@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Yemen War Desk</title>
+  <meta name="description" content="Open-source intelligence desk tracking the war in Yemen, the Red Sea corridor and the Saudi home front." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
+  <link rel="stylesheet" href="/desk.css?v=desk-en-1" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>Yemen War Desk</h1>
+      <p class="sub">Open-source intelligence, updated continuously</p>
+    </div>
+    <div class="stamp">
+      <span class="pulse" aria-hidden="true"></span>
+      <span id="updated">Connecting…</span>
+    </div>
+  </header>
+
+  <section class="bars" id="bars"></section>
+  <section class="situation" id="situation" tabindex="-1"></section>
+
+  <section class="live-scan" id="live-scan-box">
+    <details id="live-scan-details">
+      <summary>
+        <span class="ls-title">Live scan</span>
+        <span class="ls-meta" id="live-scan-meta">Not scanned yet</span>
+      </summary>
+      <p class="ls-hint">Every raw item the desk pulled, newest scanned first, with why it was carried, held or passed over. Items marked <em>held</em> are plausibly relevant but not yet established. Scanning continues while this box is closed.</p>
+      <div class="ls-stats" id="live-scan-stats"></div>
+      <div class="ls-list" id="live-scan-list"></div>
+    </details>
+  </section>
+
+  <div class="toolbar">
+    <div class="time-filter" id="time-filter" title="Pick a day, or show the whole conflict">
+      <span class="tf-label">Day on the map:</span>
+      <button type="button" id="btn-day-prev" class="day-nav" aria-label="Previous day"><span class="day-nav-arr" aria-hidden="true">←</span><span>Back</span></button>
+      <input type="date" id="map-date" min="2026-07-01" />
+      <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day"><span>Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
+      <button type="button" id="btn-day-today">Today</button>
+      <span class="tf-sep" aria-hidden="true"></span>
+      <button type="button" id="btn-conflict-all">Whole conflict</button>
+    </div>
+    <button type="button" class="ghost" id="btn-focus-map">Expand map</button>
+  </div>
+
+  <main class="stage" id="stage">
+    <section class="map-wrap" id="map-wrap">
+      <div id="map"></div>
+      <div class="legend" id="legend"></div>
+      <div class="map-chip" id="map-chip">Click a province or a mark for detail</div>
+    </section>
+
+    <div class="rail-splitter" id="rail-splitter" role="separator" aria-orientation="vertical" aria-label="Resize the report column" title="Drag to widen the report column"></div>
+
+    <aside class="rail" id="rail">
+      <div class="rail-head">
+        <h2>Latest reports</h2>
+      </div>
+      <div class="feed-legend" id="feed-legend" aria-label="What the card colours mean">
+        <span><span class="sw" style="background:#c45c26"></span>Houthi-aligned outlet</span>
+        <span><span class="sw" style="background:#22c55e"></span>Government or Saudi-aligned</span>
+        <span><span class="sw" style="background:#94a3b8"></span>No declared alignment</span>
+      </div>
+      <div id="feed" class="feed"></div>
+      <button type="button" class="more" id="btn-more-reports" hidden>Show earlier reports</button>
+    </aside>
+  </main>
+
+  <section class="fronts-wrap" id="fronts-wrap">
+    <h2>Fronts</h2>
+    <div id="fronts"></div>
+  </section>
+  <section class="cas-wrap" id="cas-wrap">
+    <h2>The conflict in numbers</h2>
+    <div id="casualties"></div>
+  </section>
+
+  <section class="timeline-wrap">
+    <div class="timeline-head">
+      <div>
+        <h2>Timeline</h2>
+      </div>
+      <button type="button" id="btn-now" class="ghost" title="Select the current phase and reset the map to today">Jump to now</button>
+    </div>
+    <div class="timeline" id="timeline"></div>
+    <div class="phase" id="phase"></div>
+  </section>
+
+  <footer>
+    <span id="attrib"></span>
+    <span id="disclaimer"></span>
+  </footer>
+
+  <div id="front-float" hidden></div>
+  <div id="media-float" hidden></div>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/app.js?v=desk-en-1"></script>
+</body>
+</html>

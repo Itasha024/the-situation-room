@@ -1,0 +1,62 @@
+name: Desk tick
+
+# The desk's clock.
+#
+# Vercel's free tier only allows a once-a-day cron, which is far too slow for a
+# five-minute Telegram cadence, so the schedule lives here instead. The tick
+# itself is idempotent with respect to each source's schedule: firing it more
+# often than needed simply finds fewer sources due, so drift costs nothing.
+#
+# GitHub's scheduler is best-effort and can run late under load. That is
+# acceptable — a late tick collects the same items, just later. If it drifts
+# badly in practice, point a third-party cron at the same endpoint instead.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  # So a human can prove the wiring works without waiting for the schedule.
+  workflow_dispatch:
+
+# A slow tick must never have a second one stack up behind it.
+concurrency:
+  group: desk-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fire the tick
+        env:
+          DESK_URL: ${{ secrets.DESK_URL }}
+          DESK_TICK_SECRET: ${{ secrets.DESK_TICK_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DESK_URL:-}" ] || [ -z "${DESK_TICK_SECRET:-}" ]; then
+            echo "::error::Set the DESK_URL and DESK_TICK_SECRET repository secrets."
+            exit 1
+          fi
+
+          # Separate the body from the status code so a failure can print both.
+          response=$(curl --silent --show-error --fail-with-body \
+            --max-time 120 \
+            --retry 2 --retry-delay 5 --retry-connrefused \
+            -X POST "${DESK_URL%/}/api/tick" \
+            -H "Authorization: Bearer ${DESK_TICK_SECRET}" \
+            -w '\n%{http_code}') || {
+              echo "::error::Tick request failed"
+              echo "$response"
+              exit 1
+            }
+
+          body=$(printf '%s' "$response" | sed '$d')
+          echo "$body"
+
+          # The endpoint answers 200 with ok:false when persistence failed —
+          # surface that as a red run rather than a quiet success.
+          if printf '%s' "$body" | grep -q '"ok": *false'; then
+            echo "::error::Tick reported ok:false"
+            exit 1
+          fi

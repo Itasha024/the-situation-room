@@ -1,0 +1,749 @@
+/**
+ * Server-only live source scanner for the Yemen desk. Never import from client.
+ *
+ * Reads the operator's source catalogue on a per-source cadence, runs every raw
+ * item through the interest gate and the English wire-style composer
+ * (`src/lib/desk/*`), and keeps only what survives both.
+ *
+ * Two things this file deliberately records for every raw item, kept or dropped:
+ *   seenAt — when THIS desk first saw it, which is what the scan box sorts on
+ *   reason — why it was kept or dropped, so the operator can audit the judgement
+ */
+
+import { type Place } from "./desk/gazetteer.ts";
+import { digest } from "./desk/digest.ts";
+import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
+import { getStore } from "./desk/store.ts";
+import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
+
+// The wire types moved to ./desk/types.ts so the store and the scanner can
+// share them without importing each other. Re-exported so existing imports
+// (brief.ts, the API routes) keep working unchanged.
+export type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
+
+type Channel = { id: string; name: string; lean: "houthi" | "gov" | "south" | "intl" };
+type Cadence = { everyMin: number } | { everyHours: number } | { atHours: number[] } | { atHour: number };
+type ChannelScan = Channel & { cadence: Cadence };
+type RssFeed = { url: string; name: string; id: string; cadence: Cadence; mode?: "rss" | "homepage-pdf" | "homepage" };
+
+const C5: Cadence = { everyMin: 5 };
+const C3H: Cadence = { everyHours: 3 };
+const C90: Cadence = { everyHours: 1.5 };
+const C_AAWSAT: Cadence = { atHours: [17, 18, 20, 22] };
+const C_AKHBAR: Cadence = { atHour: 7 };
+
+/** Operator-supplied Telegram list — exclusive catalog. */
+const TG: ChannelScan[] = [
+  { id: "Alomhoar", name: "Al-Mihwar", lean: "houthi", cadence: C5 },
+  { id: "Alibk3", name: "Ali Bk", lean: "houthi", cadence: C5 },
+  { id: "SabrenNewss", name: "Sabereen News", lean: "houthi", cadence: C5 },
+  { id: "naya_foriraq", name: "Naya", lean: "houthi", cadence: C5 },
+  { id: "shin_persian", name: "Shin Persian", lean: "houthi", cadence: C5 },
+  { id: "AlarabyTelevision", name: "Al-Araby Television", lean: "intl", cadence: C5 },
+  { id: "shajab_news", name: "Shajab News", lean: "houthi", cadence: C5 },
+  { id: "bin_1saeed", name: "Bin Saeed", lean: "gov", cadence: C5 },
+  { id: "AjaNews", name: "Al Jazeera", lean: "intl", cadence: C5 },
+  { id: "alhadath_brk", name: "Al Hadath", lean: "gov", cadence: C5 },
+  { id: "alarabiyaBr", name: "Al Arabiya Breaking", lean: "gov", cadence: C5 },
+  { id: "SabaNewsyeMedia", name: "Saba", lean: "houthi", cadence: C5 },
+  { id: "army21ye", name: "Yahya Saree", lean: "houthi", cadence: C5 },
+  { id: "abdulsalamsalah", name: "Mohammed Abdulsalam", lean: "houthi", cadence: C5 },
+  { id: "almasirah2", name: "Al-Masirah", lean: "houthi", cadence: C5 },
+  { id: "alagsa3agel", name: "Al-Aqsa Breaking", lean: "houthi", cadence: C5 },
+];
+
+function gnews(q: string, hl = "en-US", gl = "US", ceid = "US:en") {
+  const enc = encodeURIComponent(q);
+  return `https://news.google.com/rss/search?q=${enc}&hl=${hl}&gl=${gl}&ceid=${ceid}`;
+}
+
+const YE_AR = "(اليمن OR الحوث OR الحوثي OR صنعاء OR السعودية OR باب المندب)";
+const YE_EN = "(Yemen OR Houthi OR Houthis OR \"Red Sea\" OR \"Bab el-Mandeb\" OR Saudi)";
+const US_TALK = "(Trump OR \"White House\" OR \"State Department\" OR Rubio OR Vance)";
+
+const RSS: RssFeed[] = [
+  { id: "almashhad", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5 },
+  { id: "alaraby", url: gnews(`site:alaraby.co.uk ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C3H },
+  { id: "alaraby-pol", url: gnews(`site:alaraby.co.uk/politics ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C3H },
+  { id: "aawsat", url: gnews(`site:aawsat.com ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C_AAWSAT },
+  { id: "aawsat-me", url: gnews(`site:aawsat.com (الشرق الأوسط) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C_AAWSAT },
+  { id: "akhbar", url: gnews(`site:al-akhbar.com ${YE_AR} when:2d`, "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C_AKHBAR },
+  { id: "akhbar-home", url: "https://www.al-akhbar.com/", name: "Al-Akhbar", cadence: C_AKHBAR, mode: "homepage-pdf" },
+  { id: "erem", url: gnews(`site:eremnews.com ${YE_AR} when:2d`, "ar", "AE", "AE:ar"), name: "Erem News", cadence: C3H },
+  { id: "alhurra", url: gnews(`site:alhurra.com ${YE_AR} when:2d`, "ar", "US", "US:ar"), name: "Alhurra", cadence: C3H },
+  { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C3H },
+  { id: "reuters", url: gnews(`site:reuters.com ${YE_EN} when:2d`), name: "Reuters", cadence: C90 },
+  { id: "wsj", url: gnews(`site:wsj.com ${YE_EN} when:3d`), name: "WSJ", cadence: C90 },
+  { id: "wapo", url: gnews(`site:washingtonpost.com ${YE_EN} when:3d`), name: "Washington Post", cadence: C90 },
+  { id: "nyt", url: gnews(`site:nytimes.com ${YE_EN} when:3d`), name: "NYT", cadence: C90 },
+  { id: "nypost", url: gnews(`site:nypost.com ${YE_EN} when:3d`), name: "NY Post", cadence: C90 },
+  { id: "axios", url: gnews(`site:axios.com ${YE_EN} when:3d`), name: "Axios", cadence: C90 },
+  { id: "cnn", url: gnews(`site:cnn.com ${YE_EN} when:3d`), name: "CNN", cadence: C90 },
+  { id: "abc", url: gnews(`site:abcnews.go.com ${YE_EN} when:3d`), name: "ABC", cadence: C90 },
+  { id: "cbs", url: gnews(`site:cbsnews.com ${YE_EN} when:3d`), name: "CBS", cadence: C90 },
+  { id: "fox", url: gnews(`site:foxnews.com ${YE_EN} when:3d`), name: "Fox News", cadence: C90 },
+  { id: "us-talk", url: gnews(`${US_TALK} ${YE_EN} (site:reuters.com OR site:wsj.com OR site:washingtonpost.com OR site:nytimes.com OR site:cnn.com OR site:axios.com OR site:state.gov) when:3d`), name: "US media", cadence: C90 },
+  { id: "spa", url: gnews(`site:spa.gov.sa (Yemen OR Houthi OR Houthis OR اليمن OR الحوث) when:2d`, "en", "SA", "SA:en"), name: "SPA", cadence: C5 },
+];
+
+/* ------------------------------------------------------------------ *
+ * Cadence bookkeeping
+ * ------------------------------------------------------------------ */
+
+function cadenceLabel(c: Cadence): string {
+  if ("everyMin" in c) return `every ${c.everyMin} min`;
+  if ("everyHours" in c) return c.everyHours === 1.5 ? "every 90 min" : `every ${c.everyHours} h`;
+  if ("atHours" in c) return `at ${c.atHours.map((h) => `${String(h).padStart(2, "0")}:00`).join(" / ")}`;
+  if ("atHour" in c) return `daily at ${String(c.atHour).padStart(2, "0")}:00`;
+  return "";
+}
+
+function jerusalemClock(d = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jerusalem",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const p = Object.fromEntries(fmt.formatToParts(d).map((x) => [x.type, x.value]));
+  return { hour: Number(p.hour), minute: Number(p.minute) };
+}
+
+/**
+ * Is this source due?
+ *
+ * `state` comes from the store rather than module memory: a Vercel cold start
+ * used to reset the cadence map, so the scanner either believed it had never
+ * run (re-fetching all 38 sources every request) or lost the fact that it had.
+ */
+function cadenceDue(state: ScanState, id: string, cadence: Cadence, now: number): boolean {
+  if (!state.scannedOnce) return true;
+  const last = state.lastScanAt[id] || 0;
+  const age = now - last;
+  if ("everyMin" in cadence) return age >= cadence.everyMin * 60_000 - 20_000;
+  if ("everyHours" in cadence) return age >= cadence.everyHours * 3_600_000 - 90_000;
+  const { hour } = jerusalemClock(new Date(now));
+  if ("atHours" in cadence) {
+    if (!cadence.atHours.includes(hour)) return false;
+    return age >= 45 * 60_000;
+  }
+  if ("atHour" in cadence) {
+    if (hour !== cadence.atHour) return false;
+    return age >= 45 * 60_000;
+  }
+  return true;
+}
+
+/* ------------------------------------------------------------------ *
+ * Payload shapes
+ * ------------------------------------------------------------------ */
+
+function jerusalemIso(d = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const p = Object.fromEntries(fmt.formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}+03:00`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Fetch / parse
+ * ------------------------------------------------------------------ */
+
+function decodeEntities(s: string) {
+  return s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fpOf(url: string, title: string) {
+  const slug = (url || title)
+    .toLowerCase()
+    .replace(/https?:\/\//, "")
+    .replace(/[^a-z0-9؀-ۿ]+/g, "-")
+    .slice(0, 72);
+  return "live-" + slug;
+}
+
+/** 1–5, the figure shown on the card. Derived from tier and gate score. */
+function confidenceFrom(tier: string, score: number): number {
+  const base = tier === "agency" ? 4 : tier === "claim" ? 2.8 : 2.2;
+  const bump = Math.min(0.9, (score / 100) * 0.9);
+  return Math.round((base + bump) * 10) / 10;
+}
+
+function isIsraeliSource(source: string, url: string): boolean {
+  return /israel|jpost|haaretz|ynet|walla\.co|maariv|kan\.org|\.inn\.co|israelnationalnews|timesofisrael|i24news/i.test(
+    `${source} ${url}`,
+  );
+}
+
+function bestPlace(places: Place[]): Place | undefined {
+  const land = places.find((p) => p.country !== "sea");
+  return land || places[0];
+}
+
+type Composed = {
+  report: LiveReport | null;
+  outcome: Outcome;
+  reason: string;
+  note: string;
+  note2?: string;
+  tags: string[];
+  topicality: number;
+};
+
+function toLiveReport(source: string, url: string, rawText: string, at: string, fpSeed: string, lean = ""): Composed {
+  const no = (reason: string, note: string, outcome: Outcome = "exclude"): Composed => ({
+    report: null,
+    outcome,
+    reason,
+    note,
+    tags: [],
+    topicality: 0,
+  });
+
+  if (isIsraeliSource(source, url)) {
+    return no("excluded-source", "Outlet excluded from this desk's catalogue.");
+  }
+  try {
+    const u = new URL(url);
+    if (!u.pathname || u.pathname === "/" || /^\/[a-z]{2}\/?$/.test(u.pathname)) {
+      return no("no-article", "Link points at a section front, not a specific report.");
+    }
+  } catch {
+    return no("bad-url", "Item had no usable link.");
+  }
+
+  const d = digest(source, rawText, lean);
+  // A composition failure on a relevant item lands in the tray, not the bin:
+  // the desk not being able to phrase something is not a reason to lose it.
+  if (!d.ok) {
+    return { report: null, outcome: d.outcome, reason: d.reason, note: d.note, tags: d.tags, topicality: 0 };
+  }
+
+  const place = bestPlace(d.places);
+  const row: LiveReport = {
+    fp: fpOf(url, fpSeed),
+    at,
+    source,
+    url,
+    type: d.type,
+    summary: d.headline,
+    text: d.body,
+    live: true,
+    confidence: confidenceFrom(d.tier, d.score),
+    score: d.score,
+    tier: d.tier,
+    tags: d.tags,
+  };
+  if (place) {
+    row.place = place.name;
+    row.lat = place.lat;
+    row.lng = place.lng;
+  }
+  return {
+    report: row,
+    outcome: d.outcome,
+    reason: d.reason,
+    note: d.note,
+    tags: d.tags,
+    topicality: d.score,
+  };
+}
+
+async function fetchText(url: string, ms = 8000): Promise<string | null> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        "user-agent": "YemenDesk/2.0 (OSINT desk)",
+        accept: "text/html,application/rss+xml,application/xml,text/xml,*/*",
+        "accept-language": "ar,en;q=0.8",
+      },
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function extractLead(html: string): string {
+  const og =
+    (html.match(/property=["']og:description["'][^>]*content=["']([^"']{40,})["']/i) || [])[1] ||
+    (html.match(/content=["']([^"']{40,})["'][^>]*property=["']og:description["']/i) || [])[1] ||
+    "";
+  const paras = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map((m) => decodeEntities(m[1]))
+    .filter((p) => p.length > 50 && !/copyright|subscribe|cookie|javascript/i.test(p));
+  const parts: string[] = [];
+  if (og) parts.push(decodeEntities(og));
+  for (const p of paras.slice(0, 5)) {
+    if (!parts.some((x) => x.includes(p.slice(0, 50)))) parts.push(p);
+  }
+  return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, 2200);
+}
+
+type RawHit = {
+  source: string;
+  url: string;
+  text: string;
+  at: string;
+  lean: string;
+  fromTg: boolean;
+};
+
+function outletFromGoogleTitle(title: string, fallback: string): { title: string; source: string } {
+  const m = title.match(/^(.*)\s[-–—]\s+(.{3,48})$/);
+  if (!m) return { title, source: fallback };
+  const outlet = m[2].trim();
+  const mapped =
+    /fox news/i.test(outlet) ? "Fox News"
+    : /alaraby|new arab|العربي الجديد/i.test(outlet) ? "Al-Araby Al-Jadeed"
+    : /al[- ]?akhbar|الأخبار/i.test(outlet) ? "Al-Akhbar"
+    : /aawsat|الشرق الأوسط|asharq al-awsat/i.test(outlet) ? "Asharq Al-Awsat"
+    : /alhurra|الحرة/i.test(outlet) ? "Alhurra"
+    : /erem|إرم/i.test(outlet) ? "Erem News"
+    : /okaz|عكاظ/i.test(outlet) ? "Okaz"
+    : /al-?watan|الوطن/i.test(outlet) ? "Al-Watan"
+    : /reuters/i.test(outlet) ? "Reuters"
+    : /associated press|^AP$/i.test(outlet) ? "AP"
+    : /politico/i.test(outlet) ? "Politico"
+    : /cnbc/i.test(outlet) ? "CNBC"
+    : /wsj|wall street/i.test(outlet) ? "WSJ"
+    : fallback === "US media" ? outlet.replace(/\s+/g, " ").slice(0, 28)
+    : fallback;
+  return { title: m[1].trim(), source: mapped };
+}
+
+function parseRss(xml: string, source: string): RawHit[] {
+  const items: RawHit[] = [];
+  const blocks = xml.split(/<item[\s>]/i).slice(1);
+  const cap = /news\.google\.com/i.test(xml) ? 6 : 8;
+  for (const b of blocks.slice(0, cap)) {
+    let title = decodeEntities((b.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "");
+    const desc = decodeEntities((b.match(/<description[^>]*>([\s\S]*?)<\/description>/i) || [])[1] || "");
+    const linkRaw =
+      (b.match(/<link[^>]*>([\s\S]*?)<\/link>/i) || [])[1] ||
+      (b.match(/<link[^>]+href=["']([^"']+)["']/i) || [])[1] ||
+      "";
+    const guid = decodeEntities((b.match(/<guid[^>]*>([\s\S]*?)<\/guid>/i) || [])[1] || "");
+    const dateRaw = (b.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/i) || [])[1] || "";
+    let url = decodeEntities(linkRaw || guid).replace(/&amp;/g, "&").trim();
+    if (!title || !url || !/^https?:\/\//i.test(url)) continue;
+    let src = source;
+    if (/news\.google\.com/i.test(url)) {
+      const g = outletFromGoogleTitle(title, source);
+      title = g.title;
+      src = g.source;
+      const srcUrl = (b.match(/<source[^>]+url=["']([^"']+)["']/i) || [])[1];
+      if (srcUrl && /^https?:\/\//i.test(srcUrl) && !/news\.google\.com/i.test(srcUrl)) url = srcUrl;
+    }
+    if (title.length < 12) continue;
+    if (isIsraeliSource(src, url)) continue;
+    const blob = `${title} ${desc}`.slice(0, 1200);
+    let at = jerusalemIso();
+    const parsed = Date.parse(dateRaw);
+    if (Number.isFinite(parsed)) at = jerusalemIso(new Date(parsed));
+    items.push({ source: src, url, text: blob, at, lean: "", fromTg: false });
+  }
+  return items;
+}
+
+function parseTelegram(html: string, ch: Channel): RawHit[] {
+  const items: RawHit[] = [];
+  const parts = html.split("tgme_widget_message_wrap");
+  for (const p of parts.slice(1, 16)) {
+    const hrefs = [...p.matchAll(new RegExp(`href="(https://t\\.me/${ch.id}/\\d+)"`, "gi"))].map((m) => m[1]);
+    const textHtml = (p.match(/class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/) || [])[1] || "";
+    const datetime = (p.match(/datetime="([^"]+)"/) || [])[1] || "";
+    const text = decodeEntities(textHtml);
+    if (!text || text.length < 12) continue;
+    const url = (hrefs[0] || "").split("?")[0];
+    if (!url) continue;
+    let at = jerusalemIso();
+    const parsed = Date.parse(datetime);
+    if (Number.isFinite(parsed)) at = jerusalemIso(new Date(parsed));
+    items.push({ source: ch.name, url, text, at, lean: ch.lean, fromTg: true });
+  }
+  return items;
+}
+
+/* ------------------------------------------------------------------ *
+ * Story clustering — one line per story per day
+ * ------------------------------------------------------------------ */
+
+function frontBucket(r: LiveReport): string {
+  const s = `${r.place || ""} ${r.summary || ""} ${r.text || ""}`;
+  if (/Kahbub|Bab al-Mandab|Mayun|Dhubab/i.test(s)) return "bab";
+  if (/Al-Wazi'iyah|Al-Dharifah|Sharirah|Al-Alqamah/i.test(s)) return "waziyah";
+  if (/Marib|Wadi Dhanah|East Balaq|Balaq/i.test(s)) return "marib";
+  if (/Al-Jawf|Al-Hazm\b/i.test(s)) return "jawf";
+  if (/Hodeidah|Al-Khokha|Hays/i.test(s)) return "hudaydah";
+  if (/Lahj|Al-Aghbara|Al-Mudaribah|Aden/i.test(s)) return "lahj-south";
+  if (/Sanaa|Azal/i.test(s)) return "sanaa";
+  if (/Yanbu|Jeddah|Aramco|crude|oil|Suez|pipeline/i.test(s) || r.type === "economy") return "energy";
+  if (/Jazan|Najran|Khamis|Abha|Taif|Mecca|Riyadh|Al-Kharj|Farasan|Al-Ula|Sharurah/i.test(s)) return "ksa-strike";
+  return `${r.type || "x"}-other`;
+}
+
+/** Overnight sirens on both sides of midnight are one story. */
+function nightYmd(at: string): string {
+  const ymd = String(at || "").slice(0, 10);
+  const hour = parseInt(String(at || "").slice(11, 13), 10);
+  if (!ymd || !Number.isFinite(hour) || hour >= 5) return ymd;
+  const d = Date.parse(at);
+  if (!Number.isFinite(d)) return ymd;
+  return jerusalemIso(new Date(d - 5 * 3600 * 1000)).slice(0, 10);
+}
+
+function storyKey(r: LiveReport): string {
+  const s = r.summary;
+  if (/air raid sirens|air defence alerts/i.test(s)) {
+    const city = /Riyadh|Al-Kharj/i.test(s) ? "riyadh" : "ksa";
+    return `${nightYmd(r.at)}|alert|${city}`;
+  }
+  if (/crude shipments|East-West pipeline|Yanbu loadings/i.test(s)) return "oil-cancel";
+  if (/asked Syria for fighters/i.test(s)) return "syria-fighters";
+  const ymd = String(r.at || "").slice(0, 10);
+  const bucket = frontBucket(r);
+  if (r.type === "combat" || r.type === "strike" || r.type === "economy" || r.type === "vessel" || r.type === "port") {
+    return `${ymd}|${r.type}|${bucket}`;
+  }
+  if (r.type === "statement" || r.type === "diplomacy") {
+    const stem = s.replace(/[^a-zA-Z]/g, "").slice(0, 28).toLowerCase();
+    return `${ymd}|stmt|${stem || r.url.split("?")[0]}`;
+  }
+  return r.url.split("?")[0];
+}
+
+/** Which of two reports on the same story to keep. */
+function scoreReport(x: LiveReport): number {
+  return (
+    (x.score || 0) * 2 +
+    (x.tier === "agency" ? 60 : x.tier === "claim" ? 20 : 0) +
+    String(x.summary || "").length +
+    (x.place ? 25 : 0)
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Persist to the desk snapshot
+ * ------------------------------------------------------------------ */
+
+function harvestHomepage(html: string, source: string): RawHit[] {
+  const items: RawHit[] = [];
+  const seen = new Set<string>();
+  const abs = (href: string) => {
+    const h = href.replace(/&amp;/g, "&").split("#")[0];
+    if (/^https?:\/\//i.test(h)) return h;
+    if (h.startsWith("//")) return "https:" + h;
+    if (h.startsWith("/")) return "https://www.al-akhbar.com" + h;
+    return "";
+  };
+  const push = (url: string, text: string) => {
+    const u = abs(url);
+    if (!u || seen.has(u)) return;
+    seen.add(u);
+    items.push({ source, url: u, text: text.slice(0, 800), at: jerusalemIso(), lean: "", fromTg: false });
+  };
+  for (const m of html.matchAll(/href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)) {
+    const title = decodeEntities(m[2] || "");
+    if (title.length < 18) continue;
+    if (!/اليمن|الحوث|السعود|صنعاء|Yemen|Houthi/i.test(title)) continue;
+    push(m[1], title);
+  }
+  return items.slice(0, 12);
+}
+
+/* ------------------------------------------------------------------ *
+ * One scan cycle
+ * ------------------------------------------------------------------ */
+
+async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<ScanPayload> {
+  const now = Date.now();
+  const cycleSeenAt = jerusalemIso(new Date(now));
+  const dueTg = TG.filter((ch) => cadenceDue(state, `tg:${ch.id}`, ch.cadence, now));
+  const dueRss = RSS.filter((feed) => cadenceDue(state, `web:${feed.id}`, feed.cadence, now));
+  let sourcesOk = 0;
+  const hits: RawHit[] = [];
+  const status: SourceStatus[] = [];
+  const jobs: Promise<void>[] = [];
+
+  for (const ch of dueTg) {
+    jobs.push(
+      (async () => {
+        const html = await fetchText(`https://t.me/s/${ch.id}`);
+        const ok = !!(html && html.includes("tgme_widget_message"));
+        const rows = ok ? parseTelegram(html as string, ch) : [];
+        if (ok) sourcesOk += 1;
+        hits.push(...rows);
+        state.lastScanAt[`tg:${ch.id}`] = Date.now();
+        status.push({ id: ch.id, name: ch.name, kind: "tg", ok, cadence: cadenceLabel(ch.cadence), hits: rows.length });
+      })(),
+    );
+  }
+  for (const feed of dueRss) {
+    jobs.push(
+      (async () => {
+        const body = await fetchText(feed.url, feed.mode === "homepage-pdf" ? 10000 : 8000);
+        let rows: RawHit[] = [];
+        let ok = false;
+        if (feed.mode === "homepage-pdf") {
+          ok = !!body;
+          if (body) rows = harvestHomepage(body, feed.name);
+        } else {
+          ok = !!(body && /<item[\s>]/i.test(body));
+          if (ok && body) rows = parseRss(body, feed.name);
+        }
+        if (ok) sourcesOk += 1;
+        hits.push(...rows);
+        state.lastScanAt[`web:${feed.id}`] = Date.now();
+        status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length });
+      })(),
+    );
+  }
+  await Promise.allSettled(jobs);
+  state.scannedOnce = true;
+
+  // Thin RSS teasers get their lead paragraph pulled so the gate has something to judge.
+  const needFetch = hits.filter((h) => !h.fromTg && h.text.length < 500 && !/\.pdf(\?|$)/i.test(h.url)).slice(0, 10);
+  await Promise.allSettled(
+    needFetch.map(async (h) => {
+      const html = await fetchText(h.url, 6000);
+      if (!html) return;
+      const lead = extractLead(html);
+      if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, 2800);
+    }),
+  );
+
+  const reports: LiveReport[] = [];
+  const rawHits: RawScanHit[] = [];
+  for (const h of hits) {
+    const c = toLiveReport(h.source, h.url, h.text, h.at, h.text.slice(0, 80), h.lean);
+    // Only a feed verdict reaches the feed. Tray items stay in the scan box.
+    if (c.report && c.outcome === "feed") reports.push(c.report);
+    rawHits.push({
+      source: h.source,
+      url: h.url,
+      snippet: h.text.replace(/\s+/g, " ").trim().slice(0, 280),
+      at: h.at,
+      seenAt: cycleSeenAt,
+      kind: h.fromTg ? "tg" : "web",
+      kept: c.outcome === "feed" && !!c.report,
+      outcome: c.outcome,
+      topicality: c.topicality,
+      reachable: true,
+      reason: c.reason,
+      note: c.note,
+      tags: c.tags,
+    });
+  }
+
+  /**
+   * One CARD per story, but every account kept.
+   *
+   * The desk used to keep the best-sourced report of a story and delete the
+   * rest, which is the opposite of collecting everything in one place. Now the
+   * best-sourced account leads the card and the others are attached to it, so
+   * a card can say "3 sources" and open them — nothing is discarded for being
+   * a second account of the same event.
+   */
+  const seenUrl = new Set<string>();
+  const byStory = new Map<string, { lead: LiveReport; others: LiveReport[] }>();
+  reports
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || scoreReport(b) - scoreReport(a))
+    .forEach((r) => {
+      const u = r.url.split("?")[0];
+      if (seenUrl.has(u) || seenUrl.has(r.fp)) return;
+      seenUrl.add(u);
+      seenUrl.add(r.fp);
+      const sk = storyKey(r);
+      const group = byStory.get(sk);
+      if (!group) {
+        byStory.set(sk, { lead: r, others: [] });
+      } else if (scoreReport(r) > scoreReport(group.lead)) {
+        group.others.push(group.lead);
+        group.lead = r;
+      } else {
+        group.others.push(r);
+      }
+    });
+
+  for (const { lead, others } of byStory.values()) {
+    if (!others.length) continue;
+    // Distinct outlets only: three posts from one channel is one account.
+    const outlets = new Map<string, string>();
+    for (const o of others) if (o.source !== lead.source) outlets.set(o.source, o.url);
+    if (outlets.size) {
+      lead.alsoReportedBy = [...outlets].map(([source, url]) => ({ source, url })).slice(0, 6);
+    }
+  }
+  const uniqReports = [...byStory.values()].map((g) => g.lead).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+
+  // Carry forward what earlier cycles found, so a quiet cycle does not empty the desk.
+  if (prev && Array.isArray(prev.reports)) {
+    const have = new Set(uniqReports.map((r) => r.url.split("?")[0]));
+    for (const r of prev.reports) {
+      const u = String(r.url || "").split("?")[0];
+      if (!u || have.has(u)) continue;
+      uniqReports.push(r);
+      have.add(u);
+    }
+    uniqReports.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  }
+  if (prev && Array.isArray(prev.rawHits)) {
+    const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));
+    for (const h of prev.rawHits) {
+      const u = String(h.url || "").split("?")[0];
+      if (u && !haveH.has(u)) {
+        rawHits.push({ ...h, seenAt: h.seenAt || h.at });
+        haveH.add(u);
+      }
+    }
+  }
+  if (prev && Array.isArray(prev.sourceStatus)) {
+    const haveS = new Set(status.map((s) => s.id));
+    for (const s of prev.sourceStatus) {
+      if (s?.id && !haveS.has(s.id)) status.push(s);
+    }
+  }
+
+  const tried = dueTg.length + dueRss.length;
+  const skipped = TG.length + RSS.length - tried;
+  const cycleNote = skipped
+    ? `${tried} sources this cycle; ${skipped} on a slower schedule (dailies and agencies).`
+    : `All ${tried} sources scanned this cycle.`;
+
+  return {
+    ok: true,
+    scannedAt: jerusalemIso(),
+    reports: uniqReports.slice(0, 48),
+    sourcesTried: tried,
+    sourcesOk,
+    // Newest-seen first: what the scanner just pulled sits at the top of the box.
+    rawHits: rawHits
+      .sort((a, b) => Date.parse(b.seenAt || b.at) - Date.parse(a.seenAt || a.at) || Date.parse(b.at) - Date.parse(a.at))
+      .slice(0, 90),
+    sourceStatus: status.sort((a, b) => a.name.localeCompare(b.name)),
+    cycleNote,
+    reasons: NOISE_REASONS,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Reading, and running a cycle
+ *
+ * These are deliberately separate. Serving a page READS; only the tick
+ * SCANS. Previously a page view could trigger a scan, which meant the desk
+ * only advanced while someone was watching it — and on a read-only host the
+ * results were thrown away afterwards.
+ * ------------------------------------------------------------------ */
+
+const EMPTY_PAYLOAD: ScanPayload = {
+  ok: true,
+  scannedAt: "",
+  reports: [],
+  sourcesTried: 0,
+  sourcesOk: 0,
+  rawHits: [],
+  sourceStatus: [],
+  cycleNote: "The desk has not completed a scan yet.",
+  reasons: NOISE_REASONS,
+};
+
+/**
+ * What the desk currently holds. Pure read — never fetches a source.
+ * Returns an empty payload (not an error) before the first tick, so the page
+ * renders its curated snapshot rather than an error state.
+ */
+export async function scanYemenSources(): Promise<ScanPayload> {
+  try {
+    const store = await getStore();
+    return (await store.loadPayload()) ?? EMPTY_PAYLOAD;
+  } catch {
+    return EMPTY_PAYLOAD;
+  }
+}
+
+export type TickResult = {
+  ok: boolean;
+  scannedAt: string;
+  sourcesTried: number;
+  sourcesOk: number;
+  reportsInPayload: number;
+  reportsAdded: number;
+  eventsAdded: number;
+  unplaced: { fp: string; summary: string; place?: string }[];
+  store: string;
+  cycleNote?: string;
+  error?: string;
+};
+
+/**
+ * One scan cycle: fetch every due source, compose, persist, report honestly.
+ *
+ * This is the only thing that scans. It is idempotent with respect to cadence
+ * — calling it more often than the schedule simply finds fewer sources due —
+ * so an over-eager clock costs nothing.
+ */
+export async function runScanCycle(): Promise<TickResult> {
+  const store = await getStore();
+  const state = await store.loadScanState();
+  const prev = await store.loadPayload();
+
+  const payload = await scanOnce(state, prev);
+
+  // Persist in dependency order, and surface every failure. The old code
+  // fire-and-forgot this and swallowed the error, which is why a read-only
+  // host looked healthy while saving nothing.
+  const merge = await store.mergeIntoDesk(payload.reports);
+  // Carry the gazetteer misses into the payload so the scan box can show them.
+  if (merge.unplaced.length) payload.unplaced = merge.unplaced.slice(0, 20);
+  state.lastTickAt = Date.now();
+  await store.saveScanState(state);
+
+  let error = merge.error;
+  try {
+    await store.savePayload(payload);
+  } catch (err) {
+    error = err instanceof Error ? err.message : "payload write failed";
+  }
+
+  return {
+    ok: !error,
+    scannedAt: payload.scannedAt,
+    sourcesTried: payload.sourcesTried,
+    sourcesOk: payload.sourcesOk,
+    reportsInPayload: payload.reports.length,
+    reportsAdded: merge.reportsAdded,
+    eventsAdded: merge.eventsAdded,
+    unplaced: merge.unplaced,
+    store: store.kind,
+    cycleNote: payload.cycleNote,
+    ...(error ? { error } : {}),
+  };
+}
+
+export const SCAN_SOURCE_COUNT = TG.length + RSS.length;
+export { digest };

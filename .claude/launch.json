@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "desk",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/with-app-env.mjs",
+        "vite",
+        "dev",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8080"
+      ],
+      "port": 8080
+    }
+  ]
+}

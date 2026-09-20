@@ -1,0 +1,41 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "דסק מלחמה — תימן",
+      "hasCanvas": false,
+      "bodyTextLen": 246,
+      "bodyTextHash": "323b1496e874b3a195f7670ededde15c72bc89094b8870ecb3f440e937603a92",
+      "bodyTextPrefix": "דסק מלחמה — תימן מבוסס על מודיעין גלוי מתחבר… יום במפה: אחורה → ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "דסק מלחמה — תימן",
+      "hasCanvas": false,
+      "bodyTextLen": 246,
+      "bodyTextHash": "323b1496e874b3a195f7670ededde15c72bc89094b8870ecb3f440e937603a92",
+      "bodyTextPrefix": "דסק מלחמה — תימן מבוסס על מודיעין גלוי מתחבר… יום במפה: אחורה → ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": true,
+  "baselineReasons": [
+    "desktop: body text collapsed (4445 -> 246 chars)",
+    "mobile: body text collapsed (4445 -> 246 chars)"
+  ]
+}

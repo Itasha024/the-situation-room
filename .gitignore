@@ -1,0 +1,14 @@
+node_modules/
+.project_id
+.github_repo
+.env
+.env.*
+
+# Build output.
+.vercel/output/
+.tanstack/
+
+# Runtime scan bookkeeping — per-deployment state, not source. Committing it
+# would hand every environment another environment's cadence clock.
+public/desk-state.json
+public/*.json.tmp-*

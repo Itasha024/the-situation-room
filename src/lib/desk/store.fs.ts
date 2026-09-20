@@ -1,0 +1,172 @@
+/**
+ * Filesystem driver for the desk store — local development.
+ *
+ * Keeps the same files the desk has always used, so nothing downstream has to
+ * change: `public/data.json` is the desk snapshot the page renders,
+ * `public/live-reports.json` is the last scan payload. Cadence state gets its
+ * own small file rather than riding in either.
+ *
+ * Writes go through a temp file and a rename, so a crash mid-write cannot leave
+ * a half-written `data.json` that fails to parse and blanks the desk.
+ */
+
+import { readFile, rename, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { deriveEvents, hasArticlePath, toDeskReportRow } from "./snapshot.ts";
+import type { DeskStore, MergeResult } from "./store.ts";
+import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
+
+const PUBLIC_DIR = join(process.cwd(), "public");
+const DATA_FILE = join(PUBLIC_DIR, "data.json");
+const STATE_FILE = join(PUBLIC_DIR, "desk-state.json");
+
+/**
+ * The payload is written to both the served directory and the built output, so
+ * a preview of the built bundle sees the same snapshot as dev.
+ */
+const PAYLOAD_FILES = [
+  join(PUBLIC_DIR, "live-reports.json"),
+  join(process.cwd(), ".vercel", "output", "static", "live-reports.json"),
+];
+
+async function readJson<T>(path: string): Promise<T | null> {
+  try {
+    return JSON.parse(await readFile(path, "utf8")) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Write via temp + rename so readers never observe a partial file.
+ * `indent` keeps each file's existing shape: the desk snapshot stays readable
+ * by hand, the scan payload stays compact.
+ */
+async function writeJsonAtomic(path: string, value: unknown, indent = 0): Promise<void> {
+  const tmp = `${path}.tmp-${process.pid}`;
+  await writeFile(tmp, JSON.stringify(value, null, indent), "utf8");
+  await rename(tmp, path);
+}
+
+type DeskSnapshot = {
+  updatedAt?: string;
+  reports?: Array<Record<string, unknown>>;
+  events?: Array<Record<string, unknown>>;
+  [k: string]: unknown;
+};
+
+function jerusalemIso(d = new Date()) {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const p = Object.fromEntries(fmt.formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}+03:00`;
+}
+
+export function createFsStore(): DeskStore {
+  return {
+    kind: "fs",
+
+    async loadScanState(): Promise<ScanState> {
+      const s = await readJson<ScanState>(STATE_FILE);
+      if (!s || typeof s !== "object") return { ...EMPTY_SCAN_STATE };
+      return {
+        scannedOnce: !!s.scannedOnce,
+        lastScanAt: s.lastScanAt && typeof s.lastScanAt === "object" ? s.lastScanAt : {},
+        lastTickAt: typeof s.lastTickAt === "number" ? s.lastTickAt : undefined,
+      };
+    },
+
+    async saveScanState(state: ScanState): Promise<void> {
+      await writeJsonAtomic(STATE_FILE, state);
+    },
+
+    async getJson<T>(key: string): Promise<T | null> {
+      return readJson<T>(join(PUBLIC_DIR, `desk-${key}.json`));
+    },
+
+    async putJson(key: string, value: unknown): Promise<void> {
+      await writeJsonAtomic(join(PUBLIC_DIR, `desk-${key}.json`), value);
+    },
+
+    async loadPayload(): Promise<ScanPayload | null> {
+      for (const p of PAYLOAD_FILES) {
+        const parsed = await readJson<ScanPayload>(p);
+        if (parsed && Array.isArray(parsed.reports) && parsed.scannedAt) return parsed;
+      }
+      return null;
+    },
+
+    async savePayload(payload: ScanPayload): Promise<void> {
+      const results = await Promise.allSettled(
+        PAYLOAD_FILES.map((p) => writeJsonAtomic(p, payload)),
+      );
+      // The built-output copy is optional (it does not exist before a build);
+      // the served copy is not. Only fail if every target failed.
+      if (results.every((r) => r.status === "rejected")) {
+        const first = results[0];
+        throw new Error(
+          `could not write scan payload: ${first.status === "rejected" ? first.reason : "unknown"}`,
+        );
+      }
+    },
+
+    async mergeIntoDesk(reports: LiveReport[]): Promise<MergeResult> {
+      const out: MergeResult = { reportsAdded: 0, eventsAdded: 0, unplaced: [] };
+      const data = await readJson<DeskSnapshot>(DATA_FILE);
+      if (!data) {
+        out.error = "desk snapshot missing or unparseable";
+        return out;
+      }
+
+      data.reports = Array.isArray(data.reports) ? data.reports : [];
+      data.events = Array.isArray(data.events) ? data.events : [];
+
+      const haveFp = new Set(data.events.map((e) => String(e.fp || "")));
+      const haveUrl = new Set([
+        ...data.reports.map((r) => String(r.url || "")),
+        ...data.events.map((e) => String(e.url || "")),
+      ]);
+
+      for (const r of reports) {
+        if (!r.url || haveUrl.has(r.url) || haveFp.has(r.fp)) continue;
+        if (!hasArticlePath(r.url)) continue;
+
+        data.reports.unshift(toDeskReportRow(r));
+        haveUrl.add(r.url);
+        haveFp.add(r.fp);
+        out.reportsAdded += 1;
+
+        const { events, unplaced } = deriveEvents(r);
+        for (const e of events) {
+          if (haveFp.has(e.fp)) continue;
+          data.events.unshift({ ...e });
+          haveFp.add(e.fp);
+          out.eventsAdded += 1;
+        }
+        if (unplaced) out.unplaced.push({ fp: r.fp, summary: r.summary, place: r.place });
+      }
+
+      if (!out.reportsAdded) return out;
+
+      data.reports.sort((a, b) => String(b.at || "").localeCompare(String(a.at || "")));
+      data.updatedAt = jerusalemIso();
+      try {
+        await writeJsonAtomic(DATA_FILE, data, 2);
+      } catch (err) {
+        out.error = err instanceof Error ? err.message : "desk snapshot write failed";
+        out.reportsAdded = 0;
+        out.eventsAdded = 0;
+      }
+      return out;
+    },
+  };
+}

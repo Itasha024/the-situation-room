@@ -1,0 +1,61 @@
+=== FEED (composed reports now on the desk) ===
+
+[Al-Araby Television] strike score=60 place=Kahbub
+  Reports of a drone shot down in Kahbub and Bab al-Mandab
+
+[Al-Araby Television] strike score=60 place=Riyadh
+  Reports of a ballistic missile launch towards Riyadh
+
+[Almashhad] combat score=72 place=Taiz
+  Clashes between Houthi forces and Yemeni government forces in Taiz and Kahbub
+
+[Almashhad] strike score=72 place=Al-Bayda
+  Reports of air strikes on Houthi positions in Al-Bayda
+
+[Almashhad] strike score=82 place=Marib
+  Reports of air strikes on Houthi positions in Marib and Al-Bayda
+
+[Al-Mihwar] statement score=20 place=-
+  Trump says there are contacts over a deal
+
+[Almashhad] strike score=70 place=Kahbub
+  Reports of a drone shot down in Bab al-Mandab and Kahbub
+
+[Almashhad] combat score=72 place=Hadramawt
+  Clashes between Houthi forces and Yemeni government forces in Hadramawt and Al-Bayda, at least three killed
+
+
+=== TRAY — passed the gate, composer could not phrase them ===
+
+[Almashhad] reason=no-actor
+  خلال 72 ساعة فقط.. القائد يلحق بنائبه وشقيقه في أنصع ملاحم البطولة ضد الحوثيين ارتقى أمس قائد فصيلة "أبناء المسيمير"، البطل ينوف فضل دحان الحوشبي، شهيداً شامخاً في خنادق الشرف والبطولة، متأثراً بإصابت
+
+[Almashhad] reason=no-actor
+  ماذا حدث في العاصمة صنعاء؟ خبير سعودي يفجر مفاجأة حول العملية المشتركة وتفاصيلها المرتقبة كشف الخبير العسكري والاستراتيجي السعودي، فيصل الحمد، عن كواليس عملية عسكرية نوعية جرت تفاصيلها في قلب العاصمة 
+
+[Al-Araby Television] reason=no-actor
+  مضيق هرمز والعودة للتفاوض.. ما شروط طهران لاستئناف الحوار مع واشنطن؟
+
+[Al-Araby Television] reason=no-actor
+  دمار واسع يخلفه استهداف برج اتصالات في منطقة رحوب بمحافظة الجوف اليمنية
+
+[Almashhad] reason=no-actor
+  رسائل حاسمة من باكستان وتركيا إلى طهران.. هل اقتربت الساعة للعملية العسكرية الكبرى ضد الحوثيين؟ تكشفت تفاصيل جديدة حول الجولة الأخيرة من الصراع الميداني المشتعل على أبواب الممر المائي الأهم عالمياً؛ إ
+
+[Almashhad] reason=no-actor
+  اللواء ثوابة: مأرب اليوم تهاجم وعينها على صنعاء.. والقوات المسلحة تتوعد بمواصلة المعركة وانهاء انقلاب الحوثيين أكد قائد المنطقة العسكرية الثالثة، اللواء الركن منصور بن عبدالله ثوابة، أن مأرب ستظل عصية
+
+[Shajab News] reason=thin
+  أعلن المتحدث باسم لجنة الأمن القومي والسياسة الخارجية في البرلمان الإيراني عن إقرار المادة 12 من مشروع «الإجراء الاستراتيجي لتأمين أمن وتقدم مضيق هرمز». وبموجب هذه المادة، يصبح إدراج الاسم الكامل «الخ
+
+[Al Jazeera] reason=thin
+  عاجل | المتحدث باسم الخارجية القطرية: نعمل عبر فريق الوساطة لدينا مع #طهران وواشنطن لمعرفة إمكانية استئناف المحادثات
+
+[Almashhad] reason=no-actor
+  راجمات الصواريخ تدخل المعركة في مأرب.. وعمليات الجيش اليمني تطارد الحوثيين في محور بيحان دمرت القوات المسلحة اليمنية مرابض مدفعية تابعة لمليشيا الحوثي في الجبهة الجنوبية لمحافظة مأرب، عبر ضربات نفذتها
+
+[Almashhad] reason=no-actor
+  مسام يزيل نحو 4 آلاف لغم وذخيرة وعبوة ناسفة حوثية خلال 18 يوماً أعلن مشروع «مسام» لنزع الألغام في اليمن، إزالة 3887 لغماً وذخيرة غير منفجرة وعبوة ناسفة، خلال الفترة من مطلع سبتمبر وحتى 18 من الشهر ذات
+
+[Sabereen News] reason=bad-copy
+  🔴 تقوم عدد من طائرات الشحن العسكرية التركية بعمليات تسليم إلى السعودية.

@@ -140,7 +140,12 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    alerts in Yemen, in Saudi Arabia, and at sea; statements by the parties
    (Houthis, the Yemeni government, Saudi Arabia) and by the US, Iran, the UN,
    Europe, Turkey, Pakistan, Qatar ABOUT this war; arms sales to a party; a
-   party tying Yemen to other fronts ("unity of fronts").
+   party tying Yemen to other fronts ("unity of fronts");
+   outside powers deciding or debating whether to strike, arm or back a party
+   (e.g. Trump weighing strikes on the Houthis after a Saudi request), and
+   requests for help between the parties and their allies; foreign media
+   reports about this war, including ones relayed by other outlets ("according
+   to the New York Times ..."). These are in scope, not "internal politics".
 2. CURRENT. It reports something that happened or was said now. NOT a
    programme title, a video segment, a battle map, a documentary, an analysis,
    an anniversary, a recap. "Marib and Taiz: the map of the battles #ThisDay"
@@ -228,8 +233,11 @@ export const BANNED_PHRASES: RegExp[] = [
   /\bZionist/i,
 ];
 
+/** Bumped when the instructions change, so cached readings are redone. */
+export const PROMPT_VERSION = 2;
+
 export function contentHash(text: string): string {
-  return createHash("sha256").update(String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
+  return createHash("sha256").update(`v${PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
 }
 
 /** Western digits for every number in a text, Arabic-Indic included. */

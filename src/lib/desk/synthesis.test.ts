@@ -32,7 +32,7 @@ test("a quiet window says so plainly and stops", () => {
     hours: 12,
   });
   assert.equal(s.quiet, true);
-  assert.match(s.line, /Nothing kinetic/);
+  assert.match(s.line, /No fighting was reported/);
   assert.ok(sentences(s.line) <= 3, `too long: ${s.line}`);
 });
 

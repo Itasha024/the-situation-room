@@ -102,8 +102,8 @@ export function tempoOf(now: WindowCounts, prev: WindowCounts | null): Tempo {
 
 const TEMPO_PHRASE: Record<Tempo, string[]> = {
   // Must read naturally before "in the N hours to <time>", like the rest.
-  first: ["Activity was recorded", "The desk recorded activity"],
-  quiet: ["Nothing kinetic reached the desk"],
+  first: ["Fighting was reported", "Activity was reported"],
+  quiet: ["No fighting was reported"],
   steady: ["The tempo held roughly steady", "Activity ran at about the same level"],
   up: ["The tempo picked up", "Activity rose"],
   down: ["The tempo eased", "Activity fell back"],
@@ -146,7 +146,7 @@ export function composeStatus(input: StatusInput): { line: string; quiet: boolea
   if (tempo === "quiet") {
     return {
       line:
-        `Nothing kinetic reached the desk in the ${hours} hours to ${windowEnd}. ` +
+        `No fighting was reported in the ${hours} hours to ${windowEnd}. ` +
         `Front lines are reported unchanged, and no side claimed a move.`,
       quiet: true,
     };
@@ -158,7 +158,7 @@ export function composeStatus(input: StatusInput): { line: string; quiet: boolea
   const head = pick(TEMPO_PHRASE[tempo], seed);
   const comparison =
     prev && kineticTotal(prev) > 0 && tempo !== "first"
-      ? `, ${num(total)} logged incidents against ${num(kineticTotal(prev))} in the window before`
+      ? `, ${num(total)} reported incidents against ${num(kineticTotal(prev))} in the window before`
       : total
         ? `, across ${plural(total, "incident")}`
         : "";
@@ -168,7 +168,7 @@ export function composeStatus(input: StatusInput): { line: string; quiet: boolea
   const bits = activityClause(now);
   if (active.length === 1) {
     sentences.push(
-      `Almost all of it came from ${listFronts([active[0].name])}, where the desk logged ${activityClause(active[0])}.`,
+      `Almost all of it came from ${listFronts([active[0].name])}: ${activityClause(active[0])}.`,
     );
   } else if (active.length >= 4) {
     sentences.push(
@@ -181,7 +181,7 @@ export function composeStatus(input: StatusInput): { line: string; quiet: boolea
       `The heaviest reporting came from ${listFronts(active.map((f) => f.name))}, comprising ${bits}.`,
     );
   } else if (bits) {
-    sentences.push(`It comprised ${bits}, none of it tied to a front the desk tracks.`);
+    sentences.push(`It comprised ${bits}, none of it on the main fronts.`);
   }
 
   /* Sentence 3 — the one thing that most changes the picture, if anything did. */
@@ -213,7 +213,7 @@ function thirdLine(input: StatusInput): string {
     return `The maritime and energy corridor featured again, with ${plural(
       now.maritime,
       "incident",
-    )} logged at sea or against port infrastructure.`;
+    )} at sea or against port infrastructure.`;
   }
   if (now.alerts >= 2) {
     return `The Saudi home front was under alert ${plural(now.alerts, "time")} in the window.`;
@@ -250,7 +250,7 @@ export function composeFront(input: FrontInput): string {
   }
 
   sentences.push(
-    `In the ${hours} hours to ${windowEnd} the desk logged ${activityClause(front)}${
+    `In the ${hours} hours to ${windowEnd} there were ${activityClause(front)}${
       front.killed ? `, with at least ${num(front.killed)} reported killed` : ""
     }.`,
   );

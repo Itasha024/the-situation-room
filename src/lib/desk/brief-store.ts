@@ -18,7 +18,9 @@
  */
 
 import type { LiveReport } from "./types.ts";
-import { type Brief, type BriefHistory, buildBrief, briefWindow } from "./brief.ts";
+import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront } from "./brief.ts";
+import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
+import { writeProse } from "./prose.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshTally } from "./tally.ts";
 
@@ -59,12 +61,41 @@ export async function refreshBrief(
         prevWindow: saved.brief.numbers,
         prevFronts: Object.fromEntries(
           (saved.brief.fronts || []).map((f) => [f.id, f]),
-        ) as BriefHistory["prevFronts"],
+        ) as unknown as BriefHistory["prevFronts"],
         streaks: bumpStreaks(saved),
       }
     : {};
 
+  // Fronts opened for new clusters of fighting over the last 48 hours.
+  const all = reports.map((r) => r as unknown as LiveReport);
+  const extraFronts = updateExtraFronts(
+    all,
+    (await store.getJson<ExtraFront[]>(EXTRA_FRONTS_KEY)) ?? [],
+    coveredByTrackedFront,
+    now,
+  );
+  await store.putJson(EXTRA_FRONTS_KEY, extraFronts);
+  history.extraFronts = extraFronts;
+
   const brief = buildBrief(inWindow, now, history);
+  // The prose is written from the cards; the composed lines stay where the
+  // model gave nothing usable.
+  try {
+    const prose = await writeProse(
+      inWindow,
+      brief.fronts.map((f) => ({
+        id: f.id,
+        name: f.name,
+        incidents: f.strikes + f.ground + f.alerts + f.maritime,
+        previous: saved?.brief.fronts?.find((p) => p.id === f.id)?.line || "",
+      })),
+      saved?.brief.situation?.line || "",
+    );
+    if (prose?.situation) brief.situation = { ...brief.situation, line: prose.situation };
+    for (const f of brief.fronts) if (prose?.fronts[f.id]) f.line = prose.fronts[f.id];
+  } catch (err) {
+    console.error("[desk] prose failed:", err instanceof Error ? err.message : err);
+  }
   await store.putJson(BRIEF_KEY, { brief, history } satisfies StoredBrief);
   // The official numbers move on the same 12-hour clock. A failed fetch keeps
   // the last tally; it must never cost the brief.

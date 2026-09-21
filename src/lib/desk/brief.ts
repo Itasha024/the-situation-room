@@ -21,6 +21,7 @@ import {
   kineticTotal,
 } from "./synthesis.ts";
 import { num } from "./wire-style.ts";
+import { type ExtraFront, inExtraFront } from "./new-fronts.ts";
 
 export const CADENCE_HOURS = 12;
 
@@ -96,12 +97,18 @@ const FRONT_MATCH: { id: FrontId; name: string; re: RegExp }[] = [
   { id: "energy", name: "Energy and shipping", re: /Yanbu|Aramco|Abqaiq|Ras Tanura|crude|pipeline|tanker|shipping|Suez|Red Sea corridor/i },
 ];
 
+/** Does a tracked front already cover this report? */
+export function coveredByTrackedFront(r: LiveReport): boolean {
+  const blob = `${r.place || ""} ${r.summary} ${r.text}`;
+  return FRONT_MATCH.some(({ re }) => re.test(blob));
+}
+
 /* ------------------------------------------------------------------ *
  * The brief
  * ------------------------------------------------------------------ */
 
 export type FrontActivity = {
-  id: FrontId;
+  id: string;
   name: string;
   strikes: number;
   ground: number;
@@ -111,6 +118,9 @@ export type FrontActivity = {
   wounded: number;
   /** One sentence of derived activity, or "" when the window was quiet. */
   line: string;
+  /** A front opened for a new cluster of fighting (new-fronts.ts): its map spot. */
+  extra?: boolean;
+  spot?: [number, number];
 };
 
 export type Brief = {
@@ -185,9 +195,11 @@ export type BriefHistory = {
   /** Theatre-wide counts from the previous window. */
   prevWindow?: WindowCounts | null;
   /** Previous-window counts per front id. */
-  prevFronts?: Partial<Record<FrontId, WindowCounts>>;
+  prevFronts?: Partial<Record<string, WindowCounts>>;
   /** Consecutive windows each front has been active. */
-  streaks?: Partial<Record<FrontId, number>>;
+  streaks?: Partial<Record<string, number>>;
+  /** Fronts opened for new clusters of fighting. */
+  extraFronts?: ExtraFront[];
   /** Control units that changed hands in this window. */
   controlMoves?: { place: string; to: string }[];
 };
@@ -197,7 +209,7 @@ export function buildBrief(
   now = new Date(),
   history: BriefHistory = {},
 ): Brief {
-  const { prevWindow = null, prevFronts, streaks, controlMoves } = history;
+  const { prevWindow = null, prevFronts, streaks, controlMoves, extraFronts = [] } = history;
   const { updatedAt, nextUpdateAt, startedAt } = briefWindow(now);
   const start = Date.parse(startedAt);
   const inWindow = reports.filter((r) => {
@@ -215,8 +227,10 @@ export function buildBrief(
   };
   const cas = tally(inWindow);
 
-  const fronts: FrontActivity[] = FRONT_MATCH.map(({ id, name, re }) => {
-    const rows = inWindow.filter((r) => re.test(`${r.place || ""} ${r.summary} ${r.text}`));
+  const tracked = FRONT_MATCH.map(({ id, name, re }) => ({ id, name, spot: undefined as [number, number] | undefined, has: (r: LiveReport) => re.test(`${r.place || ""} ${r.summary} ${r.text}`) }));
+  const opened = extraFronts.map((x) => ({ id: x.id, name: x.name, spot: x.spot, has: (r: LiveReport) => inExtraFront(r, x) }));
+  const fronts: FrontActivity[] = [...tracked, ...opened].map(({ id, name, spot, has }) => {
+    const rows = inWindow.filter(has);
     const f: FrontActivity = {
       id,
       name,
@@ -227,11 +241,12 @@ export function buildBrief(
       killed: tally(rows).killed,
       wounded: tally(rows).wounded,
       line: "",
+      ...(spot ? { extra: true, spot } : {}),
     };
     f.line = composeFront({
       front: { ...f, reports: rows.length, id, name },
       prev: prevFronts?.[id] ?? null,
-      standing: FRONT_STANDING[id] || "",
+      standing: FRONT_STANDING[id as FrontId] || "",
       windowEnd: fmtWindow(updatedAt),
       hours: CADENCE_HOURS,
       activeStreak: streaks?.[id],
@@ -277,10 +292,10 @@ export function buildBrief(
     fronts,
     numbers: {
       line: numbersBits
-        ? `Logged by this desk in the ${CADENCE_HOURS} hours to ${fmtWindow(updatedAt)}: ${numbersBits}${
+        ? `Reported in the ${CADENCE_HOURS} hours to ${fmtWindow(updatedAt)}: ${numbersBits}${
             cas.killed ? `, with at least ${num(cas.killed)} reported killed` : ""
           }${cas.wounded ? ` and at least ${num(cas.wounded)} wounded` : ""}.`
-        : `No kinetic activity was logged by this desk in the ${CADENCE_HOURS} hours to ${fmtWindow(updatedAt)}.`,
+        : `No fighting was reported in the ${CADENCE_HOURS} hours to ${fmtWindow(updatedAt)}.`,
       ...counts,
       killed: cas.killed,
       wounded: cas.wounded,

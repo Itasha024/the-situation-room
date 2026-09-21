@@ -1916,7 +1916,7 @@ function highlightFrontOnMap(front) {
 }
 
 function showFrontFloat(idx, anchor, d) {
-  const fronts = [...(d.fronts || [])].sort((a, b) => (a.importance || 99) - (b.importance || 99));
+  const fronts = allFronts(d);
   const f = fronts[idx];
   const el = document.getElementById('front-float');
   if (!f || !el) return;
@@ -1953,8 +1953,20 @@ function showFrontFloat(idx, anchor, d) {
   placeFrontFloat(anchor);
 }
 
+/**
+ * The tracked fronts, then any the brief opened for a new cluster of fighting
+ * (src/lib/desk/new-fronts.ts), which carry only a map spot.
+ */
+function allFronts(d) {
+  const base = [...(d.fronts || [])].sort((a, b) => (a.importance || 99) - (b.importance || 99));
+  const opened = ((brief && brief.fronts) || [])
+    .filter((f) => f.extra && Array.isArray(f.spot) && !base.some((b) => b.id === f.id))
+    .map((f) => ({ id: f.id, name: f.name, importance: 50, mapFocus: { ids: [], spot: f.spot, spotRadius: 15000 } }));
+  return [...base, ...opened];
+}
+
 function renderFronts(d) {
-  const fronts = [...(d.fronts || [])].sort((a, b) => (a.importance || 99) - (b.importance || 99));
+  const fronts = allFronts(d);
   document.getElementById('fronts').innerHTML = cadenceStamp(true) + fronts.map((f, i) => {
     const act = frontActivity(f.id);
     /*

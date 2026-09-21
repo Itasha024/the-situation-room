@@ -16,8 +16,8 @@ import { anglicise } from "./anglicise.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
 import type { DeskStore } from "./store.ts";
 
-// v2: English names from namedetails; v1 held raw transliterations.
-const CACHE_KEY = "geocode-cache-v2";
+// v3: kind-filtered answers; earlier versions held looser guesses.
+const CACHE_KEY = "geocode-cache-v3";
 const UA = "yemen-war-desk/1.0 (+https://yemen-war-desk.vercel.app)";
 /** Lookups per tick, at one a second, so a busy tick stays short. */
 export const GEOCODE_BUDGET = 10;
@@ -29,7 +29,14 @@ const AGREE_KM = 40;
 export type GeoHit = { name: string; lat: number; lng: number };
 type Cached = GeoHit | { miss: true };
 
-type NominatimRow = { lat: string; lon: string; name?: string; display_name?: string; namedetails?: Record<string, string> };
+type NominatimRow = {
+  lat: string;
+  lon: string;
+  name?: string;
+  display_name?: string;
+  addresstype?: string;
+  namedetails?: Record<string, string>;
+};
 
 function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const r = Math.PI / 180;
@@ -39,18 +46,43 @@ function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }): n
   return 12742 * Math.asin(Math.sqrt(h));
 }
 
+/** What the text calls the place, and the OpenStreetMap kinds that match it. */
+const KINDS: [RegExp, string[]][] = [
+  [/مديري(?:ة|ه|تي)/, ["district", "county"]],
+  [/محافظ(?:ة|ه)/, ["state", "province"]],
+  [/مدين(?:ة|ه)/, ["city", "town"]],
+  [/قري(?:ة|ه)|عزل(?:ة|ه)/, ["village", "hamlet"]],
+];
+
+/** The kinds a text gives a place ("مديرية الظاهر" → district), if any. */
+export function kindIn(sourceText: string, bare: string): string[] | undefined {
+  for (const [re, kinds] of KINDS) {
+    const name = bare.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`(?:${re.source})\\s+(?:[\\u0600-\\u06FF]+\\s+)?${name}`).test(sourceText)) return kinds;
+  }
+  return undefined;
+}
+
 /**
- * Pick the answer that fits, or none. Pure, so the rule is testable: near the
- * named governorate when there is one; otherwise only an unambiguous answer.
+ * Pick the answer that fits, or none. Pure, so the rule is testable.
+ *   kind     when the text says what the place is, only answers of that kind
+ *   near     when the text names a governorate, the answer must lie near it
+ *   else     only an unambiguous answer: one of its kind, or all in one spot
  */
-export function pickHit(rows: NominatimRow[], near: Place | undefined): GeoHit | null {
-  const pts = rows
-    .map((x) => ({ lat: Number(x.lat), lng: Number(x.lon), name: String(x.namedetails?.["name:en"] || x.name || x.display_name || "").split(",")[0].trim() }))
+export function pickHit(rows: NominatimRow[], near: Place | undefined, kinds?: string[]): GeoHit | null {
+  let pts = rows
+    .map((x) => ({
+      lat: Number(x.lat),
+      lng: Number(x.lon),
+      kind: String(x.addresstype || ""),
+      name: String(x.namedetails?.["name:en"] || x.name || x.display_name || "").split(",")[0].trim(),
+    }))
     .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.name);
+  if (kinds) pts = pts.filter((p) => kinds.includes(p.kind));
   if (!pts.length) return null;
   const chosen = near
     ? pts.find((p) => km(p, near) <= NEAR_KM)
-    : pts.every((p) => km(p, pts[0]) <= AGREE_KM)
+    : (kinds && pts.length === 1) || pts.every((p) => km(p, pts[0]) <= AGREE_KM)
       ? pts[0]
       : undefined;
   if (!chosen) return null;
@@ -61,7 +93,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function nominatim(q: string): Promise<NominatimRow[] | null> {
   const url =
-    "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&namedetails=1&countrycodes=ye,sa&accept-language=en&q=" +
+    "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&namedetails=1&countrycodes=ye,sa&accept-language=en&q=" +
     encodeURIComponent(q);
   try {
     const res = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(8000) });
@@ -76,7 +108,7 @@ async function nominatim(q: string): Promise<NominatimRow[] | null> {
 const KIND_PREFIX = /^(?:مديرية|مديريه|محافظة|محافظه|مدينة|مدينه|منطقة|منطقه|قرية|قريه|جبهة|جبهه)\s+/;
 
 /** Words the model sometimes returns as a "target" that name no place. */
-const GENERIC = /^(?:مواقع|موقع|تحصينات|مناطق|منطقة|تجمعات|مواقع و|أهداف|هدف|مدنيين|منازل|مزارع|أحياء|قرى)(?:\s|$)/;
+const GENERIC = /^(?:مواقع|موقع|تحصينات|مناطق|منطقة|تجمعات|أهداف|هدف|مدنيين|منازل|مزارع|أحياء|قرى)(?:\s|$)/;
 
 export type NeedsPlace = { targets: string[]; sourceText: string; apply: (hit: GeoHit) => void };
 
@@ -96,25 +128,18 @@ export async function geocodeJobs(store: DeskStore, jobs: NeedsPlace[]): Promise
       // A place the gazetteer knows was left unpinned for a reason (unclear
       // roles, not in the text); and "positions", "areas" are not places.
       if (placesIn(bare).length || GENERIC.test(bare)) continue;
-      const key = `${bare}|${near?.name ?? ""}`;
+      const kinds = kindIn(job.sourceText, bare);
+      const key = `${bare}|${near?.name ?? ""}|${kinds?.[0] ?? ""}`;
       let hit = cache[key];
       if (!hit) {
         if (asked >= GEOCODE_BUDGET) continue;
         if (asked) await sleep(1100);
         asked += 1;
-        const rows = await nominatim(near ? `${bare}, ${near.name}` : bare);
+        // The bare name: "مديرية الظاهر" as a query misses the district that
+        // "الظاهر" finds. The kind filter does that job instead.
+        const rows = await nominatim(bare);
         if (!rows) continue; // A failed request is not an answer; asked again later.
-        let found = pickHit(rows, near);
-        if (!found && near) {
-          // "الظاهر, Saada" can miss where the bare name finds it near Saada.
-          if (asked >= GEOCODE_BUDGET) continue;
-          await sleep(1100);
-          asked += 1;
-          const again = await nominatim(bare);
-          if (!again) continue;
-          found = pickHit(again, near);
-        }
-        hit = found ?? { miss: true };
+        hit = pickHit(rows, near, kinds) ?? { miss: true };
         cache[key] = hit;
         dirty = true;
       }

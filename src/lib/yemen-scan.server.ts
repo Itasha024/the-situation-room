@@ -74,7 +74,8 @@ const RSS: RssFeed[] = [
   { id: "aawsat", url: gnews(`site:aawsat.com ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C_AAWSAT },
   { id: "aawsat-me", url: gnews(`site:aawsat.com (الشرق الأوسط) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C_AAWSAT },
   { id: "akhbar", url: gnews(`site:al-akhbar.com ${YE_AR} when:2d`, "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C_AKHBAR },
-  { id: "akhbar-home", url: "https://www.al-akhbar.com/", name: "Al-Akhbar", cadence: C_AKHBAR, mode: "homepage-pdf" },
+  // No homepage/PDF source: al-akhbar.com answers every automated request with
+  // a Cloudflare bot challenge (403), so Al-Akhbar comes through Google News.
   { id: "erem", url: gnews(`site:eremnews.com ${YE_AR} when:2d`, "ar", "AE", "AE:ar"), name: "Erem News", cadence: C3H },
   { id: "alhurra", url: gnews(`site:alhurra.com ${YE_AR} when:2d`, "ar", "US", "US:ar"), name: "Alhurra", cadence: C3H },
   { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C3H },
@@ -653,7 +654,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         }
         // Bumped to run once more after the geocoder landed, to pin what the
         // first pass published without a place.
-        const replayKey = `replay3:${ch.id}`;
+        const replayKey = `replay4:${ch.id}`;
         if (ok && REPLAY.channels.has(ch.id) && now < REPLAY.until && !state.lastScanAt[replayKey]) {
           for (let page = 0; page < REPLAY.pages; page += 1) {
             const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));

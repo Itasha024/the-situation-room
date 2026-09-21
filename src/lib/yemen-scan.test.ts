@@ -306,6 +306,28 @@ test("another outlet retelling a stored card joins its Also, even as a follow-up
   assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Shin Persian", url: "https://t.me/shin_persian/10302" }]);
 });
 
+test("a card written from the original source takes no Also from the outlets relaying it", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, score: 1, tags: [] } as const;
+  const home = { ...base, fp: "live-t-me-naya-foriraq-91160", url: "https://www.reuters.com/x", source: "Reuters", at: "2026-09-21T13:28:00Z", type: "diplomacy", summary: "Trump made no pledge of military support to Yemen's president in a call on Houthi advances, sources say", text: "US President Donald Trump spoke by phone with Yemen's president on Sunday about the Houthi advances." };
+  const relay = { ...base, fp: "b", url: "https://t.me/shin_persian/10302", source: "Shin Persian", at: "2026-09-21T14:56:00Z", type: "diplomacy", summary: "Trump made no pledge of military support to Yemen's president in a call, sources say", text: "US President Donald Trump spoke with Yemen's president on Sunday.", duplicateOf: "live-t-me-naya-foriraq-91160" };
+  const reports = [relay] as never[];
+  foldIntoPublished(reports, new Set(), [home] as never[]);
+  assert.equal((reports as unknown[]).length, 0);
+  assert.equal((home as { alsoReportedBy?: unknown }).alsoReportedBy, undefined);
+});
+
+test("a card links the article itself: no tracking parameters, never a section page", async () => {
+  const { cleanUrl, isSectionFront } = await import("./desk/gnews.ts");
+  assert.equal(cleanUrl("https://www.nytimes.com/2026/09/20/us/politics/x.html?smid=url-share&utm_source=tw#top"), "https://www.nytimes.com/2026/09/20/us/politics/x.html");
+  assert.equal(cleanUrl("https://www.almashhad.news/news/495814?page=2"), "https://www.almashhad.news/news/495814?page=2");
+  assert.ok(isSectionFront("https://www.nytimes.com/spotlight/donald-trump?page"));
+  assert.ok(isSectionFront("https://www.reuters.com/world/"));
+  assert.ok(!isSectionFront("https://www.reuters.com/world/middle-east/trump-call-2026-09-21/"));
+  assert.ok(!isSectionFront("https://www.almashhad.news/news/495814"));
+  assert.ok(!isSectionFront("https://www.spa.gov.sa/w2680640"));
+});
+
 test("one post forwarded by two channels has one copy key", async () => {
   const { copyKey } = await import("./desk/copies.ts");
   const a = "عضو المكتب السياسي لحركة أنصار الله ضيف الله الشامي: الطائرات السعودية تستهدف سوقاً شعبياً في مديرية ذو باب في محافظة تعز.";

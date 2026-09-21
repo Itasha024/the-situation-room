@@ -6,6 +6,30 @@
 
 export const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
+/** The article's own address: tracking parameters and fragment dropped. */
+export function cleanUrl(u: string): string {
+  try {
+    const url = new URL(u);
+    for (const k of [...url.searchParams.keys()]) {
+      if (/^(?:utm_.*|smid|smtyp|ref|oc|fbclid|gclid|cmpid|mod|taid)$/i.test(k)) url.searchParams.delete(k);
+    }
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return u;
+  }
+}
+
+/** A section, topic or home page rather than one article. */
+export function isSectionFront(u: string): boolean {
+  try {
+    const path = new URL(u).pathname.replace(/\/+$/, "");
+    return !path || /^\/(?:spotlight|topics?|tags?|section|category|author|hub|live-news)(?:\/|$)/i.test(path) || (!/[/-]\w+[/-]/.test(path) && !/\d{4,}/.test(path));
+  } catch {
+    return true;
+  }
+}
+
 export const isGnews = (u: string) => /^https:\/\/news\.google\.com\/rss\/articles\//.test(u);
 
 /**
@@ -39,7 +63,7 @@ export async function resolveGoogleNews(link: string): Promise<string> {
     });
     const text = await res.text();
     const url = /garturlres\\",\\"(https?:[^"\\]+)/.exec(text)?.[1] ?? "";
-    return /^https?:\/\/(?!news\.google\.)/.test(url) ? url : "";
+    return /^https?:\/\/(?!news\.google\.)/.test(url) && !isSectionFront(url) ? url : "";
   } catch {
     return "";
   }

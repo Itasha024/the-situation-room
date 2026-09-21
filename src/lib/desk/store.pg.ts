@@ -207,7 +207,9 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             // relay's version: headline, body, source and link.
             if (r.tags?.includes("original")) {
               await sql`
-                update desk_report set summary = ${r.summary}, body = ${r.text}, url = ${r.url}, source = ${r.source}, citing = null
+                update desk_report set summary = ${r.summary}, body = ${r.text}, url = ${r.url}, source = ${r.source}, citing = null,
+                       -- Written from the original: the outlets that relayed it are no "Also".
+                       also_reported_by = null
                  where fp = ${r.fp} and (summary is distinct from ${r.summary} or url is distinct from ${r.url})
               `;
             }

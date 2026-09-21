@@ -17,7 +17,7 @@ import { refreshBrief } from "./desk/brief-store.ts";
 import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, queueForReading } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
-import { isGnews, resolveGoogleNews } from "./desk/gnews.ts";
+import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, traceOrigins } from "./desk/origin.ts";
 import { sameStory, sameWords } from "./desk/copies.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
@@ -350,9 +350,11 @@ const PAYLOAD_RAW_HITS = 400;
 const LEAD_CACHE_KEY = "lead-cache";
 const LEAD_CACHE_MAX = 3000;
 /** url → the lead paragraph pulled from it ("" when the page had none). */
-type LeadCache = Record<string, { lead: string; at: number; real?: string }>;
+type LeadCache = Record<string, { lead: string; at: number; real?: string; tries?: number }>;
 /** Google News links resolved to their article per cycle (two requests each). */
 const GNEWS_RESOLVES = 12;
+/** A Google News item waits this many cycles for its article's address. */
+const GNEWS_HOLD_TRIES = 3;
 
 type RawHit = {
   source: string;
@@ -564,6 +566,9 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     }
     if (!home) continue;
     gone.add(r);
+    // A card written from the original source needs no "Also": the others
+    // only relay it.
+    if (isOriginal(home) || r.citing === home.source) continue;
     const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url }];
     const seen = new Set([home.source]);
     home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);
@@ -571,6 +576,11 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
   }
   for (let i = reports.length - 1; i >= 0; i -= 1) if (gone.has(reports[i])) reports.splice(i, 1);
   return [...touched];
+}
+
+/** Written from the original source's own article: a relay's card moved to it. */
+export function isOriginal(r: LiveReport): boolean {
+  return !!r.tags?.includes("original") || (r.fp.startsWith("live-t-me-") && !r.url.startsWith("https://t.me/"));
 }
 
 /** A speaker silent this long has finished; the next line starts a new thread. */
@@ -781,14 +791,16 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   };
   const toFetch: RawHit[] = [];
   for (const h of hits) {
-    if (h.fromTg || h.text.length >= 500 || /\.pdf(\?|$)/i.test(h.url)) continue;
+    // A Google News item is resolved to its article even with a long teaser:
+    // Google's redirect sends readers to a robot check.
+    if (h.fromTg || (h.text.length >= 500 && !isGnews(h.url)) ||/\.pdf(\?|$)/i.test(h.url)) continue;
     const cached = leadCache[h.url];
     // A Google News entry cached before links were resolved holds Google's
     // own page, not the article: it is fetched again.
     if (cached && !(isGnews(h.url) && !cached.real)) {
       addLead(h, cached.lead);
       // The card links the publisher's article, not Google's redirect.
-      if (cached.real) h.url = cached.real;
+      if (cached.real) h.url = cleanUrl(cached.real);
     } else toFetch.push(h);
   }
   // Google News items first need their article's address: a few per cycle,
@@ -799,17 +811,25 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     fetchable.map(async (h) => {
       const key = h.url;
       const real = isGnews(key) ? await resolveGoogleNews(key) : "";
-      if (isGnews(key) && !real) return; // retried next cycle
+      if (isGnews(key) && !real) {
+        leadCache[key] = { lead: "", at: now, tries: (leadCache[key]?.tries ?? 0) + 1 };
+        return; // retried next cycle
+      }
       const html = await fetchText(real || key, 6000);
       if (!html && !real) return; // not cached: a failed fetch is retried next cycle
       // A paywalled article still yields its address; its lead may be empty.
       const lead = html ? extractLead(html) : "";
       leadCache[key] = { lead, at: now, ...(real ? { real } : {}) };
       addLead(h, lead);
-      if (real) h.url = real;
+      if (real) h.url = cleanUrl(real);
     }),
   );
   await saveLeadCache(leadCache);
+  // An item still on Google's redirect waits a few cycles for its address,
+  // then goes out as it is rather than be missed.
+  const resolved = hits.filter((h) => !isGnews(h.url) || (leadCache[h.url]?.tries ?? 0) >= GNEWS_HOLD_TRIES);
+  hits.length = 0;
+  hits.push(...resolved);
 
   /**
    * Two stages. The keyword gate (via `toLiveReport`) is only a cheap
@@ -950,7 +970,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     if (!others.length) continue;
     // Distinct outlets only: three posts from one channel is one account.
     const outlets = new Map<string, string>();
-    for (const o of others) if (o.source !== lead.source) outlets.set(o.source, o.url);
+    for (const o of others) if (o.source !== lead.source && o.citing !== lead.source) outlets.set(o.source, o.url);
+    if (isOriginal(lead)) outlets.clear();
     if (outlets.size) {
       lead.alsoReportedBy = [...outlets].map(([source, url]) => ({ source, url })).slice(0, 6);
     }

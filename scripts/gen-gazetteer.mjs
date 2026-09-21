@@ -13,7 +13,7 @@ import { writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { PLACES } from "../src/lib/desk/gazetteer.ts";
+import { PLACES, shortWhere } from "../src/lib/desk/gazetteer.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "public", "gazetteer.json");
@@ -28,6 +28,9 @@ const payload = {
     kind: p.kind,
     country: p.country,
     ...(p.region ? { region: p.region } : {}),
+    // The card-length locator, resolved here so the browser never has to
+    // re-derive it and drift from the server's wording.
+    ...(shortWhere(p) ? { where: shortWhere(p) } : {}),
     ...(p.wellKnown ? { wellKnown: true } : {}),
     ...(p.dateline ? { dateline: p.dateline } : {}),
     aliases: p.aliases,

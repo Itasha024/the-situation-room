@@ -19,9 +19,19 @@
  * two never disagree about which world they are in.
  */
 
+import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import type { LiveReport, ScanPayload, ScanState } from "./types.ts";
 
 export type StoreKind = "fs" | "pg";
+
+/**
+ * What the desk has accumulated, newest first — the whole feed, not one cycle.
+ */
+export type DeskSlice = {
+  updatedAt: string | null;
+  reports: DeskReportRow[];
+  events: DeskEventRow[];
+};
 
 export interface DeskStore {
   readonly kind: StoreKind;
@@ -47,6 +57,19 @@ export interface DeskStore {
    * instead of claiming success it did not achieve.
    */
   mergeIntoDesk(reports: LiveReport[]): Promise<MergeResult>;
+
+  /**
+   * Read the accumulated feed back out, newest first.
+   *
+   * WHY THIS EXISTS: `mergeIntoDesk` was write-only on the Postgres side. The
+   * page renders the build-time `data.json` plus the last scan payload, so
+   * deployed, every report the desk collected sat in `desk_report` and was
+   * never shown — the feed could only ever be as long as one cycle, and a
+   * report that scrolled out of a Telegram channel's recent window disappeared
+   * from the public desk while still being stored. This is the read that makes
+   * the feed a continuous stream instead of a rolling snapshot.
+   */
+  recentDesk(limit?: number): Promise<DeskSlice>;
 }
 
 export type MergeResult = {

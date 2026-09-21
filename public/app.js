@@ -70,8 +70,16 @@ const CATEGORY_LABEL = {
   statement: 'Statement',
 };
 
-const INITIAL_REPORTS = 8;
-const MORE_STEP = 12;
+/*
+ * How much of the feed is on screen before you ask for more.
+ *
+ * Eight cards covered barely half an hour of a busy evening, which made a desk
+ * that had collected all day look like it had filed twice. The feed is the
+ * heart of this desk; it should read as a running wire, so it opens deep and
+ * pages in large steps.
+ */
+const INITIAL_REPORTS = 30;
+const MORE_STEP = 24;
 
 /* ---------------------------------------------------------------- *
  * Gazetteer — canonical English place names, loaded from the file the
@@ -105,35 +113,38 @@ function placeNamesByLength() {
 /**
  * Add a short locator the first time an unfamiliar place appears in body copy.
  * Sanaa, Aden, Riyadh, Jeddah and the Red Sea are never glossed.
+ *
+ * Short is the whole point. The previous version inserted the full `region`
+ * description — "Taiz, a city and governorate in south-western Yemen" — which
+ * read as padding and, inside a list of places, left the reader unable to tell
+ * where the description ended: "hit positions in Taiz, a city and governorate
+ * in south-western Yemen, Al-Jawf and Marib". `where` comes from the same
+ * `shortWhere()` the server uses, so the two can never drift.
  */
 function annotatePlaces(text) {
   let s = String(text || '');
   if (!s) return s;
-  const used = new Set();
   for (const name of placeNamesByLength()) {
     const meta = PLACE_META[name];
-    if (!meta || meta.wellKnown || !meta.region) continue;
-    if (used.has(name)) continue;
+    if (!meta || meta.wellKnown || !meta.where) continue;
     const idx = s.indexOf(name);
     if (idx < 0) continue;
-    // Do not gloss a name that is already followed by a comma-clause.
-    const after = s.slice(idx + name.length, idx + name.length + 3);
-    if (/^,\s*(a|an|the)\b/.test(after)) continue;
-    // Do not gloss a place inside a speaker's title. "the governor of Marib,
-    // a city and governorate in east-central Yemen, … said" buries the verb
-    // and tells the reader something the title already told them.
+    // Already followed by a clause of its own — leave it alone.
+    const after = s.slice(idx + name.length, idx + name.length + 6);
+    if (/^\s*,/.test(after) || /^\s+(?:in|on|off|near|beside)\b/i.test(after)) continue;
+    // Never gloss inside a speaker's title: "the governor of Marib in
+    // east-central Yemen said" buries the verb behind geography the title
+    // already implied.
     const before = s.slice(Math.max(0, idx - 12), idx);
-    if (/\b(of|in|for)\s+$/i.test(before) && idx < 90) continue;
-    // Some regions are already a full phrase ("a city and governorate in
-    // south-western Yemen"), others a bare locator ("in northern Sanaa").
-    // Prepending the kind to the first produced "Taiz, a city a city and…".
-    // Mirrors withLocator() in the gazetteer — keep the two in step.
-    const article = /^[aeiou]/i.test(meta.kind) ? 'an' : 'a';
-    const gloss = /^(an?|the)\s/i.test(meta.region)
-      ? `${name}, ${meta.region}`
-      : `${name}, ${article} ${meta.kind} ${meta.region}`;
+    if (/\b(of|for)\s+$/i.test(before) && idx < 90) continue;
+    // Never gloss a place that is part of a list — the locator would read as
+    // if it described the whole list rather than the one place.
+    if (/^\s*(?:,|and\b)/.test(after)) continue;
+
+    const selfPrepositioned = /^(?:on|off|beside|near|inside|overlooking|between)\b/i.test(meta.where)
+      || /^(?:north|south|east|west|north-east|north-west|south-east|south-west)\s+of\b/i.test(meta.where);
+    const gloss = selfPrepositioned ? `${name} ${meta.where}` : `${name} in ${meta.where}`;
     s = s.slice(0, idx) + gloss + s.slice(idx + name.length);
-    used.add(name);
     break; // one locator per paragraph keeps the copy readable
   }
   return s;
@@ -540,8 +551,10 @@ function formatConfidence(r) {
   const n = Number(r.confidence);
   if (!Number.isFinite(n)) return '';
   const shown = (Math.round(n * 10) / 10).toFixed(1);
-  const tier = r.tier ? ` · ${r.tier === 'agency' ? 'wire report' : r.tier === 'claim' ? 'party claim' : 'single source'}` : '';
-  return `Confidence ${shown}/5${tier}`;
+  // No tier label. "party claim" / "single source" / "wire report" told the
+  // reader how the desk rates its own sourcing, which is noise on the card —
+  // the outlet is named beside it and the link is one click away.
+  return `Confidence ${shown}/5`;
 }
 
 /* ---------------------------------------------------------------- *
@@ -560,12 +573,11 @@ function hasNonLatinScript(s) {
 }
 
 /**
- * Last-resort composer for a row that arrived without usable English. It asserts
- * only what the row's own fields support — type, place, source — and hedges,
- * because a row with no copy is by definition unconfirmed.
+ * Last-resort composer for a row that arrived without usable English. It
+ * asserts only what the row's own fields support — type and place — and says
+ * nothing more, because a row with no copy supports nothing more.
  */
 function fallbackReport(r) {
-  const src = canonicalSourceName(primaryOutlet(sourceOf(r))) || 'a single source';
   const place = r && r.place ? String(r.place) : '';
   const where = place ? ` in ${place}` : '';
   const kind = (r && r.type) || 'statement';
@@ -583,8 +595,10 @@ function fallbackReport(r) {
   } else {
     summary = `Statement on the fighting${where || ' in Yemen'}`;
   }
-  const text = `${summary}. ${src} carried the report. The account could not be independently verified.`;
-  return { summary, text };
+  // Neither "X carried the report" nor "could not be independently verified"
+  // belongs in the copy: the outlet is already shown on the card, and a blanket
+  // caveat on every line says nothing about any particular one.
+  return { summary, text: `${summary}.` };
 }
 
 /** Headline for a feed card or map popup. */
@@ -767,12 +781,30 @@ async function fetchData() {
 
 function stripNikud(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
 
-/** One line per story per day, so a wave of copy-cat posts collapses. */
+/**
+ * Collapse a wave of copy-cat posts into one card — but only a wave.
+ *
+ * This used to key on the whole DAY, so every strike reported in Marib between
+ * midnight and midnight became a single card no matter how many separate
+ * engagements they were. A day of fighting rendered as one line, which is the
+ * opposite of what a running feed is for.
+ *
+ * Copy-cat posts arrive within minutes of each other, so a three-hour window
+ * catches them while leaving a morning strike and an evening strike as the two
+ * distinct events they are. Overnight Saudi alerts keep their own all-night
+ * bucket below, because those genuinely are one story either side of midnight.
+ */
 function feedClusterKey(r) {
   const s = `${r.place || ''} ${r.summary || ''} ${r.text || ''}`;
   const ts = reportTime(r);
   let ymd = jerusalemYmd(ts) || String(r.at || '').slice(0, 10);
   const t = String(r.type || 'x').toLowerCase();
+  const hourOf = (v) => {
+    const h = parseInt(String(v || '').slice(11, 13), 10);
+    return Number.isFinite(h) ? h : 0;
+  };
+  // Three-hour slot, appended to the day below for everything but alerts.
+  const slot = Math.floor(hourOf(ts || r.at) / 3);
   let b = 'other';
   if (/air raid sirens|air defence alerts/i.test(s)) {
     b = 'ksa-alert';
@@ -789,7 +821,10 @@ function feedClusterKey(r) {
   else if (/Hodeidah|Al-Khokha/i.test(s)) b = 'hudaydah';
   else if (/Yanbu|crude|oil|Suez|Aramco/i.test(s) || t === 'economy') b = 'energy';
   else if (/Sanaa/i.test(s)) b = 'sanaa';
-  if (t === 'combat' || t === 'strike' || t === 'economy' || b === 'ksa-alert') return `${ymd}|${t}|${b}`;
+  // An overnight alert wave is one story across the whole night; everything
+  // else is one story only within its three-hour slot.
+  if (b === 'ksa-alert') return `${ymd}|${t}|${b}`;
+  if (t === 'combat' || t === 'strike' || t === 'economy') return `${ymd}|${slot}|${t}|${b}`;
   return r.fp || r.url || s.slice(0, 40);
 }
 
@@ -828,6 +863,66 @@ function sortedReports(d) {
   }
   out.sort((a, b) => (Date.parse(reportTime(b)) || 0) - (Date.parse(reportTime(a)) || 0));
   return out;
+}
+
+/*
+ * Everything the clock has collected, as opposed to what the last cycle saw.
+ *
+ * `/data.json` is baked at build time and `/api/scan` returns one cycle, so
+ * without this the feed was a rolling window: a report that scrolled out of a
+ * Telegram channel's recent messages disappeared from the desk even though it
+ * was safely stored. This is the archive that makes the feed continuous.
+ */
+let deskArchive = { reports: [], events: [], updatedAt: null };
+
+async function pullDesk() {
+  try {
+    const res = await fetch('/api/desk?limit=400&ts=' + Date.now());
+    if (!res.ok) return;
+    const body = await res.json();
+    if (!body || body.ok === false) return;
+    deskArchive = {
+      reports: Array.isArray(body.reports) ? body.reports : [],
+      events: Array.isArray(body.events) ? body.events : [],
+      updatedAt: body.updatedAt || null,
+    };
+  } catch (e) {
+    // The desk still renders from data.json and the live overlay. A failed
+    // archive read costs depth, never the page.
+    console.warn('desk archive', e);
+  }
+}
+
+/**
+ * Fold the archive into the base snapshot.
+ *
+ * Locally the archive IS data.json, so every row dedupes away and this is a
+ * no-op — which is the point: one code path, both worlds.
+ */
+function applyDeskArchive(base) {
+  if (!base || !deskArchive.reports.length) return base;
+  const canon = (u) => String(u || '').split('?')[0].replace(/\/$/, '').toLowerCase();
+
+  const haveUrl = new Set((base.reports || []).map((r) => canon(r.url)));
+  const haveFp = new Set((base.reports || []).map((r) => String(r.fp || '')));
+  const extra = deskArchive.reports.filter((r) => {
+    if (!r || !r.url) return false;
+    const u = canon(r.url);
+    if (haveUrl.has(u) || haveFp.has(String(r.fp || ''))) return false;
+    haveUrl.add(u);
+    haveFp.add(String(r.fp || ''));
+    return true;
+  });
+  if (extra.length) {
+    base.reports = [...extra, ...(base.reports || [])];
+    base.reports.sort((a, b) => (Date.parse(reportTime(b)) || 0) - (Date.parse(reportTime(a)) || 0));
+  }
+
+  const haveEvent = new Set((base.events || []).map((e) => String(e.fp || '')));
+  const newEvents = deskArchive.events.filter((e) => e && e.fp && !haveEvent.has(String(e.fp)));
+  if (newEvents.length) base.events = [...newEvents, ...(base.events || [])];
+
+  return base;
 }
 
 function applyLiveOverlay(base) {
@@ -2716,12 +2811,16 @@ async function refresh(first) {
   if (first) await hydrateSnapshot();
   const liveP = pullLive({ silent: true });
   const briefP = pullBrief();
+  const deskP = pullDesk();
   if (first && !liveOverlay.reports.length) {
     await Promise.race([liveP, new Promise((r) => setTimeout(r, 2000))]);
   }
   if (first) await Promise.race([briefP, new Promise((r) => setTimeout(r, 2500))]);
   const base = await baseP;
-  data = applyLiveOverlay(base);
+  // The archive carries the bulk of the feed, so it is worth a short wait on
+  // first paint rather than letting the page render a stub and jump.
+  await Promise.race([deskP, new Promise((r) => setTimeout(r, first ? 2500 : 1200))]);
+  data = applyLiveOverlay(applyDeskArchive(base));
   if (!miniGeo) {
     try { miniGeo = await fetch('/yemen-mini.json').then((r) => r.json()); }
     catch (e) { miniGeo = { w: 240, h: 280, features: [] }; }

@@ -8,7 +8,7 @@
  */
 
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { after, before, test } from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
@@ -22,7 +22,13 @@ let sql: Sql;
 before(async () => {
   pg = new PGlite({ parsers: { 20: Number, 1082: (v: string) => v } });
   await pg.waitReady;
-  await pg.exec(await readFile("migrations/0002_desk.sql", "utf8"));
+  // Every migration, in order — not a named one. Pinning this to a single file
+  // meant adding `0003` left the test running against a schema the deployed
+  // desk no longer has, and the driver failed against it in a way that looked
+  // like a logic bug.
+  const files = (await readdir("migrations")).filter((f) => f.endsWith(".sql")).sort();
+  assert.ok(files.length > 0, "no migrations found to apply");
+  for (const f of files) await pg.exec(await readFile(`migrations/${f}`, "utf8"));
 
   const run = async <T>(text: string, params: unknown[]): Promise<T[]> => {
     const res = await pg.query<T>(text, params);
@@ -142,6 +148,61 @@ test("a statement is carried but never pinned", async () => {
   assert.equal(res.reportsAdded, 1);
   assert.equal(res.eventsAdded, 0, "pinning a speech to a coordinate tells the reader something untrue");
   assert.deepEqual(res.unplaced, [], "and it is not a gazetteer miss either");
+});
+
+test("what the tick writes, the feed can read back", async () => {
+  // The defect this covers: `mergeIntoDesk` was write-only on the Postgres
+  // side. Rows went in, nothing read them out, and the deployed feed could
+  // only ever show the last scan cycle while the archive sat unused.
+  const store = createPgStore(provider);
+
+  await store.mergeIntoDesk([
+    report({
+      fp: "live-read-1",
+      url: "https://example.com/news/10",
+      at: "2026-09-20T08:00:00+03:00",
+      summary: "Older report",
+    }),
+    report({
+      fp: "live-read-2",
+      url: "https://example.com/news/11",
+      at: "2026-09-20T12:00:00+03:00",
+      summary: "Newer report",
+      alsoReportedBy: [{ source: "Al-Masirah", url: "https://example.com/news/11b" }],
+    }),
+  ]);
+
+  const slice = await store.recentDesk(50);
+  const fps = slice.reports.map((r) => r.fp);
+  assert.ok(fps.includes("live-read-1") && fps.includes("live-read-2"), "both reports come back");
+
+  // Newest first is the only order the feed asks for.
+  const idxNew = fps.indexOf("live-read-2");
+  const idxOld = fps.indexOf("live-read-1");
+  assert.ok(idxNew < idxOld, `newest first expected, got ${JSON.stringify(fps)}`);
+
+  const newer = slice.reports.find((r) => r.fp === "live-read-2") as Record<string, unknown>;
+  // The shape must match what `toDeskReportRow` produces, or the page cannot
+  // tell fs rows and pg rows apart.
+  assert.equal(newer.summary, "Newer report");
+  assert.equal(newer.text, "TAIZ — Fighting was reported.", "body maps back to `text`");
+  assert.equal(typeof newer.at, "string", "timestamps come back as ISO strings, not Dates");
+  assert.deepEqual(
+    newer.alsoReportedBy,
+    [{ source: "Al-Masirah", url: "https://example.com/news/11b" }],
+    "story grouping survives storage",
+  );
+
+  assert.ok(
+    slice.events.some((e) => e.fp === "live-read-2"),
+    "the map pins come back too",
+  );
+});
+
+test("the feed read is bounded, so one request cannot ask for the whole archive", async () => {
+  const store = createPgStore(provider);
+  const slice = await store.recentDesk(1);
+  assert.equal(slice.reports.length, 1);
 });
 
 test("a link to a section front is not a report", async () => {

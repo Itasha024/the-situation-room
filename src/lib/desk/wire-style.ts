@@ -49,15 +49,21 @@
  *    Spell out one through nine, figures from 10 up. Casualty figures always
  *    carry "at least", because first counts are always partial.
  *
- * 6. PLACES GET A LOCATOR THE FIRST TIME, IN THE BODY, NEVER IN THE HEADLINE.
- *    "Kahbub, a hill in Lahj governorate overlooking the Bab al-Mandab strait".
+ * 6. PLACES GET A SHORT LOCATOR THE FIRST TIME, IN THE BODY, NEVER IN THE
+ *    HEADLINE. "Taiz in south-west Yemen", "Kahbub in Lahj governorate" — the
+ *    place and where it is, and nothing else. Not the kind, not a description:
+ *    "Taiz, a city and governorate in south-western Yemen" reads as padding on
+ *    every mention and makes a list of places ambiguous. The full `region`
+ *    description exists for the expanded view only.
  *    Sanaa, Aden, Riyadh, Jeddah, Mecca, the Red Sea are never glossed.
  *
  * 7. THE BODY IS A WIRE LEAD, NOT AN ESSAY.
- *    DATELINE — one sentence of what happened, with attribution.
+ *    DATELINE — one sentence of what happened.
  *    Then at most two sentences of detail: numbers, weapon, denial, context.
- *    If the claim stands on one partisan or anonymous source, the body closes
- *    with "The report could not be independently verified." — once, never twice.
+ *    The desk does NOT name which outlet carried an item in the body, and does
+ *    NOT append "could not be independently verified". The outlet is shown on
+ *    the card with a link; a caveat repeated on every report says nothing about
+ *    any particular one, and reads as boilerplate rather than caution.
  *
  * 8. NO EDITORIALISING, NO SECOND PERSON, NO DESK VOICE.
  *    No "note that", no "importantly", no "as our readers know", no exclamation
@@ -341,24 +347,16 @@ export function tidyHeadline(s: string, cap = 140): string {
   return sentenceCase(t);
 }
 
-/** Body hygiene: sentences end in a stop, no doubled caveats, no source dumps. */
+/** Body hygiene: sentences end in a stop, no source dumps. */
 export function tidyBody(s: string): string {
-  let t = String(s || "")
+  const t = String(s || "")
     .replace(/\s+/g, " ")
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/\.{2,}/g, ".")
     .replace(/…/g, "")
     .trim();
-  // One caveat only, and always last.
-  const caveat = "The report could not be independently verified.";
-  const hits = t.split(caveat).length - 1;
-  if (hits > 1) t = t.split(caveat).join("").replace(/\s{2,}/g, " ").trim() + " " + caveat;
-  if (t && !/[.!?]$/.test(t)) t += ".";
-  return sentenceCase(t);
+  return sentenceCase(t && !/[.!?]$/.test(t) ? `${t}.` : t);
 }
-
-export const UNVERIFIED_CAVEAT = "The report could not be independently verified.";
-export const NO_CONFIRMATION = "There was no immediate confirmation from the other side.";
 
 /* ------------------------------------------------------------------ *
  * 5. Weapons, timing, counts

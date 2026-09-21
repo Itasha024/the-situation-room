@@ -10,8 +10,9 @@
  */
 
 import type { Sql } from "../db.ts";
+import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import { deriveEvents, hasArticlePath } from "./snapshot.ts";
-import type { DeskStore, MergeResult } from "./store.ts";
+import type { DeskSlice, DeskStore, MergeResult } from "./store.ts";
 import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
 
 const SCAN_STATE_KEY = "scan_state";
@@ -87,6 +88,80 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       return writeState(PAYLOAD_KEY, payload);
     },
 
+    /**
+     * The read that was missing. Without it every row written below was stored
+     * and never shown: deployed, the page had only the build-time snapshot and
+     * the last cycle's payload, so the feed silently reset to one cycle's worth
+     * on every scan.
+     *
+     * `at` comes back as a Date from `pg`, so it is normalised to ISO here —
+     * the page compares timestamps as strings.
+     */
+    async recentDesk(limit = 400): Promise<DeskSlice> {
+      const sql = await sqlProvider();
+      const iso = (v: unknown): string =>
+        v instanceof Date ? v.toISOString() : typeof v === "string" ? v : "";
+
+      const reports = await sql<Record<string, unknown>>`
+        select fp, url, at, source, type, summary, body, priority, confidence,
+               score, tier, place, lat, lng, also_reported_by
+          from desk_report
+         order by at desc
+         limit ${limit}
+      `;
+      const events = await sql<Record<string, unknown>>`
+        select fp, at, type, lat, lng, place, label, body, source, url, map_only
+          from desk_event
+         order by at desc
+         limit ${limit}
+      `;
+
+      return {
+        updatedAt: reports.length ? iso(reports[0].at) : null,
+        // Back to the shape `toDeskReportRow` produces, so the page cannot tell
+        // which driver served it.
+        reports: reports.map((r) => {
+          const row: Record<string, unknown> = {
+            fp: r.fp,
+            priority: r.priority,
+            at: iso(r.at),
+            source: r.source,
+            url: r.url,
+            type: r.type,
+            summary: r.summary,
+            text: r.body,
+            live: true,
+            confidence: r.confidence,
+            score: r.score,
+            tier: r.tier,
+          };
+          if (r.place != null) row.place = r.place;
+          if (r.lat != null) {
+            row.lat = r.lat;
+            row.lng = r.lng;
+          }
+          if (r.also_reported_by) row.alsoReportedBy = r.also_reported_by;
+          return row as DeskReportRow;
+        }),
+        events: events.map(
+          (e) =>
+            ({
+              fp: e.fp,
+              at: iso(e.at),
+              type: e.type,
+              lat: e.lat,
+              lng: e.lng,
+              place: e.place ?? undefined,
+              label: e.label,
+              text: e.body ?? undefined,
+              source: e.source ?? undefined,
+              url: e.url ?? undefined,
+              mapOnly: !!e.map_only,
+            }) as DeskEventRow,
+        ),
+      };
+    },
+
     async mergeIntoDesk(reports: LiveReport[]): Promise<MergeResult> {
       const out: MergeResult = { reportsAdded: 0, eventsAdded: 0, unplaced: [] };
       try {
@@ -99,11 +174,13 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           // tick reports real numbers rather than assuming every insert landed.
           const inserted = await sql<{ fp: string }>`
             insert into desk_report
-              (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng)
+              (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
+               also_reported_by)
             values (
               ${r.fp}, ${r.url}, ${r.at}, ${r.source}, ${r.type}, ${r.summary}, ${r.text},
               ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
-              ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null}
+              ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
+              ${r.alsoReportedBy?.length ? JSON.stringify(r.alsoReportedBy) : null}::jsonb
             )
             on conflict do nothing
             returning fp

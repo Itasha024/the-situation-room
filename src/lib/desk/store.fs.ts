@@ -13,8 +13,9 @@
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import { deriveEvents, hasArticlePath, toDeskReportRow } from "./snapshot.ts";
-import type { DeskStore, MergeResult } from "./store.ts";
+import type { DeskSlice, DeskStore, MergeResult } from "./store.ts";
 import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
 
 const PUBLIC_DIR = join(process.cwd(), "public");
@@ -117,6 +118,24 @@ export function createFsStore(): DeskStore {
           `could not write scan payload: ${first.status === "rejected" ? first.reason : "unknown"}`,
         );
       }
+    },
+
+    /**
+     * Locally the accumulated desk IS `data.json` — `mergeIntoDesk` unshifts
+     * into it and the page reads it directly. Reading it back here keeps the
+     * two drivers answering the same question, so `/api/desk` behaves
+     * identically in development and deployed.
+     */
+    async recentDesk(limit = 400): Promise<DeskSlice> {
+      const data = await readJson<DeskSnapshot>(DATA_FILE);
+      if (!data) return { updatedAt: null, reports: [], events: [] };
+      const byAtDesc = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+        String(b.at || "").localeCompare(String(a.at || ""));
+      return {
+        updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null,
+        reports: [...(data.reports ?? [])].sort(byAtDesc).slice(0, limit) as DeskReportRow[],
+        events: [...(data.events ?? [])].sort(byAtDesc).slice(0, limit) as unknown as DeskEventRow[],
+      };
     },
 
     async mergeIntoDesk(reports: LiveReport[]): Promise<MergeResult> {

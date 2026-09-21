@@ -45,11 +45,22 @@ export type Place = {
   kind: PlaceKind;
   country: Country;
   /**
-   * Short geographic locator, written to slot straight into prose:
+   * Full geographic locator, for the EXPANDED view only:
    * "Kahbub, a hill in Lahj governorate overlooking the Bab al-Mandab strait".
    * Omit for places an international reader already knows.
+   *
+   * This is deliberately not what the feed card shows. Glossing every place at
+   * this length broke the copy apart — "Air strikes hit positions in Taiz, a
+   * city and governorate in south-western Yemen, Al-Jawf and Marib" leaves the
+   * reader unable to tell where the description ends and the target list
+   * resumes. Cards use `shortWhere()` instead.
    */
   region?: string;
+  /**
+   * The card-length locator: "south-west Yemen", "Lahj governorate". Set this
+   * only where `shortWhere()` derives something awkward from `region`.
+   */
+  where?: string;
   /** Widely known abroad — never glossed, never given a locator. */
   wellKnown?: boolean;
   /** Regex sources (case-insensitive) for Arabic / English / legacy Hebrew spellings. */
@@ -280,6 +291,7 @@ const YEMEN: Place[] = [
     kind: "town",
     country: "Yemen",
     region: "on the Red Sea coast south of Hodeidah",
+    where: "on the Red Sea coast",
     aliases: ["حيس", "\\bHays\\b", "Hais", "חֵ?יס", "חַ?יְ?ס"],
   },
   {
@@ -307,6 +319,7 @@ const YEMEN: Place[] = [
     kind: "governorate",
     country: "Yemen",
     region: "Yemen's largest governorate, in the east",
+    where: "eastern Yemen",
     aliases: ["حضرموت", "Hadramawt", "Hadhramaut", "Hadramout", "חצרמוות"],
   },
   {
@@ -361,6 +374,7 @@ const YEMEN: Place[] = [
     kind: "site",
     country: "Yemen",
     region: "at the edge of Al-Wazi'iyah district in western Taiz",
+    where: "western Taiz",
     aliases: [
       "الأغبرة",
       "الاغبره",
@@ -451,6 +465,7 @@ const YEMEN: Place[] = [
     kind: "area",
     country: "Yemen",
     region: "on the supply road in Marib governorate",
+    where: "Marib governorate",
     aliases: ["الحزمة", "al-?Hazmah", "אלחַ?זמה"],
   },
   {
@@ -613,6 +628,7 @@ const YEMEN: Place[] = [
     kind: "town",
     country: "Yemen",
     region: "on the Red Sea coast near the Saudi border",
+    where: "on the Red Sea coast",
     aliases: ["ميدي", "\\bMidi\\b", "מִ?דִ?י", "מידי"],
   },
   {
@@ -728,6 +744,7 @@ const SAUDI: Place[] = [
     kind: "area",
     country: "Saudi Arabia",
     region: "a central business district of Riyadh",
+    where: "Riyadh",
     aliases: ["العليا", "Olaya", "Al-?Ulaya", "עוליה"],
     dateline: "RIYADH",
   },
@@ -765,6 +782,7 @@ const SAUDI: Place[] = [
     kind: "port city",
     country: "Saudi Arabia",
     region: "Saudi Arabia's main Red Sea oil export terminal",
+    where: "on Saudi Arabia's Red Sea coast",
     aliases: ["ينبع", "Yanbu", "Yanbo", "יַ?נְ?בּ?וּ?ע", "ינבוע"],
   },
   {
@@ -792,6 +810,7 @@ const SAUDI: Place[] = [
     kind: "city",
     country: "Saudi Arabia",
     region: "on Saudi Arabia's southern border with Yemen",
+    where: "southern Saudi Arabia",
     aliases: ["نجران", "Najran", "נַ?גְ?׳?רַ?אן", "נג׳ראן"],
   },
   {
@@ -819,6 +838,7 @@ const SAUDI: Place[] = [
     kind: "town",
     country: "Saudi Arabia",
     region: "on Saudi Arabia's southern desert border with Yemen",
+    where: "southern Saudi Arabia",
     aliases: ["شرورة", "Sharurah", "Sharorah", "שַ?ׁ?רוּ?רָ?ה", "שרורה"],
   },
   {
@@ -846,6 +866,7 @@ const SAUDI: Place[] = [
     kind: "facility",
     country: "Saudi Arabia",
     region: "Saudi Arabia's main Gulf oil export terminal",
+    where: "eastern Saudi Arabia",
     aliases: ["رأس تنورة", "Ras Tanura", "ראס תַ?נּ?וּ?רַ?ה", "ראס תנורה"],
   },
   {
@@ -972,16 +993,59 @@ export function placesInCountry(text: string, country: Country): Place[] {
  * "Kahbub, a hill in Lahj governorate overlooking the Bab al-Mandab strait".
  * Well-known places come back bare.
  */
+/** Prepositions that begin a usable locator inside a longer `region` phrase. */
+const LOCATOR_HEAD =
+  /\b(in|on|off|at|beside|near|inside|overlooking|between|north|south|east|west|north-east|north-west|south-east|south-west)\b/i;
+
+/**
+ * The card-length locator: "south-west Yemen", "Lahj governorate".
+ *
+ * Derived from `region` by dropping the "a <kind> and <kind>" preamble and
+ * everything after the first comma, because the card only needs to place the
+ * reader on the map — the full description belongs in the expanded view.
+ * Returns "" when there is nothing short and useful to say.
+ */
+export function shortWhere(place: Place): string {
+  if (place.where) return place.where;
+  if (place.wellKnown || !place.region) return "";
+
+  let s = place.region.trim();
+  // "a city and governorate in south-western Yemen" → "in south-western Yemen"
+  const head = LOCATOR_HEAD.exec(s);
+  if (head && head.index > 0) s = s.slice(head.index);
+  // "in Yemen's far north, the Houthi heartland" → "in Yemen's far north"
+  s = s.split(",")[0].trim();
+  // Drop a leading "in"/"at" only — the caller supplies "in". "on", "off",
+  // "beside" and the rest are kept, because "Mocha in Yemen's Red Sea coast"
+  // is wrong where "Mocha on Yemen's Red Sea coast" is right.
+  s = s.replace(/^(?:in|at)\s+/i, "");
+  // Compound compass points lose the "-ern": "south-west Yemen", as the desk
+  // writes it. Single ones keep it — "northern Sanaa" is a part of the city,
+  // while "north Sanaa" is not English.
+  s = s.replace(/\b(north|south)-(east|west)ern\b/gi, "$1-$2");
+  return s.replace(/\s{2,}/g, " ").trim();
+}
+
+/**
+ * A place with its card-length locator: "Taiz in south-west Yemen".
+ *
+ * Never the long form. The previous version built "Taiz, a city and governorate
+ * in south-western Yemen" and inserted it mid-sentence, which read as padding
+ * on every mention and made lists of places ambiguous.
+ */
 export function withLocator(place: Place): string {
-  if (place.wellKnown || !place.region) return place.name;
+  if (place.wellKnown) return place.name;
   if (place.kind === "country" || place.kind === "sea") return place.name;
-  // Some regions are written as a full phrase ("a city and governorate in
-  // south-western Yemen"), others as a bare locator ("in northern Sanaa").
-  // Prepending the kind to the first produced "Taiz, a city a city and
-  // governorate in…", so only the bare form gets one.
-  if (/^(?:an?|the)\s/i.test(place.region)) return `${place.name}, ${place.region}`;
-  const article = /^[aeiou]/i.test(place.kind) ? "an" : "a";
-  return `${place.name}, ${article} ${place.kind} ${place.region}`;
+  const where = shortWhere(place);
+  if (!where) return place.name;
+  // A locator that already carries its own preposition is used as-is:
+  // "on the Red Sea coast", "west of Marib city", "between Yemen and Saudi
+  // Arabia". A bare compass region is not one of those — "south-west Yemen"
+  // still needs "in", which is the form the desk writes.
+  const selfPrepositioned =
+    /^(?:on|off|beside|near|inside|overlooking|between)\b/i.test(where) ||
+    /^(?:north|south|east|west|north-east|north-west|south-east|south-west)\s+of\b/i.test(where);
+  return selfPrepositioned ? `${place.name} ${where}` : `${place.name} in ${where}`;
 }
 
 export function datelineFor(place: Place | undefined): string {

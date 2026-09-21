@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiBriefRouteImport } from './routes/api/brief'
+import { Route as ApiDeskRouteImport } from './routes/api/desk'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiTickRouteImport } from './routes/api/tick'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiBriefRoute = ApiBriefRouteImport.update({
   id: '/api/brief',
   path: '/api/brief',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDeskRoute = ApiDeskRouteImport.update({
+  id: '/api/desk',
+  path: '/api/desk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiScanRoute = ApiScanRouteImport.update({
@@ -38,12 +44,14 @@ const ApiTickRoute = ApiTickRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/brief': typeof ApiBriefRoute
+  '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
   '/api/tick': typeof ApiTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/brief': typeof ApiBriefRoute
+  '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
   '/api/tick': typeof ApiTickRoute
 }
@@ -51,20 +59,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/brief': typeof ApiBriefRoute
+  '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
   '/api/tick': typeof ApiTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/brief' | '/api/scan' | '/api/tick'
+  fullPaths: '/' | '/api/brief' | '/api/desk' | '/api/scan' | '/api/tick'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/brief' | '/api/scan' | '/api/tick'
-  id: '__root__' | '/' | '/api/brief' | '/api/scan' | '/api/tick'
+  to: '/' | '/api/brief' | '/api/desk' | '/api/scan' | '/api/tick'
+  id: '__root__' | '/' | '/api/brief' | '/api/desk' | '/api/scan' | '/api/tick'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiBriefRoute: typeof ApiBriefRoute
+  ApiDeskRoute: typeof ApiDeskRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiTickRoute: typeof ApiTickRoute
 }
@@ -83,6 +93,13 @@ declare module '@tanstack/react-router' {
       path: '/api/brief'
       fullPath: '/api/brief'
       preLoaderRoute: typeof ApiBriefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/desk': {
+      id: '/api/desk'
+      path: '/api/desk'
+      fullPath: '/api/desk'
+      preLoaderRoute: typeof ApiDeskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/scan': {
@@ -105,6 +122,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiBriefRoute: ApiBriefRoute,
+  ApiDeskRoute: ApiDeskRoute,
   ApiScanRoute: ApiScanRoute,
   ApiTickRoute: ApiTickRoute,
 }

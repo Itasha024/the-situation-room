@@ -321,7 +321,7 @@ export async function editCandidates(
 const REWORD: [RegExp, string][] = [
   [/\bthe Saudi (?:regime|adversary|aggressor)\b/gi, "Saudi Arabia"],
   [/\bthe (US|American|Israeli|Emirati) (?:adversary|aggressor|foe)\b/gi, "$1 forces"],
-  [/\bthe (Saudi|US|American|Israeli|Zionist|Emirati|Houthi) enem(?:y|ies)\b/gi, "$1 forces"],
+  [/\b(?:the )?(Saudi|US|American|Israeli|Zionist|Emirati|Houthi) enem(?:y|ies)\b/gi, "$1 forces"],
   [/\benemy (positions|forces|targets|aircraft|vessels|ships)\b/gi, "opposing $1"],
   [/\bthe enemy\b/gi, "the opposing side"],
   [/\benem(?:y|ies)\b/gi, "opponents"],

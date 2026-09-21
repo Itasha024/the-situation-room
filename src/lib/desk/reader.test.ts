@@ -144,3 +144,9 @@ test("a side-corrected statement still leads with its speaker", async () => {
   assert.equal(v.kind, "publish");
   assert.equal(v.kind === "publish" && v.report.summary, "The Houthi foreign ministry: ready to cooperate to face Israeli danger");
 });
+
+test("a side's 'enemy' becomes that side's forces, never 'opposing'", async () => {
+  const { reword } = await import("./editor.ts");
+  assert.equal(reword("Houthi leader: Saudi enemy targets civilian objects"), "Houthi leader: Saudi forces targets civilian objects");
+  assert.equal(reword("the Saudi adversary opened its airports"), "Saudi Arabia opened its airports");
+});

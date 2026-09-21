@@ -19,7 +19,7 @@ import type { DeskStore } from "./store.ts";
 
 export const TALLY_KEY = "tally";
 
-type Sides = { houthi: number | null; gov: number | null; saudi: number | null; civilians: number | null };
+type Sides = { houthi: number | null; gov: number | null; saudi: number | null; civilians: number | null; total?: number | null };
 export type TallySource = { name: string; url: string; date: string };
 export type Tally = {
   since: string;
@@ -54,6 +54,7 @@ export const TALLY_SEED: Tally = {
 const FIELDS = [
   "killed.houthi", "killed.gov", "killed.saudi", "killed.civilians",
   "injured.houthi", "injured.gov", "injured.saudi", "injured.civilians",
+  "killed.total", "injured.total",
   "idp", "refugees",
 ] as const;
 type Field = (typeof FIELDS)[number];
@@ -113,7 +114,9 @@ function officialReports(reports: LiveReport[]): Doc[] {
       const t = `${r.summary || ""} ${r.text || ""}`;
       return OFFICIAL_RE.test(t) && NUMBER_RE.test(t);
     })
-    .slice(0, 15)
+    // The newest first: the latest statement of a count is the one that stands.
+    .sort((a, b) => Date.parse(String(b.at)) - Date.parse(String(a.at)))
+    .slice(0, 30)
     .map((r) => ({
       name: String(r.source || "desk report"),
       url: String(r.url || ""),
@@ -128,7 +131,8 @@ Fields:
 - killed.houthi / injured.houthi: all people on the Houthi side, fighters AND civilians in Houthi areas
 - killed.gov / injured.gov: all people on the government side, fighters AND civilians in government areas
 - killed.saudi / injured.saudi: all people in or from Saudi Arabia, military AND civilians
-- killed.civilians / injured.civilians: all civilians from every side together
+- killed.civilians / injured.civilians: all civilians from every side together, ONLY when the document itself says the figure is civilians
+- killed.total / injured.total: a total for all sides together that the document does not split by side or call civilians (e.g. "nearly 700 people killed")
 - idp: people internally displaced inside Yemen in this round
 - refugees: people who fled Yemen in this round
 Never add up single incidents yourself, never estimate, never use totals for the whole war since 2014/2015. If a document gives nothing usable, return no update for it.
@@ -191,7 +195,7 @@ export async function askModel(current: Tally, docs: Doc[]): Promise<Update[] | 
 function getField(t: Tally, f: Field): number | null {
   if (f === "idp" || f === "refugees") return t[f];
   const [group, side] = f.split(".") as ["killed" | "injured", keyof Sides];
-  return t[group][side];
+  return t[group][side] ?? null;
 }
 
 function setField(t: Tally, f: Field, v: number) {
@@ -209,6 +213,8 @@ export function applyUpdates(current: Tally, updates: Update[], docs: Doc[], now
     if (!u || !FIELDS.includes(u.field) || !Number.isFinite(u.value) || u.value < 0) continue;
     const doc = docs[u.doc];
     if (!doc) continue;
+    // A count is civilian only when the document says so; an unsplit total goes to "All sides".
+    if (u.field.endsWith(".civilians") && !/civilian/i.test(doc.text)) continue;
     const value = Math.round(u.value);
     const prev = getField(next, u.field);
     const prevFrom = next.from[u.field];

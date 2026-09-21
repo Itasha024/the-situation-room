@@ -86,13 +86,13 @@ export type Action =
 
 const SIREN_RE = /صفارات|صافرات|صفارة|صافرة|دوي صفار|دوي صافر|air[- ]?raid (?:siren|alert)|\bsirens?\b|إنذار جوي/i;
 const GROUND_RE = /اشتباكات|معارك|مواجهات|هجوم حوثي|خطوط التماس|clash(?:es)?|fighting|front line|ground assault/i;
-const AIR_RE = /غارة|غارات|قصف جوي|الطيران الحربي|air ?strike|airstrikes?|bombing raid/i;
+const AIR_RE = /غارة|غارات|قصف جوي|الطيران الحربي|air ?strike|airstrikes?|bombing raid|air raids?|warplanes?|fighter jets?/i;
 const LAUNCH_RE = /صاروخ|باليست|أطلق|إطلاق|شن هجوم(?:ا)? صاروخي|launch(?:ed)?|fired (?:a )?(?:missile|rocket)|missile attack/i;
 const DRONE_RE = /مسيّر|مسيرة|درون|\bdrone\b|\bUAV\b/i;
 const INTERCEPT_RE = /أسقط|اسقاط|إسقاط|اعترض|intercept(?:ed)?|shot down|downed/i;
 const VESSEL_RE = /سفينة|ناقلة|باخرة|حادثة بحرية|\bUKMTO\b|vessel|tanker|merchant ship|bulk carrier|crew/i;
 const PORT_RE = /ميناء|مرفأ|أرامكو|مصفاة|\bport\b|terminal|refinery|Aramco|oil facility/i;
-const SEIZE_RE = /سيطر(?:ت|وا)?\s*على|اقتحم|تقدم(?:وا)? (?:في|نحو)|seiz(?:e|ed)|captured (?:the )?(?:positions|village|hill)|took control/i;
+const SEIZE_RE = /سيطر(?:ت|وا)?\s*على|اقتحم|تقدم(?:وا)? (?:في|نحو)|seiz(?:e|ed)|captured (?:the )?(?:positions|village|hill)|took control|(?:^|[\s،.])(?:أسر|أسرى)(?=[\s،.]|$)|القبض على|captur(?:e|es|ed|ing) (?:a |an |the )?(?:[\w-]+ ){0,3}(?:commander|leader|officer|soldiers?|fighters?|members?|positions?|sites?)|taken prisoner/i;
 const RETAKE_RE = /استعاد|استعادة|يستعيد مواقع|retook|retake|recaptur/i;
 const ECONOMY_RE =
   /نفط|خام|برنت|أرامكو|أنبوب|ناقلة|شحن|الملاحة|قناة السويس|صادرات|crude|brent|oil shipment|pipeline|tanker|shipping|Suez|export|loadings|freight rate|insurance premium/i;

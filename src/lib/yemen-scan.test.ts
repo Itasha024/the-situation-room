@@ -413,3 +413,10 @@ test("another outlet's late lines of the Houthi leader's speech join its thread"
   threadSpeeches([l1, l2] as never[], new Set());
   assert.equal((l2 as { replyTo?: string }).replyTo, "m1");
 });
+
+test("capturing a commander is ground fighting; a jet raid and an alert are the launch/strike/alert kind", () => {
+  assert.equal(digest("Almashhad", "Giants Brigades capture Houthi battalion commander in Kahbub front").type, "combat");
+  assert.equal(digest("Almashhad", "القبض على قيادي حوثي في جبهة كهبوب").type, "combat");
+  assert.equal(digest("Al-Masirah", "Saudi warplanes carry out an air raid on Al-Hazm district in Al-Jawf").type, "strike");
+  assert.notEqual(digest("Almashhad", "أسرة نازحة تصل إلى مأرب").type, "combat");
+});

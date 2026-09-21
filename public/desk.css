@@ -808,3 +808,6 @@ html{scroll-behavior:smooth}
 .close-notes[hidden]{display:none}
 /* A phone has no room for both: the legend steps aside while notes are open. */
 @media (max-width:720px){.map-wrap.popup-open .legend{display:none}}
+/* The "Updated" line under a column's heading. */
+.cadence.top{margin:0 0 .45rem;border-top:0;padding-top:0}
+.situation .cadence.top{margin:0 0 .3rem}

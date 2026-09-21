@@ -42,8 +42,9 @@ const EVENT_SVG = {
   // Two crossed swords: thick blades, visible crossguards, clear X at 24px.
   combat:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.3 2.2 7 2.9l11.4 11.4-2.1 2.1L4.9 5 3.3 2.2zm17.4 0L19.1 5 14 10.1l2.1 2.1L21.1 7l.7-3.7-1.1-1.1zM2.9 19.3l2.6-2.6 2.1 2.1-2.6 2.6a1.5 1.5 0 0 1-2.1-2.1zm18.2 0a1.5 1.5 0 0 1-2.1 2.1l-2.6-2.6 2.1-2.1 2.6 2.6zM8.9 13.2l2.1 2.1-2.4 2.4-2.1-2.1 2.4-2.4z"/></svg>',
+  // A ship side-on: hull, deck house, funnel and mast over a wave line.
   vessel:
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 15 6h2.4l-4.2 2.1V11l7 2.6v2.1c-2.7 1.8-5.8 2.7-8.2 2.7s-5.5-.9-8.2-2.7v-2.1l7-2.6V8.1L6.6 6H9zM3 19.4h18V21c-3 .8-6 .9-9 .9s-6-.1-9-.9z"/></svg>',
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 2.5h1.4v4H11zM7.5 7h8.5v5H7.5zM16.8 5h2.4v7h-2.4zM1.5 13h21l-3.3 5.2H4.2z"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M2 21.2c1.7 0 1.7-1.2 3.3-1.2s1.7 1.2 3.3 1.2 1.7-1.2 3.4-1.2 1.7 1.2 3.3 1.2 1.7-1.2 3.3-1.2 1.7 1.2 3.4 1.2"/></svg>',
   port:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 3h3.2v7.6h8.2V7.4L21 12l-5.6 4.6v-3.2H7.2V21H4zm-1 18.4h18V23H3z"/></svg>',
 };
@@ -64,9 +65,9 @@ const LABELS = {
 
 const CATEGORY_LABEL = {
   combat: 'Ground fighting',
-  strike: 'Strike or launch',
+  strike: 'Launch/strike/alert',
   vessel: 'Vessel attacked',
-  port: 'Port or terminal hit',
+  port: 'Port/terminal attacked',
   statement: 'Statement',
 };
 
@@ -677,8 +678,21 @@ function guessCoords(text) {
   return { lat: use.lat, lng: use.lng, place: use.name };
 }
 
-const GROUND_RE = /\bclash(?:es|ed)?\b|\bfighting\b|front line|contact lines?|ground (?:assault|engagement)|shelling|artillery|mortar|counter-attack|attack(?:ed)? government lines|seize|seized|retake|retook|infiltration/i;
-const STRIKE_RE = /\bstrike[sd]?\b|air strikes?|\bmissile\b|ballistic|\bdrone\b|\bUAV\b|launch(?:ed|es)?\b|shot down|intercept(?:ed)?|air defence alerts?|air raid sirens?|explosion|blast/i;
+// Ground fighting: clashes, advances, and the capture of positions or of
+// commanders, soldiers and senior figures.
+const GROUND_RE = /\bclash(?:es|ed)?\b|\bfighting\b|front line|contact lines?|ground (?:assault|engagement)|shelling|artillery|mortar|counter-attack|attack(?:ed)? government lines|seize|seized|retake|retook|infiltration|\bcaptur(?:e|es|ed|ing)\b|\btaken prisoner\b|\bprisoners? of war\b|\bstorm(?:s|ed)?\b|\badvance[sd]?\b|\btook control\b|\bpositions? (?:fell|taken)\b/i;
+// Launch/strike/alert: raids by fighter jets, drone and missile launches,
+// interceptions, and sirens or air-defence alerts.
+const STRIKE_RE = /\bstrike[sd]?\b|air strikes?|air raids?|warplanes?|fighter jets?|\bjets?\b|bomb(?:ed|ing|ard)|\bmissile\b|ballistic|\bdrone\b|\bUAV\b|launch(?:ed|es)?\b|shot down|intercept(?:ed|ion|s)?|air defence alerts?|air raid sirens?|sirens?\b|explosion|blast/i;
+
+/** The exact kind inside the launch/strike/alert category, for a pin's note. */
+function strikeKind(text) {
+  const t = String(text || '');
+  if (/sirens?\b|air defence alerts?|\balert\b|warning to residents/i.test(t)) return 'Alert';
+  if (/intercept|shot down/i.test(t)) return 'Interception';
+  if (/launch(?:ed|es)?\b|fired|toward|towards/i.test(t) && !/air raids?|warplanes?|jets?\b|air strikes?/i.test(t)) return 'Launch';
+  return 'Strike';
+}
 const VESSEL_RE = /\bvessel\b|\btanker\b|merchant ship|bulk carrier|\bcrew\b|\bship\b|UKMTO/i;
 const PORT_RE = /\bport\b|oil terminal|refinery|Aramco|terminal at/i;
 const NONMAP_RE = /\bF-?35\b|arms (?:deal|sale)|approved a (?:possible )?sale|State Department|condemn(?:s|ed)?\b|expresses solidarity|appeal|funding|displaced|refugee|humanitarian|Crisis Group|travel warning/i;
@@ -1175,10 +1189,12 @@ async function pullBrief() {
  * The stamp under every 12-hourly panel. Says plainly when the panel last
  * refreshed and when it next will, and flags it when the refresh is overdue.
  */
-function cadenceStamp() {
-  if (!brief) return '<p class="cadence">Refreshes every 12 hours.</p>';
+/** `top`: the stamp sits under a column's heading rather than at its foot. */
+function cadenceStamp(top = false) {
+  const cls = top ? 'cadence top' : 'cadence';
+  if (!brief) return `<p class="${cls}">Refreshes every 12 hours.</p>`;
   const overdue = Date.now() > Date.parse(brief.nextUpdateAt);
-  return `<p class="cadence${overdue ? ' late' : ''}">Updated ${escapeHtml(fmtWhen(brief.updatedAt))} · next ${escapeHtml(fmtWhen(brief.nextUpdateAt))}${overdue ? ' · refresh due' : ''}</p>`;
+  return `<p class="${cls}${overdue ? ' late' : ''}">Updated ${escapeHtml(fmtWhen(brief.updatedAt))} · next ${escapeHtml(fmtWhen(brief.nextUpdateAt))}${overdue ? ' · refresh due' : ''}</p>`;
 }
 
 function frontActivity(id) {
@@ -1240,9 +1256,8 @@ function renderSituation(d) {
   const fallback = String((d.situation || {}).summary || '').trim();
   const body = derived || fallback;
   if (!body) { el.innerHTML = ''; return; }
-  el.innerHTML = `<strong>Situation</strong>
-    <p class="situation-window">${escapeHtml(body)}</p>
-    ${cadenceStamp()}`;
+  el.innerHTML = `<strong>Latest Developments</strong>${cadenceStamp(true)}
+    <p class="situation-window">${escapeHtml(body)}</p>`;
 }
 
 /*
@@ -1279,6 +1294,8 @@ function renderCasualties() {
     row('Government', `${group}.gov`, t[group].gov),
     row('Saudi Arabia', `${group}.saudi`, t[group].saudi),
     row('Civilians', `${group}.civilians`, t[group].civilians),
+    // A total no official body split by side (e.g. the UN's overall count).
+    Number.isFinite(t[group].total) ? row('All sides', `${group}.total`, t[group].total) : '',
   ].join('');
   const seen = new Set();
   const sources = Object.values(t.from || {}).filter((s) => {
@@ -1846,9 +1863,6 @@ function highlightFrontOnMap(front) {
 
   const applyView = () => {
     if (!map) return;
-    try { map.setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { animate: true }); } catch (e) {}
-    // Once framed, the front is moved clear of the legend.
-    map.once('moveend', () => panClearOfLegend(frontBoxInMap()));
     if (frontSpotLayer && map) {
       try { map.removeLayer(frontSpotLayer); } catch (e) {}
       frontSpotLayer = null;
@@ -1873,10 +1887,17 @@ function highlightFrontOnMap(front) {
   applyView();
   setHighlightChip(front);
   scrollToMap();
+  // One move, once the page has scrolled and the map has its size: straight
+  // onto the front, with the legend's side kept as padding.
   setTimeout(() => {
-    try { map && map.invalidateSize(); } catch (e) {}
-    applyView();
-  }, 420);
+    if (!map) return;
+    try { map.invalidateSize(); } catch (e) {}
+    const b = frontBounds();
+    try {
+      if (b) map.flyToBounds(b, { ...legendPadding(), maxZoom: 8, duration: 0.8 });
+      else map.flyTo(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { duration: 0.8 });
+    } catch (e) {}
+  }, 380);
   if (highlightTimer) clearTimeout(highlightTimer);
   highlightTimer = setTimeout(() => {
     highlightPulse = false;
@@ -1924,7 +1945,7 @@ function showFrontFloat(idx, anchor, d) {
 
 function renderFronts(d) {
   const fronts = [...(d.fronts || [])].sort((a, b) => (a.importance || 99) - (b.importance || 99));
-  document.getElementById('fronts').innerHTML = fronts.map((f, i) => {
+  document.getElementById('fronts').innerHTML = cadenceStamp(true) + fronts.map((f, i) => {
     const act = frontActivity(f.id);
     /*
      * The composed paragraph replaces the curated prose rather than sitting
@@ -1956,7 +1977,7 @@ function renderFronts(d) {
       ${showDetail ? `<div class="full">${escapeHtml(detail)}</div>
       <button type="button" class="toggle-front">Read more</button>` : ''}
     </article>`;
-  }).join('') + cadenceStamp();
+  }).join('');
 
   document.querySelectorAll('.toggle-front').forEach((btn) => {
     btn.onclick = () => {
@@ -2177,7 +2198,9 @@ function popupHtml(ev) {
   }
   const srcLine = anchors ? `<p class="pop-src">Source: ${anchors}</p>` : '';
   const cat = ev.mapCat || classifyForMap(ev.text || '', ev.type) || pinCategory(ev.type);
-  const catLabel = CATEGORY_LABEL[cat] || CATEGORY_LABEL.combat;
+  const catLabel = cat === 'strike'
+    ? strikeKind(`${ev.label || ''} ${ev.text || ''}`)
+    : (CATEGORY_LABEL[cat] || CATEGORY_LABEL.combat);
   const needExpand = full && full.length > sum.length + 24;
   return `<p class="pop-h">${escapeHtml(sum)}</p>
     <p class="pop-meta">${escapeHtml(fmtStamp(ev.at))}${ev.place ? ' · ' + escapeHtml(ev.place) : ''} · ${escapeHtml(catLabel)}</p>
@@ -2396,13 +2419,40 @@ function panClearOfLegend(box, animate = true) {
   if (dx || dy) map.panBy([-dx, -dy], { animate });
 }
 
-/** The highlighted front (its areas and spot) in map-container pixels. */
-function frontBoxInMap() {
+/** The highlighted front's areas and spot, as map bounds. */
+function frontBounds() {
   if (!map || !window.L) return null;
   const b = L.latLngBounds([]);
   if (geoLayer) geoLayer.eachLayer((l) => { if (l.feature && highlightIds.has(l.feature.properties.shapeISO)) b.extend(l.getBounds()); });
   if (frontSpotLayer && frontSpotLayer.getBounds) b.extend(frontSpotLayer.getBounds());
-  if (!b.isValid()) return null;
+  return b.isValid() ? b : null;
+}
+
+/**
+ * fitBounds padding that keeps a target off the legend: the legend's width on
+ * its side, or its height, whichever costs the map less room.
+ */
+function legendPadding() {
+  const gap = 16;
+  const pad = { paddingTopLeft: [gap, gap], paddingBottomRight: [gap, gap] };
+  const lg = document.getElementById('legend');
+  if (!map || !lg || !lg.offsetWidth || getComputedStyle(lg).display === 'none') return pad;
+  const l = boxInMap(lg);
+  const s = map.getSize();
+  const onLeft = l.left < s.x / 2;
+  const onTop = l.top < s.y / 2;
+  const w = (onLeft ? l.right : s.x - l.left) + gap;
+  const h = (onTop ? l.bottom : s.y - l.top) + gap;
+  if (w / s.x <= h / s.y) {
+    if (onLeft) pad.paddingTopLeft[0] = w; else pad.paddingBottomRight[0] = w;
+  } else if (onTop) pad.paddingTopLeft[1] = h; else pad.paddingBottomRight[1] = h;
+  return pad;
+}
+
+/** The highlighted front (its areas and spot) in map-container pixels. */
+function frontBoxInMap() {
+  const b = frontBounds();
+  if (!b) return null;
   const nw = map.latLngToContainerPoint(b.getNorthWest());
   const se = map.latLngToContainerPoint(b.getSouthEast());
   return { left: nw.x, top: nw.y, right: se.x, bottom: se.y };
@@ -2775,9 +2825,9 @@ function renderLegend(d) {
     ${row('saudi', COLORS.saudi, 'Saudi Arabia')}
     <div class="leg-sec">Events</div>
     ${row('combat', EVENT_COLORS.combat, 'Ground fighting', true)}
-    ${row('strike', EVENT_COLORS.strike, 'Strike or launch', true)}
+    ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
     ${row('vessel', EVENT_COLORS.vessel, 'Vessel attacked', true)}
-    ${row('port', EVENT_COLORS.port, 'Port or terminal', true)}`;
+    ${row('port', EVENT_COLORS.port, 'Port/terminal attacked', true)}`;
   document.querySelectorAll('#legend .leg-item').forEach((btn) => {
     btn.onclick = (ev) => {
       if (ev) { ev.preventDefault(); ev.stopPropagation(); }

@@ -45,3 +45,18 @@ test("unknown fields, bad numbers and missing documents are ignored", () => {
   assert.equal(t.refugees, 3000);
   assert.equal(TALLY_SEED.idp, 112000, "the seed itself is never mutated");
 });
+
+test("an unsplit total never lands in Civilians; it goes to All sides", () => {
+  const un = [{ name: "Almashhad", url: "u", date: "2026-09-21", text: "The United Nations reported that nearly 700 people were killed." }];
+  const t = applyUpdates(
+    TALLY_SEED,
+    [
+      { field: "killed.civilians", value: 700, source: "United Nations", doc: 0 },
+      { field: "killed.total", value: 700, source: "United Nations", doc: 0 },
+    ],
+    un,
+    now,
+  );
+  assert.equal(t.killed.civilians, 150);
+  assert.equal(t.killed.total, 700);
+});

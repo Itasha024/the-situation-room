@@ -11,6 +11,7 @@
  *            finds in the source text — never from the model's say-so alone
  */
 
+import { anglicise } from "./anglicise.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
 import { type OutletSide, credibility, outletSide } from "./credibility.ts";
 import {
@@ -171,7 +172,9 @@ export async function editCandidates(
 }
 
 /** A reading, checked, becomes a report — or a rejection with its reason. */
-function decide(r: Reading, c: Candidate): EditorVerdict {
+function decide(raw: Reading, c: Candidate): EditorVerdict {
+  // Arabic left in the English copy is fixed here, not grounds for rejection.
+  const r: Reading = { ...raw, headline: anglicise(raw.headline), body: anglicise(raw.body) };
   const problem = checkReading(r, c.text);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };

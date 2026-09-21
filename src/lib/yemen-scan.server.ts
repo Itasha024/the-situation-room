@@ -385,8 +385,8 @@ function parseRss(xml: string, source: string): RawHit[] {
       const g = outletFromGoogleTitle(title, source);
       title = g.title;
       src = g.source;
-      const srcUrl = (b.match(/<source[^>]+url=["']([^"']+)["']/i) || [])[1];
-      if (srcUrl && /^https?:\/\//i.test(srcUrl) && !/news\.google\.com/i.test(srcUrl)) url = srcUrl;
+      // Keep Google's per-article link. <source url> is only the outlet's
+      // homepage; swapping it in made every Google item a "section front".
     }
     if (title.length < 12) continue;
     if (isIsraeliSource(src, url)) continue;

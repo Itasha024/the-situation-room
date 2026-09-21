@@ -99,10 +99,17 @@ export function overlap(title: string, want: string[], resultAt: number, reportA
   return want.filter((w) => have.has(w.toLowerCase())).length;
 }
 
+/** Shared words, each weighted by how early it ranks in `want`. */
+export function weight(title: string, want: string[]): number {
+  const have = new Set((title.match(/[A-Za-zء-ي][A-Za-z'ء-ي-]{2,}/g) || []).map((w) => w.toLowerCase()));
+  return want.reduce((s, w, i) => s + (have.has(w.toLowerCase()) ? 1 / (1 + i) : 0), 0);
+}
+
 /** A paraphrase shares few words with the original's headline: two is a match. */
 const MIN_SHARED = 2;
 
-const CACHE_KEY = "origin-cache";
+// v2: matches weighted by the post's leading names; v1 held looser matches.
+const CACHE_KEY = "origin-cache-v2";
 const CACHE_MAX = 600;
 /** Searches per tick: each costs a Google search plus a link resolution. */
 export const ORIGIN_BUDGET = 4;
@@ -117,11 +124,14 @@ type Entry =
 async function search(cited: Cited, keys: string[], reportAt: number): Promise<Found | null> {
   const q = `site:${cited.site} ${keys.slice(0, 4).join(" ")} when:3d`;
   const items = await searchGoogleNews(q, cited.lang);
+  // Enough shared words to count, then the best fit: a word ranked early (the
+  // post's leading names, "Trump") weighs more than one from deep in the body.
   let hit: (typeof items)[number] | undefined;
-  let best = MIN_SHARED - 1;
+  let best = 0;
   for (const i of items) {
-    const n = overlap(i.title, keys, i.at, reportAt);
-    if (n > best) [hit, best] = [i, n];
+    if (overlap(i.title, keys, i.at, reportAt) < MIN_SHARED) continue;
+    const score = weight(i.title, keys);
+    if (score > best) [hit, best] = [i, score];
   }
   if (!hit) return null;
   const url = await resolveGoogleNews(hit.link);

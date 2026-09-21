@@ -148,14 +148,14 @@ export async function editCandidates(
   // What the desk already published today, so the reader can mark a direct
   // development of one of them as its follow-up.
   const recent: RecentReport[] = [];
-  const refToFp = new Map<string, string>();
+  const refToFp = new Map<string, { fp: string; at: number }>();
   if (unread.length && anyReader) {
     try {
       const { reports } = await store.recentDesk(RECENT_MAX);
       for (const r of reports) {
         if (now - Date.parse(String(r.at)) > RECENT_MS || !r.fp) continue;
         const ref = "r" + (recent.length + 1);
-        refToFp.set(ref, String(r.fp));
+        refToFp.set(ref, { fp: String(r.fp), at: Date.parse(String(r.at)) });
         recent.push({ ref, at: String(r.at), headline: String(r.summary || "").slice(0, 160) });
       }
     } catch {
@@ -189,8 +189,11 @@ export async function editCandidates(
         stillQueued.push(c);
         return;
       }
-      // Refs mean nothing outside this call; keep the report's fp instead.
-      r.follows_up = refToFp.get(String(r.follows_up || "")) ?? "";
+      // Refs mean nothing outside this call; keep the report's fp instead. A
+      // reply only ever points back in time: an old post read late (a replay)
+      // cannot follow up something published after it.
+      const parent = refToFp.get(String(r.follows_up || ""));
+      r.follows_up = parent && parent.at < Date.parse(c.at) ? parent.fp : "";
       cache[contentHash(c.text)] = { reading: r, at: now };
       verdicts.set(c.url, decide(r, c));
       readingOf.set(c.url, r);

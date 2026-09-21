@@ -1343,7 +1343,8 @@ function feedCardHtml(r, i) {
 /** "Follows 11:02 · <headline>": the earlier report this one develops. */
 function replyQuote(r) {
   const parent = r.replyTo && reportByFp.get(String(r.replyTo));
-  if (!parent) return '';
+  // A reply points back in time only.
+  if (!parent || !(Date.parse(reportTime(parent)) < Date.parse(reportTime(r)))) return '';
   const pt = reportTime(parent);
   return `<a class="reply-to" href="#" data-parent="${escapeHtml(String(r.replyTo))}">↩ Follows ${escapeHtml(fmtStamp(pt))} · ${escapeHtml(reportTeaser(parent))}</a>`;
 }

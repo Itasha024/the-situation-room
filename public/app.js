@@ -2376,16 +2376,24 @@ function panClearOfLegend(box, animate = true) {
   if (!map || !box || !lg || !lg.offsetWidth || getComputedStyle(lg).display === 'none') return;
   const l = boxInMap(lg);
   const gap = 8;
-  if (box.right <= l.left || box.left >= l.right || box.bottom <= l.top || box.top >= l.bottom) return;
-  const right = l.right + gap - box.left;
-  const up = box.bottom - (l.top - gap);
-  const room = map.getSize();
-  // Moving right must not push the box off the far edge; up must not push it off the top.
-  const canRight = box.right + right <= room.x;
-  const canUp = box.top - up >= 0;
-  if (canRight && (!canUp || right <= up)) map.panBy([-right, 0], { animate });
-  else if (canUp) map.panBy([0, up], { animate });
-  else map.panBy([-right, 0], { animate });
+  // A box hanging off the left or top edge comes inside first.
+  const inX = Math.max(0, gap - box.left);
+  const inY = Math.max(0, gap - box.top);
+  const b = { left: box.left + inX, right: box.right + inX, top: box.top + inY, bottom: box.bottom + inY };
+  let dx = inX;
+  let dy = inY;
+  if (!(b.right <= l.left || b.left >= l.right || b.bottom <= l.top || b.top >= l.bottom)) {
+    const right = l.right + gap - b.left;
+    const up = b.bottom - (l.top - gap);
+    const room = map.getSize();
+    // Moving right must not push the box off the far edge; up must not push it off the top.
+    const canRight = b.right + right <= room.x;
+    const canUp = b.top - up >= 0;
+    if (canRight && (!canUp || right <= up)) dx += right;
+    else if (canUp) dy -= up;
+    else dx += right;
+  }
+  if (dx || dy) map.panBy([-dx, -dy], { animate });
 }
 
 /** The highlighted front (its areas and spot) in map-container pixels. */

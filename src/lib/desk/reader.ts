@@ -395,6 +395,14 @@ const ROLE_NAMES: [RegExp, string][] = [
   [/\bHouthi (?:armed forces |military |army )?spokes(?:man|person)\b/gi, "Houthi spokesperson"],
   [/\b(?:(?:the )?UN (?:aid|humanitarian|relief) (?:chief|coordinator|head) )?Tom Fletcher\b/g, "UN aid chief Tom Fletcher"],
 ];
+
+/** Running prose (the 12-hour brief): the same people by role, "Houthi leader" included. */
+export function roleNamesInProse(text: string): string {
+  let t = String(text || "").replace(/\b(?:the )?Houthi leader,? (?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi\b|\b(?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi\b/gi, "the Houthi leader");
+  for (const [name, role] of ROLE_NAMES) t = t.replace(name, role);
+  // A sentence opens with a capital, whatever role now leads it.
+  return t.replace(/(^|[.!?]\s+)the /g, "$1The ");
+}
 /** "<role> says/warns (that) X" for a speaker whose words X are: the colon form. */
 const SPEAKER_SAYS =
   /^((?:[\w'.-]+ ){0,4}(?:spokes(?:man|person|woman)|minister|envoy|leader|secretary-general|chief|coordinator|Guterres|Grundberg|Fletcher)) (?:says|said|stated|warns|warned|stresses|stressed|affirms|affirmed|confirms|confirmed|declares|declared) (?:that )?(.+)$/i;

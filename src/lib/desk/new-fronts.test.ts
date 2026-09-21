@@ -31,3 +31,8 @@ test("prose that mentions the desk or logging is thrown out", () => {
   assert.equal(cleanProse("The desk logged 12 strikes in the 12 hours to midnight across the fronts.", 5), "");
   assert.ok(cleanProse("Saudi jets struck Houthi positions in Al-Jawf, the Houthis said. Fighting continued west of Taiz.", 5).startsWith("Saudi jets"));
 });
+
+test("prose names people by role", () => {
+  const t = cleanProse("Houthi spokesperson Brigadier General Yahya Saree said Saudi forces carried out 157 strikes. Abdul Malik al-Houthi said the war would widen.", 5);
+  assert.equal(t, "The Houthi spokesperson said Saudi forces carried out 157 strikes. The Houthi leader said the war would widen.");
+});

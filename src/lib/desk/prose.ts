@@ -10,7 +10,7 @@
  */
 
 import type { LiveReport } from "./types.ts";
-import { groqKey, readerKey, GROQ_MODEL } from "./reader.ts";
+import { groqKey, readerKey, GROQ_MODEL, roleNamesInProse } from "./reader.ts";
 import { outletSide } from "./digest.ts";
 
 export type ProseFront = { id: string; name: string; incidents: number; previous: string };
@@ -44,10 +44,10 @@ function cardLine(r: LiveReport, frontsOf: (r: LiveReport) => string[]): string 
 
 /** Drop a paragraph that breaks the rules; the composed text stands in for it. */
 export function cleanProse(s: unknown, maxSentences: number): string {
-  const t = String(s ?? "").replace(/\s+/g, " ").trim();
+  const t = roleNamesInProse(String(s ?? "").replace(/\s+/g, " ").trim());
   if (t.length < 40 || t.length > 1200 || BANNED.test(t)) return "";
   const sentences = t.match(/[^.!?]+[.!?]+/g) || [t];
-  return sentences.slice(0, maxSentences).join(" ").trim();
+  return sentences.slice(0, maxSentences).map((x) => x.trim()).join(" ");
 }
 
 /**

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-21T12:00:21+03:00",
+  "updatedAt": "2026-09-21T12:10:36+03:00",
   "control": [
     {
       "id": "houthi",
@@ -272,6 +272,26 @@
   ],
   "reports": [
     {
+      "fp": "live-www-almashhad-news-news-495809",
+      "priority": 1,
+      "at": "2026-09-21T12:08:58+03:00",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/495809",
+      "type": "strike",
+      "summary": "Yemeni government forces shoot down Houthi drone in Taiz",
+      "text": "TAIZ — Yemeni government forces shot down a Houthi drone carrying a mortar shell in the Kadha front west of Taiz governorate.",
+      "live": true,
+      "confidence": 2.3,
+      "score": 80,
+      "tier": "claim",
+      "place": "Taiz",
+      "lat": 13.58,
+      "lng": 44.02,
+      "side": "gov",
+      "interest": "for",
+      "hasTime": true
+    },
+    {
       "fp": "live-www-almashhad-news-news-495808",
       "priority": 1,
       "at": "2026-09-21T11:59:04+03:00",
@@ -403,7 +423,8 @@
       "score": 50,
       "tier": "claim",
       "side": "gov",
-      "interest": "neutral"
+      "interest": "neutral",
+      "noMap": true
     },
     {
       "fp": "live-www-almashhad-news-news-495782",
@@ -436,7 +457,8 @@
       "tier": "claim",
       "side": "houthi",
       "interest": "neutral",
-      "hasTime": false
+      "hasTime": false,
+      "noMap": true
     },
     {
       "fp": "live-t-me-bin-1saeed-73136",
@@ -547,7 +569,8 @@
       "score": 20,
       "tier": "claim",
       "side": "houthi",
-      "interest": "for"
+      "interest": "for",
+      "noMap": true
     },
     {
       "fp": "live-t-me-abdulsalamsalah-2650",
@@ -579,7 +602,8 @@
       "score": 40,
       "tier": "claim",
       "side": "houthi",
-      "interest": "for"
+      "interest": "for",
+      "noMap": true
     },
     {
       "fp": "live-t-me-abdulsalamsalah-2652",
@@ -611,7 +635,8 @@
       "score": 50,
       "tier": "claim",
       "side": "houthi",
-      "interest": "for"
+      "interest": "for",
+      "noMap": true
     },
     {
       "fp": "live-t-me-almasirah2-299294",
@@ -627,7 +652,8 @@
       "score": 20,
       "tier": "claim",
       "side": "houthi",
-      "interest": "for"
+      "interest": "for",
+      "noMap": true
     },
     {
       "fp": "live-t-me-alomhoar-112518",
@@ -1401,7 +1427,8 @@
       "score": 50,
       "tier": "unverified",
       "side": "neutral",
-      "interest": "neutral"
+      "interest": "neutral",
+      "noMap": true
     },
     {
       "fp": "live-alkhabaralyemeni-net-2026-09-19-355528-",
@@ -1420,7 +1447,8 @@
       "lat": 24.7136,
       "lng": 46.6753,
       "side": "neutral",
-      "interest": "neutral"
+      "interest": "neutral",
+      "noMap": true
     },
     {
       "fp": "desk-2026-09-19-riyadh-kharj-alerts",
@@ -1501,7 +1529,8 @@
       "type": "statement",
       "summary": "Giants Brigades commander urges Yemeni families to pull their sons out of the Houthi ranks",
       "text": "Colonel Dhwaizan Abu Saif of the Giants Brigades called on families, mainly in Aden and the south, to pull back sons serving with the Houthis, saying the window to get them out was still open. Almashhad carried the appeal.",
-      "confidence": 3
+      "confidence": 3,
+      "noMap": true
     },
     {
       "fp": "ksa-sirens-jeddah-taif-2026-09-19",
@@ -1584,7 +1613,8 @@
       "type": "economy",
       "summary": "Saudi Arabia cancels crude shipments to European refineries amid the Red Sea fighting",
       "text": "Saudi Arabia cancels crude shipments to European refineries amid the Red Sea fighting on 18 September. Full detail is at the source link.",
-      "confidence": 3
+      "confidence": 3,
+      "noMap": true
     },
     {
       "fp": "hist-ksa-alerts-2026-09-18",
@@ -1721,7 +1751,8 @@
           "name": "Al Jazeera",
           "url": "https://www.aljazeera.com/news/2026/9/18/more-than-112000-displaced-by-yemen-fighting-thousands-flee-to-djibouti"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "live-t-me-asharqnews-35381",
@@ -1892,7 +1923,8 @@
           "name": "Al Arabiya",
           "url": "https://www.alarabiya.net/saudi-today/2026/09/18/%D8%A7%D9%84%D8%AF%D9%81%D8%A7%D8%B9-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9-41-%D8%AF%D9%88%D9%84%D8%A9-%D8%B4%D8%A7%D8%B1%D9%83%D8%AA-%D9%81%D9%8A-%D8%A7%D8%AC%D8%AA%D9%85%D8%A7%D8%B9-%D8%A7%D9%84%D8%AA%D8%AE%D8%B7%D9%8A%D8%B7-%D8%A7%D9%84%D8%B1%D8%A7%D8%A8%D8%B9-%D9%84%D9%84%D8%AA%D8%AD%D8%A7%D9%84%D9%81-%D8%A7%D9%84%D8%A8%D8%AD%D8%B1%D9%8A-%D8%A7%D9%84%D8%AF%D9%81%D8%A7%D8%B9%D9%8A"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "tarira-waziyah-3children-houthi-shell-named-2026-09-18",
@@ -1934,7 +1966,8 @@
           "name": "Al Jazeera",
           "url": "https://www.aljazeera.com/news/2026/9/18/as-houthis-grab-bab-al-mandeb-us-appears-willing-to-watch-from-sidelines"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "alibk3-saree-sanaa-thwart-2026-09-18",
@@ -1990,7 +2023,8 @@
           "url": "https://www.reuters.com/world/middle-east/barefoot-terrified-yemenis-flee-houthi-advance-2026-09-18/"
         }
       ],
-      "text": "Rawya Hassan and her family fled barefoot from shelling around the camp where they had been sheltering, leaving livestock and belongings behind. The family had already been displaced once before. Aid agencies report about 115,000 people on the move since the Houthi advance, and the IOM counts at least 112,000 internally displaced in two weeks, with about 3,000 crossing to Djibouti in overloaded boats. Reuters reported from the Al-Birin camp in Taiz."
+      "text": "Rawya Hassan and her family fled barefoot from shelling around the camp where they had been sheltering, leaving livestock and belongings behind. The family had already been displaced once before. Aid agencies report about 115,000 people on the move since the Houthi advance, and the IOM counts at least 112,000 internally displaced in two weeks, with about 3,000 crossing to Djibouti in overloaded boats. Reuters reported from the Al-Birin camp in Taiz.",
+      "noMap": true
     },
     {
       "fp": "alibk3-waziyah-fronts-clash-2026-09-18",
@@ -2052,7 +2086,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/495328"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "icg-close-yemen-front-truce-2026-09-18",
@@ -2069,7 +2104,8 @@
           "name": "International Crisis Group",
           "url": "https://www.crisisgroup.org/stm/middle-east-north-africa/yemen-saudi-arabia-iran/closing-new-war-front-yemen"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "abdulmalik-millioniya-sabeen-held-2026-09-18",
@@ -2149,7 +2185,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/495320"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "sudayr-subaihi-zero-range-lahj-2026-09-18",
@@ -2214,7 +2251,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/495314"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "iom-reuters-112k-djibouti-3k-2026-09-18",
@@ -2246,7 +2284,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/495315"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "aghbara-waziyah-gov-liber-retake-2026-09-18",
@@ -2347,7 +2386,8 @@
           "name": "Aden Observer",
           "url": "https://www.adenobserver.com/149151/"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "anadolu-waziyah-30kia-2026-09-18-army",
@@ -2396,7 +2436,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/495297"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "arabnews-kahbub-fourth-day-2026-09-18",
@@ -2510,7 +2551,8 @@
           "name": "Barran Press",
           "url": "https://barran.press/news/17233"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "In its first statement on the Red Sea escalation, the African Union Commission condemned Houthi attacks on civilian targets and infrastructure in Saudi Arabia and attacks and threats against commercial shipping. It said it was particularly concerned by reports of attempts to strike Mecca and the holy cities, stressed freedom of navigation in the Red Sea and at Bab al-Mandab under international law, and warned that disruption to the passage harms African economies, global trade and energy supply. It called for an immediate halt to attacks, de-escalation and dialogue. Yemen Monitor carried the statement.",
@@ -2526,7 +2568,8 @@
           "name": "AU Commission",
           "url": "https://www.au.int/en/pressreleases/20260917/statement-african-union-commission-escalation-red-sea-region"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "agsi-pipeline-export-flex-2026-09-18",
@@ -2597,7 +2640,8 @@
           "name": "Anadolu",
           "url": "https://www.aa.com.tr/en/middle-east/un-food-agency-scales-up-yemen-response-as-fighting-displaces-125-000-people/4060400"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "live-t-me-barranpress-19335",
@@ -2632,7 +2676,8 @@
           "name": "Al-Akhbar",
           "url": "https://en.infomaxai.com/news/articleView.html?idxno=139819"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Pakistani army spokesman Lieutenant General Ahmed Sharif Chaudhry says Pakistan will defend Saudi Arabia on 18 September. Full detail is at the source link.",
@@ -2648,7 +2693,8 @@
           "name": "Arab News",
           "url": "https://www.arabnews.com/saudi-arabia/exclusive-pakistan-military-vows-to-defend-saudi-arabia-to-any-extent-amid-houthi-attacks-3002146"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Qatar strongly condemns the Houthi drone attack on Taif, which killed a Yemeni resident and wounded two people on 18 September. Full detail is at the source link.",
@@ -2664,7 +2710,8 @@
           "name": "QNA",
           "url": "https://thepeninsulaqatar.com/article/17/09/2026/qatar-strongly-condemns-houthi-attack-on-saudi-arabias-taif-governorate"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Strong condemnation of the drone attack on Taif, which killed a Yemeni resident and left a Saudi woman wounded and a Pakistani man critically injured on 18 September. Full detail is at the source link.",
@@ -2680,7 +2727,8 @@
           "name": "Ishaq Dar",
           "url": "https://wenewsenglish.com/pakistan-condemns-houthi-drone-attack-on-taif/"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Jordanian Foreign Minister Ayman Safadi condemns the Houthi drone attack on Taif on 17 September. Full detail is at the source link.",
@@ -2696,7 +2744,8 @@
           "name": "Petra",
           "url": "https://petra.gov.jo/en/news/jordan-condemns-houthi-militias-drone-attack-on-saudi-arabias-taif"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "marib-6th-region-riyal-armed-protest-2026-09-17",
@@ -2776,7 +2825,8 @@
           "name": "Anadolu",
           "url": "https://www.aa.com.tr/en/europe/eu-condemns-houthi-attack-targeting-mecca-urges-houthis-cease-attacks/4060461"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Pakistan's army chief Field Marshal Asim Munir calls Iranian Foreign Minister Abbas Araghchi and urges Tehran to rein in the Houthis on 17 September. Full detail is at the source link.",
@@ -2792,7 +2842,8 @@
           "name": "Anadolu",
           "url": "https://www.aa.com.tr/en/asia-pacific/pakistan-army-chief-urges-iran-to-persuade-houthis-not-to-target-saudi-energy-facilities-sources/4059811"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "live-t-me-barranpress-19331",
@@ -2886,7 +2937,8 @@
           "credit": "BBC Verify · Houthi military spokesman",
           "caption": "Wreckage of a Saudi F-15 west of Marib — a still from Houthi video geolocated by BBC Verify, showing a tail fin with Saudi markings."
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Shipping through Bab al-Mandab falls about 88%, with only four vessels in 24 hours against an average of about 33 a day on 17 September. Full detail is at the source link.",
@@ -2934,7 +2986,8 @@
           "name": "Reuters",
           "url": "https://www.reuters.com/world/middle-east/trump-hopes-iran-war-nearing-end-houthi-saudi-fighting-escalates-2026-09-17/"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "live-t-me-barranpress-19327",
@@ -3082,7 +3135,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/495198"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Renewed fighting pushes more than 12.2 million children deeper into crisis, with more than 104,000 displaced in two weeks, over 57,000 of them children on 17 September. Full detail is at the source link.",
@@ -3098,7 +3152,8 @@
           "name": "UNICEF",
           "url": "https://www.vaticannews.va/en/world/news/2026-09/crisis-worsens-for-children-in-yemen-unicef.html"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Government forces claim they blocked a large Houthi attack on the Al-Mansurah and Al-Bukrah front in southern Al-Wazi'iyah on 17 September. Full detail is at the source link.",
@@ -3130,7 +3185,8 @@
           "name": "Al Jazeera",
           "url": "https://aa.com.tr/en/politics/turkiye-condemns-houthi-drone-attack-targeting-mecca/4059400"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "At least 125,000 people, about 18,000 households, displaced since the start of September 2026, up from the roughly 104,800 the IOM reported earlier on 17 September. Full detail is at the source link.",
@@ -3162,7 +3218,8 @@
           "name": "MEE",
           "url": "https://www.middleeasteye.net/live-blog/live-blog-update/pakistan-ready-implement-mecca-pact-saudi-arabia-and-turkey-defence"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Series of government air strikes in south-eastern Taiz on Houthi reinforcements and logistics at the Al-Dhikrah junction and Al-Damnah on 17 September. Full detail is at the source link.",
@@ -3242,7 +3299,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/495193"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Giants Brigades and Homeland Shield forces, with Al-Subayhah tribesmen, claim full control of the strategic Kahbub heights in Lahj on 17 September. Full detail is at the source link.",
@@ -3290,7 +3348,8 @@
           "name": "Reuters",
           "url": "https://www.reuters.com/world/china/china-presses-iran-help-rein-houthis-after-saudi-appeal-sources-say-2026-09-17/"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Statement on the fighting in Yemen on 17 September. Full detail is at the source link.",
@@ -3466,7 +3525,8 @@
           "name": "Al Jazeera",
           "url": "https://www.aljazeera.com/news/2026/9/16/djibouti-calls-for-assistance-as-thousands-of-yemenis-flee-to-country"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "US reports of a secret deal between Washington and the Houthis giving American shipping free passage in the Red Sea in return for restraint on 17 September. Full detail is at the source link.",
@@ -3482,7 +3542,8 @@
           "name": "Al Jazeera",
           "url": "https://www.aljazeera.com/video/newsfeed/2026/9/17/reports-us-houthis-make-secret-deal-over-yemen-war"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Houthis flatly deny the Saudi claim of a drone intercepted heading for Mecca, calling it the lie of the age on 17 September. Full detail is at the source link.",
@@ -3626,7 +3687,8 @@
           "name": "CGTN",
           "url": "https://news.cgtn.com/news/2026-09-17/Saudi-Houthis-trade-strikes-as-fighting-deepens-near-Bab-al-Mandab-1Qvxnot11wQ/p.html"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Houthis publish video claiming they shot down a Saudi F-15SA over Marib on 16 September on 17 September. Full detail is at the source link.",
@@ -3746,7 +3808,8 @@
           "name": "Reuters",
           "url": "https://www.aljazeera.com/news/2026/9/17/yemeni-forces-target-houthis-and-a-saudi-base-as-us-rules-out-direct-role"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Iran's Revolutionary Guards are helping the Houthis fortify Bab al-Mandab and the islands on 17 September. Full detail is at the source link.",
@@ -3884,7 +3947,8 @@
           "name": "MEE",
           "url": "https://www.mofa-ye.org/Pages/39545/"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "UAE foreign ministry condemns the reported Houthi drone attempt towards Mecca, which the Houthis deny, and expresses solidarity on 17 September. Full detail is at the source link.",
@@ -3900,7 +3964,8 @@
           "name": "MEE",
           "url": "https://www.middleeasteye.net/live-blog/live-blog-update/us-reiterates-support-yemens-government-against-houthi-aggression-uae"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Houthi missile fired towards southern Bab al-Mandab fell on the village of Al-Gharib east of Mocha, local sources say on 17 September. Full detail is at the source link.",
@@ -4187,7 +4252,8 @@
           "name": "RTE",
           "url": "https://www.rte.ie/news/middle-east/2026/0915/1591559-houthi-saudi-world/"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Trump says he spoke with Mohammed bin Salman and that the Houthis asked Washington to stay out of the conflict on 15 September. Full detail is at the source link.",
@@ -4203,7 +4269,8 @@
           "name": "RTE",
           "url": "https://www.rte.ie/news/middle-east/2026/0915/1591559-houthi-saudi-world/"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Kremlin says it will hold back and watch, with any review of Moscow's position on legitimacy in Yemen depending on events on 15 September. Full detail is at the source link.",
@@ -4219,7 +4286,8 @@
           "name": "Yemen Monitor",
           "url": "https://www.yemenmonitor.com/Details/ArtMID/908/ArticleID/181962"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "US Vice-President JD Vance says Washington is holding direct talks with the Houthis after the seizure of Mayun on 15 September. Full detail is at the source link.",
@@ -4235,7 +4303,8 @@
           "name": "Anadolu",
           "url": "https://www.aa.com.tr/en/us-israel-iran-war/vance-says-us-in-direct-talks-with-houthis-after-red-sea-island-seizure/4057050"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Government fighters say a split command between the Homeland Shield forces and the Giants Brigades contributed to the retreat from Mocha towards Bab al-Mandab and Ras al-Arah on 15 September. Full detail is at the source link.",
@@ -4283,7 +4352,8 @@
           "name": "Yemen Monitor",
           "url": "https://www.yemenmonitor.com/Details/ArtMID/908/ArticleID/182039"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Houthi control near Bab al-Mandab gives Iran and its allies leverage over two energy chokepoints, Hormuz and Bab al-Mandab on 15 September. Full detail is at the source link.",
@@ -4299,7 +4369,8 @@
           "name": "Yemen Monitor",
           "url": "https://www.yemenmonitor.com/Details/ArtMID/908/ArticleID/182037"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "European Commission President Ursula von der Leyen condemns a Houthi attack on Saudi Arabia and expresses solidarity with partners on 15 September. Full detail is at the source link.",
@@ -4315,7 +4386,8 @@
           "name": "Saba",
           "url": "https://www.sabanew.net/story/ar/152351"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Major General Abu Bakr al-Jabouli of the Tur al-Baha axis continues patrols along the contact line from Bani Omar on 15 September. Full detail is at the source link.",
@@ -4347,7 +4419,8 @@
           "name": "Yemen Monitor",
           "url": "https://www.yemenmonitor.com/Details/ArtMID/908/ArticleID/182031"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Government military sources report more than 300 air strikes in five days on Houthi concentrations, depots and reinforcements across seven governorates on 15 September. Full detail is at the source link.",
@@ -4475,7 +4548,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/494762"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "US Congressman Joe Wilson introduces an Iran-Free Yemen bill on 15 September. Full detail is at the source link.",
@@ -4523,7 +4597,8 @@
           "name": "AFP",
           "url": "https://www.anews.com.tr/world/2026/09/14/iran-denies-any-involvement-in-yemen-war"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Asil al-Saqaldi says the Houthi push into Mocha and the coast has become a trap under concentrated fire, and calls the coming weeks a turning point on 15 September. Full detail is at the source link.",
@@ -4587,7 +4662,8 @@
           "name": "Almashhad",
           "url": "https://www.almashhad.news/news/494727"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Asil al-Saqaldi of the Giants Brigades media centre comments on the coastal front on 15 September. Full detail is at the source link.",
@@ -4635,7 +4711,8 @@
           "name": "Al Arabiya",
           "url": "https://english.alarabiya.net/News/middle-east/2026/09/14/saudi-crown-prince-to-meet-egypt-s-alsisi-in-cairo-on-tuesday"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Southern Transitional Council rejects the entry of Saudi-backed emergency forces into Aden, citing a convoy to the Maashiq palace on 15 September. Full detail is at the source link.",
@@ -4651,7 +4728,8 @@
           "name": "YPA",
           "url": "https://en.ypagency.net/405195"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Government army spokesman Colonel Majed al-Nuzayli announces new air strikes at Dhubab and Al-Khokha on 15 September. Full detail is at the source link.",
@@ -4699,7 +4777,8 @@
           "name": "CNN via Euronews Arabic",
           "url": "https://arabic.euronews.com/2026/09/13/ghost-soldiers-missing-saudi-support-how-mokha-fell-houthis"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Government forces report foiling a broad Houthi assault on the fronts west of Marib on 15 September. Full detail is at the source link.",
@@ -4763,7 +4842,8 @@
           "name": "EFE",
           "url": "https://www.thejapantimes.jp/Politics/731240-houthis-say-saudi-arabia-hits-yemen-with-54-strikes-after-attack-on-bases.html"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Tareq Saleh forms the Tihama Resistance Force as an independent coastal command under Major General Zayed Mansar on 15 September. Full detail is at the source link.",
@@ -4811,7 +4891,8 @@
           "name": "Al-Watan",
           "url": "https://www.alwatan.com.sa/article/1185643"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Houthi missile fired at the village of Al-Sajiyah in the Dabah area of Taiz, with damage and casualties still unclear on 15 September. Full detail is at the source link.",
@@ -4843,7 +4924,8 @@
           "name": "Reuters",
           "url": "https://www.al-monitor.com/originals/2026/09/houthis-attack-saudi-arabia-gulf-iran-talks-are-postponed"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Nearly 1,000 government-aligned soldiers from Hanish and Zuqar reach Djibouti after withdrawing under a Houthi attack on 15 September. Full detail is at the source link.",
@@ -4970,7 +5052,8 @@
           "name": "The National",
           "url": "https://www.thenationalnews.com/news/mena/2026/09/14/houthis-forced-to-redeploy-on-yemens-west-coast-after-heavy-strikes/"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "text": "Floods briefly cut the Taiz to Aden road at Sailat al-Maqatirah, stranding hundreds of travellers on 14 September. Full detail is at the source link.",
@@ -5002,7 +5085,8 @@
           "name": "Saba",
           "url": "https://www.sabanew.net/story/ar/152359"
         }
-      ]
+      ],
+      "noMap": true
     },
     {
       "fp": "live-t-me-shebaintelligence-760",
@@ -5037,7 +5121,8 @@
       "score": 50,
       "tier": "unverified",
       "side": "neutral",
-      "interest": "neutral"
+      "interest": "neutral",
+      "noMap": true
     },
     {
       "fp": "hist-jazan-mosque-2026-09-13",
@@ -5114,7 +5199,8 @@
       "score": 50,
       "tier": "unverified",
       "side": "neutral",
-      "interest": "neutral"
+      "interest": "neutral",
+      "noMap": true
     },
     {
       "fp": "almashhad-2026-09-11-mocha-meeting-rpt",
@@ -5944,7 +6030,8 @@
       "url": "https://saudigazette.com.sa/article/664674",
       "priority": 2,
       "mapOnly": false,
-      "label": "Jeddah — naval coalition reaches initial capability, 41 states"
+      "label": "Jeddah — naval coalition reaches initial capability, 41 states",
+      "noMap": true
     },
     {
       "fp": "tarira-waziyah-3children-houthi-shell-named-2026-09-18",
@@ -6051,7 +6138,8 @@
       "fp": "gov-jahannam-aqrab-artillery-bab-priority-2026-09-18",
       "url": "https://www.almashhad.news/news/495320",
       "source": "Almashhad",
-      "label": "Retaking Bab al-Mandab and the west coast"
+      "label": "Retaking Bab al-Mandab and the west coast",
+      "noMap": true
     },
     {
       "at": "2026-09-18T13:45:00+03:00",
@@ -6098,7 +6186,8 @@
       "fp": "nasr-mustafa-mokha-khalid-camp-2026-09-18",
       "url": "https://www.almashhad.news/news/495314",
       "source": "Almashhad · Al Jazeera Net",
-      "label": "Nasr Taha Mustafa blames the fall of Mocha on the Houthis"
+      "label": "Nasr Taha Mustafa blames the fall of Mocha on the Houthis",
+      "noMap": true
     },
     {
       "at": "2026-09-18T12:31:00+03:00",
@@ -6176,7 +6265,8 @@
       "fp": "turkey-kalin-islamabad-mecca-pact-ksa-msg-iran-2026-09-17",
       "url": "https://barran.press/news/17233",
       "source": "Barran Press · Anadolu",
-      "label": "Turkish intelligence chief Ibrahim Kalin meets Pakistan's prime minister in Islamabad"
+      "label": "Turkish intelligence chief Ibrahim Kalin meets Pakistan's prime minister in Islamabad",
+      "noMap": true
     },
     {
       "at": "2026-09-18T02:27:11+03:00",
@@ -6185,7 +6275,8 @@
       "fp": "wfp-scaleup-125k-idp-45k-fed-2026-09-17",
       "url": "https://www.aa.com.tr/en/middle-east/un-food-agency-scales-up-yemen-response-as-fighting-displaces-125-000-people/4060400",
       "source": "Anadolu · WFP",
-      "label": "UN food agency scales up its emergency response after about 125,000 displaced on the coast"
+      "label": "UN food agency scales up its emergency response after about 125,000 displaced on the coast",
+      "noMap": true
     },
     {
       "at": "2026-09-18T01:01:49+03:00",
@@ -6194,7 +6285,8 @@
       "fp": "pakistan-chaudhry-defend-ksa-any-extent-2026-09-17",
       "url": "https://www.arabnews.com/saudi-arabia/exclusive-pakistan-military-vows-to-defend-saudi-arabia-to-any-extent-amid-houthi-attacks-3002146",
       "source": "Arab News",
-      "label": "Pakistan/ISPR: pledge to defend Saudi Arabia by every means"
+      "label": "Pakistan/ISPR: pledge to defend Saudi Arabia by every means",
+      "noMap": true
     },
     {
       "at": "2026-09-18T01:01:49+03:00",
@@ -6203,7 +6295,8 @@
       "fp": "qatar-taif-condemn-2026-09-17",
       "url": "https://thepeninsulaqatar.com/article/17/09/2026/qatar-strongly-condemns-houthi-attack-on-saudi-arabias-taif-governorate",
       "source": "QNA · The Peninsula",
-      "label": "Qatar: condemnation of the Taif attack and solidarity with Saudi Arabia"
+      "label": "Qatar: condemnation of the Taif attack and solidarity with Saudi Arabia",
+      "noMap": true
     },
     {
       "at": "2026-09-18T01:01:49+03:00",
@@ -6212,7 +6305,8 @@
       "fp": "pakistan-dar-taif-condemn-2026-09-17",
       "url": "https://wenewsenglish.com/pakistan-condemns-houthi-drone-attack-on-taif/",
       "source": "Ishaq Dar · WE News",
-      "label": "Dar (Pakistan): condemnation of the Taif attack"
+      "label": "Dar (Pakistan): condemnation of the Taif attack",
+      "noMap": true
     },
     {
       "at": "2026-09-17T23:31:00+03:00",
@@ -6271,7 +6365,8 @@
       "url": "https://www.ypagency.net/891855",
       "priority": 1,
       "mapOnly": true,
-      "label": "Mecca — Abdul Malik al-Houthi denies any intent to strike the holy city"
+      "label": "Mecca — Abdul Malik al-Houthi denies any intent to strike the holy city",
+      "noMap": true
     },
     {
       "fp": "map-marib-houthi-offensive-2026-09-17",
@@ -6640,7 +6735,8 @@
       "fp": "houthi-redeploy-killbox-westcoast-2026-09-14",
       "url": "https://www.thenationalnews.com/news/mena/2026/09/14/houthis-forced-to-redeploy-on-yemens-west-coast-after-heavy-strikes/",
       "source": "The National",
-      "label": "Houthi redeployment on the west coast after strikes in the kill zone"
+      "label": "Houthi redeployment on the west coast after strikes in the kill zone",
+      "noMap": true
     },
     {
       "fp": "map-ksa-taif-strike-pin-2026-09-14",
@@ -6712,7 +6808,8 @@
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/494727",
       "label": "Coalition reinforcements into Aden",
-      "place": "Aden"
+      "place": "Aden",
+      "noMap": true
     },
     {
       "id": "ev-bab-effective",
@@ -7588,7 +7685,8 @@
       "source": "South24",
       "url": "https://south24.net/news/newse.php?nid=5702",
       "priority": 2,
-      "label": "Aden — southern forces rally and statement against the Houthis"
+      "label": "Aden — southern forces rally and statement against the Houthis",
+      "noMap": true
     },
     {
       "fp": "map-yafa-sirr-drones-2026-08-31",
@@ -8021,7 +8119,8 @@
       "source": "South24",
       "url": "https://south24.net/news/newse.php?nid=5679",
       "priority": 2,
-      "label": "Taiz and Hodeidah — about 2,000 Houthi fighters massed"
+      "label": "Taiz and Hodeidah — about 2,000 Houthi fighters massed",
+      "noMap": true
     },
     {
       "fp": "hist-mocha-saudi-vessels-2026-08-18",
@@ -8776,7 +8875,8 @@
       "url": "https://en.wikipedia.org/wiki/2026_Yemen_offensives",
       "priority": 2,
       "mapOnly": true,
-      "label": "Bab al-Mandab — drones and missiles deployed near the strait"
+      "label": "Bab al-Mandab — drones and missiles deployed near the strait",
+      "noMap": true
     },
     {
       "fp": "hist-bayda-drone-2026-07-14",
@@ -9169,7 +9269,8 @@
       "text": "RIYADH — Saudi Arabia issued warnings for the second time regarding attacks targeting Riyadh and Al-Kharj.",
       "source": "Al-Khabar al-Yemeni",
       "url": "https://alkhabaralyemeni.net/2026/09/19/355528/",
-      "mapOnly": false
+      "mapOnly": false,
+      "noMap": true
     },
     {
       "fp": "desk-2026-09-19-riyadh-kharj-alerts",

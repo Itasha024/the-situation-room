@@ -262,7 +262,6 @@ a.src-link:hover,.src-wrap a:hover,.srcs a:hover{border-bottom-color:#7eb6ff;col
 .cas-wrap #casualties .cas-sum{margin:0 0 .5rem;font-size:.86rem;line-height:1.5;color:#eaf0f6}
 .cas-wrap #casualties ul{margin:.15rem 0 0;padding-inline-start:1.15rem}
 .cas-wrap #casualties li{margin:.35rem 0;font-size:.8rem;line-height:1.45;color:#d7e2ef}
-.cas-wrap #casualties li strong{color:#f0d78c;font-weight:600}
 #fronts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.5rem}
 #btn-day-next[hidden]{display:none !important}
 .isl-tag-wrap{background:none!important;border:0!important}
@@ -328,12 +327,7 @@ html{scroll-behavior:smooth}
 
 .src-plain{color:var(--muted)}
 
-.card-conf{margin-top:0.45rem;font-size:0.75rem;color:#94a3b8;text-align:start}
 
-.conf-sources{margin-top:0.5rem;font-size:0.78rem;color:#94a3b8}
-.conf-sources summary{cursor:pointer;color:#cbd5e1;user-select:none}
-.conf-sources ul{margin:0.35rem 0 0;padding-inline-start:1.1rem}
-.conf-sources a{color:#7dd3fc}
 #time-filter button.on{outline:1px solid #22c55e}
 
 /* —— Mobile only (desktop unchanged) —— */
@@ -568,7 +562,6 @@ html{scroll-behavior:smooth}
   }
   .card .meta { margin-bottom: .4rem; gap: .4rem .6rem; }
   .card .actions { margin-top: .45rem; }
-  .card-conf { margin-top: .55rem; }
   .more {
     margin-top: .75rem;
     padding: .55rem;
@@ -746,9 +739,6 @@ html{scroll-behavior:smooth}
 .cadence.late{color:#fbbf24}
 .situation .cadence{border-top-color:#22303f}
 .situation-window{margin:.35rem 0 0;font-size:.8rem;line-height:1.45;color:#b8c6d6}
-.cas-wrap #casualties .cas-window{
-  margin:0 0 .55rem;font-size:.84rem;line-height:1.5;color:#f0d78c;
-}
 .front-activity{
   margin:.35rem 0 0;font-size:.72rem;line-height:1.4;color:#9fb3c8;
   border-inline-start:2px solid #2a3a4e;padding-inline-start:.45rem;
@@ -781,3 +771,12 @@ html{scroll-behavior:smooth}
 .card .also a{color:#9fb4cc;text-decoration:none}
 .card .also a:hover{text-decoration:underline}
 .front-card .front-composed{margin:.35rem 0 0;font-size:.78rem;line-height:1.5;color:#c9d4e0}
+
+/* The conflict in numbers: three plain boxes, no accent colour. */
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.5rem}
+.tally-box{border:1px solid #243244;border-radius:8px;padding:.5rem .65rem;background:#0f1822}
+.tally-box h3{margin:0 0 .35rem;font-size:.72rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#9fb3c8}
+.tally-row{display:flex;justify-content:space-between;gap:.5rem;padding:.18rem 0;font-size:.8rem;color:#c9d4e0;border-top:1px solid #1a2531}
+.tally-row:first-of-type{border-top:0}
+.tally-row strong{font-variant-numeric:tabular-nums;font-weight:600;color:#eaf0f6}
+.tally-note{margin:.45rem 0 0;font-size:.68rem;color:#8fa3b6}

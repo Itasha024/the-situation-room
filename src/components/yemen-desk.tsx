@@ -26,8 +26,6 @@ const DESK_HTML = `
       <span class="ls-title">Live scan</span>
       <span class="ls-meta" id="live-scan-meta">Not scanned yet</span>
     </summary>
-    <p class="ls-hint">Every raw item the desk pulled, newest scanned first, with why it was carried, held or passed over. Items marked <em>held</em> are plausibly relevant but not yet established. Scanning continues while this box is closed.</p>
-    <div class="ls-stats" id="live-scan-stats"></div>
     <div class="ls-list" id="live-scan-list"></div>
   </details>
 </section>

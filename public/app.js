@@ -78,8 +78,8 @@ const CATEGORY_LABEL = {
  * heart of this desk; it should read as a running wire, so it opens deep and
  * pages in large steps.
  */
-const INITIAL_REPORTS = 30;
-const MORE_STEP = 24;
+const INITIAL_REPORTS = 10;
+const MORE_STEP = 10;
 
 /* ---------------------------------------------------------------- *
  * Gazetteer — canonical English place names, loaded from the file the
@@ -214,7 +214,10 @@ const MAP_ROUND_START = '2026-07-01';
 const CONFLICT_START = '2026-07-03';
 const FRONT_HOME_VIEW = [15.35, 46.15, 6];
 const MAX_MAP_PINS = 80;
-const MAX_MAP_PINS_RANGE = 220;
+// A range or "all" view must show the whole war, not the newest slice of it:
+// the old 220 cut every pin from July and most of August. This only guards
+// against a runaway feed.
+const MAX_MAP_PINS_RANGE = 3000;
 
 /* West-coast strips that changed hands in this round (Tihama and Bab). */
 const COAST_AREAS = [
@@ -521,46 +524,6 @@ function sourcesLine(list, primaryUrl) {
   return html ? `<div class="srcs">Source: ${html}</div>` : '';
 }
 
-function confidenceSourcesHtml(r) {
-  const items = [];
-  const seen = new Set();
-  const push = (name, url) => {
-    const n = canonicalSourceName(name);
-    if (!n || seen.has(n.toLowerCase())) return;
-    seen.add(n.toLowerCase());
-    items.push({ name: n, url: url || '' });
-  };
-  (r.confidenceSources || r.sources || []).forEach((s) => {
-    if (typeof s === 'string') push(s, '');
-    else if (s && s.name) push(s.name, s.url || '');
-  });
-  splitSources(r.source).forEach((p) => push(p, ''));
-  if (r.url && items.length && !items[0].url) items[0].url = r.url;
-  else if (r.url && !items.length) push(primaryOutlet(r.source) || 'Source', r.url);
-  const lis = items
-    .map((it) => (it.url && !isHomepageOrSectionUrl(it.url)
-      ? `<li><a href="${escapeHtml(it.url)}" target="_blank" rel="noopener">${escapeHtml(it.name)}</a></li>`
-      : ''))
-    .filter(Boolean)
-    .join('');
-  if (!lis) return '';
-  return `<details class="conf-sources"><summary>Sources behind this rating</summary><ul>${lis}</ul></details>`;
-}
-
-function formatConfidence(r) {
-  const n = Number(r.confidence);
-  if (!Number.isFinite(n)) return '';
-  const shown = (Math.round(n * 10) / 10).toFixed(1);
-  // No tier label. "party claim" / "single source" / "wire report" told the
-  // reader how the desk rates its own sourcing, which is noise on the card —
-  // the outlet is named beside it and the link is one click away.
-  return `Confidence ${shown}/5`;
-}
-
-/* ---------------------------------------------------------------- *
- * Report copy
- * ---------------------------------------------------------------- */
-
 function cleanBody(text) {
   return String(text || '')
     .replace(/\s{2,}/g, ' ')
@@ -611,12 +574,11 @@ function reportTeaser(r) {
 }
 
 /**
- * The card's lead: the substance, under the headline, so the card is a short
- * REPORT rather than a bare headline.
- *
- * Three lines is a ceiling, not a target. A thin source yields a short lead and
- * that is a correct outcome — padding it out is how a desk starts inventing
- * detail. Returns "" when the body adds nothing the headline did not say.
+ * The card's body under the headline: the whole report, minus a first sentence
+ * that only restates the headline. CSS clamps it to three lines and the card
+ * offers "Read more" when it runs longer — never cut the text itself, or a
+ * long report ends in "…" with no way to read the rest.
+ * Returns "" when the body adds nothing the headline did not say.
  */
 function reportLead(r) {
   const full = formatFullReport(r && r.text, r);
@@ -632,11 +594,10 @@ function reportLead(r) {
     // Skip a first sentence that merely restates the headline.
     if (!out.length && head && (bare.startsWith(head.slice(0, 40)) || head.startsWith(bare.slice(0, 40)))) continue;
     out.push(s);
-    if (out.join(' ').length >= 165) break;
   }
   const lead = out.join(' ').trim();
   if (lead.length < 25) return '';
-  return lead.length > 230 ? lead.slice(0, 227).replace(/\s+\S*$/, '') + '…' : lead;
+  return lead;
 }
 
 /** A pin whose report the reader wrote — its text is already glossed. */
@@ -1193,86 +1154,15 @@ function frontActivity(id) {
  * Live scan box
  * ---------------------------------------------------------------- */
 
-/**
- * Plain-English gloss for a verdict slug. The server sends its own note with
- * each item; this is the fallback, and it covers the slugs the scorer added.
- */
-function reasonNote(id) {
-  const fromServer = (liveOverlay.reasons || []).find((r) => r && r.id === id);
-  if (fromServer && fromServer.note) return fromServer.note;
-  const builtin = {
-    tray: 'Plausibly relevant but not established — held for corroboration.',
-    'off-topic': 'Nothing ties the item to this conflict or to a party to it.',
-    'other-theatre': 'A different theatre, borrowing the same vocabulary.',
-    empty: 'Too little text to say what happened.',
-    thin: 'Too little to anchor it — no place and no named actor.',
-    vague: 'The substance could not be pinned down.',
-    'no-actor': 'No named official, unit or government behind it.',
-    'bad-copy': 'The composed line came out as a fragment.',
-    'no-article': 'The link points at a section front, not a report.',
-    'excluded-source': 'Outlet excluded from this catalogue.',
-    legacy: 'Scanned before the desk recorded reasons.',
-  };
-  return builtin[id] || '';
-}
-
 function renderLiveScan() {
   const meta = document.getElementById('live-scan-meta');
-  const stats = document.getElementById('live-scan-stats');
   const list = document.getElementById('live-scan-list');
   const details = document.getElementById('live-scan-details');
   if (meta) {
     const t = liveOverlay.scannedAt ? fmtClock(liveOverlay.scannedAt) : '—';
-    const health = sourceHealth();
-    const counts = health ? `${health.ok}/${health.total} sources` : 'not scanned yet';
-    meta.textContent = `${counts} · ${t}${liveOverlay.cycleNote ? ' · ' + liveOverlay.cycleNote : ''}`;
+    meta.textContent = liveOverlay.scannedAt ? `Last scan ${t}` : 'Not scanned yet';
   }
-  if (!details || !details.open) return;
-  if (stats) {
-    const hits = liveOverlay.rawHits || [];
-
-    /*
-     * The verdict tally. This is the instrument for catching a gate
-     * regression: if one reason suddenly starts eating items, or the held
-     * count balloons, it shows up here the same day rather than being
-     * discovered weeks later as reports that quietly never arrived.
-     */
-    const tally = { feed: 0, tray: 0, exclude: 0 };
-    const byReason = new Map();
-    for (const h of hits) {
-      const o = h.outcome || (h.kept ? 'feed' : 'exclude');
-      tally[o] = (tally[o] || 0) + 1;
-      if (o === 'exclude' && h.reason) byReason.set(h.reason, (byReason.get(h.reason) || 0) + 1);
-    }
-    const top = [...byReason.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-    const verdicts = hits.length
-      ? `<div class="ls-tally">
-          <span class="ls-chip ok">${tally.feed} carried</span>
-          <span class="ls-chip hold">${tally.tray} held</span>
-          <span class="ls-chip">${tally.exclude} passed over</span>
-          ${top.map(([id, n]) => `<span class="ls-chip" title="${escapeHtml(reasonNote(id))}">${escapeHtml(id)} · ${n}</span>`).join('')}
-        </div>`
-      : '';
-
-    const st = liveOverlay.sourceStatus || [];
-    const sources = st.map((s) => {
-      const cls = s.ok ? 'ok' : 'fail';
-      const n = s.hits != null ? ` · ${s.hits}` : '';
-      return `<span class="ls-chip ${cls}" title="${escapeHtml(s.cadence || '')}">${escapeHtml(s.name)}${s.ok ? n : ' · none'}</span>`;
-    }).join('');
-
-    // Reports the desk carried but could not put on the map. A relevant report
-    // vanishing from the map with no trace is the failure most worth seeing.
-    const up = liveOverlay.unplaced || [];
-    const unplaced = up.length
-      ? `<div class="ls-unplaced"><strong>${up.length} carried but not mapped</strong> — no coordinates for the place named.
-          <ul>${up.slice(0, 6).map((u) => `<li>${escapeHtml(u.summary || u.fp)}${u.place ? ` <em>(${escapeHtml(u.place)})</em>` : ''}</li>`).join('')}</ul>
-        </div>`
-      : '';
-
-    stats.innerHTML = verdicts + unplaced + `<div class="ls-sources">${sources}</div>`;
-  }
-  if (!list) return;
+  if (!details || !details.open || !list) return;
 
   const rows = [...(liveOverlay.rawHits || [])]
     .sort((a, b) => scanSeen(b) - scanSeen(a))
@@ -1286,25 +1176,14 @@ function renderLiveScan() {
     const seen = h.seenAt ? fmtStamp(h.seenAt) : '';
     const pub = h.at ? fmtStamp(h.at) : '';
     const sn = escapeHtml((h.snippet || '').slice(0, 240));
-    const outcome = h.outcome || (h.kept ? 'feed' : 'exclude');
-    const cls = outcome === 'feed' ? 'kept' : outcome === 'tray' ? 'tray' : '';
-    const reason = h.reason && h.reason !== 'kept'
-      ? `<span class="ls-why" title="${escapeHtml(h.note || reasonNote(h.reason))}">${escapeHtml(h.reason)}</span>`
-      : '';
-    const chip = outcome === 'feed'
-      ? '<span class="ls-chip ok">in feed</span>'
-      : outcome === 'tray'
-        ? `<span class="ls-chip hold" title="Relevant but not established — held for corroboration.">held</span>${reason}`
-        : reason;
-    return `<div class="ls-row ${cls}" data-url="${escapeHtml(u)}">
+    return `<div class="ls-row" data-url="${escapeHtml(u)}">
       <div class="ls-top">
-        <span class="ls-src">${escapeHtml(h.source || '')}${h.kind === 'tg' ? ' · TG' : ''}</span>
+        <span class="ls-src">${escapeHtml(h.source || '')}</span>
         <span class="ls-at" title="Published ${escapeHtml(pub)}">scanned ${escapeHtml(seen || pub)}</span>
       </div>
       <p class="ls-sn">${sn}</p>
       <div class="ls-mark">
         <a class="src-link" href="${escapeHtml(h.url)}" target="_blank" rel="noopener">Open source</a>
-        ${chip}
       </div>
     </div>`;
   }).join('') || '<p class="ls-hint">Nothing raw in the last cycle.</p>';
@@ -1330,24 +1209,62 @@ function renderSituation(d) {
     ${cadenceStamp()}`;
 }
 
-function renderCasualties(d) {
+/*
+ * "The conflict in numbers": three boxes from the server's official tally
+ * (src/lib/desk/tally.ts), refreshed with the 12-hour brief. Each side's
+ * figure counts fighters and civilians on that side; "Civilians" is every
+ * side's civilians in one number. A figure no official body has given shows
+ * as a dash, never an estimate.
+ */
+const TALLY_FALLBACK = {
+  since: '2026-07-03',
+  killed: { houthi: 278, gov: 216, saudi: 1, civilians: 150 },
+  injured: { houthi: null, gov: null, saudi: 73, civilians: null },
+  idp: 112000,
+  refugees: 3000,
+  from: {},
+};
+
+function fmtCount(n) {
+  return Number.isFinite(n) ? Number(n).toLocaleString('en-US') : '—';
+}
+
+function renderCasualties() {
   const el = document.getElementById('casualties');
   if (!el) return;
-  const c = d.casualties || {};
-  const bullets = c.bullets || [];
-  const summary = String(c.summary || '').trim();
-  const li = bullets.map((b) => {
-    const raw = String(b || '').trim();
-    const m = raw.match(/^([^:]{2,48}):\s*([\s\S]+)$/);
-    if (m) return `<li><strong>${escapeHtml(m[1])}</strong> — ${escapeHtml(m[2])}</li>`;
-    return `<li>${escapeHtml(raw)}</li>`;
-  }).join('');
-  const derived = brief && brief.numbers ? brief.numbers.line : '';
+  const t = (brief && brief.tally) || TALLY_FALLBACK;
+  const row = (label, key, n) => {
+    const src = t.from && t.from[key];
+    const tip = src ? `${src.name}${src.date ? ', ' + src.date : ''}` : '';
+    return `<div class="tally-row"${tip ? ` title="${escapeHtml(tip)}"` : ''}><span>${label}</span><strong>${fmtCount(n)}</strong></div>`;
+  };
+  const sides = (group) => [
+    row('Houthi', `${group}.houthi`, t[group].houthi),
+    row('Government', `${group}.gov`, t[group].gov),
+    row('Saudi Arabia', `${group}.saudi`, t[group].saudi),
+    row('Civilians', `${group}.civilians`, t[group].civilians),
+  ].join('');
+  const seen = new Set();
+  const sources = Object.values(t.from || {}).filter((s) => {
+    const k = s && s.name;
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const srcHtml = sources.map((s) => (s.url
+    ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>`
+    : escapeHtml(s.name))).join(' · ');
   el.innerHTML = `
-    ${derived ? `<p class="cas-window">${escapeHtml(derived)}</p>` : ''}
-    ${summary ? `<p class="cas-sum">${escapeHtml(summary)}</p>` : ''}
-    ${bullets.length ? `<ul>${li}</ul>` : ''}
-    ${sourcesLine(c.sources)}
+    <div class="tally">
+      <div class="tally-box"><h3>Killed</h3>${sides('killed')}</div>
+      <div class="tally-box"><h3>Injured</h3>${sides('injured')}</div>
+      <div class="tally-box"><h3>Humanitarian</h3>
+        ${row('Internally displaced', 'idp', t.idp)}
+        ${row('Refugees', 'refugees', t.refugees)}
+      </div>
+    </div>
+    <p class="tally-note">Since ${escapeHtml(fmtDay(t.since))}. Official figures only.</p>
+    ${srcHtml ? `<div class="srcs">Sources: ${srcHtml}</div>` : ''}
     ${cadenceStamp()}`;
 }
 
@@ -1392,20 +1309,16 @@ function feedCardHtml(r, i) {
   const src = sourceOf(r);
   const fp = r.fp || ('i' + i);
   const sum = reportTeaser(r);
-  const full = formatFullReport(r.text, r);
   const srcHtml = sourceAnchors(src, r.url || '');
   const lead = reportLead(r);
   const also = Array.isArray(r.alsoReportedBy) && r.alsoReportedBy.length ? r.alsoReportedBy : null;
-  const sumBare = (sum + ' ' + lead).replace(/\s+/g, ' ').trim();
-  const fullCore = full.replace(/^[A-Z' -]{3,28} — /, '').replace(/\s+/g, ' ').trim();
-  // Expand only when the full report genuinely says more than the card already does.
-  const worthExpand = fullCore.length >= Math.max(sumBare.length + 55, Math.floor(sumBare.length * 1.35));
   const isOpen = openFeedFps.has(fp);
   const leanRaw = sourceLean(src);
   const lean = (leanRaw === 'south' || leanRaw === 'intl' || leanRaw === 'other') ? 'indep' : leanRaw;
-  const confHtml = formatConfidence(r);
-  const confSrc = r.live ? '' : confidenceSourcesHtml(r);
-  return `<article class="card lean-${lean}${worthExpand ? ' expandable' : ''}${isOpen ? ' open' : ''}" data-i="${i}" data-fp="${escapeHtml(fp)}" title="${escapeHtml(LEAN_LABEL[lean] || '')}"${worthExpand ? ' role="button" tabindex="0" aria-expanded="' + (isOpen ? 'true' : 'false') + '"' : ''}>
+  // The source name in the meta line links to the original, so the card has
+  // no second "Read the report" link. "Read more" stays hidden until
+  // wireFeedCard measures that the lead overflows its three lines.
+  return `<article class="card lean-${lean}${isOpen ? ' open' : ''}" data-i="${i}" data-fp="${escapeHtml(fp)}" title="${escapeHtml(LEAN_LABEL[lean] || '')}">
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
         <span class="src-wrap">${srcHtml}</span>
@@ -1414,27 +1327,33 @@ function feedCardHtml(r, i) {
       ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
       ${mediaBlock(r.media)}
       ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.source)}</a>`).join(' · ')}</p>` : ''}
-      ${worthExpand ? `<div class="full">
-        <p class="full-label">Full report</p>
-        <p>${escapeHtml(full)}</p>
-        ${sourcesLine([src], r.url || '')}
-        ${confSrc}
-      </div>
-      <div class="actions">
-        <button type="button" class="toggle">${isOpen ? 'Hide detail' : 'Read more'}</button>
-      </div>` : `<div class="actions">${(r.url && !isHomepageOrSectionUrl(r.url)) ? `<a class="src-link" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">Read the report</a>` : ''}</div>${confSrc}`}
-      ${confHtml ? `<div class="card-conf">${confHtml}</div>` : ''}
+      ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
+}
+
+/** Does the clamped lead hide text? Measured; a length guess while hidden or open. */
+function leadOverflows(card) {
+  const lead = card.querySelector('.lead');
+  if (!lead) return false;
+  if (card.classList.contains('open') || !lead.clientHeight) return lead.textContent.length > 200;
+  return lead.scrollHeight > lead.clientHeight + 2;
 }
 
 function wireFeedCard(card) {
   if (!card) return;
+  const btn = card.querySelector('.toggle');
+  if (btn && leadOverflows(card)) {
+    card.classList.add('expandable');
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-expanded', card.classList.contains('open') ? 'true' : 'false');
+    btn.hidden = false;
+  }
   const setCardOpen = (open) => {
     if (!card.classList.contains('expandable')) return;
     card.classList.toggle('open', open);
     card.setAttribute('aria-expanded', open ? 'true' : 'false');
-    const btn = card.querySelector('.toggle');
-    if (btn) btn.textContent = open ? 'Hide detail' : 'Read more';
+    if (btn) btn.textContent = open ? 'Show less' : 'Read more';
     const fp = card.dataset.fp;
     if (fp) {
       if (open) openFeedFps.add(fp);
@@ -1456,7 +1375,6 @@ function wireFeedCard(card) {
       toggleCard();
     };
   }
-  const btn = card.querySelector('.toggle');
   if (btn) {
     btn.onclick = (ev) => {
       if (ev) { ev.preventDefault(); ev.stopPropagation(); }
@@ -2041,7 +1959,10 @@ function buildMapPins(d) {
     byFp.set(fp, keep);
   };
 
+  // noMap: a reader audit found the item is not a physical event (a statement,
+  // a condemnation, a video, a build-up). It stays in the feed, off the map.
   sortedReports(d).forEach((r) => {
+    if (r.noMap) return;
     const blob = [r.summary, r.text, r.place].filter(Boolean).join('\n');
     let lat = (typeof r.lat === 'number') ? r.lat : null;
     let lng = (typeof r.lng === 'number') ? r.lng : null;
@@ -2076,6 +1997,7 @@ function buildMapPins(d) {
   });
 
   (d.events || []).forEach((ev) => {
+    if (ev.noMap) return;
     const blob = ev.text || ev.note || ev.label || '';
     let lat = ev.lat, lng = ev.lng, place = ev.place || '';
     if (lat == null || lng == null) {

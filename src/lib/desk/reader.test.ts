@@ -117,6 +117,7 @@ test("no outlet opens a headline, and a report about someone is no quote", async
   // Reported on, not quoted: the colon goes. Unfamiliar names go by role.
   assert.equal(fixHeadline("Al-Alimi: Trump made no pledge of military support to Yemen's president al-Alimi in a call, sources say"), "Trump made no pledge of military support to Yemen's president in a call, sources say");
   assert.equal(fixHeadline("Al-Zubaidi: the south will not accept Houthi rule"), "STC leader: the south will not accept Houthi rule");
+  assert.equal(fixHeadline("Mufie Damaj: Yemeni culture minister: Sanaa is the primary target"), "Yemen's culture minister: Sanaa is the primary target");
   // "said that our" is his words without the quote: the colon form.
   assert.equal(fixHeadline("Houthi leader said that our demands are legitimate rights"), "Houthi leader: our demands are legitimate rights");
   assert.equal(fixHeadline("Houthi leader says the Houthis' demands are legitimate"), "Houthi leader says the Houthis' demands are legitimate");

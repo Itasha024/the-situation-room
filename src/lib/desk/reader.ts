@@ -325,6 +325,9 @@ export function fixHeadline(headline: string): string {
   // People readers do not know by name go by their role.
   for (const [name, role] of ROLE_NAMES) h = h.replace(name, (_m, at: number) => (at === 0 ? role.replace(/^the /, "") : role));
   h = h.replace(/\b(Yemen's president)(?:,? \1)+/gi, "$1");
+  // "Name: role: words" — one speaker, named by role only.
+  h = h.replace(/^[^:]{2,40}:\s+([^:]{2,60}):\s+/, "$1: ");
+  h = h.replace(/^Yemeni ((?:culture|information|foreign|defen[cs]e|interior|oil|finance) minister):/i, "Yemen's $1:");
   // "X said that our …" is his own words without the quote: the colon form.
   h = h.replace(/^([^:]{2,60}?) (?:said|says|stated|stressed|affirmed|declared|added) (?:that )?((?:our|we|us|my|I)\b.*)$/, "$1: $2");
   const m = /^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);

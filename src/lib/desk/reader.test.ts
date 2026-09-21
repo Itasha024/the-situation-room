@@ -198,3 +198,10 @@ test("a body that says the headline again goes; one with new facts stays", async
   assert.equal(redundantBody("Houthi drone hits Saudi border post", "The attack targeted a post near Najran, the Saudi-led coalition said."), false);
   assert.equal(redundantBody("Houthi drone hits Saudi border post", ""), false);
 });
+
+test("'killing a martyr' is one person killed", async () => {
+  const { reword } = await import("./editor.ts");
+  assert.equal(reword("Saudi airstrike kills a martyr in Haifan"), "Saudi airstrike kills one person in Haifan");
+  assert.equal(reword("Saudi airstrike kills a people killed in Haifan"), "Saudi airstrike kills one person in Haifan");
+  assert.equal(reword("three martyrs in Taiz"), "three people killed in Taiz");
+});

@@ -92,7 +92,7 @@ export async function refreshBrief(
       saved?.brief.situation?.line || "",
       (r) => frontIdsOf(r, extraFronts),
     );
-    if (prose?.situation) brief.situation = { ...brief.situation, line: prose.situation };
+    if (prose?.situation) brief.situation = { ...brief.situation, line: prose.situation, model: prose.model };
     for (const f of brief.fronts) if (prose?.fronts[f.id]) f.line = prose.fronts[f.id];
   } catch (err) {
     console.error("[desk] prose failed:", err instanceof Error ? err.message : err);

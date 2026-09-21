@@ -93,6 +93,11 @@ export const READER_MODELS = [
   "gemini-3.1-flash-lite",
   "gemini-3.5-flash-lite",
   "gemini-flash-latest",
+  // Each has its own free daily quota. The newest is last: the 12-hour prose
+  // leads with it (models.ts), so the reader leaves it for that when it can.
+  "gemini-3.5-flash",
+  "gemini-3.7-flash",
+  "gemini-3.8-flash",
 ];
 /** The stronger reader for a second look at a rejected field report. */
 export const SECOND_LOOK_MODELS = ["gemini-flash-latest"];

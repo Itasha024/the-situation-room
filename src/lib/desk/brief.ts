@@ -132,7 +132,7 @@ export type Brief = {
   /** Start of the window the counts cover. */
   windowStart: string;
   windowLabel: string;
-  situation: { line: string; quiet: boolean };
+  situation: { line: string; quiet: boolean; /** The model that wrote the prose, when one did. */ model?: string };
   fronts: FrontActivity[];
   numbers: {
     line: string;

@@ -14,7 +14,7 @@
  */
 
 import type { LiveReport } from "./types.ts";
-import { groqKey, readerKey, GROQ_MODEL } from "./reader.ts";
+import { askChain } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 
 export const TALLY_KEY = "tally";
@@ -145,51 +145,9 @@ export async function askModel(current: Tally, docs: Doc[]): Promise<Update[] | 
     current: { killed: current.killed, injured: current.injured, idp: current.idp, refugees: current.refugees },
     documents: docs.map((d, i) => ({ index: i, title: d.name, date: d.date, text: d.text })),
   });
-  const groq = groqKey();
-  if (groq) {
-    try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { authorization: `Bearer ${groq}`, "content-type": "application/json" },
-        signal: AbortSignal.timeout(60_000),
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          temperature: 0,
-          response_format: { type: "json_object" },
-          messages: [{ role: "system", content: SYSTEM }, { role: "user", content: user }],
-        }),
-      });
-      if (res.ok) {
-        const j = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-        return (JSON.parse(j.choices?.[0]?.message?.content || "{}").updates ?? []) as Update[];
-      }
-    } catch {
-      // Fall through to Gemini.
-    }
-  }
-  const gemini = readerKey();
-  if (!gemini) return null;
-  try {
-    const res = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
-      {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": gemini },
-        signal: AbortSignal.timeout(60_000),
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM }] },
-          contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: { temperature: 0, responseMimeType: "application/json" },
-        }),
-      },
-    );
-    if (!res.ok) return null;
-    const j = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    const text = j.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "{}";
-    return (JSON.parse(text).updates ?? []) as Update[];
-  } catch {
-    return null;
-  }
+  const got = await askChain("tally", SYSTEM, user, { temperature: 0 });
+  if (!got) return null;
+  return (Array.isArray(got.json.updates) ? got.json.updates : []) as Update[];
 }
 
 function getField(t: Tally, f: Field): number | null {

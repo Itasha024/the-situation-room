@@ -36,3 +36,10 @@ test("prose names people by role", () => {
   const t = cleanProse("Houthi spokesperson Brigadier General Yahya Saree said Saudi forces carried out 157 strikes. Abdul Malik al-Houthi said the war would widen.", 5);
   assert.equal(t, "The Houthi spokesperson said Saudi forces carried out 157 strikes. The Houthi leader said the war would widen.");
 });
+
+test("the prose never writes about what was not reported; the rest of the paragraph stands", () => {
+  const t = cleanProse("No new fighting was reported on the Taiz front. Government forces hold the city's western approaches after last week's advance.", 4);
+  assert.equal(t, "Government forces hold the city's western approaches after last week's advance.");
+  assert.equal(cleanProse("No fighting was reported in Marib over the period in question at all.", 4), "");
+  assert.equal(cleanProse("One. Two strikes hit Saada. Three were reported. Four more. Five here.", 3).split(". ").length, 3);
+});

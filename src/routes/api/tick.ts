@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runScanCycle } from "@/lib/yemen-scan.server";
+import { getStore } from "@/lib/desk/store";
 
 /**
  * The desk's clock.
@@ -52,24 +53,62 @@ function authorize(request: Request): string | null {
   return secretMatches(given, expected) ? null : "bad token";
 }
 
+/**
+ * Vercel's hook for work that outlives the response. The free schedulers cut
+ * a request off after ~30 seconds and a cycle takes longer, so on Vercel the
+ * tick answers 202 at once and the cycle finishes in the background.
+ */
+function backgroundRunner(request: Request): ((p: Promise<unknown>) => void) | null {
+  const fromRequest = (request as Request & { waitUntil?: (p: Promise<unknown>) => void }).waitUntil;
+  if (typeof fromRequest === "function") return fromRequest;
+  const ctx = (
+    globalThis as unknown as Record<symbol, { get?: () => { waitUntil?: (p: Promise<unknown>) => void } }>
+  )[Symbol.for("@vercel/request-context")]?.get?.();
+  return typeof ctx?.waitUntil === "function" ? ctx.waitUntil.bind(ctx) : null;
+}
+
+const LOCK_KEY = "tick-lock";
+/** Just under Vercel's 300-second function limit: a crashed cycle frees the lock by then. */
+const LOCK_TTL_MS = 290_000;
+
+/** A scheduler with no concurrency control must never stack two cycles. */
+async function runLocked(): Promise<Record<string, unknown>> {
+  const store = await getStore();
+  const held = await store.getJson<{ at: number }>(LOCK_KEY);
+  if (held && Date.now() - held.at < LOCK_TTL_MS) {
+    return { ok: true, skipped: "a cycle is already running" };
+  }
+  await store.putJson(LOCK_KEY, { at: Date.now() });
+  const startedAt = Date.now();
+  try {
+    const result = await runScanCycle();
+    return { ...result, tookMs: Date.now() - startedAt };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "tick failed",
+      tookMs: Date.now() - startedAt,
+    };
+  } finally {
+    await store.putJson(LOCK_KEY, { at: 0 }).catch(() => {});
+  }
+}
+
 async function tick(request: Request): Promise<Response> {
   const denied = authorize(request);
   if (denied) return json({ ok: false, error: denied }, 401);
 
-  const startedAt = Date.now();
-  try {
-    const result = await runScanCycle();
-    return json({ ...result, tookMs: Date.now() - startedAt }, result.ok ? 200 : 500);
-  } catch (err) {
-    return json(
-      {
-        ok: false,
-        error: err instanceof Error ? err.message : "tick failed",
-        tookMs: Date.now() - startedAt,
-      },
-      500,
+  const background = backgroundRunner(request);
+  // `?wait=1` keeps the old synchronous answer, for a human checking by hand.
+  const wait = new URL(request.url).searchParams.get("wait") === "1";
+  if (background && !wait) {
+    background(
+      runLocked().then((r) => console.log("[tick]", JSON.stringify(r).slice(0, 500))),
     );
+    return json({ ok: true, accepted: true }, 202);
   }
+  const result = await runLocked();
+  return json(result, result.ok === false ? 500 : 200);
 }
 
 function json(body: unknown, status = 200) {

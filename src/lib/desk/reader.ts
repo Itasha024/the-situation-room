@@ -323,7 +323,7 @@ export async function readBatch(
   let lastError = "";
   const exhausted: string[] = [];
   for (const model of READER_MODELS) {
-    if (skip.has(model)) continue;
+    if (!apiKey || skip.has(model)) continue;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const r = await callModel(items, apiKey, model);
       if ("readings" in r) {
@@ -341,9 +341,80 @@ export async function readBatch(
       await sleep(1500 * 2 ** attempt);
     }
   }
+  // Every Gemini model out (or no Gemini key): the free Groq fallback reads
+  // what it can. Its free tier counts tokens per minute, so it takes a few
+  // items per call; what it does not reach stays queued for the next cycle.
+  const groq = groqKey();
+  if (groq && !skip.has(GROQ_MODEL)) {
+    const r = await callGroq(items.slice(0, GROQ_BATCH), groq);
+    if ("readings" in r) {
+      const byId = new Map<string, Reading>();
+      for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
+      return { readings: byId, model: r.model, exhausted };
+    }
+    lastError = `${GROQ_MODEL}: ${r.error}`;
+    if (r.daily) exhausted.push(GROQ_MODEL);
+  }
   return { readings: new Map(), error: lastError || "every model skipped (quota)", exhausted };
+}
+
+/**
+ * The fallback reader, used only when every Gemini model is out of quota.
+ * Same prompt, same `checkReading` afterwards, so a weaker model can publish
+ * less, never something wrong.
+ */
+export const GROQ_MODEL = "openai/gpt-oss-120b";
+const GROQ_BATCH = 4;
+
+async function callGroq(
+  items: ReaderItem[],
+  apiKey: string,
+): Promise<{ readings: Reading[]; model: string } | { error: string; daily: boolean }> {
+  const payload = items.map((i) => ({
+    id: i.id,
+    source: i.source,
+    source_alignment: i.alignment,
+    posted_at: i.postedAt,
+    text: i.text.slice(0, 1600),
+  }));
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 45_000);
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0,
+        reasoning_effort: "low",
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: JSON.stringify({ items: payload }) },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      // A per-minute limit clears by the next cycle; a daily one does not.
+      const wait = Number(res.headers.get("retry-after") || 0);
+      return { error: `HTTP ${res.status}`, daily: res.status === 429 && wait > 600 };
+    }
+    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const parsed = JSON.parse(json?.choices?.[0]?.message?.content ?? "") as { items?: Reading[] };
+    if (!Array.isArray(parsed.items)) return { error: "no items in response", daily: false };
+    return { readings: parsed.items, model: GROQ_MODEL };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "call failed", daily: false };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function readerKey(): string {
   return (typeof process !== "undefined" && process.env.GEMINI_API_KEY?.trim()) || "";
+}
+
+export function groqKey(): string {
+  return (typeof process !== "undefined" && process.env.GROQ_API_KEY?.trim()) || "";
 }

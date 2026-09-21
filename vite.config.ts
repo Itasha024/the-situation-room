@@ -192,6 +192,10 @@ export default defineConfig(({ command, isPreview }) => ({
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
             serverDir: "./server",
+            // A tick cycle (scan + model reads) outlives the default limit;
+            // 300s is the Hobby ceiling. It runs in the background (see
+            // src/routes/api/tick.ts), so the scheduler never waits for it.
+            vercel: { functions: { maxDuration: 300 } },
           }),
         ]
       : []),

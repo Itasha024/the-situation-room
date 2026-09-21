@@ -20,6 +20,7 @@ import {
   READER_BATCH,
   checkReading,
   contentHash,
+  groqKey,
   readBatch,
   readerKey,
 } from "./reader.ts";
@@ -84,7 +85,7 @@ const TYPE_OF: Record<EventType, DeskType> = {
 
 /** Is the reader switched on? Without a key the desk publishes nothing new. */
 export function readerAvailable(): boolean {
-  return !!readerKey();
+  return !!readerKey() || !!groqKey();
 }
 
 /**
@@ -119,13 +120,14 @@ export async function editCandidates(
 
   // Read what is new, newest first, within this cycle's budget.
   const key = readerKey();
-  let modelNote = key ? "" : "reader off: GEMINI_API_KEY not set";
+  const anyReader = !!key || !!groqKey();
+  let modelNote = anyReader ? "" : "reader off: GEMINI_API_KEY not set";
   unread.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const stillQueued: Queued[] = [];
   let calls = 0;
   for (let i = 0; i < unread.length; i += READER_BATCH) {
     const batch = unread.slice(i, i + READER_BATCH);
-    if (!key || calls >= MAX_CALLS_PER_CYCLE) {
+    if (!anyReader || calls >= MAX_CALLS_PER_CYCLE) {
       stillQueued.push(...batch);
       continue;
     }

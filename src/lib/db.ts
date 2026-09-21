@@ -1,4 +1,5 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
+import { pgPoolConfig } from "../../scripts/pg-config.mjs";
 
 /** Which database backend is active. */
 export type DbSource = "neon" | "pglite";
@@ -93,7 +94,9 @@ function createNeonSql(): Promise<Sql> {
     types.setTypeParser(OID_INT8, Number);
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
-    const pool = new Pool({ connectionString: databaseUrl });
+    // Few connections per instance: serverless instances multiply, and the
+    // Supabase pooler caps the total.
+    const pool = new Pool(pgPoolConfig(databaseUrl as string, { max: 3 }));
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];

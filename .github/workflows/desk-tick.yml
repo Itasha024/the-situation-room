@@ -1,20 +1,12 @@
 name: Desk tick
 
-# The desk's clock.
+# A manual tick, for proving the wiring by hand.
 #
-# Vercel's free tier only allows a once-a-day cron, which is far too slow for a
-# five-minute Telegram cadence, so the schedule lives here instead. The tick
-# itself is idempotent with respect to each source's schedule: firing it more
-# often than needed simply finds fewer sources due, so drift costs nothing.
-#
-# GitHub's scheduler is best-effort and can run late under load. That is
-# acceptable — a late tick collects the same items, just later. If it drifts
-# badly in practice, point a third-party cron at the same endpoint instead.
+# The desk's real clock is cron-job.org, every 5 minutes: a GitHub schedule
+# that often costs ~8,600 Actions minutes a month, over a private repo's free
+# 2,000, and GitHub's scheduler runs late under load.
 
 on:
-  schedule:
-    - cron: "*/5 * * * *"
-  # So a human can prove the wiring works without waiting for the schedule.
   workflow_dispatch:
 
 # A slow tick must never have a second one stack up behind it.

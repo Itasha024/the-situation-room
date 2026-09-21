@@ -30,6 +30,8 @@ export type ReaderItem = {
   text: string;
   /** An original article read in full: the model reads all of it, not its top. */
   full?: boolean;
+  /** A repair: what the model's earlier copy of this item failed. */
+  fix?: string;
 };
 
 export type EventType =
@@ -202,6 +204,8 @@ WRITING
   decision, a commitment, a reversal, casualties — not only the opening
   paragraph; the body keeps the other key facts (a leader agreed to strike,
   then called it off: both).
+- Do not compress: keep who, what, where, casualties (killed and wounded,
+  with their figures), weapon and unit. A short item stays whole.
 - Every number, name and place you write must be in the item's text. Add
   nothing: no background, no cause, no casualties, no attribution the text
   does not give.
@@ -211,11 +215,18 @@ WRITING
   name the outlet or say who "carried" or "reported" the item — the card shows
   the source.
 - A place a general reader does not know gets a short locator once, in the
-  body only: "Kahbub in Lahj governorate". Never inside a list of places, never
+  body only: "in Kahbub, south-west Yemen" or "Kahbub in Lahj governorate".
+  No "the strategic front of", no chains of district and governorate names.
+  Never inside a list of places, never
   for Sanaa, Aden, Marib, Taiz, Hodeidah, Riyadh, Jeddah, Mecca, the Red Sea,
   Bab al-Mandab.
 - Neutral words: "Houthi forces", "Yemeni government forces", "Saudi forces",
   "people killed". Never "martyrs", "mercenaries", "aggression", "enemy".
+- Forces by their English names: درع الوطن = Nation's Shield forces, درع
+  الجزيرة = Peninsula Shield forces, الحزام الأمني = Security Belt forces,
+  العمالقة = Giants Brigades, المقاومة الوطنية = National Resistance forces.
+- An item with fix_previous: your earlier copy of it failed that check.
+  Write it again with the fault corrected; the rules above still hold.
 
 SIDES (actor_side)
 Both the Houthis (Sanaa) and the recognised government (Aden) call themselves
@@ -393,7 +404,19 @@ function numbersIn(text: string): Set<string> {
  * The code's check on the model. Returns why a reading must not be published,
  * or null when it may be.
  */
-export function checkReading(r: Reading, sourceText: string): string | null {
+const CASUALTY_SRC = /قتيل|قتلى|شهيد|شهداء|جرحى|جريح|مصابين|\bkilled\b|\bwounded\b|\binjured\b|casualties/i;
+const CASUALTY_COPY = /kill|dead|death|died|wound|injur|casualt|lives|bodies/i;
+
+/** Failures a second writing can fix; anything else is a judgement, and stands. */
+export function repairable(problem: string): boolean {
+  return /headline length|empty body|casualties dropped|does not lead with its speaker|leads with outlet|written as|banned phrase|source-language/i.test(problem);
+}
+
+/**
+ * `strict` adds the checks a repair may still fail on a good card (casualties,
+ * side words); a card that failed them twice goes out rather than be lost.
+ */
+export function checkReading(r: Reading, sourceText: string, strict = true): string | null {
   if (!r.publish) return r.reject_reason || "not publishable";
   const h = String(r.headline || "").trim();
   const b = String(r.body || "").trim();
@@ -416,6 +439,11 @@ export function checkReading(r: Reading, sourceText: string): string | null {
     if (lead && !h.toLowerCase().startsWith(lead.toLowerCase())) return "statement does not lead with its speaker";
   }
   if (OUTLET_LEAD.test(h)) return "headline leads with outlet";
+  // Casualties in the source are never dropped from the copy.
+  if (!strict) return null;
+  if (CASUALTY_SRC.test(sourceText) && !CASUALTY_COPY.test(`${h} ${b}`)) return "casualties dropped";
+  // A Houthi actor is never "Yemeni forces", nor a government one "Houthi".
+  if (r.actor_side === "houthi" && /\bYemeni (?:armed )?forces\b|\bYemen's (?:army|armed forces)\b/i.test(`${h} ${b}`)) return "Houthi actor written as Yemeni forces";
   return null;
 }
 
@@ -428,6 +456,7 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string, rec
     source_alignment: i.alignment,
     posted_at: i.postedAt,
     text: i.text.slice(0, i.full ? FULL_TEXT_MAX : 2400),
+    ...(i.fix ? { fix_previous: i.fix } : {}),
   }));
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 60_000);
@@ -529,6 +558,7 @@ async function callGroq(
     source_alignment: i.alignment,
     posted_at: i.postedAt,
     text: i.text.slice(0, i.full ? 6000 : 1600),
+    ...(i.fix ? { fix_previous: i.fix } : {}),
   }));
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 45_000);

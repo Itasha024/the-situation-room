@@ -24,6 +24,7 @@ import {
   SECOND_LOOK_MODELS,
   OUTLET_LEAD,
   checkReading,
+  repairable,
   fixHeadline,
   contentHash,
   groqKey,
@@ -68,13 +69,15 @@ const RECENT_MAX = 40;
 /** Model calls per cycle, so one busy cycle cannot spend the day's quota. */
 const MAX_CALLS_PER_CYCLE = 5;
 
-type CacheEntry = { reading: Reading; at: number; second?: boolean };
+/** `loose`: failed a strict check twice and went out anyway (see the repair). */
+type CacheEntry = { reading: Reading; at: number; second?: boolean; loose?: boolean };
 
 /** Rejected field reports, with what the second look made of them (admin page). */
 export type Missed = { at: string; source: string; url: string; text: string; reason: string; second: string };
 export const MISSED_KEY = "reader-missed";
 const MISSED_MAX = 200;
 const SECOND_LOOK_MAX = 8;
+const REPAIR_MAX = 10;
 
 /** A place in Yemen or Saudi Arabia, and something happening there. */
 const FIELD_WORDS =
@@ -167,7 +170,7 @@ export async function editCandidates(
   for (const c of all) {
     const hit = cache[contentHash(c.text)];
     if (hit && !stale(hit)) {
-      verdicts.set(c.url, decide(hit.reading, c));
+      verdicts.set(c.url, decide(hit.reading, c, !hit.loose));
       readingOf.set(c.url, hit.reading);
     } else unread.push(c);
   }
@@ -187,6 +190,15 @@ export async function editCandidates(
   // development of one of them as its follow-up.
   const recent: RecentReport[] = [];
   const refToFp = new Map<string, { fp: string; at: number }>();
+  // Refs mean nothing outside this call; keep the report's fp instead. A
+  // reply only ever points back in time: an old post read late (a replay)
+  // cannot follow up something published after it.
+  const unref = (r: Reading, c: Candidate) => {
+    const parent = refToFp.get(String(r.follows_up || ""));
+    r.follows_up = parent && parent.at < Date.parse(c.at) ? parent.fp : "";
+    r.duplicate_of = refToFp.get(String(r.duplicate_of || ""))?.fp ?? "";
+  };
+  const fixes: { c: Queued; note: string }[] = [];
   if (unread.length && anyReader) {
     try {
       const { reports } = await store.recentDesk(RECENT_MAX);
@@ -228,17 +240,59 @@ export async function editCandidates(
         stillQueued.push(c);
         return;
       }
-      // Refs mean nothing outside this call; keep the report's fp instead. A
-      // reply only ever points back in time: an old post read late (a replay)
-      // cannot follow up something published after it.
-      const parent = refToFp.get(String(r.follows_up || ""));
-      r.follows_up = parent && parent.at < Date.parse(c.at) ? parent.fp : "";
-      r.duplicate_of = refToFp.get(String(r.duplicate_of || ""))?.fp ?? "";
+      unref(r, c);
       cache[contentHash(c.text)] = { reading: r, at: now };
-      verdicts.set(c.url, decide(r, c));
+      const v = decide(r, c);
+      verdicts.set(c.url, v);
       readingOf.set(c.url, r);
+      if (v.kind === "reject" && v.reason === "reader-check" && repairable(v.note)) fixes.push({ c, note: v.note });
     });
   }
+  /**
+   * The repair: copy that failed a check a second writing can pass (casualties
+   * dropped, the speaker not first, length...) is sent back once, in the same
+   * cycle, with the fault named. Still failing a strict check, it goes out as
+   * first written rather than be lost; either way it is on the missed list.
+   */
+  if (fixes.length && anyReader) {
+    const batch = fixes.slice(0, REPAIR_MAX);
+    const items: ReaderItem[] = batch.map(({ c, note }, n) => ({
+      id: String(n),
+      source: c.source,
+      alignment: ALIGNMENT[outletSide(c.source, c.lean)],
+      postedAt: c.at,
+      text: c.text,
+      full: c.tags.includes("original"),
+      fix: note,
+    }));
+    const res = await readBatch(items, key, skip, recent);
+    const missed = (await store.getJson<Missed[]>(MISSED_KEY)) ?? [];
+    batch.forEach(({ c, note }, n) => {
+      const first = readingOf.get(c.url)!;
+      const second = res.readings.get(String(n));
+      if (second) unref(second, c);
+      let outcome = "unread";
+      let v = second ? decide(second, c) : undefined;
+      let entry: CacheEntry | undefined = v?.kind === "publish" ? { reading: second!, at: now } : undefined;
+      if (v?.kind === "publish") outcome = "published after repair";
+      else {
+        const loose = decide(second ?? first, c, false);
+        if (loose.kind === "publish") {
+          v = loose;
+          entry = { reading: second ?? first, at: now, loose: true };
+          outcome = `published as written: ${second ? (v as { note?: string }).note ?? "repair failed" : "no repair"}`;
+        } else if (v) outcome = `rejected again: ${(v as { note?: string }).note ?? ""}`;
+      }
+      if (v?.kind === "publish" && entry) {
+        verdicts.set(c.url, v);
+        readingOf.set(c.url, entry.reading);
+        cache[contentHash(c.text)] = entry;
+      }
+      missed.unshift({ at: new Date(now).toISOString(), source: c.source, url: c.url, text: c.text.replace(/\s+/g, " ").slice(0, 280), reason: `check: ${note}`, second: outcome });
+    });
+    await store.putJson(MISSED_KEY, missed.slice(0, MISSED_MAX));
+  }
+
   for (const c of stillQueued) {
     verdicts.set(c.url, { kind: "pending", note: "Waiting for the reader; retried next cycle." });
   }
@@ -389,7 +443,7 @@ export function reword(s: string): string {
   return out.replace(/\bSaudi forces forces\b/g, "Saudi forces");
 }
 
-function decide(raw: Reading, c: Candidate): EditorVerdict {
+function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
   const r: Reading = { ...raw, headline: fixHeadline(reword(anglicise(raw.headline))), body: reword(anglicise(raw.body)) };
@@ -412,7 +466,7 @@ function decide(raw: Reading, c: Candidate): EditorVerdict {
     const role = fixHeadline(lead);
     r.speaker_lead = r.headline.toLowerCase().startsWith(role.toLowerCase()) ? role : null;
   }
-  const problem = checkReading(r, c.text);
+  const problem = checkReading(r, c.text, strict);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   }

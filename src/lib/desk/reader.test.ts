@@ -9,7 +9,7 @@ import test from "node:test";
 
 import { credibility } from "./credibility.ts";
 import { type Candidate, toReport } from "./editor.ts";
-import { type Reading, checkReading } from "./reader.ts";
+import { type Reading, checkReading, repairable } from "./reader.ts";
 
 function reading(over: Partial<Reading>): Reading {
   return {
@@ -156,4 +156,20 @@ test("a side's 'enemy' becomes that side's forces, never 'opposing'", async () =
   const { reword } = await import("./editor.ts");
   assert.equal(reword("Houthi leader: Saudi enemy targets civilian objects"), "Houthi leader: Saudi forces targets civilian objects");
   assert.equal(reword("the Saudi adversary opened its airports"), "Saudi Arabia opened its airports");
+});
+
+test("casualties in the source are never dropped; a card failing that twice still goes out", () => {
+  const src = "غارات سعودية على سوق شعبي في ذباب أسفرت عن سقوط قتلى وجرحى";
+  const dropped = reading({ headline: "Saudi jets strike a market in Dhubab", body: "Saudi jets struck a popular market in Dhubab." });
+  assert.equal(checkReading(dropped, src), "casualties dropped");
+  assert.ok(repairable("casualties dropped"));
+  assert.equal(checkReading(dropped, src, false), null);
+  const kept = reading({ headline: "Saudi jets strike a market in Dhubab, killing and wounding people", body: "People were killed and wounded." });
+  assert.equal(checkReading(kept, src), null);
+});
+
+test("a Houthi actor written as Yemeni forces fails, and can be repaired", () => {
+  const r = reading({ actor_side: "houthi", headline: "Yemeni forces fire drones at Jizan", body: "Yemeni forces said they fired drones at Jizan." });
+  assert.match(String(checkReading(r, "القوات المسلحة اليمنية تستهدف جيزان")), /written as Yemeni forces/);
+  assert.equal(repairable("figure not in source: 30"), false);
 });

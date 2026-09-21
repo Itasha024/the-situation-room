@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findCitation, keywords, overlap } from "./origin.ts";
+import { findCitation, keywords, logRoute, overlap, type RouteLog } from "./origin.ts";
 
 test("a relayed outlet is found, the carrier itself is not", () => {
   assert.equal(findCitation("نيويورك تايمز: ترامب تردد في ضرب اليمن بعد طلب سعودي", "Shajab News")?.name, "NYT");
@@ -49,4 +49,13 @@ test("a match days older than the post is refused", () => {
   const keys = keywords("Yemeni president asked US for government support against Houthis", "en", "Reuters");
   const at = Date.parse("2026-09-21T13:29:00Z");
   assert.equal(overlap("China presses Iran to help rein in Houthis after Saudi appeal", keys, Date.parse("2026-09-17T10:00:00Z"), at), 0);
+});
+
+test("each site's reading route is counted by host, failures included", () => {
+  const log: RouteLog = {};
+  logRoute(log, "https://www.nytimes.com/2026/09/20/us/politics/a.html", "copy", 1);
+  logRoute(log, "https://www.nytimes.com/2026/09/21/world/b.html", "none", 2);
+  logRoute(log, "https://aawsat.com/node/1", "page", 3);
+  assert.deepEqual(log["nytimes.com"], { routes: { copy: 1, none: 1 }, lastAt: 2, last: "none" });
+  assert.equal(log["aawsat.com"].routes.page, 1);
 });

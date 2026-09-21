@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Desk status</title>
+<style>
+  :root { --bg: #fff; --fg: #1a1a1a; --mute: #666; --line: #ddd; --warn: #b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #141414; --fg: #eee; --mute: #999; --line: #333; --warn: #f28b82; } }
+  body { background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, sans-serif; margin: 0 auto; padding: 16px; max-width: 1000px; }
+  h1 { font-size: 20px; } h2 { font-size: 16px; margin-top: 28px; }
+  .wrap { overflow-x: auto; } table { border-collapse: collapse; width: 100%; }
+  td, th { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { color: var(--mute); font-weight: 600; } .zero { color: var(--warn); font-weight: 600; }
+  .mute { color: var(--mute); } .ar { direction: rtl; text-align: right; } a { color: inherit; }
+</style>
+</head>
+<body>
+<h1>Desk status</h1>
+<p class="mute" id="tick">Loading…</p>
+<h2>Sources, last 24 hours</h2>
+<div class="wrap"><table id="sources"><thead><tr><th>Source</th><th>Cards</th><th>Last read</th></tr></thead><tbody></tbody></table></div>
+<h2>Missed list: rejected posts that looked like news</h2>
+<div class="wrap"><table id="missed"><thead><tr><th>When</th><th>Source</th><th>Post</th><th>First reading</th><th>Second look</th></tr></thead><tbody></tbody></table></div>
+<h2>Reading originals, by site</h2>
+<div class="wrap"><table id="routes"><thead><tr><th>Site</th><th>Page</th><th>Copy</th><th>Wayback</th><th>Failed</th><th>Last</th></tr></thead><tbody></tbody></table></div>
+<script>
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const when = (iso) => (iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
+const rows = (id, html) => (document.querySelector(`#${id} tbody`).innerHTML = html.join("") || '<tr><td colspan="6" class="mute">Nothing yet.</td></tr>');
+fetch("/api/status").then((r) => r.json()).then((d) => {
+  if (!d.ok) throw new Error(d.error);
+  document.getElementById("tick").textContent = `Last tick: ${when(d.lastTickAt)}`;
+  rows("sources", d.sources.sort((a, b) => a.cards24h - b.cards24h).map((s) =>
+    `<tr><td>${esc(s.name)}</td><td class="${s.cards24h ? "" : "zero"}">${s.cards24h}</td><td class="mute">${when(s.lastReadAt)}</td></tr>`));
+  rows("missed", d.missed.map((m) =>
+    `<tr><td class="mute">${when(m.at)}</td><td>${esc(m.source)}</td><td class="ar"><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.text)}</a></td><td>${esc(m.reason)}</td><td>${esc(m.second)}</td></tr>`));
+  rows("routes", Object.entries(d.routes).sort((a, b) => b[1].lastAt - a[1].lastAt).map(([h, e]) =>
+    `<tr><td>${esc(h)}</td><td>${e.routes.page ?? 0}</td><td>${e.routes.copy ?? 0}</td><td>${e.routes.wayback ?? 0}</td><td class="${e.routes.none ? "zero" : ""}">${e.routes.none ?? 0}</td><td class="mute">${esc(e.last)} · ${when(new Date(e.lastAt).toISOString())}</td></tr>`));
+}).catch((e) => (document.getElementById("tick").textContent = `Status failed: ${e.message}`));
+</script>
+</body>
+</html>

@@ -330,6 +330,11 @@ export function extractLead(html: string): string {
 
 /** Items read from one RSS feed per cycle. Google News lists up to 100. */
 const RSS_ITEMS = 25;
+
+/** Every source the clock reads, with its lastScanAt key: the status page's list. */
+export function sourceList(): { key: string; name: string }[] {
+  return [...TG.map((c) => ({ key: `tg:${c.id}`, name: c.name })), ...RSS.map((f) => ({ key: `web:${f.id}`, name: f.name }))];
+}
 /** Extra `?before=` pages read from one channel to reach the last post seen. */
 const TG_BACKFILL_PAGES = 4;
 /**

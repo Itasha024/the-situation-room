@@ -181,13 +181,33 @@ export function articleText(html: string): string {
     .filter((t) => t.length > 60 && !/cookie|subscribe|sign up|newsletter|all rights reserved|©/i.test(t))
     // A paragraph is a sentence: a line with no closing stop is a related
     // headline or a caption, not the story.
-    .filter((t) => /[.!?"'”’)]$/.test(t))
+    .filter((t) => /[.!?؟"'”’)»]$/.test(t))
     .filter((t, i, all) => all.indexOf(t) === i)
     // Whole paragraphs, the whole article: its key fact may be near the end.
     .reduce((out, t) => (out.length + t.length < FULL_TEXT_MAX ? (out ? `${out}\n${t}` : t) : out), "");
 }
 
-const titleKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
+const titleKey = (t: string) => t.toLowerCase().replace(/[^p{L}p{N}]+/gu, "");
+
+/** How each site's original was read, and how often it could not be: the admin record. */
+export const ROUTES_KEY = "origin-routes";
+export type Route = "page" | "copy" | "wayback" | "none";
+export type RouteLog = Record<string, { routes: Partial<Record<Route, number>>; lastAt: number; last: Route }>;
+export function logRoute(log: RouteLog, url: string, route: Route, now = Date.now()): void {
+  const host = hostOf(url);
+  if (!host) return;
+  const e = (log[host] ??= { routes: {}, lastAt: 0, last: route });
+  e.routes[route] = (e.routes[route] ?? 0) + 1;
+  e.lastAt = now;
+  e.last = route;
+}
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).hostname.replace(/^www./, "");
+  } catch {
+    return "";
+  }
+};
 
 /**
  * The original's full text. Wires such as Reuters refuse automated readers, so
@@ -195,21 +215,26 @@ const titleKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
  * that carries the wire under the same headline (The Straits Times,
  * MarketScreener, ...). No page is forced: a refusal moves on to the next copy.
  */
-export async function readOriginal(f: Found): Promise<string> {
+export async function readOriginal(f: Found, lang: "en" | "ar" = "en", note: (r: Route) => void = () => {}): Promise<string> {
   const own = articleText(await page(f.url));
-  if (own.length >= 400 || !f.title) return own;
+  if (own.length >= 400) return note("page"), own;
+  const kept = async () => {
+    // A copy the Wayback Machine already holds; a new capture is never asked for.
+    const text = articleText(await page(await archived(f.url)));
+    note(text.length >= 400 ? "wayback" : "none");
+    return text.length > own.length ? text : own;
+  };
+  if (!f.title) return kept();
   const want = titleKey(f.title);
-  const copies = (await searchGoogleNews(`"${f.title}"`, "en")).filter(
+  const copies = (await searchGoogleNews(`"${f.title}"`, lang)).filter(
     (i) => i.outlet && i.outlet !== f.source && titleKey(i.title) === want,
   );
   for (const i of copies.slice(0, 3)) {
     const url = await resolveGoogleNews(i.link);
     const text = url ? articleText(await page(url)) : "";
-    if (text.length >= 400) return text;
+    if (text.length >= 400) return note("copy"), text;
   }
-  // A copy the Wayback Machine already holds; a new capture is never asked for.
-  const kept = articleText(await page(await archived(f.url)));
-  return kept.length > own.length ? kept : own;
+  return kept();
 }
 
 /** The raw page of an existing Wayback Machine capture, or "". */
@@ -245,6 +270,7 @@ export async function traceOrigins(
     r.alsoReportedBy = undefined;
   };
   let reads = READ_BUDGET;
+  let routes: RouteLog | undefined;
   /**
    * The first report traced to an original has the original read and queued,
    * so the card is written from the original text, not the relay. Another
@@ -256,9 +282,9 @@ export async function traceOrigins(
       r.duplicateOf = owner.found.readBy;
       return;
     }
-    if (f.readBy || !cited || cited.lang !== "en" || cited.kind !== "outlet" || reads <= 0) return;
+    if (f.readBy || !cited || cited.kind !== "outlet" || reads <= 0) return;
     reads -= 1;
-    const text = await readOriginal(f);
+    const text = await readOriginal(f, cited.lang, (route) => logRoute((routes ??= {}), f.url, route, now));
     if (text.length < 400) return;
     f.readBy = r.fp;
     dirty = true;
@@ -324,6 +350,16 @@ ${text}`.trim(),
     late.push(r);
   }
 
+  if (routes) {
+    const log = (await store.getJson<RouteLog>(ROUTES_KEY)) ?? {};
+    for (const [host, e] of Object.entries(routes)) {
+      const into = (log[host] ??= { routes: {}, lastAt: 0, last: e.last });
+      for (const [k, n] of Object.entries(e.routes)) into.routes[k as Route] = (into.routes[k as Route] ?? 0) + (n ?? 0);
+      into.lastAt = e.lastAt;
+      into.last = e.last;
+    }
+    await store.putJson(ROUTES_KEY, log);
+  }
   if (dirty) {
     const stamp = (e: Entry) => ("found" in e ? e.at : e.firstAt);
     const kept = Object.entries(cache)

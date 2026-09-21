@@ -1,0 +1,59 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+import { MISSED_KEY, type Missed } from "@/lib/desk/editor";
+import { ROUTES_KEY, type RouteLog } from "@/lib/desk/origin";
+import { getStore } from "@/lib/desk/store";
+import { sourceList } from "@/lib/yemen-scan.server";
+
+/**
+ * The desk's own health, for the operator: what each source gave in 24 hours,
+ * when it was last read, what the reader rejected that looked like news (the
+ * missed list), and how each site's originals could be read. A READ only.
+ */
+export const Route = createFileRoute("/api/status")({
+  server: {
+    handlers: {
+      GET: async () => {
+        try {
+          const store = await getStore();
+          const now = Date.now();
+          const [state, slice, missed, routes] = await Promise.all([
+            store.loadScanState(),
+            store.recentDesk(1000),
+            store.getJson<Missed[]>(MISSED_KEY),
+            store.getJson<RouteLog>(ROUTES_KEY),
+          ]);
+          const day = new Map<string, number>();
+          for (const row of slice.reports) {
+            const r = row as { at: string; source: string };
+            if (now - Date.parse(r.at) > 86_400_000) continue;
+            day.set(r.source, (day.get(r.source) ?? 0) + 1);
+          }
+          const seen = new Set<string>();
+          const sources = sourceList().map((s) => {
+            seen.add(s.name);
+            return { name: s.name, key: s.key, lastReadAt: state.lastScanAt[s.key] ? new Date(state.lastScanAt[s.key]).toISOString() : null, cards24h: day.get(s.name) ?? 0 };
+          });
+          // Originals (Reuters, NYT, ...) are sources too, though no feed reads them.
+          for (const [name, n] of day) if (!seen.has(name)) sources.push({ name, key: "", lastReadAt: null, cards24h: n });
+          return json({
+            ok: true,
+            lastTickAt: state.lastTickAt ? new Date(state.lastTickAt).toISOString() : null,
+            sources,
+            missed: (missed ?? []).slice(0, 100),
+            routes: routes ?? {},
+          });
+        } catch (err) {
+          return json({ ok: false, error: err instanceof Error ? err.message : "status failed" }, 500);
+        }
+      },
+    },
+  },
+});
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+  });
+}

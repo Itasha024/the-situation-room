@@ -32,8 +32,9 @@
  *    One sentence. Sentence case, not Title Case. No terminal full stop.
  *    Order: actor → verb → object → place → count.
  *    Target length 60–110 characters; hard cap 140, cut on a word boundary.
- *    Never a colon-prefixed source name ("Reuters: …"); the source has its own
- *    field on the card.
+ *    Never a colon-prefixed SOURCE name ("Reuters: …"); the source has its own
+ *    field on the card. A statement opens with its SPEAKER instead —
+ *    "Trump: …", "Al-Mashat: …" — because who said it is the news.
  *
  * 3. VERBS ARE PLAIN AND ACTIVE, PAST TENSE FOR COMPLETED EVENTS.
  *    launched, struck, hit, shelled, intercepted, shot down, seized, retook,
@@ -69,9 +70,17 @@
  *    No "note that", no "importantly", no "as our readers know", no exclamation
  *    marks, no rhetorical questions, no scare quotes on ordinary nouns.
  *
- * 9. WHAT WE DO NOT KNOW, WE SAY WE DO NOT KNOW.
- *    "No casualties were reported." is a fact. "There were no casualties." is a
- *    claim we cannot make. Absence of detail is reported as absence of detail.
+ * 9. SAY WHAT HAPPENED, AND NOTHING ABOUT WHAT IS MISSING.
+ *    No "no casualty figures were given", no "neither side gave details", no
+ *    "it was unclear". A line about what the source did not say is filler on
+ *    every card that carries it. When the source gives a figure, report it;
+ *    when it does not, the report simply has no figure.
+ *
+ * 10. A DATELINE IS WHERE IT HAPPENED, OR NOTHING.
+ *    Only a place the reported action happened in may head the body. Never a
+ *    default ("SANAA" on anything unplaced) and never a place merely mentioned
+ *    — a denial that names Mecca was not issued from Mecca. A statement has no
+ *    dateline: the desk does not know where the speaker was standing.
  */
 
 import { type Place, datelineFor, placesIn, withLocator } from "./gazetteer.ts";
@@ -145,23 +154,35 @@ export function unitsIn(text: string): string[] {
   return out;
 }
 
-const SPEAKER_RULES: [RegExp, string][] = [
-  [/يحيى السريع|يحيى سريع|العميد سريع|Yahya Saree/i, "Yahya Saree, the Houthi military spokesman"],
-  [/عبد الملك الحوثي|عبدالملك الحوثي/i, "Abdul Malik al-Houthi, the Houthi leader"],
-  [/محمد عبد السلام|محمد عبدالسلام/i, "Mohammed Abdulsalam, the Houthis' chief negotiator"],
-  [/محمد علي الحوثي/i, "Mohammed Ali al-Houthi, a senior Houthi official"],
-  [/حزام الأسد|حزام الاسد|Hezam al-?Asad|Hazam al-?Asad/i, "Hezam al-Asad, a Houthi political bureau member"],
-  [/عبدالقادر المرتضى|عبد القادر المرتضى|al-?Murtad/i, "Abdulqader al-Murtada, the Houthi prisoner-affairs chief"],
-  [/رشاد العليمي|al-?Alimi/i, "Rashad al-Alimi, the head of Yemen's Presidential Leadership Council"],
-  [/سمير الحاج/i, "Samir al-Haj al-Sabri, Yemen's deputy defence minister"],
-  [/نبيل شمسان/i, "Nabil Shamsan, a Yemeni government official"],
-  [/أبوراس|أبو راس|Aburas/i, "Abdul Wahid Aburas"],
-  [/مهدي المشاط|المشاط|al-?Mashat/i, "Mahdi al-Mashat, head of the Houthis' Supreme Political Council"],
-  [/سلطان العرادة|العرادة|al-?Arada/i, "Sultan al-Arada, the governor of Marib"],
-  [/ترامب|Trump/i, "US President Donald Trump"],
-  [/روبيو|Rubio/i, "US Secretary of State Marco Rubio"],
-  [/فانس|\bVance\b/i, "US Vice-President JD Vance"],
+/**
+ * People who speak, as [pattern, how the body names them, how the card opens].
+ *
+ * The card leads with the speaker — "Trump: …", "Al-Mashat: …" — because who
+ * said it is part of the news. Three tiers, and the rule is the reader's, not
+ * ours: a figure a reader knows is named; someone they could not place is
+ * given by title only ("Yemen's deputy defence minister"), never by a full
+ * name that would mean nothing to them. The body follows the same rule.
+ */
+const SPEAKER_RULES: [RegExp, string, string][] = [
+  [/يحيى السريع|يحيى سريع|العميد سريع|Yahya Saree/i, "Yahya Saree, the Houthi military spokesman", "Saree"],
+  [/عبد الملك الحوثي|عبدالملك الحوثي/i, "Abdul Malik al-Houthi, the Houthi leader", "Abdul Malik al-Houthi"],
+  [/محمد عبد السلام|محمد عبدالسلام/i, "the Houthis' chief negotiator", "The Houthis' chief negotiator"],
+  [/محمد علي الحوثي/i, "a senior Houthi official", "A senior Houthi official"],
+  [/حزام الأسد|حزام الاسد|Hezam al-?Asad|Hazam al-?Asad/i, "a Houthi political bureau member", "A Houthi political bureau member"],
+  [/عبدالقادر المرتضى|عبد القادر المرتضى|al-?Murtad/i, "the Houthi prisoner-affairs chief", "The Houthi prisoner-affairs chief"],
+  [/رشاد العليمي|al-?Alimi/i, "Rashad al-Alimi, the head of Yemen's Presidential Leadership Council", "Al-Alimi"],
+  [/سمير الحاج/i, "Yemen's deputy defence minister", "Yemen's deputy defence minister"],
+  [/نبيل شمسان/i, "a Yemeni government official", "A Yemeni government official"],
+  [/أبوراس|أبو راس|Aburas/i, "a Houthi official", "A Houthi official"],
+  [/مهدي المشاط|المشاط|al-?Mashat/i, "Mahdi al-Mashat, head of the Houthis' Supreme Political Council", "Al-Mashat"],
+  [/سلطان العرادة|العرادة|al-?Arada/i, "the governor of Marib", "Marib's governor"],
+  [/ترامب|Trump/i, "US President Donald Trump", "Trump"],
+  [/روبيو|Rubio/i, "US Secretary of State Marco Rubio", "Rubio"],
+  [/فانس|Vance/i, "US Vice-President JD Vance", "Vance"],
 ];
+
+/** Body form → card-opening form, for the named figures above. */
+const SPEAKER_LEAD = new Map(SPEAKER_RULES.map(([, full, lead]) => [full, lead]));
 
 /**
  * Institutions that speak. Unlike personal names these have settled English
@@ -277,6 +298,18 @@ export function speakerShort(full: string): string {
   return parts[parts.length - 1] || head;
 }
 
+/**
+ * How a statement card opens: "Trump", "Al-Mashat", "Yemen's defence
+ * ministry", "A Saudi military analyst". Always something a reader can place.
+ */
+export function speakerLead(full: string): string {
+  if (!full) return "";
+  const known = SPEAKER_LEAD.get(full);
+  if (known) return known;
+  // Institutions and roles are already in reader-facing form.
+  return sentenceCase(full);
+}
+
 /* ------------------------------------------------------------------ *
  * 3. Neutralising the sources' vocabulary
  * ------------------------------------------------------------------ */
@@ -350,6 +383,8 @@ export function tidyHeadline(s: string, cap = 140): string {
 /** Body hygiene: sentences end in a stop, no source dumps. */
 export function tidyBody(s: string): string {
   const t = String(s || "")
+    // An empty dateline leaves "— text": drop the orphaned dash.
+    .replace(/^\s*[—–-]\s*/, "")
     .replace(/\s+/g, " ")
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/\.{2,}/g, ".")
@@ -453,20 +488,21 @@ export function inPlaces(places: Place[]): string {
 }
 
 /**
- * Body geography: the first unfamiliar place gets its locator, the rest stay bare.
- * "in Kahbub, a hill in Lahj governorate overlooking the Bab al-Mandab strait"
+ * Body geography: a lone unfamiliar place gets its short locator — "in Kahbub
+ * in Lahj governorate". A LIST of places is never glossed: "Marib in
+ * east-central Yemen and Taiz in south-west Yemen" stops reading as a list.
  */
 export function inPlacesWithLocator(places: Place[]): string {
   const xs = places.slice(0, 3);
   if (!xs.length) return "";
-  const first = withLocator(xs[0]);
-  const rest = xs.slice(1).map((p) => p.name);
-  return `in ${listPlaces([first, ...rest])}`;
+  if (xs.length > 1) return `in ${listPlaces(xs.map((p) => p.name))}`;
+  return `in ${withLocator(xs[0])}`;
 }
 
-export function datelineOf(places: Place[], fallback = "SANAA"): string {
+export function datelineOf(places: Place[]): string {
+  if (!places.length) return "";
   const land = places.find((p) => p.country !== "sea") || places[0];
-  return datelineFor(land) || fallback;
+  return datelineFor(land) || "";
 }
 
 /* ------------------------------------------------------------------ *
@@ -511,7 +547,7 @@ export function composeLaunch(a: LaunchArgs): Composed {
   }
   if (cas) headline += `, ${cas}`;
 
-  const dateline = a.targets.length ? datelineOf(a.targets) : "SANAA";
+  const dateline = datelineOf(a.targets);
   const from = a.origin ? ` from ${a.origin.name}` : "";
   const lead =
     a.tier === "agency"
@@ -519,7 +555,7 @@ export function composeLaunch(a: LaunchArgs): Composed {
       : `${article === "an" ? "An" : "A"} ${weapon} was reported launched${from}${toward ? " " + toward : ""}${a.when ? " " + a.when : ""}.`;
   // No outlet name and no "could not be verified" line: the card already shows
   // the source, and the hedge is carried by the wording of the lead itself.
-  const detail = cas ? `${sentenceCase(cas)} were reported.` : "No casualty figures were given.";
+  const detail = cas ? `${sentenceCase(cas)} were reported.` : "";
 
   return {
     headline: tidyHeadline(headline),
@@ -538,11 +574,11 @@ export function composeAlert(a: AlertArgs): Composed {
       : `Air defence alerts sound in ${where}`;
   const first = a.firstTime ? " It was the first such alert there since the current round of fighting began." : "";
   const boom = a.explosions ? " Residents reported hearing explosions." : "";
-  const dateline = datelineOf(a.cities, "RIYADH");
+  const dateline = datelineOf(a.cities);
   return {
     headline: tidyHeadline(headline + (a.firstTime ? ", a first since the fighting began" : "")),
     body: tidyBody(
-      `${dateline} — Saudi civil defence sounded air raid alerts in ${where}.${boom}${first} An all-clear followed.`,
+      `${dateline} — Saudi civil defence sounded air raid alerts in ${where}.${boom}${first}`,
     ),
   };
 }
@@ -591,7 +627,7 @@ export function composeAirstrike(a: StrikeArgs): Composed {
     body: tidyBody(
       `${datelineOf(a.places)} — Air strikes hit ${obj} ${inPlacesWithLocator(a.places)}${a.when ? " " + a.when : ""}${
         a.attacker ? `, in an attack attributed to ${a.attacker}` : ""
-      }. ${cas ? sentenceCase(cas) + " were reported." : "No casualty figures were given."}`,
+      }. ${cas ? sentenceCase(cas) + " were reported." : ""}`,
     ),
   };
 }
@@ -618,7 +654,7 @@ export function composeClash(a: ClashArgs): Composed {
     body: tidyBody(
       `${datelineOf(a.places)} — ${a.houthiPush ? "Houthi forces attacked government lines" : `${sentenceCase(a.left)} and ${a.right} clashed`} ${inPlacesWithLocator(
         a.places,
-      )}${a.when ? " " + a.when : ""}. ${cas ? sentenceCase(cas) + " were reported." : "Neither side gave casualty figures."}`,
+      )}${a.when ? " " + a.when : ""}. ${cas ? sentenceCase(cas) + " were reported." : ""}`,
     ),
   };
 }
@@ -638,7 +674,7 @@ export function composeSeize(a: SeizeArgs): Composed {
     headline: tidyHeadline(headline + (cas ? `, ${cas}` : "")),
     body: tidyBody(
       `${datelineOf(a.places)} — ${sentenceCase(a.actor)} ${past} positions ${inPlacesWithLocator(a.places)}. ${
-        cas ? sentenceCase(cas) + " were reported." : "No casualty figures were given."
+        cas ? sentenceCase(cas) + " were reported." : ""
       }`,
     ),
   };
@@ -655,8 +691,8 @@ export function composeVessel(a: VesselArgs): Composed {
   return {
     headline: tidyHeadline(headline + (cas ? `, ${cas}` : "")),
     body: tidyBody(
-      `${datelineOf(a.places, "RED SEA")} — ${sentenceCase(ship)} was attacked ${where}. ${
-        cas ? sentenceCase(cas) + " were reported." : "No casualties among the crew were reported."
+      `${datelineOf(a.places)} — ${sentenceCase(ship)} was attacked ${where}. ${
+        cas ? sentenceCase(cas) + " were reported." : ""
       }`,
     ),
   };
@@ -689,7 +725,7 @@ export function composePort(a: PortArgs): Composed {
     headline: tidyHeadline(headline + (cas ? `, ${cas}` : "")),
     body: tidyBody(
       `${datelineOf(a.places)} — ${Target} was hit in a strike. ${
-        cas ? sentenceCase(cas) + " were reported." : "No casualty figures were given."
+        cas ? sentenceCase(cas) + " were reported." : ""
       }`,
     ),
   };
@@ -698,24 +734,25 @@ export function composePort(a: PortArgs): Composed {
 type StatementArgs = { speaker: string; gist: string; detail: string; places: Place[]; source: string; tier: Tier };
 
 /**
- * Statements carry the speaker in the headline, wire style:
- *   "Saree says Saudi infiltration attempts foiled in Sanaa"
- * A statement is never dressed up as an event.
+ * Statements lead with the speaker, as the reader asked:
+ *   "Saree: Saudi infiltration attempts foiled in Sanaa"
+ * A statement is never dressed up as an event, and carries no dateline — the
+ * desk knows what was said, not where the speaker was standing.
  */
 export function composeStatement(a: StatementArgs): Composed {
-  const who = speakerShort(a.speaker) || "";
-  const gist = a.gist.replace(/^[\s:—–-]+/, "").replace(/[.\s]+$/, "");
-  const headline = who ? `${who} says ${gist.charAt(0).toLowerCase() + gist.slice(1)}` : gist;
-  const dateline = datelineOf(a.places);
-  const detail = a.detail || gist + ".";
-  // "Trump said X. Trump made the remarks." — the detail already names the
-  // speaker, so the attribution line only earns its place when it does not.
-  const namesSpeaker = !!a.speaker && detail.toLowerCase().includes(a.speaker.toLowerCase());
-  const attrib = namesSpeaker ? "" : a.speaker ? ` ${sentenceCase(a.speaker)} made the remarks.` : "";
+  const lead = speakerLead(a.speaker);
+  const gist = sentenceCase(a.gist.replace(/^[\s:—–-]+/, "").replace(/[.\s]+$/, ""));
+  const headline = lead ? `${lead}: ${gist}` : gist;
   return {
     headline: tidyHeadline(headline),
-    body: tidyBody(`${dateline} — ${detail}${attrib}`),
+    body: tidyBody(a.detail || `${gist}.`),
   };
+}
+
+/** "Mahdi al-Mashat, head of …, said X." — the appositive closes with a comma. */
+export function saidBy(speaker: string, gist: string): string {
+  const who = sentenceCase(speaker);
+  return `${who}${who.includes(",") ? "," : ""} said ${gist}.`;
 }
 
 type EconomyArgs = { headline: string; detail: string; source: string; places: Place[] };
@@ -723,7 +760,7 @@ type EconomyArgs = { headline: string; detail: string; source: string; places: P
 export function composeEconomy(a: EconomyArgs): Composed {
   return {
     headline: tidyHeadline(a.headline),
-    body: tidyBody(`${datelineOf(a.places, "RIYADH")} — ${a.detail}`),
+    body: tidyBody(`${datelineOf(a.places)} — ${a.detail}`),
   };
 }
 
@@ -740,8 +777,11 @@ export function isBadCopy(headline: string, body: string): boolean {
   if (/^Reports of\s*$|^Reports of a\s*$/i.test(h)) return true;
   if (/\b(\w+)\s+\1\b/i.test(h)) return true; // stutter: "the the", "forces forces"
   if (/\s,|,,|\.\./.test(h)) return true;
-  // A headline with no verb is a fragment, not a line of copy.
+  // A headline with no verb is a fragment, not a line of copy — except a
+  // speaker-led one: "Saree: Saudi attempts foiled" is a quote by its shape.
+  const speakerLed = /^[^:]{2,60}: \S/.test(h);
   if (
+    !speakerLed &&
     !/\b(launch|launched|claims|claimed|report|reports|reported|hit|hits|struck|strike|strikes|clash|clashes|clashed|seize|seizes|seized|retake|retook|intercept|intercepts|intercepted|shot|down|says|said|kill|killed|wound|wounded|attack|attacked|sound|sounds|sounded|halt|halted|suspend|suspended|cancel|cancels|cancelled|advance|warn|warns|warned|deny|denies|denied|announce|announced|reject|rejected|refuse|refused|agree|agreed|resume|resumed)\b/i.test(
       h,
     )

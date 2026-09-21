@@ -40,7 +40,10 @@ const TG: ChannelScan[] = [
   { id: "SabrenNewss", name: "Sabereen News", lean: "houthi", cadence: C5 },
   { id: "naya_foriraq", name: "Naya", lean: "houthi", cadence: C5 },
   { id: "shin_persian", name: "Shin Persian", lean: "houthi", cadence: C5 },
-  { id: "AlarabyTelevision", name: "Al-Araby Television", lean: "intl", cadence: C5 },
+  // The breaking-news channel, not the main one: the main channel posts
+  // programme clips ("Marib and Taiz: the battle map") that read as live
+  // fighting and were published as clashes happening now.
+  { id: "AlarabyTvBrk", name: "Al-Araby TV (breaking)", lean: "intl", cadence: C5 },
   { id: "shajab_news", name: "Shajab News", lean: "houthi", cadence: C5 },
   { id: "bin_1saeed", name: "Bin Saeed", lean: "gov", cadence: C5 },
   { id: "AjaNews", name: "Al Jazeera", lean: "intl", cadence: C5 },

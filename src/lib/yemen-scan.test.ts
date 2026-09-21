@@ -226,7 +226,8 @@ test("a spokesman's foiling claim stays a statement and is never pinned", () => 
   );
   assert.equal(d.ok, true);
   assert.equal(d.type, "statement");
-  assert.match(d.headline, /Saree says/);
+  assert.match(d.headline, /^Saree: /, "the speaker leads the card");
+  assert.doesNotMatch(d.body, /^[A-Z ]+ —/, "a statement carries no dateline");
   assert.equal(d.places.length, 0, "statements never get a map pin");
 });
 

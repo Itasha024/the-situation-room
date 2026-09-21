@@ -9,7 +9,7 @@
  *   isBadCopy() — reject anything that came out as a fragment or leaked source text
  *
  * Nothing in here invents detail. If the source did not say how many were killed,
- * the copy says no figures were given.
+ * the copy carries no figure -- and says nothing about the absence.
  */
 
 import { type Place, isOpenWaterNearBab, placesIn } from "./gazetteer.ts";
@@ -29,6 +29,7 @@ import {
   composePort,
   composeSeize,
   composeStatement,
+  saidBy,
   composeVessel,
   countsIn,
   isBadCopy,
@@ -394,7 +395,9 @@ export function digest(source: string, rawText: string, lean = "", extraSources 
         when,
         source,
         target: againstHouthis ? "Houthi positions" : "positions",
-        attacker: sides.govSrc || /Saudi/i.test(text) ? ACTORS.coalition : "",
+        // Named only when the source names it — never inferred from which side
+        // the outlet is on.
+        attacker: /Saudi|coalition/i.test(text) ? ACTORS.coalition : "",
       });
       pinPlaces = yemen.length ? yemen : all;
       break;
@@ -456,28 +459,13 @@ export function digest(source: string, rawText: string, lean = "", extraSources 
       break;
     }
     case "diplomacy": {
-      if (/سوريا|Syria/i.test(raw) && /مقاتلين|fighters/i.test(raw)) {
-        const refused = /رفض|refused|declined/i.test(raw);
-        out = {
-          headline: tidyHeadline(
-            `Saudi Arabia asked Syria for fighters against the Houthis${refused ? ", and was turned down" : ""}`,
-          ),
-          body: `DAMASCUS — Saudi Arabia approached Syria months ago about assembling a Syrian force for the front against the Houthis${
-            refused ? ", and Damascus declined" : ""
-          }. ${source} reported the account. Turkish sources denied any role for Ankara in moving fighters.`,
-        };
-      } else if (speaker) {
-        out = composeStatement({
-          speaker,
-          gist: "there are contacts over the fighting in Yemen",
-          detail: `${sentenceCase(speaker)} addressed the diplomatic track around the fighting in Yemen.`,
-          places: all,
-          source,
-          tier: effTier,
-        });
-      } else {
-        return fail("thin", "Diplomatic item with no named party or concrete step.", onFail);
-      }
+      // No canned stories: a diplomatic item says what its speaker said, or it
+      // is dropped with a reason. (A pre-written Syria story and a generic
+      // "there are contacts" line used to stand in for the source here.)
+      if (!speaker) return fail("thin", "Diplomatic item with no named party or concrete step.", onFail);
+      const gist = statementGist(raw, all);
+      if (!gist) return fail("vague", "Diplomatic item whose substance could not be pinned down.", onFail);
+      out = composeStatement({ speaker, gist, detail: saidBy(speaker, gist), places: all, source, tier: effTier });
       pinPlaces = [];
       break;
     }
@@ -488,7 +476,7 @@ export function digest(source: string, rawText: string, lean = "", extraSources 
       out = composeStatement({
         speaker,
         gist,
-        detail: `${sentenceCase(speaker)} said ${gist}.`,
+        detail: saidBy(speaker, gist),
         places: all,
         source,
         tier: effTier,

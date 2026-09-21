@@ -1404,7 +1404,7 @@ function feedCardHtml(r, i) {
       <p class="headline">${escapeHtml(sum)}</p>
       ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
       ${mediaBlock(r.media)}
-      ${also ? `<p class="also">${also.length + 1} sources${also.map((a) => ` · <a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.source)}</a>`).join('')}</p>` : ''}
+      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.source)}</a>`).join(' · ')}</p>` : ''}
       ${worthExpand ? `<div class="full">
         <p class="full-label">Full report</p>
         <p>${escapeHtml(full)}</p>

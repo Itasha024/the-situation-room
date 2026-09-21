@@ -1247,6 +1247,99 @@ function renderLiveScan() {
  * Panels
  * ---------------------------------------------------------------- */
 
+/**
+ * The escalation meter (src/lib/desk/escalation.ts): a half-dial from Calm to
+ * Severe, the readings it compares with, and a 30-day line. Thin windows are
+ * gaps in the line, never drawn as calm.
+ */
+const ESC_BANDS = [
+  { name: 'Calm', to: 20, color: '#64748b' },
+  { name: 'Low', to: 40, color: '#84cc16' },
+  { name: 'Elevated', to: 60, color: '#f59e0b' },
+  { name: 'High', to: 80, color: '#f97316' },
+  { name: 'Severe', to: 100, color: '#dc2626' },
+];
+
+function escBand(score) {
+  return ESC_BANDS.find((b) => score < b.to) || ESC_BANDS[ESC_BANDS.length - 1];
+}
+
+function escalationHtml(v) {
+  if (!v || !v.now) return '';
+  const cx = 100; const cy = 96; const r = 78;
+  const pt = (s, rad) => {
+    const a = Math.PI * (1 - s / 100);
+    return [cx + rad * Math.cos(a), cy - rad * Math.sin(a)];
+  };
+  let from = 0;
+  const arcs = ESC_BANDS.map((b) => {
+    const [x0, y0] = pt(from + 0.6, r);
+    const [x1, y1] = pt(b.to - 0.6, r);
+    from = b.to;
+    return `<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${r},${r} 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)}" stroke="${b.color}" stroke-width="16" fill="none"/>`;
+  }).join('');
+  const s = v.now.score;
+  const [nx, ny] = pt(s, r - 16);
+  const band = escBand(s);
+  const cmp = (label, x) => `<div class="esc-cmp"><span>${label}</span><b style="color:${x == null ? 'inherit' : escBand(x).color}">${x == null ? '—' : `${escBand(x).name} ${x}`}</b></div>`;
+  const line = (v.line || []);
+  let spark = '';
+  if (line.filter((p) => p.score != null).length > 1) {
+    const t0 = Date.parse(line[0].at);
+    const t1 = Date.parse(line[line.length - 1].at);
+    const span = Math.max(1, t1 - t0);
+    let d = '';
+    let pen = false;
+    line.forEach((p) => {
+      if (p.score == null) { pen = false; return; }
+      const x = 2 + 196 * (Date.parse(p.at) - t0) / span;
+      const y = 38 - 36 * p.score / 100;
+      d += `${pen ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
+      pen = true;
+    });
+    spark = `<svg class="esc-spark" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="0" y1="20" x2="200" y2="20" class="esc-mid"/>
+      <path d="${d}" fill="none" stroke="${band.color}" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>
+      <p class="esc-spark-cap">Last 30 days</p>`;
+  }
+  return `<div class="esc" aria-label="Escalation: ${band.name}, ${s} of 100">
+    <div class="esc-head"><strong>Escalation meter</strong>
+      <button type="button" class="esc-how" aria-expanded="false">How is this measured?</button></div>
+    <div class="esc-body">
+      <svg class="esc-dial" viewBox="0 0 200 112" role="img" aria-hidden="true">
+        ${arcs}
+        <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" class="esc-needle"/>
+        <circle cx="${cx}" cy="${cy}" r="5" class="esc-hub"/>
+        <text x="${cx}" y="${cy - 26}" text-anchor="middle" class="esc-num">${s}</text>
+        <text x="${cx}" y="${cy - 8}" text-anchor="middle" class="esc-band" fill="${band.color}">${band.name}</text>
+      </svg>
+      <div class="esc-side">
+        ${cmp('12 hours ago', v.previous)}
+        ${cmp('1 day ago', v.dayAgo)}
+        ${cmp('1 week ago', v.weekAgo)}
+        ${cmp('1 month ago', v.monthAgo)}
+      </div>
+    </div>
+    ${spark}
+    <div class="esc-explain" hidden>
+      <p>A 0–100 reading of the last 24 hours, updated every 12 hours.</p>
+      <p>It counts distinct events, not reports: one kind of action in one area counts once, however many outlets carry it or follow it up.</p>
+      <p>Weighted: how many areas see fighting or strikes, ground fighting and changes of control, air, missile and drone strikes, attacks on Saudi soil and at sea, and deaths reported in single incidents. A ceasefire or truce lowers it.</p>
+      <p>Fixed scales, so wider coverage of the same fighting does not raise it. A day with too few reports to read is left blank.</p>
+    </div>
+  </div>`;
+}
+
+function wireEscalation(root) {
+  const btn = root && root.querySelector('.esc-how');
+  const box = root && root.querySelector('.esc-explain');
+  if (!btn || !box) return;
+  btn.onclick = () => {
+    box.hidden = !box.hidden;
+    btn.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
+  };
+}
+
 function renderSituation(d) {
   const el = document.getElementById('situation');
   if (!el) return;
@@ -1258,7 +1351,9 @@ function renderSituation(d) {
   const body = derived || fallback;
   if (!body) { el.innerHTML = ''; return; }
   el.innerHTML = `<strong>Latest Developments</strong>${cadenceStamp(true)}
-    <p class="situation-window">${escapeHtml(body)}</p>`;
+    <p class="situation-window">${escapeHtml(body)}</p>
+    ${escalationHtml(brief && brief.escalation)}`;
+  wireEscalation(el);
 }
 
 /*

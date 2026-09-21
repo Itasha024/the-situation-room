@@ -12,6 +12,7 @@
  * data.json — the desk does not invent an authority it does not have.
  */
 
+import type { EscalationView } from "./escalation.ts";
 import type { LiveReport } from "../yemen-scan.server.ts";
 import {
   type FrontCounts,
@@ -133,6 +134,8 @@ export type Brief = {
   windowStart: string;
   windowLabel: string;
   situation: { line: string; quiet: boolean; /** The model that wrote the prose, when one did. */ model?: string };
+  /** The escalation meter (escalation.ts), set when the brief is stored. */
+  escalation?: EscalationView | null;
   fronts: FrontActivity[];
   numbers: {
     line: string;

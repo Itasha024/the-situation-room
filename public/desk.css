@@ -852,3 +852,23 @@ html{scroll-behavior:smooth}
 #fronts > .cadence.top:first-child{margin-top:-6px}
 #casualties > .cadence.top:first-child{margin-top:-1px}
 .situation .cadence.top{margin-top:-3px}
+
+/* ---- Escalation meter ---------------------------------------------------- */
+.esc{margin:.7rem 0 0;padding:.6rem .7rem;border:1px solid #22303f;border-radius:8px;background:rgba(10,16,24,.45)}
+.esc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.esc-head strong{font-size:.78rem;letter-spacing:.02em}
+.esc-how{background:none;border:0;padding:0;color:#7cb3ff;font:inherit;font-size:.72rem;cursor:pointer;text-decoration:underline}
+.esc-body{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:.3rem}
+.esc-dial{width:190px;max-width:100%;height:auto;flex:none}
+.esc-needle{stroke:#e5edf5;stroke-width:3;stroke-linecap:round}
+.esc-hub{fill:#e5edf5}
+.esc-num{font-size:26px;font-weight:700;fill:#f1f5f9}
+.esc-band{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.esc-side{flex:1;min-width:150px;display:grid;gap:4px}
+.esc-cmp{display:flex;justify-content:space-between;gap:8px;font-size:.74rem;color:var(--muted);border-bottom:1px dashed #22303f;padding-bottom:3px}
+.esc-cmp b{font-weight:600}
+.esc-spark{width:100%;height:40px;display:block;margin-top:.45rem}
+.esc-mid{stroke:#22303f;stroke-dasharray:3 3}
+.esc-spark-cap{margin:.1rem 0 0;font-size:.66rem;color:var(--muted)}
+.esc-explain{margin-top:.45rem;font-size:.74rem;line-height:1.45;color:#b8c6d6}
+.esc-explain p{margin:.25rem 0}

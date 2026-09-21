@@ -21,6 +21,7 @@ import type { LiveReport } from "./types.ts";
 import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
 import { writeProse } from "./prose.ts";
+import { type EscalationPoint, ESCALATION_KEY, escalationView, pushPoint, scoreWindow } from "./escalation.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshTally } from "./tally.ts";
 
@@ -96,6 +97,18 @@ export async function refreshBrief(
     for (const f of brief.fronts) if (prose?.fronts[f.id]) f.line = prose.fronts[f.id];
   } catch (err) {
     console.error("[desk] prose failed:", err instanceof Error ? err.message : err);
+  }
+  // The escalation meter reads the 24 hours to the window's end.
+  try {
+    const day = all.filter((r) => {
+      const t = Date.parse(String(r.at || ""));
+      return Number.isFinite(t) && t >= end - 24 * 3600_000 && t < end;
+    });
+    const points = pushPoint((await store.getJson<EscalationPoint[]>(ESCALATION_KEY)) ?? [], scoreWindow(day, w.updatedAt));
+    await store.putJson(ESCALATION_KEY, points);
+    brief.escalation = escalationView(points);
+  } catch (err) {
+    console.error("[desk] escalation failed:", err instanceof Error ? err.message : err);
   }
   await store.putJson(BRIEF_KEY, { brief, history } satisfies StoredBrief);
   // The official numbers move on the same 12-hour clock. A failed fetch keeps

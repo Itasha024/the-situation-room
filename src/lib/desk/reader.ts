@@ -86,6 +86,8 @@ export const READER_MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-flash-latest",
 ];
+/** The stronger reader for a second look at a rejected field report. */
+export const SECOND_LOOK_MODELS = ["gemini-flash-latest"];
 /** Items per model call — large, because calls are what the quota counts. */
 export const READER_BATCH = 15;
 
@@ -366,10 +368,11 @@ export async function readBatch(
   apiKey: string,
   skip: ReadonlySet<string> = new Set(),
   recent: RecentReport[] = [],
+  models: readonly string[] = READER_MODELS,
 ): Promise<{ readings: Map<string, Reading>; model?: string; error?: string; exhausted: string[] }> {
   let lastError = "";
   const exhausted: string[] = [];
-  for (const model of READER_MODELS) {
+  for (const model of models) {
     if (!apiKey || skip.has(model)) continue;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const r = await callModel(items, apiKey, model, recent);

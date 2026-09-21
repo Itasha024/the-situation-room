@@ -101,3 +101,9 @@ test("the trust figure weighs who reported it, against whose interest, and who c
   assert.equal(echoed, selfClaim, "the same side repeating a claim adds nothing");
   for (const v of [selfClaim, admission, wire, confirmed]) assert.ok(v >= 1 && v <= 5);
 });
+
+test("a strike on a named Yemeni place gets a second look; rhetoric does not", async () => {
+  const { fieldReport } = await import("./editor.ts");
+  assert.ok(fieldReport("عاجل ـ السعودية تقصف مديرية حيفان بمحافظة تعز بسلسلة غارات جوية"));
+  assert.ok(!fieldReport("السيد القائد: شعبنا تفانى وبذل التضحيات للدفاع عن أرضه وكرامته"));
+});

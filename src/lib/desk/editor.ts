@@ -21,6 +21,7 @@ import {
   type ReaderItem,
   type RecentReport,
   READER_BATCH,
+  SECOND_LOOK_MODELS,
   checkReading,
   contentHash,
   groqKey,
@@ -31,6 +32,7 @@ import type { DeskStore } from "./store.ts";
 import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
+import { normaliseArabic } from "./relevance.ts";
 
 export type Candidate = {
   source: string;
@@ -63,7 +65,21 @@ const RECENT_MAX = 40;
 /** Model calls per cycle, so one busy cycle cannot spend the day's quota. */
 const MAX_CALLS_PER_CYCLE = 5;
 
-type CacheEntry = { reading: Reading; at: number };
+type CacheEntry = { reading: Reading; at: number; second?: boolean };
+
+/** Rejected field reports, with what the second look made of them (admin page). */
+export type Missed = { at: string; source: string; url: string; text: string; reason: string; second: string };
+export const MISSED_KEY = "reader-missed";
+const MISSED_MAX = 200;
+const SECOND_LOOK_MAX = 8;
+
+/** A place in Yemen or Saudi Arabia, and something happening there. */
+const FIELD_WORDS =
+  /غاره|غارات|قصف|اشتباك|اشتباكات|مواجهات|مقتل|قتلي|قتيل|جرحي|جريح|اصابه|مصابين|شهدا|صاروخ|صواريخ|مسيره|مسيرات|استهداف|استهدف|هجوم|كمين|تفجير|strike|clash|killed|wounded|injured|missile|drone|attack|shell/;
+export function fieldReport(text: string): boolean {
+  if (!FIELD_WORDS.test(normaliseArabic(text))) return false;
+  return placesIn(text).some((p) => p.country === "Yemen" || p.country === "Saudi Arabia");
+}
 
 /**
  * Rejections for thinness made before the rule that a headline stating a fact
@@ -201,6 +217,60 @@ export async function editCandidates(
   }
   for (const c of stillQueued) {
     verdicts.set(c.url, { kind: "pending", note: "Waiting for the reader; retried next cycle." });
+  }
+
+  /**
+   * A second look. A rejected post that names a place in Yemen or Saudi Arabia
+   * together with a strike, clash, casualty or launch is exactly what the desk
+   * must never lose, so the stronger model reads it once more, and its
+   * reading stands. Every such rejection is also logged on the missed list.
+   */
+  const doubt = all.filter((c) => {
+    const r = readingOf.get(c.url);
+    const v = verdicts.get(c.url);
+    if (!r || v?.kind !== "reject" || cache[contentHash(c.text)]?.second) return false;
+    if (/speech-rhetoric/i.test(String(r.reject_reason || ""))) return false;
+    return fieldReport(c.text);
+  });
+  if (doubt.length) {
+    const missed = (await store.getJson<Missed[]>(MISSED_KEY)) ?? [];
+    const batch = doubt.slice(0, SECOND_LOOK_MAX);
+    let second = new Map<string, Reading>();
+    if (anyReader) {
+      const items: ReaderItem[] = batch.map((c, n) => ({
+        id: String(n),
+        source: c.source,
+        alignment: ALIGNMENT[outletSide(c.source, c.lean)],
+        postedAt: c.at,
+        text: c.text,
+      }));
+      const res = await readBatch(items, key, skip, recent, SECOND_LOOK_MODELS);
+      second = res.readings;
+    }
+    batch.forEach((c, n) => {
+      const first = readingOf.get(c.url)!;
+      const r = second.get(String(n));
+      let outcome = "unread";
+      if (r) {
+        r.follows_up = "";
+        cache[contentHash(c.text)] = { reading: r, at: now, second: true };
+        const v = decide(r, c);
+        outcome = v.kind === "publish" ? "published" : `rejected again: ${v.kind === "reject" ? v.note : ""}`;
+        if (v.kind === "publish") {
+          verdicts.set(c.url, v);
+          readingOf.set(c.url, r);
+        }
+      }
+      missed.unshift({
+        at: new Date(now).toISOString(),
+        source: c.source,
+        url: c.url,
+        text: c.text.replace(/\s+/g, " ").slice(0, 280),
+        reason: String(first.reject_reason || (verdicts.get(c.url) as { note?: string })?.note || ""),
+        second: outcome,
+      });
+    });
+    await store.putJson(MISSED_KEY, missed.slice(0, MISSED_MAX));
   }
 
   // A field event the gazetteer could not place: look its target up instead.

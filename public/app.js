@@ -164,7 +164,6 @@ let islandGeoCache = null;
 let data = null;
 let geoCache = null;
 let saudiGeoCache = null;
-let miniGeo = null;
 let brief = null;
 
 let layersOn = { houthi: true, plc: true, saudi: true, contested: true, combat: true, strike: true, vessel: true, port: true };
@@ -1309,7 +1308,7 @@ function renderCasualties() {
   const srcHtml = sources.map((s) => (s.url
     ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>`
     : escapeHtml(s.name))).join(' · ');
-  el.innerHTML = `
+  el.innerHTML = `${cadenceStamp(true)}
     <div class="tally">
       <div class="tally-box"><h3>Killed</h3>${sides('killed')}</div>
       <div class="tally-box"><h3>Injured</h3>${sides('injured')}</div>
@@ -1319,8 +1318,7 @@ function renderCasualties() {
       </div>
     </div>
     <p class="tally-note">Since ${escapeHtml(fmtDay(t.since))}. Official figures only.</p>
-    ${srcHtml ? `<div class="srcs">Sources: ${srcHtml}</div>` : ''}
-    ${cadenceStamp()}`;
+    ${srcHtml ? `<div class="srcs">Sources: ${srcHtml}</div>` : ''}`;
 }
 
 function computeControlShares(d) {
@@ -1459,6 +1457,21 @@ function wireFeedCard(card) {
       ev.stopPropagation();
       showReportOnMap(card.dataset.fp);
     };
+    // Desktop: resting on the button opens the map beside the card.
+    mapBtn.onmouseenter = () => {
+      if (!window.matchMedia('(hover: hover)').matches || window.innerWidth < 720) return;
+      clearTimeout(pinPopTimer);
+      pinPopTimer = setTimeout(() => {
+        const pin = mappableByFp.get(card.dataset.fp);
+        if (pin && map) openPinSheet(pin, mapBtn);
+      }, 250);
+    };
+    mapBtn.onmouseleave = () => {
+      clearTimeout(pinPopTimer);
+      const el = document.getElementById('pin-sheet');
+      if (el && el.classList.contains('as-pop')) pinPopTimer = setTimeout(closePinSheet, 300);
+    };
+
   }
   const reply = card.querySelector('.reply-to');
   if (reply) {
@@ -1568,58 +1581,11 @@ function prependFeedCards(d) {
  * Front locator mini-map
  * ---------------------------------------------------------------- */
 
-function miniFillFor(id, d) {
-  if (id === 'YE-MY' || id === 'YE-HN') {
-    const want = id === 'YE-MY' ? 'mayun' : 'hanish';
-    const meta = ((d && d.islandControl) || []).find((x) => x.id === want);
-    const ctrl = (meta && meta.control) || 'houthi';
-    return COLORS[ctrl] || COLORS.houthi;
-  }
-  const g = ((d && d.governorates) || []).find((x) => x.id === id) || {};
-  const ctrl = g.control === 'mixed' ? 'contested' : (g.control === 'saudi' ? 'saudi' : g.control);
-  return COLORS[ctrl] || COLORS.contested || '#334155';
-}
-
-function parsePathNums(cmd) {
-  return String(cmd).replace(/[A-Za-z]/g, ' ').trim().split(/[\s,]+/).map(Number).filter((n) => Number.isFinite(n));
-}
-
-function pathBBox(dcmds) {
-  let minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9;
-  (dcmds || []).forEach((cmd) => {
-    const nums = parsePathNums(cmd);
-    for (let i = 0; i + 1 < nums.length; i += 2) {
-      minx = Math.min(minx, nums[i]); maxx = Math.max(maxx, nums[i]);
-      miny = Math.min(miny, nums[i + 1]); maxy = Math.max(maxy, nums[i + 1]);
-    }
-  });
-  if (!Number.isFinite(minx) || minx > maxx) return null;
-  return [minx, miny, maxx, maxy];
-}
-
-function pathCentroid(dcmds) {
-  let sx = 0, sy = 0, n = 0;
-  (dcmds || []).forEach((cmd) => {
-    const nums = parsePathNums(cmd);
-    for (let i = 0; i + 1 < nums.length; i += 2) { sx += nums[i]; sy += nums[i + 1]; n++; }
-  });
-  if (!n) return null;
-  return [sx / n, sy / n];
-}
-
-function unionBox(a, b) {
-  if (!b) return a;
-  if (!a) return b.slice();
-  return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
-}
-
-function frontMiniSvg(front, d) {
-  const mini = miniGeo;
-  if (!mini || !mini.features || !mini.features.length) return '<p class="front-float-miss">No locator map</p>';
+/** The governorates a front covers, for its locator map. */
+function frontMiniIds(front) {
   const locator = (front && front.mapFocus) || {};
   const ids = new Set(locator.ids || []);
   const name = (front && front.name) || '';
-  const isBab = (ids.has('YE-MY') || ids.has('YE-HN')) && !ids.has('YE-TA');
   if (!ids.size) {
     if (/Wazi'iyah|western Taiz|Mocha|Dhubab|coast/i.test(name)) ids.add('YE-TA');
     else if (/Marib/i.test(name)) ids.add('YE-MA');
@@ -1627,52 +1593,55 @@ function frontMiniSvg(front, d) {
     else if (/Jawf|Hazm/i.test(name)) ids.add('YE-JA');
     else if (/Bab al-Mandab|Mayun|Hanish/i.test(name)) { ids.add('YE-LA'); ids.add('YE-MY'); ids.add('YE-HN'); }
   }
-  let box = null;
-  (mini.features || []).forEach((f) => { box = unionBox(box, pathBBox(f.d)); });
-  const pad = 10;
-  const vx = box ? (box[0] - pad) : 0;
-  const vy = box ? (box[1] - pad) : 0;
-  const vw = box ? (box[2] - box[0] + pad * 2) : (mini.w || 240);
-  const vh = box ? (box[3] - box[1] + pad * 2) : (mini.h || 280);
-  const featById = {};
-  (mini.features || []).forEach((f) => { featById[f.id] = f; });
-  const paths = (mini.features || []).map((f) => {
-    const on = ids.has(f.id);
-    const col = miniFillFor(f.id, d);
-    const fill = on ? col : '#8aa0b4';
-    const op = on ? 0.96 : 0.78;
-    const stroke = on ? '#f8fafc' : '#c5d4e2';
-    const sw = on ? 1.2 : 0.55;
-    return (f.d || []).map((dp) => `<path d="${dp}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}"/>`).join('');
-  }).join('');
-  let strait = '';
-  if (isBab) {
-    strait = `<g class="strait-mark">
-      <path d="M58,236 C64,244 70,250 78,252" fill="none" stroke="#7dd3fc" stroke-width="1.4" stroke-dasharray="3 2.2" opacity="0.95"/>
-      <text x="78" y="268" fill="#c8e7fa" font-size="7" text-anchor="start">Bab al-Mandab strait</text>
-    </g>`;
+  return ids;
+}
+
+/**
+ * The front's locator: the regular map (same tiles, same control colours), no
+ * pins and no names, with the front's governorates lit and the rest dimmed,
+ * framed with enough of Yemen around them to place them at a glance.
+ */
+let frontMiniMap = null;
+async function mountFrontMini(front, d) {
+  const box = document.getElementById('front-mini-map');
+  if (!box || !window.L) return;
+  if (frontMiniMap) { try { frontMiniMap.remove(); } catch (e) {} frontMiniMap = null; }
+  const m = L.map(box, {
+    zoomControl: false, attributionControl: false, zoomSnap: 0.25,
+    dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false,
+  }).setView([15.6, 47.5], 5);
+  frontMiniMap = m;
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(m);
+  if (!geoCache) geoCache = await fetch('/yemen-adm1.geojson').then((r) => r.json()).catch(() => null);
+  if (frontMiniMap !== m || !geoCache) return;
+  const ids = frontMiniIds(front);
+  const byIso = controlByIso(d);
+  const lit = L.latLngBounds([]);
+  L.geoJSON(geoCache, {
+    interactive: false,
+    style: (f) => {
+      const iso = f.properties.shapeISO;
+      const g = byIso[iso] || {};
+      const ctrl = g.control === 'mixed' ? 'contested' : g.control;
+      return ids.has(iso)
+        ? { fillColor: COLORS[ctrl] || COLORS.contested, fillOpacity: 0.9, color: '#fde047', weight: 3, opacity: 1 }
+        : { fillColor: '#64748b', fillOpacity: 0.28, color: '#0b0f14', weight: 0.8, opacity: 0.6 };
+    },
+    onEachFeature: (f, layer) => { if (ids.has(f.properties.shapeISO)) lit.extend(layer.getBounds()); },
+  }).addTo(m);
+  const spot = front.mapFocus && front.mapFocus.spot;
+  if (Array.isArray(spot) && spot.length === 2) {
+    const r = (front.mapFocus.spotRadius || 15000) * 1.6;
+    L.circle(spot, { radius: r, color: '#fde047', weight: 3, fillColor: '#fde047', fillOpacity: 0.25, interactive: false }).addTo(m);
+    lit.extend(L.latLng(spot).toBounds(r * 2));
   }
-  let spotSvg = '';
-  let sx, sy, lab;
-  if (Array.isArray(locator.miniSpot) && locator.miniSpot.length === 2) {
-    sx = locator.miniSpot[0]; sy = locator.miniSpot[1];
-    lab = locator.miniLabel || '';
-  } else if (isBab) {
-    const my = featById['YE-MY'];
-    const c = my && pathCentroid(my.d);
-    if (c) { sx = c[0]; sy = c[1]; lab = 'Mayun'; }
-  }
-  if (sx != null) {
-    spotSvg = `<g>
-      <circle cx="${sx}" cy="${sy}" r="6.2" fill="#fbbf24" fill-opacity="0.28" stroke="#fde68a" stroke-width="1.3"/>
-      <circle cx="${sx}" cy="${sy}" r="2.2" fill="#fbbf24" stroke="#111" stroke-width="0.5"/>
-      ${lab ? `<text x="${sx}" y="${sy - 9}" fill="#fde68a" font-size="7.2" text-anchor="middle">${escapeHtml(lab)}</text>` : ''}
-    </g>`;
-  }
-  return `<svg viewBox="${vx} ${vy} ${vw} ${vh}" class="front-mini" role="img" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
-    <rect x="${vx}" y="${vy}" width="${vw}" height="${vh}" fill="#1a2836"/>
-    ${paths}${strait}${spotSvg}
-  </svg>`;
+  const frame = () => {
+    if (frontMiniMap !== m) return;
+    try { m.invalidateSize(); } catch (e) {}
+    if (lit.isValid()) m.fitBounds(lit, { padding: [34, 34], maxZoom: 7 });
+  };
+  frame();
+  setTimeout(frame, 80);
 }
 
 function hideFrontFloat() {
@@ -1680,6 +1649,7 @@ function hideFrontFloat() {
   if (!el) return;
   el.classList.remove('show');
   el.hidden = true;
+  if (frontMiniMap) { try { frontMiniMap.remove(); } catch (e) {} frontMiniMap = null; }
   el.innerHTML = '';
   frontFloatIdx = null;
   frontFloatAnchor = null;
@@ -1930,7 +1900,7 @@ function showFrontFloat(idx, anchor, d) {
   el.innerHTML = `
     <p class="front-float-title">${escapeHtml(f.name)}</p>
     ${f.where ? `<p class="front-float-where">${escapeHtml(f.where)}</p>` : ''}
-    ${frontMiniSvg(f, d)}
+    <div id="front-mini-map" class="front-mini"></div>
     <div class="front-float-key">
       <span><span class="sw" style="background:${COLORS.houthi}"></span>Houthi</span>
       <span><span class="sw" style="background:${COLORS.plc}"></span>Government</span>
@@ -1953,6 +1923,7 @@ function showFrontFloat(idx, anchor, d) {
   el.onmouseenter = () => { if (frontFloatTimer) { clearTimeout(frontFloatTimer); frontFloatTimer = null; } };
   el.onmouseleave = () => { frontFloatTimer = setTimeout(hideFrontFloat, 220); };
   placeFrontFloat(anchor);
+  mountFrontMini(f, d);
 }
 
 /**
@@ -2090,7 +2061,7 @@ function clearEvents() {
  * "Show on map" from a feed card. On a wide screen the page goes to the big
  * map and flies to the pin, clear of the legend; the pin pulses and its note
  * stays shut (the reader has just read the card). On a phone a sheet opens
- * with a small map of that day's pins, and a button to the big map.
+ * with a small map of that day's pins, and a button to the main map.
  */
 let mappableByFp = new Map();
 let markerByFp = new Map();
@@ -2144,7 +2115,7 @@ function closePinSheet() {
   if (sheetMap) { try { sheetMap.remove(); } catch (e) {} sheetMap = null; }
 }
 
-function openPinSheet(pin) {
+function openPinSheet(pin, anchor) {
   let el = document.getElementById('pin-sheet');
   if (!el) {
     el = document.createElement('div');
@@ -2157,14 +2128,18 @@ function openPinSheet(pin) {
       <div class="pin-sheet-head"><p class="front-float-title">${escapeHtml(pin.label || '')}</p>
       <button type="button" class="pin-sheet-x" aria-label="Close">×</button></div>
       <div id="pin-sheet-map"></div>
-      <button type="button" class="front-float-go">Show on the big map</button>
+      <button type="button" class="front-float-go">Show on the main map</button>
     </div>`;
+  el.classList.toggle('as-pop', !!anchor);
   el.classList.add('show');
-  sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false }).setView([pin.lat, pin.lng], 8);
+  if (anchor) placePinPop(el.firstElementChild, anchor);
+  sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false, zoomSnap: 0.5 }).setView([pin.lat, pin.lng], 6.5);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(sheetMap);
   if (geoCache) {
     const byIso = controlByIso(data);
-    L.geoJSON(splitIslandFeatures(geoCache).mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(sheetMap);
+    const mainland = splitIslandFeatures(geoCache).mainland;
+    L.geoJSON(mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(sheetMap);
+    govNameLayer(sheetMap, mainland.features, byIso);
   }
   const ymd = jerusalemYmd(pin.at);
   [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
@@ -2176,7 +2151,26 @@ function openPinSheet(pin) {
   el.querySelector('.pin-sheet-x').onclick = closePinSheet;
   el.onclick = (ev) => { if (ev.target === el) closePinSheet(); };
   el.querySelector('.front-float-go').onclick = () => { closePinSheet(); goToPinOnMainMap(pin); };
+  const box = el.firstElementChild;
+  box.onmouseenter = () => { clearTimeout(pinPopTimer); };
+  box.onmouseleave = () => { if (el.classList.contains('as-pop')) pinPopTimer = setTimeout(closePinSheet, 250); };
 }
+
+/** On desktop the sheet floats beside the card's button, like the fronts' map. */
+let pinPopTimer = null;
+function placePinPop(box, anchor) {
+  const r = anchor.getBoundingClientRect();
+  const w = Math.min(420, window.innerWidth - 16);
+  const h = 400;
+  let left = r.right + 8;
+  if (left + w > window.innerWidth - 8) left = Math.max(8, r.left - w - 8);
+  let top = r.top - 20;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, window.innerHeight - h - 8);
+  box.style.left = `${left}px`;
+  box.style.top = `${top}px`;
+  box.style.width = `${w}px`;
+}
+
 
 /* ---------------------------------------------------------------- *
  * Map: event pins
@@ -2657,6 +2651,55 @@ function islandPopupHtml(isl) {
     ${mediaBlock(isl.media, true)}`;
 }
 
+/** Where a governorate's name sits: the centroid of its largest polygon. */
+function featureLabelPoint(f) {
+  const g = f && f.geometry;
+  if (!g) return null;
+  const polys = g.type === 'Polygon' ? [g.coordinates] : (g.type === 'MultiPolygon' ? g.coordinates : []);
+  let best = null;
+  let bestA = 0;
+  for (const poly of polys) {
+    const ring = poly[0] || [];
+    let ar = 0; let cx = 0; let cy = 0;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const k = ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+      ar += k; cx += (ring[j][0] + ring[i][0]) * k; cy += (ring[j][1] + ring[i][1]) * k;
+    }
+    if (Math.abs(ar) > bestA) { bestA = Math.abs(ar); best = [cy / (3 * ar), cx / (3 * ar)]; }
+  }
+  return best;
+}
+
+/**
+ * The governorate names, drawn by the desk above the control colours: the
+ * tiles' own names sit under the fill and can barely be read.
+ */
+function govNameLayer(m, features, byIso) {
+  if (!m.getPane('govNames')) {
+    m.createPane('govNames');
+    m.getPane('govNames').style.zIndex = 460;
+    m.getPane('govNames').style.pointerEvents = 'none';
+  }
+  const group = L.layerGroup();
+  (features || []).forEach((f) => {
+    const iso = f.properties && f.properties.shapeISO;
+    const g = byIso[iso] || {};
+    const name = String(g.name || (f.properties && f.properties.shapeName) || '').trim();
+    const pt = featureLabelPoint(f);
+    if (!name || !pt) return;
+    L.marker(pt, {
+      pane: 'govNames', interactive: false, keyboard: false,
+      icon: L.divIcon({ className: 'gov-name', html: `<span>${escapeHtml(name)}</span>`, iconSize: null }),
+    }).addTo(group);
+  });
+  const sync = () => { try { m.getContainer().classList.toggle('names-small', m.getZoom() < 6.5); } catch (e) {} };
+  m.on('zoomend', sync);
+  sync();
+  return group.addTo(m);
+}
+
+let govNamesLayer = null;
+
 async function drawGeo(d) {
   const byIso = controlByIso(d);
   if (geoLayer) map.removeLayer(geoLayer);
@@ -2672,6 +2715,8 @@ async function drawGeo(d) {
     style: (f) => styleFeature(f, byIso),
     onEachFeature: (f, layer) => bindGov(f, layer, byIso),
   }).addTo(map);
+  if (govNamesLayer) { try { map.removeLayer(govNamesLayer); } catch (e) {} }
+  govNamesLayer = govNameLayer(map, split.mainland.features, byIso);
 
   try {
     if (!saudiGeoCache) {
@@ -3206,10 +3251,6 @@ async function refresh(first) {
   // first paint rather than letting the page render a stub and jump.
   await Promise.race([deskP, new Promise((r) => setTimeout(r, first ? 2500 : 1200))]);
   data = applyLiveOverlay(applyDeskArchive(base));
-  if (!miniGeo) {
-    try { miniGeo = await fetch('/yemen-mini.json').then((r) => r.json()); }
-    catch (e) { miniGeo = { w: 240, h: 280, features: [] }; }
-  }
   const stamp = document.getElementById('updated');
   if (stamp) stamp.textContent = stampText();
   renderBars(data);

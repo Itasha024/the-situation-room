@@ -809,8 +809,10 @@ html{scroll-behavior:smooth}
 /* A phone has no room for both: the legend steps aside while notes are open. */
 @media (max-width:720px){.map-wrap.popup-open .legend{display:none}}
 /* The "Updated" line under a column's heading. */
-.cadence.top{margin:0 0 .45rem;border-top:0;padding-top:0}
-.situation .cadence.top{margin:0 0 .3rem}
+/* Under a column's heading: the same small type as the live scan's "Last scan" line. */
+.cadence.top{margin:0 0 .5rem;border-top:0;padding-top:0;font-size:.72rem;color:var(--muted);line-height:1.3}
+.cadence.top.late{color:#fbbf24}
+.situation .cadence.top{margin:.1rem 0 .35rem}
 
 /* "Show on map" on a feed card, and the pulse of the pin it lands on. */
 .card .meta .card-map{
@@ -828,3 +830,21 @@ html{scroll-behavior:smooth}
 .pin-sheet-x{flex:none;width:30px;height:30px;font-size:20px;line-height:1;border:1px solid #2f4257;border-radius:4px;background:#101a25;color:#fff;cursor:pointer}
 #pin-sheet-map{height:min(60vh,420px);border-radius:6px}
 .pin-sheet .front-float-go{margin-top:8px;width:100%;padding:.55rem;border:0;border-radius:4px;background:#1d4ed8;color:#fff;font:inherit;font-size:.82rem;cursor:pointer}
+
+/* ---- Governorate names, above the control colours ----------------------- */
+.gov-name{background:none;border:0}
+.gov-name span{
+  display:block;transform:translate(-50%,-50%);white-space:nowrap;
+  font:700 12px/1.1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.01em;color:#0b0f14;
+  text-shadow:0 0 2px #fff,0 0 3px #fff,1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff;
+}
+.names-small .gov-name span{font-size:9.5px}
+
+/* ---- Front locator: the regular map ------------------------------------ */
+#front-mini-map.front-mini{height:230px;min-height:0;background:#aad3df}
+
+/* ---- The pin map floating beside a card (desktop hover) ----------------- */
+.pin-sheet.as-pop{background:none;pointer-events:none;display:none}
+.pin-sheet.as-pop.show{display:block}
+.pin-sheet.as-pop .pin-sheet-box{position:fixed;pointer-events:auto;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.pin-sheet.as-pop #pin-sheet-map{height:300px}

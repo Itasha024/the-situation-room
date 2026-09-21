@@ -844,14 +844,18 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // Carry forward what earlier cycles found, so a quiet cycle does not empty the desk.
   if (prev && Array.isArray(prev.reports)) {
     const have = new Set(uniqReports.map((r) => r.url.split("?")[0]));
+    // By fp too: a report traced to its original has a new url, and its stale
+    // relay copy must not ride along beside it.
+    const haveFp = new Set(uniqReports.map((r) => r.fp));
     for (const r of prev.reports) {
       // Only reports the reader wrote are carried forward; the keyword
       // composer's output is not re-published.
       if (!r.side && !floor) continue;
       const u = String(r.url || "").split("?")[0];
-      if (!u || have.has(u)) continue;
+      if (!u || have.has(u) || haveFp.has(r.fp)) continue;
       uniqReports.push(r);
       have.add(u);
+      haveFp.add(r.fp);
     }
     uniqReports.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   }

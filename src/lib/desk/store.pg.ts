@@ -197,7 +197,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             if (!r.citing && r.source) {
               await sql`
                 update desk_report set url = ${r.url}, source = ${r.source}, citing = null, also_reported_by = null
-                 where fp = ${r.fp} and url <> ${r.url}
+                 where fp = ${r.fp} and url like 'https://t.me/%' and ${r.url} not like 'https://t.me/%'
                    and not exists (select 1 from desk_report d where d.url = ${r.url})
               `;
             }

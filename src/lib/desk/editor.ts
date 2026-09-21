@@ -24,6 +24,8 @@ import {
   SECOND_LOOK_MODELS,
   OUTLET_LEAD,
   checkReading,
+  nextPacificMidnight,
+  pacificDay,
   repairable,
   fixHeadline,
   contentHash,
@@ -58,8 +60,9 @@ export type EditorVerdict =
 const CACHE_KEY = "reader-cache";
 const QUEUE_KEY = "reader-queue";
 const QUOTA_KEY = "reader-quota";
-/** A model that answered 429 is left alone this long before it is tried again. */
-const QUOTA_REST_MS = 6 * 3600 * 1000;
+/** Model calls per model on the quota's (Pacific) day: the status page's count. */
+export const USAGE_KEY = "reader-usage";
+export type Usage = { day: string; calls: Record<string, number> };
 const CACHE_MAX = 6000;
 /** A queued item older than this is no longer news; it is dropped from the queue. */
 const QUEUE_TTL_MS = 24 * 3600 * 1000;
@@ -175,15 +178,32 @@ export async function editCandidates(
     } else unread.push(c);
   }
 
-  // Models that ran out of daily quota recently are not asked again yet.
+  // Models out of their daily quota rest until it resets (the value is when).
   const quota = (await store.getJson<Record<string, number>>(QUOTA_KEY)) ?? {};
-  const skip = new Set(Object.keys(quota).filter((m) => now - quota[m] < QUOTA_REST_MS));
+  const skip = new Set(Object.keys(quota).filter((m) => now < quota[m]));
+  // Calls per model today, for the status page.
+  const today = pacificDay(now);
+  const usage = await store.getJson<Usage>(USAGE_KEY);
+  const calls24: Usage = usage?.day === today ? usage : { day: today, calls: {} };
+  const count = (model?: string) => {
+    if (model) calls24.calls[model] = (calls24.calls[model] ?? 0) + 1;
+  };
 
   // Read what is new, newest first, within this cycle's budget.
   const key = readerKey();
   const anyReader = !!key || !!groqKey();
   let modelNote = anyReader ? "" : "reader off: GEMINI_API_KEY not set";
   unread.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  // A post forwarded by several channels is read once; the copies take its reading.
+  const copyOf = new Map<Queued, Queued>();
+  const firstOf = new Map<string, Queued>();
+  for (const c of unread) {
+    const k = copyKey(c.text);
+    const first = k ? firstOf.get(k) : undefined;
+    if (first) copyOf.set(c, first);
+    else if (k) firstOf.set(k, c);
+  }
+  const toRead = unread.filter((c) => !copyOf.has(c));
   const stillQueued: Queued[] = [];
   let calls = 0;
   // What the desk already published today, so the reader can mark a direct
@@ -212,8 +232,8 @@ export async function editCandidates(
       // Without the recent list nothing is marked a follow-up; nothing else changes.
     }
   }
-  for (let i = 0; i < unread.length; i += READER_BATCH) {
-    const batch = unread.slice(i, i + READER_BATCH);
+  for (let i = 0; i < toRead.length; i += READER_BATCH) {
+    const batch = toRead.slice(i, i + READER_BATCH);
     if (!anyReader || calls >= MAX_CALLS_PER_CYCLE) {
       stillQueued.push(...batch);
       continue;
@@ -227,11 +247,13 @@ export async function editCandidates(
       text: c.text,
       full: c.tags.includes("original"),
     }));
-    const { readings, model, error, exhausted } = await readBatch(items, key, skip, recent);
+    const { readings, model, error, exhausted, minute } = await readBatch(items, key, skip, recent);
+    count(model);
     for (const m of exhausted) {
-      quota[m] = now;
+      quota[m] = nextPacificMidnight(now);
       skip.add(m);
     }
+    for (const m of minute) skip.add(m);
     if (error) modelNote = error;
     else if (model) modelNote = `read by ${model}`;
     batch.forEach((c, n) => {
@@ -248,6 +270,18 @@ export async function editCandidates(
       if (v.kind === "reject" && v.reason === "reader-check" && repairable(v.note)) fixes.push({ c, note: v.note });
     });
   }
+  for (const [c, first] of copyOf) {
+    const r = readingOf.get(first.url);
+    if (!r) {
+      stillQueued.push(c);
+      continue;
+    }
+    const copy = { ...r };
+    cache[contentHash(c.text)] = { reading: copy, at: now };
+    verdicts.set(c.url, decide(copy, c));
+    readingOf.set(c.url, copy);
+  }
+
   /**
    * The repair: copy that failed a check a second writing can pass (casualties
    * dropped, the speaker not first, length...) is sent back once, in the same
@@ -266,6 +300,7 @@ export async function editCandidates(
       fix: note,
     }));
     const res = await readBatch(items, key, skip, recent);
+    count(res.model);
     const missed = (await store.getJson<Missed[]>(MISSED_KEY)) ?? [];
     batch.forEach(({ c, note }, n) => {
       const first = readingOf.get(c.url)!;
@@ -323,6 +358,7 @@ export async function editCandidates(
         text: c.text,
       }));
       const res = await readBatch(items, key, skip, recent, SECOND_LOOK_MODELS);
+      count(res.model);
       second = res.readings;
     }
     batch.forEach((c, n) => {
@@ -383,6 +419,7 @@ export async function editCandidates(
   await store.putJson(CACHE_KEY, Object.fromEntries(kept));
   await store.putJson(QUEUE_KEY, stillQueued);
   await store.putJson(QUOTA_KEY, quota);
+  await store.putJson(USAGE_KEY, calls24);
 
   return { verdicts, queued: stillQueued, modelNote };
 }

@@ -9,7 +9,7 @@ import test from "node:test";
 
 import { credibility } from "./credibility.ts";
 import { type Candidate, toReport } from "./editor.ts";
-import { type Reading, checkReading, repairable } from "./reader.ts";
+import { type Reading, checkReading, nextPacificMidnight, pacificDay, repairable } from "./reader.ts";
 
 function reading(over: Partial<Reading>): Reading {
   return {
@@ -172,4 +172,11 @@ test("a Houthi actor written as Yemeni forces fails, and can be repaired", () =>
   const r = reading({ actor_side: "houthi", headline: "Yemeni forces fire drones at Jizan", body: "Yemeni forces said they fired drones at Jizan." });
   assert.match(String(checkReading(r, "القوات المسلحة اليمنية تستهدف جيزان")), /written as Yemeni forces/);
   assert.equal(repairable("figure not in source: 30"), false);
+});
+
+test("a daily 429 rests the model until midnight in California", () => {
+  const now = Date.parse("2026-09-21T17:30:00Z"); // 10:30 in California
+  assert.equal(new Date(nextPacificMidnight(now)).toISOString(), "2026-09-22T07:01:00.000Z");
+  assert.equal(pacificDay(now), "2026-09-21");
+  assert.equal(pacificDay(Date.parse("2026-09-22T06:59:00Z")), "2026-09-21");
 });

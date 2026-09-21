@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { MISSED_KEY, type Missed } from "@/lib/desk/editor";
+import { MISSED_KEY, type Missed, USAGE_KEY, type Usage } from "@/lib/desk/editor";
 import { ROUTES_KEY, type RouteLog } from "@/lib/desk/origin";
 import { getStore } from "@/lib/desk/store";
 import { sourceList } from "@/lib/yemen-scan.server";
@@ -17,11 +17,13 @@ export const Route = createFileRoute("/api/status")({
         try {
           const store = await getStore();
           const now = Date.now();
-          const [state, slice, missed, routes] = await Promise.all([
+          const [state, slice, missed, routes, usage, quota] = await Promise.all([
             store.loadScanState(),
             store.recentDesk(1000),
             store.getJson<Missed[]>(MISSED_KEY),
             store.getJson<RouteLog>(ROUTES_KEY),
+            store.getJson<Usage>(USAGE_KEY),
+            store.getJson<Record<string, number>>("reader-quota"),
           ]);
           const day = new Map<string, number>();
           for (const row of slice.reports) {
@@ -47,6 +49,9 @@ export const Route = createFileRoute("/api/status")({
             sources,
             missed: (missed ?? []).slice(0, 100),
             routes: routes ?? {},
+            usage: usage ?? null,
+            // Models out of their daily quota, and when they are back.
+            resting: Object.fromEntries(Object.entries(quota ?? {}).filter(([, until]) => until > now).map(([m, until]) => [m, new Date(until).toISOString()])),
           });
         } catch (err) {
           return json({ ok: false, error: err instanceof Error ? err.message : "status failed" }, 500);

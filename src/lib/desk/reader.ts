@@ -97,7 +97,20 @@ export const READER_MODELS = [
 /** The stronger reader for a second look at a rejected field report. */
 export const SECOND_LOOK_MODELS = ["gemini-flash-latest"];
 /** Items per model call — large, because calls are what the quota counts. */
-export const READER_BATCH = 15;
+export const READER_BATCH = 30;
+
+/** When Google's free daily quota resets: the next midnight in California. */
+export function nextPacificMidnight(now: number): number {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", hourCycle: "h23", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(new Date(now));
+  const get = (t: string) => Number(parts.find((x) => x.type === t)?.value ?? 0);
+  const since = ((get("hour") * 60 + get("minute")) * 60 + get("second")) * 1000;
+  return now - since + 86_400_000 + 60_000;
+}
+
+/** The day in California, the quota's day. */
+export function pacificDay(now: number): string {
+  return new Date(now).toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+}
 /** An original article is read to this length: its key fact may be deep in it. */
 export const FULL_TEXT_MAX = 8000;
 
@@ -471,6 +484,9 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string, rec
         generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA },
       }),
     });
+    // A 429 is either the minute's quota (wait a cycle) or the day's (wait for
+    // midnight Pacific, when Google resets it); the body's quota id says which.
+    if (res.status === 429) return { error: /PerDay/i.test(await res.text().catch(() => "")) ? "HTTP 429 daily" : "HTTP 429" };
     if (!res.ok) return { error: `HTTP ${res.status}` };
     const json = (await res.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -500,9 +516,11 @@ export async function readBatch(
   skip: ReadonlySet<string> = new Set(),
   recent: RecentReport[] = [],
   models: readonly string[] = READER_MODELS,
-): Promise<{ readings: Map<string, Reading>; model?: string; error?: string; exhausted: string[] }> {
+): Promise<{ readings: Map<string, Reading>; model?: string; error?: string; exhausted: string[]; minute: string[] }> {
   let lastError = "";
+  // Out for the day, and out for this minute only.
   const exhausted: string[] = [];
+  const minute: string[] = [];
   for (const model of models) {
     if (!apiKey || skip.has(model)) continue;
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -510,12 +528,12 @@ export async function readBatch(
       if ("readings" in r) {
         const byId = new Map<string, Reading>();
         for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
-        return { readings: byId, model: r.model, exhausted };
+        return { readings: byId, model: r.model, exhausted, minute };
       }
       lastError = `${model}: ${r.error}`;
       // Quota exhausted: the next model has its own quota — move on now.
-      if (r.error === "HTTP 429") {
-        exhausted.push(model);
+      if (r.error.startsWith("HTTP 429")) {
+        (r.error.endsWith("daily") ? exhausted : minute).push(model);
         break;
       }
       if (r.error !== "HTTP 503" && !/abort/i.test(r.error)) break;
@@ -531,12 +549,12 @@ export async function readBatch(
     if ("readings" in r) {
       const byId = new Map<string, Reading>();
       for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
-      return { readings: byId, model: r.model, exhausted };
+      return { readings: byId, model: r.model, exhausted, minute };
     }
     lastError = `${GROQ_MODEL}: ${r.error}`;
     if (r.daily) exhausted.push(GROQ_MODEL);
   }
-  return { readings: new Map(), error: lastError || "every model skipped (quota)", exhausted };
+  return { readings: new Map(), error: lastError || "every model skipped (quota)", exhausted, minute };
 }
 
 /**

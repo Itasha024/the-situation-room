@@ -19,6 +19,7 @@
 <body>
 <h1>Desk status</h1>
 <p class="mute" id="tick">Loading…</p>
+<p class="mute" id="usage"></p>
 <h2>Sources, last 24 hours</h2>
 <div class="wrap"><table id="sources"><thead><tr><th>Source</th><th>Cards</th><th>Last read</th></tr></thead><tbody></tbody></table></div>
 <h2>Missed list: rejected posts that looked like news</h2>
@@ -32,6 +33,9 @@ const rows = (id, html) => (document.querySelector(`#${id} tbody`).innerHTML = h
 fetch("/api/status").then((r) => r.json()).then((d) => {
   if (!d.ok) throw new Error(d.error);
   document.getElementById("tick").textContent = `Last tick: ${when(d.lastTickAt)}`;
+  const calls = d.usage ? Object.entries(d.usage.calls).map(([m, n]) => `${m} ${n}`).join(" · ") : "";
+  const rest = Object.entries(d.resting || {}).map(([m, t]) => `${m} until ${when(t)}`).join(" · ");
+  document.getElementById("usage").textContent = `Reader calls today (Pacific): ${calls || "none"}${rest ? ` — out of quota: ${rest}` : ""}`;
   rows("sources", d.sources.sort((a, b) => a.cards24h - b.cards24h).map((s) =>
     `<tr><td>${esc(s.name)}</td><td class="${s.cards24h ? "" : "zero"}">${s.cards24h}</td><td class="mute">${when(s.lastReadAt)}</td></tr>`));
   rows("missed", d.missed.map((m) =>

@@ -107,3 +107,14 @@ test("a strike on a named Yemeni place gets a second look; rhetoric does not", a
   assert.ok(fieldReport("عاجل ـ السعودية تقصف مديرية حيفان بمحافظة تعز بسلسلة غارات جوية"));
   assert.ok(!fieldReport("السيد القائد: شعبنا تفانى وبذل التضحيات للدفاع عن أرضه وكرامته"));
 });
+
+test("no outlet opens a headline, and a report about someone is no quote", async () => {
+  const { fixHeadline } = await import("./reader.ts");
+  assert.equal(fixHeadline("Reuters sources: Reuters: Yemeni president asked US for support against Houthis"), "Yemeni president asked US for support against Houthis");
+  assert.equal(fixHeadline("Trump: did not commit to military aid requested by Rashad al-Alimi"), "Trump did not commit to military aid requested by Rashad al-Alimi");
+  assert.equal(fixHeadline("Trump: hesitated on Yemen strikes before Saudi requests"), "Trump hesitated on Yemen strikes before Saudi requests");
+  assert.equal(fixHeadline("Trump: spoke with Yemeni Presidential Leadership Council head Rashad al-Alimi"), "Trump spoke with Yemeni Presidential Leadership Council head Rashad al-Alimi");
+  // Real quotes keep their colon.
+  assert.equal(fixHeadline("Houthi leader: Saudi Arabia will pay a price"), "Houthi leader: Saudi Arabia will pay a price");
+  assert.equal(fixHeadline("Trump: we will not let the Houthis win"), "Trump: we will not let the Houthis win");
+});

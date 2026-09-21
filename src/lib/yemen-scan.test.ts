@@ -269,3 +269,15 @@ test("only copies of one event fold into one card", async () => {
   // Two lines of one speech: separate cards, the speaker prefix does not count.
   assert.ok(!sameWords("Houthi leader: Saudi Arabia will pay a price if the siege continues", "Houthi leader: our forces are ready to strike Saudi oil facilities"));
 });
+
+test("outlets' takes on one story fold across scans; separate speech lines do not", async () => {
+  const { sameStory } = await import("./desk/copies.ts");
+  const call = { summary: "Reuters: phone call took place between Trump and Rashad al-Alimi", text: "A phone call took place between US President Donald Trump and Yemeni Presidential Leadership Council head Rashad al-Alimi, Reuters reported." };
+  const aid = { summary: "Trump: did not commit to military aid requested by Rashad al-Alimi", text: "US President Donald Trump did not commit to providing military aid requested by Rashad al-Alimi during a phone call, sources told Reuters." };
+  const spoke = { summary: "Trump: spoke with Yemeni Presidential Leadership Council head Rashad al-Alimi", text: "US President Donald Trump held a phone call with Yemeni Presidential Leadership Council head Rashad al-Alimi on Sunday to discuss military developments in Yemen." };
+  assert.ok(sameStory(call, aid));
+  assert.ok(sameStory(call, spoke));
+  const l1 = { summary: "Houthi leader: Saudi Arabia opened airports to Israeli reconnaissance planes heading to Yemen", text: "Houthi leader stated that Saudi Arabia opened its airports to Israeli reconnaissance planes to take off toward Yemen." };
+  const l2 = { summary: "Houthi leader: Saudi Arabia made every effort to intercept missiles and drones launched toward Israel", text: "Houthi leader stated that Saudi Arabia made every effort to intercept the missiles and drone aircraft launched toward occupied Palestine against Israeli forces." };
+  assert.ok(!sameStory(l1, l2));
+});

@@ -203,10 +203,18 @@ WRITING
   "people killed". Never "martyrs", "mercenaries", "aggression", "enemy".
 
 STATEMENTS (event_type statement or diplomacy)
-- speaker_lead is REQUIRED, and the headline starts with it.
-  A person: speaker_lead, a colon, what they said — "Saree: Saudi jets carried
-  out 28 strikes in 24 hours", "Trump: ...". A state or institution may lead
-  with a verb — "Qatar condemns Houthi missile attack on Riyadh".
+- speaker_lead is REQUIRED: the person or body the report is about.
+- A colon ONLY when the item carries that person's own words (a quote, speech,
+  post, interview): "Saree: Saudi jets carried out 28 strikes in 24 hours".
+  A report ABOUT someone (what they did, decided or discussed, or what
+  officials, sources or an outlet say about them) is a plain sentence with no
+  colon: "Trump held a phone call with Yemen's Presidential Council head
+  al-Alimi", "Trump weighed strikes on the Houthis before holding off, US
+  officials say". A state or institution may lead with a verb: "Qatar
+  condemns Houthi missile attack on Riyadh".
+- An outlet (Reuters, Axios, NYT, Al Jazeera, a TV channel) is NEVER the
+  speaker_lead and never opens the headline. What officials tell an outlet
+  ends the headline: ", officials say", ", sources say".
 - speaker_lead: a bare surname only for a figure an international reader knows
   (Trump, Rubio, al-Mashat, Saree, al-Alimi, Grundberg). Abdul Malik
   al-Houthi (السيد القائد, قائد الثورة) is always "Houthi leader".
@@ -248,6 +256,29 @@ Return JSON: {"items":[{"id":string,"publish":bool,"reject_reason":string,
 "speaker_lead":string|null,"interest":"for"|"against"|"neutral",
 "has_time":bool,"headline":string,"body":string,"follows_up":string}]}
 When publish=false, headline and body may be "".`;
+
+/** Outlets that must never open a headline: "Reuters: …", "Axios sources: …". */
+const OUTLET_NAMES =
+  "Reuters|AP|AFP|Axios|NYT|The New York Times|New York Times|WSJ|The Wall Street Journal|Wall Street Journal|" +
+  "The Washington Post|Washington Post|Bloomberg|CNN|BBC|Al Jazeera|Al-Jazeera|Al Arabiya|Al-Arabiya|Politico|" +
+  "Fox News|Financial Times|The Guardian|Sky News|Al-Araby(?: TV)?|Al Araby(?: TV)?|Asharq Al-Awsat|Al-Masirah|" +
+  "Al Masirah|Saba|SPA|Media|Reports?|Sources?";
+export const OUTLET_LEAD = new RegExp(`^(?:${OUTLET_NAMES})(?:\\s+(?:sources?|reports?|TV))?\\s*:\\s*`, "i");
+
+/**
+ * Headline fixes the model keeps needing: an outlet opening the headline goes
+ * ("Reuters sources: Reuters: …"), and a colon after a name that introduces
+ * no words of theirs ("Trump: held a call …") becomes a plain sentence.
+ */
+export function fixHeadline(headline: string): string {
+  let h = String(headline || "").trim();
+  while (OUTLET_LEAD.test(h)) h = h.replace(OUTLET_LEAD, "");
+  const m = /^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);
+  if (m && (REPORTED_VERB.test(m[2]) || /ed$/.test(m[2]))) h = `${m[1]} ${h.slice(m[0].length - m[2].length)}`;
+  return h ? h[0].toUpperCase() + h.slice(1) : h;
+}
+const REPORTED_VERB =
+  /^(?:did|does|do|has|had|have|is|was|were|held|spoke|met|made|took|gave|sent|told|won|in|to|not|will|would|could|may|might|plans|seeks|asks|urges|calls|weighs|mulls|meets|holds|speaks|rejects|refuses|agrees|orders|visits|receives|discusses|considers|decides|approves|signs)$/;
 
 /** Phrases that never appear in published copy, whoever wrote it. */
 export const BANNED_PHRASES: RegExp[] = [
@@ -314,6 +345,7 @@ export function checkReading(r: Reading, sourceText: string): string | null {
     if (!lead) return "statement without a speaker";
     if (!h.toLowerCase().startsWith(lead.toLowerCase())) return "statement does not lead with its speaker";
   }
+  if (OUTLET_LEAD.test(h)) return "headline leads with outlet";
   return null;
 }
 

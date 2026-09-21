@@ -19,7 +19,7 @@ import { type Candidate, confidenceOf, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { traceOrigins } from "./desk/origin.ts";
-import { sameWords } from "./desk/copies.ts";
+import { sameStory, sameWords } from "./desk/copies.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 
 // The wire types moved to ./desk/types.ts so the store and the scanner can
@@ -522,6 +522,35 @@ function storyKey(r: LiveReport): string {
   return r.url.split("?")[0];
 }
 
+/** How far back a new statement is matched against cards already published. */
+const STORY_WINDOW_MS = 18 * 3600 * 1000;
+
+/**
+ * A statement or diplomacy report that tells a story already on the desk, as
+ * another outlet's take, is not a new card: its outlet joins that card's
+ * "Also". Grouping inside one scan never saw the cards of earlier scans, so
+ * one Reuters story became seven cards over half an hour. `published` are the
+ * fps already on the desk; only reports not among them can fold.
+ */
+export function foldIntoPublished(reports: LiveReport[], published: Set<string>): void {
+  const talk = (r: LiveReport) => r.type === "statement" || r.type === "diplomacy";
+  const byTime = [...reports].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  const gone = new Set<LiveReport>();
+  for (const r of byTime) {
+    if (!talk(r) || published.has(r.fp)) continue;
+    const t = Date.parse(r.at);
+    const home = byTime.find(
+      (o) => o !== r && !gone.has(o) && talk(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= STORY_WINDOW_MS && sameStory(o, r),
+    );
+    if (!home) continue;
+    gone.add(r);
+    const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url }];
+    const seen = new Set([home.source]);
+    home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);
+  }
+  for (let i = reports.length - 1; i >= 0; i -= 1) if (gone.has(reports[i])) reports.splice(i, 1);
+}
+
 /** Which of two reports on the same story to keep. */
 function scoreReport(x: LiveReport): number {
   return (
@@ -877,6 +906,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     if (i >= 0) uniqReports[i] = r;
     else uniqReports.push(r);
   }
+  foldIntoPublished(uniqReports, new Set((prev?.reports ?? []).map((r) => r.fp)));
   if (prev && Array.isArray(prev.rawHits)) {
     const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));
     for (const h of prev.rawHits) {

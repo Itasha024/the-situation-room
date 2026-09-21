@@ -22,7 +22,9 @@ import {
   type RecentReport,
   READER_BATCH,
   SECOND_LOOK_MODELS,
+  OUTLET_LEAD,
   checkReading,
+  fixHeadline,
   contentHash,
   groqKey,
   readBatch,
@@ -314,6 +316,8 @@ export async function editCandidates(
  * here: a real statement or strike must not be lost over one word.
  */
 const REWORD: [RegExp, string][] = [
+  [/\bthe Saudi (?:regime|adversary|aggressor)\b/gi, "Saudi Arabia"],
+  [/\bthe (US|American|Israeli|Emirati) (?:adversary|aggressor|foe)\b/gi, "$1 forces"],
   [/\bthe (Saudi|US|American|Israeli|Zionist|Emirati|Houthi) enem(?:y|ies)\b/gi, "$1 forces"],
   [/\benemy (positions|forces|targets|aircraft|vessels|ships)\b/gi, "opposing $1"],
   [/\bthe enemy\b/gi, "the opposing side"],
@@ -337,11 +341,15 @@ export function reword(s: string): string {
 function decide(raw: Reading, c: Candidate): EditorVerdict {
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
-  const r: Reading = { ...raw, headline: reword(anglicise(raw.headline)), body: reword(anglicise(raw.body)) };
-  // A statement whose headline forgot its speaker gets the speaker put first.
-  const lead = String(r.speaker_lead || "").trim();
+  const r: Reading = { ...raw, headline: fixHeadline(reword(anglicise(raw.headline))), body: reword(anglicise(raw.body)) };
+  // An outlet is never the speaker. A statement whose headline forgot its
+  // speaker gets the speaker put first, and a colon that introduces no words
+  // of theirs ("Trump: held a call") becomes a plain sentence.
+  let lead = String(r.speaker_lead || "").trim();
+  if (OUTLET_LEAD.test(`${lead}:`)) lead = "";
+  r.speaker_lead = lead || null;
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
-    r.headline = `${lead}: ${r.headline.trim()}`;
+    r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
   }
   const problem = checkReading(r, c.text);
   if (problem) {

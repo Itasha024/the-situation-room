@@ -201,6 +201,14 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                    and not exists (select 1 from desk_report d where d.url = ${r.url})
               `;
             }
+            // Another outlet's take on this story arrived after it was stored.
+            if (r.alsoReportedBy?.length) {
+              const also = JSON.stringify(r.alsoReportedBy);
+              await sql`
+                update desk_report set also_reported_by = ${also}::jsonb
+                 where fp = ${r.fp} and also_reported_by is distinct from ${also}::jsonb
+              `;
+            }
             // Stored earlier without a place (the geocoder had not found it
             // yet): take the place now, and let its pin be added below.
             if (r.lat == null || r.lng == null) continue;

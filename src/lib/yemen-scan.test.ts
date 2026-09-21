@@ -259,3 +259,13 @@ test("a drone launch towards a Yemeni port is a strike with a place", () => {
   assert.ok(["strike", "port"].includes(d.type));
   assert.ok(d.places.some((p) => p.name === "Hodeidah"));
 });
+
+test("only copies of one event fold into one card", async () => {
+  const { sameWords } = await import("./desk/copies.ts");
+  // Two outlets on the same strikes: one card.
+  assert.ok(sameWords("Saudi air strike targets Haifan district in Taiz", "Saudi jets launch air strike on Haifan district in Taiz"));
+  // Different events on the same front: separate cards (the lost Haifan strikes).
+  assert.ok(!sameWords("Saudi strikes hit school and areas in Hayfan district", "Abyan sends over 1,400 fighters to frontlines in Taiz and Al-Subaiha"));
+  // Two lines of one speech: separate cards, the speaker prefix does not count.
+  assert.ok(!sameWords("Houthi leader: Saudi Arabia will pay a price if the siege continues", "Houthi leader: our forces are ready to strike Saudi oil facilities"));
+});

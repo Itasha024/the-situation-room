@@ -804,6 +804,21 @@ function feedClusterKey(r) {
   return r.fp || r.url || s.slice(0, 40);
 }
 
+/** Same event: most headline words shared. Mirrors sameWords() in yemen-scan.server.ts. */
+function headWords(summary) {
+  const said = String(summary || '').replace(/^[^:]{2,60}:\s/, '');
+  const stop = new Set('the and for with from that this into over after amid near its his her their has have had was were are will been says said say'.split(' '));
+  return new Set((said.toLowerCase().match(/[a-z][a-z'-]{2,}/g) || []).filter((w) => !stop.has(w)).map((w) => w.replace(/s$/, '')));
+}
+function sameWords(a, b) {
+  const x = headWords(a);
+  const y = headWords(b);
+  if (!x.size || !y.size) return false;
+  let both = 0;
+  for (const w of x) if (y.has(w)) both += 1;
+  return both / (x.size + y.size - both) >= 0.4;
+}
+
 function namedSpeaker(summary) {
   const m = /^(.{2,48}?)(?::\s|\s(?:says|said|tells|told|warns|warned|denies|denied)\b)/.exec(String(summary || ''));
   if (!m) return '';
@@ -850,7 +865,7 @@ function sortedReports(d) {
     const k = feedClusterKey(r);
     const t = Date.parse(reportTime(r));
     const group = seen.get(k) || [];
-    const prev = group.find((p) => Math.abs(Date.parse(reportTime(p)) - t) <= 20 * 60 * 1000);
+    const prev = group.find((p) => Math.abs(Date.parse(reportTime(p)) - t) <= 20 * 60 * 1000 && sameWords(p.summary, r.summary));
     if (!prev || r.replyTo) {
       group.push(r);
       seen.set(k, group);

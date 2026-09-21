@@ -19,6 +19,7 @@ import { type Candidate, confidenceOf, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { traceOrigins } from "./desk/origin.ts";
+import { sameWords } from "./desk/copies.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 
 // The wire types moved to ./desk/types.ts so the store and the scanner can
@@ -811,11 +812,16 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       // Field events group only as copies of one post: outlets relaying the
       // same event within minutes. A later development on the same front is
       // its own card (the reader may mark it a reply), never folded in.
+      // Statements likewise: one speaker's separate lines are separate cards;
+      // only two outlets' copies of the same line fold together.
       let sk = storyKey(r);
-      if (FIELD_TYPES.has(r.type) && !/|alert|/.test(sk)) {
+      const copyRule = FIELD_TYPES.has(r.type) && !sk.includes("|alert|");
+      if (copyRule || sk.includes("|stmt|")) {
         const t = Date.parse(r.at);
+        const fits = (g: { lead: LiveReport }) =>
+          (!copyRule || Math.abs(Date.parse(g.lead.at) - t) <= COPY_WINDOW_MS) && sameWords(g.lead.summary, r.summary);
         let n = 0;
-        while (byStory.has(`${sk}#${n}`) && Math.abs(Date.parse(byStory.get(`${sk}#${n}`)!.lead.at) - t) > COPY_WINDOW_MS) n += 1;
+        while (byStory.has(`${sk}#${n}`) && !fits(byStory.get(`${sk}#${n}`)!)) n += 1;
         sk = `${sk}#${n}`;
       }
       const group = byStory.get(sk);

@@ -347,7 +347,7 @@ export const NOISE_REASONS = [
  * ------------------------------------------------------------------ */
 
 /** Noise rules a leader's quoted words skip: they speak of these things. */
-const LEADER_PASSES = new Set(["ceremony", "crime", "religion", "rally", "admin"]);
+const LEADER_PASSES = new Set(["ceremony", "crime", "religion", "rally", "admin", "obituary"]);
 
 export type Breadth = "focused" | "mixed" | "wire";
 
@@ -429,7 +429,7 @@ type Leader = { key: string; re: RegExp; official?: RegExp };
 const LEADERS: Leader[] = [
   {
     key: "houthi-leader",
-    re: /السيد ?القايد|قايد ?الثوره|قايد ?انصار ?الله|عبد ?الملك ?(?:بدر ?الدين ?)?الحوثي|السيد ?عبد ?الملك/,
+    re: /السيد ?القايد|السيد ?الحوثي|قايد ?الثوره|قايد ?انصار ?الله|عبد ?الملك ?(?:بدر ?الدين ?)?الحوثي|السيد ?عبد ?الملك/,
     official: /masirah|المسيره/i,
   },
   { key: "saree", re: /يحيي ?سريع|العميد ?سريع|المتحدث ?(?:الرسمي ?)?باسم ?القوات ?المسلحه/ },

@@ -1847,6 +1847,8 @@ function highlightFrontOnMap(front) {
   const applyView = () => {
     if (!map) return;
     try { map.setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { animate: true }); } catch (e) {}
+    // Once framed, the front is moved clear of the legend.
+    map.once('moveend', () => panClearOfLegend(frontBoxInMap()));
     if (frontSpotLayer && map) {
       try { map.removeLayer(frontSpotLayer); } catch (e) {}
       frontSpotLayer = null;
@@ -2211,17 +2213,8 @@ function placeMapPin(ev) {
       autoClose: false,
       closeOnClick: false,
     });
-  // Several notes stay open side by side; a click on a note (not on its link,
-  // button, media or full text) closes that note; its pin toggles it (Leaflet).
-  m.on('popupopen', (e) => {
-    const el = e.popup.getElement();
-    if (!el || el.dataset.closeWired) return;
-    el.dataset.closeWired = '1';
-    el.addEventListener('click', (ev) => {
-      if (ev.target.closest('a, button, img, video, .pop-full, .leaflet-popup-close-button')) return;
-      m.closePopup();
-    });
-  });
+  // Several notes stay open side by side; each closes with its ×, its pin, or
+  // "Close all" (a click on the note itself expands it).
   m.addTo(map);
   eventLayers.push(m);
 }
@@ -2294,10 +2287,10 @@ function ensureMap(d) {
     attribution: d.basemapAttribution || '© OpenStreetMap',
   }).addTo(map);
   map.on('popupopen', (e) => {
-    const wrap = document.getElementById('map-wrap');
-    if (wrap) wrap.classList.add('popup-open');
+    syncOpenNotes();
     const root = e.popup.getElement();
     if (!root) return;
+    setTimeout(() => panClearOfLegend(boxInMap(root)), 30);
     wireMediaClicks(root);
     try { L.DomEvent.disableClickPropagation(root); L.DomEvent.disableScrollPropagation(root); } catch (err) {}
     const btn = root.querySelector('.pop-toggle');
@@ -2331,10 +2324,80 @@ function ensureMap(d) {
       };
     }
   });
-  map.on('popupclose', () => {
-    const wrap = document.getElementById('map-wrap');
-    if (wrap) wrap.classList.remove('popup-open');
-  });
+  map.on('popupclose', () => setTimeout(syncOpenNotes, 0));
+}
+
+/** The notes open on the map now. */
+function openNotes() {
+  const out = [];
+  if (map) map.eachLayer((l) => { if (l.getPopup && l.isPopupOpen && l.isPopupOpen()) out.push(l); });
+  return out;
+}
+
+/** Keeps the map's state in step with its open notes: the class, and "Close all (N)" when 2+. */
+function syncOpenNotes() {
+  const wrap = document.getElementById('map-wrap');
+  if (!wrap) return;
+  const n = openNotes().length;
+  wrap.classList.toggle('popup-open', n > 0);
+  let btn = document.getElementById('close-notes');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'close-notes';
+    btn.className = 'close-notes';
+    btn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      openNotes().forEach((l) => l.closePopup());
+      syncOpenNotes();
+    };
+    wrap.appendChild(btn);
+  }
+  btn.textContent = `Close all (${n})`;
+  btn.hidden = n < 2;
+}
+
+/** An element's box in map-container pixels. */
+function boxInMap(el) {
+  const mc = map && map.getContainer();
+  if (!el || !mc) return null;
+  const a = el.getBoundingClientRect();
+  const b = mc.getBoundingClientRect();
+  return { left: a.left - b.left, top: a.top - b.top, right: a.right - b.left, bottom: a.bottom - b.top };
+}
+
+/**
+ * Pans the least that takes `box` (map-container pixels) off the legend in the
+ * bottom-left corner: right past it, or up above it, whichever is shorter.
+ */
+function panClearOfLegend(box, animate = true) {
+  const lg = document.getElementById('legend');
+  if (!map || !box || !lg || !lg.offsetWidth || getComputedStyle(lg).display === 'none') return;
+  const l = boxInMap(lg);
+  const gap = 8;
+  if (box.right <= l.left || box.left >= l.right || box.bottom <= l.top || box.top >= l.bottom) return;
+  const right = l.right + gap - box.left;
+  const up = box.bottom - (l.top - gap);
+  const room = map.getSize();
+  // Moving right must not push the box off the far edge; up must not push it off the top.
+  const canRight = box.right + right <= room.x;
+  const canUp = box.top - up >= 0;
+  if (canRight && (!canUp || right <= up)) map.panBy([-right, 0], { animate });
+  else if (canUp) map.panBy([0, up], { animate });
+  else map.panBy([-right, 0], { animate });
+}
+
+/** The highlighted front (its areas and spot) in map-container pixels. */
+function frontBoxInMap() {
+  if (!map || !window.L) return null;
+  const b = L.latLngBounds([]);
+  if (geoLayer) geoLayer.eachLayer((l) => { if (l.feature && highlightIds.has(l.feature.properties.shapeISO)) b.extend(l.getBounds()); });
+  if (frontSpotLayer && frontSpotLayer.getBounds) b.extend(frontSpotLayer.getBounds());
+  if (!b.isValid()) return null;
+  const nw = map.latLngToContainerPoint(b.getNorthWest());
+  const se = map.latLngToContainerPoint(b.getSouthEast());
+  return { left: nw.x, top: nw.y, right: se.x, bottom: se.y };
 }
 
 /* ---------------------------------------------------------------- *

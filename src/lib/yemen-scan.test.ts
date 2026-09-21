@@ -382,3 +382,34 @@ test("a Telegram reply keeps its own link, and names the post it replies to", as
   assert.equal(h.url, "https://t.me/naya_foriraq/91168");
   assert.equal(h.replyUrl, "https://t.me/naya_foriraq/91167");
 });
+
+test("the same outlet following up within minutes replies to its earlier card", async () => {
+  const { linkFollowUps } = await import("./yemen-scan.server.ts");
+  const a = { fp: "a", source: "Al Hadath", at: "2026-09-21T20:53:00+03:00", summary: "Indications of fuel shortages in Sanaa, sources say", type: "economy" };
+  const b = { fp: "b", source: "Al Hadath", at: "2026-09-21T20:54:00+03:00", summary: "Houthi forces begin allocating fuel stocks for military operations", type: "economy" };
+  const c = { fp: "c", source: "Al Hadath", at: "2026-09-21T20:55:00+03:00", summary: "Saudi air raid targets Al-Hazm district", type: "strike" };
+  const pool = [a, b, c] as never[];
+  linkFollowUps([b, c] as never[], pool);
+  assert.equal((b as { replyTo?: string }).replyTo, "a");
+  assert.equal((c as { replyTo?: string }).replyTo, undefined);
+});
+
+test("a card quoting a US official has his own sources searched this tick, once an hour", async () => {
+  const { speakerSearches } = await import("./yemen-scan.server.ts");
+  const now = Date.parse("2026-09-21T20:00:00Z");
+  const card = { fp: "v", source: "Al Jazeera", at: "2026-09-21T19:50:00Z", summary: "Vance: the US will keep Red Sea shipping open", type: "statement" };
+  const state = { scannedOnce: true, lastScanAt: {} as Record<string, number> };
+  const feeds = speakerSearches([card] as never[], state as never, now);
+  assert.equal(feeds.length, 1);
+  assert.match(decodeURIComponent(feeds[0].url), /"Vance" \(Yemen OR Houthi/);
+  state.lastScanAt["web:spk-vance"] = now - 10 * 60_000;
+  assert.equal(speakerSearches([card] as never[], state as never, now).length, 0);
+});
+
+test("another outlet's late lines of the Houthi leader's speech join its thread", async () => {
+  const { threadSpeeches } = await import("./yemen-scan.server.ts");
+  const l1 = { fp: "m1", source: "Al-Masirah", at: "2026-09-21T17:30:00+03:00", summary: "Houthi leader: Saudi Arabia must end the blockade", type: "statement" };
+  const l2 = { fp: "s1", source: "Saba", at: "2026-09-21T21:17:00+03:00", summary: "Houthi leader: Makkah is an Islamic landmark", type: "statement" };
+  threadSpeeches([l1, l2] as never[], new Set());
+  assert.equal((l2 as { replyTo?: string }).replyTo, "m1");
+});

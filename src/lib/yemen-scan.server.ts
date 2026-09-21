@@ -619,6 +619,63 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
   return [...touched];
 }
 
+/**
+ * US officials whose remarks are looked for at their own sources — the White
+ * House, State, the Pentagon, the wires, the TV networks — as soon as a card
+ * quotes them: a relay carries one line, the original carries all of them.
+ */
+const SPEAKER_SEARCH: Record<string, string> = { trump: "Trump", vance: "Vance", rubio: "Rubio", hegseth: "Hegseth" };
+const SPEAKER_SEARCH_GAP_MS = 60 * 60_000;
+const SPEAKER_SEARCHES_PER_TICK = 2;
+
+/** One Google News search per quoted official, read this tick alongside the feeds. */
+export function speakerSearches(reports: LiveReport[], state: ScanState, now: number): RssFeed[] {
+  const out: RssFeed[] = [];
+  for (const r of reports) {
+    if (out.length >= SPEAKER_SEARCHES_PER_TICK) break;
+    if ((r.type !== "statement" && r.type !== "diplomacy") || now - Date.parse(r.at) > 3 * 3600_000) continue;
+    const key = namedSpeaker(r.summary);
+    const name = SPEAKER_SEARCH[key];
+    const id = `spk-${key}`;
+    if (!name || out.some((f) => f.id === id) || now - (state.lastScanAt[`web:${id}`] ?? 0) < SPEAKER_SEARCH_GAP_MS) continue;
+    out.push({ id, url: gnews(`"${name}" (Yemen OR Houthi OR Houthis OR Saudi OR "Red Sea") when:1d`), name: "US media", cadence: C90 });
+  }
+  return out;
+}
+
+/** A follow-up this soon after the same outlet's card on the same story replies to it. */
+const FOLLOW_MS = 15 * 60_000;
+const FOLLOW_GENERIC = new Set(
+  ("saudi houthi houthis forces yemen yemeni government says said sources source report reports strike strikes " +
+    "raid raids attack attacks target targets targeted amid after over into with from their against new").split(" "),
+);
+const followWords = (s: string) =>
+  new Set(
+    String(s || "")
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((w) => w.length >= 4 && !FOLLOW_GENERIC.has(w))
+      .map((w) => w.replace(/(?:ing|ed|es|s)$/, "")),
+  );
+
+/**
+ * "Fuel shortages in Sanaa" then, a minute later from the same outlet, "Houthis
+ * allocate fuel to military operations": the second follows the first. Same
+ * source, within 15 minutes, and a word of substance in common.
+ */
+export function linkFollowUps(fresh: LiveReport[], pool: LiveReport[]): void {
+  for (const r of fresh) {
+    if (r.replyTo || r.type === "statement") continue;
+    const t = Date.parse(r.at);
+    const mine = followWords(r.summary);
+    const prev = pool
+      .filter((x) => x.fp !== r.fp && x.source === r.source && Date.parse(x.at) < t && t - Date.parse(x.at) <= FOLLOW_MS)
+      .filter((x) => [...followWords(x.summary)].some((w) => mine.has(w)))
+      .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
+    if (prev) r.replyTo = prev.fp;
+  }
+}
+
 /** Outlet feeds read early per tick because a channel cited them. */
 const HINTS_PER_TICK = 3;
 
@@ -653,6 +710,8 @@ export function isOriginal(r: LiveReport): boolean {
 
 /** A speaker silent this long has finished; the next line starts a new thread. */
 const SPEECH_GAP_MS = 45 * 60 * 1000;
+/** Lines of a speech another outlet posts after it ended, as long as this after its last line. */
+const LATE_RELAY_MS = 6 * 3600 * 1000;
 
 /**
  * A live speech arrives one line per post, and each newsworthy line is its own
@@ -672,14 +731,17 @@ export function threadSpeeches(reports: LiveReport[], _published: Set<string>, s
   const last = new Map<string, LiveReport>();
   const touched: LiveReport[] = [];
   for (const r of lines) {
-    const who = `${namedSpeaker(r.summary)}|${r.source}`;
+    const who = namedSpeaker(r.summary);
     const prev = last.get(who);
     last.set(who, r);
-    if (!prev || Date.parse(r.at) - Date.parse(prev.at) > SPEECH_GAP_MS || r.replyTo === prev.fp) continue;
+    // Another outlet posting lines of the speech after it ended (Saba's summary,
+    // hours later) still belongs to it.
+    const gap = prev && prev.source !== r.source && who === "houthi leader" ? LATE_RELAY_MS : SPEECH_GAP_MS;
+    if (!prev || Date.parse(r.at) - Date.parse(prev.at) > gap || r.replyTo === prev.fp) continue;
     // A reply to something else than this speech stays; one to an earlier
     // line of it moves to the line now just before it.
     const to = r.replyTo ? byFp.get(r.replyTo) : undefined;
-    if (r.replyTo && !(to && `${namedSpeaker(to.summary)}|${to.source}` === who && Date.parse(to.at) < Date.parse(prev.at))) continue;
+    if (r.replyTo && !(to && namedSpeaker(to.summary) === who && Date.parse(to.at) < Date.parse(prev.at))) continue;
     r.replyTo = prev.fp;
     if (!inPayload.has(r.fp)) touched.push(r);
   }
@@ -692,9 +754,12 @@ function scoreReport(x: LiveReport): number {
     (x.score || 0) * 2 +
     (x.tier === "agency" ? 60 : x.tier === "claim" ? 20 : 0) +
     String(x.summary || "").length +
-    (x.place ? 25 : 0)
+    (x.place ? 25 : 0) +
+    // A speaker's own channel is the original of his words.
+    (OWN_CHANNELS.has(x.source) ? 120 : 0)
   );
 }
+const OWN_CHANNELS = new Set(["Yahya Saree", "Mohammed Abdulsalam"]);
 
 /* ------------------------------------------------------------------ *
  * Persist to the desk snapshot
@@ -773,7 +838,10 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   const dueTg = TG.filter((ch) => cadenceDue(state, `tg:${ch.id}`, ch.cadence, now));
   // A feed an outlet hint named (a channel citing the WSJ) is read now, not at its hour.
   const hinted = (id: string) => (state.lastScanAt[`hint:web:${id}`] ?? 0) > (state.lastScanAt[`web:${id}`] ?? 0);
-  const dueRss = RSS.filter((feed) => hinted(feed.id) || cadenceDue(state, `web:${feed.id}`, feed.cadence, now));
+  const dueRss = [
+    ...RSS.filter((feed) => hinted(feed.id) || cadenceDue(state, `web:${feed.id}`, feed.cadence, now)),
+    ...speakerSearches(prev?.reports ?? [], state, now),
+  ];
   let sourcesOk = 0;
   const hits: RawHit[] = [];
   const status: SourceStatus[] = [];
@@ -1089,6 +1157,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     const to = h.replyUrl ? byUrl.get(h.replyUrl) : undefined;
     if (r && to && to.fp !== r.fp && !r.replyTo && Date.parse(to.at) <= Date.parse(r.at)) r.replyTo = to.fp;
   }
+  linkFollowUps(uniqReports.filter((r) => !published.has(r.fp)), [...stored, ...uniqReports]);
   const touched = [...foldIntoPublished(uniqReports, published, stored), ...threadSpeeches(uniqReports, published, stored)];
   if (prev && Array.isArray(prev.rawHits)) {
     const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));

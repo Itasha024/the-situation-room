@@ -28,6 +28,7 @@ import {
   pacificDay,
   repairable,
   fixHeadline,
+  redundantBody,
   contentHash,
   groqKey,
   readBatch,
@@ -480,6 +481,9 @@ export function reword(s: string): string {
   return out.replace(/\bSaudi forces forces\b/g, "Saudi forces");
 }
 
+/** A channel's line of the Houthi leader's speech: his title, then a colon. */
+const HOUTHI_LEADER_LINE = /^\s*(?:السيد القائد|قائد الثورة|السيد عبد ?الملك(?: بدر الدين)? الحوثي)[^:\n]{0,30}:/;
+
 function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
@@ -503,6 +507,14 @@ function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
     const role = fixHeadline(lead);
     r.speaker_lead = r.headline.toLowerCase().startsWith(role.toLowerCase()) ? role : null;
   }
+  // A speech line posted as "السيد القائد: …" is his words, whether or not the
+  // model kept his name: the speaker goes first.
+  if (HOUTHI_LEADER_LINE.test(c.text) && !/^Houthi leader\b/i.test(r.headline) && !r.headline.includes(":")) {
+    r.headline = `Houthi leader: ${r.headline}`;
+    r.speaker_lead = "Houthi leader";
+  }
+  // A short report is its headline: a body that only says it again goes.
+  if (redundantBody(r.headline, r.body)) r.body = "";
   const problem = checkReading(r, c.text, strict);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };

@@ -799,3 +799,12 @@ html{scroll-behavior:smooth}
 .jump-back{position:fixed;bottom:18px;transform:translateX(-50%);z-index:900;background:#1a2433;color:#eaf0f6;border:1px solid #4a6280;border-radius:999px;padding:.4rem .9rem;font:inherit;font-size:.78rem;cursor:pointer;box-shadow:0 4px 14px #0009}
 .jump-back:hover{background:#243447}
 .jump-back[hidden]{display:none}
+
+/* Map notes: a larger close ×, and "Close all" when two or more are open. */
+.leaflet-container a.leaflet-popup-close-button{width:26px;height:26px;font:20px/24px Tahoma,Verdana,sans-serif;color:#475569;right:2px;top:2px}
+.leaflet-container a.leaflet-popup-close-button:hover{color:#111827}
+.close-notes{position:absolute;z-index:600;top:8px;left:50%;transform:translateX(-50%);background:rgba(8,12,18,.94);color:#e5edf5;border:1px solid var(--line);border-radius:6px;padding:.28rem .6rem;font-size:.72rem;cursor:pointer}
+.close-notes:hover{background:#1a2433}
+.close-notes[hidden]{display:none}
+/* A phone has no room for both: the legend steps aside while notes are open. */
+@media (max-width:720px){.map-wrap.popup-open .legend{display:none}}

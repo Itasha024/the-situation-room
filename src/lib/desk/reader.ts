@@ -211,7 +211,12 @@ WHO DID WHAT TO WHOM — never infer, never assume
 
 WRITING
 - English wire style. headline <= 110 characters, sentence case, no full stop.
-- body: 1-3 sentences carrying the substance. A thin item gets a short body.
+- A short item that fits in the headline: the whole report goes in the
+  headline and body is "" (empty). Never a body that says the headline again
+  in more words.
+- A longer item, as a wire story: the headline carries the most important
+  facts; the body (1-3 sentences) adds the next ones — detail, figures,
+  context from the text — never a rephrasing of the headline.
 - A long item is a full article: read ALL of it. The headline carries its
   most important new development wherever in the text it appears — a
   decision, a commitment, a reversal, casualties — not only the opening
@@ -235,6 +240,11 @@ WRITING
   Bab al-Mandab.
 - Neutral words: "Houthi forces", "Yemeni government forces", "Saudi forces",
   "people killed". Never "martyrs", "mercenaries", "aggression", "enemy".
+- A party's claim of harm to civilians ("civilian neighbourhoods", "homes",
+  "a massacre") is that party's claim, not a fact: put who says it at the
+  head — "Houthi media: Saudi strikes hit residential areas in Taiz",
+  "Saudi-led coalition: Houthi drone hit a school in Jazan" — and keep the
+  victims and figures.
 - Forces by their English names: درع الوطن = Nation's Shield forces, درع
   الجزيرة = Peninsula Shield forces, الحزام الأمني = Security Belt forces,
   العمالقة = Giants Brigades, المقاومة الوطنية = National Resistance forces.
@@ -259,7 +269,10 @@ defence minister"; unclear -> the name and title only, no label.
 STATEMENTS (event_type statement or diplomacy)
 - speaker_lead is REQUIRED: the person or body the report is about.
 - A colon ONLY when the item carries that person's own words (a quote, speech,
-  post, interview): "Saree: Saudi jets carried out 28 strikes in 24 hours".
+  post, interview, statement, remarks): "Houthi spokesperson: Saudi jets
+  carried out 28 strikes in 24 hours". Then ALWAYS the colon, straight after
+  the speaker — never "UN spokesman says …" or "UN spokesman warns …": write
+  "UN spokesman: …".
   A report ABOUT someone (what they did, decided or discussed, or what
   officials, sources or an outlet say about them) is a plain sentence with no
   colon: "Trump held a phone call with Yemen's Presidential Council head
@@ -270,8 +283,9 @@ STATEMENTS (event_type statement or diplomacy)
   speaker_lead and never opens the headline. What officials tell an outlet
   ends the headline: ", officials say", ", sources say".
 - speaker_lead: a bare surname only for a figure an international reader knows
-  (Trump, Rubio, Bin Salman, Saree, Grundberg). Abdul Malik
-  al-Houthi (السيد القائد, قائد الثورة) is always "Houthi leader"; al-Alimi is
+  (Trump, Rubio, Bin Salman, Grundberg). Abdul Malik
+  al-Houthi (السيد القائد, قائد الثورة) is always "Houthi leader"; Yahya Saree
+  (the Houthi armed forces spokesman) is always "Houthi spokesperson"; al-Alimi is
   "Yemen's president", al-Mashat "the Houthi political council head",
   al-Zubaidi "the STC leader", in the headline and wherever a reader would not
   know the name.
@@ -293,7 +307,8 @@ a claim of a specific attack or its result; a figure. Praise, prayer,
 thanks, history, the anniversary, general accusations and slogans are
 rejected with reject_reason "speech-rhetoric". A published line is
 headlined "<role>: <what was said>", e.g. "Houthi leader: Saudi Arabia will
-pay a price if the siege on Hodeidah port continues".
+pay a price if the siege on Hodeidah port continues" — always with the
+speaker at the head, even when the channel's line does not name him again.
 
 interest: "for" if the report favours the side of the outlet carrying it (a
 Houthi outlet reporting Houthi gains or enemy losses), "against" if it hurts
@@ -354,6 +369,9 @@ export function fixHeadline(headline: string): string {
   h = h.replace(/^Yemeni ((?:culture|information|foreign|defen[cs]e|interior|oil|finance) minister):/i, "Yemen's $1:");
   // "X said that our …" is his own words without the quote: the colon form.
   h = h.replace(/^([^:]{2,60}?) (?:said|says|stated|stressed|affirmed|declared|added) (?:that )?((?:our|we|us|my|I)\b.*)$/, "$1: $2");
+  // A spokesman's or minister's statement always takes the colon: "UN
+  // spokesman says talks will resume" → "UN spokesman: talks will resume".
+  h = h.replace(SPEAKER_SAYS, "$1: $2");
   const m = /^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);
   if (m && (REPORTED_VERB.test(m[2]) || /ed$/.test(m[2]))) h = `${m[1]} ${h.slice(m[0].length - m[2].length)}`;
   // A colon after a name that is then reported on is no quote: "Al-Alimi:
@@ -370,7 +388,41 @@ const ROLE_NAMES: [RegExp, string][] = [
   [/\b(?:Yemen's |Yemeni )?(?:[Pp]resident(?:ial (?:Leadership )?Council (?:head|chairman|leader))? )?(?:Rashad )?al-Alimi\b/gi, "Yemen's president"],
   [/\b(?:STC (?:leader|head|chief) )?(?:Aidarous |Aidrous )?al-Zubaidi\b/gi, "the STC leader"],
   [/\b(?:Houthi (?:political council|Supreme Political Council) (?:head|chief) )?(?:Mahdi )?al-Mashat\b/gi, "the Houthi political council head"],
+  [/\b(?:(?:the )?(?:Houthi|Yemeni|Sanaa) (?:armed forces |military |army )?spokes(?:man|person) )?(?:Brig(?:adier)?\.? (?:Gen(?:eral)?\.? )?)?(?:Yahya )?Saree\b/gi, "the Houthi spokesperson"],
+  [/\bHouthi (?:armed forces |military |army )?spokes(?:man|person)\b/gi, "Houthi spokesperson"],
 ];
+/** "<role> says/warns (that) X" for a speaker whose words X are: the colon form. */
+const SPEAKER_SAYS =
+  /^((?:[\w'.-]+ ){0,4}(?:spokes(?:man|person|woman)|minister|envoy|leader|secretary-general|Guterres|Grundberg)) (?:says|said|stated|warns|warned|stresses|stressed|affirms|affirmed|confirms|confirmed|declares|declared) (?:that )?(.+)$/i;
+
+const BODY_FILLER = new Set(
+  ("the and are was were has have had been for with from that this its their there after into over also " +
+    "said says say sources source report reports reported according " +
+    "governorate province district city town area north south east west northern southern eastern western yemen yemeni").split(" "),
+);
+const stemOf = (w: string) => w.replace(/(?:ing|ed|es|s)$/, "");
+const wordsOf = (s: string) => s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3);
+
+/**
+ * A body that only says the headline again in more words ("There are
+ * indications of fuel shortages in Sanaa, sources say" under "Indications of
+ * fuel shortages in Sanaa, sources say"). A new number, a casualty or a name
+ * the headline lacks keeps it.
+ */
+export function redundantBody(headline: string, body: string): boolean {
+  const b = String(body || "").trim();
+  if (!b) return false;
+  const h = String(headline || "");
+  const hl = h.toLowerCase();
+  if ((b.match(/\d+/g) || []).some((n) => !h.includes(n))) return false;
+  if (/\b(?:killed|wounded|injured|dead|died|casualt)/i.test(b) && !/\b(?:killed|wounded|injured|dead|died|casualt)/i.test(h)) return false;
+  const seen = new Set(wordsOf(h).map(stemOf));
+  const fresh = wordsOf(b).filter((w) => !BODY_FILLER.has(w) && !seen.has(stemOf(w)));
+  // A capitalised name the headline does not have (the dateline aside).
+  const names = (b.replace(/^[^—]{2,30}—\s*/, "").match(/(?<=\S\s)[A-Z][\p{L}'-]{2,}/gu) || []).filter((n) => !hl.includes(n.toLowerCase()) && !BODY_FILLER.has(n.toLowerCase()));
+  if (names.length) return false;
+  return fresh.length <= 3;
+}
 const REPORTED_VERB =
   /^(?:did|does|do|has|had|have|is|was|were|held|spoke|met|made|took|gave|sent|told|won|in|to|not|will|would|could|may|might|plans|seeks|asks|urges|calls|weighs|mulls|meets|holds|speaks|rejects|refuses|agrees|orders|visits|receives|discusses|considers|decides|approves|signs)$/;
 
@@ -434,7 +486,7 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   const h = String(r.headline || "").trim();
   const b = String(r.body || "").trim();
   if (h.length < 12 || h.length > 140) return "headline length";
-  if (b.length < 20) return "empty body";
+  if (b && b.length < 20) return "empty body";
   if (/[؀-ۿ֐-׿]/.test(h + b)) return "source-language text in copy";
   for (const re of BANNED_PHRASES) if (re.test(`${h} ${b}`)) return `banned phrase: ${re.source}`;
 

@@ -32,6 +32,8 @@ export type LiveReport = {
    * the card; these are kept and linked rather than deleted as duplicates.
    */
   alsoReportedBy?: { source: string; url: string }[];
+  /** The original a relaying post cites, while the original is not yet found. */
+  citing?: string;
   /** fp of the earlier report this one directly develops; shown as a reply to it. */
   replyTo?: string;
   /** Inputs to the trust figure — see credibility.ts. */

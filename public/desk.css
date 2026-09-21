@@ -773,6 +773,7 @@ html{scroll-behavior:smooth}
 .card.flash{outline:2px solid #9fb4cc;outline-offset:2px;transition:outline-color 1.2s}
 .card .also a{color:#9fb4cc;text-decoration:none}
 .card .also a:hover{text-decoration:underline}
+.card .citing{color:#8b98a8}
 .front-card .front-composed{margin:.35rem 0 0;font-size:.78rem;line-height:1.5;color:#c9d4e0}
 
 /* The conflict in numbers: three plain boxes, no accent colour. */

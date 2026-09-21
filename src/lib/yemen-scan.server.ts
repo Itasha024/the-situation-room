@@ -17,6 +17,8 @@ import { refreshBrief } from "./desk/brief-store.ts";
 import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
+import { isGnews, resolveGoogleNews } from "./desk/gnews.ts";
+import { traceOrigins } from "./desk/origin.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 
 // The wire types moved to ./desk/types.ts so the store and the scanner can
@@ -348,46 +350,6 @@ const LEAD_CACHE_MAX = 3000;
 type LeadCache = Record<string, { lead: string; at: number; real?: string }>;
 /** Google News links resolved to their article per cycle (two requests each). */
 const GNEWS_RESOLVES = 12;
-const BROWSER_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
-const isGnews = (u: string) => /^https:\/\/news\.google\.com\/rss\/articles\//.test(u);
-
-/**
- * The article a Google News link stands for. The link carries an opaque id;
- * Google's own page gives a signature for it, and its batchexecute endpoint
- * trades id + signature for the publisher's URL. "" when that fails.
- */
-async function resolveGoogleNews(link: string): Promise<string> {
-  const id = /\/articles\/([^?/]+)/.exec(link)?.[1];
-  if (!id) return "";
-  try {
-    const page = await fetch(`https://news.google.com/articles/${id}`, {
-      headers: { "user-agent": BROWSER_UA },
-      signal: AbortSignal.timeout(8000),
-    }).then((r) => (r.ok ? r.text() : ""));
-    const sg = /data-n-a-sg="([^"]+)"/.exec(page)?.[1];
-    const ts = /data-n-a-ts="([^"]+)"/.exec(page)?.[1];
-    if (!sg || !ts) return "";
-    const inner = JSON.stringify([
-      "garturlreq",
-      [["X", "X", ["X", "X"], null, null, 1, 1, "US:en", null, 1, null, null, null, null, null, 0, 1], "X", "X", 1, [1, 1, 1], 1, 1, null, 0, 0, null, 0],
-      id,
-      Number(ts),
-      sg,
-    ]);
-    const res = await fetch("https://news.google.com/_/DotsSplashUi/data/batchexecute", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "user-agent": BROWSER_UA },
-      body: "f.req=" + encodeURIComponent(JSON.stringify([[["Fbv4je", inner, null, "generic"]]])),
-      signal: AbortSignal.timeout(8000),
-    });
-    const text = await res.text();
-    const url = /garturlres\\",\\"(https?:[^"\\]+)/.exec(text)?.[1] ?? "";
-    return /^https?:\/\/(?!news\.google\.)/.test(url) ? url : "";
-  } catch {
-    return "";
-  }
-}
 
 type RawHit = {
   source: string;
@@ -814,6 +776,15 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // Items read from the queue — seen in an earlier cycle, read only now.
   for (const [url, v] of verdicts) if (v.kind === "publish" && !pre.has(url)) reports.push(v.report);
 
+  // A relayed report is traced to its original, which then replaces it as the
+  // source; `late` are stored reports whose original turned up only now.
+  let late: LiveReport[] = [];
+  try {
+    late = await traceOrigins(await getStore(), reports, new Map(hits.map((h) => [h.url, h.text])), now);
+  } catch {
+    // Untraced reports keep their relay as source; nothing else changes.
+  }
+
   /**
    * One CARD per story, but every account kept.
    *
@@ -883,6 +854,13 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       have.add(u);
     }
     uniqReports.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  }
+  // Originals found late replace the relay copy the payload carries; saving
+  // them lets the store move the stored row to the original too.
+  for (const r of late) {
+    const i = uniqReports.findIndex((x) => x.fp === r.fp);
+    if (i >= 0) uniqReports[i] = r;
+    else uniqReports.push(r);
   }
   if (prev && Array.isArray(prev.rawHits)) {
     const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));

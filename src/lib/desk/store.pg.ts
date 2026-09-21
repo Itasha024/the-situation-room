@@ -105,7 +105,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
 
       const reports = await sql<Record<string, unknown>>`
         select fp, url, at, source, type, summary, body, priority, confidence,
-               score, tier, place, lat, lng, also_reported_by, reply_to
+               score, tier, place, lat, lng, also_reported_by, reply_to, citing
           from desk_report
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
          order by at desc
@@ -145,6 +145,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           }
           if (r.also_reported_by) row.alsoReportedBy = r.also_reported_by;
           if (r.reply_to) row.replyTo = r.reply_to;
+          if (r.citing) row.citing = r.citing;
           return row as DeskReportRow;
         }),
         events: events.map(
@@ -179,18 +180,27 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           const inserted = await sql<{ fp: string }>`
             insert into desk_report
               (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
-               also_reported_by, reply_to)
+               also_reported_by, reply_to, citing)
             values (
               ${r.fp}, ${r.url}, ${r.at}, ${r.source}, ${r.type}, ${r.summary}, ${r.text},
               ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
               ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
               ${r.alsoReportedBy?.length ? JSON.stringify(r.alsoReportedBy) : null}::jsonb,
-              ${r.replyTo ?? null}
+              ${r.replyTo ?? null}, ${r.citing ?? null}
             )
             on conflict do nothing
             returning fp
           `;
           if (!inserted.length) {
+            // The original of a relayed report turned up after it was stored:
+            // the original replaces the relay as its source and link.
+            if (!r.citing && r.source) {
+              await sql`
+                update desk_report set url = ${r.url}, source = ${r.source}, citing = null, also_reported_by = null
+                 where fp = ${r.fp} and citing is not null and url <> ${r.url}
+                   and not exists (select 1 from desk_report d where d.url = ${r.url})
+              `;
+            }
             // Stored earlier without a place (the geocoder had not found it
             // yet): take the place now, and let its pin be added below.
             if (r.lat == null || r.lng == null) continue;

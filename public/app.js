@@ -1329,7 +1329,7 @@ function feedCardHtml(r, i) {
   return `<article class="card lean-${lean}${isOpen ? ' open' : ''}" data-i="${i}" data-fp="${escapeHtml(fp)}" title="${escapeHtml(LEAN_LABEL[lean] || '')}">
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
-        <span class="src-wrap">${srcHtml}</span>
+        <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">, citing ${escapeHtml(r.citing)}</span>` : ''}</span>
       </div>
       ${replyQuote(r)}
       <p class="headline">${escapeHtml(sum)}</p>

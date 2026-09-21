@@ -64,6 +64,17 @@ const RECENT_MAX = 40;
 const MAX_CALLS_PER_CYCLE = 5;
 
 type CacheEntry = { reading: Reading; at: number };
+
+/**
+ * Rejections for thinness made before the rule that a headline stating a fact
+ * about this war is publishable. Those alone are read again, rather than
+ * re-reading the whole cache and spending the day's quota.
+ */
+const THIN_RULE_AT = Date.parse("2026-09-21T14:30:00+03:00");
+const THIN_REASON = /substantive|teaser|headline|vague|brief|analy|recap|uninformative/i;
+function stale(e: CacheEntry): boolean {
+  return e.at < THIN_RULE_AT && !e.reading.publish && THIN_REASON.test(String(e.reading.reject_reason || ""));
+}
 type Cache = Record<string, CacheEntry>;
 type Queued = Candidate & { queuedAt: number };
 
@@ -117,7 +128,7 @@ export async function editCandidates(
   const unread: Queued[] = [];
   for (const c of all) {
     const hit = cache[contentHash(c.text)];
-    if (hit) {
+    if (hit && !stale(hit)) {
       verdicts.set(c.url, decide(hit.reading, c));
       readingOf.set(c.url, hit.reading);
     } else unread.push(c);

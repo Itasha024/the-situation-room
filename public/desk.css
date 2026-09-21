@@ -848,3 +848,7 @@ html{scroll-behavior:smooth}
 .pin-sheet.as-pop.show{display:block}
 .pin-sheet.as-pop .pin-sheet-box{position:fixed;pointer-events:auto;box-shadow:0 12px 32px rgba(0,0,0,.5)}
 .pin-sheet.as-pop #pin-sheet-map{height:300px}
+/* The stamp tight under each heading, the same distance in every column. */
+#fronts > .cadence.top:first-child{margin-top:-6px}
+#casualties > .cadence.top:first-child{margin-top:-1px}
+.situation .cadence.top{margin-top:-3px}

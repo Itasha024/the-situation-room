@@ -1607,7 +1607,7 @@ async function mountFrontMini(front, d) {
   if (!box || !window.L) return;
   if (frontMiniMap) { try { frontMiniMap.remove(); } catch (e) {} frontMiniMap = null; }
   const m = L.map(box, {
-    zoomControl: false, attributionControl: false, zoomSnap: 0.25,
+    zoomControl: false, attributionControl: false, zoomSnap: 0.25, renderer: L.svg({ padding: 1.5 }),
     dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false,
   }).setView([15.6, 47.5], 5);
   frontMiniMap = m;
@@ -1638,7 +1638,8 @@ async function mountFrontMini(front, d) {
   const frame = () => {
     if (frontMiniMap !== m) return;
     try { m.invalidateSize(); } catch (e) {}
-    if (lit.isValid()) m.fitBounds(lit, { padding: [34, 34], maxZoom: 7 });
+    if (lit.isValid()) m.fitBounds(lit, { padding: [34, 34], maxZoom: 7, animate: false });
+    m.fire('moveend');
   };
   frame();
   setTimeout(frame, 80);

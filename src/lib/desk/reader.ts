@@ -273,6 +273,7 @@ export const OUTLET_LEAD = new RegExp(`^(?:${OUTLET_NAMES})(?:\\s+(?:sources?|re
 export function fixHeadline(headline: string): string {
   let h = String(headline || "").trim();
   while (OUTLET_LEAD.test(h)) h = h.replace(OUTLET_LEAD, "");
+  h = h.replace(/^(?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi:/i, "Houthi leader:");
   const m = /^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);
   if (m && (REPORTED_VERB.test(m[2]) || /ed$/.test(m[2]))) h = `${m[1]} ${h.slice(m[0].length - m[2].length)}`;
   return h ? h[0].toUpperCase() + h.slice(1) : h;

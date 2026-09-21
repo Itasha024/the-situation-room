@@ -116,5 +116,6 @@ test("no outlet opens a headline, and a report about someone is no quote", async
   assert.equal(fixHeadline("Trump: spoke with Yemeni Presidential Leadership Council head Rashad al-Alimi"), "Trump spoke with Yemeni Presidential Leadership Council head Rashad al-Alimi");
   // Real quotes keep their colon.
   assert.equal(fixHeadline("Houthi leader: Saudi Arabia will pay a price"), "Houthi leader: Saudi Arabia will pay a price");
+  assert.equal(fixHeadline("Abdul Malik al-Houthi: Saudi regime committed crimes"), "Houthi leader: Saudi regime committed crimes");
   assert.equal(fixHeadline("Trump: we will not let the Houthis win"), "Trump: we will not let the Houthis win");
 });

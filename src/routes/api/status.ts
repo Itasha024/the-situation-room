@@ -29,13 +29,18 @@ export const Route = createFileRoute("/api/status")({
             if (now - Date.parse(r.at) > 86_400_000) continue;
             day.set(r.source, (day.get(r.source) ?? 0) + 1);
           }
-          const seen = new Set<string>();
-          const sources = sourceList().map((s) => {
-            seen.add(s.name);
-            return { name: s.name, key: s.key, lastReadAt: state.lastScanAt[s.key] ? new Date(state.lastScanAt[s.key]).toISOString() : null, cards24h: day.get(s.name) ?? 0 };
-          });
+          // One row per source name; a source read through several feeds shows its latest read.
+          const byName = new Map<string, { name: string; lastReadAt: string | null; cards24h: number }>();
+          for (const s of sourceList()) {
+            const at = state.lastScanAt[s.key] ? new Date(state.lastScanAt[s.key]).toISOString() : null;
+            const row = byName.get(s.name);
+            if (!row) byName.set(s.name, { name: s.name, lastReadAt: at, cards24h: day.get(s.name) ?? 0 });
+            else if (at && (!row.lastReadAt || at > row.lastReadAt)) row.lastReadAt = at;
+          }
+          const seen = new Set(byName.keys());
+          const sources = [...byName.values()];
           // Originals (Reuters, NYT, ...) are sources too, though no feed reads them.
-          for (const [name, n] of day) if (!seen.has(name)) sources.push({ name, key: "", lastReadAt: null, cards24h: n });
+          for (const [name, n] of day) if (!seen.has(name)) sources.push({ name, lastReadAt: null, cards24h: n });
           return json({
             ok: true,
             lastTickAt: state.lastTickAt ? new Date(state.lastTickAt).toISOString() : null,

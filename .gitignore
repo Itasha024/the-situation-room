@@ -18,3 +18,7 @@ logs/
 scripts/tick-hidden.vbs
 public/desk-lead-cache.json
 public/desk-reader-*.json
+
+.vercel
+.env*
+public/desk-tick-lock.json

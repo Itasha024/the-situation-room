@@ -1375,6 +1375,7 @@ function feedCardHtml(r, i) {
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
         <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">, citing ${escapeHtml(r.citing)}</span>` : ''}</span>
+        ${mappableByFp.has(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
       </div>
       ${replyQuote(r)}
       <p class="headline">${escapeHtml(sum)}</p>
@@ -1449,6 +1450,14 @@ function offerJumpBack(from) {
 
 function wireFeedCard(card) {
   if (!card) return;
+  const mapBtn = card.querySelector('.card-map');
+  if (mapBtn) {
+    mapBtn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      showReportOnMap(card.dataset.fp);
+    };
+  }
   const reply = card.querySelector('.reply-to');
   if (reply) {
     // The earlier report may have no card of its own (folded into another
@@ -1512,6 +1521,7 @@ function renderFeed(d) {
   const slice = all.slice(0, reportsShown);
   const fc = document.getElementById('feed-count');
   if (fc) fc.textContent = `${Math.min(reportsShown, all.length)} / ${all.length}`;
+  if (!mappableByFp.size && data && window.L) { try { buildMapPins(data); } catch (e) {} }
   document.getElementById('feed').innerHTML = slice.map((r, i) => feedCardHtml(r, i)).join('');
   document.querySelectorAll('#feed .card').forEach(wireFeedCard);
   const more = document.getElementById('btn-more-reports');
@@ -2059,6 +2069,99 @@ function bindGov(feature, layer, byIso) {
 function clearEvents() {
   eventLayers.forEach((l) => map.removeLayer(l));
   eventLayers = [];
+  markerByFp = new Map();
+}
+
+/*
+ * "Show on map" from a feed card. On a wide screen the page goes to the big
+ * map and flies to the pin, clear of the legend; the pin pulses and its note
+ * stays shut (the reader has just read the card). On a phone a sheet opens
+ * with a small map of that day's pins, and a button to the big map.
+ */
+let mappableByFp = new Map();
+let markerByFp = new Map();
+let sheetMap = null;
+
+function showReportOnMap(fp) {
+  const pin = mappableByFp.get(fp);
+  if (!pin || !map) return;
+  if (window.innerWidth < 720) openPinSheet(pin);
+  else goToPinOnMainMap(pin);
+}
+
+function pulsePin(el) {
+  const ev = el && el.querySelector('.ev');
+  if (!ev) return;
+  ev.classList.remove('pin-pulse');
+  void ev.offsetWidth;
+  ev.classList.add('pin-pulse');
+  setTimeout(() => ev.classList.remove('pin-pulse'), 5200);
+}
+
+function goToPinOnMainMap(pin) {
+  if (highlightIds.size) clearMapHighlight({});
+  const ymd = jerusalemYmd(pin.at);
+  if (mapMode !== 'day' || effectiveMapDate() !== ymd) {
+    enterDayMode(ymd);
+    const dateInp = document.getElementById('map-date');
+    if (dateInp) dateInp.value = mapDate;
+    document.querySelectorAll('#time-filter button').forEach((b) => b.classList.remove('on'));
+    if (ymd === todayYmd()) { const t = document.getElementById('btn-day-today'); if (t) t.classList.add('on'); }
+    syncDayNav();
+  }
+  if (!layersOn[pin.mapCat]) layersOn[pin.mapCat] = true;
+  applyMapFilters();
+  scrollToMap();
+  setTimeout(() => {
+    if (!map) return;
+    try { map.invalidateSize(); } catch (e) {}
+    const m = markerByFp.get(pin.fp);
+    const ll = m ? m.getLatLng() : L.latLng(pin.lat, pin.lng);
+    map.once('moveend', () => pulsePin(m && m.getElement()));
+    try {
+      map.flyToBounds(L.latLngBounds(ll, ll), { ...legendPadding(), maxZoom: Math.max(map.getZoom(), 8), duration: 0.8 });
+    } catch (e) {}
+  }, 380);
+}
+
+function closePinSheet() {
+  const el = document.getElementById('pin-sheet');
+  if (el) el.classList.remove('show');
+  if (sheetMap) { try { sheetMap.remove(); } catch (e) {} sheetMap = null; }
+}
+
+function openPinSheet(pin) {
+  let el = document.getElementById('pin-sheet');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'pin-sheet';
+    el.className = 'pin-sheet';
+    document.body.appendChild(el);
+  }
+  closePinSheet();
+  el.innerHTML = `<div class="pin-sheet-box" role="dialog" aria-label="Report on the map">
+      <div class="pin-sheet-head"><p class="front-float-title">${escapeHtml(pin.label || '')}</p>
+      <button type="button" class="pin-sheet-x" aria-label="Close">×</button></div>
+      <div id="pin-sheet-map"></div>
+      <button type="button" class="front-float-go">Show on the big map</button>
+    </div>`;
+  el.classList.add('show');
+  sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false }).setView([pin.lat, pin.lng], 8);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(sheetMap);
+  if (geoCache) {
+    const byIso = controlByIso(data);
+    L.geoJSON(splitIslandFeatures(geoCache).mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(sheetMap);
+  }
+  const ymd = jerusalemYmd(pin.at);
+  [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
+    const me = p.fp === pin.fp;
+    const icon = L.divIcon({ className: 'ev-wrap', html: eventIconHtml(p.mapCat, me ? ' pin-pulse' : '', escapeHtml(p.label || '')), iconSize: [34, 42], iconAnchor: [17, 40] });
+    L.marker([p.lat, p.lng], { icon, zIndexOffset: me ? 2000 : 0 }).bindPopup(popupHtml(p), { maxWidth: 260 }).addTo(sheetMap);
+  });
+  setTimeout(() => { try { sheetMap && sheetMap.invalidateSize(); } catch (e) {} }, 60);
+  el.querySelector('.pin-sheet-x').onclick = closePinSheet;
+  el.onclick = (ev) => { if (ev.target === el) closePinSheet(); };
+  el.querySelector('.front-float-go').onclick = () => { closePinSheet(); goToPinOnMainMap(pin); };
 }
 
 /* ---------------------------------------------------------------- *
@@ -2161,6 +2264,8 @@ function buildMapPins(d) {
   const today = todayYmd();
   const from = mapDateFrom || CONFLICT_START;
   const to = mapDateTo || today;
+  // Every report that has a place on the map, on any day: the feed's "Show on map".
+  mappableByFp = byFp;
   const pins = [...byFp.values()].filter((p) => {
     const y = jerusalemYmd(p.at);
     if (!y) return false;
@@ -2239,6 +2344,7 @@ function placeMapPin(ev) {
   // Several notes stay open side by side; each closes with its ×, its pin, or
   // "Close all" (a click on the note itself expands it).
   m.addTo(map);
+  if (ev.fp) markerByFp.set(ev.fp, m);
   eventLayers.push(m);
 }
 

@@ -15,7 +15,7 @@ import { digest } from "./desk/digest.ts";
 import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
 import { backupDaily } from "./desk/backup.ts";
-import { type Candidate, confidenceOf, editCandidates, queueForReading } from "./desk/editor.ts";
+import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, traceOrigins } from "./desk/origin.ts";
@@ -74,6 +74,9 @@ const RSS: RssFeed[] = [
   { id: "almashhad", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5 },
   { id: "alaraby", url: gnews(`site:alaraby.co.uk ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C3H },
   { id: "alaraby-pol", url: gnews(`site:alaraby.co.uk/politics ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C3H },
+  // The TV channel's own site (alaraby.com), not the paper's: its interviews
+  // with officials are posted there and not on the breaking channel.
+  { id: "alaraby-tv", url: gnews(`site:alaraby.com ${YE_AR} when:2d`, "ar", "QA", "QA:ar"), name: "Al-Araby TV", cadence: C90 },
   { id: "aawsat", url: gnews(`site:aawsat.com ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C_AAWSAT },
   { id: "aawsat-me", url: gnews(`site:aawsat.com (الشرق الأوسط) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C_AAWSAT },
   { id: "akhbar", url: gnews(`site:al-akhbar.com ${YE_AR} when:2d`, "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C_AKHBAR },
@@ -244,6 +247,11 @@ function toLiveReport(source: string, url: string, rawText: string, at: string, 
   // A composition failure on a relevant item lands in the tray, not the bin:
   // the desk not being able to phrase something is not a reason to lose it.
   if (!d.ok) {
+    // On the wide radar (an official speaking, an alert in Saudi Arabia): the
+    // reader decides, not the keyword gate.
+    if (d.outcome === "exclude" && onRadar(rawText)) {
+      return { report: null, outcome: "tray", reason: "radar", note: "Official statement or alert: sent to the reader.", tags: [...d.tags, "radar"], topicality: 0 };
+    }
     return { report: null, outcome: d.outcome, reason: d.reason, note: d.note, tags: d.tags, topicality: 0 };
   }
 

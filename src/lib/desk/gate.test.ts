@@ -110,3 +110,13 @@ test("military words are not rally or sports noise", () => {
   assert.notEqual(gate({ text: "دورية عسكرية تتعرض لكمين في أبين", source: "Almashhad", url: "", agency: false }).reason, "sports");
   assert.notEqual(gate({ text: "وزير الدفاع يتفقد جبهات مأرب", source: "Saba", url: "", agency: false }).reason, "ceremony");
 });
+
+test("the wide radar: an official of any side speaking, and alerts in Saudi Arabia", async () => {
+  const { onRadar } = await import("./editor.ts");
+  assert.ok(onRadar("وزير الثقافة للتلفزيون العربي: صنعاء هي الهدف والحوثيون يريدون إشعال المنطقة"));
+  assert.ok(onRadar("وزير الدفاع ورئيس هيئة الأركان للعدو السعودي: أي تصعيد سيواجه بخيارات تصعيدية مكلّفة"));
+  assert.ok(onRadar("دوي صافرات الإنذار في جازان"));
+  assert.ok(onRadar("Civil defence sirens sound in Riyadh"));
+  assert.ok(!onRadar("وزير الرياضة يفتتح بطولة كرة القدم"));
+  assert.ok(!onRadar("Sirens sound in Tel Aviv after a launch from Lebanon"));
+});

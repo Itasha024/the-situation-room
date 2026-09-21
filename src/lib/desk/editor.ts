@@ -85,6 +85,25 @@ export function fieldReport(text: string): boolean {
 }
 
 /**
+ * The wide radar: what the desk must never lose even when no keyword fires.
+ * Anyone with a role on any side speaking to any outlet about this war, and
+ * any siren, civil-defence alert, interception or closed airspace in Saudi
+ * Arabia (or Eilat, when the fire comes from Yemen).
+ */
+const ROLE =
+  /وزير|وزارة|مسؤول|مسئول|متحدث|ناطق|مستشار|قائد|رئيس هيئة الأركان|رئيس الأركان|محافظ|سفير|مبعوث|مصدر (?:في|ب|مطلع|عسكري|حكومي|دبلوماسي)|عضو المكتب السياسي|\b(?:minister|ministry|official|spokes(?:man|woman|person)|advis[eo]r|commander|chief of staff|governor|ambassador|envoy)\b/i;
+const SPEAKS = /قال|صرح|صرّح|أكد|اكد|حذر|حذّر|أعلن|اعلن|كشف|لـ?«|لـ?"|ل(?:قناة|صحيفة|موقع|وكالة|التلفزيون)|:|\b(?:said|says|told|warned|stated|announced)\b/i;
+const WAR = /الحوث|اليمن|يمني|صنعاء|عدن|السعودي|الرياض|البحر الأحمر|باب المندب|أنصار الله|\b(?:Houthis?|Yemen|Yemeni|Sanaa|Aden|Saudi|Riyadh|Red Sea|Bab al-Mandab)\b/i;
+const ALERT =
+  /صفارات الإنذار|صافرات الإنذار|صفارات الانذار|صافرات الانذار|الدفاع المدني|اعتراض|إغلاق المجال الجوي|اغلاق المجال الجوي|تعليق الرحلات|الملاجئ|\b(?:sirens?|civil defen[cs]e|intercept\w*|airspace|flights? (?:suspended|halted|diverted)|shelters?)\b/i;
+const ALERT_PLACE =
+  /السعودي|الرياض|جدة|جيزان|جازان|نجران|أبها|ابها|الطائف|ينبع|الدمام|خميس مشيط|مكة|إيلات|ايلات|\b(?:Saudi|Riyadh|Jeddah|Jizan|Jazan|Najran|Abha|Taif|Yanbu|Dammam|Khamis Mushait|Mecca|Makkah|Eilat)\b/i;
+export function onRadar(text: string): boolean {
+  const t = String(text || "");
+  return (ROLE.test(t) && SPEAKS.test(t) && WAR.test(t)) || (ALERT.test(t) && ALERT_PLACE.test(t));
+}
+
+/**
  * Rejections for thinness made before the rule that a headline stating a fact
  * about this war is publishable. Those alone are read again, rather than
  * re-reading the whole cache and spending the day's quota.
@@ -235,7 +254,7 @@ export async function editCandidates(
     const v = verdicts.get(c.url);
     if (!r || v?.kind !== "reject" || cache[contentHash(c.text)]?.second) return false;
     if (/speech-rhetoric/i.test(String(r.reject_reason || ""))) return false;
-    return fieldReport(c.text);
+    return fieldReport(c.text) || onRadar(c.text);
   });
   if (doubt.length) {
     const missed = (await store.getJson<Missed[]>(MISSED_KEY)) ?? [];

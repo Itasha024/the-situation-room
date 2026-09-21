@@ -20,6 +20,7 @@
 import type { LiveReport } from "./types.ts";
 import { type Brief, type BriefHistory, buildBrief, briefWindow } from "./brief.ts";
 import type { DeskStore } from "./store.ts";
+import { refreshTally } from "./tally.ts";
 
 export const BRIEF_KEY = "brief";
 
@@ -65,6 +66,13 @@ export async function refreshBrief(
 
   const brief = buildBrief(inWindow, now, history);
   await store.putJson(BRIEF_KEY, { brief, history } satisfies StoredBrief);
+  // The official numbers move on the same 12-hour clock. A failed fetch keeps
+  // the last tally; it must never cost the brief.
+  try {
+    await refreshTally(store, inWindow, now);
+  } catch (err) {
+    console.error("[desk] tally refresh failed:", err instanceof Error ? err.message : err);
+  }
   return { brief, built: true };
 }
 

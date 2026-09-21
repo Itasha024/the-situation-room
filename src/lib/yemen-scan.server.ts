@@ -559,6 +559,28 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>)
   for (let i = reports.length - 1; i >= 0; i -= 1) if (gone.has(reports[i])) reports.splice(i, 1);
 }
 
+/** A speaker silent this long has finished; the next line starts a new thread. */
+const SPEECH_GAP_MS = 20 * 60 * 1000;
+
+/**
+ * A live speech arrives one line per post, and each newsworthy line is its own
+ * card. Each new line replies to the speaker's previous published line, so the
+ * feed shows the speech as a thread. Only lines not yet stored get the reply;
+ * one already given a reply by the reader keeps it.
+ */
+export function threadSpeeches(reports: LiveReport[], published: Set<string>): void {
+  const last = new Map<string, LiveReport>();
+  const lines = reports
+    .filter((r) => r.type === "statement" && namedSpeaker(r.summary))
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  for (const r of lines) {
+    const who = namedSpeaker(r.summary);
+    const prev = last.get(who);
+    if (prev && !published.has(r.fp) && !r.replyTo && Date.parse(r.at) - Date.parse(prev.at) <= SPEECH_GAP_MS) r.replyTo = prev.fp;
+    last.set(who, r);
+  }
+}
+
 /** Which of two reports on the same story to keep. */
 function scoreReport(x: LiveReport): number {
   return (
@@ -914,7 +936,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     if (i >= 0) uniqReports[i] = r;
     else uniqReports.push(r);
   }
-  foldIntoPublished(uniqReports, new Set((prev?.reports ?? []).map((r) => r.fp)));
+  const published = new Set((prev?.reports ?? []).map((r) => r.fp));
+  foldIntoPublished(uniqReports, published);
+  threadSpeeches(uniqReports, published);
   if (prev && Array.isArray(prev.rawHits)) {
     const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));
     for (const h of prev.rawHits) {

@@ -303,3 +303,19 @@ test("one post forwarded by two channels has one copy key", async () => {
   const { placesIn } = await import("./desk/gazetteer.ts");
   assert.ok(placesIn(a).some((p) => p.name === "Dhubab"));
 });
+
+test("each new line of a speech replies to the speaker's previous line", async () => {
+  const { threadSpeeches } = await import("./yemen-scan.server.ts");
+  const line = (fp: string, at: string, summary: string) => ({ live: true, text: "", score: 1, tags: [], fp, url: `https://t.me/almasirah2/${fp}`, source: "Al-Masirah", type: "statement", at, summary });
+  const a = line("1", "2026-09-21T13:45:00Z", "Houthi leader: Saudi Arabia took the wrong path");
+  const b = line("2", "2026-09-21T13:46:00Z", "Houthi leader: Saudi Arabia opened airports to Israeli planes");
+  const c = line("3", "2026-09-21T13:48:00Z", "Houthi leader: Saudi Arabia tried to intercept missiles");
+  const late = line("4", "2026-09-21T15:30:00Z", "Houthi leader: a new speech");
+  const other = line("5", "2026-09-21T13:47:00Z", "Saree: forces struck Riyadh");
+  const all = [c, a, other, late, b] as never[];
+  threadSpeeches(all, new Set(["1"]));
+  assert.equal((b as { replyTo?: string }).replyTo, "1");
+  assert.equal((c as { replyTo?: string }).replyTo, "2");
+  assert.equal((late as { replyTo?: string }).replyTo, undefined);
+  assert.equal((other as { replyTo?: string }).replyTo, undefined);
+});

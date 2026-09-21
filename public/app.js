@@ -2211,6 +2211,17 @@ function placeMapPin(ev) {
       autoClose: false,
       closeOnClick: false,
     });
+  // Several notes stay open side by side; a click on a note (not on its link,
+  // button, media or full text) closes that note; its pin toggles it (Leaflet).
+  m.on('popupopen', (e) => {
+    const el = e.popup.getElement();
+    if (!el || el.dataset.closeWired) return;
+    el.dataset.closeWired = '1';
+    el.addEventListener('click', (ev) => {
+      if (ev.target.closest('a, button, img, video, .pop-full, .leaflet-popup-close-button')) return;
+      m.closePopup();
+    });
+  });
   m.addTo(map);
   eventLayers.push(m);
 }

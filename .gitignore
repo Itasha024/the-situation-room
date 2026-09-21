@@ -16,3 +16,4 @@ public/*.json.tmp-*
 # Local clock log and lock (scripts/tick.mjs).
 logs/
 scripts/tick-hidden.vbs
+public/desk-lead-cache.json

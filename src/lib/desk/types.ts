@@ -36,6 +36,8 @@ export type LiveReport = {
   citing?: string;
   /** fp of the earlier report this one directly develops; shown as a reply to it. */
   replyTo?: string;
+  /** fp of a published report telling this same event with nothing new; folded into its "Also", never stored. */
+  duplicateOf?: string;
   /** Inputs to the trust figure — see credibility.ts. */
   side?: "houthi" | "gov" | "neutral" | "agency";
   interest?: "for" | "against" | "neutral";

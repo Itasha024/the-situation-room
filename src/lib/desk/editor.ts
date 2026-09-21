@@ -212,6 +212,7 @@ export async function editCandidates(
       // cannot follow up something published after it.
       const parent = refToFp.get(String(r.follows_up || ""));
       r.follows_up = parent && parent.at < Date.parse(c.at) ? parent.fp : "";
+      r.duplicate_of = refToFp.get(String(r.duplicate_of || ""))?.fp ?? "";
       cache[contentHash(c.text)] = { reading: r, at: now };
       verdicts.set(c.url, decide(r, c));
       readingOf.set(c.url, r);
@@ -255,6 +256,7 @@ export async function editCandidates(
       let outcome = "unread";
       if (r) {
         r.follows_up = "";
+        r.duplicate_of = "";
         cache[contentHash(c.text)] = { reading: r, at: now, second: true };
         const v = decide(r, c);
         outcome = v.kind === "publish" ? "published" : `rejected again: ${v.kind === "reject" ? v.note : ""}`;
@@ -404,7 +406,8 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
     interest: r.interest,
     hasTime: !!r.has_time,
   };
-  if (r.follows_up && r.follows_up !== c.fp) row.replyTo = r.follows_up;
+  if (r.duplicate_of && r.duplicate_of !== c.fp) row.duplicateOf = r.duplicate_of;
+  else if (r.follows_up && r.follows_up !== c.fp) row.replyTo = r.follows_up;
   row.confidence = confidenceOf(row, []);
   const place = places.find((p) => p.country !== "sea") || places[0];
   if (place) {

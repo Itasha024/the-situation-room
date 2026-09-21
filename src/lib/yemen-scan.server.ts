@@ -325,16 +325,18 @@ const RSS_ITEMS = 25;
 /** Extra `?before=` pages read from one channel to reach the last post seen. */
 const TG_BACKFILL_PAGES = 4;
 /**
- * One-time replay: posts from 21 September that were rejected before the
+ * One-time replay: posts from the 21 September speech (from 15:00) folded or
+ * dropped before the speech and grouping fixes, and the missed Haifan strikes;
+ * earlier: posts from 21 September that were rejected before the
  * Arabic-place-name and scope fixes had already scrolled past the pages a
  * tick reads. Each listed channel pages back to the start of that day once;
  * already-published posts dedupe on insert. Inert after `until`.
  */
 const REPLAY = {
-  since: Date.parse("2026-09-21T00:00:00+03:00"),
+  since: Date.parse("2026-09-21T15:00:00+03:00"),
   until: Date.parse("2026-09-23T00:00:00+03:00"),
-  channels: new Set(["almasirah2", "naya_foriraq", "Alomhoar", "Alibk3", "shajab_news", "SabrenNewss"]),
-  pages: 15,
+  channels: new Set(["almasirah2", "alagsa3agel", "Alomhoar"]),
+  pages: 10,
 };
 /** Nothing older than this is news for a live desk, however a feed lists it. */
 const MAX_ITEM_AGE_MS = 72 * 3600 * 1000;
@@ -537,11 +539,15 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>)
   const byTime = [...reports].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   const gone = new Set<LiveReport>();
   for (const r of byTime) {
-    if (!talk(r) || published.has(r.fp)) continue;
+    if (published.has(r.fp)) continue;
     const t = Date.parse(r.at);
-    const home = byTime.find(
-      (o) => o !== r && !gone.has(o) && talk(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= STORY_WINDOW_MS && sameStory(o, r),
-    );
+    // The reader said it: this is another outlet on an event already published.
+    let home = r.duplicateOf ? byTime.find((o) => o !== r && !gone.has(o) && o.fp === r.duplicateOf) : undefined;
+    if (!home && talk(r)) {
+      home = byTime.find(
+        (o) => o !== r && !gone.has(o) && talk(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= STORY_WINDOW_MS && sameStory(o, r),
+      );
+    }
     if (!home) continue;
     gone.add(r);
     const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url }];
@@ -646,7 +652,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         }
         // Bumped to run once more after the geocoder landed, to pin what the
         // first pass published without a place.
-        const replayKey = `replay4:${ch.id}`;
+        const replayKey = `replay5:${ch.id}`;
         if (ok && REPLAY.channels.has(ch.id) && now < REPLAY.until && !state.lastScanAt[replayKey]) {
           for (let page = 0; page < REPLAY.pages; page += 1) {
             const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));

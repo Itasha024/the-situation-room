@@ -70,6 +70,8 @@ export type Reading = {
    * or "". Resolved to that report's fp before the reading is cached.
    */
   follows_up?: string;
+  /** The fp of a published report telling this same event with nothing new: this item joins its "Also". */
+  duplicate_of?: string;
 };
 
 /** A report already on the desk, shown to the reader so it can spot follow-ups. */
@@ -121,10 +123,11 @@ const RESPONSE_SCHEMA = {
           headline: { type: "STRING" },
           body: { type: "STRING" },
           follows_up: { type: "STRING", description: "ref of the recent report this directly develops, or empty string." },
+          duplicate_of: { type: "STRING", description: "ref of the recent report that already tells this same event with nothing new, or empty string." },
         },
         required: [
           "id", "publish", "reject_reason", "event_type", "confident_roles", "targets", "origins",
-          "speaker_lead", "interest", "has_time", "headline", "body", "follows_up",
+          "speaker_lead", "interest", "has_time", "headline", "body", "follows_up", "duplicate_of",
         ],
       },
     },
@@ -248,13 +251,24 @@ aftermath at that same place, a reply to that specific attack, the same
 battle's outcome. Same area or same kind of event is NOT enough; a new strike
 in the same district is a new event. When in doubt, "".
 
+DUPLICATES
+duplicate_of = the ref of a recent report that tells the SAME event or
+statement this item tells, with no new fact: another outlet on the same
+strike (one market in one place at one time, whatever village or district
+name each outlet uses), the same call, the same quote. Still write the
+item in full. An item that adds a new fact (a toll, a name, a quote, a
+decision) is not a duplicate: use follows_up. Two strikes, two lines of a
+speech, or two statements are never duplicates of each other. When in
+doubt, "".
+
 Return JSON: {"items":[{"id":string,"publish":bool,"reject_reason":string,
 "event_type":"air_strike"|"shelling"|"missile_launch"|"drone_attack"|
 "interception"|"ground_clash"|"advance_or_capture"|"air_raid_alert"|
 "maritime_attack"|"statement"|"diplomacy"|"economy","confident_roles":bool,
 "actor":string|null,"targets":[string],"origins":[string],
 "speaker_lead":string|null,"interest":"for"|"against"|"neutral",
-"has_time":bool,"headline":string,"body":string,"follows_up":string}]}
+"has_time":bool,"headline":string,"body":string,"follows_up":string,
+"duplicate_of":string}]}
 When publish=false, headline and body may be "".`;
 
 /** Outlets that must never open a headline: "Reuters: …", "Axios sources: …". */

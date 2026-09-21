@@ -281,3 +281,15 @@ test("outlets' takes on one story fold across scans; separate speech lines do no
   const l2 = { summary: "Houthi leader: Saudi Arabia made every effort to intercept missiles and drones launched toward Israel", text: "Houthi leader stated that Saudi Arabia made every effort to intercept the missiles and drone aircraft launched toward occupied Palestine against Israeli forces." };
   assert.ok(!sameStory(l1, l2));
 });
+
+test("a report the reader marks a duplicate joins the published card's Also", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const home = { ...base, fp: "a", url: "https://t.me/naya/1", source: "Naya", at: "2026-09-21T14:00:00Z", type: "strike", summary: "Saudi jets target popular market in Dhubab" };
+  const dup = { ...base, fp: "b", url: "https://t.me/alibk/2", source: "Ali Bk", at: "2026-09-21T14:07:00Z", type: "strike", summary: "Saudi air strike hits popular market near Bab al-Mandab", duplicateOf: "a" };
+  const other = { ...base, fp: "c", url: "https://t.me/x/3", source: "X", at: "2026-09-21T14:08:00Z", type: "strike", summary: "Saudi strike on Haifan" };
+  const reports = [home, dup, other] as never[];
+  foldIntoPublished(reports, new Set(["a"]));
+  assert.deepEqual((reports as { fp: string }[]).map((r) => r.fp), ["a", "c"]);
+  assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Ali Bk", url: "https://t.me/alibk/2" }]);
+});

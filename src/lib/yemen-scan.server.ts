@@ -18,7 +18,7 @@ import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
-import { type ReRead, traceOrigins } from "./desk/origin.ts";
+import { type ReRead, findCitation, traceOrigins } from "./desk/origin.ts";
 import { sameStory, sameWords } from "./desk/copies.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 
@@ -586,6 +586,33 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
   return [...touched];
 }
 
+/** Outlet feeds read early per tick because a channel cited them. */
+const HINTS_PER_TICK = 3;
+
+/**
+ * A channel relaying "the WSJ reports ..." hints that the outlet has a story:
+ * the outlet's own feeds are read next tick instead of at their hour.
+ */
+export function hintOutlets(state: ScanState, hits: { text: string; source: string; url: string; fromTg?: boolean }[], now: number): string[] {
+  const sites = new Set<string>();
+  for (const h of hits) {
+    if (!h.fromTg) continue;
+    const c = findCitation(h.text, h.source, h.url);
+    if (c) sites.add(c.site);
+  }
+  const out: string[] = [];
+  for (const feed of RSS) {
+    if (out.length >= HINTS_PER_TICK) break;
+    const site = /site:([a-z0-9.-]+)/i.exec(decodeURIComponent(feed.url))?.[1];
+    const last = state.lastScanAt[`web:${feed.id}`] ?? 0;
+    // Already hinted, or read in the last ten minutes: nothing to add.
+    if (!site || !sites.has(site) || (state.lastScanAt[`hint:web:${feed.id}`] ?? 0) > last || now - last < 10 * 60_000) continue;
+    state.lastScanAt[`hint:web:${feed.id}`] = now;
+    out.push(feed.id);
+  }
+  return out;
+}
+
 /** Written from the original source's own article: a relay's card moved to it. */
 export function isOriginal(r: LiveReport): boolean {
   return !!r.tags?.includes("original") || (r.fp.startsWith("live-t-me-") && !r.url.startsWith("https://t.me/"));
@@ -711,7 +738,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   const now = Date.now();
   const cycleSeenAt = jerusalemIso(new Date(now));
   const dueTg = TG.filter((ch) => cadenceDue(state, `tg:${ch.id}`, ch.cadence, now));
-  const dueRss = RSS.filter((feed) => cadenceDue(state, `web:${feed.id}`, feed.cadence, now));
+  // A feed an outlet hint named (a channel citing the WSJ) is read now, not at its hour.
+  const hinted = (id: string) => (state.lastScanAt[`hint:web:${id}`] ?? 0) > (state.lastScanAt[`web:${id}`] ?? 0);
+  const dueRss = RSS.filter((feed) => hinted(feed.id) || cadenceDue(state, `web:${feed.id}`, feed.cadence, now));
   let sourcesOk = 0;
   const hits: RawHit[] = [];
   const status: SourceStatus[] = [];
@@ -924,6 +953,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   } catch {
     // Untraced reports keep their relay as source; nothing else changes.
   }
+  hintOutlets(state, hits, now);
   // A card written from its original replaces the relay's version of it.
   const fromOriginal = new Set(reports.filter((r) => r.tags?.includes("original")).map((r) => r.fp));
   for (let i = reports.length - 1; i >= 0; i -= 1) {

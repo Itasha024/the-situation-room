@@ -353,3 +353,13 @@ test("each new line of a speech replies to the speaker's previous line", async (
   assert.equal((late as { replyTo?: string }).replyTo, undefined);
   assert.equal((other as { replyTo?: string }).replyTo, undefined);
 });
+
+test("a channel citing the WSJ has the WSJ feed read next tick, not at its hour", async () => {
+  const { hintOutlets } = await import("./yemen-scan.server.ts");
+  const now = Date.parse("2026-09-21T16:00:00Z");
+  const state = { scannedOnce: true, lastScanAt: { "web:wsj": now - 3600_000 } as Record<string, number> };
+  const hits = [{ text: "وول ستريت جورنال: واشنطن تدرس ضربات ضد الحوثيين", source: "Al-Masirah", url: "https://t.me/almasirah2/1", fromTg: true }];
+  assert.deepEqual(hintOutlets(state, hits, now), ["wsj"]);
+  assert.equal(state.lastScanAt["hint:web:wsj"], now);
+  assert.deepEqual(hintOutlets(state, hits, now + 60_000), []);
+});

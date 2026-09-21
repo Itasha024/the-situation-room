@@ -397,7 +397,7 @@ const SPEAKER_SAYS =
 
 const BODY_FILLER = new Set(
   ("the and are was were has have had been for with from that this its their there after into over also " +
-    "said says say sources source report reports reported according " +
+    "said says say sources source report reports reported according carried out " +
     "governorate province district city town area north south east west northern southern eastern western yemen yemeni").split(" "),
 );
 const stemOf = (w: string) => w.replace(/(?:ing|ed|es|s)$/, "");
@@ -415,13 +415,16 @@ export function redundantBody(headline: string, body: string): boolean {
   const h = String(headline || "");
   const hl = h.toLowerCase();
   if ((b.match(/\d+/g) || []).some((n) => !h.includes(n))) return false;
+  const counts = (s: string) => new Set(s.toLowerCase().match(/\b(?:one|two|three|four|five|six|seven|eight|nine|ten|dozens?|hundreds?|thousands?)\b/g) || []);
+  const hc = counts(h);
+  if ([...counts(b)].some((n) => !hc.has(n))) return false;
   if (/\b(?:killed|wounded|injured|dead|died|casualt)/i.test(b) && !/\b(?:killed|wounded|injured|dead|died|casualt)/i.test(h)) return false;
   const seen = new Set(wordsOf(h).map(stemOf));
   const fresh = wordsOf(b).filter((w) => !BODY_FILLER.has(w) && !seen.has(stemOf(w)));
   // A capitalised name the headline does not have (the dateline aside).
   const names = (b.replace(/^[^—]{2,30}—\s*/, "").match(/(?<=\S\s)[A-Z][\p{L}'-]{2,}/gu) || []).filter((n) => !hl.includes(n.toLowerCase()) && !BODY_FILLER.has(n.toLowerCase()));
   if (names.length) return false;
-  return fresh.length <= 3;
+  return fresh.length <= 2;
 }
 const REPORTED_VERB =
   /^(?:did|does|do|has|had|have|is|was|were|held|spoke|met|made|took|gave|sent|told|won|in|to|not|will|would|could|may|might|plans|seeks|asks|urges|calls|weighs|mulls|meets|holds|speaks|rejects|refuses|agrees|orders|visits|receives|discusses|considers|decides|approves|signs)$/;

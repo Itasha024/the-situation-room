@@ -441,7 +441,12 @@ const REWORD: [RegExp, string][] = [
   [/\baggression\b/gi, "attacks"],
   [/\bmartyrdom\b/gi, "death"],
   [/\bmartyred\b/gi, "killed"],
+  // "killing a martyr" is one person killed, not "a people killed".
+  [/\b(?:killing|kills|killed) (?:a|one) martyr\b/gi, "killing one person"],
+  [/\b(?:a|one) martyr\b/gi, "one person killed"],
   [/\bmartyrs?\b/gi, "people killed"],
+  [/\b(?:killing|kills) a people killed\b/gi, "killing one person"],
+  [/\ba people killed\b/gi, "one person killed"],
   [/\bmercenar(?:y|ies)\b/gi, "government forces"],
   [/\bZionist entity\b/gi, "Israel"],
   [/\bZionists?\b/gi, "Israeli"],

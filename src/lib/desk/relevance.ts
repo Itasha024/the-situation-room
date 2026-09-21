@@ -247,7 +247,7 @@ const NOISE: NoiseRule[] = [
   {
     id: "sport",
     note: "Sport.",
-    re: /كره ?القدم|مباراه|مباريات|الدوري|المنتخب|ديربي|هدف ?في ?مرمي|football|soccer|\bmatch\b|league ?table|olympic|derby/,
+    re: /كره ?القدم|مباراه|مباريات|الدوري(?!ه)|المنتخب|ديربي|هدف ?في ?مرمي|football|soccer|\bmatch\b|league ?table|olympic|derby/,
   },
   {
     id: "rally",
@@ -255,25 +255,25 @@ const NOISE: NoiseRule[] = [
     re: /مسيرات ?جماهيريه|مسيره ?حاشده|مسيرات|تظاهرات|مليونيه|خروج ?شعبي|وقفه ?احتجاجيه|حشود|\brall(?:y|ies)\b|\bmarch(?:es)?\b|demonstration/,
     // NOT "مسير" for drone: normalisation strips the shadda from مسيّر, and the
     // result is a substring of مسيرات (marches), so every rally would escape.
-    unless: /صاروخ|غاره|جبهه|استهدف|اشتباك|قصف|درون|missile|strike|clash|drone/,
+    unless: /صاروخ|غاره|جبهه|جبهات|استهدف|اشتباك|قصف|درون|اسقاط|اسقط|اعتراض|تعترض|اعترض|طايره|طايرات|عسكري|هجوم|missile|strike|clash|drone/,
   },
   {
     id: "ceremony",
     note: "Ceremonial or administrative occasion — a speech event, opening, seminar or commemoration.",
     re: /فعاليه ?خطابيه|فعاليه ?بمناسبه|ندوه|ورشه ?عمل|حفل ?تكريم|تدشين|افتتاح ?معرض|اجتماع ?دوري|زياره ?تفقديه|يتفقد|العيد ?ال|ذكري ?ثوره|ثوره ?21 ?سبتمبر|بمناسبه ?ذكري|الذكري ?السنويه|anniversary ?of|commemorat|inaugurat|ceremony/,
-    unless: /صاروخ|غاره|اشتباك|قصف|جبهه|strike|missile|clash/,
+    unless: /صاروخ|غاره|اشتباك|قصف|جبهه|جبهات|strike|missile|clash/,
   },
   {
     id: "admin",
     note: "Administrative, civil-service or local-government news: salaries, exams, budgets, service projects.",
-    re: /الرواتب|صرف ?المرتبات|الامتحانات|الاختبارات|العام ?الدراسي|جدول ?مواعيد|انقطاع ?الكهربا|رسوم|جوازات|الاحوال ?المدنيه|المشاريع ?الخدميه|التنمويه|الزراعيه|خطه ?تنفيذ|مناقشه ?تقييم|برياسه ?المحافظ|اجتماع ?بمحافظه|الموازنه|civil ?service ?pay|school ?year|exam ?results|development ?projects/,
-    unless: /جبهه|صاروخ|غاره|اشتباك|قصف|strike|missile|front ?line/,
+    re: /الرواتب|صرف ?المرتبات|الامتحانات|الاختبارات|العام ?الدراسي|جدول ?مواعيد|انقطاع ?الكهربا|(?<![ء-ي])(?:ال)?رسوم|جوازات|الاحوال ?المدنيه|المشاريع ?الخدميه|التنمويه|الزراعيه|خطه ?تنفيذ|مناقشه ?تقييم|برياسه ?المحافظ|اجتماع ?بمحافظه|الموازنه|civil ?service ?pay|school ?year|exam ?results|development ?projects/,
+    unless: /جبهه|جبهات|صاروخ|غاره|اشتباك|قصف|strike|missile|front ?line/,
   },
   {
     id: "crime",
     note: "Crime blotter, court or traffic item with no bearing on the conflict.",
-    re: /سجين|قصاص|اوليا ?الدم|جنبيه|حادث ?مروري|سرقه|المحكمه ?الجزاييه|traffic ?accident|court ?sentenced/,
-    unless: /جبهه|صاروخ|غاره|اشتباك|مسير|strike|missile|front/,
+    re: /سجين|قصاص|اوليا ?الدم|(?<![ء-ي])(?:ال)?جنبيه|حادث ?مروري|سرقه|المحكمه ?الجزاييه|traffic ?accident|court ?sentenced/,
+    unless: /جبهه|جبهات|صاروخ|غاره|اشتباك|مسير|strike|missile|front/,
   },
   {
     id: "prices",
@@ -329,6 +329,14 @@ export const NOISE_REASONS = [
     id: "tray",
     note: "Plausibly relevant but not established. Held for corroboration rather than dropped.",
   },
+  {
+    id: "speech-relay",
+    note: "A leader's words relayed by another outlet; taken from the leader's own outlet instead.",
+  },
+  {
+    id: "speech-rhetoric",
+    note: "A line of a speech with nothing new in it: praise, prayer or rhetoric.",
+  },
 ];
 
 /* ------------------------------------------------------------------ *
@@ -337,6 +345,9 @@ export const NOISE_REASONS = [
  * The cheapest large accuracy win: the Houthi military spokesman is almost
  * purely on-topic, Reuters is a broad wire. One global bar cannot serve both.
  * ------------------------------------------------------------------ */
+
+/** Noise rules a leader's quoted words skip: they speak of these things. */
+const LEADER_PASSES = new Set(["ceremony", "crime", "religion", "rally", "admin"]);
 
 export type Breadth = "focused" | "mixed" | "wire";
 
@@ -401,6 +412,49 @@ function assessClarity(text: string): { unclear: boolean; empty: boolean } {
 }
 
 /* ------------------------------------------------------------------ *
+ * Leaders' words
+ * ------------------------------------------------------------------ */
+
+/**
+ * A party leader quoted by name. During a live speech the channels post one
+ * sentence at a time, and those lines are full of words the noise rules key
+ * on: the anniversary, "crimes", "foreign tutelage", prayers. Such a line is
+ * never noise by keyword; the reader decides whether it says anything new.
+ *
+ * `official` is the speaker's own outlet. A quote line from anyone else is a
+ * relay of what that outlet already carries, and is dropped before the reader
+ * unless the official outlet could not be reached this cycle.
+ */
+type Leader = { key: string; re: RegExp; official?: RegExp };
+const LEADERS: Leader[] = [
+  {
+    key: "houthi-leader",
+    re: /السيد ?القايد|قايد ?الثوره|قايد ?انصار ?الله|عبد ?الملك ?(?:بدر ?الدين ?)?الحوثي|السيد ?عبد ?الملك/,
+    official: /masirah|المسيره/i,
+  },
+  { key: "saree", re: /يحيي ?سريع|العميد ?سريع|المتحدث ?(?:الرسمي ?)?باسم ?القوات ?المسلحه/ },
+  { key: "mashat", re: /المشاط|رييس ?المجلس ?السياسي/ },
+  { key: "abdulsalam", re: /محمد ?عبد ?السلام/ },
+  { key: "alimi", re: /العليمي|رييس ?مجلس ?القياده/ },
+  { key: "coalition", re: /المالكي|المتحدث ?باسم ?التحالف|تركي ?المالكي/ },
+  { key: "saudi", re: /محمد ?بن ?سلمان|خالد ?بن ?سلمان|وزير ?الدفاع ?السعودي/ },
+];
+
+/**
+ * The leader a post quotes, if it opens by quoting one: the name, then a colon
+ * within a few words ("السيد القائد: …", "قائد الثورة في كلمته: …"). A stream
+ * notice ("البث المباشر لكلمة السيد القائد") has no quote and is not matched.
+ */
+export function leaderQuoted(text: string): Leader | null {
+  const head = normaliseArabic(contentOnly(text)).slice(0, 90);
+  const colon = head.search(/[:：]/);
+  if (colon < 0) return null;
+  const lead = head.slice(0, colon);
+  if (lead.split(/\s+/).length > 9) return null;
+  return LEADERS.find((l) => l.re.test(lead)) ?? null;
+}
+
+/* ------------------------------------------------------------------ *
  * The gate
  * ------------------------------------------------------------------ */
 
@@ -411,6 +465,8 @@ export type GateInput = {
   agency: boolean;
   /** Override the source's breadth class. Mostly for tests. */
   breadth?: Breadth;
+  /** The leaders' official outlets could not be reached this cycle: relays pass. */
+  officialDown?: boolean;
 };
 
 export function gate(input: GateInput): Verdict {
@@ -443,10 +499,19 @@ export function gate(input: GateInput): Verdict {
   const clarity = assessClarity(raw);
 
   /* 2. Named exclusions -------------------------------------------- */
+  const leader = leaderQuoted(raw);
+  if (leader?.official && !leader.official.test(input.source) && !input.officialDown) {
+    return out(
+      "exclude",
+      "speech-relay",
+      "A leader's words relayed by another outlet; the desk takes them from the leader's own outlet.",
+    );
+  }
   // Siren language beats the aircraft rule: early-warning SIRENS are an event,
   // early-warning AIRCRAFT are not.
   const isSiren = SIREN.test(n);
   for (const rule of NOISE) {
+    if (leader && LEADER_PASSES.has(rule.id)) continue;
     if (rule.id === "air-activity" && isSiren) continue;
     if (!rule.re.test(n)) continue;
     if (rule.unless && rule.unless.test(n)) continue;
@@ -531,6 +596,17 @@ export function gate(input: GateInput): Verdict {
       score,
       topicality,
       true,
+    );
+  }
+
+  if (leader && !clarity.empty) {
+    return out(
+      "feed",
+      "leader-quote",
+      "A party leader quoted by name; the reader judges whether the line says anything new.",
+      score,
+      topicality,
+      clarity.unclear,
     );
   }
 

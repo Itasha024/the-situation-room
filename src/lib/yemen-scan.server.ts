@@ -217,7 +217,7 @@ type Composed = {
   topicality: number;
 };
 
-function toLiveReport(source: string, url: string, rawText: string, at: string, fpSeed: string, lean = ""): Composed {
+function toLiveReport(source: string, url: string, rawText: string, at: string, fpSeed: string, lean = "", officialDown = false): Composed {
   const no = (reason: string, note: string, outcome: Outcome = "exclude"): Composed => ({
     report: null,
     outcome,
@@ -239,7 +239,7 @@ function toLiveReport(source: string, url: string, rawText: string, at: string, 
     return no("bad-url", "Item had no usable link.");
   }
 
-  const d = digest(source, rawText, lean);
+  const d = digest(source, rawText, lean, 0, officialDown);
   // A composition failure on a relevant item lands in the tray, not the bin:
   // the desk not being able to phrase something is not a reason to lose it.
   if (!d.ok) {
@@ -716,10 +716,15 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
    * launch bases into reports. `DESK_READER_REQUIRED=0` restores the old
    * composer as a fallback, for local work without a key.
    */
+  // Leaders' words come from their own outlet; relays pass only when it was down.
+  const officialDown = !status.some((s) => s.id === "almasirah2" && s.ok);
+  // A post stamped in the future (a wrong clock or a misread date) is dated to
+  // this scan instead of floating above the whole feed.
+  for (const h of hits) if (Date.parse(h.at) > now + 10 * 60_000) h.at = cycleSeenAt;
   const pre = new Map<string, Composed>();
   const candidates: Candidate[] = [];
   for (const h of hits) {
-    const c = toLiveReport(h.source, h.url, h.text, h.at, h.text.slice(0, 80), h.lean);
+    const c = toLiveReport(h.source, h.url, h.text, h.at, h.text.slice(0, 80), h.lean, officialDown);
     pre.set(h.url, c);
     if (c.outcome === "exclude") continue;
     candidates.push({

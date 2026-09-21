@@ -80,3 +80,33 @@ test("every fixture carries a label the report can score", () => {
     assert.ok(f.text.trim().length > 10, `${f.name}: fixture text too short to be meaningful`);
   }
 });
+
+test("jambiya is a whole word: 'foreign' (الأجنبية) is not a crime item", () => {
+  const speech = gate({ text: "قائد الثورة: الشعب اليمني تحرر من الوصاية الأجنبية ومن ممارساتها الإجرامية بحق اليمن", source: "Al-Masirah", url: "", agency: false });
+  assert.notEqual(speech.reason, "crime");
+  const brawl = gate({ text: "مقتل شخص بطعنة جنبية في شجار بسوق تعز", source: "Almashhad", url: "", agency: false });
+  assert.equal(brawl.reason, "crime");
+});
+
+test("a leader's quoted line skips the ceremony/crime rules and goes to the reader", () => {
+  const v = gate({ text: "🔴 عاجل 🔴 السيد القائد: في ذكرى ثورة 21 سبتمبر نؤكد أن السعودي سيدفع الثمن إذا استمر الحصار", source: "Al-Masirah", url: "", agency: false });
+  assert.equal(v.outcome, "feed");
+  assert.equal(v.reason, "leader-quote");
+});
+
+test("a stream notice has no quote and stays out", () => {
+  const v = gate({ text: "📡 البث المباشر لكلمة السيد القائد عبدالملك بدرالدين الحوثي بمناسبة ذكرى ثورة 21 سبتمبر", source: "Al-Masirah", url: "", agency: false });
+  assert.equal(v.outcome, "exclude");
+});
+
+test("a leader's line relayed by another outlet is dropped unless his outlet was down", () => {
+  const text = "عبدالملك الحوثي: نتوجه إلى الله بالحمد والشكر على ما منّ به على شعبنا العزيز من النصر والتأييد في ثورته المباركة ثورة 21 سبتمبر";
+  assert.equal(gate({ text, source: "Bin Saeed", url: "", agency: false }).reason, "speech-relay");
+  assert.notEqual(gate({ text, source: "Bin Saeed", url: "", agency: false, officialDown: true }).reason, "speech-relay");
+});
+
+test("military words are not rally or sports noise", () => {
+  assert.notEqual(gate({ text: "الدفاعات الجوية تعترض مسيرات أطلقها الحوثيون باتجاه مأرب", source: "Almashhad", url: "", agency: false }).reason, "rally");
+  assert.notEqual(gate({ text: "دورية عسكرية تتعرض لكمين في أبين", source: "Almashhad", url: "", agency: false }).reason, "sports");
+  assert.notEqual(gate({ text: "وزير الدفاع يتفقد جبهات مأرب", source: "Saba", url: "", agency: false }).reason, "ceremony");
+});

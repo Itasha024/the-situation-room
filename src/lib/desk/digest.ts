@@ -296,10 +296,10 @@ function economyCopy(text: string): { headline: string; detail: string } {
  * The digest
  * ------------------------------------------------------------------ */
 
-export function digest(source: string, rawText: string, lean = "", extraSources = 0): Digest {
+export function digest(source: string, rawText: string, lean = "", extraSources = 0, officialDown = false): Digest {
   const raw = String(rawText || "");
   const tier = tierOf(source, extraSources);
-  const verdict: Verdict = gate({ text: raw, source, url: "", agency: tier === "agency" });
+  const verdict: Verdict = gate({ text: raw, source, url: "", agency: tier === "agency", officialDown });
 
   const fail = (reason: string, note: string, outcome: Outcome = "exclude"): Digest => ({
     ok: false,

@@ -206,12 +206,24 @@ STATEMENTS (event_type statement or diplomacy)
   out 28 strikes in 24 hours", "Trump: ...". A state or institution may lead
   with a verb — "Qatar condemns Houthi missile attack on Riyadh".
 - speaker_lead: a bare surname only for a figure an international reader knows
-  (Trump, Rubio, al-Mashat, Saree, Abdul Malik al-Houthi, al-Alimi, Grundberg).
+  (Trump, Rubio, al-Mashat, Saree, al-Alimi, Grundberg). Abdul Malik
+  al-Houthi (السيد القائد, قائد الثورة) is always "Houthi leader".
   Otherwise the title alone ("Yemen's defence minister", "The Houthis' chief
   negotiator") or the affiliation alone ("A Houthi official", "A Saudi
   military analyst"). Never an unfamiliar personal name, in headline or body.
 - Say what was said, specifically. If the speaker denies an accusation, state
   the accusation and the denial.
+
+SPEECH LINES
+Channels post a live speech one sentence at a time ("السيد القائد: ...").
+Each line is read on its own. Publish a line ONLY if it carries at least one of:
+a threat or warning to a named party; an announcement (an operation,
+escalation, halt, deadline or condition); a new position on talks or a deal;
+a claim of a specific attack or its result; a figure. Praise, prayer,
+thanks, history, the anniversary, general accusations and slogans are
+rejected with reject_reason "speech-rhetoric". A published line is
+headlined "<role>: <what was said>", e.g. "Houthi leader: Saudi Arabia will
+pay a price if the siege on Hodeidah port continues".
 
 interest: "for" if the report favours the side of the outlet carrying it (a
 Houthi outlet reporting Houthi gains or enemy losses), "against" if it hurts
@@ -260,7 +272,7 @@ export const BANNED_PHRASES: RegExp[] = [
 ];
 
 /** Bumped when the instructions change, so cached readings are redone. */
-export const PROMPT_VERSION = 2;
+export const PROMPT_VERSION = 3;
 
 export function contentHash(text: string): string {
   return createHash("sha256").update(`v${PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);

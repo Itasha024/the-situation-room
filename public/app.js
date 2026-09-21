@@ -614,6 +614,8 @@ function formatFullReport(text, r) {
   // desk's rules; glossing it again produced "Taiz in south-west Yemen
   // governorate". Only older copy is annotated here.
   if (raw && !hasNonLatinScript(raw)) return r && r.side ? cleanBody(raw) : annotatePlaces(cleanBody(raw));
+  // A short report is its headline: an empty body stays empty, never a placeholder.
+  if (!raw.trim() && r && r.summary && !hasNonLatinScript(r.summary)) return '';
   return fallbackReport(r || { text }).text;
 }
 

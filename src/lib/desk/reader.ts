@@ -64,7 +64,16 @@ export type Reading = {
   has_time: boolean;
   headline: string;
   body: string;
+  /**
+   * The ref of an already-published report this item directly develops (the
+   * same incident: its toll, its aftermath, a response to that exact attack),
+   * or "". Resolved to that report's fp before the reading is cached.
+   */
+  follows_up?: string;
 };
+
+/** A report already on the desk, shown to the reader so it can spot follow-ups. */
+export type RecentReport = { ref: string; at: string; headline: string };
 
 /**
  * Tried in order. The free tier allows about 20 requests a day PER MODEL, so
@@ -109,10 +118,11 @@ const RESPONSE_SCHEMA = {
           has_time: { type: "BOOLEAN" },
           headline: { type: "STRING" },
           body: { type: "STRING" },
+          follows_up: { type: "STRING", description: "ref of the recent report this directly develops, or empty string." },
         },
         required: [
           "id", "publish", "reject_reason", "event_type", "confident_roles", "targets", "origins",
-          "speaker_lead", "interest", "has_time", "headline", "body",
+          "speaker_lead", "interest", "has_time", "headline", "body", "follows_up",
         ],
       },
     },
@@ -200,13 +210,21 @@ Houthi outlet reporting Houthi gains or enemy losses), "against" if it hurts
 that side (an outlet admitting its own side's losses), else "neutral".
 has_time: true if the text says when it happened.
 
+FOLLOW-UPS
+You also get "recent": reports the desk already published, each with a ref.
+follows_up = the ref of a recent report ONLY when this item is a direct
+development of that exact same incident: the toll of that strike rising, the
+aftermath at that same place, a reply to that specific attack, the same
+battle's outcome. Same area or same kind of event is NOT enough; a new strike
+in the same district is a new event. When in doubt, "".
+
 Return JSON: {"items":[{"id":string,"publish":bool,"reject_reason":string,
 "event_type":"air_strike"|"shelling"|"missile_launch"|"drone_attack"|
 "interception"|"ground_clash"|"advance_or_capture"|"air_raid_alert"|
 "maritime_attack"|"statement"|"diplomacy"|"economy","confident_roles":bool,
 "actor":string|null,"targets":[string],"origins":[string],
 "speaker_lead":string|null,"interest":"for"|"against"|"neutral",
-"has_time":bool,"headline":string,"body":string}]}
+"has_time":bool,"headline":string,"body":string,"follows_up":string}]}
 When publish=false, headline and body may be "".`;
 
 /** Phrases that never appear in published copy, whoever wrote it. */
@@ -279,7 +297,7 @@ export function checkReading(r: Reading, sourceText: string): string | null {
 
 type CallResult = { readings: Reading[]; model: string } | { error: string };
 
-async function callModel(items: ReaderItem[], apiKey: string, model: string): Promise<CallResult> {
+async function callModel(items: ReaderItem[], apiKey: string, model: string, recent: RecentReport[]): Promise<CallResult> {
   const payload = items.map((i) => ({
     id: i.id,
     source: i.source,
@@ -296,7 +314,7 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string): Pr
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts: [{ text: JSON.stringify({ items: payload }) }] }],
+        contents: [{ role: "user", parts: [{ text: JSON.stringify({ recent, items: payload }) }] }],
         generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA },
       }),
     });
@@ -327,13 +345,14 @@ export async function readBatch(
   items: ReaderItem[],
   apiKey: string,
   skip: ReadonlySet<string> = new Set(),
+  recent: RecentReport[] = [],
 ): Promise<{ readings: Map<string, Reading>; model?: string; error?: string; exhausted: string[] }> {
   let lastError = "";
   const exhausted: string[] = [];
   for (const model of READER_MODELS) {
     if (!apiKey || skip.has(model)) continue;
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const r = await callModel(items, apiKey, model);
+      const r = await callModel(items, apiKey, model, recent);
       if ("readings" in r) {
         const byId = new Map<string, Reading>();
         for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
@@ -354,7 +373,7 @@ export async function readBatch(
   // items per call; what it does not reach stays queued for the next cycle.
   const groq = groqKey();
   if (groq && !skip.has(GROQ_MODEL)) {
-    const r = await callGroq(items.slice(0, GROQ_BATCH), groq);
+    const r = await callGroq(items.slice(0, GROQ_BATCH), groq, recent.slice(0, 15));
     if ("readings" in r) {
       const byId = new Map<string, Reading>();
       for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
@@ -377,6 +396,7 @@ const GROQ_BATCH = 4;
 async function callGroq(
   items: ReaderItem[],
   apiKey: string,
+  recent: RecentReport[],
 ): Promise<{ readings: Reading[]; model: string } | { error: string; daily: boolean }> {
   const payload = items.map((i) => ({
     id: i.id,
@@ -399,7 +419,7 @@ async function callGroq(
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: JSON.stringify({ items: payload }) },
+          { role: "user", content: JSON.stringify({ recent, items: payload }) },
         ],
       }),
     });

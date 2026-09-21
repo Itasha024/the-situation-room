@@ -18,6 +18,7 @@ import {
   type EventType,
   type Reading,
   type ReaderItem,
+  type RecentReport,
   READER_BATCH,
   checkReading,
   contentHash,
@@ -55,6 +56,9 @@ const QUOTA_REST_MS = 6 * 3600 * 1000;
 const CACHE_MAX = 6000;
 /** A queued item older than this is no longer news; it is dropped from the queue. */
 const QUEUE_TTL_MS = 24 * 3600 * 1000;
+/** How far back, and how many, published reports the reader sees for follow-ups. */
+const RECENT_MS = 24 * 3600 * 1000;
+const RECENT_MAX = 40;
 /** Model calls per cycle, so one busy cycle cannot spend the day's quota. */
 const MAX_CALLS_PER_CYCLE = 5;
 
@@ -126,6 +130,23 @@ export async function editCandidates(
   unread.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const stillQueued: Queued[] = [];
   let calls = 0;
+  // What the desk already published today, so the reader can mark a direct
+  // development of one of them as its follow-up.
+  const recent: RecentReport[] = [];
+  const refToFp = new Map<string, string>();
+  if (unread.length && anyReader) {
+    try {
+      const { reports } = await store.recentDesk(RECENT_MAX);
+      for (const r of reports) {
+        if (now - Date.parse(String(r.at)) > RECENT_MS || !r.fp) continue;
+        const ref = "r" + (recent.length + 1);
+        refToFp.set(ref, String(r.fp));
+        recent.push({ ref, at: String(r.at), headline: String(r.summary || "").slice(0, 160) });
+      }
+    } catch {
+      // Without the recent list nothing is marked a follow-up; nothing else changes.
+    }
+  }
   for (let i = 0; i < unread.length; i += READER_BATCH) {
     const batch = unread.slice(i, i + READER_BATCH);
     if (!anyReader || calls >= MAX_CALLS_PER_CYCLE) {
@@ -140,7 +161,7 @@ export async function editCandidates(
       postedAt: c.at,
       text: c.text,
     }));
-    const { readings, model, error, exhausted } = await readBatch(items, key, skip);
+    const { readings, model, error, exhausted } = await readBatch(items, key, skip, recent);
     for (const m of exhausted) {
       quota[m] = now;
       skip.add(m);
@@ -153,6 +174,8 @@ export async function editCandidates(
         stillQueued.push(c);
         return;
       }
+      // Refs mean nothing outside this call; keep the report's fp instead.
+      r.follows_up = refToFp.get(String(r.follows_up || "")) ?? "";
       cache[contentHash(c.text)] = { reading: r, at: now };
       verdicts.set(c.url, decide(r, c));
     });
@@ -228,6 +251,7 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
     interest: r.interest,
     hasTime: !!r.has_time,
   };
+  if (r.follows_up && r.follows_up !== c.fp) row.replyTo = r.follows_up;
   row.confidence = confidenceOf(row, []);
   const place = places.find((p) => p.country !== "sea") || places[0];
   if (place) {

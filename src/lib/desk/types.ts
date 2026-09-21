@@ -32,6 +32,8 @@ export type LiveReport = {
    * the card; these are kept and linked rather than deleted as duplicates.
    */
   alsoReportedBy?: { source: string; url: string }[];
+  /** fp of the earlier report this one directly develops; shown as a reply to it. */
+  replyTo?: string;
   /** Inputs to the trust figure — see credibility.ts. */
   side?: "houthi" | "gov" | "neutral" | "agency";
   interest?: "for" | "against" | "neutral";

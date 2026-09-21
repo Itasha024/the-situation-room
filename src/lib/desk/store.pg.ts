@@ -105,7 +105,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
 
       const reports = await sql<Record<string, unknown>>`
         select fp, url, at, source, type, summary, body, priority, confidence,
-               score, tier, place, lat, lng, also_reported_by
+               score, tier, place, lat, lng, also_reported_by, reply_to
           from desk_report
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
          order by at desc
@@ -144,6 +144,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             row.lng = r.lng;
           }
           if (r.also_reported_by) row.alsoReportedBy = r.also_reported_by;
+          if (r.reply_to) row.replyTo = r.reply_to;
           return row as DeskReportRow;
         }),
         events: events.map(
@@ -178,12 +179,13 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           const inserted = await sql<{ fp: string }>`
             insert into desk_report
               (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
-               also_reported_by)
+               also_reported_by, reply_to)
             values (
               ${r.fp}, ${r.url}, ${r.at}, ${r.source}, ${r.type}, ${r.summary}, ${r.text},
               ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
               ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
-              ${r.alsoReportedBy?.length ? JSON.stringify(r.alsoReportedBy) : null}::jsonb
+              ${r.alsoReportedBy?.length ? JSON.stringify(r.alsoReportedBy) : null}::jsonb,
+              ${r.replyTo ?? null}
             )
             on conflict do nothing
             returning fp

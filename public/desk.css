@@ -768,6 +768,9 @@ html{scroll-behavior:smooth}
   #front-float{width:auto}
 }
 .card .also{margin:.3rem 0 0;font-size:.68rem;color:#8b98a8}
+.card .reply-to{display:block;margin:.15rem 0 .3rem;padding:.2rem .45rem;border-left:2px solid #5b7290;background:rgba(91,114,144,.12);font-size:.68rem;color:#9fb4cc;text-decoration:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-radius:2px}
+.card .reply-to:hover{color:#c9d8ea}
+.card.flash{outline:2px solid #9fb4cc;outline-offset:2px;transition:outline-color 1.2s}
 .card .also a{color:#9fb4cc;text-decoration:none}
 .card .also a:hover{text-decoration:underline}
 .front-card .front-composed{margin:.35rem 0 0;font-size:.78rem;line-height:1.5;color:#c9d4e0}

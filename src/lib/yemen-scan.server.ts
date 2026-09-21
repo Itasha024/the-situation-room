@@ -320,6 +320,18 @@ export function extractLead(html: string): string {
 const RSS_ITEMS = 25;
 /** Extra `?before=` pages read from one channel to reach the last post seen. */
 const TG_BACKFILL_PAGES = 4;
+/**
+ * One-time replay: posts from 21 September that were rejected before the
+ * Arabic-place-name and scope fixes had already scrolled past the pages a
+ * tick reads. Each listed channel pages back to the start of that day once;
+ * already-published posts dedupe on insert. Inert after `until`.
+ */
+const REPLAY = {
+  since: Date.parse("2026-09-21T00:00:00+03:00"),
+  until: Date.parse("2026-09-23T00:00:00+03:00"),
+  channels: new Set(["almasirah2", "naya_foriraq", "Alomhoar", "Alibk3", "shajab_news", "SabrenNewss"]),
+  pages: 15,
+};
 /** Nothing older than this is news for a live desk, however a feed lists it. */
 const MAX_ITEM_AGE_MS = 72 * 3600 * 1000;
 /** Article pages fetched per cycle to fill thin teasers. Cached by URL. */
@@ -475,6 +487,10 @@ export function namedSpeaker(summary: string): string {
   return who.toLowerCase();
 }
 
+const FIELD_TYPES = new Set(["combat", "strike", "economy", "vessel", "port"]);
+/** Copies of one event arrive within this long of each other. */
+const COPY_WINDOW_MS = 30 * 60 * 1000;
+
 function storyKey(r: LiveReport): string {
   const s = r.summary;
   if (/air raid sirens|air defence alerts/i.test(s)) {
@@ -592,6 +608,19 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           const more = older ? parseTelegram(older, ch).filter((r) => tgPostNo(r.url) < oldest) : [];
           if (!more.length) break;
           rows.push(...more);
+        }
+        const replayKey = `replay:${ch.id}`;
+        if (ok && REPLAY.channels.has(ch.id) && now < REPLAY.until && !state.lastScanAt[replayKey]) {
+          for (let page = 0; page < REPLAY.pages; page += 1) {
+            const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));
+            const oldestAt = Math.min(...rows.map((r) => Date.parse(r.at)).filter(Number.isFinite));
+            if (!Number.isFinite(oldest) || oldestAt < REPLAY.since) break;
+            const older = await fetchText(`https://t.me/s/${ch.id}?before=${oldest}`);
+            const more = older ? parseTelegram(older, ch).filter((r) => tgPostNo(r.url) < oldest) : [];
+            if (!more.length) break;
+            rows.push(...more);
+          }
+          state.lastScanAt[replayKey] = now;
         }
         const newest = Math.max(seen, ...rows.map((r) => tgPostNo(r.url)));
         if (newest > 0) (state.lastTgPost ??= {})[ch.id] = newest;
@@ -744,7 +773,16 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       if (seenUrl.has(u) || seenUrl.has(r.fp)) return;
       seenUrl.add(u);
       seenUrl.add(r.fp);
-      const sk = storyKey(r);
+      // Field events group only as copies of one post: outlets relaying the
+      // same event within minutes. A later development on the same front is
+      // its own card (the reader may mark it a reply), never folded in.
+      let sk = storyKey(r);
+      if (FIELD_TYPES.has(r.type) && !/|alert|/.test(sk)) {
+        const t = Date.parse(r.at);
+        let n = 0;
+        while (byStory.has(`${sk}#${n}`) && Math.abs(Date.parse(byStory.get(`${sk}#${n}`)!.lead.at) - t) > COPY_WINDOW_MS) n += 1;
+        sk = `${sk}#${n}`;
+      }
       const group = byStory.get(sk);
       if (!group) {
         byStory.set(sk, { lead: r, others: [] });

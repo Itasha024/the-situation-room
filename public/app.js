@@ -824,10 +824,14 @@ function attachAccount(keep, other) {
   keep.alsoReportedBy = [...list, { source: other.source, url: other.url }];
 }
 
+/** Every report by fp, so a follow-up card can quote the report it replies to. */
+let reportByFp = new Map();
+
 function sortedReports(d) {
   const raw = [...(d.reports || [])]
     .filter((r) => r && r.url && !isHomepageOrSectionUrl(r.url))
     .sort((a, b) => new Date(reportTime(b)) - new Date(reportTime(a)));
+  reportByFp = new Map(raw.filter((r) => r.fp).map((r) => [String(r.fp), r]));
   const seen = new Map();
   const seenUrl = new Set();
   const seenHead = new Set();
@@ -840,22 +844,25 @@ function sortedReports(d) {
     const ymd = jerusalemYmd(reportTime(r)) || String(r.at || '').slice(0, 10);
     const hk = `${ymd}|${stripNikud(r.summary || '').slice(0, 80)}`;
     if (seenHead.has(hk)) continue;
+    // Only copies of one event fold together: the same story key AND posted
+    // within 20 minutes of each other. A later development is its own card
+    // (a reply, when the reader tied it to the earlier one), never hidden.
     const k = feedClusterKey(r);
-    const prev = seen.get(k);
-    if (!prev) {
-      seen.set(k, r);
+    const t = Date.parse(reportTime(r));
+    const group = seen.get(k) || [];
+    const prev = group.find((p) => Math.abs(Date.parse(reportTime(p)) - t) <= 20 * 60 * 1000);
+    if (!prev || r.replyTo) {
+      group.push(r);
+      seen.set(k, group);
       if (u) seenUrl.add(u);
       seenHead.add(hk);
       out.push(r);
       continue;
     }
-    // A richer account only stands in for one posted within 20 minutes of it;
-    // an older item must never hide a newer development in the same cluster.
-    const close = Math.abs(Date.parse(reportTime(prev)) - Date.parse(reportTime(r))) <= 20 * 60 * 1000;
-    if (close && score(r) > score(prev) + 12) {
+    if (score(r) > score(prev) + 12) {
       const i = out.indexOf(prev);
       if (i >= 0) out[i] = r;
-      seen.set(k, r);
+      group[group.indexOf(prev)] = r;
       attachAccount(r, prev);
     } else {
       attachAccount(prev, r);
@@ -981,7 +988,6 @@ function applyLiveOverlay(base) {
   if (!base) return base;
   const canon = (u) => String(u || '').split('?')[0].replace(/\/$/, '').toLowerCase();
   const haveUrl = new Set((base.reports || []).map((r) => canon(r.url)));
-  const haveStory = new Set((base.reports || []).map((r) => feedClusterKey(r)));
   // A story gains corroborating outlets over time, so refresh that on rows the
   // desk already holds — otherwise only reports first seen after grouping
   // landed would ever show "3 sources".
@@ -997,10 +1003,9 @@ function applyLiveOverlay(base) {
     if (!r || !r.url) return false;
     const u = canon(r.url);
     if (haveUrl.has(u)) return false;
-    const sk = feedClusterKey(r);
-    if (haveStory.has(sk)) return false;
+    // Same-story copies are folded by sortedReports within their 20 minutes;
+    // dropping on the story key here hid every later development.
     haveUrl.add(u);
-    haveStory.add(sk);
     return true;
   });
   if (extra.length) base.reports = [...extra, ...(base.reports || [])];
@@ -1326,12 +1331,21 @@ function feedCardHtml(r, i) {
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
         <span class="src-wrap">${srcHtml}</span>
       </div>
+      ${replyQuote(r)}
       <p class="headline">${escapeHtml(sum)}</p>
       ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
       ${mediaBlock(r.media)}
       ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.source)}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
+}
+
+/** "Follows 11:02 · <headline>": the earlier report this one develops. */
+function replyQuote(r) {
+  const parent = r.replyTo && reportByFp.get(String(r.replyTo));
+  if (!parent) return '';
+  const pt = reportTime(parent);
+  return `<a class="reply-to" href="#" data-parent="${escapeHtml(String(r.replyTo))}">↩ Follows ${escapeHtml(fmtStamp(pt))} · ${escapeHtml(reportTeaser(parent))}</a>`;
 }
 
 /** Does the clamped lead hide text? Measured; a length guess while hidden or open. */
@@ -1344,6 +1358,18 @@ function leadOverflows(card) {
 
 function wireFeedCard(card) {
   if (!card) return;
+  const reply = card.querySelector('.reply-to');
+  if (reply) {
+    reply.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const target = document.querySelector(`#feed .card[data-fp="${CSS.escape(reply.dataset.parent)}"]`);
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('flash');
+      setTimeout(() => target.classList.remove('flash'), 1600);
+    };
+  }
   const btn = card.querySelector('.toggle');
   if (btn && leadOverflows(card)) {
     card.classList.add('expandable');

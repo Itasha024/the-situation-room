@@ -74,6 +74,7 @@ export function toDeskReportRow(r: LiveReport): DeskReportRow {
     // Kept so the card can link the other outlets — dropping it here would
     // undo the grouping and leave the other accounts unreachable.
     ...(r.alsoReportedBy?.length ? { alsoReportedBy: r.alsoReportedBy } : {}),
+    ...(r.replyTo ? { replyTo: r.replyTo } : {}),
     // Set only on rows the reader wrote; also the trust figure's inputs.
     ...(r.side ? { side: r.side, interest: r.interest, hasTime: r.hasTime } : {}),
   };

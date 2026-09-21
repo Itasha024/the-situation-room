@@ -223,7 +223,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             if (r.alsoReportedBy?.length) {
               const also = JSON.stringify(r.alsoReportedBy);
               await sql`
-                update desk_report set also_reported_by = ${also}::jsonb
+                update desk_report set also_reported_by = ${also}::jsonb, confidence = coalesce(${r.confidence ?? null}, confidence)
                  where fp = ${r.fp} and also_reported_by is distinct from ${also}::jsonb
               `;
             }

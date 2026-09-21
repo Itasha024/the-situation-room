@@ -363,3 +363,22 @@ test("a channel citing the WSJ has the WSJ feed read next tick, not at its hour"
   assert.equal(state.lastScanAt["hint:web:wsj"], now);
   assert.deepEqual(hintOutlets(state, hits, now + 60_000), []);
 });
+
+test("one speaker key per person, whatever the title", async () => {
+  const { namedSpeaker } = await import("./yemen-scan.server.ts");
+  for (const h of ["Trump: we will defend our allies", "US President Donald Trump: talks go on", "President Trump says strikes are off"]) assert.equal(namedSpeaker(h), "trump");
+  assert.equal(namedSpeaker("Saudi Crown Prince Mohammed bin Salman: no truce"), "mbs");
+  assert.equal(namedSpeaker("Houthi leader: our demands stand"), "houthi leader");
+});
+
+test("a Telegram reply keeps its own link, and names the post it replies to", async () => {
+  const { parseTelegram } = await import("./yemen-scan.server.ts");
+  const html =
+    '<div class="tgme_widget_message_wrap"><div class="tgme_widget_message" data-post="naya_foriraq/91168">' +
+    '<a class="tgme_widget_message_reply user-color-default" href="https://t.me/naya_foriraq/91167"><div>earlier</div></a>' +
+    '<div class="tgme_widget_message_text js-message_text">حصيلة القصف على السوق الشعبي في ذباب ترتفع</div>' +
+    '<a class="tgme_widget_message_date" href="https://t.me/naya_foriraq/91168"><time datetime="2026-09-21T10:00:00+00:00"></time></a></div>';
+  const [h] = parseTelegram(html, { id: "naya_foriraq", name: "Naya", lean: "houthi" });
+  assert.equal(h.url, "https://t.me/naya_foriraq/91168");
+  assert.equal(h.replyUrl, "https://t.me/naya_foriraq/91167");
+});

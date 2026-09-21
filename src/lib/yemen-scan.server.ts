@@ -20,6 +20,7 @@ import { getStore } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, traceOrigins } from "./desk/origin.ts";
 import { sameStory, sameWords } from "./desk/copies.ts";
+import { type OutletSide, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 
 // The wire types moved to ./desk/types.ts so the store and the scanner can
@@ -376,6 +377,8 @@ type RawHit = {
   at: string;
   lean: string;
   fromTg: boolean;
+  /** The channel post this one replies to, on Telegram. */
+  replyUrl?: string;
 };
 
 function outletFromGoogleTitle(title: string, fallback: string): { title: string; source: string } {
@@ -440,7 +443,7 @@ function tgPostNo(url: string): number {
   return m ? Number(m[1]) : 0;
 }
 
-function parseTelegram(html: string, ch: Channel): RawHit[] {
+export function parseTelegram(html: string, ch: Channel): RawHit[] {
   const items: RawHit[] = [];
   const parts = html.split("tgme_widget_message_wrap");
   // t.me/s lists a channel's latest ~20 posts OLDEST FIRST. Reading a prefix of
@@ -452,12 +455,15 @@ function parseTelegram(html: string, ch: Channel): RawHit[] {
     const datetime = (p.match(/datetime="([^"]+)"/) || [])[1] || "";
     const text = decodeEntities(textHtml);
     if (!text || text.length < 12) continue;
-    const url = (hrefs[0] || "").split("?")[0];
+    // The post's own link: a reply's first link is the post it replies to.
+    const own = (p.match(/data-post="([^"]+)"/) || [])[1];
+    const url = own ? `https://t.me/${own}` : (hrefs[0] || "").split("?")[0];
     if (!url) continue;
+    const replyUrl = (p.match(/class="tgme_widget_message_reply[^"]*"[^>]*href="([^"?]+)/) || [])[1];
     let at = jerusalemIso();
     const parsed = Date.parse(datetime);
     if (Number.isFinite(parsed)) at = jerusalemIso(new Date(parsed));
-    items.push({ source: ch.name, url, text, at, lean: ch.lean, fromTg: true });
+    items.push({ source: ch.name, url, text, at, lean: ch.lean, fromTg: true, ...(replyUrl && replyUrl !== url ? { replyUrl } : {}) });
   }
   return items;
 }
@@ -501,13 +507,27 @@ function hourOfIso(iso: string): number {
  * spokesman" or "the official" in two posts are not known to be one person,
  * so they are never grouped on that alone.
  */
+/** A channel's side by its name; outlets not on the list are international. */
+function sideOfSource(name: string): OutletSide {
+  return outletSide(name, TG.find((c) => c.name === name)?.lean ?? "intl");
+}
+
+/** One key per person, whatever the title: "US President Donald Trump" is "trump". */
+export function speakerKey(who: string): string {
+  const w = who.toLowerCase().replace(/^(?:the\s+)?(?:u\.?s\.?|us|american|former)\s+/, "");
+  const known = /\b(trump|rubio|vance|hegseth|biden|netanyahu|khamenei|araghchi|guterres|grundberg)\b/.exec(w);
+  if (known) return known[1];
+  if (/bin salman|\bmbs\b|saudi crown prince/.test(w)) return "mbs";
+  return w.replace(/^(?:president|secretary of state|secretary|minister|prime minister)\s+/, "");
+}
+
 export function namedSpeaker(summary: string): string {
   const m = /^(.{2,48}?)(?::\s|\s(?:says|said|tells|told|warns|warned|denies|denied)\b)/.exec(summary || "");
   if (!m) return "";
   const who = m[1].trim();
   if (/^(an?|the)\s/i.test(who)) return "";
   if (/^(spokes(?:man|woman|person)|officials?|sources?|commanders?|ministers?)$/i.test(who)) return "";
-  return who.toLowerCase();
+  return speakerKey(who);
 }
 
 const FIELD_TYPES = new Set(["combat", "strike", "economy", "vessel", "port"]);
@@ -585,6 +605,8 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url }];
     const seen = new Set([home.source]);
     home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);
+    // More outlets, more trust: counted by side, as in the cycle's own grouping.
+    if (home.side) home.confidence = confidenceOf(home, home.alsoReportedBy.map((a) => sideOfSource(a.source)));
     if (!inPayload.has(home.fp)) touched.add(home);
   }
   for (let i = reports.length - 1; i >= 0; i -= 1) if (gone.has(reports[i])) reports.splice(i, 1);
@@ -1054,6 +1076,13 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   }
   const published = new Set((prev?.reports ?? []).map((r) => r.fp));
   const stored = await storedCards();
+  // A Telegram reply to a card on the desk is the same thread: it follows that card.
+  const byUrl = new Map([...stored, ...uniqReports].map((r) => [r.url, r]));
+  for (const h of hits) {
+    const r = h.replyUrl ? uniqReports.find((x) => x.url === h.url) : undefined;
+    const to = h.replyUrl ? byUrl.get(h.replyUrl) : undefined;
+    if (r && to && to.fp !== r.fp && !r.replyTo && Date.parse(to.at) <= Date.parse(r.at)) r.replyTo = to.fp;
+  }
   const touched = [...foldIntoPublished(uniqReports, published, stored), ...threadSpeeches(uniqReports, published, stored)];
   if (prev && Array.isArray(prev.rawHits)) {
     const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));

@@ -825,7 +825,12 @@ function namedSpeaker(summary) {
   const who = m[1].trim();
   if (/^(an?|the)\s/i.test(who)) return '';
   if (/^(spokes(?:man|woman|person)|officials?|sources?|commanders?|ministers?)$/i.test(who)) return '';
-  return who.toLowerCase();
+  // One key per person, whatever the title (as speakerKey on the server).
+  const w = who.toLowerCase().replace(/^(?:the\s+)?(?:u\.?s\.?|us|american|former)\s+/, '');
+  const known = /\b(trump|rubio|vance|hegseth|biden|netanyahu|khamenei|araghchi|guterres|grundberg)\b/.exec(w);
+  if (known) return known[1];
+  if (/bin salman|\bmbs\b|saudi crown prince/.test(w)) return 'mbs';
+  return w.replace(/^(?:president|secretary of state|secretary|minister|prime minister)\s+/, '');
 }
 
 /**

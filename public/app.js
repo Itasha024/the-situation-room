@@ -1192,7 +1192,7 @@ async function pullBrief() {
  */
 /** `top`: the stamp sits under a column's heading rather than at its foot. */
 function cadenceStamp(top = false) {
-  const cls = top ? 'cadence top' : 'cadence';
+  const cls = top ? 'cadence at-head' : 'cadence';
   if (!brief) return `<p class="${cls}">Refreshes every 12 hours.</p>`;
   const overdue = Date.now() > Date.parse(brief.nextUpdateAt);
   return `<p class="${cls}${overdue ? ' late' : ''}">Updated ${escapeHtml(fmtWhen(brief.updatedAt))} · next ${escapeHtml(fmtWhen(brief.nextUpdateAt))}${overdue ? ' · refresh due' : ''}</p>`;
@@ -1249,8 +1249,7 @@ function renderLiveScan() {
 
 /**
  * The escalation meter (src/lib/desk/escalation.ts): a half-dial from Calm to
- * Severe, the readings it compares with, and a 30-day line. Thin windows are
- * gaps in the line, never drawn as calm.
+ * Severe, and the readings 12 hours and a day before.
  */
 const ESC_BANDS = [
   { name: 'Calm', to: 20, color: '#64748b' },
@@ -1282,26 +1281,6 @@ function escalationHtml(v) {
   const [nx, ny] = pt(s, r - 18);
   const band = escBand(s);
   const cmp = (label, x) => `<div class="esc-cmp"><span>${label}</span><b style="color:${x == null ? 'inherit' : escBand(x).color}">${x == null ? '—' : `${escBand(x).name} ${x}`}</b></div>`;
-  const line = (v.line || []);
-  let spark = '';
-  if (line.filter((p) => p.score != null).length > 1) {
-    const t0 = Date.parse(line[0].at);
-    const t1 = Date.parse(line[line.length - 1].at);
-    const span = Math.max(1, t1 - t0);
-    let d = '';
-    let pen = false;
-    line.forEach((p) => {
-      if (p.score == null) { pen = false; return; }
-      const x = 2 + 196 * (Date.parse(p.at) - t0) / span;
-      const y = 38 - 36 * p.score / 100;
-      d += `${pen ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
-      pen = true;
-    });
-    spark = `<svg class="esc-spark" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true">
-      <line x1="0" y1="20" x2="200" y2="20" class="esc-mid"/>
-      <path d="${d}" fill="none" stroke="${band.color}" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>
-      <p class="esc-spark-cap">Last 30 days</p>`;
-  }
   return `<div class="esc" aria-label="Escalation: ${band.name}, ${s} of 100">
     <div class="esc-head"><strong>Escalation meter</strong>
       <button type="button" class="esc-how" aria-expanded="false">How is this measured?</button></div>
@@ -1315,14 +1294,10 @@ function escalationHtml(v) {
       <div class="esc-side">
         ${cmp('12 hours ago', v.previous)}
         ${cmp('1 day ago', v.dayAgo)}
-        ${cmp('1 week ago', v.weekAgo)}
-        ${cmp('1 month ago', v.monthAgo)}
       </div>
     </div>
-    ${spark}
     <div class="esc-explain" hidden>
-      <p>A 0–100 reading of the last 24 hours, updated every 12 hours.</p>
-      <p>It counts distinct events, not reports: one kind of action in one area counts once, however many outlets carry it or follow it up.</p>
+      <p>A 0–100 reading of the last 12 hours, updated every 12 hours.</p>
       <p>Weighted: how many areas see fighting or strikes, ground fighting and changes of control, air, missile and drone strikes, attacks on Saudi soil and at sea, and deaths reported in single incidents. A ceasefire or truce lowers it.</p>
       <p>Fixed scales, so wider coverage of the same fighting does not raise it. A day with too few reports to read is left blank.</p>
     </div>
@@ -1691,38 +1666,32 @@ function frontMiniIds(front) {
 }
 
 /**
- * The front's locator: the regular map (same tiles, same control colours), no
- * pins and no names, with the front's governorates lit and the rest dimmed,
- * framed with enough of Yemen around them to place them at a glance.
+ * The front's map: the same map as a report's pop-up (control colours,
+ * governorate and Saudi city names), no pins, framed on the front with Yemen
+ * around it. The front's governorates keep their full colour under a thick
+ * yellow border; the rest fade, still readable as control areas.
  */
-let frontMiniMap = null;
-async function mountFrontMini(front, d) {
-  const box = document.getElementById('front-mini-map');
-  if (!box || !window.L) return;
-  if (frontMiniMap) { try { frontMiniMap.remove(); } catch (e) {} frontMiniMap = null; }
-  const m = L.map(box, {
-    zoomControl: false, attributionControl: false, zoomSnap: 0.25, renderer: L.svg({ padding: 1.5 }),
-    dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false,
-  }).setView([15.6, 47.5], 5);
-  frontMiniMap = m;
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(m);
+async function buildFrontMap(m, front, d) {
   if (!geoCache) geoCache = await fetch('/yemen-adm1.geojson').then((r) => r.json()).catch(() => null);
-  if (frontMiniMap !== m || !geoCache) return;
+  if (sheetMap !== m || !geoCache) return;
   const ids = frontMiniIds(front);
   const byIso = controlByIso(d);
   const lit = L.latLngBounds([]);
-  L.geoJSON(geoCache, {
+  const mainland = splitIslandFeatures(geoCache).mainland;
+  const layer = L.geoJSON(mainland, {
     interactive: false,
     style: (f) => {
-      const iso = f.properties.shapeISO;
-      const g = byIso[iso] || {};
-      const ctrl = g.control === 'mixed' ? 'contested' : g.control;
-      return ids.has(iso)
-        ? { fillColor: COLORS[ctrl] || COLORS.contested, fillOpacity: 0.9, color: '#fde047', weight: 3, opacity: 1 }
-        : { fillColor: '#64748b', fillOpacity: 0.28, color: '#0b0f14', weight: 0.8, opacity: 0.6 };
+      const base = styleFeature(f, byIso);
+      const fo = base.fillOpacity == null ? 0.5 : base.fillOpacity;
+      return ids.has(f.properties.shapeISO)
+        ? { ...base, fillOpacity: Math.min(0.85, fo * 1.35), color: '#fde047', weight: 3.5, opacity: 1 }
+        : { ...base, fillOpacity: fo * 0.45, opacity: 0.45 };
     },
-    onEachFeature: (f, layer) => { if (ids.has(f.properties.shapeISO)) lit.extend(layer.getBounds()); },
+    onEachFeature: (f, l) => { if (ids.has(f.properties.shapeISO)) lit.extend(l.getBounds()); },
   }).addTo(m);
+  layer.eachLayer((l) => { if (ids.has(l.feature.properties.shapeISO)) l.bringToFront(); });
+  govNameLayer(m, mainland.features, byIso);
+  saudiCityLayer(m);
   const spot = front.mapFocus && front.mapFocus.spot;
   if (Array.isArray(spot) && spot.length === 2) {
     const r = (front.mapFocus.spotRadius || 15000) * 1.6;
@@ -1730,52 +1699,20 @@ async function mountFrontMini(front, d) {
     lit.extend(L.latLng(spot).toBounds(r * 2));
   }
   const frame = () => {
-    if (frontMiniMap !== m) return;
+    if (sheetMap !== m) return;
     try { m.invalidateSize(); } catch (e) {}
-    if (lit.isValid()) m.fitBounds(lit, { padding: [34, 34], maxZoom: 7, animate: false });
-    m.fire('moveend');
+    if (lit.isValid()) m.fitBounds(lit, { padding: [40, 40], maxZoom: 7, animate: false });
+    else m.setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { animate: false });
   };
   frame();
   setTimeout(frame, 80);
 }
 
 function hideFrontFloat() {
-  const el = document.getElementById('front-float');
-  if (!el) return;
-  el.classList.remove('show');
-  el.hidden = true;
-  if (frontMiniMap) { try { frontMiniMap.remove(); } catch (e) {} frontMiniMap = null; }
-  el.innerHTML = '';
+  closePinSheet();
   frontFloatIdx = null;
   frontFloatAnchor = null;
   document.querySelectorAll('.front-map-btn[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
-}
-
-function placeFrontFloat(anchor) {
-  const el = document.getElementById('front-float');
-  if (!el || !anchor) return;
-  el.hidden = false;
-  el.classList.add('show');
-  const r = anchor.getBoundingClientRect();
-  const w = el.offsetWidth || 280;
-  const h = el.offsetHeight || 320;
-  let left = r.right + 2;
-  if (left + w > window.innerWidth - 8) left = r.left - w - 2;
-  if (left < 8) left = 8;
-  let top = r.top;
-  if (top + h > window.innerHeight - 8) top = Math.max(8, window.innerHeight - h - 8);
-  if (window.innerWidth < 800) {
-    left = 8;
-    el.style.right = '8px';
-    el.style.left = '8px';
-    el.style.width = 'auto';
-    top = Math.min(r.bottom + 8, window.innerHeight - h - 8);
-  } else {
-    el.style.right = 'auto';
-    el.style.width = '';
-    el.style.left = left + 'px';
-  }
-  el.style.top = Math.max(8, top) + 'px';
 }
 
 function textOverlap(a, b) {
@@ -1983,29 +1920,14 @@ function highlightFrontOnMap(front) {
 }
 
 function showFrontFloat(idx, anchor, d) {
-  const fronts = allFronts(d);
-  const f = fronts[idx];
-  const el = document.getElementById('front-float');
-  if (!f || !el) return;
-  frontFloatIdx = idx;
-  frontFloatAnchor = anchor;
-  frontFloatOpenedAt = Date.now();
+  const f = allFronts(d)[idx];
+  if (!f) return;
   document.querySelectorAll('.front-map-btn').forEach((b, i) => b.setAttribute('aria-expanded', i === idx ? 'true' : 'false'));
-  const locator = f.mapFocus || {};
-  el.innerHTML = `
-    <p class="front-float-title">${escapeHtml(f.name)}</p>
-    ${f.where ? `<p class="front-float-where">${escapeHtml(f.where)}</p>` : ''}
-    <div id="front-mini-map" class="front-mini"></div>
-    <div class="front-float-key">
-      <span><span class="sw" style="background:${COLORS.houthi}"></span>Houthi</span>
-      <span><span class="sw" style="background:${COLORS.plc}"></span>Government</span>
-      <span><span class="sw" style="background:${COLORS.contested}"></span>Contested</span>
-    </div>
-    ${locator.view || (locator.spot && locator.spot.length) ? '<button type="button" class="front-float-go">Show on the main map</button>' : ''}`;
-  const go = el.querySelector('.front-float-go');
-  if (go && (locator.view || (locator.spot && locator.spot.length))) {
-    go.onclick = (ev) => {
-      if (ev) { ev.preventDefault(); ev.stopPropagation(); try { ev.stopImmediatePropagation(); } catch (e) {} }
+  openMapPop({
+    title: f.name,
+    anchor,
+    build: (m) => buildFrontMap(m, f, d),
+    go: () => {
       keepHighlightUntil = Date.now() + 2200;
       hideFrontFloat();
       scrollToMap();
@@ -2013,12 +1935,9 @@ function showFrontFloat(idx, anchor, d) {
       try { requestAnimationFrame(scrollToMap); } catch (e) {}
       setTimeout(scrollToMap, 80);
       setTimeout(scrollToMap, 360);
-    };
-  }
-  el.onmouseenter = () => { if (frontFloatTimer) { clearTimeout(frontFloatTimer); frontFloatTimer = null; } };
-  el.onmouseleave = () => { frontFloatTimer = setTimeout(hideFrontFloat, 220); };
-  placeFrontFloat(anchor);
-  mountFrontMini(f, d);
+    },
+  });
+  frontFloatIdx = idx;
 }
 
 /**
@@ -2076,21 +1995,23 @@ function renderFronts(d) {
       btn.textContent = open ? 'Hide' : 'Read more';
     };
   });
-  const canHover = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const canHover = () => window.matchMedia('(hover: hover)').matches && window.innerWidth >= 720;
   document.querySelectorAll('.front-map-btn').forEach((btn) => {
     const idx = parseInt(btn.dataset.i, 10);
-    const open = () => {
-      if (frontFloatTimer) { clearTimeout(frontFloatTimer); frontFloatTimer = null; }
-      showFrontFloat(idx, btn, d);
+    btn.onmouseenter = () => {
+      if (!canHover()) return;
+      clearTimeout(pinPopTimer);
+      pinPopTimer = setTimeout(() => showFrontFloat(idx, btn, d), 250);
     };
-    const delayHide = () => { frontFloatTimer = setTimeout(hideFrontFloat, 280); };
-    if (canHover) {
-      btn.onmouseenter = open;
-      btn.onmouseleave = delayHide;
-    }
+    btn.onmouseleave = () => {
+      clearTimeout(pinPopTimer);
+      const el = document.getElementById('pin-sheet');
+      if (el && el.classList.contains('as-pop')) pinPopTimer = setTimeout(hideFrontFloat, 300);
+    };
     btn.onclick = (ev) => {
       if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-      open();
+      clearTimeout(pinPopTimer);
+      showFrontFloat(idx, canHover() ? btn : null, d);
     };
     btn.onpointerdown = (ev) => { if (ev) ev.stopPropagation(); };
   });
@@ -2210,7 +2131,12 @@ function closePinSheet() {
   if (sheetMap) { try { sheetMap.remove(); } catch (e) {} sheetMap = null; }
 }
 
-function openPinSheet(pin, anchor) {
+/**
+ * The map pop-up shared by a report's "Show on map" and a front's "Map": beside
+ * the button on desktop, a sheet on a phone (no anchor). `build(m)` draws the
+ * map and frames it; `go` is the blue "Show on the main map".
+ */
+function openMapPop({ title, anchor, build, go }) {
   let el = document.getElementById('pin-sheet');
   if (!el) {
     el = document.createElement('div');
@@ -2219,8 +2145,8 @@ function openPinSheet(pin, anchor) {
     document.body.appendChild(el);
   }
   closePinSheet();
-  el.innerHTML = `<div class="pin-sheet-box" role="dialog" aria-label="Report on the map">
-      <div class="pin-sheet-head"><p class="front-float-title">${escapeHtml(pin.label || '')}</p>
+  el.innerHTML = `<div class="pin-sheet-box" role="dialog" aria-label="Map">
+      <div class="pin-sheet-head"><p class="front-float-title">${escapeHtml(title || '')}</p>
       <button type="button" class="pin-sheet-x" aria-label="Close">×</button></div>
       <div id="pin-sheet-map"></div>
       <button type="button" class="front-float-go">Show on the main map</button>
@@ -2228,27 +2154,46 @@ function openPinSheet(pin, anchor) {
   el.classList.toggle('as-pop', !!anchor);
   el.classList.add('show');
   if (anchor) placePinPop(el.firstElementChild, anchor);
-  sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false, zoomSnap: 0.5 }).setView([pin.lat, pin.lng], 6.5);
+  frontFloatAnchor = anchor || null;
+  frontFloatOpenedAt = Date.now();
+  sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false, zoomSnap: 0.5 }).setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2]);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(sheetMap);
-  if (geoCache) {
-    const byIso = controlByIso(data);
-    const mainland = splitIslandFeatures(geoCache).mainland;
-    L.geoJSON(mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(sheetMap);
-    govNameLayer(sheetMap, mainland.features, byIso);
-  }
-  const ymd = jerusalemYmd(pin.at);
-  [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
-    const me = p.fp === pin.fp;
-    const icon = L.divIcon({ className: 'ev-wrap', html: eventIconHtml(p.mapCat, me ? ' pin-pulse' : '', escapeHtml(p.label || '')), iconSize: [34, 42], iconAnchor: [17, 40] });
-    L.marker([p.lat, p.lng], { icon, zIndexOffset: me ? 2000 : 0 }).bindPopup(popupHtml(p), { maxWidth: 260 }).addTo(sheetMap);
-  });
+  build(sheetMap);
   setTimeout(() => { try { sheetMap && sheetMap.invalidateSize(); } catch (e) {} }, 60);
   el.querySelector('.pin-sheet-x').onclick = closePinSheet;
   el.onclick = (ev) => { if (ev.target === el) closePinSheet(); };
-  el.querySelector('.front-float-go').onclick = () => { closePinSheet(); goToPinOnMainMap(pin); };
+  el.querySelector('.front-float-go').onclick = (ev) => {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    closePinSheet();
+    go();
+  };
   const box = el.firstElementChild;
   box.onmouseenter = () => { clearTimeout(pinPopTimer); };
-  box.onmouseleave = () => { if (el.classList.contains('as-pop')) pinPopTimer = setTimeout(closePinSheet, 250); };
+  box.onmouseleave = () => { if (el.classList.contains('as-pop')) pinPopTimer = setTimeout(hideFrontFloat, 250); };
+}
+
+function openPinSheet(pin, anchor) {
+  openMapPop({
+    title: pin.label,
+    anchor,
+    go: () => goToPinOnMainMap(pin),
+    build: (m) => {
+      m.setView([pin.lat, pin.lng], 6.5);
+      if (geoCache) {
+        const byIso = controlByIso(data);
+        const mainland = splitIslandFeatures(geoCache).mainland;
+        L.geoJSON(mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(m);
+        govNameLayer(m, mainland.features, byIso);
+        saudiCityLayer(m);
+      }
+      const ymd = jerusalemYmd(pin.at);
+      [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
+        const me = p.fp === pin.fp;
+        const icon = L.divIcon({ className: 'ev-wrap', html: eventIconHtml(p.mapCat, me ? ' pin-pulse' : '', escapeHtml(p.label || '')), iconSize: [34, 42], iconAnchor: [17, 40] });
+        L.marker([p.lat, p.lng], { icon, zIndexOffset: me ? 2000 : 0 }).bindPopup(popupHtml(p), { maxWidth: 260 }).addTo(m);
+      });
+    },
+  });
 }
 
 /** On desktop the sheet floats beside the card's button, like the fronts' map. */
@@ -2793,7 +2738,48 @@ function govNameLayer(m, features, byIso) {
   return group.addTo(m);
 }
 
+/**
+ * Saudi cities: the big ones always, and the border towns and targets the
+ * Houthis have struck as the map zooms in (tier 2 from zoom 6, tier 3 from 7.5,
+ * where close neighbours no longer collide).
+ */
+const SAUDI_CITIES = [
+  ['Riyadh', 24.713, 46.675, 1], ['Jeddah', 21.543, 39.173, 1], ['Mecca', 21.389, 39.858, 1],
+  ['Medina', 24.467, 39.611, 1], ['Dammam', 26.434, 50.103, 1], ['Taif', 21.27, 40.415, 1], ['Yanbu', 24.089, 38.064, 1],
+  ['Najran', 17.565, 44.228, 2], ['Jizan', 16.889, 42.551, 2], ['Abha', 18.216, 42.505, 2],
+  ['Khamis Mushait', 18.3, 42.729, 2], ['Sharurah', 17.466, 47.106, 2], ['Dhahran al-Janub', 17.667, 43.505, 2],
+  ['Sabya', 17.15, 42.626, 3], ['Samtah', 16.596, 42.944, 3], ['Ahad al-Masarihah', 16.708, 42.955, 3],
+  ['al-Tuwal', 16.525, 42.99, 3], ['Abqaiq', 25.937, 49.668, 3], ['Ras Tanura', 26.643, 50.159, 3],
+];
+
+function saudiCityLayer(m) {
+  if (!m.getPane('govNames')) {
+    m.createPane('govNames');
+    m.getPane('govNames').style.zIndex = 460;
+    m.getPane('govNames').style.pointerEvents = 'none';
+  }
+  const group = L.layerGroup();
+  SAUDI_CITIES.forEach(([name, lat, lng, tier]) => {
+    L.marker([lat, lng], {
+      pane: 'govNames', interactive: false, keyboard: false,
+      icon: L.divIcon({ className: `sa-city t${tier}`, html: `<i></i><span>${escapeHtml(name)}</span>`, iconSize: null }),
+    }).addTo(group);
+  });
+  const sync = () => {
+    try {
+      const z = m.getZoom();
+      const c = m.getContainer().classList;
+      c.toggle('sa-t2-off', z < 6);
+      c.toggle('sa-t3-off', z < 7.5);
+    } catch (e) {}
+  };
+  m.on('zoomend', sync);
+  sync();
+  return group.addTo(m);
+}
+
 let govNamesLayer = null;
+let saudiCitiesLayer = null;
 
 async function drawGeo(d) {
   const byIso = controlByIso(d);
@@ -2812,6 +2798,7 @@ async function drawGeo(d) {
   }).addTo(map);
   if (govNamesLayer) { try { map.removeLayer(govNamesLayer); } catch (e) {} }
   govNamesLayer = govNameLayer(map, split.mainland.features, byIso);
+  if (!saudiCitiesLayer) saudiCitiesLayer = saudiCityLayer(map);
 
   try {
     if (!saudiGeoCache) {
@@ -3231,8 +3218,9 @@ function wireUi(d) {
       if (Date.now() - frontFloatOpenedAt < 400) return;
       const t = ev.target;
       if (!t) return;
-      if (t.closest('#front-float, .front-map-btn')) return;
-      hideFrontFloat();
+      if (t.closest('#pin-sheet, .front-map-btn, .card-map')) return;
+      const ps = document.getElementById('pin-sheet');
+      if (ps && ps.classList.contains('as-pop')) hideFrontFloat();
       const mf = document.getElementById('media-float');
       if (mf && !mf.hidden && !t.closest('#media-float, .media-open')) {
         mf.classList.remove('show'); mf.hidden = true; mf.innerHTML = '';
@@ -3251,14 +3239,14 @@ function wireUi(d) {
       const r = frontFloatAnchor.getBoundingClientRect();
       const vis = r.bottom > 40 && r.top < window.innerHeight - 20;
       if (!vis) hideFrontFloat();
-      else placeFrontFloat(frontFloatAnchor);
+      else { const box = document.querySelector('#pin-sheet.as-pop .pin-sheet-box'); if (box) placePinPop(box, frontFloatAnchor); }
     }, true);
     document.addEventListener('click', (ev) => {
       if (Date.now() < keepHighlightUntil) return;
       const t = ev.target;
       if (!t) return;
       const path = (typeof ev.composedPath === 'function') ? ev.composedPath() : [];
-      if (path.some((n) => n && n.matches && n.matches('#legend, .front-float-go, .front-map-btn, #front-float, #map-chip, .chip-clear, #btn-clear-hl'))) return;
+      if (path.some((n) => n && n.matches && n.matches('#legend, .front-float-go, .front-map-btn, #pin-sheet, #map-chip, .chip-clear, #btn-clear-hl'))) return;
       if (t.closest && t.closest('#legend, .front-float-go, .front-map-btn, #map-chip, .chip-clear')) return;
       if (highlightIds.size && !(t.closest && t.closest('.leaflet-interactive, .leaflet-popup, .leaflet-control'))) {
         clearMapHighlight({ home: true });

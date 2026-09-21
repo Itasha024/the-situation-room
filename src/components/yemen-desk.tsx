@@ -80,7 +80,6 @@ const DESK_HTML = `
   <span id="attrib"></span>
   <span id="disclaimer"></span>
 </footer>
-<div id="front-float" hidden></div>
 <div id="media-float" hidden></div>
 `;
 

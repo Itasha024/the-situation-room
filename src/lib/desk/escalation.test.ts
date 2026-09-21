@@ -38,7 +38,8 @@ test("a thin window is marked sparse, and the view never reads it as calm", () =
   const full = scoreWindow([...filler(12), rep("combat", 13.5, 43.9)], "2026-09-20T21:00:00Z");
   const v = escalationView(pushPoint(pushPoint([], full), thin));
   assert.equal(v?.now.at, full.at);
-  assert.equal(v?.line.find((p) => p.at === thin.at)?.score, null);
+  assert.equal(v?.previous, null);
+  assert.equal("weekAgo" in (v || {}), false);
 });
 
 test("bands, bounds and incident deaths", () => {

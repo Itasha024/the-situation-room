@@ -98,11 +98,11 @@ export async function refreshBrief(
   } catch (err) {
     console.error("[desk] prose failed:", err instanceof Error ? err.message : err);
   }
-  // The escalation meter reads the 24 hours to the window's end.
+  // The escalation meter reads the 12 hours to the window's end.
   try {
     const day = all.filter((r) => {
       const t = Date.parse(String(r.at || ""));
-      return Number.isFinite(t) && t >= end - 24 * 3600_000 && t < end;
+      return Number.isFinite(t) && t >= end - 12 * 3600_000 && t < end;
     });
     const points = pushPoint((await store.getJson<EscalationPoint[]>(ESCALATION_KEY)) ?? [], scoreWindow(day, w.updatedAt));
     await store.putJson(ESCALATION_KEY, points);

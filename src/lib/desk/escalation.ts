@@ -1,11 +1,11 @@
 /**
  * The escalation meter: one 0-100 reading of how intense the war was over the
- * last 24 hours, updated with each 12-hour brief and kept as a history.
+ * last 12 hours, updated with each 12-hour brief and kept as a history.
  *
  * WHY DISTINCT EVENTS, NOT CARDS: the desk's coverage grew from a few curated
  * events a day in July to a hundred cards a day in September. Counting cards
  * would read that growth as escalation. The index counts distinct events
- * (one kind of action in one area on one day, however many outlets carried it)
+ * (one kind of action in one area in the window, however many outlets carried it)
  * and scores them on fixed scales bound by geography, so more coverage of the
  * same fighting does not move it, and a wider or heavier war does.
  */
@@ -28,7 +28,7 @@ export type EscalationParts = {
 };
 
 export type EscalationPoint = {
-  /** End of the 24-hour window (a 12-hour boundary). */
+  /** End of the 12-hour window (a 12-hour boundary). */
   at: string;
   score: number;
   band: Band;
@@ -95,14 +95,14 @@ function areaOf(r: LiveReport): string {
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
-/** Below this many reports in 24 hours the window is not read (thin coverage, not calm). */
-export const MIN_REPORTS = 12;
+/** Below this many reports in 12 hours the window is not read (thin coverage, not calm). */
+export const MIN_REPORTS = 6;
 
 /** Weights of the parts; they sum to 1. */
 const WEIGHTS: EscalationParts = { breadth: 0.24, ground: 0.2, strikes: 0.16, cross: 0.14, maritime: 0.1, deaths: 0.16 };
 
 /**
- * Score the reports of one 24-hour window. Follow-ups (replies) and folded
+ * Score the reports of one 12-hour window. Follow-ups (replies) and folded
  * duplicates are the same events told again, so they count once.
  */
 export function scoreWindow(reports: LiveReport[], endAt: string): EscalationPoint {
@@ -139,15 +139,15 @@ export function scoreWindow(reports: LiveReport[], endAt: string): EscalationPoi
   const maritime = list.filter((e) => e.kind === "maritime").length;
   const deaths = list.reduce((s, e) => s + e.deaths, 0);
 
-  // Fixed scales: 14 areas at once is a war on every front; 8 ground fronts,
-  // 10 struck areas, 3 attacks on Saudi soil, 2 at sea, 100 dead in a day.
+  // Fixed scales for 12 hours: 10 areas at once is a war on every front; 6 ground
+  // fronts, 7 struck areas, 3 attacks on Saudi soil, 2 at sea, 60 dead.
   const parts: EscalationParts = {
-    breadth: clamp01(areas.size / 14),
-    ground: clamp01((groundAreas.length + controls) / 8),
-    strikes: clamp01(strikeAreas / 10),
+    breadth: clamp01(areas.size / 10),
+    ground: clamp01((groundAreas.length + controls) / 6),
+    strikes: clamp01(strikeAreas / 7),
     cross: cross === 0 ? 0 : clamp01(0.25 + cross / 4),
     maritime: maritime === 0 ? 0 : clamp01(0.3 + maritime / 3),
-    deaths: clamp01(Math.log1p(deaths) / Math.log1p(100)),
+    deaths: clamp01(Math.log1p(deaths) / Math.log1p(60)),
   };
   let score = 0;
   for (const k of Object.keys(WEIGHTS) as (keyof EscalationParts)[]) score += WEIGHTS[k] * parts[k];
@@ -166,14 +166,11 @@ export function pushPoint(history: EscalationPoint[], p: EscalationPoint): Escal
   return out.slice(-400);
 }
 
-/** What the page shows: now, the comparisons and a 30-day line. */
+/** What the page shows: now, and 12 hours and a day before. */
 export type EscalationView = {
   now: EscalationPoint;
   previous: number | null;
   dayAgo: number | null;
-  weekAgo: number | null;
-  monthAgo: number | null;
-  line: { at: string; score: number | null }[];
 };
 
 export function escalationView(history: EscalationPoint[]): EscalationView | null {
@@ -190,9 +187,5 @@ export function escalationView(history: EscalationPoint[]): EscalationView | nul
     now,
     previous: near(12 * 3600_000),
     dayAgo: near(24 * 3600_000),
-    weekAgo: near(7 * 24 * 3600_000),
-    monthAgo: near(30 * 24 * 3600_000),
-    // Thin windows stay in the line as gaps (null), so it never draws calm where there was no data.
-    line: history.filter((h) => Date.parse(h.at) >= t - 30 * 24 * 3600_000).map((h) => ({ at: h.at, score: h.sparse ? null : h.score })),
   };
 }

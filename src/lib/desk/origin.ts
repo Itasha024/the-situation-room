@@ -13,6 +13,7 @@
  */
 
 import { BROWSER_UA, resolveGoogleNews, searchGoogleNews } from "./gnews.ts";
+import { FULL_TEXT_MAX } from "./reader.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -178,8 +179,12 @@ export function articleText(html: string): string {
         .trim(),
     )
     .filter((t) => t.length > 60 && !/cookie|subscribe|sign up|newsletter|all rights reserved|©/i.test(t))
-    .join("\n")
-    .slice(0, 3000);
+    // A paragraph is a sentence: a line with no closing stop is a related
+    // headline or a caption, not the story.
+    .filter((t) => /[.!?"'”’)]$/.test(t))
+    .filter((t, i, all) => all.indexOf(t) === i)
+    // Whole paragraphs, the whole article: its key fact may be near the end.
+    .reduce((out, t) => (out.length + t.length < FULL_TEXT_MAX ? (out ? `${out}\n${t}` : t) : out), "");
 }
 
 const titleKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -202,7 +207,20 @@ export async function readOriginal(f: Found): Promise<string> {
     const text = url ? articleText(await page(url)) : "";
     if (text.length >= 400) return text;
   }
-  return own;
+  // A copy the Wayback Machine already holds; a new capture is never asked for.
+  const kept = articleText(await page(await archived(f.url)));
+  return kept.length > own.length ? kept : own;
+}
+
+/** The raw page of an existing Wayback Machine capture, or "". */
+async function archived(url: string): Promise<string> {
+  try {
+    const res = await fetch(`https://archive.org/wayback/available?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(6000) });
+    const snap = res.ok ? ((await res.json()) as { archived_snapshots?: { closest?: { url?: string; available?: boolean } } }).archived_snapshots?.closest : undefined;
+    return snap?.available && snap.url ? snap.url.replace(/\/web\/(\d+)\//, "/web/$1id_/") : "";
+  } catch {
+    return "";
+  }
 }
 
 /**

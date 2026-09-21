@@ -34,6 +34,17 @@ test("an original's text is read from its paragraphs, without page furniture", a
   );
 });
 
+test("the whole article is read, deep facts included, without related headlines", async () => {
+  const { articleText } = await import("./origin.ts");
+  const filler = "<p>" + "Officials in Washington weighed the request from Riyadh over several days of meetings. ".repeat(3) + "</p>";
+  const html = `${filler.repeat(20)}<p>Trump Weighs Response as Houthi Missiles Hit Saudi Oil Sites and Markets React</p>
+    <p>After the call with Prince Mohammed on Thursday, Mr. Trump changed his mind: target lists were approved and bombs were loaded.</p>`;
+  const text = articleText(html);
+  assert.ok(text.includes("target lists were approved"));
+  assert.ok(!text.includes("Markets React"));
+  assert.ok(text.length <= 8000);
+});
+
 test("a match days older than the post is refused", () => {
   const keys = keywords("Yemeni president asked US for government support against Houthis", "en", "Reuters");
   const at = Date.parse("2026-09-21T13:29:00Z");

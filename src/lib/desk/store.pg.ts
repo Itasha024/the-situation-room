@@ -17,6 +17,8 @@ import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } f
 
 const SCAN_STATE_KEY = "scan_state";
 const PAYLOAD_KEY = "payload";
+/** fp → when a card was deleted by hand; a scan running meanwhile cannot bring it back. */
+const DROPPED_KEY = "json:dropped";
 
 /**
  * The SQL client is injected so the driver can be exercised against an embedded
@@ -81,11 +83,14 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
     async loadPayload(): Promise<ScanPayload | null> {
       const p = await readState<ScanPayload>(PAYLOAD_KEY);
       if (!p || !Array.isArray(p.reports) || !p.scannedAt) return null;
+      const dropped = (await readState<Record<string, number>>(DROPPED_KEY)) ?? {};
+      p.reports = p.reports.filter((r) => !(r.fp in dropped));
       return p;
     },
 
-    savePayload(payload: ScanPayload): Promise<void> {
-      return writeState(PAYLOAD_KEY, payload);
+    async savePayload(payload: ScanPayload): Promise<void> {
+      const dropped = (await readState<Record<string, number>>(DROPPED_KEY)) ?? {};
+      return writeState(PAYLOAD_KEY, { ...payload, reports: payload.reports.filter((r) => !(r.fp in dropped)) });
     },
 
     /**
@@ -183,13 +188,14 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             insert into desk_report
               (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
                also_reported_by, reply_to, citing)
-            values (
-              ${r.fp}, ${r.url}, ${r.at}, ${r.source}, ${r.type}, ${r.summary}, ${r.text},
+            select
+              ${r.fp}, ${r.url}, ${r.at}::timestamptz, ${r.source}, ${r.type}, ${r.summary}, ${r.text},
               ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
               ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
               ${r.alsoReportedBy?.length ? JSON.stringify(r.alsoReportedBy) : null}::jsonb,
               ${r.replyTo ?? null}, ${r.citing ?? null}
-            )
+             -- A card deleted by hand stays deleted.
+             where not exists (select 1 from desk_state s where s.key = ${DROPPED_KEY} and s.value ? ${r.fp})
             on conflict do nothing
             returning fp
           `;

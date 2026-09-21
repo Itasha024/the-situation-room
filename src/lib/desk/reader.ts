@@ -28,6 +28,8 @@ export type ReaderItem = {
   alignment: string;
   postedAt: string;
   text: string;
+  /** An original article read in full: the model reads all of it, not its top. */
+  full?: boolean;
 };
 
 export type EventType =
@@ -94,6 +96,8 @@ export const READER_MODELS = [
 export const SECOND_LOOK_MODELS = ["gemini-flash-latest"];
 /** Items per model call — large, because calls are what the quota counts. */
 export const READER_BATCH = 15;
+/** An original article is read to this length: its key fact may be deep in it. */
+export const FULL_TEXT_MAX = 8000;
 
 /** The answer's shape, enforced by the API so a reply always parses. */
 const RESPONSE_SCHEMA = {
@@ -193,6 +197,11 @@ WHO DID WHAT TO WHOM — never infer, never assume
 WRITING
 - English wire style. headline <= 110 characters, sentence case, no full stop.
 - body: 1-3 sentences carrying the substance. A thin item gets a short body.
+- A long item is a full article: read ALL of it. The headline carries its
+  most important new development wherever in the text it appears — a
+  decision, a commitment, a reversal, casualties — not only the opening
+  paragraph; the body keeps the other key facts (a leader agreed to strike,
+  then called it off: both).
 - Every number, name and place you write must be in the item's text. Add
   nothing: no background, no cause, no casualties, no attribution the text
   does not give.
@@ -415,7 +424,7 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string, rec
     source: i.source,
     source_alignment: i.alignment,
     posted_at: i.postedAt,
-    text: i.text.slice(0, 2400),
+    text: i.text.slice(0, i.full ? FULL_TEXT_MAX : 2400),
   }));
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 60_000);
@@ -516,7 +525,7 @@ async function callGroq(
     source: i.source,
     source_alignment: i.alignment,
     posted_at: i.postedAt,
-    text: i.text.slice(0, 1600),
+    text: i.text.slice(0, i.full ? 6000 : 1600),
   }));
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 45_000);

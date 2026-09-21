@@ -194,6 +194,7 @@ export async function editCandidates(
       alignment: ALIGNMENT[outletSide(c.source, c.lean)],
       postedAt: c.at,
       text: c.text,
+      full: c.tags.includes("original"),
     }));
     const { readings, model, error, exhausted } = await readBatch(items, key, skip, recent);
     for (const m of exhausted) {

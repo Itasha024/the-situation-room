@@ -609,7 +609,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           if (!more.length) break;
           rows.push(...more);
         }
-        const replayKey = `replay:${ch.id}`;
+        // Bumped to run once more after the geocoder landed, to pin what the
+        // first pass published without a place.
+        const replayKey = `replay2:${ch.id}`;
         if (ok && REPLAY.channels.has(ch.id) && now < REPLAY.until && !state.lastScanAt[replayKey]) {
           for (let page = 0; page < REPLAY.pages; page += 1) {
             const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));

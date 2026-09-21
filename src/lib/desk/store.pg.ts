@@ -190,8 +190,17 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             on conflict do nothing
             returning fp
           `;
-          if (!inserted.length) continue;
-          out.reportsAdded += 1;
+          if (!inserted.length) {
+            // Stored earlier without a place (the geocoder had not found it
+            // yet): take the place now, and let its pin be added below.
+            if (r.lat == null || r.lng == null) continue;
+            const placed = await sql<{ fp: string }>`
+              update desk_report set place = ${r.place ?? null}, lat = ${r.lat}, lng = ${r.lng}
+               where fp = ${r.fp} and lat is null
+              returning fp
+            `;
+            if (!placed.length) continue;
+          } else out.reportsAdded += 1;
 
           const { events, unplaced } = deriveEvents(r);
           for (const e of events) {

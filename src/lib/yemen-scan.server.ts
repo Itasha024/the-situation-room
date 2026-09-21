@@ -14,6 +14,7 @@ import { type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
 import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
+import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
@@ -916,6 +917,16 @@ export async function runScanCycle(): Promise<TickResult> {
     briefBuilt = (await refreshBrief(store)).built;
   } catch (err) {
     error ??= `brief: ${err instanceof Error ? err.message : "failed"}`;
+  }
+
+  // The first tick of each day snapshots the live tables; a failed backup
+  // must not fail the scan, so it is logged, not surfaced.
+  if (store.kind === "pg") {
+    try {
+      await backupDaily();
+    } catch (err) {
+      console.error("[desk] daily backup failed:", err instanceof Error ? err.message : err);
+    }
   }
 
   return {

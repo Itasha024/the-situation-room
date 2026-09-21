@@ -849,7 +849,10 @@ function sortedReports(d) {
       out.push(r);
       continue;
     }
-    if (score(r) > score(prev) + 12) {
+    // A richer account only stands in for one posted within 20 minutes of it;
+    // an older item must never hide a newer development in the same cluster.
+    const close = Math.abs(Date.parse(reportTime(prev)) - Date.parse(reportTime(r))) <= 20 * 60 * 1000;
+    if (close && score(r) > score(prev) + 12) {
       const i = out.indexOf(prev);
       if (i >= 0) out[i] = r;
       seen.set(k, r);

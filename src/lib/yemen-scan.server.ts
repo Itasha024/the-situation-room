@@ -532,22 +532,34 @@ const STORY_WINDOW_MS = 18 * 3600 * 1000;
  * another outlet's take, is not a new card: its outlet joins that card's
  * "Also". Grouping inside one scan never saw the cards of earlier scans, so
  * one Reuters story became seven cards over half an hour. `published` are the
- * fps already on the desk; only reports not among them can fold.
+ * fps already on the desk; only reports not among them can fold. `stored` are
+ * recent desk rows the payload no longer carries; the ones given a new "Also"
+ * are returned, so the store can save it.
  */
-export function foldIntoPublished(reports: LiveReport[], published: Set<string>): void {
+export function foldIntoPublished(reports: LiveReport[], published: Set<string>, stored: LiveReport[] = []): LiveReport[] {
   const talk = (r: LiveReport) => r.type === "statement" || r.type === "diplomacy";
   const byTime = [...reports].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  // Cards already on the desk that this cycle's payload no longer carries.
+  const inPayload = new Set(reports.map((r) => r.fp));
+  const homes = [...byTime, ...stored.filter((s) => !inPayload.has(s.fp))];
   const gone = new Set<LiveReport>();
+  const touched = new Set<LiveReport>();
   for (const r of byTime) {
     if (published.has(r.fp)) continue;
     const t = Date.parse(r.at);
+    const open = (o: LiveReport) => o !== r && !gone.has(o) && o.fp !== r.fp;
     // The reader said it: this is another outlet on an event already published.
-    let home = r.duplicateOf ? byTime.find((o) => o !== r && !gone.has(o) && o.fp === r.duplicateOf) : undefined;
+    let home = r.duplicateOf ? homes.find((o) => open(o) && o.fp === r.duplicateOf) : undefined;
     // The same post forwarded by another channel, seen in a later scan.
-    if (!home && r.copyKey) home = byTime.find((o) => o !== r && !gone.has(o) && o.copyKey === r.copyKey && Date.parse(o.at) <= t);
+    if (!home && r.copyKey) home = homes.find((o) => open(o) && o.copyKey === r.copyKey && Date.parse(o.at) <= t);
+    // Another outlet's "follow-up" that only retells the card it follows.
+    if (!home && r.replyTo) {
+      const p = homes.find((o) => open(o) && o.fp === r.replyTo);
+      if (p && p.source !== r.source && sameStory(p, r)) home = p;
+    }
     if (!home && talk(r)) {
-      home = byTime.find(
-        (o) => o !== r && !gone.has(o) && talk(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= STORY_WINDOW_MS && sameStory(o, r),
+      home = homes.find(
+        (o) => open(o) && o.source !== r.source && talk(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= STORY_WINDOW_MS && sameStory(o, r),
       );
     }
     if (!home) continue;
@@ -555,30 +567,45 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>)
     const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url }];
     const seen = new Set([home.source]);
     home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);
+    if (!inPayload.has(home.fp)) touched.add(home);
   }
   for (let i = reports.length - 1; i >= 0; i -= 1) if (gone.has(reports[i])) reports.splice(i, 1);
+  return [...touched];
 }
 
 /** A speaker silent this long has finished; the next line starts a new thread. */
-const SPEECH_GAP_MS = 20 * 60 * 1000;
+const SPEECH_GAP_MS = 45 * 60 * 1000;
 
 /**
  * A live speech arrives one line per post, and each newsworthy line is its own
- * card. Each new line replies to the speaker's previous published line, so the
- * feed shows the speech as a thread. Only lines not yet stored get the reply;
- * one already given a reply by the reader keeps it.
+ * card replying to the speaker's previous line, so the feed shows the speech
+ * as one thread from its first line. A line that arrives late (a replay, a
+ * slow scan) takes its place in time: the line after it is re-pointed to it.
+ * `stored` are desk rows the payload no longer carries; the ones re-pointed
+ * are returned, so the store can save them.
  */
-export function threadSpeeches(reports: LiveReport[], published: Set<string>): void {
-  const last = new Map<string, LiveReport>();
-  const lines = reports
+export function threadSpeeches(reports: LiveReport[], _published: Set<string>, stored: LiveReport[] = []): LiveReport[] {
+  const inPayload = new Set(reports.map((r) => r.fp));
+  const all = [...reports, ...stored.filter((s) => !inPayload.has(s.fp))];
+  const lines = all
     .filter((r) => r.type === "statement" && namedSpeaker(r.summary))
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  const byFp = new Map(lines.map((r) => [r.fp, r]));
+  const last = new Map<string, LiveReport>();
+  const touched: LiveReport[] = [];
   for (const r of lines) {
-    const who = namedSpeaker(r.summary);
+    const who = `${namedSpeaker(r.summary)}|${r.source}`;
     const prev = last.get(who);
-    if (prev && !published.has(r.fp) && !r.replyTo && Date.parse(r.at) - Date.parse(prev.at) <= SPEECH_GAP_MS) r.replyTo = prev.fp;
     last.set(who, r);
+    if (!prev || Date.parse(r.at) - Date.parse(prev.at) > SPEECH_GAP_MS || r.replyTo === prev.fp) continue;
+    // A reply to something else than this speech stays; one to an earlier
+    // line of it moves to the line now just before it.
+    const to = r.replyTo ? byFp.get(r.replyTo) : undefined;
+    if (r.replyTo && !(to && `${namedSpeaker(to.summary)}|${to.source}` === who && Date.parse(to.at) < Date.parse(prev.at))) continue;
+    r.replyTo = prev.fp;
+    if (!inPayload.has(r.fp)) touched.push(r);
   }
+  return touched;
 }
 
 /** Which of two reports on the same story to keep. */
@@ -623,6 +650,22 @@ function harvestHomepage(html: string, source: string): RawHit[] {
 /* ------------------------------------------------------------------ *
  * One scan cycle
  * ------------------------------------------------------------------ */
+
+/**
+ * The last day of desk rows, as reports: a new outlet on a story whose card
+ * has left the payload still folds into that card instead of becoming another.
+ */
+async function storedCards(): Promise<LiveReport[]> {
+  try {
+    const store = await getStore();
+    const since = Date.now() - STORY_WINDOW_MS;
+    return (await store.recentDesk(150)).reports
+      .filter((r) => Date.parse(String(r.at)) >= since)
+      .map((r) => ({ ...(r as unknown as LiveReport), text: String((r as { text?: string }).text ?? ""), live: true as const }));
+  } catch {
+    return [];
+  }
+}
 
 async function loadLeadCache(): Promise<LeadCache> {
   try {
@@ -946,8 +989,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     else uniqReports.push(r);
   }
   const published = new Set((prev?.reports ?? []).map((r) => r.fp));
-  foldIntoPublished(uniqReports, published);
-  threadSpeeches(uniqReports, published);
+  const stored = await storedCards();
+  const touched = [...foldIntoPublished(uniqReports, published, stored), ...threadSpeeches(uniqReports, published, stored)];
   if (prev && Array.isArray(prev.rawHits)) {
     const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));
     for (const h of prev.rawHits) {
@@ -978,6 +1021,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     ok: true,
     scannedAt: jerusalemIso(),
     reports: uniqReports.slice(0, PAYLOAD_REPORTS),
+    ...(touched.length ? { touched } : {}),
     sourcesTried: tried,
     sourcesOk,
     // Newest-seen first: what the scanner just pulled sits at the top of the box.
@@ -1058,7 +1102,8 @@ export async function runScanCycle(): Promise<TickResult> {
   // Persist in dependency order, and surface every failure. The old code
   // fire-and-forgot this and swallowed the error, which is why a read-only
   // host looked healthy while saving nothing.
-  const merge = await store.mergeIntoDesk(payload.reports);
+  const merge = await store.mergeIntoDesk([...payload.reports, ...(payload.touched ?? [])]);
+  delete payload.touched;
   // Carry the gazetteer misses into the payload so the scan box can show them.
   if (merge.unplaced.length) payload.unplaced = merge.unplaced.slice(0, 20);
   state.lastTickAt = Date.now();

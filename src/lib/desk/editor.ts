@@ -387,6 +387,11 @@ function decide(raw: Reading, c: Candidate): EditorVerdict {
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
     r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
   }
+  // The name went to its role, or the colon was no quote: the lead follows.
+  if (lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
+    const role = fixHeadline(lead);
+    r.speaker_lead = r.headline.toLowerCase().startsWith(role.toLowerCase()) ? role : null;
+  }
   const problem = checkReading(r, c.text);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };

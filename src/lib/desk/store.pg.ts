@@ -105,8 +105,10 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
 
       const reports = await sql<Record<string, unknown>>`
         select fp, url, at, source, type, summary, body, priority, confidence,
-               score, tier, place, lat, lng, also_reported_by, reply_to, citing
-          from desk_report
+               score, tier, place, lat, lng, also_reported_by, citing,
+               -- A reply to a row since deleted leads nowhere: shown as none.
+               case when exists (select 1 from desk_report p where p.fp = d.reply_to) then reply_to end as reply_to
+          from desk_report d
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
          order by at desc
          limit ${limit}
@@ -215,6 +217,15 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               await sql`
                 update desk_report set also_reported_by = ${also}::jsonb
                  where fp = ${r.fp} and also_reported_by is distinct from ${also}::jsonb
+              `;
+            }
+            // A speech line re-threaded: a late line took its place in time.
+            // Only ever to an older row that exists.
+            if (r.replyTo) {
+              await sql`
+                update desk_report set reply_to = ${r.replyTo}
+                 where fp = ${r.fp} and reply_to is distinct from ${r.replyTo}
+                   and exists (select 1 from desk_report p where p.fp = ${r.replyTo} and p.at < ${r.at}::timestamptz)
               `;
             }
             // Stored earlier without a place (the geocoder had not found it

@@ -111,9 +111,15 @@ test("a strike on a named Yemeni place gets a second look; rhetoric does not", a
 test("no outlet opens a headline, and a report about someone is no quote", async () => {
   const { fixHeadline } = await import("./reader.ts");
   assert.equal(fixHeadline("Reuters sources: Reuters: Yemeni president asked US for support against Houthis"), "Yemeni president asked US for support against Houthis");
-  assert.equal(fixHeadline("Trump: did not commit to military aid requested by Rashad al-Alimi"), "Trump did not commit to military aid requested by Rashad al-Alimi");
+  assert.equal(fixHeadline("Trump: did not commit to military aid requested by Rashad al-Alimi"), "Trump did not commit to military aid requested by Yemen's president");
   assert.equal(fixHeadline("Trump: hesitated on Yemen strikes before Saudi requests"), "Trump hesitated on Yemen strikes before Saudi requests");
-  assert.equal(fixHeadline("Trump: spoke with Yemeni Presidential Leadership Council head Rashad al-Alimi"), "Trump spoke with Yemeni Presidential Leadership Council head Rashad al-Alimi");
+  assert.equal(fixHeadline("Trump: spoke with Yemeni Presidential Leadership Council head Rashad al-Alimi"), "Trump spoke with Yemen's president");
+  // Reported on, not quoted: the colon goes. Unfamiliar names go by role.
+  assert.equal(fixHeadline("Al-Alimi: Trump made no pledge of military support to Yemen's president al-Alimi in a call, sources say"), "Trump made no pledge of military support to Yemen's president in a call, sources say");
+  assert.equal(fixHeadline("Al-Zubaidi: the south will not accept Houthi rule"), "STC leader: the south will not accept Houthi rule");
+  // "said that our" is his words without the quote: the colon form.
+  assert.equal(fixHeadline("Houthi leader said that our demands are legitimate rights"), "Houthi leader: our demands are legitimate rights");
+  assert.equal(fixHeadline("Houthi leader says the Houthis' demands are legitimate"), "Houthi leader says the Houthis' demands are legitimate");
   // Real quotes keep their colon.
   assert.equal(fixHeadline("Houthi leader: Saudi Arabia will pay a price"), "Houthi leader: Saudi Arabia will pay a price");
   assert.equal(fixHeadline("Abdul Malik al-Houthi: Saudi regime committed crimes"), "Houthi leader: Saudi regime committed crimes");

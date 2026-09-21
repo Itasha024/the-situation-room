@@ -31,13 +31,13 @@ const DESK_HTML = `
 </section>
 <div class="toolbar">
   <div class="time-filter" id="time-filter" title="Pick a day, or show the whole conflict">
-    <span class="tf-label">Day on the map:</span>
-    <button type="button" id="btn-day-prev" class="day-nav" aria-label="Previous day"><span class="day-nav-arr" aria-hidden="true">←</span><span>Back</span></button>
+    <span class="tf-label">Map:</span>
+    <button type="button" id="btn-day-prev" class="day-nav" aria-label="Previous day"><span class="day-nav-arr" aria-hidden="true">←</span><span class="day-nav-txt">Back</span></button>
     <input type="date" id="map-date" min="2026-07-01" />
-    <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day"><span>Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
+    <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day"><span class="day-nav-txt">Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
     <button type="button" id="btn-day-today">Today</button>
     <span class="tf-sep" aria-hidden="true"></span>
-    <button type="button" id="btn-conflict-all">Whole conflict</button>
+    <button type="button" id="btn-conflict-all" aria-label="Whole conflict"><span class="tf-long">Whole conflict</span><span class="tf-short">All</span></button>
   </div>
   <button type="button" class="ghost" id="btn-focus-map">Expand map</button>
 </div>

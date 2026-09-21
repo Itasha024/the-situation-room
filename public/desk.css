@@ -784,3 +784,18 @@ html{scroll-behavior:smooth}
 .tally-row:first-of-type{border-top:0}
 .tally-row strong{font-variant-numeric:tabular-nums;font-weight:600;color:#eaf0f6}
 .tally-note{margin:.45rem 0 0;font-size:.68rem;color:#8fa3b6}
+/* The day row stays one line on any width: shorter labels, then a sideways scroll. */
+.time-filter .tf-short{display:none}
+@media (max-width:720px){
+  .time-filter{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .time-filter::-webkit-scrollbar{display:none}
+  .time-filter > *{flex:0 0 auto}
+  .time-filter .day-nav-txt,.time-filter .tf-long{display:none}
+  .time-filter .tf-short{display:inline}
+  .time-filter input[type="date"]{flex:1 1 7.5rem;min-width:7.5rem;max-width:10rem}
+  .time-filter #btn-day-prev,.time-filter #btn-day-next{padding:.4rem .6rem}
+}
+/* Back to the report a jump started from. */
+.jump-back{position:fixed;bottom:18px;transform:translateX(-50%);z-index:900;background:#1a2433;color:#eaf0f6;border:1px solid #4a6280;border-radius:999px;padding:.4rem .9rem;font:inherit;font-size:.78rem;cursor:pointer;box-shadow:0 4px 14px #0009}
+.jump-back:hover{background:#243447}
+.jump-back[hidden]{display:none}

@@ -98,6 +98,8 @@ export type ScanPayload = {
    * quietly never appearing.
    */
   unplaced?: { fp: string; summary: string; place?: string }[];
+  /** Stored cards this cycle gave a new "Also"; saved to the desk, never kept in the payload. */
+  touched?: LiveReport[];
 };
 
 /**

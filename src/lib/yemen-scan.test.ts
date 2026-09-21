@@ -294,6 +294,18 @@ test("a report the reader marks a duplicate joins the published card's Also", as
   assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Ali Bk", url: "https://t.me/alibk/2" }]);
 });
 
+test("another outlet retelling a stored card joins its Also, even as a follow-up", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, score: 1, tags: [] } as const;
+  const home = { ...base, fp: "a", url: "https://www.reuters.com/x", source: "Reuters", at: "2026-09-21T13:28:00Z", type: "diplomacy", summary: "Trump made no pledge of military support to Yemen's president in a call on Houthi advances, sources say", text: "US President Donald Trump spoke by phone with Yemen's president on Sunday about the Houthi advances." };
+  const relay = { ...base, fp: "b", url: "https://t.me/shin_persian/10302", source: "Shin Persian", at: "2026-09-21T14:56:00Z", type: "diplomacy", summary: "Trump made no pledge of military support to Yemen's president in a call, sources say", text: "US President Donald Trump spoke with Yemen's president on Sunday.", replyTo: "a" };
+  const reports = [relay] as never[];
+  const touched = foldIntoPublished(reports, new Set(), [home] as never[]);
+  assert.equal((reports as unknown[]).length, 0);
+  assert.equal((touched[0] as { fp: string }).fp, "a");
+  assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Shin Persian", url: "https://t.me/shin_persian/10302" }]);
+});
+
 test("one post forwarded by two channels has one copy key", async () => {
   const { copyKey } = await import("./desk/copies.ts");
   const a = "عضو المكتب السياسي لحركة أنصار الله ضيف الله الشامي: الطائرات السعودية تستهدف سوقاً شعبياً في مديرية ذو باب في محافظة تعز.";

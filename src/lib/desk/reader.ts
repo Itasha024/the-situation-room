@@ -237,8 +237,14 @@ STATEMENTS (event_type statement or diplomacy)
   speaker_lead and never opens the headline. What officials tell an outlet
   ends the headline: ", officials say", ", sources say".
 - speaker_lead: a bare surname only for a figure an international reader knows
-  (Trump, Rubio, al-Mashat, Saree, al-Alimi, Grundberg). Abdul Malik
-  al-Houthi (السيد القائد, قائد الثورة) is always "Houthi leader".
+  (Trump, Rubio, Bin Salman, Saree, Grundberg). Abdul Malik
+  al-Houthi (السيد القائد, قائد الثورة) is always "Houthi leader"; al-Alimi is
+  "Yemen's president", al-Mashat "the Houthi political council head",
+  al-Zubaidi "the STC leader", in the headline and wherever a reader would not
+  know the name.
+- Words of the speaker in the first person (our, we, us) only after the colon,
+  never "X said that our …": either "Houthi leader: our demands are legitimate"
+  or "Houthi leader says the Houthis' demands are legitimate".
   Otherwise the title alone ("Yemen's defence minister", "The Houthis' chief
   negotiator") or the affiliation alone ("A Houthi official", "A Saudi
   military analyst"). Never an unfamiliar personal name, in headline or body.
@@ -307,10 +313,28 @@ export function fixHeadline(headline: string): string {
   let h = String(headline || "").trim();
   while (OUTLET_LEAD.test(h)) h = h.replace(OUTLET_LEAD, "");
   h = h.replace(/^(?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi:/i, "Houthi leader:");
+  // People readers do not know by name go by their role.
+  for (const [name, role] of ROLE_NAMES) h = h.replace(name, (_m, at: number) => (at === 0 ? role.replace(/^the /, "") : role));
+  h = h.replace(/\b(Yemen's president)(?:,? \1)+/gi, "$1");
+  // "X said that our …" is his own words without the quote: the colon form.
+  h = h.replace(/^([^:]{2,60}?) (?:said|says|stated|stressed|affirmed|declared|added) (?:that )?((?:our|we|us|my|I)\b.*)$/, "$1: $2");
   const m = /^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);
   if (m && (REPORTED_VERB.test(m[2]) || /ed$/.test(m[2]))) h = `${m[1]} ${h.slice(m[0].length - m[2].length)}`;
+  // A colon after a name that is then reported on is no quote: "Al-Alimi:
+  // Trump made no pledge to al-Alimi, sources say".
+  const c = /^([^:]{2,60}):\s+(.+)$/.exec(h);
+  if (c) {
+    const key = c[1].split(/[\s-]+/).filter((w) => w.length >= 4).pop()?.toLowerCase();
+    const about = !!key && c[2].toLowerCase().includes(key);
+    if (about || /,? (?:\S+ ){0,2}(?:sources?|officials?|diplomats?|people familiar[^,]*) (?:say|said)$/i.test(c[2])) h = c[2];
+  }
   return h ? h[0].toUpperCase() + h.slice(1) : h;
 }
+const ROLE_NAMES: [RegExp, string][] = [
+  [/\b(?:Yemen's |Yemeni )?(?:[Pp]resident(?:ial (?:Leadership )?Council (?:head|chairman|leader))? )?(?:Rashad )?al-Alimi\b/gi, "Yemen's president"],
+  [/\b(?:STC (?:leader|head|chief) )?(?:Aidarous |Aidrous )?al-Zubaidi\b/gi, "the STC leader"],
+  [/\b(?:Houthi (?:political council|Supreme Political Council) (?:head|chief) )?(?:Mahdi )?al-Mashat\b/gi, "the Houthi political council head"],
+];
 const REPORTED_VERB =
   /^(?:did|does|do|has|had|have|is|was|were|held|spoke|met|made|took|gave|sent|told|won|in|to|not|will|would|could|may|might|plans|seeks|asks|urges|calls|weighs|mulls|meets|holds|speaks|rejects|refuses|agrees|orders|visits|receives|discusses|considers|decides|approves|signs)$/;
 
@@ -376,8 +400,8 @@ export function checkReading(r: Reading, sourceText: string): string | null {
   if (r.event_type === "statement" || r.event_type === "diplomacy") {
     // A headline shaped "X: ..." names its speaker even when the field is empty.
     const lead = String(r.speaker_lead || "").trim() || (/^([^:]{2,60}):\s/.exec(h)?.[1] ?? "");
-    if (!lead) return "statement without a speaker";
-    if (!h.toLowerCase().startsWith(lead.toLowerCase())) return "statement does not lead with its speaker";
+    // A report about someone is a plain sentence; only a named speaker leads.
+    if (lead && !h.toLowerCase().startsWith(lead.toLowerCase())) return "statement does not lead with its speaker";
   }
   if (OUTLET_LEAD.test(h)) return "headline leads with outlet";
   return null;

@@ -1372,18 +1372,67 @@ function leadOverflows(card) {
   return lead.scrollHeight > lead.clientHeight + 2;
 }
 
+function flashCard(el) {
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1600);
+}
+
+/**
+ * After a jump to an earlier report, a way back to the one it was opened
+ * from, shown only while that card is out of sight.
+ */
+let jumpBack = null;
+function offerJumpBack(from) {
+  if (jumpBack) jumpBack.stop();
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'jump-back';
+  btn.innerHTML = '<span aria-hidden="true">↑</span> Back';
+  btn.setAttribute('aria-label', 'Back to the report you came from');
+  btn.hidden = true;
+  const feed = document.getElementById('feed');
+  const place = () => {
+    const box = (feed || document.body).getBoundingClientRect();
+    btn.style.left = `${Math.round(box.left + box.width / 2)}px`;
+  };
+  const io = new IntersectionObserver(([e]) => {
+    btn.hidden = e.isIntersecting;
+    if (!btn.hidden) place();
+  });
+  const timer = setTimeout(() => stop(), 20000);
+  function stop() {
+    io.disconnect();
+    clearTimeout(timer);
+    btn.remove();
+    if (jumpBack && jumpBack.btn === btn) jumpBack = null;
+  }
+  btn.onclick = () => {
+    from.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    flashCard(from);
+    stop();
+  };
+  document.body.appendChild(btn);
+  // Observed once the jump's scroll has started, so the card is judged where it lands.
+  setTimeout(() => io.observe(from), 400);
+  jumpBack = { btn, stop };
+}
+
 function wireFeedCard(card) {
   if (!card) return;
   const reply = card.querySelector('.reply-to');
   if (reply) {
+    // The earlier report may have no card of its own (folded into another
+    // card's copies): then the link leads nowhere and is not shown.
+    const findParent = () => document.querySelector(`#feed .card[data-fp="${CSS.escape(reply.dataset.parent)}"]`);
+    if (!findParent()) reply.remove();
     reply.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      const target = document.querySelector(`#feed .card[data-fp="${CSS.escape(reply.dataset.parent)}"]`);
+      const target = findParent();
       if (!target) return;
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      target.classList.add('flash');
-      setTimeout(() => target.classList.remove('flash'), 1600);
+      flashCard(target);
+      offerJumpBack(card);
     };
   }
   const btn = card.querySelector('.toggle');

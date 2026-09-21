@@ -201,6 +201,14 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                    and not exists (select 1 from desk_report d where d.url = ${r.url})
               `;
             }
+            // The card rewritten from its original's full text replaces the
+            // relay's version: headline, body, source and link.
+            if (r.tags?.includes("original")) {
+              await sql`
+                update desk_report set summary = ${r.summary}, body = ${r.text}, url = ${r.url}, source = ${r.source}, citing = null
+                 where fp = ${r.fp} and (summary is distinct from ${r.summary} or url is distinct from ${r.url})
+              `;
+            }
             // Another outlet's take on this story arrived after it was stored.
             if (r.alsoReportedBy?.length) {
               const also = JSON.stringify(r.alsoReportedBy);

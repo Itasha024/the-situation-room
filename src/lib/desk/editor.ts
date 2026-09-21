@@ -442,7 +442,8 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
   };
   const key = copyKey(c.text);
   if (key) row.copyKey = key;
-  if (r.duplicate_of && r.duplicate_of !== c.fp) row.duplicateOf = r.duplicate_of;
+  // The original always leads: it is never folded under a relay's card.
+  if (r.duplicate_of && r.duplicate_of !== c.fp && !c.tags.includes("original")) row.duplicateOf = r.duplicate_of;
   else if (r.follows_up && r.follows_up !== c.fp) row.replyTo = r.follows_up;
   row.confidence = confidenceOf(row, []);
   const place = places.find((p) => p.country !== "sea") || places[0];
@@ -470,4 +471,15 @@ export function confidenceOf(r: LiveReport, corroboratedBy: OutletSide[]): numbe
 /** `decide` on a bare source text, for tests. */
 export function decideForTest(r: Reading, text: string): EditorVerdict {
   return decide(r, { source: "Al-Masirah", url: "https://t.me/almasirah2/1", text, at: "2026-09-21T12:00:00Z", lean: "houthi", fp: "t", score: 1, tags: [] });
+}
+
+/**
+ * Put candidates on the reader's queue for the next cycle: an original found
+ * and read in full after this cycle's reading was done.
+ */
+export async function queueForReading(store: DeskStore, cands: Candidate[], now = Date.now()): Promise<void> {
+  if (!cands.length) return;
+  const queue = (await store.getJson<Queued[]>(QUEUE_KEY)) ?? [];
+  for (const c of cands) if (!queue.some((q) => q.url === c.url)) queue.push({ ...c, queuedAt: now });
+  await store.putJson(QUEUE_KEY, queue);
 }

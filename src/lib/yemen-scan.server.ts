@@ -15,10 +15,10 @@ import { digest } from "./desk/digest.ts";
 import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
 import { backupDaily } from "./desk/backup.ts";
-import { type Candidate, confidenceOf, editCandidates } from "./desk/editor.ts";
+import { type Candidate, confidenceOf, editCandidates, queueForReading } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { isGnews, resolveGoogleNews } from "./desk/gnews.ts";
-import { traceOrigins } from "./desk/origin.ts";
+import { type ReRead, traceOrigins } from "./desk/origin.ts";
 import { sameStory, sameWords } from "./desk/copies.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 
@@ -844,10 +844,19 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // A relayed report is traced to its original, which then replaces it as the
   // source; `late` are stored reports whose original turned up only now.
   let late: LiveReport[] = [];
+  const reread: ReRead[] = [];
   try {
-    late = await traceOrigins(await getStore(), reports, new Map(hits.map((h) => [h.url, h.text])), now);
+    late = await traceOrigins(await getStore(), reports, new Map(hits.map((h) => [h.url, h.text])), now, reread);
+    // Originals read in full go to the reader next cycle; the card is then
+    // rewritten from the original's text under the same fp.
+    await queueForReading(await getStore(), reread, now);
   } catch {
     // Untraced reports keep their relay as source; nothing else changes.
+  }
+  // A card written from its original replaces the relay's version of it.
+  const fromOriginal = new Set(reports.filter((r) => r.tags?.includes("original")).map((r) => r.fp));
+  for (let i = reports.length - 1; i >= 0; i -= 1) {
+    if (fromOriginal.has(reports[i].fp) && !reports[i].tags?.includes("original")) reports.splice(i, 1);
   }
 
   /**

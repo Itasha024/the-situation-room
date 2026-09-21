@@ -22,3 +22,20 @@ test("a paraphrase is matched on shared names within the time window", () => {
   assert.ok(overlap("Trump Gets Caught in a Dilemma Over a Saudi Plea for Military Help", keys, at - 3600_000, at) >= 2);
   assert.equal(overlap("Trump Gets Caught in a Dilemma Over a Saudi Plea", keys, at - 5 * 86400_000, at), 0);
 });
+
+test("an original's text is read from its paragraphs, without page furniture", async () => {
+  const { articleText } = await import("./origin.ts");
+  const html = `<p>ListenSept 21 - US President Donald Trump spoke by phone with Yemeni President Rashad al-Alimi on Sunday, four people familiar with the matter said.</p>
+    <p>Subscribe to our newsletter for the latest news and analysis every morning.</p>
+    <p>Two of the sources said Trump had made no direct pledge of military support during the call. REUTERS</p><p>Short.</p>`;
+  assert.equal(
+    articleText(html),
+    "Sept 21 - US President Donald Trump spoke by phone with Yemeni President Rashad al-Alimi on Sunday, four people familiar with the matter said.\nTwo of the sources said Trump had made no direct pledge of military support during the call.",
+  );
+});
+
+test("a match days older than the post is refused", () => {
+  const keys = keywords("Yemeni president asked US for government support against Houthis", "en", "Reuters");
+  const at = Date.parse("2026-09-21T13:29:00Z");
+  assert.equal(overlap("China presses Iran to help rein in Houthis after Saudi appeal", keys, Date.parse("2026-09-17T10:00:00Z"), at), 0);
+});

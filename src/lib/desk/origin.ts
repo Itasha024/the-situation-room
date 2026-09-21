@@ -12,7 +12,7 @@
  * Code finds the citation and checks the match; no model call is spent.
  */
 
-import { resolveGoogleNews, searchGoogleNews } from "./gnews.ts";
+import { BROWSER_UA, resolveGoogleNews, searchGoogleNews } from "./gnews.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -94,7 +94,7 @@ export function keywords(text: string, lang: "en" | "ar", skip: string): string[
 
 /** Does a search result tell the same story? Shared words and a fitting time. */
 export function overlap(title: string, want: string[], resultAt: number, reportAt: number): number {
-  if (!Number.isFinite(resultAt) || resultAt > reportAt + 6 * 3600_000 || resultAt < reportAt - 72 * 3600_000) return 0;
+  if (!Number.isFinite(resultAt) || resultAt > reportAt + 6 * 3600_000 || resultAt < reportAt - 36 * 3600_000) return 0;
   const have = new Set((title.match(/[A-Za-zء-ي][A-Za-z'ء-ي-]{2,}/g) || []).map((w) => w.toLowerCase()));
   return want.filter((w) => have.has(w.toLowerCase())).length;
 }
@@ -108,34 +108,101 @@ export function weight(title: string, want: string[]): number {
 /** A paraphrase shares few words with the original's headline: two is a match. */
 const MIN_SHARED = 2;
 
-// v2: matches weighted by the post's leading names; v1 held looser matches.
-const CACHE_KEY = "origin-cache-v2";
+// v3: video pages and matches over 36 hours old refused, originals read in
+// full; v2 matches weighted by the post's leading names; v1 held looser matches.
+const CACHE_KEY = "origin-cache-v3";
 const CACHE_MAX = 600;
 /** Searches per tick: each costs a Google search plus a link resolution. */
 export const ORIGIN_BUDGET = 4;
 const RETRY_MS = 3600_000;
 const GIVE_UP_MS = 24 * 3600_000;
 
-type Found = { url: string; source: string };
+type Found = { url: string; source: string; title?: string; readBy?: string };
+
+/** The original, read in full and queued for the reader to write the card from. */
+export type ReRead = { source: string; url: string; text: string; at: string; lean: string; fp: string; score: number; tags: string[] };
+/** Originals read per tick: each costs a page, and maybe a search and three copies. */
+const READ_BUDGET = 2;
 type Entry =
   | { found: Found; at: number }
   | { cited: Cited; keys: string[]; firstAt: number; lastAt: number; report: LiveReport };
+
+/** Paths that are never the article itself: video, photo and live pages, a bare front page. */
+const NOT_ARTICLE = /\/(?:video|videos|pictures|graphics|live)\//i;
+function articlePath(url: string): boolean {
+  try {
+    const p = new URL(url).pathname;
+    return p.length > 1 && !NOT_ARTICLE.test(p);
+  } catch {
+    return false;
+  }
+}
 
 async function search(cited: Cited, keys: string[], reportAt: number): Promise<Found | null> {
   const q = `site:${cited.site} ${keys.slice(0, 4).join(" ")} when:3d`;
   const items = await searchGoogleNews(q, cited.lang);
   // Enough shared words to count, then the best fit: a word ranked early (the
   // post's leading names, "Trump") weighs more than one from deep in the body.
-  let hit: (typeof items)[number] | undefined;
-  let best = 0;
-  for (const i of items) {
-    if (overlap(i.title, keys, i.at, reportAt) < MIN_SHARED) continue;
-    const score = weight(i.title, keys);
-    if (score > best) [hit, best] = [i, score];
+  const ranked = items
+    .filter((i) => overlap(i.title, keys, i.at, reportAt) >= MIN_SHARED)
+    .sort((a, b) => weight(b.title, keys) - weight(a.title, keys));
+  // A video page or a section front is not the article: try the next fit.
+  for (const hit of ranked.slice(0, 2)) {
+    const url = await resolveGoogleNews(hit.link);
+    if (url && articlePath(url)) return { url, source: cited.name, title: hit.title };
   }
-  if (!hit) return null;
-  const url = await resolveGoogleNews(hit.link);
-  return url ? { url, source: cited.name } : null;
+  return null;
+}
+
+async function page(url: string): Promise<string> {
+  try {
+    const res = await fetch(url, { headers: { "user-agent": BROWSER_UA }, signal: AbortSignal.timeout(8000) });
+    return res.ok ? await res.text() : "";
+  } catch {
+    return "";
+  }
+}
+
+/** An article page's paragraphs, without the page's furniture. */
+export function articleText(html: string): string {
+  return [...String(html || "").matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map((m) =>
+      m[1]
+        .replace(/<[^>]+>/g, "")
+        .replace(/&#x27;|&#39;|&rsquo;|&lsquo;/g, "'")
+        .replace(/&quot;|&ldquo;|&rdquo;/g, '"')
+        .replace(/&amp;/g, "&")
+        .replace(/&nbsp;|&#160;/g, " ")
+        .replace(/^Listen\s*/, "")
+        .replace(/\s*REUTERS\s*$/, "")
+        .trim(),
+    )
+    .filter((t) => t.length > 60 && !/cookie|subscribe|sign up|newsletter|all rights reserved|©/i.test(t))
+    .join("\n")
+    .slice(0, 3000);
+}
+
+const titleKey = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+/**
+ * The original's full text. Wires such as Reuters refuse automated readers, so
+ * when the page itself will not open, the same story is read from a paper
+ * that carries the wire under the same headline (The Straits Times,
+ * MarketScreener, ...). No page is forced: a refusal moves on to the next copy.
+ */
+export async function readOriginal(f: Found): Promise<string> {
+  const own = articleText(await page(f.url));
+  if (own.length >= 400 || !f.title) return own;
+  const want = titleKey(f.title);
+  const copies = (await searchGoogleNews(`"${f.title}"`, "en")).filter(
+    (i) => i.outlet && i.outlet !== f.source && titleKey(i.title) === want,
+  );
+  for (const i of copies.slice(0, 3)) {
+    const url = await resolveGoogleNews(i.link);
+    const text = url ? articleText(await page(url)) : "";
+    if (text.length >= 400) return text;
+  }
+  return own;
 }
 
 /**
@@ -147,6 +214,7 @@ export async function traceOrigins(
   reports: LiveReport[],
   sourceText: Map<string, string>,
   now = Date.now(),
+  reread: ReRead[] = [],
 ): Promise<LiveReport[]> {
   const cache = (await store.getJson<Record<string, Entry>>(CACHE_KEY)) ?? {};
   let budget = ORIGIN_BUDGET;
@@ -158,12 +226,43 @@ export async function traceOrigins(
     r.citing = undefined;
     r.alsoReportedBy = undefined;
   };
+  let reads = READ_BUDGET;
+  /**
+   * The first report traced to an original has the original read and queued,
+   * so the card is written from the original text, not the relay. Another
+   * relay of the same original joins that card instead.
+   */
+  const readFrom = async (r: LiveReport, f: Found, cited: Cited | null) => {
+    const owner = Object.entries(cache).find(([fp, e]) => fp !== r.fp && "found" in e && e.found.url === f.url && e.found.readBy)?.[1];
+    if (owner && "found" in owner) {
+      r.duplicateOf = owner.found.readBy;
+      return;
+    }
+    if (f.readBy || !cited || cited.lang !== "en" || cited.kind !== "outlet" || reads <= 0) return;
+    reads -= 1;
+    const text = await readOriginal(f);
+    if (text.length < 400) return;
+    f.readBy = r.fp;
+    dirty = true;
+    reread.push({
+      source: f.source,
+      url: f.url,
+      text: `${f.title ?? ""}
+${text}`.trim(),
+      at: r.at,
+      lean: "intl",
+      fp: r.fp,
+      score: r.score ?? 0,
+      tags: [...(r.tags ?? []), "original"],
+    });
+  };
 
   for (const r of reports) {
     const text = sourceText.get(r.url);
     const prior = cache[r.fp];
     if (prior && "found" in prior) {
       apply(r, prior.found);
+      await readFrom(r, prior.found, findCitation(text ?? "", "", ""));
       continue;
     }
     if (prior) {
@@ -186,6 +285,7 @@ export async function traceOrigins(
     if (found) {
       cache[r.fp] = { found, at: now };
       apply(r, found);
+      await readFrom(r, found, cited);
     }
   }
 
@@ -202,6 +302,7 @@ export async function traceOrigins(
     cache[fp] = { found, at: now };
     const r = { ...e.report };
     apply(r, found);
+    await readFrom(r, found, e.cited);
     late.push(r);
   }
 

@@ -12,6 +12,8 @@
  * Off with `DESK_SELF_TICK=0`. Dev only — `apply: "serve"`.
  */
 
+import { loadEnv } from "vite";
+
 const DEFAULT_INTERVAL_MS = 60_000;
 
 export function deskTickPlugin() {
@@ -19,7 +21,11 @@ export function deskTickPlugin() {
     name: "desk:self-tick",
     apply: "serve",
     configureServer(server) {
-      if (process.env.DESK_SELF_TICK === "0") {
+      // Vite leaves non-VITE_ .env entries out of process.env, so read the
+      // flag from .env too — the shell still wins when it sets one.
+      const fileEnv = loadEnv(server.config.mode, server.config.root, "DESK_");
+      const selfTick = process.env.DESK_SELF_TICK ?? fileEnv.DESK_SELF_TICK;
+      if (selfTick === "0") {
         server.config.logger.info("[desk] self-tick disabled (DESK_SELF_TICK=0)");
         return;
       }

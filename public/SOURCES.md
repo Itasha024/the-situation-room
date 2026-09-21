@@ -47,6 +47,8 @@ The client pulls `/api/scan` every 5 minutes. The map/feed are patched in place 
 - Mohammed Abdulsalam — `@abdulsalamsalah`
 - Al-Masirah — `@almasirah2`
 - Al-Aqsa Breaking — `@alagsa3agel`
+- Al-Akhbar — `@Alakhbar_News` (every 15 minutes)
+- Erem News — `@eremnews` (every 15 minutes)
 
 ## Websites
 

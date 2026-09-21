@@ -34,6 +34,7 @@ type ChannelScan = Channel & { cadence: Cadence };
 type RssFeed = { url: string; name: string; id: string; cadence: Cadence; mode?: "rss" | "homepage-pdf" | "homepage" };
 
 const C5: Cadence = { everyMin: 5 };
+const C15: Cadence = { everyMin: 15 };
 const C3H: Cadence = { everyHours: 3 };
 const C90: Cadence = { everyHours: 1.5 };
 const C_AAWSAT: Cadence = { atHours: [17, 18, 20, 22] };
@@ -60,6 +61,10 @@ const TG: ChannelScan[] = [
   { id: "abdulsalamsalah", name: "Mohammed Abdulsalam", lean: "houthi", cadence: C5 },
   { id: "almasirah2", name: "Al-Masirah", lean: "houthi", cadence: C5 },
   { id: "alagsa3agel", name: "Al-Aqsa Breaking", lean: "houthi", cadence: C5 },
+  // Their sites refuse automated readers (403); their channels post each
+  // story's headline and first line, minutes after publication.
+  { id: "Alakhbar_News", name: "Al-Akhbar", lean: "houthi", cadence: C15 },
+  { id: "eremnews", name: "Erem News", lean: "gov", cadence: C15 },
 ];
 
 function gnews(q: string, hl = "en-US", gl = "US", ceid = "US:en") {

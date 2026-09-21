@@ -152,6 +152,18 @@ export default defineConfig(({ command, isPreview }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    watch: {
+      // Build output is not source: a `npm run build` while dev runs writes
+      // here, and on Windows a locked file crashes the watcher. The desk's own
+      // data files are rewritten by every tick and fetched fresh by the page,
+      // so a change to them must not reload it.
+      ignored: [
+        "**/.vercel/**",
+        "**/.output/**",
+        "**/public/data.json",
+        "**/public/live-reports.json",
+      ],
+    },
   },
   preview: {
     host: "127.0.0.1",

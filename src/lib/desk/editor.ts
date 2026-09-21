@@ -35,6 +35,7 @@ import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
 import { normaliseArabic } from "./relevance.ts";
+import { copyKey } from "./copies.ts";
 
 export type Candidate = {
   source: string;
@@ -406,6 +407,8 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
     interest: r.interest,
     hasTime: !!r.has_time,
   };
+  const key = copyKey(c.text);
+  if (key) row.copyKey = key;
   if (r.duplicate_of && r.duplicate_of !== c.fp) row.duplicateOf = r.duplicate_of;
   else if (r.follows_up && r.follows_up !== c.fp) row.replyTo = r.follows_up;
   row.confidence = confidenceOf(row, []);

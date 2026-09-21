@@ -38,6 +38,8 @@ export type LiveReport = {
   replyTo?: string;
   /** fp of a published report telling this same event with nothing new; folded into its "Also", never stored. */
   duplicateOf?: string;
+  /** `copyKey` of the post it was written from: forwards of one post share it. */
+  copyKey?: string;
   /** Inputs to the trust figure — see credibility.ts. */
   side?: "houthi" | "gov" | "neutral" | "agency";
   interest?: "for" | "against" | "neutral";

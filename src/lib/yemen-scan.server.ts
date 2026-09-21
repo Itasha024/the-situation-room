@@ -543,6 +543,8 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>)
     const t = Date.parse(r.at);
     // The reader said it: this is another outlet on an event already published.
     let home = r.duplicateOf ? byTime.find((o) => o !== r && !gone.has(o) && o.fp === r.duplicateOf) : undefined;
+    // The same post forwarded by another channel, seen in a later scan.
+    if (!home && r.copyKey) home = byTime.find((o) => o !== r && !gone.has(o) && o.copyKey === r.copyKey && Date.parse(o.at) <= t);
     if (!home && talk(r)) {
       home = byTime.find(
         (o) => o !== r && !gone.has(o) && talk(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= STORY_WINDOW_MS && sameStory(o, r),

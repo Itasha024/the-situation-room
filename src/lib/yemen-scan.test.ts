@@ -293,3 +293,13 @@ test("a report the reader marks a duplicate joins the published card's Also", as
   assert.deepEqual((reports as { fp: string }[]).map((r) => r.fp), ["a", "c"]);
   assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Ali Bk", url: "https://t.me/alibk/2" }]);
 });
+
+test("one post forwarded by two channels has one copy key", async () => {
+  const { copyKey } = await import("./desk/copies.ts");
+  const a = "عضو المكتب السياسي لحركة أنصار الله ضيف الله الشامي: الطائرات السعودية تستهدف سوقاً شعبياً في مديرية ذو باب في محافظة تعز.";
+  assert.equal(copyKey(`🚫 ${a}`), copyKey(a));
+  assert.equal(copyKey(`🔴 عاجل | ${a} #اليمن https://t.me/x`), copyKey(a));
+  assert.notEqual(copyKey(a), copyKey(a.replace("ذو باب", "حيفان")));
+  const { placesIn } = await import("./desk/gazetteer.ts");
+  assert.ok(placesIn(a).some((p) => p.name === "Dhubab"));
+});

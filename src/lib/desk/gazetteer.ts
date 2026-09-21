@@ -219,7 +219,7 @@ const YEMEN: Place[] = [
     kind: "district",
     country: "Yemen",
     region: "a coastal district beside the Bab al-Mandab strait",
-    aliases: ["ذباب", "Dhubab", "ד׳ובאב"],
+    aliases: ["ذباب", "ذو ?باب", "Dhubab", "Dhu ?Bab", "ד׳ובאב"],
   },
   {
     name: "Mayun",

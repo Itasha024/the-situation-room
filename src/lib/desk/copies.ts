@@ -70,3 +70,23 @@ export function sameStory(a: { summary: string; text?: string }, b: { summary: s
   for (const w of storyNames(tb)) if (na.has(w)) names += 1;
   return names >= 3 && overlap >= 0.3;
 }
+
+/**
+ * The same post forwarded by several channels: letters and digits only, with
+ * links, handles, hashtags, emoji and the "urgent" tag gone. Two posts with
+ * one key are one account, whichever scan saw each.
+ */
+export function copyKey(text: string): string {
+  const core = String(text || "")
+    .replace(/https?:\/\/\S+|[@#][\p{L}\p{N}_]+/gu, " ")
+    .replace(/عاجل|العاجل/g, " ")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .slice(0, 200);
+  if (core.length < 40) return "";
+  let h = 5381;
+  for (let i = 0; i < core.length; i += 1) h = ((h * 33) ^ core.charCodeAt(i)) >>> 0;
+  return h.toString(36) + core.length.toString(36);
+}

@@ -124,10 +124,23 @@ test("the side decides Houthi or Yemeni government wording", async () => {
   const { sideWords } = await import("./editor.ts");
   assert.equal(sideWords("Six Saudi soldiers killed in Yemeni attack", undefined), "Six Saudi soldiers killed in Houthi attack");
   assert.equal(sideWords("Yemeni armed forces target Saudi ship", "houthi"), "Houthi forces target Saudi ship");
+  assert.equal(sideWords("Saree: Yemeni armed forces executed operations against Riyadh and Yanbu", undefined), "Saree: Houthi forces executed operations against Riyadh and Yanbu");
+  assert.equal(sideWords("Yemeni foreign ministry: ready to cooperate to face Israeli danger", "houthi"), "The Houthi foreign ministry: ready to cooperate to face Israeli danger");
   assert.equal(sideWords("Yemen's defence minister warns Saudi ships", "houthi"), "Houthi defence minister warns Saudi ships");
   assert.equal(sideWords("Yemen's defence minister inspects Marib fronts", "government"), "Yemen's government defence minister inspects Marib fronts");
   assert.equal(sideWords("Yemeni forces advance in Marib", "government"), "Yemeni government forces advance in Marib");
   assert.equal(sideWords("Yemeni government forces advance in Marib", "government"), "Yemeni government forces advance in Marib");
   // Unclear side: no label added.
   assert.equal(sideWords("Yemen's defence minister spoke", "unclear"), "Yemen's defence minister spoke");
+});
+
+test("a side-corrected statement still leads with its speaker", async () => {
+  const { decideForTest } = await import("./editor.ts");
+  const src = "الخارجية اليمنية: مستعدون للتعاون لمواجهة الخطر الإسرائيلي";
+  const v = decideForTest(
+    reading({ event_type: "statement", actor_side: "houthi", speaker_lead: "Yemeni foreign ministry", headline: "Yemeni foreign ministry: ready to cooperate to face Israeli danger", body: "The Yemeni foreign ministry said it is ready to cooperate against the Israeli danger." }),
+    src,
+  );
+  assert.equal(v.kind, "publish");
+  assert.equal(v.kind === "publish" && v.report.summary, "The Houthi foreign ministry: ready to cooperate to face Israeli danger");
 });

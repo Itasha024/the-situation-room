@@ -343,10 +343,14 @@ const REWORD: [RegExp, string][] = [
  */
 export function sideWords(s: string, side: string | undefined): string {
   let out = String(s || "");
-  const onSaudi = /\bSaudi\b/.test(out) && /\bYemeni (?:attacks?|drones?|missiles?|operations?|strikes?)\b/.test(out);
+  const onSaudi =
+    (/^(?:Saree|Houthi|Al-Mashat)\b/.test(out) || /\b(?:Saudi|Riyadh|Jeddah|Yanbu|Jizan|Najran|Abha|Aramco|Dammam)\b/.test(out)) &&
+    /\bYemeni (?:attacks?|drones?|missiles?|operations?|strikes?|armed forces)\b/i.test(out);
   if (side === "houthi" || (!side && onSaudi)) {
     out = out
       .replace(/\b(?:the )?Yemen(?:i|'s) armed forces\b/gi, "Houthi forces")
+      .replace(/\b(?:the )?Yemen(?:i|'s) (foreign|defen[cs]e|interior|information|oil) ministry\b/gi, "the Houthi $1 ministry")
+      .replace(/^the Houthi/, "The Houthi")
       .replace(/\b(?<!government )Yemeni (forces|army|military)\b/g, "Houthi forces")
       .replace(/\bYemeni (attacks?|drones?|missiles?|operations?|strikes?|drone attacks?|missile attacks?)\b/g, "Houthi $1")
       .replace(/\bYemen's (defen[cs]e minister|chief of staff|military spokesman|army)\b/g, "Houthi $1")
@@ -373,6 +377,7 @@ function decide(raw: Reading, c: Candidate): EditorVerdict {
   const side = raw.actor_side ?? (sideWords(`${r.headline} ${r.body}`, undefined) !== `${r.headline} ${r.body}` ? "houthi" : undefined);
   r.headline = sideWords(r.headline, side);
   r.body = sideWords(r.body, side);
+  if (r.speaker_lead) r.speaker_lead = sideWords(r.speaker_lead, side);
   // An outlet is never the speaker. A statement whose headline forgot its
   // speaker gets the speaker put first, and a colon that introduces no words
   // of theirs ("Trump: held a call") becomes a plain sentence.
@@ -460,4 +465,9 @@ export function confidenceOf(r: LiveReport, corroboratedBy: OutletSide[]): numbe
     hasTime: !!r.hasTime,
     corroboratedBy,
   });
+}
+
+/** `decide` on a bare source text, for tests. */
+export function decideForTest(r: Reading, text: string): EditorVerdict {
+  return decide(r, { source: "Al-Masirah", url: "https://t.me/almasirah2/1", text, at: "2026-09-21T12:00:00Z", lean: "houthi", fp: "t", score: 1, tags: [] });
 }

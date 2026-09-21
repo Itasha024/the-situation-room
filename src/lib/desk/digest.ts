@@ -620,3 +620,10 @@ const STATEMENT_THEMES: [RegExp, ThemeGist][] = [
 ];
 
 export { casualtyPhrase, mapsAsPin };
+
+/** An outlet's alignment, for text that must attribute a party's claims. */
+export function outletSide(source: string): "Houthi-aligned" | "Gov/Saudi-aligned" | "" {
+  if (HOUTHI_SRC_RE.test(source)) return "Houthi-aligned";
+  if (GOV_SRC_RE.test(source)) return "Gov/Saudi-aligned";
+  return "";
+}

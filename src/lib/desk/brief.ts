@@ -319,3 +319,12 @@ function fmtWindow(iso: string): string {
   }).format(d);
   return `${time} on ${day}`;
 }
+
+/** The ids of every front (tracked or opened) a report belongs to. */
+export function frontIdsOf(r: LiveReport, extraFronts: ExtraFront[] = []): string[] {
+  const blob = `${r.place || ""} ${r.summary} ${r.text}`;
+  return [
+    ...FRONT_MATCH.filter(({ re }) => re.test(blob)).map(({ id }) => id as string),
+    ...extraFronts.filter((x) => inExtraFront(r, x)).map((x) => x.id),
+  ];
+}

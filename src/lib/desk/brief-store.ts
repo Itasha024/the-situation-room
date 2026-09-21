@@ -18,7 +18,7 @@
  */
 
 import type { LiveReport } from "./types.ts";
-import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront } from "./brief.ts";
+import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
 import { writeProse } from "./prose.ts";
 import type { DeskStore } from "./store.ts";
@@ -90,6 +90,7 @@ export async function refreshBrief(
         previous: saved?.brief.fronts?.find((p) => p.id === f.id)?.line || "",
       })),
       saved?.brief.situation?.line || "",
+      (r) => frontIdsOf(r, extraFronts),
     );
     if (prose?.situation) brief.situation = { ...brief.situation, line: prose.situation };
     for (const f of brief.fronts) if (prose?.fronts[f.id]) f.line = prose.fronts[f.id];

@@ -11,3 +11,11 @@ test("Arabic places left in English copy become English", () => {
 test("known places take the gazetteer's name", () => {
   assert.equal(anglicise("Clashes in تعز and مأرب"), "Clashes in Taiz and Marib");
 });
+
+import { reword } from "./editor.ts";
+
+test("the sources' partisan words are reworded, not left to sink the report", () => {
+  assert.equal(reword("Missiles fired at the Saudi enemy positions"), "Missiles fired at Saudi forces positions");
+  assert.equal(reword("Houthi forces fired at enemy positions"), "Houthi forces fired at opposing positions");
+  assert.equal(reword("despite the US-Saudi aggression"), "despite the Saudi-led coalition");
+});

@@ -225,9 +225,40 @@ export async function editCandidates(
 }
 
 /** A reading, checked, becomes a report — or a rejection with its reason. */
+/**
+ * The sources' vocabulary the model sometimes carries into English. Reworded
+ * here: a real statement or strike must not be lost over one word.
+ */
+const REWORD: [RegExp, string][] = [
+  [/\bthe (Saudi|US|American|Israeli|Zionist|Emirati|Houthi) enem(?:y|ies)\b/gi, "$1 forces"],
+  [/\benemy (positions|forces|targets|aircraft|vessels|ships)\b/gi, "opposing $1"],
+  [/\bthe enemy\b/gi, "the opposing side"],
+  [/\benem(?:y|ies)\b/gi, "opponents"],
+  [/\bthe (?:US-Saudi |Saudi-American |Saudi |American )?aggression\b/gi, "the Saudi-led coalition"],
+  [/\baggression\b/gi, "attacks"],
+  [/\bmartyrdom\b/gi, "death"],
+  [/\bmartyred\b/gi, "killed"],
+  [/\bmartyrs?\b/gi, "people killed"],
+  [/\bmercenar(?:y|ies)\b/gi, "government forces"],
+  [/\bZionist entity\b/gi, "Israel"],
+  [/\bZionists?\b/gi, "Israeli"],
+];
+
+export function reword(s: string): string {
+  let out = String(s || "");
+  for (const [re, to] of REWORD) out = out.replace(re, to);
+  return out.replace(/\bSaudi forces forces\b/g, "Saudi forces");
+}
+
 function decide(raw: Reading, c: Candidate): EditorVerdict {
-  // Arabic left in the English copy is fixed here, not grounds for rejection.
-  const r: Reading = { ...raw, headline: anglicise(raw.headline), body: anglicise(raw.body) };
+  // Arabic left in the English copy and the sources' partisan words are fixed
+  // here, not grounds for rejection.
+  const r: Reading = { ...raw, headline: reword(anglicise(raw.headline)), body: reword(anglicise(raw.body)) };
+  // A statement whose headline forgot its speaker gets the speaker put first.
+  const lead = String(r.speaker_lead || "").trim();
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
+    r.headline = `${lead}: ${r.headline.trim()}`;
+  }
   const problem = checkReading(r, c.text);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };

@@ -162,6 +162,14 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    is a programme clip, not a report of clashes — publish=false.
 3. SUBSTANTIVE. A reader learns what happened or what was said about what.
    "A spokesman said something" with no content is not a report.
+   A news outlet's HEADLINE alone is substantive when it states a fact or a
+   development about this war ("Trump caught in dilemma over Saudi plea for
+   military help", "Houthis warn against joining Saudi Arabia", "Arab League
+   condemns Houthi attacks on Saudi Arabia"): publish it, body = that fact in
+   one or two sentences, nothing added. States and bodies condemning or
+   backing a side in this war are diplomacy, in scope. A terse alert ("a
+   missile salvo from Yemen", "reports of strikes on Sanaa") is a report:
+   publish it as exactly that, no more.
 
 WHO DID WHAT TO WHOM — never infer, never assume
 - The actor is who the TEXT says acted. Never assign an attack to the Houthis

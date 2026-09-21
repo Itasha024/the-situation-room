@@ -205,6 +205,19 @@ test("the feed read is bounded, so one request cannot ask for the whole archive"
   assert.equal(slice.reports.length, 1);
 });
 
+test("the feed pages back: `before` returns only strictly older rows", async () => {
+  const store = createPgStore(provider);
+  const all = await store.recentDesk(50);
+  assert.ok(all.reports.length >= 2, "fixture has at least two rows");
+  const newest = String(all.reports[0].at);
+  const older = await store.recentDesk(50, newest);
+  assert.ok(older.reports.length > 0, "something is older than the newest row");
+  assert.ok(
+    older.reports.every((r) => Date.parse(String(r.at)) < Date.parse(newest)),
+    "no row at or after the cursor",
+  );
+});
+
 test("a link to a section front is not a report", async () => {
   const store = createPgStore(provider);
   const res = await store.mergeIntoDesk([report({ fp: "live-d", url: "https://example.com/" })]);

@@ -31,8 +31,11 @@ export const Route = createFileRoute("/api/desk")({
           // entire archive on every request.
           const limit = Number.isFinite(asked) ? Math.min(Math.max(asked, 1), 1000) : 400;
 
+          // Paging back: rows strictly older than this ISO time.
+          const before = url.searchParams.get("before") || undefined;
+
           const store = await getStore();
-          const slice = await store.recentDesk(limit);
+          const slice = await store.recentDesk(limit, before);
 
           return json(
             { ok: true, store: store.kind, ...slice },

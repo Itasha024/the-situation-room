@@ -126,15 +126,18 @@ export function createFsStore(): DeskStore {
      * two drivers answering the same question, so `/api/desk` behaves
      * identically in development and deployed.
      */
-    async recentDesk(limit = 400): Promise<DeskSlice> {
+    async recentDesk(limit = 400, before?: string): Promise<DeskSlice> {
+      const cut = before ? Date.parse(before) : NaN;
+      const older = (r: Record<string, unknown>) =>
+        !Number.isFinite(cut) || Date.parse(String(r.at || "")) < cut;
       const data = await readJson<DeskSnapshot>(DATA_FILE);
       if (!data) return { updatedAt: null, reports: [], events: [] };
       const byAtDesc = (a: Record<string, unknown>, b: Record<string, unknown>) =>
         String(b.at || "").localeCompare(String(a.at || ""));
       return {
         updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null,
-        reports: [...(data.reports ?? [])].sort(byAtDesc).slice(0, limit) as DeskReportRow[],
-        events: [...(data.events ?? [])].sort(byAtDesc).slice(0, limit) as unknown as DeskEventRow[],
+        reports: [...(data.reports ?? [])].filter(older).sort(byAtDesc).slice(0, limit) as DeskReportRow[],
+        events: [...(data.events ?? [])].filter((e) => older(e as Record<string, unknown>)).sort(byAtDesc).slice(0, limit) as unknown as DeskEventRow[],
       };
     },
 

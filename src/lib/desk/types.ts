@@ -102,6 +102,12 @@ export type ScanState = {
   lastScanAt: Record<string, number>;
   /** Epoch ms of the last completed tick, for health reporting. */
   lastTickAt?: number;
+  /**
+   * Channel id → highest Telegram post number already read. Lets a scan page
+   * back through a busy channel to the last post it saw, instead of reading
+   * only whatever fits on the channel's first page.
+   */
+  lastTgPost?: Record<string, number>;
 };
 
 export const EMPTY_SCAN_STATE: ScanState = { scannedOnce: false, lastScanAt: {} };

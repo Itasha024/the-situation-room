@@ -52,6 +52,7 @@ const DESK_HTML = `
   <div class="rail-splitter" id="rail-splitter" role="separator" aria-orientation="vertical" aria-label="Resize the report column" title="Drag to widen the report column"></div>
   <aside class="rail" id="rail">
     <div class="rail-head"><h2>Latest reports</h2></div>
+    <div class="feed-fresh" id="feed-fresh" aria-live="polite"></div>
     <div class="feed-legend" id="feed-legend" aria-label="What the card colours mean">
       <span><span class="sw" style="background:#c45c26"></span>Houthi-aligned outlet</span>
       <span><span class="sw" style="background:#22c55e"></span>Government or Saudi-aligned</span>

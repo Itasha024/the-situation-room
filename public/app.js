@@ -825,7 +825,33 @@ function feedClusterKey(r) {
   // else is one story only within its three-hour slot.
   if (b === 'ksa-alert') return `${ymd}|${t}|${b}`;
   if (t === 'combat' || t === 'strike' || t === 'economy') return `${ymd}|${slot}|${t}|${b}`;
+  // One speech arrives as many posts; a named speaker within a three-hour slot
+  // is one story. Mirrors namedSpeaker() in yemen-scan.server.ts.
+  if (t === 'statement' || t === 'diplomacy') {
+    const who = namedSpeaker(r.summary);
+    if (who) return `${ymd}|${slot}|stmt|${who}`;
+  }
   return r.fp || r.url || s.slice(0, 40);
+}
+
+function namedSpeaker(summary) {
+  const m = /^(.{2,48}?)(?::\s|\s(?:says|said|tells|told|warns|warned|denies|denied)\b)/.exec(String(summary || ''));
+  if (!m) return '';
+  const who = m[1].trim();
+  if (/^(an?|the)\s/i.test(who)) return '';
+  if (/^(spokes(?:man|woman|person)|officials?|sources?|commanders?|ministers?)$/i.test(who)) return '';
+  return who.toLowerCase();
+}
+
+/**
+ * A report collapsed into another card's story is attached to it, not dropped:
+ * a second outlet's account of the same event stays one click away.
+ */
+function attachAccount(keep, other) {
+  if (!keep || !other || !other.url || other.source === keep.source) return;
+  const list = Array.isArray(keep.alsoReportedBy) ? keep.alsoReportedBy : [];
+  if (list.some((a) => a.source === other.source)) return;
+  keep.alsoReportedBy = [...list, { source: other.source, url: other.url }];
 }
 
 function sortedReports(d) {
@@ -857,6 +883,9 @@ function sortedReports(d) {
       const i = out.indexOf(prev);
       if (i >= 0) out[i] = r;
       seen.set(k, r);
+      attachAccount(r, prev);
+    } else {
+      attachAccount(prev, r);
     }
     if (u) seenUrl.add(u);
     seenHead.add(hk);
@@ -891,6 +920,56 @@ async function pullDesk() {
     // archive read costs depth, never the page.
     console.warn('desk archive', e);
   }
+}
+
+/*
+ * Paging back through the archive. The page first loads the newest 400 rows;
+ * when "Show earlier reports" reaches the end of those, it asks for the next
+ * page strictly older than the oldest report it holds. Without this the feed
+ * had a floor: deployed, anything past row 400 was stored but unreachable.
+ */
+let archiveExhausted = false;
+const OLDER_PAGE = 200;
+
+async function pullOlderDesk() {
+  if (archiveExhausted || !data) return false;
+  const times = (data.reports || []).map((r) => Date.parse(reportTime(r))).filter(Number.isFinite);
+  if (!times.length) return false;
+  const oldest = new Date(Math.min(...times)).toISOString();
+  try {
+    const res = await fetch('/api/desk?limit=' + OLDER_PAGE + '&before=' + encodeURIComponent(oldest));
+    if (!res.ok) return false;
+    const body = await res.json();
+    const rows = body && Array.isArray(body.reports) ? body.reports : [];
+    if (!rows.length) { archiveExhausted = true; return false; }
+    if (rows.length < OLDER_PAGE) archiveExhausted = true;
+    deskArchive.reports = [...deskArchive.reports, ...rows];
+    deskArchive.events = [...deskArchive.events, ...(Array.isArray(body.events) ? body.events : [])];
+    data = applyDeskArchive(data);
+    return true;
+  } catch (e) {
+    console.warn('older reports', e);
+    return false;
+  }
+}
+
+/*
+ * Freshness: is the stream flowing? Green while the last scan is recent, amber
+ * after 15 minutes, red after 30 — so a stalled clock is visible on the page
+ * instead of a quiet feed that merely looks like a quiet war.
+ */
+function renderFreshness() {
+  const el = document.getElementById('feed-fresh');
+  if (!el || !data) return;
+  const last = Date.parse(liveOverlay.scannedAt || '');
+  if (!Number.isFinite(last)) { el.textContent = ''; return; }
+  const mins = Math.max(0, Math.round((Date.now() - last) / 60000));
+  const hourAgo = Date.now() - 3600 * 1000;
+  const lastHour = (data.reports || []).filter((r) => Date.parse(reportTime(r)) >= hourAgo).length;
+  const ago = mins < 1 ? 'just now' : mins === 1 ? '1 min ago' : mins < 120 ? `${mins} min ago` : `${Math.round(mins / 60)} h ago`;
+  el.textContent = `Last scan ${ago} · ${lastHour} ${lastHour === 1 ? 'report' : 'reports'} in the last hour`;
+  el.classList.toggle('stale-amber', mins >= 15 && mins < 30);
+  el.classList.toggle('stale-red', mins >= 30);
 }
 
 /**
@@ -1067,6 +1146,7 @@ function paintLive() {
   const el = document.getElementById('updated');
   if (el) el.textContent = stampText();
   renderLiveScan();
+  renderFreshness();
   const extra = (data.reports || []).filter((r) => r && (r.fp || r.url) && !beforeUrls.has(r.fp || r.url));
   if (extra.length) prependFeedCards(data);
   try { addNewMapPins(data); } catch (e) {}
@@ -1387,9 +1467,13 @@ function renderFeed(d) {
   if (reportsShown < all.length) {
     more.hidden = false;
     more.textContent = `Show earlier reports (+${Math.min(MORE_STEP, all.length - reportsShown)})`;
+  } else if (!archiveExhausted) {
+    more.hidden = false;
+    more.textContent = 'Load older reports from the archive';
   } else {
     more.hidden = true;
   }
+  renderFreshness();
   wireMediaClicks(document.getElementById('feed'));
 }
 
@@ -2692,10 +2776,18 @@ function wireUi(d) {
   };
 
   syncDayNav();
-  document.getElementById('btn-more-reports').onclick = () => {
+  document.getElementById('btn-more-reports').onclick = async () => {
+    const btn = document.getElementById('btn-more-reports');
+    if (reportsShown >= sortedReports(data).length) {
+      btn.disabled = true;
+      btn.textContent = 'Loading…';
+      await pullOlderDesk();
+      btn.disabled = false;
+    }
     reportsShown += MORE_STEP;
     renderFeed(data);
   };
+  setInterval(renderFreshness, 30 * 1000);
   document.getElementById('btn-focus-map').onclick = () => {
     mapFocus = !mapFocus;
     document.body.classList.toggle('map-focus', mapFocus);

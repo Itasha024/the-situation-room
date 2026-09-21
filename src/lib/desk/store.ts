@@ -68,8 +68,11 @@ export interface DeskStore {
    * report that scrolled out of a Telegram channel's recent window disappeared
    * from the public desk while still being stored. This is the read that makes
    * the feed a continuous stream instead of a rolling snapshot.
+   *
+   * `before` (an ISO time) pages back: only rows strictly older are returned,
+   * so "Show earlier reports" can walk the whole archive a page at a time.
    */
-  recentDesk(limit?: number): Promise<DeskSlice>;
+  recentDesk(limit?: number, before?: string): Promise<DeskSlice>;
 }
 
 export type MergeResult = {

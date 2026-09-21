@@ -12,3 +12,7 @@ node_modules/
 # would hand every environment another environment's cadence clock.
 public/desk-state.json
 public/*.json.tmp-*
+
+# Local clock log and lock (scripts/tick.mjs).
+logs/
+scripts/tick-hidden.vbs

@@ -97,7 +97,8 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
      * `at` comes back as a Date from `pg`, so it is normalised to ISO here —
      * the page compares timestamps as strings.
      */
-    async recentDesk(limit = 400): Promise<DeskSlice> {
+    async recentDesk(limit = 400, before?: string): Promise<DeskSlice> {
+      const cursor = before && Number.isFinite(Date.parse(before)) ? before : null;
       const sql = await sqlProvider();
       const iso = (v: unknown): string =>
         v instanceof Date ? v.toISOString() : typeof v === "string" ? v : "";
@@ -106,12 +107,14 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
         select fp, url, at, source, type, summary, body, priority, confidence,
                score, tier, place, lat, lng, also_reported_by
           from desk_report
+         where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
          order by at desc
          limit ${limit}
       `;
       const events = await sql<Record<string, unknown>>`
         select fp, at, type, lat, lng, place, label, body, source, url, map_only
           from desk_event
+         where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
          order by at desc
          limit ${limit}
       `;

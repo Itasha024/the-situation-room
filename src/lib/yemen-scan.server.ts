@@ -13,6 +13,7 @@
 import { type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
 import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
+import { refreshBrief } from "./desk/brief-store.ts";
 import { getStore } from "./desk/store.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 
@@ -304,6 +305,30 @@ function extractLead(html: string): string {
   return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, 2200);
 }
 
+/* ------------------------------------------------------------------ *
+ * Volume. The feed is meant to be a stream: these bound one cycle's work,
+ * they are not an editorial filter. Anything relevant that arrives inside
+ * them reaches the store, which accumulates.
+ * ------------------------------------------------------------------ */
+
+/** Items read from one RSS feed per cycle. Google News lists up to 100. */
+const RSS_ITEMS = 25;
+/** Extra `?before=` pages read from one channel to reach the last post seen. */
+const TG_BACKFILL_PAGES = 4;
+/** Nothing older than this is news for a live desk, however a feed lists it. */
+const MAX_ITEM_AGE_MS = 72 * 3600 * 1000;
+/** Article pages fetched per cycle to fill thin teasers. Cached by URL. */
+const BODY_FETCHES = 40;
+/** Reports kept in the cycle payload (the scan box and carry-forward). */
+const PAYLOAD_REPORTS = 300;
+/** Raw items kept in the cycle payload for the scan box. */
+const PAYLOAD_RAW_HITS = 400;
+
+const LEAD_CACHE_KEY = "lead-cache";
+const LEAD_CACHE_MAX = 3000;
+/** url → the lead paragraph pulled from it ("" when the page had none). */
+type LeadCache = Record<string, { lead: string; at: number }>;
+
 type RawHit = {
   source: string;
   url: string;
@@ -339,8 +364,7 @@ function outletFromGoogleTitle(title: string, fallback: string): { title: string
 function parseRss(xml: string, source: string): RawHit[] {
   const items: RawHit[] = [];
   const blocks = xml.split(/<item[\s>]/i).slice(1);
-  const cap = /news\.google\.com/i.test(xml) ? 6 : 8;
-  for (const b of blocks.slice(0, cap)) {
+  for (const b of blocks.slice(0, RSS_ITEMS)) {
     let title = decodeEntities((b.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "");
     const desc = decodeEntities((b.match(/<description[^>]*>([\s\S]*?)<\/description>/i) || [])[1] || "");
     const linkRaw =
@@ -370,10 +394,19 @@ function parseRss(xml: string, source: string): RawHit[] {
   return items;
 }
 
+/** The post number in a t.me/<channel>/<n> URL, or 0. */
+function tgPostNo(url: string): number {
+  const m = /\/(\d+)(?:\?|$)/.exec(url);
+  return m ? Number(m[1]) : 0;
+}
+
 function parseTelegram(html: string, ch: Channel): RawHit[] {
   const items: RawHit[] = [];
   const parts = html.split("tgme_widget_message_wrap");
-  for (const p of parts.slice(1, 16)) {
+  // t.me/s lists a channel's latest ~20 posts OLDEST FIRST. Reading a prefix of
+  // the page (as this once did, `slice(1, 16)`) kept the oldest posts and
+  // silently dropped the newest ones — so every part is read.
+  for (const p of parts.slice(1)) {
     const hrefs = [...p.matchAll(new RegExp(`href="(https://t\\.me/${ch.id}/\\d+)"`, "gi"))].map((m) => m[1]);
     const textHtml = (p.match(/class="tgme_widget_message_text[^"]*"[^>]*>([\s\S]*?)<\/div>/) || [])[1] || "";
     const datetime = (p.match(/datetime="([^"]+)"/) || [])[1] || "";
@@ -417,6 +450,26 @@ function nightYmd(at: string): string {
   return jerusalemIso(new Date(d - 5 * 3600 * 1000)).slice(0, 10);
 }
 
+function hourOfIso(iso: string): number {
+  const h = parseInt(String(iso || "").slice(11, 13), 10);
+  return Number.isFinite(h) ? h : 0;
+}
+
+/**
+ * The speaker a statement headline opens with — "Al-Mashat says …",
+ * "Trump: …" — lowercased, or "" when there is none or it is generic. "A
+ * spokesman" or "the official" in two posts are not known to be one person,
+ * so they are never grouped on that alone.
+ */
+export function namedSpeaker(summary: string): string {
+  const m = /^(.{2,48}?)(?::\s|\s(?:says|said|tells|told|warns|warned|denies|denied)\b)/.exec(summary || "");
+  if (!m) return "";
+  const who = m[1].trim();
+  if (/^(an?|the)\s/i.test(who)) return "";
+  if (/^(spokes(?:man|woman|person)|officials?|sources?|commanders?|ministers?)$/i.test(who)) return "";
+  return who.toLowerCase();
+}
+
 function storyKey(r: LiveReport): string {
   const s = r.summary;
   if (/air raid sirens|air defence alerts/i.test(s)) {
@@ -431,6 +484,11 @@ function storyKey(r: LiveReport): string {
     return `${ymd}|${r.type}|${bucket}`;
   }
   if (r.type === "statement" || r.type === "diplomacy") {
+    // One speech arrives as many posts, each quoting a different line. Keyed
+    // on the headline those never matched, so one speech became six cards.
+    // A NAMED speaker within a three-hour slot is one story.
+    const who = namedSpeaker(s);
+    if (who) return `${ymd}|stmt|${who}|${Math.floor(hourOfIso(r.at) / 3)}`;
     const stem = s.replace(/[^a-zA-Z]/g, "").slice(0, 28).toLowerCase();
     return `${ymd}|stmt|${stem || r.url.split("?")[0]}`;
   }
@@ -480,6 +538,28 @@ function harvestHomepage(html: string, source: string): RawHit[] {
  * One scan cycle
  * ------------------------------------------------------------------ */
 
+async function loadLeadCache(): Promise<LeadCache> {
+  try {
+    const store = await getStore();
+    return (await store.getJson<LeadCache>(LEAD_CACHE_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/** Keep the newest entries only, so the cache cannot grow without bound. */
+async function saveLeadCache(cache: LeadCache): Promise<void> {
+  const kept = Object.entries(cache)
+    .sort((a, b) => b[1].at - a[1].at)
+    .slice(0, LEAD_CACHE_MAX);
+  try {
+    const store = await getStore();
+    await store.putJson(LEAD_CACHE_KEY, Object.fromEntries(kept));
+  } catch {
+    /* a lost cache only costs refetches */
+  }
+}
+
 async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<ScanPayload> {
   const now = Date.now();
   const cycleSeenAt = jerusalemIso(new Date(now));
@@ -496,6 +576,20 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         const html = await fetchText(`https://t.me/s/${ch.id}`);
         const ok = !!(html && html.includes("tgme_widget_message"));
         const rows = ok ? parseTelegram(html as string, ch) : [];
+        // A busy channel can post more between two scans than its first page
+        // holds. Page back until we reach the last post already read, so a
+        // burst never leaves a gap. First sight of a channel: no backfill.
+        const seen = state.lastTgPost?.[ch.id] ?? 0;
+        for (let page = 0; ok && seen && page < TG_BACKFILL_PAGES; page += 1) {
+          const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));
+          if (!Number.isFinite(oldest) || oldest <= seen + 1) break;
+          const older = await fetchText(`https://t.me/s/${ch.id}?before=${oldest}`);
+          const more = older ? parseTelegram(older, ch).filter((r) => tgPostNo(r.url) < oldest) : [];
+          if (!more.length) break;
+          rows.push(...more);
+        }
+        const newest = Math.max(seen, ...rows.map((r) => tgPostNo(r.url)));
+        if (newest > 0) (state.lastTgPost ??= {})[ch.id] = newest;
         if (ok) sourcesOk += 1;
         hits.push(...rows);
         state.lastScanAt[`tg:${ch.id}`] = Date.now();
@@ -526,16 +620,38 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   await Promise.allSettled(jobs);
   state.scannedOnce = true;
 
-  // Thin RSS teasers get their lead paragraph pulled so the gate has something to judge.
-  const needFetch = hits.filter((h) => !h.fromTg && h.text.length < 500 && !/\.pdf(\?|$)/i.test(h.url)).slice(0, 10);
+  // A feed that lists last week's articles is not reporting last week's news.
+  const fresh = hits.filter((h) => {
+    const t = Date.parse(h.at);
+    return !Number.isFinite(t) || now - t <= MAX_ITEM_AGE_MS;
+  });
+  hits.length = 0;
+  hits.push(...fresh);
+
+  // Thin RSS teasers get their lead paragraph pulled so the gate has something
+  // to judge. The same items reappear cycle after cycle, so leads are cached by
+  // URL and each article page is fetched once.
+  const leadCache = await loadLeadCache();
+  const addLead = (h: RawHit, lead: string) => {
+    if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, 2800);
+  };
+  const toFetch: RawHit[] = [];
+  for (const h of hits) {
+    if (h.fromTg || h.text.length >= 500 || /\.pdf(\?|$)/i.test(h.url)) continue;
+    const cached = leadCache[h.url];
+    if (cached) addLead(h, cached.lead);
+    else toFetch.push(h);
+  }
   await Promise.allSettled(
-    needFetch.map(async (h) => {
+    toFetch.slice(0, BODY_FETCHES).map(async (h) => {
       const html = await fetchText(h.url, 6000);
-      if (!html) return;
+      if (!html) return; // not cached: a failed fetch is retried next cycle
       const lead = extractLead(html);
-      if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, 2800);
+      leadCache[h.url] = { lead, at: now };
+      addLead(h, lead);
     }),
   );
+  await saveLeadCache(leadCache);
 
   const reports: LiveReport[] = [];
   const rawHits: RawScanHit[] = [];
@@ -638,13 +754,13 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   return {
     ok: true,
     scannedAt: jerusalemIso(),
-    reports: uniqReports.slice(0, 48),
+    reports: uniqReports.slice(0, PAYLOAD_REPORTS),
     sourcesTried: tried,
     sourcesOk,
     // Newest-seen first: what the scanner just pulled sits at the top of the box.
     rawHits: rawHits
       .sort((a, b) => Date.parse(b.seenAt || b.at) - Date.parse(a.seenAt || a.at) || Date.parse(b.at) - Date.parse(a.at))
-      .slice(0, 90),
+      .slice(0, PAYLOAD_RAW_HITS),
     sourceStatus: status.sort((a, b) => a.name.localeCompare(b.name)),
     cycleNote,
     reasons: NOISE_REASONS,
@@ -697,6 +813,8 @@ export type TickResult = {
   unplaced: { fp: string; summary: string; place?: string }[];
   store: string;
   cycleNote?: string;
+  /** True when this tick closed a 12-hour window and composed its brief. */
+  briefBuilt?: boolean;
   error?: string;
 };
 
@@ -730,6 +848,15 @@ export async function runScanCycle(): Promise<TickResult> {
     error = err instanceof Error ? err.message : "payload write failed";
   }
 
+  // The brief moves on the clock, not on page views: a no-op until a 12-hour
+  // window closes, then composed from everything the desk logged in it.
+  let briefBuilt = false;
+  try {
+    briefBuilt = (await refreshBrief(store)).built;
+  } catch (err) {
+    error ??= `brief: ${err instanceof Error ? err.message : "failed"}`;
+  }
+
   return {
     ok: !error,
     scannedAt: payload.scannedAt,
@@ -741,6 +868,7 @@ export async function runScanCycle(): Promise<TickResult> {
     unplaced: merge.unplaced,
     store: store.kind,
     cycleNote: payload.cycleNote,
+    briefBuilt,
     ...(error ? { error } : {}),
   };
 }

@@ -223,3 +223,11 @@ test("a link to a section front is not a report", async () => {
   const res = await store.mergeIntoDesk([report({ fp: "live-d", url: "https://example.com/" })]);
   assert.equal(res.reportsAdded, 0);
 });
+
+test("a value with NUL or half an emoji is still saved (Postgres refuses both in jsonb)", async () => {
+  const store = createPgStore(provider);
+  const bad = "Sanaa" + String.fromCharCode(0) + " strike " + String.fromCharCode(0xd83d) + "end";
+  await store.putJson("nul-test", { text: bad });
+  const back = await store.getJson<{ text: string }>("nul-test");
+  assert.equal(back?.text, "Sanaa strike end");
+});

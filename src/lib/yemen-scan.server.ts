@@ -22,6 +22,7 @@ import { type ReRead, findCitation, traceOrigins } from "./desk/origin.ts";
 import { sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
+import { pgSafe } from "./desk/store.pg.ts";
 
 // The wire types moved to ./desk/types.ts so the store and the scanner can
 // share them without importing each other. Re-exported so existing imports
@@ -177,7 +178,7 @@ function jerusalemIso(d = new Date()) {
  * ------------------------------------------------------------------ */
 
 export function decodeEntities(s: string) {
-  return s
+  return pgSafe(s)
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")

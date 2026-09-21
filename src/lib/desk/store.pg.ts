@@ -28,6 +28,16 @@ const DROPPED_KEY = "json:dropped";
  */
 export type SqlProvider = () => Promise<Sql>;
 
+/** Drops what Postgres refuses in text/jsonb: NUL and half of a surrogate pair. */
+export function pgSafe(s: string): string {
+  return s.split(String.fromCharCode(0)).join("").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+}
+
+/** JSON for a jsonb column: every string passes through `pgSafe`. */
+export function pgJson(value: unknown): string {
+  return JSON.stringify(value, (_k, v) => (typeof v === "string" ? pgSafe(v) : v));
+}
+
 /**
  * Imported lazily and on first use: `src/lib/db.ts` kicks a PGLite bootstrap at
  * module load, so importing it eagerly would fire that side effect in any test
@@ -50,7 +60,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
     const sql = await sqlProvider();
     await sql`
       insert into desk_state (key, value, updated_at)
-      values (${key}, ${JSON.stringify(value)}::jsonb, now())
+      values (${key}, ${pgJson(value)}::jsonb, now())
       on conflict (key) do update set value = excluded.value, updated_at = now()
     `;
   };
@@ -189,10 +199,10 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
                also_reported_by, reply_to, citing)
             select
-              ${r.fp}, ${r.url}, ${r.at}::timestamptz, ${r.source}, ${r.type}, ${r.summary}, ${r.text},
+              ${r.fp}, ${r.url}, ${r.at}::timestamptz, ${r.source}, ${r.type}, ${pgSafe(r.summary)}, ${r.text == null ? null : pgSafe(r.text)},
               ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
               ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
-              ${r.alsoReportedBy?.length ? JSON.stringify(r.alsoReportedBy) : null}::jsonb,
+              ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb,
               ${r.replyTo ?? null}, ${r.citing ?? null}
              -- A card deleted by hand stays deleted.
              where not exists (select 1 from desk_state s where s.key = ${DROPPED_KEY} and s.value ? ${r.fp})
@@ -213,7 +223,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             // relay's version: headline, body, source and link.
             if (r.tags?.includes("original")) {
               await sql`
-                update desk_report set summary = ${r.summary}, body = ${r.text}, url = ${r.url}, source = ${r.source}, citing = null,
+                update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)}, url = ${r.url}, source = ${r.source}, citing = null,
                        -- Written from the original: the outlets that relayed it are no "Also".
                        also_reported_by = null
                  where fp = ${r.fp} and (summary is distinct from ${r.summary} or url is distinct from ${r.url})
@@ -221,7 +231,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             }
             // Another outlet's take on this story arrived after it was stored.
             if (r.alsoReportedBy?.length) {
-              const also = JSON.stringify(r.alsoReportedBy);
+              const also = pgJson(r.alsoReportedBy);
               await sql`
                 update desk_report set also_reported_by = ${also}::jsonb, confidence = coalesce(${r.confidence ?? null}, confidence)
                  where fp = ${r.fp} and also_reported_by is distinct from ${also}::jsonb

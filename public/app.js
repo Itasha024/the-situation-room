@@ -958,6 +958,10 @@ async function pullOlderDesk() {
  * after 15 minutes, red after 30 — so a stalled clock is visible on the page
  * instead of a quiet feed that merely looks like a quiet war.
  */
+/** A refresh in flight, and the cards the last one brought: shown under the feed. */
+let feedChecking = false;
+let feedNews = { n: 0, at: 0 };
+
 function renderFreshness() {
   const el = document.getElementById('feed-fresh');
   if (!el || !data) return;
@@ -967,7 +971,11 @@ function renderFreshness() {
   const hourAgo = Date.now() - 3600 * 1000;
   const lastHour = (data.reports || []).filter((r) => Date.parse(reportTime(r)) >= hourAgo).length;
   const ago = mins < 1 ? 'just now' : mins === 1 ? '1 min ago' : mins < 120 ? `${mins} min ago` : `${Math.round(mins / 60)} h ago`;
-  el.textContent = `Last scan ${ago} · ${lastHour} ${lastHour === 1 ? 'report' : 'reports'} in the last hour`;
+  if (feedChecking) { el.textContent = 'Checking for new reports…'; return; }
+  const news = feedNews.n && Date.now() - feedNews.at < 10 * 60 * 1000
+    ? ` · ${feedNews.n} new at ${fmtClock(new Date(feedNews.at).toISOString())}`
+    : '';
+  el.textContent = `Last scan ${ago} · ${lastHour} ${lastHour === 1 ? 'report' : 'reports'} in the last hour${news}`;
   el.classList.toggle('stale-amber', mins >= 15 && mins < 30);
   el.classList.toggle('stale-red', mins >= 30);
 }
@@ -2929,6 +2937,9 @@ function wireRailResize() {
 
 async function refresh(first) {
   if (first) await loadGazetteer();
+  const feedEl = document.getElementById('feed');
+  const shown = first ? null : new Set([...(feedEl ? feedEl.querySelectorAll('.card') : [])].map((el) => el.dataset.fp));
+  if (!first) { feedChecking = true; renderFreshness(); }
   const baseP = fetchData();
   if (first) await hydrateSnapshot();
   const liveP = pullLive({ silent: true });
@@ -2953,7 +2964,17 @@ async function refresh(first) {
   renderSituation(data);
   renderLiveScan();
   renderCasualties(data);
+  feedChecking = false;
   renderFeed(data);
+  // New cards since the last refresh flash once, and are counted under the feed.
+  if (shown && shown.size && feedEl) {
+    const fresh = [...feedEl.querySelectorAll('.card')].filter((el) => !shown.has(el.dataset.fp));
+    if (fresh.length) {
+      feedNews = { n: fresh.length, at: Date.now() };
+      fresh.forEach(flashCard);
+    }
+  }
+  renderFreshness();
   renderFronts(data);
   ensureMap(data);
   if (first) {

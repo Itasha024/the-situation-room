@@ -639,10 +639,19 @@ function reportLead(r) {
   return lead.length > 230 ? lead.slice(0, 227).replace(/\s+\S*$/, '') + '…' : lead;
 }
 
+/** A pin whose report the reader wrote — its text is already glossed. */
+function isReaderWritten(url) {
+  if (!url || !data) return false;
+  return (data.reports || []).some((r) => r && r.side && r.url === url);
+}
+
 /** Expanded body. Never shows source-language text. */
 function formatFullReport(text, r) {
   const raw = String(text || '');
-  if (raw && !hasNonLatinScript(raw)) return annotatePlaces(cleanBody(raw));
+  // Reader-written copy (it carries `side`) already glosses places by the
+  // desk's rules; glossing it again produced "Taiz in south-west Yemen
+  // governorate". Only older copy is annotated here.
+  if (raw && !hasNonLatinScript(raw)) return r && r.side ? cleanBody(raw) : annotatePlaces(cleanBody(raw));
   return fallbackReport(r || { text }).text;
 }
 
@@ -2143,7 +2152,7 @@ function popupHtml(ev) {
     <p class="pop-meta">${escapeHtml(fmtStamp(ev.at))}${ev.place ? ' · ' + escapeHtml(ev.place) : ''} · ${escapeHtml(catLabel)}</p>
     ${srcLine}
     ${mediaBlock(ev.media, true)}
-    ${needExpand ? `<div class="pop-full">${escapeHtml(annotatePlaces(full))}</div>
+    ${needExpand ? `<div class="pop-full">${escapeHtml(isReaderWritten(ev.url) ? full : annotatePlaces(full))}</div>
     <button type="button" class="pop-toggle">Read more</button>` : ''}`;
 }
 

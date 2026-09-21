@@ -17,3 +17,4 @@ public/*.json.tmp-*
 logs/
 scripts/tick-hidden.vbs
 public/desk-lead-cache.json
+public/desk-reader-*.json

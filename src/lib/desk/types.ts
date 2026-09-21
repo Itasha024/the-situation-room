@@ -32,6 +32,10 @@ export type LiveReport = {
    * the card; these are kept and linked rather than deleted as duplicates.
    */
   alsoReportedBy?: { source: string; url: string }[];
+  /** Inputs to the trust figure — see credibility.ts. */
+  side?: "houthi" | "gov" | "neutral" | "agency";
+  interest?: "for" | "against" | "neutral";
+  hasTime?: boolean;
 };
 
 export type RawScanHit = {

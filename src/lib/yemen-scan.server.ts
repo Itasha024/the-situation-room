@@ -14,6 +14,7 @@ import { type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
 import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
+import { type Candidate, confidenceOf, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 
@@ -161,7 +162,7 @@ function jerusalemIso(d = new Date()) {
  * Fetch / parse
  * ------------------------------------------------------------------ */
 
-function decodeEntities(s: string) {
+export function decodeEntities(s: string) {
   return s
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&amp;/g, "&")
@@ -292,7 +293,7 @@ async function fetchText(url: string, ms = 8000): Promise<string | null> {
   }
 }
 
-function extractLead(html: string): string {
+export function extractLead(html: string): string {
   const og =
     (html.match(/property=["']og:description["'][^>]*content=["']([^"']{40,})["']/i) || [])[1] ||
     (html.match(/content=["']([^"']{40,})["'][^>]*property=["']og:description["']/i) || [])[1] ||
@@ -656,12 +657,55 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   );
   await saveLeadCache(leadCache);
 
+  /**
+   * Two stages. The keyword gate (via `toLiveReport`) is only a cheap
+   * pre-filter: what it excludes never costs a model call. Everything else is
+   * decided by the reader (`editCandidates`), and only its verdict publishes —
+   * the keyword composer turned programme clips, other countries' wars and
+   * launch bases into reports. `DESK_READER_REQUIRED=0` restores the old
+   * composer as a fallback, for local work without a key.
+   */
+  const pre = new Map<string, Composed>();
+  const candidates: Candidate[] = [];
+  for (const h of hits) {
+    const c = toLiveReport(h.source, h.url, h.text, h.at, h.text.slice(0, 80), h.lean);
+    pre.set(h.url, c);
+    if (c.outcome === "exclude") continue;
+    candidates.push({
+      source: h.source,
+      url: h.url,
+      text: h.text,
+      at: h.at,
+      lean: h.lean,
+      fp: fpOf(h.url, h.text.slice(0, 80)),
+      score: c.report?.score ?? c.topicality,
+      tags: c.tags,
+    });
+  }
+  const { verdicts, modelNote } = await editCandidates(await getStore(), candidates, now);
+  const floor = process.env.DESK_READER_REQUIRED === "0";
+
   const reports: LiveReport[] = [];
   const rawHits: RawScanHit[] = [];
   for (const h of hits) {
-    const c = toLiveReport(h.source, h.url, h.text, h.at, h.text.slice(0, 80), h.lean);
-    // Only a feed verdict reaches the feed. Tray items stay in the scan box.
-    if (c.report && c.outcome === "feed") reports.push(c.report);
+    const c = pre.get(h.url) as Composed;
+    const v = verdicts.get(h.url);
+    let outcome: Outcome = c.outcome;
+    let reason = c.reason;
+    let note = c.note;
+    let kept = false;
+    if (v?.kind === "publish") {
+      reports.push(v.report);
+      [outcome, reason, note, kept] = ["feed", "kept", "", true];
+    } else if (v?.kind === "reject") {
+      [outcome, reason, note] = ["exclude", v.reason, v.note];
+    } else if (v?.kind === "pending") {
+      [outcome, reason, note] = ["tray", "pending", v.note];
+      if (floor && c.report && c.outcome === "feed") {
+        reports.push(c.report);
+        kept = true;
+      }
+    }
     rawHits.push({
       source: h.source,
       url: h.url,
@@ -669,15 +713,17 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       at: h.at,
       seenAt: cycleSeenAt,
       kind: h.fromTg ? "tg" : "web",
-      kept: c.outcome === "feed" && !!c.report,
-      outcome: c.outcome,
+      kept,
+      outcome,
       topicality: c.topicality,
       reachable: true,
-      reason: c.reason,
-      note: c.note,
+      reason,
+      note,
       tags: c.tags,
     });
   }
+  // Items read from the queue — seen in an earlier cycle, read only now.
+  for (const [url, v] of verdicts) if (v.kind === "publish" && !pre.has(url)) reports.push(v.report);
 
   /**
    * One CARD per story, but every account kept.
@@ -717,6 +763,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     if (outlets.size) {
       lead.alsoReportedBy = [...outlets].map(([source, url]) => ({ source, url })).slice(0, 6);
     }
+    // Corroboration moves the trust figure — counted by side inside
+    // `credibility`, so five channels of one side count once.
+    if (lead.side) {
+      const sides = others.filter((o) => o.source !== lead.source).map((o) => o.side ?? "neutral");
+      lead.confidence = confidenceOf(lead, sides);
+    }
   }
   const uniqReports = [...byStory.values()].map((g) => g.lead).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 
@@ -724,6 +776,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   if (prev && Array.isArray(prev.reports)) {
     const have = new Set(uniqReports.map((r) => r.url.split("?")[0]));
     for (const r of prev.reports) {
+      // Only reports the reader wrote are carried forward; the keyword
+      // composer's output is not re-published.
+      if (!r.side && !floor) continue;
       const u = String(r.url || "").split("?")[0];
       if (!u || have.has(u)) continue;
       uniqReports.push(r);
@@ -753,6 +808,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   const cycleNote = skipped
     ? `${tried} sources this cycle; ${skipped} on a slower schedule (dailies and agencies).`
     : `All ${tried} sources scanned this cycle.`;
+  // Say plainly when the reader could not run: a quiet feed must not look
+  // like a quiet war.
+  const readerNote = modelNote ? ` Reader: ${modelNote}.` : "";
 
   return {
     ok: true,
@@ -765,7 +823,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       .sort((a, b) => Date.parse(b.seenAt || b.at) - Date.parse(a.seenAt || a.at) || Date.parse(b.at) - Date.parse(a.at))
       .slice(0, PAYLOAD_RAW_HITS),
     sourceStatus: status.sort((a, b) => a.name.localeCompare(b.name)),
-    cycleNote,
+    cycleNote: cycleNote + readerNote,
     reasons: NOISE_REASONS,
   };
 }
@@ -878,3 +936,8 @@ export async function runScanCycle(): Promise<TickResult> {
 
 export const SCAN_SOURCE_COUNT = TG.length + RSS.length;
 export { digest };
+
+/** A catalogue outlet's declared lean, by its published name ("" if unknown). */
+export function sourceLean(name: string): string {
+  return TG.find((c) => c.name === name)?.lean ?? "";
+}

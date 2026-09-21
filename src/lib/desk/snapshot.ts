@@ -71,9 +71,11 @@ export function toDeskReportRow(r: LiveReport): DeskReportRow {
     tier: r.tier,
     ...(r.place ? { place: r.place } : {}),
     ...(r.lat != null ? { lat: r.lat, lng: r.lng } : {}),
-    // Kept so the card can say "3 sources" — dropping it here would undo the
-    // grouping and leave the other accounts unreachable.
+    // Kept so the card can link the other outlets — dropping it here would
+    // undo the grouping and leave the other accounts unreachable.
     ...(r.alsoReportedBy?.length ? { alsoReportedBy: r.alsoReportedBy } : {}),
+    // Set only on rows the reader wrote; also the trust figure's inputs.
+    ...(r.side ? { side: r.side, interest: r.interest, hasTime: r.hasTime } : {}),
   };
 }
 

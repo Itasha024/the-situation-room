@@ -12,6 +12,7 @@
  */
 
 import { anglicise } from "./anglicise.ts";
+import { type NeedsPlace, geocodeJobs } from "./geocode.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
 import { type OutletSide, credibility, outletSide } from "./credibility.ts";
 import {
@@ -112,11 +113,14 @@ export async function editCandidates(
   const all = [...byUrl.values()];
 
   const verdicts = new Map<string, EditorVerdict>();
+  const readingOf = new Map<string, Reading>();
   const unread: Queued[] = [];
   for (const c of all) {
     const hit = cache[contentHash(c.text)];
-    if (hit) verdicts.set(c.url, decide(hit.reading, c));
-    else unread.push(c);
+    if (hit) {
+      verdicts.set(c.url, decide(hit.reading, c));
+      readingOf.set(c.url, hit.reading);
+    } else unread.push(c);
   }
 
   // Models that ran out of daily quota recently are not asked again yet.
@@ -178,10 +182,36 @@ export async function editCandidates(
       r.follows_up = refToFp.get(String(r.follows_up || "")) ?? "";
       cache[contentHash(c.text)] = { reading: r, at: now };
       verdicts.set(c.url, decide(r, c));
+      readingOf.set(c.url, r);
     });
   }
   for (const c of stillQueued) {
     verdicts.set(c.url, { kind: "pending", note: "Waiting for the reader; retried next cycle." });
+  }
+
+  // A field event the gazetteer could not place: look its target up instead.
+  const jobs: NeedsPlace[] = [];
+  for (const c of all) {
+    const v = verdicts.get(c.url);
+    const r = readingOf.get(c.url);
+    if (v?.kind !== "publish" || !r || v.report.place || !r.confident_roles) continue;
+    if (v.report.type === "statement" || v.report.type === "diplomacy") continue;
+    const report = v.report;
+    jobs.push({
+      targets: r.targets || [],
+      sourceText: c.text,
+      apply: (hit) => {
+        report.place = hit.name;
+        report.lat = hit.lat;
+        report.lng = hit.lng;
+        report.text = `${hit.name.toUpperCase()} — ${report.text}`;
+      },
+    });
+  }
+  try {
+    await geocodeJobs(store, jobs);
+  } catch {
+    // Unplaced stays unplaced; the report itself is unaffected.
   }
 
   const kept = Object.entries(cache)

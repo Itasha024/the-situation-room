@@ -335,6 +335,30 @@ const REWORD: [RegExp, string][] = [
   [/\bZionists?\b/gi, "Israeli"],
 ];
 
+/**
+ * "Yemeni" names two sides. Copy about a Houthi actor says "Houthi", copy
+ * about a government actor says "Yemeni government", as the reader judged the
+ * side. Fire on Saudi Arabia from Yemen is Houthi whoever reports it, so a
+ * "Yemeni attack" on Saudis is Houthi even in readings made before the field.
+ */
+export function sideWords(s: string, side: string | undefined): string {
+  let out = String(s || "");
+  const onSaudi = /\bSaudi\b/.test(out) && /\bYemeni (?:attacks?|drones?|missiles?|operations?|strikes?)\b/.test(out);
+  if (side === "houthi" || (!side && onSaudi)) {
+    out = out
+      .replace(/\b(?:the )?Yemen(?:i|'s) armed forces\b/gi, "Houthi forces")
+      .replace(/\b(?<!government )Yemeni (forces|army|military)\b/g, "Houthi forces")
+      .replace(/\bYemeni (attacks?|drones?|missiles?|operations?|strikes?|drone attacks?|missile attacks?)\b/g, "Houthi $1")
+      .replace(/\bYemen's (defen[cs]e minister|chief of staff|military spokesman|army)\b/g, "Houthi $1")
+      .replace(/\bHouthi forces forces\b/g, "Houthi forces");
+  } else if (side === "government") {
+    out = out
+      .replace(/\b(?<!government )Yemeni (forces|army|troops)\b/g, "Yemeni government $1")
+      .replace(/\bYemen's (defen[cs]e minister|chief of staff|army)\b/g, "Yemen's government $1");
+  }
+  return out;
+}
+
 export function reword(s: string): string {
   let out = String(s || "");
   for (const [re, to] of REWORD) out = out.replace(re, to);
@@ -345,6 +369,10 @@ function decide(raw: Reading, c: Candidate): EditorVerdict {
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
   const r: Reading = { ...raw, headline: fixHeadline(reword(anglicise(raw.headline))), body: reword(anglicise(raw.body)) };
+  // One side for both, judged on the whole copy: the body alone may not say "Saudi".
+  const side = raw.actor_side ?? (sideWords(`${r.headline} ${r.body}`, undefined) !== `${r.headline} ${r.body}` ? "houthi" : undefined);
+  r.headline = sideWords(r.headline, side);
+  r.body = sideWords(r.body, side);
   // An outlet is never the speaker. A statement whose headline forgot its
   // speaker gets the speaker put first, and a colon that introduces no words
   // of theirs ("Trump: held a call") becomes a plain sentence.

@@ -53,6 +53,8 @@ export type Reading = {
   /** False when origin and target cannot be told apart with confidence. */
   confident_roles: boolean;
   actor: string | null;
+  /** Whose side acted or spoke; decides "Houthi" vs "Yemeni government" wording. */
+  actor_side?: "houthi" | "government" | "stc" | "saudi" | "other" | "unclear";
   /** English names of the places struck, or where the event happened. */
   targets: string[];
   /** English names of places a weapon or aircraft came FROM. Never pinned. */
@@ -114,6 +116,7 @@ const RESPONSE_SCHEMA = {
           },
           confident_roles: { type: "BOOLEAN" },
           actor: { type: "STRING", nullable: true },
+          actor_side: { type: "STRING", enum: ["houthi", "government", "stc", "saudi", "other", "unclear"] },
           targets: { type: "ARRAY", items: { type: "STRING" } },
           origins: { type: "ARRAY", items: { type: "STRING" } },
           // Required and never null: an optional field is one a light model skips.
@@ -126,7 +129,7 @@ const RESPONSE_SCHEMA = {
           duplicate_of: { type: "STRING", description: "ref of the recent report that already tells this same event with nothing new, or empty string." },
         },
         required: [
-          "id", "publish", "reject_reason", "event_type", "confident_roles", "targets", "origins",
+          "id", "publish", "reject_reason", "event_type", "confident_roles", "actor_side", "targets", "origins",
           "speaker_lead", "interest", "has_time", "headline", "body", "follows_up", "duplicate_of",
         ],
       },
@@ -205,6 +208,21 @@ WRITING
 - Neutral words: "Houthi forces", "Yemeni government forces", "Saudi forces",
   "people killed". Never "martyrs", "mercenaries", "aggression", "enemy".
 
+SIDES (actor_side)
+Both the Houthis (Sanaa) and the recognised government (Aden) call themselves
+"Yemen", "the Yemeni armed forces", "Yemen's defence minister". Judge each
+item's side from its evidence: the person named (Saree, al-Mashat, the Sanaa
+ministers are Houthi; al-Alimi, the Aden ministers, the national army are
+government), the seat (Sanaa, Saba Sanaa, Al-Masirah vs Aden, Saba Aden, the
+Presidential Council), the content (fire on Saudi Arabia, its ships or its
+soldiers, "the aggression" = Houthi; "the militia", "the Houthi coup" =
+government). The outlet's alignment is a hint, never enough alone.
+actor_side = the side of whoever acted or spoke: houthi | government | stc |
+saudi | other | unclear. Write it: Houthi -> "Houthi forces", "a Houthi
+attack", "Houthi defence minister", never "Yemeni forces" or "a Yemeni
+attack"; government -> "Yemeni government forces", "Yemen's government
+defence minister"; unclear -> the name and title only, no label.
+
 STATEMENTS (event_type statement or diplomacy)
 - speaker_lead is REQUIRED: the person or body the report is about.
 - A colon ONLY when the item carries that person's own words (a quote, speech,
@@ -265,7 +283,8 @@ Return JSON: {"items":[{"id":string,"publish":bool,"reject_reason":string,
 "event_type":"air_strike"|"shelling"|"missile_launch"|"drone_attack"|
 "interception"|"ground_clash"|"advance_or_capture"|"air_raid_alert"|
 "maritime_attack"|"statement"|"diplomacy"|"economy","confident_roles":bool,
-"actor":string|null,"targets":[string],"origins":[string],
+"actor":string|null,"actor_side":"houthi"|"government"|"stc"|"saudi"|"other"|
+"unclear","targets":[string],"origins":[string],
 "speaker_lead":string|null,"interest":"for"|"against"|"neutral",
 "has_time":bool,"headline":string,"body":string,"follows_up":string,
 "duplicate_of":string}]}

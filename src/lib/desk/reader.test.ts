@@ -119,3 +119,15 @@ test("no outlet opens a headline, and a report about someone is no quote", async
   assert.equal(fixHeadline("Abdul Malik al-Houthi: Saudi regime committed crimes"), "Houthi leader: Saudi regime committed crimes");
   assert.equal(fixHeadline("Trump: we will not let the Houthis win"), "Trump: we will not let the Houthis win");
 });
+
+test("the side decides Houthi or Yemeni government wording", async () => {
+  const { sideWords } = await import("./editor.ts");
+  assert.equal(sideWords("Six Saudi soldiers killed in Yemeni attack", undefined), "Six Saudi soldiers killed in Houthi attack");
+  assert.equal(sideWords("Yemeni armed forces target Saudi ship", "houthi"), "Houthi forces target Saudi ship");
+  assert.equal(sideWords("Yemen's defence minister warns Saudi ships", "houthi"), "Houthi defence minister warns Saudi ships");
+  assert.equal(sideWords("Yemen's defence minister inspects Marib fronts", "government"), "Yemen's government defence minister inspects Marib fronts");
+  assert.equal(sideWords("Yemeni forces advance in Marib", "government"), "Yemeni government forces advance in Marib");
+  assert.equal(sideWords("Yemeni government forces advance in Marib", "government"), "Yemeni government forces advance in Marib");
+  // Unclear side: no label added.
+  assert.equal(sideWords("Yemen's defence minister spoke", "unclear"), "Yemen's defence minister spoke");
+});

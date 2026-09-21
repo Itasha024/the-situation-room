@@ -16,10 +16,11 @@ import { anglicise } from "./anglicise.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
 import type { DeskStore } from "./store.ts";
 
-const CACHE_KEY = "geocode-cache";
+// v2: English names from namedetails; v1 held raw transliterations.
+const CACHE_KEY = "geocode-cache-v2";
 const UA = "yemen-war-desk/1.0 (+https://yemen-war-desk.vercel.app)";
 /** Lookups per tick, at one a second, so a busy tick stays short. */
-export const GEOCODE_BUDGET = 6;
+export const GEOCODE_BUDGET = 10;
 /** How far from the governorate the text names an answer may lie. */
 const NEAR_KM = 130;
 /** Without a governorate, all answers must agree to within this. */
@@ -28,7 +29,7 @@ const AGREE_KM = 40;
 export type GeoHit = { name: string; lat: number; lng: number };
 type Cached = GeoHit | { miss: true };
 
-type NominatimRow = { lat: string; lon: string; name?: string; display_name?: string };
+type NominatimRow = { lat: string; lon: string; name?: string; display_name?: string; namedetails?: Record<string, string> };
 
 function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const r = Math.PI / 180;
@@ -44,7 +45,7 @@ function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }): n
  */
 export function pickHit(rows: NominatimRow[], near: Place | undefined): GeoHit | null {
   const pts = rows
-    .map((x) => ({ lat: Number(x.lat), lng: Number(x.lon), name: String(x.name || x.display_name || "").split(",")[0].trim() }))
+    .map((x) => ({ lat: Number(x.lat), lng: Number(x.lon), name: String(x.namedetails?.["name:en"] || x.name || x.display_name || "").split(",")[0].trim() }))
     .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.name);
   if (!pts.length) return null;
   const chosen = near
@@ -60,7 +61,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function nominatim(q: string): Promise<NominatimRow[] | null> {
   const url =
-    "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=ye,sa&accept-language=en&q=" +
+    "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&namedetails=1&countrycodes=ye,sa&accept-language=en&q=" +
     encodeURIComponent(q);
   try {
     const res = await fetch(url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(8000) });
@@ -73,6 +74,9 @@ async function nominatim(q: string): Promise<NominatimRow[] | null> {
 
 /** The kind word a text puts before a place name ("مديرية الظاهر"). */
 const KIND_PREFIX = /^(?:مديرية|مديريه|محافظة|محافظه|مدينة|مدينه|منطقة|منطقه|قرية|قريه|جبهة|جبهه)\s+/;
+
+/** Words the model sometimes returns as a "target" that name no place. */
+const GENERIC = /^(?:مواقع|موقع|تحصينات|مناطق|منطقة|تجمعات|مواقع و|أهداف|هدف|مدنيين|منازل|مزارع|أحياء|قرى)(?:\s|$)/;
 
 export type NeedsPlace = { targets: string[]; sourceText: string; apply: (hit: GeoHit) => void };
 
@@ -89,6 +93,9 @@ export async function geocodeJobs(store: DeskStore, jobs: NeedsPlace[]): Promise
       const target = String(raw || "").trim();
       if (target.length < 2 || !job.sourceText.includes(target)) continue;
       const bare = target.replace(KIND_PREFIX, "");
+      // A place the gazetteer knows was left unpinned for a reason (unclear
+      // roles, not in the text); and "positions", "areas" are not places.
+      if (placesIn(bare).length || GENERIC.test(bare)) continue;
       const key = `${bare}|${near?.name ?? ""}`;
       let hit = cache[key];
       if (!hit) {

@@ -344,7 +344,49 @@ const PAYLOAD_RAW_HITS = 400;
 const LEAD_CACHE_KEY = "lead-cache";
 const LEAD_CACHE_MAX = 3000;
 /** url → the lead paragraph pulled from it ("" when the page had none). */
-type LeadCache = Record<string, { lead: string; at: number }>;
+type LeadCache = Record<string, { lead: string; at: number; real?: string }>;
+/** Google News links resolved to their article per cycle (two requests each). */
+const GNEWS_RESOLVES = 12;
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36";
+const isGnews = (u: string) => /^https:\/\/news\.google\.com\/rss\/articles\//.test(u);
+
+/**
+ * The article a Google News link stands for. The link carries an opaque id;
+ * Google's own page gives a signature for it, and its batchexecute endpoint
+ * trades id + signature for the publisher's URL. "" when that fails.
+ */
+async function resolveGoogleNews(link: string): Promise<string> {
+  const id = /\/articles\/([^?/]+)/.exec(link)?.[1];
+  if (!id) return "";
+  try {
+    const page = await fetch(`https://news.google.com/articles/${id}`, {
+      headers: { "user-agent": BROWSER_UA },
+      signal: AbortSignal.timeout(8000),
+    }).then((r) => (r.ok ? r.text() : ""));
+    const sg = /data-n-a-sg="([^"]+)"/.exec(page)?.[1];
+    const ts = /data-n-a-ts="([^"]+)"/.exec(page)?.[1];
+    if (!sg || !ts) return "";
+    const inner = JSON.stringify([
+      "garturlreq",
+      [["X", "X", ["X", "X"], null, null, 1, 1, "US:en", null, 1, null, null, null, null, null, 0, 1], "X", "X", 1, [1, 1, 1], 1, 1, null, 0, 0, null, 0],
+      id,
+      Number(ts),
+      sg,
+    ]);
+    const res = await fetch("https://news.google.com/_/DotsSplashUi/data/batchexecute", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "user-agent": BROWSER_UA },
+      body: "f.req=" + encodeURIComponent(JSON.stringify([[["Fbv4je", inner, null, "generic"]]])),
+      signal: AbortSignal.timeout(8000),
+    });
+    const text = await res.text();
+    const url = /garturlres\\",\\"(https?:[^"\\]+)/.exec(text)?.[1] ?? "";
+    return /^https?:\/\/(?!news\.google\.)/.test(url) ? url : "";
+  } catch {
+    return "";
+  }
+}
 
 type RawHit = {
   source: string;
@@ -611,7 +653,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         }
         // Bumped to run once more after the geocoder landed, to pin what the
         // first pass published without a place.
-        const replayKey = `replay2:${ch.id}`;
+        const replayKey = `replay3:${ch.id}`;
         if (ok && REPLAY.channels.has(ch.id) && now < REPLAY.until && !state.lastScanAt[replayKey]) {
           for (let page = 0; page < REPLAY.pages; page += 1) {
             const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));
@@ -675,16 +717,30 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   for (const h of hits) {
     if (h.fromTg || h.text.length >= 500 || /\.pdf(\?|$)/i.test(h.url)) continue;
     const cached = leadCache[h.url];
-    if (cached) addLead(h, cached.lead);
-    else toFetch.push(h);
+    // A Google News entry cached before links were resolved holds Google's
+    // own page, not the article: it is fetched again.
+    if (cached && !(isGnews(h.url) && !cached.real)) {
+      addLead(h, cached.lead);
+      // The card links the publisher's article, not Google's redirect.
+      if (cached.real) h.url = cached.real;
+    } else toFetch.push(h);
   }
+  // Google News items first need their article's address: a few per cycle,
+  // since each costs two requests to Google.
+  let resolves = 0;
+  const fetchable = toFetch.filter((h) => !isGnews(h.url) || resolves++ < GNEWS_RESOLVES).slice(0, BODY_FETCHES);
   await Promise.allSettled(
-    toFetch.slice(0, BODY_FETCHES).map(async (h) => {
-      const html = await fetchText(h.url, 6000);
-      if (!html) return; // not cached: a failed fetch is retried next cycle
-      const lead = extractLead(html);
-      leadCache[h.url] = { lead, at: now };
+    fetchable.map(async (h) => {
+      const key = h.url;
+      const real = isGnews(key) ? await resolveGoogleNews(key) : "";
+      if (isGnews(key) && !real) return; // retried next cycle
+      const html = await fetchText(real || key, 6000);
+      if (!html && !real) return; // not cached: a failed fetch is retried next cycle
+      // A paywalled article still yields its address; its lead may be empty.
+      const lead = html ? extractLead(html) : "";
+      leadCache[key] = { lead, at: now, ...(real ? { real } : {}) };
       addLead(h, lead);
+      if (real) h.url = real;
     }),
   );
   await saveLeadCache(leadCache);

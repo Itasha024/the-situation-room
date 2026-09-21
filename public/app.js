@@ -1279,7 +1279,7 @@ function escalationHtml(v) {
     return `<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${r},${r} 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)}" stroke="${b.color}" stroke-width="16" fill="none"/>`;
   }).join('');
   const s = v.now.score;
-  const [nx, ny] = pt(s, r - 16);
+  const [nx, ny] = pt(s, r - 18);
   const band = escBand(s);
   const cmp = (label, x) => `<div class="esc-cmp"><span>${label}</span><b style="color:${x == null ? 'inherit' : escBand(x).color}">${x == null ? '—' : `${escBand(x).name} ${x}`}</b></div>`;
   const line = (v.line || []);
@@ -1306,12 +1306,11 @@ function escalationHtml(v) {
     <div class="esc-head"><strong>Escalation meter</strong>
       <button type="button" class="esc-how" aria-expanded="false">How is this measured?</button></div>
     <div class="esc-body">
-      <svg class="esc-dial" viewBox="0 0 200 112" role="img" aria-hidden="true">
+      <svg class="esc-dial" viewBox="0 0 200 134" role="img" aria-hidden="true">
         ${arcs}
         <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" class="esc-needle"/>
         <circle cx="${cx}" cy="${cy}" r="5" class="esc-hub"/>
-        <text x="${cx}" y="${cy - 26}" text-anchor="middle" class="esc-num">${s}</text>
-        <text x="${cx}" y="${cy - 8}" text-anchor="middle" class="esc-band" fill="${band.color}">${band.name}</text>
+        <text x="${cx}" y="${cy + 32}" text-anchor="middle"><tspan class="esc-num">${s}</tspan><tspan class="esc-band" fill="${band.color}" dx="8">${band.name}</tspan></text>
       </svg>
       <div class="esc-side">
         ${cmp('12 hours ago', v.previous)}

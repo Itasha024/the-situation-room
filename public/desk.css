@@ -869,6 +869,6 @@ html{scroll-behavior:smooth}
 .esc-cmp b{font-weight:600}
 .esc-spark{width:100%;height:40px;display:block;margin-top:.45rem}
 .esc-mid{stroke:#22303f;stroke-dasharray:3 3}
-.esc-spark-cap{margin:.1rem 0 0;font-size:.66rem;color:var(--muted)}
-.esc-explain{margin-top:.45rem;font-size:.74rem;line-height:1.45;color:#b8c6d6}
-.esc-explain p{margin:.25rem 0}
+.situation .esc p.esc-spark-cap{margin:.1rem 0 0;font-size:.66rem;color:var(--muted);line-height:1.2}
+.esc-explain{margin-top:.45rem}
+.situation .esc .esc-explain p{margin:.25rem 0;font-size:.74rem;line-height:1.45;color:#b8c6d6}

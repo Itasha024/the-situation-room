@@ -289,6 +289,9 @@ STATEMENTS (event_type statement or diplomacy)
   "Yemen's president", al-Mashat "the Houthi political council head",
   al-Zubaidi "the STC leader", in the headline and wherever a reader would not
   know the name.
+- Tom Fletcher is "UN aid chief Tom Fletcher". An official's "we" is his
+  organisation: a UN official's "we fear famine" is "the UN fears famine" in the
+  body. One person is never "they": "Fletcher told Al Arabiya the UN fears …".
 - Words of the speaker in the first person (our, we, us) only after the colon,
   never "X said that our …": either "Houthi leader: our demands are legitimate"
   or "Houthi leader says the Houthis' demands are legitimate".
@@ -390,10 +393,11 @@ const ROLE_NAMES: [RegExp, string][] = [
   [/\b(?:Houthi (?:political council|Supreme Political Council) (?:head|chief) )?(?:Mahdi )?al-Mashat\b/gi, "the Houthi political council head"],
   [/\b(?:(?:the )?(?:Houthi|Yemeni|Sanaa) (?:armed forces |military |army )?spokes(?:man|person) )?(?:Brig(?:adier)?\.? (?:Gen(?:eral)?\.? )?)?(?:Yahya )?Saree\b/gi, "the Houthi spokesperson"],
   [/\bHouthi (?:armed forces |military |army )?spokes(?:man|person)\b/gi, "Houthi spokesperson"],
+  [/\b(?:(?:the )?UN (?:aid|humanitarian|relief) (?:chief|coordinator|head) )?Tom Fletcher\b/g, "UN aid chief Tom Fletcher"],
 ];
 /** "<role> says/warns (that) X" for a speaker whose words X are: the colon form. */
 const SPEAKER_SAYS =
-  /^((?:[\w'.-]+ ){0,4}(?:spokes(?:man|person|woman)|minister|envoy|leader|secretary-general|Guterres|Grundberg)) (?:says|said|stated|warns|warned|stresses|stressed|affirms|affirmed|confirms|confirmed|declares|declared) (?:that )?(.+)$/i;
+  /^((?:[\w'.-]+ ){0,4}(?:spokes(?:man|person|woman)|minister|envoy|leader|secretary-general|chief|coordinator|Guterres|Grundberg|Fletcher)) (?:says|said|stated|warns|warned|stresses|stressed|affirms|affirmed|confirms|confirmed|declares|declared) (?:that )?(.+)$/i;
 
 const BODY_FILLER = new Set(
   ("the and are was were has have had been for with from that this its their there after into over also " +

@@ -205,3 +205,9 @@ test("'killing a martyr' is one person killed", async () => {
   assert.equal(reword("Saudi airstrike kills a people killed in Haifan"), "Saudi airstrike kills one person in Haifan");
   assert.equal(reword("three martyrs in Taiz"), "three people killed in Taiz");
 });
+
+test("Tom Fletcher is named with his role, and his statement takes the colon", async () => {
+  const { fixHeadline } = await import("./reader.ts");
+  assert.equal(fixHeadline("Tom Fletcher says Yemen is approaching famine"), "UN aid chief Tom Fletcher: Yemen is approaching famine");
+  assert.equal(fixHeadline("Tom Fletcher: we fear rising hunger levels in Yemen"), "UN aid chief Tom Fletcher: we fear rising hunger levels in Yemen");
+});

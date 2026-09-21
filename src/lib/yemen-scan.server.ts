@@ -665,12 +665,16 @@ const followWords = (s: string) =>
  */
 export function linkFollowUps(fresh: LiveReport[], pool: LiveReport[]): void {
   for (const r of fresh) {
-    if (r.replyTo || r.type === "statement") continue;
+    if (r.replyTo) continue;
+    // A statement threads only onto the same speaker's line from the same outlet
+    // (an interview given in several posts); other cards by a shared word.
+    const who = namedSpeaker(r.summary);
+    if (r.type === "statement" && !who) continue;
     const t = Date.parse(r.at);
     const mine = followWords(r.summary);
     const prev = pool
       .filter((x) => x.fp !== r.fp && x.source === r.source && Date.parse(x.at) < t && t - Date.parse(x.at) <= FOLLOW_MS)
-      .filter((x) => [...followWords(x.summary)].some((w) => mine.has(w)))
+      .filter((x) => (who ? namedSpeaker(x.summary) === who : [...followWords(x.summary)].some((w) => mine.has(w))))
       .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
     if (prev) r.replyTo = prev.fp;
   }

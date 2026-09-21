@@ -420,3 +420,15 @@ test("capturing a commander is ground fighting; a jet raid and an alert are the 
   assert.equal(digest("Al-Masirah", "Saudi warplanes carry out an air raid on Al-Hazm district in Al-Jawf").type, "strike");
   assert.notEqual(digest("Almashhad", "أسرة نازحة تصل إلى مأرب").type, "combat");
 });
+
+test("one speaker's lines to the same outlet thread, statements included", async () => {
+  const { linkFollowUps } = await import("./yemen-scan.server.ts");
+  type LiveReport = { fp: string; source: string; at: string; summary: string; type: string; url: string; replyTo?: string };
+  const base = { source: "Al Arabiya Breaking", url: "u", type: "statement" } as unknown as LiveReport;
+  const a = { ...base, fp: "a", at: "2026-09-21T13:21:00Z", summary: "UN aid chief Tom Fletcher: humanitarian needs in Yemen are growing rapidly" } as LiveReport;
+  const b = { ...base, fp: "b", at: "2026-09-21T13:22:00Z", summary: "UN aid chief Tom Fletcher: we fear rising hunger levels" } as LiveReport;
+  const c = { ...base, fp: "c", at: "2026-09-21T13:23:00Z", summary: "Yemen's foreign minister: talks must resume" } as LiveReport;
+  linkFollowUps([b, c] as never[], [a, b, c] as never[]);
+  assert.equal(b.replyTo, "a");
+  assert.equal(c.replyTo, undefined);
+});

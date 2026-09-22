@@ -394,7 +394,7 @@ export async function editCandidates(
   for (const c of all) {
     const v = verdicts.get(c.url);
     const r = readingOf.get(c.url);
-    if (v?.kind !== "publish" || !r || v.report.place || !r.confident_roles) continue;
+    if (v?.kind !== "publish" || !r || v.report.place) continue;
     if (v.report.type === "statement" || v.report.type === "diplomacy") continue;
     const report = v.report;
     jobs.push({
@@ -581,8 +581,16 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
   const type = TYPE_OF[r.event_type] ?? "statement";
   const spoken = type === "statement" || type === "diplomacy";
   // Statements are never pinned and carry no dateline: the desk knows what was
-  // said, not where. Unclear roles name no place at all.
-  const places = spoken || !r.confident_roles ? [] : placesFor(r, c.text);
+  // said, not where.
+  //
+  // Unclear roles are no longer a reason to drop the place. `confident_roles` is
+  // the model saying it cannot tell who did this to whom — which is a reason to
+  // publish no `targets`, and it does — but "sirens sound in Najran", "violent
+  // explosions reported in Taiz", "Saudi air strike hits a prison in Al-Jawf"
+  // are all perfectly clear about *where*, and a pin asserts that something
+  // happened there, not who caused it. Holding the place back on that gate kept
+  // twelve such reports a day off the map for a fact none of them was unsure of.
+  const places = spoken ? [] : placesFor(r, c.text);
   const dateline = datelineOf(places);
   const body = String(r.body || "").trim();
   const side = outletSide(c.source, c.lean);

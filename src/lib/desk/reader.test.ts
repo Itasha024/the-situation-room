@@ -78,9 +78,13 @@ test("launch bases are never pinned: pins come from targets found in the source"
   assert.equal(invented.place, undefined);
   const inventedCopy = toReport(reading({ headline: "Air strikes hit Houthi positions in Sanaa", body: "" }), cand(SAREE));
   assert.equal(inventedCopy.place, undefined);
-  // Unclear roles: no place at all.
+  // Unclear roles still get a pin. Not knowing who fired is not the same as not
+  // knowing where it landed, and a pin only says something happened here.
   const unclear = toReport(reading({ targets: ["تعز"], ...nowhere, confident_roles: false }), cand(SAREE));
-  assert.equal(unclear.place, undefined);
+  assert.equal(unclear.place, "Taiz");
+  // Grounding still holds when the roles are unclear: an invented place is out.
+  const unclearInvented = toReport(reading({ targets: ["صنعاء"], ...nowhere, confident_roles: false }), cand(SAREE));
+  assert.equal(unclearInvented.place, undefined);
 });
 
 test("a field report with no usable target is pinned by the place its own copy names", () => {

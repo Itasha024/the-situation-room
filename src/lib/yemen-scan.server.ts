@@ -51,17 +51,17 @@ const TG: ChannelScan[] = [
   // The breaking-news channel, not the main one: the main channel posts
   // programme clips ("Marib and Taiz: the battle map") that read as live
   // fighting and were published as clashes happening now.
-  { id: "AlarabyTvBrk", name: "Al-Araby TV (breaking)", lean: "intl", cadence: C5 },
+  { id: "AlarabyTvBrk", name: "Al-Araby TV", lean: "intl", cadence: C5 },
   { id: "shajab_news", name: "Shajab News", lean: "houthi", cadence: C5 },
   { id: "bin_1saeed", name: "Bin Saeed", lean: "gov", cadence: C5 },
   { id: "AjaNews", name: "Al Jazeera", lean: "intl", cadence: C5 },
   { id: "alhadath_brk", name: "Al Hadath", lean: "gov", cadence: C5 },
-  { id: "alarabiyaBr", name: "Al Arabiya Breaking", lean: "gov", cadence: C5 },
+  { id: "alarabiyaBr", name: "Al Arabiya", lean: "gov", cadence: C5 },
   { id: "SabaNewsyeMedia", name: "Saba", lean: "houthi", cadence: C5 },
   { id: "army21ye", name: "Yahya Saree", lean: "houthi", cadence: C5 },
   { id: "abdulsalamsalah", name: "Mohammed Abdulsalam", lean: "houthi", cadence: C5 },
   { id: "almasirah2", name: "Al-Masirah", lean: "houthi", cadence: C5 },
-  { id: "alagsa3agel", name: "Al-Aqsa Breaking", lean: "houthi", cadence: C5 },
+  { id: "alagsa3agel", name: "Al-Aqsa TV", lean: "houthi", cadence: C5 },
   // Their sites refuse automated readers (403); their channels post each
   // story's headline and first line, minutes after publication.
   { id: "Alakhbar_News", name: "Al-Akhbar", lean: "houthi", cadence: C15 },

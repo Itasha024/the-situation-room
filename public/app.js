@@ -168,6 +168,7 @@ let brief = null;
 
 let layersOn = { houthi: true, plc: true, saudi: true, contested: true, combat: true, strike: true, vessel: true, port: true };
 let legendCollapsed = false;
+let legendWasOpen = true; // the state to restore when the map shrinks again
 let frontFloatTimer = null;
 let frontFloatIdx = null;
 let frontFloatWired = false;
@@ -372,7 +373,7 @@ const SOURCE_LEAN = {
   'Al-Alam': 'houthi', 'Press TV': 'houthi',
   'Ali Bk': 'houthi', 'Sabereen News': 'houthi', Sabereen: 'houthi', Naya: 'houthi',
   'Al-Mihwar': 'houthi', 'Shin Persian': 'houthi', 'Shajab News': 'houthi',
-  'Al-Aqsa Breaking': 'houthi', 'Yahya Saree': 'houthi', Saree: 'houthi',
+  'Al-Aqsa Breaking': 'houthi', 'Al-Aqsa TV': 'houthi', 'Yahya Saree': 'houthi', Saree: 'houthi',
   'Mohammed Abdulsalam': 'houthi', 'Mohammed Ali al-Houthi': 'houthi',
   Ansarollah: 'houthi', 'Baghdad Today': 'houthi', 'Al-Thawrah': 'houthi',
   'Hazam al-Asad': 'houthi', 'Abdulqader al-Murtada': 'houthi',
@@ -389,7 +390,7 @@ const SOURCE_LEAN = {
   Reuters: 'intl', AFP: 'intl', AP: 'intl', BBC: 'intl', 'BBC Verify': 'intl',
   Anadolu: 'intl', Xinhua: 'intl', DPA: 'intl', Guardian: 'intl', 'The Guardian': 'intl',
   'Al Jazeera': 'intl', 'Al Jazeera Net': 'intl', 'Al-Araby Al-Jadeed': 'intl',
-  'Al-Araby Television': 'intl', IOM: 'intl', UNHCR: 'intl', OCHA: 'intl',
+  'Al-Araby Television': 'intl', 'Al-Araby TV': 'intl', IOM: 'intl', UNHCR: 'intl', OCHA: 'intl',
   OHCHR: 'intl', WHO: 'intl', WFP: 'intl', UKMTO: 'intl',
   Axios: 'intl', ABC: 'intl', CBS: 'intl', CNN: 'intl', NYT: 'intl', 'NY Post': 'intl',
   'Washington Post': 'intl', 'US media': 'intl', 'Fox News': 'intl', Politico: 'intl',
@@ -416,6 +417,9 @@ function sourceLean(sourceStr) {
   for (const name of String(sourceStr || '').split(/\s*[·|/]\s*/)) {
     const key = name.trim();
     if (SOURCE_LEAN[key]) return SOURCE_LEAN[key];
+    // Rows stored before the breaking-feed marker came off the outlet names.
+    const bare = stripBreakingMarker(key);
+    if (bare !== key && SOURCE_LEAN[bare]) return SOURCE_LEAN[bare];
   }
   return 'other';
 }
@@ -434,14 +438,36 @@ function splitSources(sourceStr) {
   return String(sourceStr || '').split(/\s*[·|/]\s*/).map((s) => s.trim()).filter(Boolean);
 }
 
+/**
+ * A channel's name often carries which of the outlet's feeds it is — "Al
+ * Arabiya Breaking", "Al-Araby TV (breaking)", "الأقصى عاجل". The reader is
+ * being told who reported it, not which desk inside that outlet posted it
+ * first, so the marker comes off the displayed name. Rows already in the
+ * database carry the old names, which is why this strips rather than relying on
+ * the scanner's table alone.
+ */
+function stripBreakingMarker(name) {
+  const n = String(name || '').trim();
+  const out = n
+    .replace(/\s*[([]\s*(?:breaking(?:\s*news)?|urgent|عاجل)\s*[)\]]\s*$/i, '')
+    .replace(/[\s·|—–-]+(?:breaking(?:\s*news)?|urgent|عاجل)\s*$/i, '')
+    .trim();
+  // "Breaking" on its own is the whole name, not a marker on one.
+  return out || n;
+}
+
 /** One canonical display name per outlet. */
 function canonicalSourceName(name) {
-  const n = String(name || '').trim();
+  const n = stripBreakingMarker(name);
   if (!n) return '';
   const fixes = [
     [/^al[- ]?jazeera.*$/i, 'Al Jazeera'],
     [/^al[- ]?arabiya.*$/i, 'Al Arabiya'],
     [/^al[- ]?hadath.*$/i, 'Al Hadath'],
+    // The channel, not the newspaper (Al-Araby Al-Jadeed), which is its own
+    // outlet and must not be folded in here.
+    [/^al[- ]?araby (?:tv|television)$/i, 'Al-Araby TV'],
+    [/^al[- ]?aqsa(?: tv| channel)?$/i, 'Al-Aqsa TV'],
     [/^al[- ]?masirah.*$/i, 'Al-Masirah'],
     [/^al[- ]?akhbar.*$/i, 'Al-Akhbar'],
     [/^the guardian$/i, 'Guardian'],
@@ -1238,7 +1264,7 @@ function renderLiveScan() {
     const sn = escapeHtml((h.snippet || '').slice(0, 240));
     return `<div class="ls-row" data-url="${escapeHtml(u)}">
       <div class="ls-top">
-        <span class="ls-src">${escapeHtml(h.source || '')}</span>
+        <span class="ls-src">${escapeHtml(canonicalSourceName(h.source))}</span>
         <span class="ls-at" title="Published ${escapeHtml(pub)}">scanned ${escapeHtml(seen || pub)}</span>
       </div>
       <p class="ls-sn">${sn}</p>
@@ -1457,7 +1483,7 @@ function feedCardHtml(r, i) {
       <p class="headline">${escapeHtml(sum)}</p>
       ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
       ${mediaBlock(r.media)}
-      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.source)}</a>`).join(' · ')}</p>` : ''}
+      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
 }
@@ -2230,6 +2256,7 @@ function openMapPop({ title, anchor, build, go }) {
       <div class="pin-sheet-head"><p class="front-float-title">${escapeHtml(title || '')}</p>
       <button type="button" class="pin-sheet-x" aria-label="Close">×</button></div>
       <div id="pin-sheet-map"></div>
+      ${popLegendHtml()}
       <button type="button" class="front-float-go">Show on the main map</button>
     </div>`;
   el.classList.toggle('as-pop', !!anchor);
@@ -3205,13 +3232,52 @@ function renderTimeline(d) {
   goPresent({ scroll: false });
 }
 
+let legendFitWired = false;
+
+/**
+ * The legend does not scroll: a key that hides half its rows behind a scrollbar
+ * is not a key. When the map is too short for the full list it switches to the
+ * compact scale instead (`.tight` — the hint line goes, the rows close up).
+ * Measured rather than guessed, because the map's height is a `clamp()` of the
+ * viewport and the list's length depends on how many control sides exist today.
+ */
+function fitLegend() {
+  const legend = document.getElementById('legend');
+  if (!legend) return;
+  legend.classList.remove('tight', 'cols');
+  if (legendCollapsed) return;
+  // `overflow:hidden` plus a max-height, so anything clipped shows up here.
+  const clipped = () => legend.scrollHeight > legend.clientHeight + 1;
+  if (!clipped()) return;
+  legend.classList.add('tight');
+  if (!clipped()) return;
+  legend.classList.add('cols');
+}
+
+/** The name a control side goes by in a key: "Houthi", not "Houthi / Ansar Allah". */
+function controlShortName(c) {
+  if (c.id === 'plc') return 'Government';
+  if (c.id === 'houthi') return 'Houthi';
+  if (c.id === 'contested') return 'Contested';
+  return (c.name || '').split(' / ')[0] || c.name || '';
+}
+
+/**
+ * The control key for a pop-up map: one row between the map and the button to
+ * the main map. The pop-ups paint governorates in the main map's colours but
+ * carry none of its legend, so a reader who opened one straight from a card had
+ * no way to read them. Sides only — the pop-ups draw no Saudi fill, and the
+ * report pop-up's pins already carry their own labels.
+ */
+function popLegendHtml() {
+  const sides = (data && Array.isArray(data.control) ? data.control : []).filter((c) => c && c.color);
+  if (!sides.length) return '';
+  const row = (c) => `<span><i class="sw" style="background:${escapeHtml(c.color)}"></i>${escapeHtml(controlShortName(c))}</span>`;
+  return `<div class="pop-legend">${sides.map(row).join('')}</div>`;
+}
+
 function renderLegend(d) {
-  const shortName = (c) => {
-    if (c.id === 'plc') return 'Government';
-    if (c.id === 'houthi') return 'Houthi';
-    if (c.id === 'contested') return 'Contested';
-    return (c.name || '').split(' / ')[0] || c.name || '';
-  };
+  const shortName = controlShortName;
   const inkFor = (hex) => {
     const h = String(hex || '').replace('#', '');
     if (h.length < 6) return '';
@@ -3248,6 +3314,11 @@ function renderLegend(d) {
       ${row('vessel', EVENT_COLORS.vessel, 'Vessel attacked', true)}
       ${row('port', EVENT_COLORS.port, 'Port/terminal attacked', true)}
     </div>`;
+  fitLegend();
+  if (!legendFitWired) {
+    legendFitWired = true;
+    window.addEventListener('resize', fitLegend);
+  }
   legend.querySelector('.leg-collapse').onclick = (ev) => {
     if (ev) { ev.preventDefault(); ev.stopPropagation(); }
     legendCollapsed = !legendCollapsed;
@@ -3387,7 +3458,16 @@ function wireUi(d) {
     mapFocus = !mapFocus;
     document.body.classList.toggle('map-focus', mapFocus);
     document.getElementById('btn-focus-map').textContent = mapFocus ? 'Shrink map' : 'Expand map';
-    setTimeout(() => map && map.invalidateSize(), 50);
+    // On a phone the expanded map is nearly all the screen there is, so the key
+    // folds itself away and the reader opens it if they want it. On a desktop
+    // there is room for both and the legend is left alone. Shrinking puts back
+    // whatever they had before, not an unconditional "open".
+    if (window.innerWidth <= 720) {
+      if (mapFocus) { legendWasOpen = !legendCollapsed; legendCollapsed = true; }
+      else legendCollapsed = !legendWasOpen;
+    }
+    try { if (data) renderLegend(data); } catch (e) {}
+    setTimeout(() => { if (map) map.invalidateSize(); fitLegend(); }, 50);
   };
 
   if (!frontFloatWired) {

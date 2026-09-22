@@ -25,7 +25,29 @@ h1{margin:0;font-size:1.15rem}
 .stage{display:grid;grid-template-columns:minmax(0,1fr) 8px var(--rail-w, 360px);align-items:stretch;min-height:0;height:clamp(280px, calc(100dvh - 12.5rem), 78vh)}
 .map-wrap{position:relative;min-height:0;height:100%;border-inline-end:1px solid var(--line);overflow:hidden}
 #map{position:absolute;inset:0;background:#0a1018}
-.legend{position:absolute;z-index:500;left:10px;bottom:12px;background:rgba(8,12,18,.94);border:1px solid var(--line);border-radius:8px;padding:.45rem .55rem .4rem;font-size:.7rem;max-width:220px;line-height:1.35;user-select:none}
+/* The 94px it stops short of the top is the zoom buttons' corner (10px down,
+   63px tall) plus its own 12px off the bottom and a little air: on a short map
+   the expanded legend used to climb over them. It scrolls instead. */
+.legend{position:absolute;z-index:500;left:10px;bottom:12px;max-height:calc(100% - 94px);overflow-y:auto;overscroll-behavior:contain;background:rgba(8,12,18,.94);border:1px solid var(--line);border-radius:8px;padding:.45rem .55rem .4rem;font-size:.7rem;max-width:220px;line-height:1.35;user-select:none}
+/* Slim, dark scrollbar: on a short map the legend scrolls, and the platform's
+   default bar is a bright slab over the map. */
+.legend{scrollbar-width:thin;scrollbar-color:#2b3a4c transparent}
+.legend::-webkit-scrollbar{width:6px}
+.legend::-webkit-scrollbar-track{background:transparent}
+.legend::-webkit-scrollbar-thumb{background:#2b3a4c;border-radius:3px}
+.legend .leg-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.legend .leg-title{color:#c9d4e0;font-size:.66rem;font-weight:700;letter-spacing:.02em}
+.legend .leg-collapse{
+  background:transparent;border:0;color:#8fa3b6;font:inherit;font-size:.95rem;line-height:1;
+  cursor:pointer;padding:.2rem .38rem;border-radius:5px;margin:-.2rem -.28rem -.2rem 0;
+}
+.legend .leg-collapse:hover{background:#1a2433;color:#eaf0f6}
+/* `display:block` is load-bearing: the blanket `.legend div{display:flex}` rule
+   below catches this wrapper too and lays the whole legend out as one
+   horizontal row. */
+.legend .leg-body{display:block;overflow:hidden;max-height:60vh;transition:max-height .18s ease,opacity .15s ease;opacity:1}
+.legend.collapsed{padding-bottom:.45rem}
+.legend.collapsed .leg-body{max-height:0;opacity:0;pointer-events:none}
 .legend .leg-sec{color:#9aabbd;font-size:.62rem;font-weight:600;margin:.4rem 0 .14rem;letter-spacing:.02em}
 .legend .leg-sec:first-child{margin-top:0}
 /* Sits at the very top of the legend: one short line telling the reader the
@@ -229,6 +251,13 @@ body.ctrl-mode .ev{visibility:hidden}
 .island-dot{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #0006}
 a.src-link,.src-wrap a,.srcs a,.pop-src a{color:#7eb6ff;text-decoration:none;border-bottom:1px solid #7eb6ff55}
 a.src-link:hover,.src-wrap a:hover,.srcs a:hover{border-bottom-color:#7eb6ff;color:#a8d0ff}
+a.src-go{
+  display:inline-flex;align-items:center;justify-content:center;
+  color:#7eb6ff;opacity:.8;margin-inline-start:.3em;
+  vertical-align:-2px;text-decoration:none;
+}
+a.src-go:hover{opacity:1;color:#a8d0ff}
+a.src-go svg{display:block}
 .card .src-wrap{font-size:.68rem}
 .card .headline{font-weight:500;line-height:1.45}
 .full-label{margin:0 0 .25rem;color:var(--muted);font-size:.7rem}
@@ -377,7 +406,7 @@ html{scroll-behavior:smooth}
   .legend {
     left: 8px;
     bottom: 8px;
-    max-height: calc(100% - 16px);
+    max-height: calc(100% - 90px);
     max-width: min(190px, 38%);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -860,3 +889,8 @@ html{scroll-behavior:smooth}
   text-shadow:0 0 2px #fff,0 0 3px #fff,1px 1px 0 #fff,-1px -1px 0 #fff}
 .sa-city.t1 span{font-size:12px;font-weight:700;color:#1f2937}
 .sa-t2-off .sa-city.t2,.sa-t3-off .sa-city.t3{display:none}
+/* A label the shared collision pass (declutterLabels) stood down. `!important`
+   because the class lands on the text itself, and `.gov-name span{display:block}`
+   above is the more specific selector. A stood-down Saudi city keeps its dot:
+   the place is still marked, it just goes unnamed at this zoom. */
+.lbl-collide{display:none!important}

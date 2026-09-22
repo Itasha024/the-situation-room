@@ -256,6 +256,14 @@ WRITING
 - An item with fix_previous: your earlier copy of it failed that check.
   Write it again with the fault corrected; the rules above still hold.
 
+EVENT TYPES AT SEA
+maritime_attack is not only a missile or drone strike on a ship: use it for
+any event that happens TO a vessel at a point at sea or in port — seized,
+boarded, detained, intercepted, hijacked, fired on, damaged — as long as it is
+that specific event, not a general mention of Red Sea shipping or a policy
+statement about it. A vessel merely named in a statement (a warning, a
+condemnation, a funding appeal) stays statement or diplomacy.
+
 SIDES (actor_side)
 Both the Houthis (Sanaa) and the recognised government (Aden) call themselves
 "Yemen", "the Yemeni armed forces", "Yemen's defence minister". Judge each

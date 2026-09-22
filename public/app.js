@@ -167,6 +167,7 @@ let saudiGeoCache = null;
 let brief = null;
 
 let layersOn = { houthi: true, plc: true, saudi: true, contested: true, combat: true, strike: true, vessel: true, port: true };
+let legendCollapsed = false;
 let frontFloatTimer = null;
 let frontFloatIdx = null;
 let frontFloatWired = false;
@@ -475,6 +476,12 @@ function isHomepageOrSectionUrl(url) {
   }
 }
 
+/** "Arrow in a box" — external-link glyph after a source name, same href as the name. */
+const SRC_GO_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+function srcGoLink(url) {
+  return `<a class="src-go" href="${escapeHtml(url)}" target="_blank" rel="noopener" aria-label="Open source">${SRC_GO_SVG}</a>`;
+}
+
 /**
  * Source credits. Accepts a "A · B" string, or the {name, url} rows the curated
  * panels carry — passing an object list through a string path is how you end up
@@ -490,7 +497,7 @@ function sourceAnchors(sourceStrOrList, primaryUrl) {
       || (i === 0 && primaryUrl && !isHomepageOrSectionUrl(primaryUrl) ? primaryUrl : '')
       || SOURCE_HOME[e.name]
       || '';
-    if (url) out.push(`<a class="src-link" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(e.name)}</a>`);
+    if (url) out.push(`<a class="src-link" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(e.name)}</a>${srcGoLink(url)}`);
     else out.push(`<span class="src-plain">${escapeHtml(e.name)}</span>`);
   });
   return out.join(' · ');
@@ -504,12 +511,12 @@ function sourceCreditsHtml(sourceStrOrList, primaryUrl) {
       const name = canonicalSourceName(s);
       const url = SOURCE_HOME[name] || '';
       parts.push(url
-        ? `<a class="src-link" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>`
+        ? `<a class="src-link" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>${srcGoLink(url)}`
         : `<span class="src-plain">${escapeHtml(name)}</span>`);
     } else if (s && s.name) {
       const name = canonicalSourceName(s.name);
       parts.push(s.url
-        ? `<a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>`
+        ? `<a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>${srcGoLink(s.url)}`
         : `<span class="src-plain">${escapeHtml(name)}</span>`);
     }
   }
@@ -694,7 +701,7 @@ function strikeKind(text) {
   if (/launch(?:ed|es)?\b|fired|toward|towards/i.test(t) && !/air raids?|warplanes?|jets?\b|air strikes?/i.test(t)) return 'Launch';
   return 'Strike';
 }
-const VESSEL_RE = /\bvessel\b|\btanker\b|merchant ship|bulk carrier|\bcrew\b|\bship\b|UKMTO/i;
+const VESSEL_RE = /\bvessels?\b|\btankers?\b|merchant ships?|bulk carriers?|\bcrews?\b|\bships?\b|\bboats?\b|UKMTO/i;
 const PORT_RE = /\bport\b|oil terminal|refinery|Aramco|terminal at/i;
 const NONMAP_RE = /\bF-?35\b|arms (?:deal|sale)|approved a (?:possible )?sale|State Department|condemn(?:s|ed)?\b|expresses solidarity|appeal|funding|displaced|refugee|humanitarian|Crisis Group|travel warning/i;
 
@@ -1605,7 +1612,10 @@ function renderFeed(d) {
   const slice = all.slice(0, reportsShown);
   const fc = document.getElementById('feed-count');
   if (fc) fc.textContent = `${Math.min(reportsShown, all.length)} / ${all.length}`;
-  if (!mappableByFp.size && data && window.L) { try { buildMapPins(data); } catch (e) {} }
+  // Refresh the pin index BEFORE the cards are built: `feedCardHtml` decides
+  // whether to offer "Show on map" from `mappableByFp`, so a stale index means
+  // a report that is on the map renders without the button.
+  if (data && window.L) { try { buildMapPins(data); } catch (e) {} }
   document.getElementById('feed').innerHTML = slice.map((r, i) => feedCardHtml(r, i)).join('');
   document.querySelectorAll('#feed .card').forEach(wireFeedCard);
   const more = document.getElementById('btn-more-reports');
@@ -1636,6 +1646,11 @@ function prependFeedCards(d) {
     if (newcomers.length > 12) break;
   }
   if (!newcomers.length) return;
+  // The reports that just landed are not in the pin index yet, and the index is
+  // what decides whether a card offers "Show on map". Without this, a fresh
+  // report sits in the feed with no way to reach its own pin until the next
+  // full render — which is why cards kept turning up "not on the map".
+  if (window.L) { try { buildMapPins(d); } catch (e) {} }
   feed.insertAdjacentHTML('afterbegin', newcomers.map((r, i) => feedCardHtml(r, i)).join(''));
   [...feed.querySelectorAll('.card')].slice(0, newcomers.length).forEach(wireFeedCard);
   const more = document.getElementById('btn-more-reports');
@@ -1651,7 +1666,48 @@ function prependFeedCards(d) {
  * ---------------------------------------------------------------- */
 
 /** The governorates a front covers, for its locator map. */
-function frontMiniIds(front) {
+/** Ray-casting point-in-ring test. `ring` is a GeoJSON [lng,lat] point list. */
+function pointInRing(x, y, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/** Point-in-polygon for a GeoJSON Polygon/MultiPolygon geometry (holes excluded). */
+function pointInGeometry(x, y, geom) {
+  if (!geom) return false;
+  const inPoly = (poly) => {
+    if (!pointInRing(x, y, poly[0])) return false;
+    for (let k = 1; k < poly.length; k++) if (pointInRing(x, y, poly[k])) return false;
+    return true;
+  };
+  if (geom.type === 'Polygon') return inPoly(geom.coordinates);
+  if (geom.type === 'MultiPolygon') return geom.coordinates.some(inPoly);
+  return false;
+}
+
+/** Which governorate a [lat,lng] spot falls inside, by scanning the loaded admin polygons. */
+function governorateIdAtSpot(spot, features) {
+  if (!Array.isArray(spot) || spot.length !== 2 || !Array.isArray(features)) return null;
+  const [lat, lng] = spot;
+  for (const f of features) {
+    if (pointInGeometry(lng, lat, f.geometry)) return f.properties.shapeISO;
+  }
+  return null;
+}
+
+/**
+ * Which governorates a front belongs to. Curated fronts carry `mapFocus.ids`;
+ * dynamically-opened ones (new-fronts.ts) never do, so fall back to a name
+ * match and, failing that, to locating the front's own spot in the loaded
+ * governorate polygons (`features`, when the caller has them to hand).
+ */
+function frontMiniIds(front, features) {
   const locator = (front && front.mapFocus) || {};
   const ids = new Set(locator.ids || []);
   const name = (front && front.name) || '';
@@ -1662,7 +1718,34 @@ function frontMiniIds(front) {
     else if (/Jawf|Hazm/i.test(name)) ids.add('YE-JA');
     else if (/Bab al-Mandab|Mayun|Hanish/i.test(name)) { ids.add('YE-LA'); ids.add('YE-MY'); ids.add('YE-HN'); }
   }
+  if (!ids.size && locator.spot) {
+    const iso = governorateIdAtSpot(locator.spot, features);
+    if (iso) ids.add(iso);
+  }
   return ids;
+}
+
+/**
+ * Front-map governorate styling: the front's own governorates at full,
+ * strong control colour under a thick yellow border; the rest at a fixed,
+ * still-readable lower opacity — independent of the main map's hover/"Show
+ * on map" highlight state (`highlightIds`), which `styleFeature` uses and
+ * which would otherwise bleed stale fades into this map between hovers.
+ */
+function frontFeatureStyle(feature, byIso, ids) {
+  const iso = feature.properties.shapeISO;
+  const g = byIso[iso] || {};
+  const ctrl = (g.control === 'mixed') ? 'contested' : g.control;
+  const c = COLORS[ctrl] || COLORS.contested || '#334155';
+  const on = controlVisible(ctrl);
+  const lit = ids.has(iso);
+  return {
+    fillColor: c,
+    fillOpacity: on ? (lit ? 0.88 : 0.55) : 0,
+    color: lit ? '#fde047' : '#0b0f14',
+    weight: lit ? 3.5 : 1.2,
+    opacity: on ? 1 : 0.2,
+  };
 }
 
 /**
@@ -1674,19 +1757,13 @@ function frontMiniIds(front) {
 async function buildFrontMap(m, front, d) {
   if (!geoCache) geoCache = await fetch('/yemen-adm1.geojson').then((r) => r.json()).catch(() => null);
   if (sheetMap !== m || !geoCache) return;
-  const ids = frontMiniIds(front);
   const byIso = controlByIso(d);
   const lit = L.latLngBounds([]);
   const mainland = splitIslandFeatures(geoCache).mainland;
+  const ids = frontMiniIds(front, mainland.features);
   const layer = L.geoJSON(mainland, {
     interactive: false,
-    style: (f) => {
-      const base = styleFeature(f, byIso);
-      const fo = base.fillOpacity == null ? 0.5 : base.fillOpacity;
-      return ids.has(f.properties.shapeISO)
-        ? { ...base, fillOpacity: Math.min(0.85, fo * 1.35), color: '#fde047', weight: 3.5, opacity: 1 }
-        : { ...base, fillOpacity: fo * 0.45, opacity: 0.45 };
-    },
+    style: (f) => frontFeatureStyle(f, byIso, ids),
     onEachFeature: (f, l) => { if (ids.has(f.properties.shapeISO)) lit.extend(l.getBounds()); },
   }).addTo(m);
   layer.eachLayer((l) => { if (ids.has(l.feature.properties.shapeISO)) l.bringToFront(); });
@@ -2043,7 +2120,11 @@ function styleFeature(feature, byIso) {
   const hl = highlightIds.has(iso);
   return {
     fillColor: c,
-    fillOpacity: on ? (hl ? 0.88 : (highlightIds.size ? 0.22 : 0.55)) : 0,
+    // Highlighting one governorate used to fade every other one to 0.22, which
+    // left the whole map looking washed out until the highlight was cleared.
+    // The highlight reads perfectly well from its brighter fill, white border
+    // and pulse — the rest of the map keeps its real control colours.
+    fillOpacity: on ? (hl ? 0.88 : 0.55) : 0,
     color: hl ? '#f8fafc' : '#0b0f14',
     weight: hl ? 2.6 : (on ? 1.2 : 0.6),
     opacity: on ? 1 : 0.2,
@@ -2714,6 +2795,78 @@ function featureLabelPoint(f) {
  * The governorate names, drawn by the desk above the control colours: the
  * tiles' own names sit under the fill and can barely be read.
  */
+/* ---------------------------------------------------------------- *
+ * Map labels: one shared collision pass
+ *
+ * Every name the desk draws on a map — governorate names and Saudi city names
+ * — is placed at a point and sized by its own text, so at some zooms they sit
+ * on top of each other and the map turns heavy to read. Zoom thresholds alone
+ * cannot fix that: two labels can be far apart in degrees and still touch on
+ * screen. So each layer registers its labels with a priority, and one greedy
+ * pass over the rendered boxes hides the lower-priority label of any
+ * overlapping pair. Governorate names outrank city names; among the cities the
+ * tiers rank themselves.
+ * ---------------------------------------------------------------- */
+
+const mapLabels = new WeakMap();
+
+function registerLabels(m, group, entries) {
+  const kept = (mapLabels.get(m) || []).filter((e) => e.group !== group);
+  mapLabels.set(m, [...kept, ...entries].sort((a, b) => a.prio - b.prio));
+  if (!m._deskLabelPass) {
+    // Deferred by a frame on purpose. A zoom also flips `names-small` and the
+    // Saudi tier classes from their own handlers, and those decide how big a
+    // label is and whether it is drawn at all; measuring in the same tick
+    // measures the previous zoom's type. The flag coalesces a burst of view
+    // events into one pass.
+    m._deskLabelPass = () => {
+      if (m._deskLabelQueued) return;
+      m._deskLabelQueued = true;
+      requestAnimationFrame(() => { m._deskLabelQueued = false; declutterLabels(m); });
+    };
+    m.on('zoomend moveend viewreset resize', m._deskLabelPass);
+  }
+  m._deskLabelPass();
+}
+
+/**
+ * Hide every label whose box overlaps one already placed.
+ *
+ * What is measured is the text itself, not the marker. A `divIcon` with
+ * `iconSize: null` has no size of its own: the Saudi markers, whose text is
+ * absolutely positioned, measured 0x0 and so were never checked against
+ * anything, and the governorate markers measured a box sitting at the anchor
+ * point while the name is actually drawn half its width left and half its
+ * height up from there. Measuring the span is the only way the boxes match
+ * what the reader sees.
+ */
+function declutterLabels(m) {
+  const all = mapLabels.get(m);
+  if (!all || !all.length) return;
+  try {
+    const z = m.getZoom();
+    const boxes = [];
+    for (const e of all) {
+      const root = e.marker.getElement();
+      const el = root && (root.querySelector('span') || root);
+      if (!el) continue;
+      // Clear first: a label hidden at the last zoom may fit at this one, and
+      // a hidden element measures as a zero-sized box.
+      el.classList.remove('lbl-collide');
+      if (e.visible && !e.visible(z)) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      // Wider than a hairline: every label carries a white halo, so two boxes
+      // that merely touch already read as one smudge.
+      const pad = 3;
+      const hit = boxes.some((b) => r.left < b.right + pad && r.right > b.left - pad
+        && r.top < b.bottom + pad && r.bottom > b.top - pad);
+      if (hit) el.classList.add('lbl-collide');
+      else boxes.push(r);
+    }
+  } catch (e) {}
+}
+
 function govNameLayer(m, features, byIso) {
   if (!m.getPane('govNames')) {
     m.createPane('govNames');
@@ -2721,21 +2874,25 @@ function govNameLayer(m, features, byIso) {
     m.getPane('govNames').style.pointerEvents = 'none';
   }
   const group = L.layerGroup();
+  const entries = [];
   (features || []).forEach((f) => {
     const iso = f.properties && f.properties.shapeISO;
     const g = byIso[iso] || {};
     const name = String(g.name || (f.properties && f.properties.shapeName) || '').trim();
     const pt = featureLabelPoint(f);
     if (!name || !pt) return;
-    L.marker(pt, {
+    const marker = L.marker(pt, {
       pane: 'govNames', interactive: false, keyboard: false,
       icon: L.divIcon({ className: 'gov-name', html: `<span>${escapeHtml(name)}</span>`, iconSize: null }),
     }).addTo(group);
+    entries.push({ group: 'gov', prio: 0, marker });
   });
+  group.addTo(m);
   const sync = () => { try { m.getContainer().classList.toggle('names-small', m.getZoom() < 6.5); } catch (e) {} };
   m.on('zoomend', sync);
   sync();
-  return group.addTo(m);
+  registerLabels(m, 'gov', entries);
+  return group;
 }
 
 /**
@@ -2759,13 +2916,20 @@ function saudiCityLayer(m) {
     m.getPane('govNames').style.pointerEvents = 'none';
   }
   const group = L.layerGroup();
-  SAUDI_CITIES.forEach(([name, lat, lng, tier]) => {
-    L.marker([lat, lng], {
+  // SAUDI_CITIES is already tier-ordered (1, then 2, then 3) — that order is
+  // also the collision priority: a lower tier never yields to a higher one.
+  // They all rank below the governorate names, which is what `prio` encodes.
+  const entries = SAUDI_CITIES.map(([name, lat, lng, tier]) => ({
+    group: 'saudi',
+    prio: tier,
+    visible: (z) => !(tier === 2 && z < 6) && !(tier === 3 && z < 7.5),
+    marker: L.marker([lat, lng], {
       pane: 'govNames', interactive: false, keyboard: false,
       icon: L.divIcon({ className: `sa-city t${tier}`, html: `<i></i><span>${escapeHtml(name)}</span>`, iconSize: null }),
-    }).addTo(group);
-  });
-  const sync = () => {
+    }).addTo(group),
+  }));
+  group.addTo(m);
+  const tiers = () => {
     try {
       const z = m.getZoom();
       const c = m.getContainer().classList;
@@ -2773,9 +2937,10 @@ function saudiCityLayer(m) {
       c.toggle('sa-t3-off', z < 7.5);
     } catch (e) {}
   };
-  m.on('zoomend', sync);
-  sync();
-  return group.addTo(m);
+  m.on('zoomend', tiers);
+  tiers();
+  registerLabels(m, 'saudi', entries);
+  return group;
 }
 
 let govNamesLayer = null;
@@ -3065,17 +3230,30 @@ function renderLegend(d) {
     </button>`;
   };
   const controlRows = (d.control || []).map((c) => row(controlLayerKey(c.id), c.color, shortName(c))).join('');
-  document.getElementById('legend').innerHTML = `
-    <p class="leg-hint">Tick to show, untick to hide.</p>
-    <div class="leg-sec">Territory</div>
-    ${controlRows}
-    ${row('saudi', COLORS.saudi, 'Saudi Arabia')}
-    <div class="leg-sec">Events</div>
-    ${row('combat', EVENT_COLORS.combat, 'Ground fighting', true)}
-    ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
-    ${row('vessel', EVENT_COLORS.vessel, 'Vessel attacked', true)}
-    ${row('port', EVENT_COLORS.port, 'Port/terminal attacked', true)}`;
-  document.querySelectorAll('#legend .leg-item').forEach((btn) => {
+  const legend = document.getElementById('legend');
+  legend.classList.toggle('collapsed', legendCollapsed);
+  legend.innerHTML = `
+    <div class="leg-head">
+      <span class="leg-title">Legend</span>
+      <button type="button" class="leg-collapse" aria-label="${legendCollapsed ? 'Expand legend' : 'Collapse legend'}" aria-expanded="${legendCollapsed ? 'false' : 'true'}">${legendCollapsed ? '▸' : '▾'}</button>
+    </div>
+    <div class="leg-body">
+      <p class="leg-hint">Tick to show, untick to hide.</p>
+      <div class="leg-sec">Territory</div>
+      ${controlRows}
+      ${row('saudi', COLORS.saudi, 'Saudi Arabia')}
+      <div class="leg-sec">Events</div>
+      ${row('combat', EVENT_COLORS.combat, 'Ground fighting', true)}
+      ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
+      ${row('vessel', EVENT_COLORS.vessel, 'Vessel attacked', true)}
+      ${row('port', EVENT_COLORS.port, 'Port/terminal attacked', true)}
+    </div>`;
+  legend.querySelector('.leg-collapse').onclick = (ev) => {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    legendCollapsed = !legendCollapsed;
+    renderLegend(d);
+  };
+  legend.querySelectorAll('.leg-item').forEach((btn) => {
     btn.onclick = (ev) => {
       if (ev) { ev.preventDefault(); ev.stopPropagation(); }
       const k = btn.dataset.layer;

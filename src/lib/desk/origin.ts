@@ -46,6 +46,27 @@ const CITABLE: [RegExp, Cited][] = [
   [/سنتكوم|القيادة المركزية الأمريكية|CENTCOM|Central Command/i, { name: "CENTCOM", site: "centcom.mil", lang: "en", kind: "official" }],
   [/الخارجية الأمريكية|الخارجية الأميركية|State Department/i, { name: "State Department", site: "state.gov", lang: "en", kind: "official" }],
   [/المبعوث الأممي|غروندبرغ|UN envoy|Grundberg/i, { name: "UN envoy's office", site: "osesgy.unmissions.org", lang: "en", kind: "official" }],
+  // Wires and broadcasters the channels relay by name.
+  [/فرانس برس|وكالة الصحافة الفرنسية|\bAFP\b|Agence France[- ]Presse/i, { name: "AFP", site: "afp.com", lang: "en", kind: "outlet" }],
+  [/بي بي سي|\bBBC\b/i, { name: "BBC", site: "bbc.com", lang: "en", kind: "outlet" }],
+  [/الأناضول|أناضول|Anadolu/i, { name: "Anadolu", site: "aa.com.tr", lang: "en", kind: "outlet" }],
+  [/تي آر تي|\bTRT\b/i, { name: "TRT", site: "trt.net.tr", lang: "en", kind: "outlet" }],
+  [/الجزيرة نت|موقع الجزيرة|Al Jazeera Net/i, { name: "Al Jazeera", site: "aljazeera.net", lang: "ar", kind: "outlet" }],
+  [/ميدل إيست آي|Middle East Eye/i, { name: "Middle East Eye", site: "middleeasteye.net", lang: "en", kind: "outlet" }],
+  [/العربي الجديد/, { name: "Al-Araby Al-Jadeed", site: "alaraby.co.uk", lang: "ar", kind: "outlet" }],
+  // The UN bodies that publish the displacement, hunger and casualty figures
+  // the desk keeps being asked to carry. Each publishes its own release; a
+  // channel quoting "the UNHCR said" is quoting a document with a URL.
+  [/المفوضية السامية للأمم المتحدة لشؤون اللاجئين|مفوضية (?:الأمم المتحدة )?(?:السامية )?لشؤون اللاجئين|\bUNHCR\b/i, { name: "UNHCR", site: "unhcr.org", lang: "en", kind: "official" }],
+  [/مكتب تنسيق الشؤون الإنسانية|أوتشا|\bOCHA\b/i, { name: "UN OCHA", site: "unocha.org", lang: "en", kind: "official" }],
+  [/برنامج الأغذية العالمي|\bWFP\b|World Food Programme/i, { name: "WFP", site: "wfp.org", lang: "en", kind: "official" }],
+  [/منظمة الصحة العالمية|World Health Organization|\bWHO\b/, { name: "WHO", site: "who.int", lang: "en", kind: "official" }],
+  [/اليونيسف|\bUNICEF\b/i, { name: "UNICEF", site: "unicef.org", lang: "en", kind: "official" }],
+  [/المنظمة البحرية الدولية|\bIMO\b/, { name: "IMO", site: "imo.org", lang: "en", kind: "official" }],
+  // Governments whose statements arrive through whoever saw them first.
+  [/الخارجية البريطانية|وزارة الخارجية البريطانية|Foreign(?:,| and) Commonwealth|\bFCDO\b|British Foreign Office/i, { name: "UK Foreign Office", site: "gov.uk", lang: "en", kind: "official" }],
+  [/البنتاغون|وزارة الدفاع الأمريكية|Pentagon|\bDoD\b/i, { name: "Pentagon", site: "defense.gov", lang: "en", kind: "official" }],
+  [/البيت الأبيض|White House/i, { name: "White House", site: "whitehouse.gov", lang: "en", kind: "official" }],
 ];
 
 /** A citation marker: the name must be what the post is relaying, not a subject. */

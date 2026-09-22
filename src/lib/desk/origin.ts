@@ -166,7 +166,12 @@ async function page(url: string): Promise<string> {
 
 /** An article page's paragraphs, without the page's furniture. */
 export function articleText(html: string): string {
-  return [...String(html || "").matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+  // Stylesheets and scripts first. Stripping tags alone leaves what was between
+  // them, and sites that style their links inline — wsj.com does — put a
+  // `<style>` block inside the first paragraph, so every rescued WSJ story
+  // began "DUBAI—.css-qxhvg8-OverridedLink{-webkit-text-decoration:none…".
+  const clean = String(html || "").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ");
+  return [...clean.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
     .map((m) =>
       m[1]
         .replace(/<[^>]+>/g, "")
@@ -187,7 +192,19 @@ export function articleText(html: string): string {
     .reduce((out, t) => (out.length + t.length < FULL_TEXT_MAX ? (out ? `${out}\n${t}` : t) : out), "");
 }
 
-const titleKey = (t: string) => t.toLowerCase().replace(/[^p{L}p{N}]+/gu, "");
+/**
+ * A headline reduced to its letters, so the same story under two outlets'
+ * punctuation compares equal.
+ *
+ * The backslashes matter: written `[^p{L}p{N}]` the class is not "anything but
+ * a letter or a digit", it is "anything but the five characters p { L } N".
+ * Every lowercased headline came out as a run of the letter p — "Trump spoke
+ * with Yemen's president Al-Alimi" was "ppp" — so unrelated stories with the
+ * same number of p's compared equal, and `readOriginal` returned a different
+ * article's text as this report's body. Caught by a rescued Arab News item
+ * about a call with Yemen's president coming back as Trump meeting Qatar's PM.
+ */
+const titleKey = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 
 /** How each site's original was read, and how often it could not be: the admin record. */
 export const ROUTES_KEY = "origin-routes";

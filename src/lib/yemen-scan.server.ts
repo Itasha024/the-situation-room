@@ -18,7 +18,7 @@ import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
-import { type ReRead, findCitation, traceOrigins } from "./desk/origin.ts";
+import { type ReRead, findCitation, readOriginal, traceOrigins } from "./desk/origin.ts";
 import { sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
@@ -36,10 +36,24 @@ type RssFeed = { url: string; name: string; id: string; cadence: Cadence; mode?:
 
 const C5: Cadence = { everyMin: 5 };
 const C15: Cadence = { everyMin: 15 };
-const C3H: Cadence = { everyHours: 3 };
-const C90: Cadence = { everyHours: 1.5 };
-const C_AAWSAT: Cadence = { atHours: [17, 18, 20, 22] };
-const C_AKHBAR: Cadence = { atHour: 7 };
+/**
+ * Websites are read every half hour.
+ *
+ * They used to be read every 90 minutes or every three hours, and two of them
+ * only at fixed times of day, on the reasoning that a newspaper is not a
+ * breaking channel. That was wrong about what these sites are: aawsat.com,
+ * al-akhbar.com, reuters.com and the rest post through the day, and the pieces
+ * worth having — the interview, the exclusive, the despatch with a byline —
+ * are exactly the ones that do not arrive on anyone's Telegram. A three-hour
+ * gap meant the desk met them cold, hours late, or not at all once they had
+ * slipped off the feed's first page.
+ *
+ * The fetch itself is one request per site, so the cost of this is small; what
+ * it buys is the desk seeing an article while it is still news.
+ */
+const C30: Cadence = { everyMin: 30 };
+/** The weeklies and the quieter sections: hourly is still six times a day. */
+const C1H: Cadence = { everyHours: 1 };
 
 /** Operator-supplied Telegram list — exclusive catalog. */
 const TG: ChannelScan[] = [
@@ -79,30 +93,30 @@ const US_TALK = "(Trump OR \"White House\" OR \"State Department\" OR Rubio OR V
 
 const RSS: RssFeed[] = [
   { id: "almashhad", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5 },
-  { id: "alaraby", url: gnews(`site:alaraby.co.uk ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C3H },
-  { id: "alaraby-pol", url: gnews(`site:alaraby.co.uk/politics ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C3H },
+  { id: "alaraby", url: gnews(`site:alaraby.co.uk ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C30 },
+  { id: "alaraby-pol", url: gnews(`site:alaraby.co.uk/politics ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C30 },
   // The TV channel's own site (alaraby.com), not the paper's: its interviews
   // with officials are posted there and not on the breaking channel.
-  { id: "alaraby-tv", url: gnews(`site:alaraby.com ${YE_AR} when:2d`, "ar", "QA", "QA:ar"), name: "Al-Araby TV", cadence: C90 },
-  { id: "aawsat", url: gnews(`site:aawsat.com ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C_AAWSAT },
-  { id: "aawsat-me", url: gnews(`site:aawsat.com (الشرق الأوسط) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C_AAWSAT },
-  { id: "akhbar", url: gnews(`site:al-akhbar.com ${YE_AR} when:2d`, "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C_AKHBAR },
+  { id: "alaraby-tv", url: gnews(`site:alaraby.com ${YE_AR} when:2d`, "ar", "QA", "QA:ar"), name: "Al-Araby TV", cadence: C30 },
+  { id: "aawsat", url: gnews(`site:aawsat.com ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C30 },
+  { id: "aawsat-me", url: gnews(`site:aawsat.com (الشرق الأوسط) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C30 },
+  { id: "akhbar", url: gnews(`site:al-akhbar.com ${YE_AR} when:2d`, "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C1H },
   // No homepage/PDF source: al-akhbar.com answers every automated request with
   // a Cloudflare bot challenge (403), so Al-Akhbar comes through Google News.
-  { id: "erem", url: gnews(`site:eremnews.com ${YE_AR} when:2d`, "ar", "AE", "AE:ar"), name: "Erem News", cadence: C3H },
-  { id: "alhurra", url: gnews(`site:alhurra.com ${YE_AR} when:2d`, "ar", "US", "US:ar"), name: "Alhurra", cadence: C3H },
-  { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C3H },
-  { id: "reuters", url: gnews(`site:reuters.com ${YE_EN} when:2d`), name: "Reuters", cadence: C90 },
-  { id: "wsj", url: gnews(`site:wsj.com ${YE_EN} when:3d`), name: "WSJ", cadence: C90 },
-  { id: "wapo", url: gnews(`site:washingtonpost.com ${YE_EN} when:3d`), name: "Washington Post", cadence: C90 },
-  { id: "nyt", url: gnews(`site:nytimes.com ${YE_EN} when:3d`), name: "NYT", cadence: C90 },
-  { id: "nypost", url: gnews(`site:nypost.com ${YE_EN} when:3d`), name: "NY Post", cadence: C90 },
-  { id: "axios", url: gnews(`site:axios.com ${YE_EN} when:3d`), name: "Axios", cadence: C90 },
-  { id: "cnn", url: gnews(`site:cnn.com ${YE_EN} when:3d`), name: "CNN", cadence: C90 },
-  { id: "abc", url: gnews(`site:abcnews.go.com ${YE_EN} when:3d`), name: "ABC", cadence: C90 },
-  { id: "cbs", url: gnews(`site:cbsnews.com ${YE_EN} when:3d`), name: "CBS", cadence: C90 },
-  { id: "fox", url: gnews(`site:foxnews.com ${YE_EN} when:3d`), name: "Fox News", cadence: C90 },
-  { id: "us-talk", url: gnews(`${US_TALK} ${YE_EN} (site:reuters.com OR site:wsj.com OR site:washingtonpost.com OR site:nytimes.com OR site:cnn.com OR site:axios.com OR site:state.gov) when:3d`), name: "US media", cadence: C90 },
+  { id: "erem", url: gnews(`site:eremnews.com ${YE_AR} when:2d`, "ar", "AE", "AE:ar"), name: "Erem News", cadence: C30 },
+  { id: "alhurra", url: gnews(`site:alhurra.com ${YE_AR} when:2d`, "ar", "US", "US:ar"), name: "Alhurra", cadence: C30 },
+  { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C30 },
+  { id: "reuters", url: gnews(`site:reuters.com ${YE_EN} when:2d`), name: "Reuters", cadence: C30 },
+  { id: "wsj", url: gnews(`site:wsj.com ${YE_EN} when:3d`), name: "WSJ", cadence: C30 },
+  { id: "wapo", url: gnews(`site:washingtonpost.com ${YE_EN} when:3d`), name: "Washington Post", cadence: C30 },
+  { id: "nyt", url: gnews(`site:nytimes.com ${YE_EN} when:3d`), name: "NYT", cadence: C30 },
+  { id: "nypost", url: gnews(`site:nypost.com ${YE_EN} when:3d`), name: "NY Post", cadence: C30 },
+  { id: "axios", url: gnews(`site:axios.com ${YE_EN} when:3d`), name: "Axios", cadence: C30 },
+  { id: "cnn", url: gnews(`site:cnn.com ${YE_EN} when:3d`), name: "CNN", cadence: C30 },
+  { id: "abc", url: gnews(`site:abcnews.go.com ${YE_EN} when:3d`), name: "ABC", cadence: C30 },
+  { id: "cbs", url: gnews(`site:cbsnews.com ${YE_EN} when:3d`), name: "CBS", cadence: C30 },
+  { id: "fox", url: gnews(`site:foxnews.com ${YE_EN} when:3d`), name: "Fox News", cadence: C30 },
+  { id: "us-talk", url: gnews(`${US_TALK} ${YE_EN} (site:reuters.com OR site:wsj.com OR site:washingtonpost.com OR site:nytimes.com OR site:cnn.com OR site:axios.com OR site:state.gov) when:3d`), name: "US media", cadence: C30 },
   { id: "spa", url: gnews(`site:spa.gov.sa (Yemen OR Houthi OR Houthis OR اليمن OR الحوث) when:2d`, "en", "SA", "SA:en"), name: "SPA", cadence: C5 },
 ];
 
@@ -112,7 +126,7 @@ const RSS: RssFeed[] = [
 
 function cadenceLabel(c: Cadence): string {
   if ("everyMin" in c) return `every ${c.everyMin} min`;
-  if ("everyHours" in c) return c.everyHours === 1.5 ? "every 90 min" : `every ${c.everyHours} h`;
+  if ("everyHours" in c) return `every ${c.everyHours} h`;
   if ("atHours" in c) return `at ${c.atHours.map((h) => `${String(h).padStart(2, "0")}:00`).join(" / ")}`;
   if ("atHour" in c) return `daily at ${String(c.atHour).padStart(2, "0")}:00`;
   return "";
@@ -313,20 +327,88 @@ async function fetchText(url: string, ms = 8000): Promise<string | null> {
   }
 }
 
-export function extractLead(html: string): string {
-  const og =
-    (html.match(/property=["']og:description["'][^>]*content=["']([^"']{40,})["']/i) || [])[1] ||
-    (html.match(/content=["']([^"']{40,})["'][^>]*property=["']og:description["']/i) || [])[1] ||
+/**
+ * The article's own body, as the publisher ships it to anyone who asks.
+ *
+ * Nearly every news site carries a `<script type="application/ld+json">`
+ * NewsArticle block for search engines, and for a great many of them —
+ * including most Arabic outlets and the wires — its `articleBody` is the whole
+ * story, sitting in the same HTML whose visible paragraphs are a teaser. That
+ * is why a WSJ-style report used to come out three lines long: the desk was
+ * reading the teaser and never looked at the block underneath it.
+ *
+ * JSON-LD is allowed to nest (`@graph`, arrays of types), so this walks the
+ * parsed object rather than pattern-matching the text.
+ */
+function jsonLdBody(html: string): string {
+  let best = "";
+  for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(m[1].trim());
+    } catch {
+      continue; // a malformed block is one site's bug, not a reason to stop
+    }
+    const walk = (v: unknown, depth = 0) => {
+      if (!v || depth > 6) return;
+      if (Array.isArray(v)) return v.forEach((x) => walk(x, depth + 1));
+      if (typeof v !== "object") return;
+      const o = v as Record<string, unknown>;
+      const body = o.articleBody ?? o.text;
+      if (typeof body === "string" && body.length > best.length) best = body;
+      for (const x of Object.values(o)) walk(x, depth + 1);
+    };
+    walk(parsed);
+  }
+  return best ? decodeEntities(best) : "";
+}
+
+/** The AMP copy of this article, which publishers serve unpaywalled and clean. */
+export function amphtmlOf(html: string, pageUrl: string): string {
+  const href =
+    (html.match(/<link[^>]+rel=["']amphtml["'][^>]*href=["']([^"']+)["']/i) || [])[1] ||
+    (html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["']amphtml["']/i) || [])[1] ||
     "";
-  const paras = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
+  if (!href) return "";
+  try {
+    return new URL(decodeEntities(href), pageUrl).toString();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * As much of the article as the page will give up, best source first.
+ *
+ * The paragraph harvest used to stop at five, which is a teaser by
+ * construction: a report about a Saudi oil facility that runs eleven
+ * paragraphs was reaching the desk as its first two. The cap is now on
+ * characters, not paragraphs, so a long piece arrives long and a short one
+ * stays short.
+ */
+export function extractLead(html: string): string {
+  const meta = (p: string) =>
+    (html.match(new RegExp(`(?:property|name)=["']${p}["'][^>]*content=["']([^"']{40,})["']`, "i")) || [])[1] ||
+    (html.match(new RegExp(`content=["']([^"']{40,})["'][^>]*(?:property|name)=["']${p}["']`, "i")) || [])[1] ||
+    "";
+  const og = decodeEntities(meta("og:description") || meta("description") || "");
+  // The body Google is shown. When the page has one it is the article itself.
+  const ld = jsonLdBody(html);
+  // Stylesheets and scripts come out before the paragraphs are read: stripping
+  // tags alone leaves their contents behind, and a site that styles its links
+  // inline puts a `<style>` block inside its first paragraph.
+  const body = html.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ");
+  const paras = [...body.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
     .map((m) => decodeEntities(m[1]))
-    .filter((p) => p.length > 50 && !/copyright|subscribe|cookie|javascript/i.test(p));
+    .filter((p) => p.length > 50 && !/copyright|subscribe|cookie|javascript|sign in|all rights reserved/i.test(p));
   const parts: string[] = [];
-  if (og) parts.push(decodeEntities(og));
-  for (const p of paras.slice(0, 5)) {
+  if (og) parts.push(og);
+  if (ld.length > og.length) parts.push(ld);
+  for (const p of paras) {
+    if (parts.join(" ").length >= ARTICLE_CHARS) break;
     if (!parts.some((x) => x.includes(p.slice(0, 50)))) parts.push(p);
   }
-  return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, 2200);
+  return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, ARTICLE_CHARS);
 }
 
 /* ------------------------------------------------------------------ *
@@ -336,7 +418,7 @@ export function extractLead(html: string): string {
  * ------------------------------------------------------------------ */
 
 /** Items read from one RSS feed per cycle. Google News lists up to 100. */
-const RSS_ITEMS = 25;
+const RSS_ITEMS = 100;
 
 /** Every source the clock reads, with its lastScanAt key: the status page's list. */
 export function sourceList(): { key: string; name: string }[] {
@@ -361,7 +443,17 @@ const REPLAY = {
 /** Nothing older than this is news for a live desk, however a feed lists it. */
 const MAX_ITEM_AGE_MS = 72 * 3600 * 1000;
 /** Article pages fetched per cycle to fill thin teasers. Cached by URL. */
-const BODY_FETCHES = 40;
+const BODY_FETCHES = 90;
+/**
+ * How much of one article the desk keeps. Only web articles reach this — a
+ * Telegram post is already its whole text — so the reader's token bill grows
+ * by the handful of articles in a cycle, not by every item in it. A wire story
+ * runs 2–4k characters; below that the desk was reading a teaser and writing a
+ * three-line report from it.
+ */
+const ARTICLE_CHARS = 5000;
+/** An article's text plus the feed's own title and teaser above it. */
+const ITEM_CHARS = 5600;
 /** Reports kept in the cycle payload (the scan box and carry-forward). */
 const PAYLOAD_REPORTS = 300;
 /** Raw items kept in the cycle payload for the scan box. */
@@ -372,9 +464,15 @@ const LEAD_CACHE_MAX = 3000;
 /** url → the lead paragraph pulled from it ("" when the page had none). */
 type LeadCache = Record<string, { lead: string; at: number; real?: string; tries?: number }>;
 /** Google News links resolved to their article per cycle (two requests each). */
-const GNEWS_RESOLVES = 12;
+const GNEWS_RESOLVES = 30;
 /** A Google News item waits this many cycles for its article's address. */
 const GNEWS_HOLD_TRIES = 3;
+/** Below this many characters an article page has given the desk a teaser. */
+const AMP_RETRY_UNDER = 700;
+/** Below this, the page is walled or empty and the story is looked for elsewhere. */
+const WALLED_UNDER = 500;
+/** Walled articles chased through other outlets per cycle: a search and up to three pages each. */
+const WALLED_RESCUES = 4;
 
 type RawHit = {
   source: string;
@@ -385,6 +483,9 @@ type RawHit = {
   fromTg: boolean;
   /** The channel post this one replies to, on Telegram. */
   replyUrl?: string;
+  /** The feed's own headline, kept apart from the blob so a walled article can
+   *  be looked for under it elsewhere. */
+  title?: string;
 };
 
 function outletFromGoogleTitle(title: string, fallback: string): { title: string; source: string } {
@@ -438,7 +539,7 @@ function parseRss(xml: string, source: string): RawHit[] {
     let at = jerusalemIso();
     const parsed = Date.parse(dateRaw);
     if (Number.isFinite(parsed)) at = jerusalemIso(new Date(parsed));
-    items.push({ source: src, url, text: blob, at, lean: "", fromTg: false });
+    items.push({ source: src, url, text: blob, at, lean: "", fromTg: false, title });
   }
   return items;
 }
@@ -638,7 +739,7 @@ export function speakerSearches(reports: LiveReport[], state: ScanState, now: nu
     const name = SPEAKER_SEARCH[key];
     const id = `spk-${key}`;
     if (!name || out.some((f) => f.id === id) || now - (state.lastScanAt[`web:${id}`] ?? 0) < SPEAKER_SEARCH_GAP_MS) continue;
-    out.push({ id, url: gnews(`"${name}" (Yemen OR Houthi OR Houthis OR Saudi OR "Red Sea") when:1d`), name: "US media", cadence: C90 });
+    out.push({ id, url: gnews(`"${name}" (Yemen OR Houthi OR Houthis OR Saudi OR "Red Sea") when:1d`), name: "US media", cadence: C30 });
   }
   return out;
 }
@@ -929,7 +1030,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // URL and each article page is fetched once.
   const leadCache = await loadLeadCache();
   const addLead = (h: RawHit, lead: string) => {
-    if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, 2800);
+    if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, ITEM_CHARS);
   };
   const toFetch: RawHit[] = [];
   for (const h of hits) {
@@ -948,6 +1049,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // Google News items first need their article's address: a few per cycle,
   // since each costs two requests to Google.
   let resolves = 0;
+  let rescues = 0;
   const fetchable = toFetch.filter((h) => !isGnews(h.url) || resolves++ < GNEWS_RESOLVES).slice(0, BODY_FETCHES);
   await Promise.allSettled(
     fetchable.map(async (h) => {
@@ -957,10 +1059,39 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         leadCache[key] = { lead: "", at: now, tries: (leadCache[key]?.tries ?? 0) + 1 };
         return; // retried next cycle
       }
-      const html = await fetchText(real || key, 6000);
+      const page = real || key;
+      const html = await fetchText(page, 6000);
       if (!html && !real) return; // not cached: a failed fetch is retried next cycle
       // A paywalled article still yields its address; its lead may be empty.
-      const lead = html ? extractLead(html) : "";
+      let lead = html ? extractLead(html) : "";
+      // Still a teaser. If the publisher offers an AMP copy — which they serve
+      // openly, for readers arriving from search — read that instead: it is the
+      // same article without the subscription wall drawn over it. One extra
+      // request, only for the articles that came back short.
+      if (html && lead.length < AMP_RETRY_UNDER) {
+        const amp = amphtmlOf(html, page);
+        if (amp && amp !== page) {
+          const ampHtml = await fetchText(amp, 6000);
+          const ampLead = ampHtml ? extractLead(ampHtml) : "";
+          if (ampLead.length > lead.length) lead = ampLead;
+        }
+      }
+      // The article will not open at all, or opens on a teaser. Measured today:
+      // wsj.com answers 401 to every reader, and arabnews.com, aawsat.com and
+      // al-akhbar.com answer 403 — to any header, so there is nothing to be
+      // gained by dressing the desk up as a browser, and it does not.
+      //
+      // What a desk does instead is find the story elsewhere. `readOriginal`
+      // already knows how: the same headline searched on Google News, the copies
+      // that carry it read in full, and a Wayback capture if no copy will open.
+      // The card still says WSJ, because WSJ is who reported it; only the words
+      // the desk had to read come from wherever it could read them.
+      if (lead.length < WALLED_UNDER && h.title && rescues < WALLED_RESCUES) {
+        rescues += 1;
+        const lang = /[؀-ۿ]/.test(h.title) ? "ar" : "en";
+        const full = await readOriginal({ url: page, source: h.source, title: h.title }, lang);
+        if (full.length > lead.length) lead = full.replace(/\s+/g, " ").trim().slice(0, ARTICLE_CHARS);
+      }
       leadCache[key] = { lead, at: now, ...(real ? { real } : {}) };
       addLead(h, lead);
       if (real) h.url = cleanUrl(real);

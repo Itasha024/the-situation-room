@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { findCitation, keywords, logRoute, overlap, type RouteLog } from "./origin.ts";
+import { articleText, findCitation, keywords, logRoute, overlap, type RouteLog } from "./origin.ts";
 
 test("a relayed outlet is found, the carrier itself is not", () => {
   assert.equal(findCitation("نيويورك تايمز: ترامب تردد في ضرب اليمن بعد طلب سعودي", "Shajab News")?.name, "NYT");
@@ -58,4 +58,17 @@ test("each site's reading route is counted by host, failures included", () => {
   logRoute(log, "https://aawsat.com/node/1", "page", 3);
   assert.deepEqual(log["nytimes.com"], { routes: { copy: 1, none: 1 }, lastAt: 2, last: "none" });
   assert.equal(log["aawsat.com"].routes.page, 1);
+});
+
+test("an article's text is its paragraphs, not the stylesheet inside one", () => {
+  // wsj.com styles its links with a <style> block sitting inside the first
+  // paragraph. Stripping tags alone left the CSS behind, so every rescued WSJ
+  // story opened with '.css-qxhvg8-OverridedLink{-webkit-text-decoration:none'.
+  const html =
+    "<p>DUBAI—<style>.css-qxhvg8{-webkit-text-decoration:none;text-decoration:none;color:var(--x);}</style>" +
+    "Debris discovered in Yemen indicates that Saudi Arabia has fired a Chinese-made missile in combat.</p>" +
+    "<p><script>track({ label: 'a string long enough to pass for a paragraph of copy, which it is not.' });</script></p>";
+  const out = articleText(html);
+  assert.match(out, /^DUBAI— ?Debris discovered in Yemen/);
+  assert.doesNotMatch(out, /text-decoration|css-qxhvg8|track\(/);
 });

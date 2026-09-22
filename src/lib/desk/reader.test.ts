@@ -71,12 +71,52 @@ test("launch bases are never pinned: pins come from targets found in the source"
   const r = reading({ targets: ["تعز", "الجوف", "مأرب"], origins: ["خميس مشيط", "الطائف"] });
   const row = toReport(r, cand(SAREE));
   assert.ok(row.place && ["Taiz", "Al-Jawf", "Marib"].includes(row.place), `pinned ${row.place}`);
-  // A target the text does not contain never reaches the map.
-  const invented = toReport(reading({ targets: ["صنعاء"] }), cand(SAREE));
+  // A target the text does not contain never reaches the map, and neither does
+  // a place the copy names that the text does not contain.
+  const nowhere = { headline: "Air strikes hit Houthi positions", body: "" };
+  const invented = toReport(reading({ targets: ["صنعاء"], ...nowhere }), cand(SAREE));
   assert.equal(invented.place, undefined);
+  const inventedCopy = toReport(reading({ headline: "Air strikes hit Houthi positions in Sanaa", body: "" }), cand(SAREE));
+  assert.equal(inventedCopy.place, undefined);
   // Unclear roles: no place at all.
-  const unclear = toReport(reading({ targets: ["تعز"], confident_roles: false }), cand(SAREE));
+  const unclear = toReport(reading({ targets: ["تعز"], ...nowhere, confident_roles: false }), cand(SAREE));
   assert.equal(unclear.place, undefined);
+});
+
+test("a field report with no usable target is pinned by the place its own copy names", () => {
+  // The real shape of the miss: the target is a front the gazetteer does not
+  // list, and the governorate is sitting in the headline.
+  const src = "اشتباكات عنيفة في جبهة جردد بمحافظة تعز";
+  const row = toReport(
+    reading({
+      event_type: "ground_clash",
+      targets: ["جبهة جردد"],
+      headline: "Heavy fighting on the Jardad front in Taiz",
+      body: "",
+    }),
+    cand(src),
+  );
+  assert.equal(row.place, "Taiz");
+
+  // The target still wins when it is one the gazetteer knows.
+  const aimed = toReport(
+    reading({ targets: ["المخا"], headline: "Shelling kills six in Mocha, Taiz governorate", body: "" }),
+    cand("قصف على المخا في محافظة تعز أسفر عن ستة قتلى"),
+  );
+  assert.equal(aimed.place, "Mocha");
+
+  // A launch base named in the copy is not a pin: the raids flew from Khamis
+  // Mushait and Taif, and landed in Yemen.
+  const bases = toReport(
+    reading({
+      targets: [],
+      origins: ["قاعدتي خميس مشيط والطائف"],
+      headline: "Saudi warplanes flew 28 raids from Khamis Mushait and Taif",
+      body: "",
+    }),
+    cand(SAREE),
+  );
+  assert.equal(bases.place, undefined);
 });
 
 test("a statement carries no pin and no dateline", () => {

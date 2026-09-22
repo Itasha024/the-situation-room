@@ -323,6 +323,29 @@ const YEMEN: Place[] = [
     aliases: ["حضرموت", "Hadramawt", "Hadhramaut", "Hadramout", "חצרמוות"],
   },
   {
+    name: "Al-Mukalla",
+    lat: 14.54,
+    lng: 49.13,
+    kind: "port city",
+    country: "Yemen",
+    region: "Hadramawt's capital and main port, on the Arabian Sea",
+    where: "eastern Yemen",
+    aliases: ["المكلا", "al-?Mukalla", "Mukalla", "אל?[־-]?מכלא"],
+  },
+  {
+    // "بروم" is why this entry earns its place even though the town is small:
+    // without it the Arabic matched Rum near Bab al-Mandab, 700km west, because
+    // the matcher reads the ب as the preposition "in".
+    name: "Brom",
+    lat: 14.36,
+    lng: 48.98,
+    kind: "town",
+    country: "Yemen",
+    region: "on the Hadramawt coast west of Al-Mukalla",
+    where: "the Hadramawt coast",
+    aliases: ["بروم", "Br[ou]m", "Burum"],
+  },
+  {
     name: "Hajjah",
     lat: 15.69,
     lng: 43.6,
@@ -593,6 +616,46 @@ const YEMEN: Place[] = [
     country: "Yemen",
     region: "in Taiz governorate",
     aliases: ["الصلو", "al-?Salw", "אלסלו"],
+  },
+  {
+    // The Arabic is deliberately only the full "مديرية صالح": bare صالح is Ali
+    // Abdullah Saleh's name, which appears in Yemeni copy constantly, and it
+    // would put a Taiz pin on every mention of him.
+    name: "Salh",
+    lat: 13.58,
+    lng: 44.04,
+    kind: "district",
+    country: "Yemen",
+    region: "in Taiz city",
+    aliases: ["مديري(?:ة|ه) صالح", "Salh(?: District)?"],
+  },
+  {
+    name: "Hayfan",
+    lat: 13.29,
+    lng: 44.27,
+    kind: "district",
+    country: "Yemen",
+    region: "in southern Taiz governorate",
+    aliases: ["حيفان", "Hay?fan", "Haifan"],
+  },
+  {
+    name: "Jabal Habashi",
+    lat: 13.47,
+    lng: 43.89,
+    kind: "district",
+    country: "Yemen",
+    region: "in western Taiz governorate",
+    aliases: ["جبل حبش[يى]", "Jabal Habash[iy]"],
+  },
+  {
+    name: "Jabal Qarfan",
+    lat: 13.18,
+    lng: 43.87,
+    kind: "hill",
+    country: "Yemen",
+    region: "a hill in Al-Wazi'iyah district of Taiz governorate",
+    where: "western Taiz",
+    aliases: ["جبل قرفان", "Jabal Qarfan"],
   },
   {
     name: "Hadran",

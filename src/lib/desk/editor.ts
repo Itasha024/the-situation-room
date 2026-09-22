@@ -546,12 +546,43 @@ function groundedPlaces(names: string[], sourceText: string): Place[] {
   return out;
 }
 
+/**
+ * Where the report is: the model's `targets` first, and failing that the place
+ * the desk's own headline names.
+ *
+ * The fallback exists because `targets` means "where a weapon was aimed", and a
+ * great many field reports plainly state where they are without having one. A
+ * ground advance has no target; a shelling death names a hill or a district the
+ * gazetteer does not list. Measured over a day of published rows, 45 of 126
+ * field reports carried no place, and most of those named a place the gazetteer
+ * already knows — in the headline the desk itself published.
+ *
+ * The headline and not the body, because the headline is where the desk states
+ * where this happened and the body is where it puts everything else. "Houthi
+ * forces launch major offensive … in central Yemen" has a body reading "progress
+ * toward Aden": the offensive is not at Aden, and the body would have pinned it
+ * there.
+ *
+ * Origins are kept out for the same reason. The air bases aircraft took off
+ * from are named in the same breath as the raids they flew, and pinning a
+ * strike on Yemen at Khamis Mushait would be a lie the reader cannot see.
+ *
+ * Grounding is unchanged either way: a place must also appear in the source
+ * text, so nothing the model invented reaches the map.
+ */
+function placesFor(r: Reading, sourceText: string): Place[] {
+  const fromTargets = groundedPlaces(r.targets || [], sourceText);
+  if (fromTargets.length) return fromTargets;
+  const origins = new Set((r.origins || []).flatMap((o) => placesIn(o)).map((p) => p.name));
+  return groundedPlaces([r.headline || ""], sourceText).filter((p) => !origins.has(p.name));
+}
+
 export function toReport(r: Reading, c: Candidate): LiveReport {
   const type = TYPE_OF[r.event_type] ?? "statement";
   const spoken = type === "statement" || type === "diplomacy";
   // Statements are never pinned and carry no dateline: the desk knows what was
   // said, not where. Unclear roles name no place at all.
-  const places = spoken || !r.confident_roles ? [] : groundedPlaces(r.targets || [], c.text);
+  const places = spoken || !r.confident_roles ? [] : placesFor(r, c.text);
   const dateline = datelineOf(places);
   const body = String(r.body || "").trim();
   const side = outletSide(c.source, c.lean);

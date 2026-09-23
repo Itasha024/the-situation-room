@@ -62,6 +62,19 @@ function clamp(n: number): number {
   return Math.round(Math.min(5, Math.max(1, n)) * 10) / 10;
 }
 
+/**
+ * A party's own outlet, as against a paper that merely takes its side.
+ *
+ * Al-Masirah is the Houthis' own channel and Saree their own spokesman;
+ * Al-Akhbar is a Lebanese daily sympathetic to them. Both come out as
+ * "houthi" from `outletSide`, which is right for weighing a claim and wrong
+ * for deciding who a statement belongs to. When the movement's own outlet
+ * carries a statement a sympathetic paper reported first, the statement is
+ * the movement's, and the paper is relaying it.
+ */
+export function homeOutlet(source: string): boolean {
+  return /^(?:Al-?Masirah|Saba|Yahya Saree|Mohammed Abdulsalam|Al-?Thawrah|SPA)\b/i.test(String(source || "").trim());
+}
 /** Which side an outlet is on, from its catalogue lean and name. */
 export function outletSide(source: string, lean: string): OutletSide {
   if (

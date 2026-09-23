@@ -483,3 +483,32 @@ test("a newspaper's edition post is cut up, so one Yemen story is not judged by 
   // An ordinary field report is untouched.
   assert.equal(splitDigest("عاجل | غارة سعودية على مديرية حيفان في تعز", []).length, 0);
 });
+
+test("the movement's own outlet takes the card from the paper that relayed it", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, score: 40, tags: [] } as const;
+  // Al-Akhbar, a Lebanese paper on their side, reports it first and thinly.
+  const relay = { ...base, fp: "a", url: "https://www.al-akhbar.com/x/1", source: "Al-Akhbar", at: "2026-09-22T17:00:00Z", type: "statement", summary: "Houthi spokesperson: Saudi strikes hit a prison in Al-Jawf", text: "" };
+  // Al-Masirah, their own channel, carries the same statement in full.
+  const own = { ...base, fp: "b", url: "https://t.me/almasirah2/1", source: "Al-Masirah", at: "2026-09-22T17:20:00Z", type: "statement", summary: "Houthi spokesperson: Saudi strikes hit a prison in Al-Jawf", text: "Nine people were killed in the strike on the facility, the spokesperson said." };
+  const reports = [relay, own] as never[];
+  foldIntoPublished(reports, new Set());
+  assert.equal(reports.length, 1, "one statement, one card");
+  const card = reports[0] as { fp: string; source: string; text?: string; alsoReportedBy?: { source: string }[]; tags?: string[] };
+  assert.equal(card.fp, "a", "the card keeps its identity and its place in the feed");
+  assert.equal(card.source, "Al-Masirah", "but it is now the movement's own outlet that carries it");
+  assert.match(String(card.text), /Nine people/, "with their fuller version of the words");
+  assert.deepEqual((card.alsoReportedBy ?? []).map((x) => x.source), ["Al-Akhbar"], "the relay is credited, not dropped");
+  assert.ok(card.tags?.includes("lead-swap"), "and the store is told to rewrite the stored row");
+});
+
+test("a sympathetic paper does not take a card from the movement's own outlet", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, score: 40, tags: [] } as const;
+  const own = { ...base, fp: "a", url: "https://t.me/almasirah2/1", source: "Al-Masirah", at: "2026-09-22T17:00:00Z", type: "statement", summary: "Houthi spokesperson: Saudi strikes hit a prison in Al-Jawf", text: "Nine killed." };
+  const relay = { ...base, fp: "b", url: "https://www.al-akhbar.com/x/1", source: "Al-Akhbar", at: "2026-09-22T17:20:00Z", type: "statement", summary: "Houthi spokesperson: Saudi strikes hit a prison in Al-Jawf", text: "Nine killed." };
+  const reports = [own, relay] as never[];
+  foldIntoPublished(reports, new Set());
+  assert.equal(reports.length, 1);
+  assert.equal((reports[0] as { source: string }).source, "Al-Masirah", "the original keeps the card");
+});

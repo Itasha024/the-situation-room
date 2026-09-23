@@ -20,7 +20,7 @@ import { getStore } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, readOriginal, traceOrigins } from "./desk/origin.ts";
 import { sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
-import { type OutletSide, outletSide } from "./desk/credibility.ts";
+import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
 
@@ -761,6 +761,28 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     }
     if (!home) continue;
     gone.add(r);
+    // The movement's own outlet carrying a statement a sympathetic paper
+    // reported first: the statement is the movement's, and the paper was
+    // relaying it. The card keeps its place in the feed and its identity, and
+    // changes hands — the relay moving to "Also" rather than being dropped.
+    if (
+      homeOutlet(r.source) &&
+      !homeOutlet(home.source) &&
+      sideOfSource(r.source) === sideOfSource(home.source) &&
+      scoreReport(r) >= scoreReport(home)
+    ) {
+      const relayed = { source: home.source, url: home.url };
+      home.summary = r.summary;
+      home.text = r.text;
+      home.url = r.url;
+      home.source = r.source;
+      home.tier = r.tier;
+      home.alsoReportedBy = [relayed, ...(home.alsoReportedBy ?? [])].slice(0, 8);
+      home.tags = [...new Set([...(home.tags ?? []), "lead-swap"])];
+      if (home.side) home.confidence = confidenceOf(home, home.alsoReportedBy.map((a) => sideOfSource(a.source)));
+      touched.add(home);
+      continue;
+    }
     // A card written from the original source needs no "Also": the others
     // only relay it.
     if (isOriginal(home) || r.citing === home.source) continue;

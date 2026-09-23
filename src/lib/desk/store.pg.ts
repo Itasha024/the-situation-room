@@ -219,6 +219,18 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                    and not exists (select 1 from desk_report d where d.url = ${r.url})
               `;
             }
+            // The party's own outlet took the card from a paper that had only
+            // been relaying it. Same card, same place in the feed; the copy,
+            // the link and the byline change hands, and the relay is kept in
+            // "Also" rather than dropped — so the swap is visible, not silent.
+            if (r.tags?.includes("lead-swap")) {
+              await sql`
+                update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)},
+                       url = ${r.url}, source = ${r.source}, citing = null,
+                       also_reported_by = ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb
+                 where fp = ${r.fp} and source is distinct from ${r.source}
+              `;
+            }
             // The card rewritten from its original's full text replaces the
             // relay's version: headline, body, source and link.
             if (r.tags?.includes("original")) {

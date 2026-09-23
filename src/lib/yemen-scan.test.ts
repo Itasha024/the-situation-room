@@ -432,3 +432,33 @@ test("one speaker's lines to the same outlet thread, statements included", async
   assert.equal(b.replyTo, "a");
   assert.equal(c.replyTo, undefined);
 });
+
+test("two outlets on one strike, written up in the same words, make one card", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const headline = "Houthi sniper unit targets Saudi force concentrations in Jizan";
+  // Neither is a statement, so the story test never looked at them; neither
+  // shares a copyKey, because the two channels wrote different Arabic.
+  const first = { ...base, fp: "a", url: "https://t.me/Alomhoar/1", source: "Al-Mihwar", at: "2026-09-22T18:46:00Z", type: "combat", summary: headline };
+  const second = { ...base, fp: "b", url: "https://t.me/SabrenNewss/2", source: "Sabereen News", at: "2026-09-22T18:47:00Z", type: "combat", summary: headline };
+  const reports = [first, second] as never[];
+  foldIntoPublished(reports, new Set());
+  assert.equal(reports.length, 1, "the second outlet does not get its own card");
+  assert.equal((reports[0] as { fp: string }).fp, "a", "the first to report keeps the card");
+  assert.deepEqual(
+    ((reports[0] as { alsoReportedBy?: { source: string }[] }).alsoReportedBy ?? []).map((x) => x.source),
+    ["Sabereen News"],
+    "the second outlet is credited rather than dropped",
+  );
+});
+
+test("one headline twice, hours apart, is two events and stays two cards", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const headline = "Saudi warplanes strike Haifan district in Taiz";
+  const morning = { ...base, fp: "a", url: "https://t.me/Alomhoar/1", source: "Al-Mihwar", at: "2026-09-21T10:47:00Z", type: "strike", summary: headline };
+  const afternoon = { ...base, fp: "b", url: "https://t.me/SabrenNewss/2", source: "Sabereen News", at: "2026-09-21T13:59:00Z", type: "strike", summary: headline };
+  const reports = [morning, afternoon] as never[];
+  foldIntoPublished(reports, new Set());
+  assert.equal(reports.length, 2, "a second strike on one district is not a copy of the first");
+});

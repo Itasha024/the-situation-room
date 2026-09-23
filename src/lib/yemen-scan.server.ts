@@ -19,7 +19,7 @@ import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading 
 import { getStore } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, readOriginal, traceOrigins } from "./desk/origin.ts";
-import { sameStory, sameWords } from "./desk/copies.ts";
+import { sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -668,6 +668,13 @@ function storyKey(r: LiveReport): string {
 
 /** How far back a new statement is matched against cards already published. */
 const STORY_WINDOW_MS = 18 * 3600 * 1000;
+/**
+ * How far back an identical headline folds. Relays run a minute or two behind
+ * the first channel, so this is generous by their standard and deliberately
+ * mean by the day's: two strikes on one district three hours apart are two
+ * strikes, and must stay two cards.
+ */
+const SAME_HEADLINE_WINDOW_MS = 45 * 60_000;
 
 /**
  * A statement or diplomacy report that tells a story already on the desk, as
@@ -694,6 +701,15 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     let home = r.duplicateOf ? homes.find((o) => open(o) && o.fp === r.duplicateOf) : undefined;
     // The same post forwarded by another channel, seen in a later scan.
     if (!home && r.copyKey) home = homes.find((o) => open(o) && o.copyKey === r.copyKey && Date.parse(o.at) <= t);
+    // One event, two outlets, and the reader wrote both up in the same words.
+    // The story test below runs only on statements, so a strike or a clash
+    // relayed a minute later went out as a second card with an identical
+    // headline. The same channel posting its own line twice folds here too.
+    if (!home) {
+      home = homes.find(
+        (o) => open(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= SAME_HEADLINE_WINDOW_MS && sameHeadline(o, r),
+      );
+    }
     // Another outlet's "follow-up" that only retells the card it follows.
     if (!home && r.replyTo) {
       const p = homes.find((o) => open(o) && o.fp === r.replyTo);

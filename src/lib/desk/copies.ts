@@ -72,6 +72,26 @@ export function sameStory(a: { summary: string; text?: string }, b: { summary: s
 }
 
 /**
+ * Two outlets, one event, and the reader wrote both up in the same words.
+ *
+ * `sameStory` only ever ran on statements and diplomacy, so a strike or a
+ * clash relayed a minute later by a second channel went out as its own card
+ * even when its headline matched the first one character for character. This
+ * is the strict test — same sentence, once case and spacing are set aside —
+ * so it folds those and nothing looser.
+ */
+export function sameHeadline(a: { summary: string }, b: { summary: string }): boolean {
+  const key = (s: string) =>
+    String(s || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .replace(/[.!?…]+$/, "")
+      .trim();
+  const x = key(a.summary);
+  return x.length >= 20 && x === key(b.summary);
+}
+
+/**
  * The same post forwarded by several channels: letters and digits only, with
  * links, handles, hashtags, emoji and the "urgent" tag gone. Two posts with
  * one key are one account, whichever scan saw each.

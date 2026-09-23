@@ -245,9 +245,11 @@ WHO DID WHAT TO WHOM — never infer, never assume
 
 WRITING
 - English wire style. headline <= 110 characters, sentence case, no full stop.
-- A short item that fits in the headline: the whole report goes in the
-  headline and body is "" (empty). Never a body that says the headline again
-  in more words.
+- A short item — three sentences or fewer — is its headline: the whole report
+  goes in the headline (the districts, the target, the weapon) and body is ""
+  (empty). Never a body that says the headline again in more words, and never
+  a body just to add a little: a place name or a detail belongs in the
+  headline. The one exception is casualties the headline cannot hold.
 - A longer item, as a wire story: the headline carries the most important
   facts; the body (1-3 sentences) adds the next ones — detail, figures,
   context from the text — never a rephrasing of the headline.
@@ -572,22 +574,45 @@ const wordsOf = (s: string) => s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((
  * fuel shortages in Sanaa, sources say"). A new number, a casualty or a name
  * the headline lacks keeps it.
  */
-export function redundantBody(headline: string, body: string): boolean {
-  const b = String(body || "").trim();
-  if (!b) return false;
+export function redundantBody(headline: string, body: string, sourceText?: string): boolean {
+  const b = String(body || "").replace(/^[^—]{2,30}—\s*/, "").trim();
+  if (!b) return !!String(body || "").trim();
   const h = String(headline || "");
   const hl = h.toLowerCase();
-  if ((b.match(/\d+/g) || []).some((n) => !h.includes(n))) return false;
+  const seen = new Set(wordsOf(h).map(stemOf));
+  // Sentence by sentence: one that only says the headline again adds nothing.
+  const sentences = (b.match(/(?:[^.!?]|\.(?=\d))+[.!?]*/g) || [b]).map((s) => s.trim()).filter(Boolean);
+  const restates = (s: string) => {
+    const content = wordsOf(s).filter((w) => !BODY_FILLER.has(w));
+    return !content.length || content.filter((w) => seen.has(stemOf(w))).length / content.length >= 0.6;
+  };
+  const rest = sentences.filter((s) => !restates(s)).join(" ");
+  if (!rest) return true;
+  // A figure or a casualty the headline lacks is a fact, and it stays.
   const counts = (s: string) => new Set(s.toLowerCase().match(/\b(?:one|two|three|four|five|six|seven|eight|nine|ten|dozens?|hundreds?|thousands?)\b/g) || []);
   const hc = counts(h);
-  if ([...counts(b)].some((n) => !hc.has(n))) return false;
-  if (/\b(?:killed|wounded|injured|dead|died|casualt)/i.test(b) && !/\b(?:killed|wounded|injured|dead|died|casualt)/i.test(h)) return false;
-  const seen = new Set(wordsOf(h).map(stemOf));
-  const fresh = wordsOf(b).filter((w) => !BODY_FILLER.has(w) && !seen.has(stemOf(w)));
-  // A capitalised name the headline does not have (the dateline aside).
-  const names = (b.replace(/^[^—]{2,30}—\s*/, "").match(/(?<=\S\s)[A-Z][\p{L}'-]{2,}/gu) || []).filter((n) => !hl.includes(n.toLowerCase()) && !BODY_FILLER.has(n.toLowerCase()));
-  if (names.length) return false;
-  return fresh.length <= 2;
+  const casualties =
+    (/\b(?:killed|wounded|injured|dead|died|casualt)/i.test(rest) && !/\b(?:kill|wound|injur|dead|died|death|casualt)/i.test(h)) ||
+    (rest.match(/\b\d+(?=\s+(?:\S+\s+){0,3}?(?:killed|wounded|injured|dead|people|civilians|citizens|fighters|soldiers|children|women|members|commanders|officers)\b)/gi) || []).some((n) => !h.includes(n));
+  const carries = casualties || (rest.match(/\d+/g) || []).some((n) => !h.includes(n)) || [...counts(rest)].some((n) => !hc.has(n));
+  // The desk's rule: a source of three sentences or fewer is its headline. Only
+  // casualties the headline could not hold earn such a card a body.
+  if (sourceText !== undefined && sourceSentences(sourceText) <= 3) return !casualties;
+  if (carries) return false;
+  const fresh = wordsOf(rest).filter((w) => !BODY_FILLER.has(w) && !seen.has(stemOf(w)));
+  // A capitalised name the headline does not have.
+  const names = (rest.match(/(?<=\S\s)[A-Z][\p{L}'-]{2,}/gu) || []).filter((n) => !hl.includes(n.toLowerCase()) && !BODY_FILLER.has(n.toLowerCase()));
+  // "Just a little more" is not a body: it takes a real sentence of new fact.
+  return names.length ? fresh.length <= 3 : fresh.length <= 6;
+}
+
+/** Sentences in a source text, Arabic or English; a Telegram line counts as one. */
+export function sourceSentences(text: string): number {
+  return String(text || "")
+    .replace(/https?:\/\/\S+/g, " ")
+    .split(/[.!?؟\n]+|\s[-–—]\s/)
+    .map((s) => s.trim())
+    .filter((s) => s.split(/\s+/).length >= 4).length;
 }
 const REPORTED_VERB =
   /^(?:did|does|do|has|had|have|is|was|were|held|spoke|met|made|took|gave|sent|told|won|in|to|not|will|would|could|may|might|plans|seeks|asks|urges|calls|weighs|mulls|meets|holds|speaks|rejects|refuses|agrees|orders|visits|receives|discusses|considers|decides|approves|signs)$/;

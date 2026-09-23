@@ -452,6 +452,23 @@ test("which Houthi spokesperson, and no role the text never gave", async () => {
   assert.equal(dropInventedRole("UN aid chief Tom Fletcher: Yemen is approaching famine", "فليتشر"), "UN aid chief Tom Fletcher: Yemen is approaching famine");
 });
 
+test("a source of three sentences or fewer is its headline; a longer one needs a real new sentence", async () => {
+  const { redundantBody } = await import("./reader.ts");
+  const hajjah = "قصف مدفعي سعودي يستهدف المناطق الحدودية في مديريتي بكيل المير وحرض بمحافظة حجة";
+  assert.equal(redundantBody("Saudi artillery shelling hits border areas in Hajjah", "HAJJAH — Saudi artillery shelling targeted border areas in the districts of Bakil al-Mir and Haradh in Hajjah governorate.", hajjah), true);
+  // A dateline with nothing after it is no body.
+  assert.equal(redundantBody("Houthi forces target Saudi-backed militia build-up with four ballistic missiles in Ras al-Ara", "RAS AL-ARA — "), true);
+  // Casualties the headline lacks keep a short item's body.
+  const taiz = "قصف مدفعي يستهدف حي الحرير في مديرية صالة بتعز ويقتل امرأة ويصيب زوجها";
+  assert.equal(redundantBody("Saudi shelling hits Al-Harir neighbourhood in Taiz", "The shelling killed a woman and wounded her husband.", taiz), false);
+  const long = "أولا جملة طويلة عن الهجوم في المنطقة. ثانيا جملة أخرى عن القوات هناك. ثالثا جملة عن الخسائر والأضرار. رابعا جملة عن ردود الفعل الرسمية. خامسا جملة عن السياق.";
+  assert.equal(redundantBody("Houthi drone strikes government positions in Al-Dhale", "The positions are in Al-Dhale governorate.", long), true);
+  assert.equal(
+    redundantBody("Houthi drone strikes government positions in Al-Dhale", "The attack followed a week of shelling on the Murais front, and government commanders said reinforcements were moving north from Aden.", long),
+    false,
+  );
+});
+
 test("wounded is never written as killed", () => {
   const src = "إصابة 3 مواطنين وتدمير محطة وقود تزود قوارب الصيادين جراء ثلاث غارات للعدوان السعودي على جزيرة كمران";
   const bad = reading({ headline: "Houthi media: Saudi air strikes on Kamaran Island kill 3 citizens and destroy fuel station", body: "" });

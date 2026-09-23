@@ -556,7 +556,7 @@ function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
     r.speaker_lead = "Houthi leader";
   }
   // A short report is its headline: a body that only says it again goes.
-  if (redundantBody(r.headline, r.body)) r.body = "";
+  if (redundantBody(r.headline, r.body, c.text)) r.body = "";
   const problem = checkReading(r, c.text, strict);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
@@ -640,7 +640,8 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
     url: c.url,
     type,
     summary: r.headline.trim().replace(/[.\s]+$/, ""),
-    text: dateline ? `${dateline} — ${body}` : body,
+    // No body, no dateline: "KAHBUB — " on its own is an empty card.
+    text: dateline && body ? `${dateline} — ${body}` : body,
     live: true,
     score: c.score,
     tier: side === "agency" ? "agency" : side === "neutral" ? "unverified" : "claim",

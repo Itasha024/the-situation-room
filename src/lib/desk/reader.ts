@@ -400,6 +400,13 @@ export function fixHeadline(headline: string): string {
   // People readers do not know by name go by their role.
   for (const [name, role] of ROLE_NAMES) h = h.replace(name, (_m, at: number) => (at === 0 ? role.replace(/^the /, "") : role));
   h = h.replace(/\b(Yemen's president)(?:,? \1)+/gi, "$1");
+  // "Houthi official Dr Omar Al-Bukhiti condemns …" — a name the reader does
+  // not know tells them nothing a headline has room for. The role stays and
+  // the name goes; the body can carry it if it earns its place there.
+  h = h.replace(
+    /\b((?:Houthi|Yemeni|Saudi|Iranian|Omani|Emirati)(?: government| military| army| security| political)? (?:official|spokes(?:man|person)|commander|minister))\s+(?:Dr\.?|Mr\.?|Sheikh|Sayyed|Sayyid|Brig(?:adier)?\.?|Gen(?:eral)?\.?|Col(?:onel)?\.?|Maj(?:or)?\.?)?\s*[A-Z][\w'-]+(?:\s+(?:al-|Al-|bin |Bin )?[A-Z][\w'-]+){1,3}/g,
+    "$1",
+  );
   // "Name: role: words" — one speaker, named by role only.
   h = h.replace(/^[^:]{2,40}:\s+([^:]{2,60}):\s+/, "$1: ");
   h = h.replace(/^Yemeni ((?:culture|information|foreign|defen[cs]e|interior|oil|finance) minister):/i, "Yemen's $1:");
@@ -424,8 +431,13 @@ const ROLE_NAMES: [RegExp, string][] = [
   [/\b(?:Yemen's |Yemeni )?(?:[Pp]resident(?:ial (?:Leadership )?Council (?:head|chairman|leader))? )?(?:Rashad )?al-Alimi\b/gi, "Yemen's president"],
   [/\b(?:STC (?:leader|head|chief) )?(?:Aidarous |Aidrous )?al-Zubaidi\b/gi, "the STC leader"],
   [/\b(?:Houthi (?:political council|Supreme Political Council) (?:head|chief) )?(?:Mahdi )?al-Mashat\b/gi, "the Houthi political council head"],
-  [/\b(?:(?:the )?(?:Houthi|Yemeni|Sanaa) (?:armed forces |military |army )?spokes(?:man|person) )?(?:Brig(?:adier)?\.? (?:Gen(?:eral)?\.? )?)?(?:Yahya )?Saree\b/gi, "the Houthi spokesperson"],
-  [/\bHouthi (?:armed forces |military |army )?spokes(?:man|person)\b/gi, "Houthi spokesperson"],
+  // Saree speaks for the armed forces; the government has its own spokesman.
+  // Both used to come out as "Houthi spokesperson", so a military claim of a
+  // launch and a government statement about a strike reached the feed under
+  // one name, and a reader had no way to tell which of them was speaking.
+  [/\b(?:(?:the )?(?:Houthi|Yemeni|Sanaa) (?:armed forces |military |army )?spokes(?:man|person) )?(?:Brig(?:adier)?\.? (?:Gen(?:eral)?\.? )?)?(?:Yahya )?Saree\b/gi, "the Houthi military spokesperson"],
+  [/\b(?:the )?Houthi government spokes(?:man|person)\b/gi, "Houthi government spokesperson"],
+  [/\bHouthi (?:armed forces|military|army) spokes(?:man|person)\b/gi, "Houthi military spokesperson"],
   [/\b(?:(?:the )?UN (?:aid|humanitarian|relief) (?:chief|coordinator|head) )?Tom Fletcher\b/g, "UN aid chief Tom Fletcher"],
 ];
 

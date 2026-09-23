@@ -225,12 +225,12 @@ test("a daily 429 rests the model until midnight in California", () => {
   assert.equal(pacificDay(Date.parse("2026-09-22T06:59:00Z")), "2026-09-21");
 });
 
-test("a spokesman's statement takes the colon; Saree is the Houthi spokesperson", async () => {
+test("a spokesman's statement takes the colon; Saree speaks for the military", async () => {
   const { fixHeadline } = await import("./reader.ts");
   assert.equal(fixHeadline("UN spokesman says talks on Yemen will resume next week"), "UN spokesman: talks on Yemen will resume next week");
   assert.equal(fixHeadline("Yemen's government spokesman warns that the Houthis are preparing an offensive"), "Yemen's government spokesman: the Houthis are preparing an offensive");
-  assert.equal(fixHeadline("Yahya Saree: Houthi forces fired missiles at Jizan"), "Houthi spokesperson: Houthi forces fired missiles at Jizan");
-  assert.equal(fixHeadline("Houthi military spokesman Yahya Saree says drones hit Abha airport"), "Houthi spokesperson: drones hit Abha airport");
+  assert.equal(fixHeadline("Yahya Saree: Houthi forces fired missiles at Jizan"), "Houthi military spokesperson: Houthi forces fired missiles at Jizan");
+  assert.equal(fixHeadline("Houthi military spokesman Yahya Saree says drones hit Abha airport"), "Houthi military spokesperson: drones hit Abha airport");
   assert.equal(fixHeadline("Trump says he spoke with Bin Salman"), "Trump says he spoke with Bin Salman");
 });
 
@@ -343,4 +343,28 @@ test("a scope rejection made under the old wording is read again; a thin one is 
     if (key !== undefined) process.env.GEMINI_API_KEY = key;
     if (groq !== undefined) process.env.GROQ_API_KEY = groq;
   }
+});
+
+test("the military spokesman and the government spokesman are two people", async () => {
+  const { fixHeadline } = await import("./reader.ts");
+  assert.equal(
+    fixHeadline("Yahya Saree: Houthi forces launched a ballistic missile at Riyadh"),
+    "Houthi military spokesperson: Houthi forces launched a ballistic missile at Riyadh",
+  );
+  assert.equal(
+    fixHeadline("Houthi government spokesman: Saudi strike hits prisoner facility in Al-Jawf"),
+    "Houthi government spokesperson: Saudi strike hits prisoner facility in Al-Jawf",
+  );
+  assert.equal(fixHeadline("Houthi armed forces spokesman announced a new operation"), "Houthi military spokesperson announced a new operation");
+});
+
+test("a name the reader does not know is dropped from the headline, the role is not", async () => {
+  const { fixHeadline } = await import("./reader.ts");
+  assert.equal(
+    fixHeadline("Houthi official Dr Omar Al-Bukhiti condemns Saudi crimes in Al-Jawf and Taiz"),
+    "Houthi official condemns Saudi crimes in Al-Jawf and Taiz",
+  );
+  // Names a reader does know are left alone.
+  assert.equal(fixHeadline("Trump: we will not let the Houthis win"), "Trump: we will not let the Houthis win");
+  assert.equal(fixHeadline("Houthi leader: Saudi Arabia will pay a price"), "Houthi leader: Saudi Arabia will pay a price");
 });

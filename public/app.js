@@ -1662,23 +1662,43 @@ function prependFeedCards(d) {
   const feed = document.getElementById('feed');
   if (!feed) return;
   if (!feed.children.length) { renderFeed(d); return; }
-  const have = new Set([...feed.querySelectorAll('.card')].map((el) => el.dataset.fp));
+  const cards = [...feed.querySelectorAll('.card')];
+  const have = new Set(cards.map((el) => el.dataset.fp));
   const all = sortedReports(d);
+  // Everything the column is showing, not just what sits above the top card.
+  // A report can arrive late and still belong further down: the feed is ordered
+  // by each report's own timestamp and the scanner accepts posts up to 72 hours
+  // old, so stopping at the first familiar card dropped every back-dated
+  // arrival out of the feed until the next full render.
+  const visible = all.slice(0, Math.max(reportsShown, cards.length));
   const newcomers = [];
-  for (const r of all) {
-    const fp = r.fp || r.url;
-    if (have.has(fp)) break;
-    newcomers.push(r);
-    if (newcomers.length > 12) break;
-  }
+  visible.forEach((r, i) => {
+    if (!have.has(r.fp || r.url)) newcomers.push({ r, i });
+  });
   if (!newcomers.length) return;
+  // Past a handful, a clean rebuild is cheaper than splicing them in one by one.
+  if (newcomers.length > 12) { renderFeed(d); return; }
   // The reports that just landed are not in the pin index yet, and the index is
   // what decides whether a card offers "Show on map". Without this, a fresh
   // report sits in the feed with no way to reach its own pin until the next
   // full render — which is why cards kept turning up "not on the map".
   if (window.L) { try { buildMapPins(d); } catch (e) {} }
-  feed.insertAdjacentHTML('afterbegin', newcomers.map((r, i) => feedCardHtml(r, i)).join(''));
-  [...feed.querySelectorAll('.card')].slice(0, newcomers.length).forEach(wireFeedCard);
+  const posOf = new Map(visible.map((r, i) => [r.fp || r.url, i]));
+  for (const { r, i } of newcomers) {
+    const holder = document.createElement('div');
+    holder.innerHTML = feedCardHtml(r, i);
+    const card = holder.firstElementChild;
+    if (!card) continue;
+    // Insert it before the first card already on screen that sorts after it,
+    // so a back-dated report lands in its right place instead of at the top.
+    const after = [...feed.querySelectorAll('.card')].find((c) => {
+      const pos = posOf.get(c.dataset.fp);
+      return pos !== undefined && pos > i;
+    });
+    if (after) feed.insertBefore(card, after);
+    else feed.appendChild(card);
+    wireFeedCard(card);
+  }
   const more = document.getElementById('btn-more-reports');
   if (reportsShown < all.length && more) {
     more.hidden = false;

@@ -73,14 +73,21 @@ const RECENT_MAX = 40;
 /** Model calls per cycle, so one busy cycle cannot spend the day's quota. */
 const MAX_CALLS_PER_CYCLE = 5;
 
-/** `loose`: failed a strict check twice and went out anyway (see the repair). */
-type CacheEntry = { reading: Reading; at: number; second?: boolean; loose?: boolean };
+/**
+ * `loose`: failed a strict check twice and went out anyway (see the repair).
+ * `second`: the second look has read it. `secondTriedAt`: the second look was
+ * attempted and no model answered (all of them out of quota). Without the
+ * second stamp the item came back every single cycle, forever.
+ */
+type CacheEntry = { reading: Reading; at: number; second?: boolean; secondTriedAt?: number; loose?: boolean };
 
 /** Rejected field reports, with what the second look made of them (admin page). */
 export type Missed = { at: string; source: string; url: string; text: string; reason: string; second: string };
 export const MISSED_KEY = "reader-missed";
 const MISSED_MAX = 200;
 const SECOND_LOOK_MAX = 8;
+/** After a second look that no model answered, wait this long before retrying. */
+const SECOND_RETRY_MS = 3600 * 1000;
 const REPAIR_MAX = 10;
 
 /** A place in Yemen or Saudi Arabia, and something happening there. */
@@ -342,7 +349,10 @@ export async function editCandidates(
   const doubt = all.filter((c) => {
     const r = readingOf.get(c.url);
     const v = verdicts.get(c.url);
-    if (!r || v?.kind !== "reject" || cache[contentHash(c.text)]?.second) return false;
+    const entry = cache[contentHash(c.text)];
+    if (!r || v?.kind !== "reject" || entry?.second) return false;
+    // Attempted, but every model was resting: wait rather than ask again now.
+    if (entry?.secondTriedAt && now - entry.secondTriedAt < SECOND_RETRY_MS) return false;
     if (/speech-rhetoric/i.test(String(r.reject_reason || ""))) return false;
     return fieldReport(c.text) || onRadar(c.text);
   });
@@ -365,17 +375,25 @@ export async function editCandidates(
     batch.forEach((c, n) => {
       const first = readingOf.get(c.url)!;
       const r = second.get(String(n));
-      let outcome = "unread";
-      if (r) {
-        r.follows_up = "";
-        r.duplicate_of = "";
-        cache[contentHash(c.text)] = { reading: r, at: now, second: true };
-        const v = decide(r, c);
-        outcome = v.kind === "publish" ? "published" : `rejected again: ${v.kind === "reject" ? v.note : ""}`;
-        if (v.kind === "publish") {
-          verdicts.set(c.url, v);
-          readingOf.set(c.url, r);
-        }
+      const hash = contentHash(c.text);
+      if (!r) {
+        // No model answered — every one of them is resting. Stamp the attempt
+        // so the item waits its backoff instead of being asked again five
+        // minutes from now, and do not log a verdict that says nothing: an
+        // unanswered retry echoed every cycle filled all 200 missed slots with
+        // 14 URLs and pushed the real misses off the list unread.
+        const entry = cache[hash];
+        if (entry) cache[hash] = { ...entry, secondTriedAt: now };
+        return;
+      }
+      r.follows_up = "";
+      r.duplicate_of = "";
+      cache[hash] = { reading: r, at: now, second: true };
+      const v = decide(r, c);
+      const outcome = v.kind === "publish" ? "published" : `rejected again: ${v.kind === "reject" ? v.note : ""}`;
+      if (v.kind === "publish") {
+        verdicts.set(c.url, v);
+        readingOf.set(c.url, r);
       }
       missed.unshift({
         at: new Date(now).toISOString(),

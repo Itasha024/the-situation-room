@@ -99,8 +99,21 @@ export const READER_MODELS = [
   "gemini-3.7-flash",
   "gemini-3.8-flash",
 ];
-/** The stronger reader for a second look at a rejected field report. */
-export const SECOND_LOOK_MODELS = ["gemini-flash-latest"];
+/**
+ * The stronger reader for a second look at a rejected field report, and what to
+ * fall back to. A single model here meant that once its free quota was gone the
+ * second look stopped happening at all — silently, for the rest of the day — and
+ * the desk lost exactly the reports this pass exists to catch.
+ */
+export const SECOND_LOOK_MODELS = [
+  "gemini-flash-latest",
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-lite-latest",
+];
 /** Items per model call — large, because calls are what the quota counts. */
 export const READER_BATCH = 30;
 

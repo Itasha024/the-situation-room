@@ -255,3 +255,59 @@ test("Tom Fletcher is named with his role, and his statement takes the colon", a
   assert.equal(fixHeadline("Tom Fletcher says Yemen is approaching famine"), "UN aid chief Tom Fletcher: Yemen is approaching famine");
   assert.equal(fixHeadline("Tom Fletcher: we fear rising hunger levels in Yemen"), "UN aid chief Tom Fletcher: we fear rising hunger levels in Yemen");
 });
+
+test("the second look has somewhere to fall back to", async () => {
+  const { SECOND_LOOK_MODELS, READER_MODELS } = await import("./reader.ts");
+  // One model here meant that the day its free quota ran out, the pass that
+  // exists so the desk never loses a field report simply stopped running.
+  assert.ok(SECOND_LOOK_MODELS.length > 1, "a single model is a single point of failure");
+  for (const m of SECOND_LOOK_MODELS) {
+    assert.ok(READER_MODELS.includes(m), `${m} is not a model the reader knows`);
+  }
+});
+
+test("a second look no model answered is stamped, not retried every cycle", async () => {
+  // No key: readBatch is never called, so this is the exact path taken when
+  // every model is resting on its daily quota.
+  const key = process.env.GEMINI_API_KEY;
+  const groq = process.env.GROQ_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GROQ_API_KEY;
+  try {
+    const { editCandidates } = await import("./editor.ts");
+    const { contentHash } = await import("./reader.ts");
+    const text = "عاجل ـ السعودية تقصف مديرية حيفان بمحافظة تعز بسلسلة غارات جوية";
+    const now = Date.parse("2026-09-23T07:00:00+03:00");
+
+    const json: Record<string, unknown> = {
+      // Already read once and rejected: this is what puts it up for a second look.
+      "reader-cache": {
+        [contentHash(text)]: {
+          reading: reading({ publish: false, reject_reason: "out-of-scope", headline: "", body: "" }),
+          at: now,
+        },
+      },
+    };
+    const store = {
+      getJson: async (k: string) => json[k],
+      putJson: async (k: string, v: unknown) => { json[k] = v; },
+      recentDesk: async () => ({ reports: [], events: [], updatedAt: "" }),
+    } as unknown as Parameters<typeof editCandidates>[0];
+
+    const candidate = { ...cand(text), url: "https://t.me/x/99" };
+    await editCandidates(store, [candidate], now);
+
+    const cache = json["reader-cache"] as Record<string, { secondTriedAt?: number; second?: boolean }>;
+    const entry = cache[contentHash(text)];
+    assert.ok(entry, "the reading stays in the cache");
+    assert.equal(entry.secondTriedAt, now, "the attempt is stamped even though no model answered");
+    assert.ok(!entry.second, "an unanswered attempt is not recorded as a completed second look");
+    assert.ok(
+      !((json["reader-missed"] as unknown[]) ?? []).length,
+      "an unanswered retry writes nothing to the missed list, which the echo used to fill",
+    );
+  } finally {
+    if (key !== undefined) process.env.GEMINI_API_KEY = key;
+    if (groq !== undefined) process.env.GROQ_API_KEY = groq;
+  }
+});

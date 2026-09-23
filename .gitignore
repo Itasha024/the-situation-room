@@ -21,7 +21,6 @@ public/desk-reader-*.json
 # What a local tick writes out beside the payload. The deployed desk builds
 # these from the database on every cycle, so a committed copy is only ever
 # one machine's last run showing up as a diff in everybody else's.
-public/desk-escalation.json
 public/desk-fronts-extra.json
 public/desk-tally.json
 

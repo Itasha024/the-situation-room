@@ -60,3 +60,34 @@ test("an unsplit total never lands in Civilians; it goes to All sides", () => {
   assert.equal(t.killed.civilians, 150);
   assert.equal(t.killed.total, 700);
 });
+
+import { CLAIMS_SEED, applyClaims } from "./tally.ts";
+
+test("each side keeps its own figure for the same field", () => {
+  const d = [
+    { name: "Saba", url: "s", date: "2026-09-20", text: "Saree: 40 Saudi soldiers killed since the start of the round" },
+    { name: "Coalition", url: "c", date: "2026-09-21", text: "The coalition says 1,200 Houthi fighters killed since July" },
+  ];
+  const c = applyClaims(
+    CLAIMS_SEED,
+    [
+      { field: "killed.saudi", by: "houthi", value: 40, source: "Yahya Saree", doc: 0 },
+      { field: "killed.houthi", by: "gov", value: 1200, source: "Coalition", doc: 1 },
+    ],
+    d,
+    now,
+  );
+  assert.equal(c.fields["killed.saudi"]?.houthi?.value, 40);
+  assert.equal(c.fields["killed.houthi"]?.gov?.value, 1200);
+  assert.equal(c.fields["killed.houthi"]?.houthi, undefined);
+  assert.deepEqual(CLAIMS_SEED.fields, {}, "the seed itself is never mutated");
+});
+
+test("a claim never goes down unless the same voice revises it, and a side must be named", () => {
+  const d = [{ name: "x", url: "u", date: "2026-09-21", text: "" }];
+  const one = applyClaims(CLAIMS_SEED, [{ field: "killed.gov", by: "houthi", value: 900, source: "Yahya Saree", doc: 0 }], d, now);
+  const lower = applyClaims(one, [{ field: "killed.gov", by: "houthi", value: 500, source: "Al-Masirah", doc: 0 }], d, now);
+  assert.equal(lower.fields["killed.gov"]?.houthi?.value, 900);
+  const sideless = applyClaims(one, [{ field: "killed.gov", by: "un" as never, value: 950, source: "UN", doc: 0 }], d, now);
+  assert.equal(sideless.fields["killed.gov"]?.houthi?.value, 900);
+});

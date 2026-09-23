@@ -62,6 +62,7 @@ const DESK_HTML = `
 </main>
 <section class="fronts-wrap" id="fronts-wrap">
   <h2>Fronts</h2>
+  <div id="fronts-stamp"></div>
   <div id="fronts"></div>
 </section>
 <section class="cas-wrap" id="cas-wrap">

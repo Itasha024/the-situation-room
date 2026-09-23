@@ -147,7 +147,7 @@ body.map-focus .map-wrap{min-height:calc(100vh - 110px)}
 footer{padding:.55rem 1rem .9rem;color:var(--muted);font-size:.65rem;line-height:1.4;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:.2rem}
 
 .situation{padding:.55rem 1rem;border-bottom:1px solid var(--line);background:#0c1219}
-.situation > strong{display:block;font-size:1.05rem;font-weight:700;margin-bottom:.25rem}
+.situation > h2{margin:0 0 .25rem;font-size:1.05rem;font-weight:700;color:#fff}
 .situation p{margin:0;font-size:.82rem;line-height:1.45}
 .srcs{margin-top:.35rem;color:var(--muted);font-size:.68rem}
 .hint{margin:.15rem 0 .45rem;color:var(--muted);font-size:.7rem;line-height:1.35}
@@ -291,7 +291,8 @@ a.src-go svg{display:block}
 .cas-wrap #casualties .cas-sum{margin:0 0 .5rem;font-size:.86rem;line-height:1.5;color:#eaf0f6}
 .cas-wrap #casualties ul{margin:.15rem 0 0;padding-inline-start:1.15rem}
 .cas-wrap #casualties li{margin:.35rem 0;font-size:.8rem;line-height:1.45;color:#d7e2ef}
-#fronts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.5rem}
+#fronts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:.5rem}
+#fronts .front-card{margin-bottom:0}
 #btn-day-next[hidden]{display:none !important}
 .isl-tag-wrap{background:none!important;border:0!important}
 .isl-tag{
@@ -322,7 +323,6 @@ body.front-hl .ev{visibility:hidden}
 .bar h3{color:#b8c6d6}
 .bar .pct{color:var(--text)}
 .situation{background:#121a24}
-.situation strong{color:#f0d78c}
 .situation p,.phase-sum,.phase .full p,.front-sum,.card .headline,.card .full{color:#eaf0f6}
 .hint,.sub,.muted,.card time,.front-where,.srcs{color:#a8b8c9}
 .phase{background:#15202c;border-color:#2a3a4e;color:var(--text)}
@@ -471,7 +471,6 @@ html{scroll-behavior:smooth}
     padding: .75rem .9rem;
     margin: 0;
   }
-  .situation strong { margin-bottom: .35rem; font-size: .8rem; }
   .situation p { font-size: .84rem; line-height: 1.5; }
 
   .toolbar {
@@ -735,7 +734,7 @@ html{scroll-behavior:smooth}
 .live-scan .ls-unplaced ul{margin:.3rem 0 0;padding-left:1rem}
 .live-scan .ls-unplaced li{margin:.15rem 0;color:#c9d4e0}
 .live-scan .ls-row.tray{border-left:2px solid #854d0e}
-.ls-list{max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:.3rem;padding-bottom:.4rem}
+.ls-list{display:flex;flex-direction:column;gap:.3rem;padding-bottom:.4rem}
 .ls-row{background:#121a24;border:1px solid var(--line);border-radius:8px;padding:.35rem .5rem;font-size:.72rem;line-height:1.35}
 .ls-row.kept{border-color:#334155}
 .ls-row .ls-top{display:flex;justify-content:space-between;gap:.4rem;align-items:baseline}
@@ -885,26 +884,9 @@ html{scroll-behavior:smooth}
 .pin-sheet.as-pop .pin-sheet-box{position:fixed;pointer-events:auto;box-shadow:0 12px 32px rgba(0,0,0,.5)}
 .pin-sheet.as-pop #pin-sheet-map{height:300px}
 /* The stamp tight under each heading, the same distance in every column. */
-#fronts > .cadence.at-head:first-child{margin-top:-6px}
-#casualties > .cadence.at-head:first-child{margin-top:-1px}
+#fronts-stamp > .cadence.at-head{margin-top:-6px}
+#casualties > .cadence.at-head{margin-top:-1px}
 .situation .cadence.at-head{margin-top:-1px}
-
-/* ---- Escalation meter ---------------------------------------------------- */
-.esc{margin:.7rem 0 0;padding:.6rem .7rem;border:1px solid #22303f;border-radius:8px;background:rgba(10,16,24,.45)}
-.esc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.esc-head strong{font-size:.78rem;letter-spacing:.02em}
-.esc-how{background:none;border:0;padding:0;color:#7cb3ff;font:inherit;font-size:.72rem;cursor:pointer;text-decoration:underline}
-.esc-body{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:.3rem}
-.esc-dial{width:190px;max-width:100%;height:auto;flex:none}
-.esc-needle{stroke:#e5edf5;stroke-width:3;stroke-linecap:round}
-.esc-hub{fill:#e5edf5}
-.esc-num{font-size:26px;font-weight:700;fill:#f1f5f9}
-.esc-band{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-.esc-side{flex:1;min-width:150px;display:grid;gap:4px}
-.esc-cmp{display:flex;justify-content:space-between;gap:8px;font-size:.74rem;color:var(--muted);border-bottom:1px dashed #22303f;padding-bottom:3px}
-.esc-cmp b{font-weight:600}
-.esc-explain{margin-top:.45rem}
-.situation .esc .esc-explain p{margin:.25rem 0;font-size:.74rem;line-height:1.45;color:#b8c6d6}
 
 /* ---- Saudi cities: the big ones, and the border towns and targets ------- */
 .sa-city{background:none;border:0}
@@ -918,3 +900,18 @@ html{scroll-behavior:smooth}
    above is the more specific selector. A stood-down Saudi city keeps its dot:
    the place is still marked, it just goes unnamed at this zoom. */
 .lbl-collide{display:none!important}
+
+/* ---- The numbers: Official | Unofficial ---------------------------------- */
+.cas-mode{display:inline-flex;border:1px solid #2a3a4e;border-radius:999px;overflow:hidden;margin:0 0 .4rem}
+.cas-mode button{background:#121a24;color:#9fb3c8;border:0;padding:.22rem .75rem;font:inherit;font-size:.72rem;cursor:pointer}
+.cas-mode button + button{border-left:1px solid #2a3a4e}
+.cas-mode button.on{background:#1e2c3c;color:#fff;font-weight:600}
+.tally.wide{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.tally-box.claims table{width:100%;border-collapse:collapse;font-size:.76rem}
+.tally-box.claims th,.tally-box.claims td{padding:.2rem .25rem;border-top:1px solid #1a2531;text-align:right;font-variant-numeric:tabular-nums}
+.tally-box.claims tr:first-child th{border-top:0;font-size:.62rem;font-weight:600;color:#8fa3b6;text-transform:uppercase;letter-spacing:.03em;vertical-align:bottom}
+.tally-box.claims th[scope=row]{text-align:left;font-weight:400;color:#c9d4e0}
+.tally-box.claims td{color:#eaf0f6;font-weight:600}
+.tally-box.claims td a{color:inherit;text-decoration:none;border-bottom:1px dotted currentColor}
+.tally-box.claims .h{color:#e08a55}
+.tally-box.claims .g{color:#4ade80}

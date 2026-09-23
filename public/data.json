@@ -6531,15 +6531,15 @@
       "fp": "map-ksa-khamis-houthi-yanbu-aramco-khamis-2026-09-16",
       "at": "2026-09-16T16:48:00+03:00",
       "type": "missile",
-      "lat": 18.3,
-      "lng": 42.73,
-      "place": "Khamis Mushait",
-      "text": "KHAMIS MUSHAIT — Saree announces two retaliatory volleys, with dozens of ballistic missiles and drones fired at Aramco facilities at Yanbu on the Red Sea",
+      "lat": 24.0231,
+      "lng": 38.1899,
+      "place": "Yanbu",
+      "text": "YANBU — Saree announces two retaliatory volleys, with dozens of ballistic missiles and drones fired at Aramco facilities at Yanbu on the Red Sea",
       "source": "YPA",
       "url": "https://en.ypagency.net/405423",
       "priority": 2,
       "mapOnly": true,
-      "label": "Khamis Mushait — claimed Houthi launch"
+      "label": "Yanbu — claimed Houthi missile and drone attack on Aramco facilities"
     },
     {
       "fp": "hist-ksa-alert-mecca-2026-09-16",

@@ -106,6 +106,22 @@ async function loadGazetteer() {
   }
 }
 
+/*
+ * Hand corrections to the pins of live reports (public/map-fixes.json): a pin
+ * that is no event is removed, a wrong category or spot is put right. The
+ * reports themselves stay in the feed as they are.
+ */
+let MAP_FIXES = {};
+
+async function loadMapFixes() {
+  try {
+    const j = await fetch('/map-fixes.json?ts=' + Date.now()).then((r) => r.json());
+    MAP_FIXES = (j && j.fixes) || {};
+  } catch (e) {
+    MAP_FIXES = {};
+  }
+}
+
 /** Longest name first, so "Bab al-Mandab" wins over a bare "Mandab". */
 function placeNamesByLength() {
   return Object.keys(PLACE_META).sort((a, b) => b.length - a.length);
@@ -727,8 +743,17 @@ function strikeKind(text) {
   if (/launch(?:ed|es)?\b|fired|toward|towards/i.test(t) && !/air raids?|warplanes?|jets?\b|air strikes?/i.test(t)) return 'Launch';
   return 'Strike';
 }
-const VESSEL_RE = /\bvessels?\b|\btankers?\b|merchant ships?|bulk carriers?|\bcrews?\b|\bships?\b|\bboats?\b|UKMTO/i;
-const PORT_RE = /\bport\b|oil terminal|refinery|Aramco|terminal at/i;
+// No bare "boats" or "crew": "a fuel station supplying fishermen's boats" on
+// Kamaran island made an air strike a vessel attack.
+const VESSEL_RE = /\bvessels?\b|\btankers?\b|merchant ships?|bulk carriers?|cargo ships?|container ?ships?|\bships?\b|UKMTO/i;
+// A port or oil terminal that was itself hit. Aramco alone is not a port: tanks
+// near Riyadh and a site in Najran are not ports.
+const PORT_RE = /\b(?:on|at|hit|hits|struck|strikes? on|target(?:s|ed|ing)?|shelling of|fire on) (?:the )?(?:port|harbou?r|oil terminal)\b|\bport of\b|oil terminal|terminal at/i;
+// A ship pin is an attack on a ship. Traffic figures, cargo unloaded and
+// shipping trends are not events.
+const VESSEL_ATTACK_RE = /attack|struck|\bhit\b|\bhits\b|target|seiz|board|hijack|explo|fire[sd]? (?:on|at)|missile|drone|damag|\bsank\b|sink|intercept|harass|approached by|capsiz|abduct/i;
+// The middle of a country is no place: a pin there says only "somewhere".
+const COUNTRY_PLACE_RE = /^(?:Yemen|Saudi Arabia|Oman|Iran|the Red Sea)$/i;
 const NONMAP_RE = /\bF-?35\b|arms (?:deal|sale)|approved a (?:possible )?sale|State Department|condemn(?:s|ed)?\b|expresses solidarity|appeal|funding|displaced|refugee|humanitarian|Crisis Group|travel warning/i;
 
 /**
@@ -738,19 +763,21 @@ const NONMAP_RE = /\bF-?35\b|arms (?:deal|sale)|approved a (?:possible )?sale|St
 function classifyForMap(text, hintedType) {
   const t = String(text || '');
   const hint = String(hintedType || '').toLowerCase();
-  if (hint === 'vessel') return 'vessel';
+  // The reader's type is final. A strike stays a strike: an island, a coast or
+  // a word like "boats" does not turn it into an attack on a ship.
+  if (hint === 'vessel') return VESSEL_ATTACK_RE.test(t) ? 'vessel' : null;
   if (hint === 'port') return 'port';
   if (hint === 'statement' || hint === 'diplomacy' || hint === 'intel') return 'statement';
   if (hint === 'combat' || hint === 'clash' || hint === 'capture' || hint === 'military') return 'combat';
   if (hint === 'economy' || hint === 'humanitarian') return null;
   if (hint === 'missile' || hint === 'strike' || hint === 'launch') {
-    if (VESSEL_RE.test(t) && !PORT_RE.test(t)) return 'vessel';
+    // Hand-logged items typed "missile" say "strike on the port" in words.
     if (PORT_RE.test(t)) return 'port';
     return 'strike';
   }
   if (!t.trim()) return null;
   if (NONMAP_RE.test(t) && !GROUND_RE.test(t) && !STRIKE_RE.test(t)) return null;
-  if (VESSEL_RE.test(t) && STRIKE_RE.test(t) && !PORT_RE.test(t)) return 'vessel';
+  if (VESSEL_RE.test(t) && STRIKE_RE.test(t) && VESSEL_ATTACK_RE.test(t) && !PORT_RE.test(t)) return 'vessel';
   if (PORT_RE.test(t) && STRIKE_RE.test(t)) return 'port';
   const ground = GROUND_RE.test(t);
   const strike = STRIKE_RE.test(t);
@@ -1134,17 +1161,18 @@ function ingestLivePayload(live) {
   if (Array.isArray(live.sourceStatus)) liveOverlay.sourceStatus = live.sourceStatus;
   if (Array.isArray(live.unplaced)) liveOverlay.unplaced = live.unplaced;
   if (Array.isArray(live.rawHits)) {
-    const haveRaw = new Set((liveOverlay.rawHits || []).map((h) => String(h.url || '').split('?')[0]));
+    // An item read again by a later scan takes that scan's time: the box lists
+    // what the LAST scan read, and a re-read item was part of it.
+    const byUrl = new Map((liveOverlay.rawHits || []).map((h) => [String(h.url || '').split('?')[0], h]));
     live.rawHits.filter((h) => h && h.url).forEach((h) => {
       const u = String(h.url).split('?')[0];
-      if (!haveRaw.has(u)) {
-        liveOverlay.rawHits.push(h);
-        haveRaw.add(u);
-      }
+      const had = byUrl.get(u);
+      if (!had || scanSeen(h) > scanSeen(had)) byUrl.set(u, h);
     });
+    liveOverlay.rawHits = [...byUrl.values()];
     // Newest scanned first — the box is a log of what the scanner just pulled.
     liveOverlay.rawHits.sort((a, b) => scanSeen(b) - scanSeen(a));
-    if (liveOverlay.rawHits.length > 140) liveOverlay.rawHits = liveOverlay.rawHits.slice(0, 140);
+    if (liveOverlay.rawHits.length > 600) liveOverlay.rawHits = liveOverlay.rawHits.slice(0, 600);
   }
   const incoming = Array.isArray(live.reports) ? live.reports : [];
   const have = new Set((liveOverlay.reports || []).map((r) => String(r.url || '').split('?')[0]));
@@ -1240,112 +1268,67 @@ function frontActivity(id) {
  * Live scan box
  * ---------------------------------------------------------------- */
 
+/*
+ * The box lists what the last scan read, newest first: a few at a time, with a
+ * button that pages through the rest of that same scan, the way the report
+ * column does. Older scans are not listed; a new scan starts the list over.
+ */
+const SCAN_FIRST = 6;
+const SCAN_STEP = 10;
+let scanShown = SCAN_FIRST;
+let scanShownFor = 0;
+
+function lastScanHits() {
+  const all = liveOverlay.rawHits || [];
+  const latest = all.reduce((m, h) => Math.max(m, scanSeen(h)), 0);
+  const pub = (h) => { const t = Date.parse(h.at || ''); return Number.isFinite(t) ? t : 0; };
+  return { latest, rows: all.filter((h) => scanSeen(h) === latest).sort((a, b) => pub(b) - pub(a)) };
+}
+
 function renderLiveScan() {
   const meta = document.getElementById('live-scan-meta');
   const list = document.getElementById('live-scan-list');
   const details = document.getElementById('live-scan-details');
+  const { latest, rows } = lastScanHits();
+  if (latest !== scanShownFor) { scanShown = SCAN_FIRST; scanShownFor = latest; }
   if (meta) {
     const t = liveOverlay.scannedAt ? fmtClock(liveOverlay.scannedAt) : '—';
-    meta.textContent = liveOverlay.scannedAt ? `Last scan ${t}` : 'Not scanned yet';
+    meta.textContent = liveOverlay.scannedAt
+      ? `Last scan ${t}${rows.length ? ` · ${rows.length} items read` : ''}`
+      : 'Not scanned yet';
   }
   if (!details || !details.open || !list) return;
-
-  const rows = [...(liveOverlay.rawHits || [])]
-    .sort((a, b) => scanSeen(b) - scanSeen(a))
-    .slice(0, 90);
 
   // Interesting / Not were removed: the verdicts only ever reached this
   // browser's localStorage, so they taught the desk nothing and the buttons
   // promised more than they did.
-  list.innerHTML = rows.map((h) => {
+  const html = rows.slice(0, scanShown).map((h) => {
     const u = String(h.url || '').split('?')[0];
-    const seen = h.seenAt ? fmtStamp(h.seenAt) : '';
     const pub = h.at ? fmtStamp(h.at) : '';
     const sn = escapeHtml((h.snippet || '').slice(0, 240));
     return `<div class="ls-row" data-url="${escapeHtml(u)}">
       <div class="ls-top">
         <span class="ls-src">${escapeHtml(canonicalSourceName(h.source))}</span>
-        <span class="ls-at" title="Published ${escapeHtml(pub)}">scanned ${escapeHtml(seen || pub)}</span>
+        <span class="ls-at">${escapeHtml(pub)}</span>
       </div>
       <p class="ls-sn">${sn}</p>
       <div class="ls-mark">
         <a class="src-link" href="${escapeHtml(h.url)}" target="_blank" rel="noopener">Open source</a>
       </div>
     </div>`;
-  }).join('') || '<p class="ls-hint">Nothing raw in the last cycle.</p>';
+  }).join('') || '<p class="ls-hint">Nothing read in the last scan.</p>';
+  const left = rows.length - scanShown;
+  list.innerHTML = html + (left > 0
+    ? `<button type="button" class="more" id="ls-more">Show more (+${Math.min(SCAN_STEP, left)})</button>`
+    : '');
+  const more = document.getElementById('ls-more');
+  if (more) more.onclick = () => { scanShown += SCAN_STEP; renderLiveScan(); };
 }
 
 
 /* ---------------------------------------------------------------- *
  * Panels
  * ---------------------------------------------------------------- */
-
-/**
- * The escalation meter (src/lib/desk/escalation.ts): a half-dial from Calm to
- * Severe, and the readings 12 hours and a day before.
- */
-const ESC_BANDS = [
-  { name: 'Calm', to: 20, color: '#64748b' },
-  { name: 'Low', to: 40, color: '#84cc16' },
-  { name: 'Elevated', to: 60, color: '#f59e0b' },
-  { name: 'High', to: 80, color: '#f97316' },
-  { name: 'Severe', to: 100, color: '#dc2626' },
-];
-
-function escBand(score) {
-  return ESC_BANDS.find((b) => score < b.to) || ESC_BANDS[ESC_BANDS.length - 1];
-}
-
-function escalationHtml(v) {
-  if (!v || !v.now) return '';
-  const cx = 100; const cy = 96; const r = 78;
-  const pt = (s, rad) => {
-    const a = Math.PI * (1 - s / 100);
-    return [cx + rad * Math.cos(a), cy - rad * Math.sin(a)];
-  };
-  let from = 0;
-  const arcs = ESC_BANDS.map((b) => {
-    const [x0, y0] = pt(from + 0.6, r);
-    const [x1, y1] = pt(b.to - 0.6, r);
-    from = b.to;
-    return `<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${r},${r} 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)}" stroke="${b.color}" stroke-width="16" fill="none"/>`;
-  }).join('');
-  const s = v.now.score;
-  const [nx, ny] = pt(s, r - 18);
-  const band = escBand(s);
-  const cmp = (label, x) => `<div class="esc-cmp"><span>${label}</span><b style="color:${x == null ? 'inherit' : escBand(x).color}">${x == null ? '—' : `${escBand(x).name} ${x}`}</b></div>`;
-  return `<div class="esc" aria-label="Escalation: ${band.name}, ${s} of 100">
-    <div class="esc-head"><strong>Escalation meter</strong>
-      <button type="button" class="esc-how" aria-expanded="false">How is this measured?</button></div>
-    <div class="esc-body">
-      <svg class="esc-dial" viewBox="0 0 200 134" role="img" aria-hidden="true">
-        ${arcs}
-        <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" class="esc-needle"/>
-        <circle cx="${cx}" cy="${cy}" r="5" class="esc-hub"/>
-        <text x="${cx}" y="${cy + 32}" text-anchor="middle"><tspan class="esc-num">${s}</tspan><tspan class="esc-band" fill="${band.color}" dx="8">${band.name}</tspan></text>
-      </svg>
-      <div class="esc-side">
-        ${cmp('12 hours ago', v.previous)}
-        ${cmp('1 day ago', v.dayAgo)}
-      </div>
-    </div>
-    <div class="esc-explain" hidden>
-      <p>A 0–100 reading of the last 12 hours, updated every 12 hours.</p>
-      <p>Weighted: how many areas see fighting or strikes, ground fighting and changes of control, air, missile and drone strikes, attacks on Saudi soil and at sea, and deaths reported in single incidents. A ceasefire or truce lowers it.</p>
-      <p>Fixed scales, so wider coverage of the same fighting does not raise it. A day with too few reports to read is left blank.</p>
-    </div>
-  </div>`;
-}
-
-function wireEscalation(root) {
-  const btn = root && root.querySelector('.esc-how');
-  const box = root && root.querySelector('.esc-explain');
-  if (!btn || !box) return;
-  btn.onclick = () => {
-    box.hidden = !box.hidden;
-    btn.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
-  };
-}
 
 function renderSituation(d) {
   const el = document.getElementById('situation');
@@ -1357,10 +1340,8 @@ function renderSituation(d) {
   const fallback = String((d.situation || {}).summary || '').trim();
   const body = derived || fallback;
   if (!body) { el.innerHTML = ''; return; }
-  el.innerHTML = `<strong>Latest Developments</strong>${cadenceStamp(true)}
-    <p class="situation-window">${escapeHtml(body)}</p>
-    ${escalationHtml(brief && brief.escalation)}`;
-  wireEscalation(el);
+  el.innerHTML = `<h2>Latest developments</h2>${cadenceStamp(true)}
+    <p class="situation-window">${escapeHtml(body)}</p>`;
 }
 
 /*
@@ -1383,10 +1364,65 @@ function fmtCount(n) {
   return Number.isFinite(n) ? Number(n).toLocaleString('en-US') : '—';
 }
 
+/*
+ * Official | Unofficial. Official is the panel as it always was. Unofficial
+ * sets each side's own figures (tally.ts, "tally-claims") beside the official
+ * one, in the side's feed colour, so a reader sees who is counting what.
+ */
+let casMode = 'official';
+try { if (localStorage.getItem('desk-cas-mode') === 'unofficial') casMode = 'unofficial'; } catch (e) {}
+
+function casModeHtml() {
+  const b = (id, label) => `<button type="button" role="tab" data-mode="${id}" aria-selected="${casMode === id}" class="${casMode === id ? 'on' : ''}">${label}</button>`;
+  return `<div class="cas-mode" role="tablist" aria-label="Which numbers">${b('official', 'Official')}${b('unofficial', 'Unofficial')}</div>`;
+}
+
+function wireCasMode(el) {
+  el.querySelectorAll('.cas-mode button').forEach((btn) => {
+    btn.onclick = () => {
+      casMode = btn.dataset.mode === 'unofficial' ? 'unofficial' : 'official';
+      try { localStorage.setItem('desk-cas-mode', casMode); } catch (e) {}
+      renderCasualties();
+    };
+  });
+}
+
+function renderClaims(el, t) {
+  const c = (brief && brief.claims && brief.claims.fields) || {};
+  const tip = (s) => (s ? `${s.name}${s.date ? ', ' + s.date : ''}` : '');
+  const cell = (n, src, cls) => {
+    const v = Number.isFinite(n) ? fmtCount(n) : '—';
+    const inner = src && src.url ? `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener">${v}</a>` : v;
+    return `<td class="${cls}"${src ? ` title="${escapeHtml(tip(src))}"` : ''}>${inner}</td>`;
+  };
+  const row = (label, key, official) => {
+    const side = c[key] || {};
+    return `<tr><th scope="row">${label}</th>${cell(official, t.from && t.from[key], 'off')}${cell(side.houthi && side.houthi.value, side.houthi, 'h')}${cell(side.gov && side.gov.value, side.gov, 'g')}</tr>`;
+  };
+  const head = '<tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
+  const box = (title, rows) => `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows}</table></div>`;
+  const sides = (group) => [
+    row('Houthi', `${group}.houthi`, t[group].houthi),
+    row('Government', `${group}.gov`, t[group].gov),
+    row('Saudi Arabia', `${group}.saudi`, t[group].saudi),
+    row('Civilians', `${group}.civilians`, t[group].civilians),
+    row('All sides', `${group}.total`, t[group].total),
+  ].join('');
+  el.innerHTML = `${casModeHtml()}${cadenceStamp(true)}
+    <div class="tally wide">
+      ${box('Killed', sides('killed'))}
+      ${box('Injured', sides('injured'))}
+      ${box('Humanitarian', row('Internally displaced', 'idp', t.idp) + row('Refugees', 'refugees', t.refugees))}
+    </div>
+    <p class="tally-note">Since ${escapeHtml(fmtDay(t.since))}. Includes each side's own figures and claims about the other side, beside the official count. Each figure links to its source.</p>`;
+  wireCasMode(el);
+}
+
 function renderCasualties() {
   const el = document.getElementById('casualties');
   if (!el) return;
   const t = (brief && brief.tally) || TALLY_FALLBACK;
+  if (casMode === 'unofficial') { renderClaims(el, t); return; }
   const row = (label, key, n) => {
     const src = t.from && t.from[key];
     const tip = src ? `${src.name}${src.date ? ', ' + src.date : ''}` : '';
@@ -1410,7 +1446,7 @@ function renderCasualties() {
   const srcHtml = sources.map((s) => (s.url
     ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>`
     : escapeHtml(s.name))).join(' · ');
-  el.innerHTML = `${cadenceStamp(true)}
+  el.innerHTML = `${casModeHtml()}${cadenceStamp(true)}
     <div class="tally">
       <div class="tally-box"><h3>Killed</h3>${sides('killed')}</div>
       <div class="tally-box"><h3>Injured</h3>${sides('injured')}</div>
@@ -1421,6 +1457,7 @@ function renderCasualties() {
     </div>
     <p class="tally-note">Since ${escapeHtml(fmtDay(t.since))}. Official figures only.</p>
     ${srcHtml ? `<div class="srcs">Sources: ${srcHtml}</div>` : ''}`;
+  wireCasMode(el);
 }
 
 function computeControlShares(d) {
@@ -2077,7 +2114,9 @@ function allFronts(d) {
 
 function renderFronts(d) {
   const fronts = allFronts(d);
-  document.getElementById('fronts').innerHTML = cadenceStamp(true) + fronts.map((f, i) => {
+  const stamp = document.getElementById('fronts-stamp');
+  if (stamp) stamp.innerHTML = cadenceStamp(true);
+  document.getElementById('fronts').innerHTML = fronts.map((f, i) => {
     const act = frontActivity(f.id);
     /*
      * The composed paragraph replaces the curated prose rather than sitting
@@ -2354,8 +2393,9 @@ function buildMapPins(d) {
     if (!pin || pin.lat == null || pin.lng == null) return;
     if (isWeakHeadline(pin.label)) return;
     if (!pin.url || isHomepageOrSectionUrl(pin.url)) return;
-    const cat = classifyForMap(pin.text || pin.label || '', pin.type);
+    const cat = pin.mapCat || classifyForMap(pin.text || pin.label || '', pin.type);
     if (!cat || cat === 'statement') return;
+    if (COUNTRY_PLACE_RE.test(String(pin.place || '').trim())) return;
     if (!allowCoordsForCategory(cat, pin.place, pin.lat, pin.lng)) return;
     pin.mapCat = cat;
     pin.type = cat === 'strike' ? (pin.type === 'missile' ? 'missile' : 'strike') : (pin.type || 'combat');
@@ -2372,6 +2412,8 @@ function buildMapPins(d) {
   // a condemnation, a video, a build-up). It stays in the feed, off the map.
   sortedReports(d).forEach((r) => {
     if (r.noMap) return;
+    const fix = MAP_FIXES[r.fp] || null;
+    if (fix && fix.remove) return;
     const blob = [r.summary, r.text, r.place].filter(Boolean).join('\n');
     let lat = (typeof r.lat === 'number') ? r.lat : null;
     let lng = (typeof r.lng === 'number') ? r.lng : null;
@@ -2384,16 +2426,18 @@ function buildMapPins(d) {
       const g = guessCoords(blob);
       if (g) place = g.place;
     }
+    if (fix && typeof fix.lat === 'number') { lat = fix.lat; lng = fix.lng; place = fix.place || place; }
     const label = (r.summary && !isWeakHeadline(r.summary)) ? r.summary : headlineFrom(blob);
     if (isWeakHeadline(label)) return;
-    const cat = classifyForMap(blob, r.type);
+    const cat = (fix && fix.cat) || classifyForMap(blob, r.type);
     if (!cat || cat === 'statement') return;
     if (r.live && !['strike', 'combat', 'vessel', 'port'].includes(cat)) return;
     if (!allowCoordsForCategory(cat, place, lat, lng)) return;
     push({
       fp: r.fp || blob.slice(0, 80),
       at: reportTime(r),
-      type: inferType(blob, r.type || cat),
+      type: fix && fix.cat ? (fix.cat === 'strike' ? 'strike' : fix.cat) : inferType(blob, r.type || cat),
+      mapCat: fix && fix.cat ? fix.cat : undefined,
       lat, lng, place,
       label,
       text: r.text || blob,
@@ -2407,6 +2451,7 @@ function buildMapPins(d) {
 
   (d.events || []).forEach((ev) => {
     if (ev.noMap) return;
+    if (MAP_FIXES[ev.fp] && MAP_FIXES[ev.fp].remove) return;
     const blob = ev.text || ev.note || ev.label || '';
     let lat = ev.lat, lng = ev.lng, place = ev.place || '';
     if (lat == null || lng == null) {
@@ -3594,7 +3639,7 @@ function wireRailResize() {
  * ---------------------------------------------------------------- */
 
 async function refresh(first) {
-  if (first) await loadGazetteer();
+  if (first) await Promise.all([loadGazetteer(), loadMapFixes()]);
   const feedEl = document.getElementById('feed');
   const shown = first ? null : new Set([...(feedEl ? feedEl.querySelectorAll('.card') : [])].map((el) => el.dataset.fp));
   if (!first) { feedChecking = true; renderFreshness(); }

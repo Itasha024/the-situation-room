@@ -203,3 +203,83 @@ export async function refreshTally(store: DeskStore, windowReports: LiveReport[]
 export async function readTally(store: DeskStore): Promise<Tally> {
   return (await store.getJson<Tally>(TALLY_KEY)) ?? TALLY_SEED;
 }
+
+/*
+ * The unofficial numbers: what each side's own sources say. Kept apart from the
+ * official tally, which none of this touches. For every field there is at most
+ * one figure per side — the Houthis' (Saree, the Sanaa ministries, Al-Masirah,
+ * Saba) and the government's or coalition's (army media, the coalition, Saudi
+ * officials, their outlets) — each the latest cumulative count that side gave
+ * for this round.
+ */
+export const CLAIMS_KEY = "tally-claims";
+export type ClaimSide = "houthi" | "gov";
+export type Claim = TallySource & { value: number };
+export type Claims = { fields: Partial<Record<Field, Partial<Record<ClaimSide, Claim>>>>; updatedAt: string };
+export const CLAIMS_SEED: Claims = { fields: {}, updatedAt: "2026-07-13T00:00:00+03:00" };
+
+const CLAIMS_SYSTEM = `You keep the figures each SIDE of the Yemen war gives for the current round, which began on 13 July 2026 (Houthis vs the Yemeni government and the Saudi-led coalition).
+You get the CURRENT claims and NEW documents. Return a figure only when a document states it as a cumulative total for this round, and say whose figure it is:
+- by "houthi": the Houthis or their officials and outlets (Yahya Saree, the Sanaa health or human rights ministry, Al-Masirah, Saba, Ansar Allah officials)
+- by "gov": the Yemeni government, its army or army media, the Saudi-led coalition, Saudi officials, or their outlets
+Neutral bodies (UN agencies, news agencies reporting their own count) are NOT a side: skip them.
+Fields: killed.houthi / injured.houthi (people on the Houthi side), killed.gov / injured.gov (government side), killed.saudi / injured.saudi (in or from Saudi Arabia), killed.civilians / injured.civilians (only when the text says civilians), killed.total / injured.total (an unsplit total), idp, refugees.
+A side's claim about the other side's losses counts (the coalition saying 1,200 Houthis were killed is killed.houthi by "gov"). Never add up single incidents, never estimate, never use whole-war totals since 2014/2015.
+Return JSON {"updates":[{"field":"killed.houthi","by":"gov","value":1200,"source":"<who stated it>","doc":<document index>}]}.`;
+
+type ClaimUpdate = { field: Field; by: ClaimSide; value: number; source: string; doc: number };
+
+/** Apply the model's claim updates. Pure, so the rules are testable. */
+export function applyClaims(current: Claims, updates: ClaimUpdate[], docs: Doc[], now: Date): Claims {
+  const next: Claims = structuredClone(current);
+  for (const u of updates) {
+    if (!u || !FIELDS.includes(u.field) || (u.by !== "houthi" && u.by !== "gov")) continue;
+    if (!Number.isFinite(u.value) || u.value < 0) continue;
+    const doc = docs[u.doc];
+    if (!doc) continue;
+    if (u.field.endsWith(".civilians") && !/civilian|مدني/i.test(doc.text)) continue;
+    const value = Math.round(u.value);
+    const prev = next.fields[u.field]?.[u.by];
+    // The same rules as the official count: never backwards unless the same
+    // voice revises itself, and a tenfold jump is a whole-war figure.
+    if (prev && value < prev.value && prev.name !== u.source) continue;
+    if (prev && prev.value > 50 && value > prev.value * 10) continue;
+    next.fields[u.field] = { ...next.fields[u.field], [u.by]: { value, name: u.source || doc.name, url: doc.url, date: doc.date } };
+  }
+  next.updatedAt = now.toISOString();
+  return next;
+}
+
+/** Everything in the window that carries a count, for the claims reader. */
+function claimDocs(reports: LiveReport[]): Doc[] {
+  return reports
+    .filter((r) => NUMBER_RE.test(`${r.summary || ""} ${r.text || ""}`))
+    .sort((a, b) => Date.parse(String(b.at)) - Date.parse(String(a.at)))
+    .slice(0, 40)
+    .map((r) => ({
+      name: String(r.source || "desk report"),
+      url: String(r.url || ""),
+      date: String(r.at || "").slice(0, 10),
+      text: `${r.summary || ""}. ${r.text || ""}`.slice(0, 1200),
+    }));
+}
+
+export async function refreshClaims(store: DeskStore, windowReports: LiveReport[], now = new Date()): Promise<Claims> {
+  const current = (await store.getJson<Claims>(CLAIMS_KEY)) ?? CLAIMS_SEED;
+  const docs = claimDocs(windowReports);
+  if (!docs.length) return current;
+  const user = JSON.stringify({
+    current: current.fields,
+    documents: docs.map((d, i) => ({ index: i, source: d.name, date: d.date, text: d.text })),
+  });
+  const got = await askChain("tally-claims", CLAIMS_SYSTEM, user, { temperature: 0 });
+  if (!got) return current;
+  const updates = (Array.isArray(got.json.updates) ? got.json.updates : []) as ClaimUpdate[];
+  const next = applyClaims(current, updates, docs, now);
+  await store.putJson(CLAIMS_KEY, next);
+  return next;
+}
+
+export async function readClaims(store: DeskStore): Promise<Claims> {
+  return (await store.getJson<Claims>(CLAIMS_KEY)) ?? CLAIMS_SEED;
+}

@@ -3,7 +3,7 @@ import type { Brief } from "@/lib/desk/brief";
 import { briefWindow } from "@/lib/desk/brief";
 import { refreshBrief } from "@/lib/desk/brief-store";
 import { getStore } from "@/lib/desk/store";
-import { readTally, type Tally } from "@/lib/desk/tally";
+import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally";
 
 /**
  * The 12-hour brief: the general status, the fronts and the numbers.
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/api/brief")({
         try {
           const store = await getStore();
           const { brief } = await refreshBrief(store);
-          return ok(brief, await readTally(store));
+          return ok(brief, await readTally(store), await readClaims(store));
         } catch (err) {
           const msg = err instanceof Error ? err.message : "brief failed";
           return json({ ok: false, error: msg, ...briefWindow() }, 500);
@@ -30,9 +30,9 @@ export const Route = createFileRoute("/api/brief")({
   },
 });
 
-function ok(brief: Brief, tally: Tally) {
+function ok(brief: Brief, tally: Tally, claims: Claims) {
   const secondsLeft = Math.max(60, Math.round((Date.parse(brief.nextUpdateAt) - Date.now()) / 1000));
-  return json({ ...brief, tally }, 200, `public, max-age=${Math.min(secondsLeft, 1800)}`);
+  return json({ ...brief, tally, claims }, 200, `public, max-age=${Math.min(secondsLeft, 1800)}`);
 }
 
 function json(body: unknown, status = 200, cache = "no-store") {

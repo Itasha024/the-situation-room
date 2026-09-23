@@ -12,16 +12,15 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 
 | Source | How often |
 |---|---|
-| All 16 Telegram channels | every 5 minutes |
+| Telegram channels | every 5 minutes |
+| Al-Akhbar and Erem News channels | every 15 minutes |
 | Almashhad (almashhad.news) | every 5 minutes |
 | SPA | every 5 minutes |
-| Al-Araby Al-Jadeed (incl. سياسة) | every 3 hours |
-| Erem News | every 3 hours |
-| Alhurra | every 3 hours |
-| Arab News | every 3 hours |
-| Reuters, WSJ, Washington Post, NYT, NY Post, Axios, CNN, ABC, CBS, Fox + US statements (Trump / State Department / White House) | every 90 minutes |
-| Asharq Al-Awsat (incl. الشرق الأوسط) | 17:00, 18:00, 20:00, 22:00 |
-| Al-Akhbar (site + PDF newspaper) | 07:00 |
+| Al-Araby Al-Jadeed (incl. سياسة), Al-Araby TV | every 30 minutes |
+| Asharq Al-Awsat (incl. الشرق الأوسط) | every 30 minutes |
+| Erem News, Alhurra, Arab News | every 30 minutes |
+| Reuters, WSJ, Washington Post, NYT, NY Post, Axios, CNN, ABC, CBS, Fox + US statements (Trump / State Department / White House) | every 30 minutes |
+| Al-Akhbar (via Google News) | every hour |
 
 First boot of the process hits **all** sources once, then the clock above.
 
@@ -55,7 +54,9 @@ The client pulls `/api/scan` every 5 minutes. The map/feed are patched in place 
 - Almashhad — https://www.almashhad.news/ (RSS)
 - Al-Araby Al-Jadeed — https://www.alaraby.co.uk/ (+ سياسة)
 - Asharq Al-Awsat — https://aawsat.com/ (+ الشرق الأوسط)
-- Al-Akhbar — https://www.al-akhbar.com/ (articles + PDF)
+- Al-Akhbar — via Google News only. al-akhbar.com answers every automated
+  request with a Cloudflare challenge (403), so there is no site read and no PDF
+  edition read; the paper's own headlines arrive on its Telegram channel.
 - Erem News — https://www.eremnews.com/
 - Alhurra — https://alhurra.com/
 - Arab News — https://www.arabnews.com/

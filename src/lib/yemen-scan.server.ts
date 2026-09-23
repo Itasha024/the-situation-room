@@ -32,7 +32,7 @@ export type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/t
 type Channel = { id: string; name: string; lean: "houthi" | "gov" | "south" | "intl" };
 type Cadence = { everyMin: number } | { everyHours: number } | { atHours: number[] } | { atHour: number };
 type ChannelScan = Channel & { cadence: Cadence };
-type RssFeed = { url: string; name: string; id: string; cadence: Cadence; mode?: "rss" | "homepage-pdf" | "homepage" };
+type RssFeed = { url: string; name: string; id: string; cadence: Cadence };
 
 const C5: Cadence = { everyMin: 5 };
 const C15: Cadence = { everyMin: 15 };
@@ -870,31 +870,6 @@ const OWN_CHANNELS = new Set(["Yahya Saree", "Mohammed Abdulsalam"]);
  * Persist to the desk snapshot
  * ------------------------------------------------------------------ */
 
-function harvestHomepage(html: string, source: string): RawHit[] {
-  const items: RawHit[] = [];
-  const seen = new Set<string>();
-  const abs = (href: string) => {
-    const h = href.replace(/&amp;/g, "&").split("#")[0];
-    if (/^https?:\/\//i.test(h)) return h;
-    if (h.startsWith("//")) return "https:" + h;
-    if (h.startsWith("/")) return "https://www.al-akhbar.com" + h;
-    return "";
-  };
-  const push = (url: string, text: string) => {
-    const u = abs(url);
-    if (!u || seen.has(u)) return;
-    seen.add(u);
-    items.push({ source, url: u, text: text.slice(0, 800), at: jerusalemIso(), lean: "", fromTg: false });
-  };
-  for (const m of html.matchAll(/href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)) {
-    const title = decodeEntities(m[2] || "");
-    if (title.length < 18) continue;
-    if (!/اليمن|الحوث|السعود|صنعاء|Yemen|Houthi/i.test(title)) continue;
-    push(m[1], title);
-  }
-  return items.slice(0, 12);
-}
-
 /* ------------------------------------------------------------------ *
  * One scan cycle
  * ------------------------------------------------------------------ */
@@ -997,16 +972,10 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   for (const feed of dueRss) {
     jobs.push(
       (async () => {
-        const body = await fetchText(feed.url, feed.mode === "homepage-pdf" ? 10000 : 8000);
+        const body = await fetchText(feed.url, 8000);
         let rows: RawHit[] = [];
-        let ok = false;
-        if (feed.mode === "homepage-pdf") {
-          ok = !!body;
-          if (body) rows = harvestHomepage(body, feed.name);
-        } else {
-          ok = !!(body && /<item[\s>]/i.test(body));
-          if (ok && body) rows = parseRss(body, feed.name);
-        }
+        const ok = !!(body && /<item[\s>]/i.test(body));
+        if (ok && body) rows = parseRss(body, feed.name);
         if (ok) sourcesOk += 1;
         hits.push(...rows);
         state.lastScanAt[`web:${feed.id}`] = Date.now();

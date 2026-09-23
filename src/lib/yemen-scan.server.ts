@@ -988,14 +988,23 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   for (const feed of dueRss) {
     jobs.push(
       (async () => {
+        // What we had already read from this feed, before this read moves it on.
+        const lastRead = state.lastScanAt[`web:${feed.id}`] ?? 0;
         const body = await fetchText(feed.url, 8000);
         let rows: RawHit[] = [];
         const ok = !!(body && /<item[\s>]/i.test(body));
         if (ok && body) rows = parseRss(body, feed.name);
         if (ok) sourcesOk += 1;
         hits.push(...rows);
+        // A feed answers with one page. If everything on that page was
+        // published since the last read, the page filled up in between and
+        // whatever fell off the bottom was never seen. Telegram pages back to
+        // the post it last saw; a feed URL has no such handle, so the honest
+        // thing is to make the possibility visible rather than assume it away.
+        const times = rows.map((r) => Date.parse(r.at)).filter(Number.isFinite);
+        const rolled = !!lastRead && times.length > 0 && Math.min(...times) > lastRead;
         state.lastScanAt[`web:${feed.id}`] = Date.now();
-        status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length });
+        status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length, rolled });
       })(),
     );
   }
@@ -1291,8 +1300,13 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   }
   if (prev && Array.isArray(prev.sourceStatus)) {
     const haveS = new Set(status.map((s) => s.id));
+    // Only sources that still exist. Carrying every id forward kept a feed
+    // deleted two days earlier on the status page, still advertising the
+    // daily 07:00 read it was dropped for failing — the page went on
+    // describing a capability the desk no longer had.
+    const real = new Set([...TG.map((c) => c.id), ...RSS.map((f) => f.id)]);
     for (const s of prev.sourceStatus) {
-      if (s?.id && !haveS.has(s.id)) status.push(s);
+      if (s?.id && !haveS.has(s.id) && real.has(s.id)) status.push(s);
     }
   }
 

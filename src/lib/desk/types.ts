@@ -79,6 +79,13 @@ export type SourceStatus = {
   ok: boolean;
   cadence: string;
   hits: number;
+  /**
+   * Every item this feed returned was published after the previous read, so
+   * the feed may have rolled over in between and older items scrolled off
+   * unseen. Telegram pages back to the last post it saw; a web feed cannot,
+   * so this is how a possible gap becomes visible instead of silent.
+   */
+  rolled?: boolean;
 };
 
 export type ScanPayload = {

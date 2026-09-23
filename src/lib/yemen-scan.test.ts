@@ -462,3 +462,24 @@ test("one headline twice, hours apart, is two events and stays two cards", async
   foldIntoPublished(reports, new Set());
   assert.equal(reports.length, 2, "a second strike on one district is not a copy of the first");
 });
+
+test("a newspaper's edition post is cut up, so one Yemen story is not judged by eleven Lebanese ones", async () => {
+  const { splitDigest } = await import("./yemen-scan.server.ts");
+  const edition = [
+    "📰 غلاف «الأخبار» اليوم الأربعاء 23 أيلول 2026",
+    "◼️نزار نمر | ترامب ملك الحروب الجانبية: طردهم فأقصوه",
+    "◼️ ميسم رزق | من يقرّر هُويات جنود لبنان: قيادة الجيش أم إسرائيل؟",
+    "◼️ التشكيلات القضائية: محاصصة بين عبود والحاج والقصر",
+    "◼️ غارات سعودية على صنعاء تقتل عشرة مدنيين في حي سكني مكتظ",
+  ].join("\n\n");
+  const pieces = splitDigest(edition, []);
+  assert.equal(pieces.length, 1, "only the story about this war goes forward");
+  assert.match(pieces[0].text, /صنعاء/, "and it is the one naming Sanaa");
+
+  // A post already about this war is one report, not several.
+  const ours = ["◼️ غارات على صنعاء تقتل عشرة مدنيين", "◼️ اشتباكات في تعز بين القوات الحكومية والحوثيين", "◼️ السعودية تعلن اعتراض صاروخ فوق جازان"].join("\n\n");
+  assert.equal(splitDigest(ours, []).length, 0, "a post that is all ours is left whole");
+
+  // An ordinary field report is untouched.
+  assert.equal(splitDigest("عاجل | غارة سعودية على مديرية حيفان في تعز", []).length, 0);
+});

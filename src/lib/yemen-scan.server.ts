@@ -550,6 +550,32 @@ function tgPostNo(url: string): number {
   return m ? Number(m[1]) : 0;
 }
 
+/**
+ * A newspaper posts its edition as one message: a cover, then a dozen
+ * headlines from a dozen different sections, sometimes with a link each.
+ *
+ * Judged whole, such a post is whatever most of it is about — Al-Akhbar's
+ * daily edition reads as Lebanese politics and is thrown out as another
+ * theatre, taking any Yemen story in it down with it. The desk was losing the
+ * paper it was told to read, in the one message that carries it.
+ *
+ * So a digest is cut into its headlines and only the ones that name this war
+ * go forward, each judged on its own. Anything that is not a digest, and any
+ * digest with nothing of ours in it, is left exactly as it was.
+ */
+const DIGEST_MARK = /[◼⬛⬜🖋]️?/gu;
+const OURS = /اليمن|يمني|الحوث|صنعاء|السعود|عدن|تعز|مأرب|الحديدة|Yemen|Houthi|Saudi|Sanaa|Aden|Taiz|Marib/i;
+
+export function splitDigest(text: string, links: string[]): { text: string; href?: string }[] {
+  const parts = text.split(DIGEST_MARK).map((t) => t.trim()).filter((t) => t.length >= 25);
+  if (parts.length < 3) return [];
+  const ours = parts.filter((t) => OURS.test(t));
+  if (!ours.length || ours.length === parts.length) return [];
+  return ours.map((t) => {
+    const i = parts.indexOf(t);
+    return { text: t, href: links.length === parts.length ? links[i] : undefined };
+  });
+}
 export function parseTelegram(html: string, ch: Channel): RawHit[] {
   const items: RawHit[] = [];
   const parts = html.split("tgme_widget_message_wrap");
@@ -570,7 +596,20 @@ export function parseTelegram(html: string, ch: Channel): RawHit[] {
     let at = jerusalemIso();
     const parsed = Date.parse(datetime);
     if (Number.isFinite(parsed)) at = jerusalemIso(new Date(parsed));
-    items.push({ source: ch.name, url, text, at, lean: ch.lean, fromTg: true, ...(replyUrl && replyUrl !== url ? { replyUrl } : {}) });
+    const base = { source: ch.name, at, lean: ch.lean, fromTg: true, ...(replyUrl && replyUrl !== url ? { replyUrl } : {}) };
+    // An edition post carries a dozen stories; each of ours becomes its own
+    // candidate so one is never judged by the other eleven.
+    const outside = [...p.matchAll(/href="(https?:\/\/[^"]+)"/gi)]
+      .map((m) => decodeEntities(m[1]))
+      .filter((h) => !/t\.me\//.test(h));
+    const pieces = splitDigest(text, outside);
+    if (pieces.length) {
+      pieces.forEach((piece, n) => {
+        items.push({ ...base, url: piece.href || `${url}#${n + 1}`, text: piece.text });
+      });
+      continue;
+    }
+    items.push({ ...base, url, text });
   }
   return items;
 }

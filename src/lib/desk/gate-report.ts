@@ -16,7 +16,7 @@ export type Scored = GateFixture & { got: GateLabel; reason: string; score: numb
 
 /** Map a verdict onto a label. Until the scorer lands, keep/drop is all there is. */
 export function classify(f: GateFixture): Scored {
-  const v = gate({ text: f.text, source: f.source, url: "https://example.com/a/1", agency: !!f.agency });
+  const v = gate({ text: f.text, source: f.source, url: f.url || "https://example.com/a/1", agency: !!f.agency });
   const got: GateLabel =
     (v as { outcome?: GateLabel }).outcome ?? (v.keep ? "feed" : "exclude");
   return { ...f, got, reason: v.reason, score: v.score };

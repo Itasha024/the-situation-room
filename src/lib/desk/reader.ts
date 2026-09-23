@@ -215,6 +215,12 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    programme title, a video segment, a battle map, a documentary, an analysis,
    an anniversary, a recap. "Marib and Taiz: the map of the battles #ThisDay"
    is a programme clip, not a report of clashes — publish=false.
+   Commentary is not a report either: explainers, opinion, columns, analysis,
+   and the views of writers, media figures, researchers, analysts, experts,
+   think tanks or FORMER officials ("a Saudi writer says", "former US envoy
+   warns", "what to know about") — publish=false, reject_reason
+   "commentary". News that rests on officials or sources is a report and is
+   kept ("the FT reports Saudi Arabia formally asked Washington for strikes").
 3. SUBSTANTIVE. A reader learns what happened or what was said about what.
    "A spokesman said something" with no content is not a report.
    A news outlet's HEADLINE alone is substantive when it states a fact or a

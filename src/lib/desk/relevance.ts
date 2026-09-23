@@ -201,6 +201,25 @@ const WEAPON =
 
 const COUNT = /\b\d{1,6}\b/;
 
+/** A link to an explainer, an opinion page or an analysis. */
+const COMMENTARY_URL = /[/_-](?:explainers?|opinions?|analysis|columns?|columnists?|editorials?|commentary)(?:[/_.-]|$)|\/views?\//i;
+/** Who speaks at the head of the item: a commentator, not a party. */
+const COMMENTATOR_AR =
+  /(?:^|\s)(?:ال)?(?:(?:كاتب|اعلامي|اكاديمي)(?: و(?:ال)?(?:كاتب|باحث|محلل|اعلامي|صحفي))?(?: ال)? ?(?:سعودي|يمني|امريكي|عربي|اماراتي|كويتي|بريطاني|سياسي|عسكري|استراتيجي|بارز)|باحث|محلل|خبير (?:عسكري|سياسي|استراتيجي|في)|صحفي متخصص)/;
+const FORMER_AR = /(?:المبعوث|السفير|الوزير|المسؤول|الدبلوماسي|المستشار|مدير)(?: ال[^\s]+){0,2} السابق/;
+const SPEAKS_AR = /قال|حذر|اكد|اعتبر|راي|يري|نفي|كشف|اوضح|اشار|يعلق|علق|يقدم|يتحدث|تحدث/;
+const COMMENTATOR_EN =
+  /^(?:[^:\n]{0,40}?\s)?(?:writer|columnist|researcher|analyst|expert|commentator|scholar|former (?:[A-Za-z]+ ){0,3}(?:envoy|ambassador|official|minister|diplomat|commander|adviser|advisor))\b|^(?:explainer|analysis|opinion|comment|what to know|what we know)\b/i;
+
+function commentaryHead(raw: string): boolean {
+  const head = normaliseArabic(raw.slice(0, 260));
+  if (COMMENTATOR_EN.test(raw.slice(0, 160))) return true;
+  const lead = head.slice(0, 90);
+  if ((COMMENTATOR_AR.test(lead) || FORMER_AR.test(head)) && SPEAKS_AR.test(head)) return true;
+  // "كاتب سعودي: …" — the commentator is the title's speaker.
+  return /^[^:]{0,40}(?:كاتب|باحث|محلل|خبير)[^:]{0,20}:/.test(head);
+}
+
 /**
  * Exclusive and source-based reporting — category (c).
  *
@@ -506,6 +525,12 @@ export function gate(input: GateInput): Verdict {
       "speech-relay",
       "A leader's words relayed by another outlet; the desk takes them from the leader's own outlet.",
     );
+  }
+  // Commentary is not a report: an explainer, an opinion piece, or a writer,
+  // researcher, analyst or former official giving a view. News that rests on
+  // officials or sources (the FT on the Saudi request) is a report and passes.
+  if (COMMENTARY_URL.test(input.url) || commentaryHead(raw)) {
+    return out("exclude", "commentary", "Analysis, opinion or a commentator's view, not a report of what happened or was said by a party.");
   }
   // Siren language beats the aircraft rule: early-warning SIRENS are an event,
   // early-warning AIRCRAFT are not.

@@ -25,6 +25,8 @@ export type GateFixture = {
   text: string;
   label: GateLabel;
   agency?: boolean;
+  /** The item's link, when the case is about the link itself. */
+  url?: string;
 };
 
 export const GATE_FIXTURES: GateFixture[] = [
@@ -226,5 +228,51 @@ export const GATE_FIXTURES: GateFixture[] = [
     source: "Sabereen News",
     text: "نشاط مكثف لطائرات المراقبة والإنذار المبكر السعودية من طرازي King Air 350i وSaab 2000، مع تحليق 4 طائرات في الوقت نفسه",
     label: "exclude",
+  },
+  /* ---------------------------------------------------------------- *
+   * Commentary is not a report (round 12, 23 September 2026)
+   * ---------------------------------------------------------------- */
+  {
+    name: "a Saudi writer's view of the talks",
+    source: "Almashhad",
+    text: "كاتب سعودي: تعدد الخيارات أمام الرياض يضع الحوثيين أمام مأزق متزايد قال الإعلامي والكاتب السعودي داوود الشريان إن تصوير أي مفاوضات محتملة بين الرياض ومليشيا الحوثي باعتبارها محاولة سعودية للبحث عن مخرج يتجاهل المأزق",
+    label: "exclude",
+  },
+  {
+    name: "a Saudi media figure comments on the talks",
+    source: "Almashhad",
+    text: "إعلامي سعودي بارز يعلق على المفاوضات بين المملكة والحوثيين ويتحدث عن مأزق أكد الإعلامي والكاتب السعودي داوود الشريان أن تصوير المفاوضات المحتملة بين الرياض ومليشيا الحوثي",
+    label: "exclude",
+  },
+  {
+    name: "a journalist's account of an earlier strike",
+    source: "Almashhad",
+    text: "صحفي متخصص في الجماعات المتطرفة يقدّم رواية جديدة بشأن غارة استهدفت عنصرا في القاعدة بحضرموت نفى الصحفي المتخصص في شؤون الجماعات المتطرفة صحة الأنباء المتداولة بشأن ارتباطه بتنظيم القاعدة",
+    label: "exclude",
+  },
+  {
+    name: "a former US envoy's warning",
+    source: "Almashhad",
+    text: "تيم ليندركينغ: تراجع واشنطن وانقسام الشرعية يعززان نفوذ الحوثيين وتقسيم اليمن احتمال قائم حذر المبعوث الأمريكي السابق إلى اليمن، تيم ليندركينغ، من تحول جماعة الحوثي من قوة مسلحة محدودة إلى طرف مهيمن",
+    label: "exclude",
+  },
+  {
+    name: "a Washington Post explainer",
+    source: "Washington Post",
+    url: "https://www.washingtonpost.com/world/2026/09/23/yemen-houthi-rebels-war-saudi-uae-explainer/541cdfd6-b74c-11f1-94cb-d3d8f22a8c8b_story.html",
+    text: "Yemeni factions opposing Houthis divided by geography and foreign backing. The Houthis are advancing on Bab al-Mandab as the forces arrayed against them in Yemen are split.",
+    label: "exclude",
+  },
+  {
+    name: "news resting on unnamed officials stays: the FT on the Saudi request",
+    source: "Almashhad",
+    text: "فايننشال تايمز: السعودية طلبت رسمياً من واشنطن شن غارات على الحوثيين ذكرت صحيفة فايننشال تايمز أن السعودية طلبت رسمياً من الإدارة الأمريكية تنفيذ ضربات جوية ضد مليشيا الحوثي لكن الإدارة رفضت",
+    label: "feed",
+  },
+  {
+    name: "a party's media office is no commentator",
+    source: "Almashhad",
+    text: "المكتب الإعلامي لمحور تعز: الجيش الوطني يصد هجوما حوثيا في جبهة الكدحة غرب تعز ويكبد المليشيا خسائر",
+    label: "feed",
   },
 ];

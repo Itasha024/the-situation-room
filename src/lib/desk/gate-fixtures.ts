@@ -105,10 +105,12 @@ export const GATE_FIXTURES: GateFixture[] = [
     label: "feed",
   },
   {
-    name: "Pakistani minister in Tehran, Hormuz and negotiations — adjacent, unestablished",
+    // Was "tray". Since 23 September Hormuz is another theatre unless the item
+    // names Yemen or the Houthis, and this one names neither.
+    name: "Pakistani minister in Tehran, Hormuz and negotiations — the Gulf, not this war",
     source: "Al-Araby Television",
     text: "بين مضيق هرمز والمفاوضات.. وزير الداخلية الباكستاني محسن نقوي يزور العاصمة طهران",
-    label: "tray",
+    label: "exclude",
   },
   {
     name: "Qatar mediating Iran–Washington talks — indirect, affects the Iranian track",
@@ -274,5 +276,38 @@ export const GATE_FIXTURES: GateFixture[] = [
     source: "Almashhad",
     text: "المكتب الإعلامي لمحور تعز: الجيش الوطني يصد هجوما حوثيا في جبهة الكدحة غرب تعز ويكبد المليشيا خسائر",
     label: "feed",
+  },
+  /* ---------------------------------------------------------------- *
+   * The Gulf waters are not this war (round 12, 23 September 2026)
+   * ---------------------------------------------------------------- */
+  {
+    name: "a cruise-missile strike on a ship in Hormuz, no Yemen named",
+    source: "Ali Bk",
+    text: "تأكيدا لما نشرناه..  السفينة المخالفة التي استُهدفت صباح اليوم بمضيق هرمز بصواريخ كروز، تشتعل الآن وتنجرف بالمياه.",
+    label: "exclude",
+  },
+  {
+    name: "the Royal Navy on a ship hit in Hormuz",
+    source: "Ali Bk",
+    text: "البحرية البريطانية تعلن استهداف سفينة في مضيق هرمز، ما أدى لإصابتين على متنها، وقد تم إجلاء الطاقم.",
+    label: "exclude",
+  },
+  {
+    name: "crew evacuated from a ship attacked off Musandam",
+    source: "Al Hadath",
+    text: "عاجل | مركز الأمن البحري العماني: مقتل أحد أفراد طاقم السفينة المستهدفة قرب مسندم واندلاع حريق في غرفة المحركات",
+    label: "exclude",
+  },
+  {
+    name: "a Houthi missile at a ship in the Gulf of Oman is ours: the Houthis are named",
+    source: "Al Hadath",
+    text: "عاجل | الحوثيون يعلنون استهداف سفينة تجارية في خليج عمان بصاروخ باليستي",
+    label: "feed",
+  },
+  {
+    name: "'reinforcing cooperation' is not Taiz: تعزيز contains تعز",
+    source: "Almashhad",
+    text: "الوزير اليافعي يبحث مع مدير عام منظمة العمل العربية ونظرائه العرب تعزيز التعاون وتبادل الخبرات في أسواق العمل",
+    label: "exclude",
   },
 ];

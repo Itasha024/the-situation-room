@@ -67,10 +67,9 @@ test("another theatre is dropped even when it borrows the vocabulary", () => {
   const bare = gate({ text: "قصف عنيف في دير الزور بسوريا", source: "Al-Mayadeen", url: "u", agency: false });
   assert.equal(bare.keep, false);
 
-  // Hormuz is not this desk's waterway, but shipping warnings near Saudi
-  // Arabia are adjacent enough that binning them outright would be a judgement
-  // the evidence does not support. It stays OUT OF THE FEED and waits in the
-  // tray, which is what the third outcome is for.
+  // Hormuz is not this desk's waterway. It used to wait in the tray as
+  // "adjacent"; since 23 September the Gulf waters are another theatre unless
+  // the item names Yemen or the Houthis, and this one does not.
   const hormuz = gate({
     text: "توتر في مضيق هرمز وتحذيرات للملاحة قرب السعودية",
     source: "Al-Mayadeen",
@@ -78,7 +77,7 @@ test("another theatre is dropped even when it borrows the vocabulary", () => {
     agency: false,
   });
   assert.equal(hormuz.keep, false, "must not reach the feed");
-  assert.equal(hormuz.outcome, "tray");
+  assert.equal(hormuz.outcome, "exclude");
 });
 
 test("a Saudi capital named beside ground fighting is metonymy, not a battlefield", () => {

@@ -103,8 +103,15 @@ export function normaliseArabic(s: string): string {
  * ------------------------------------------------------------------ */
 
 /** Unmistakably this war. */
-const CONFLICT_CORE =
-  /يمن|حوث|انصار ?الله|صنعا|مارب|تعز|الحديده|حديده|عدن|صعده|الجوف|الضالع|لحج|المخا|ميون|باب ?المندب|شبوه|حضرموت|البيضا|ابين|المهره|ريما|المحويت|ذمار|حجه|يمني|yemen|houthi|sanaa|sana'a|marib|taiz|hodeidah|hudaydah|aden|saada|al-?jawf|al-?dhale|lahj|mocha|mayun|bab ?al-?mandab|bab ?el-?mandeb|ansar ?allah/;
+// Short names are whole words (with the usual prefixes): inside other words
+// they are other words — المخالفة "the offending [ship]" is not Mocha, تعزيزات
+// "reinforcements" is not Taiz, معادن is not Aden, بحجة "on the pretext" is not
+// Hajjah, مآرب "aims" is not Marib.
+const CONFLICT_CORE = new RegExp(
+  "يمن|حوث|انصار ?الله|صنعا|الحديده|حديده|صعده|الجوف|الضالع|باب ?المندب|شبوه|حضرموت|البيضا|المهره|المحويت|يمني|" +
+    "(?:^|[^\\u0621-\\u064A])(?:و|ف|ب|ل)?(?:ال)?(?:مارب|تعز|عدن|لحج|مخا|ميون|ابين|ريمه|ريما|ذمار|حجه)(?=$|[^\\u0621-\\u064A])|" +
+    "yemen|houthi|sanaa|sana'a|marib|taiz|hodeidah|hudaydah|aden|saada|al-?jawf|al-?dhale|lahj|mocha|mayun|bab ?al-?mandab|bab ?el-?mandeb|ansar ?allah",
+);
 
 /** Saudi Arabia: a party to this war, and its home front. */
 const SAUDI =
@@ -183,8 +190,12 @@ const AGREEMENT =
  * Other theatres. These are only a penalty when nothing ties the item to our
  * war — a Houthi or Iranian official invoking Gaza to link the fronts IS ours.
  */
+// The Gulf waters are another theatre too: a ship hit in Hormuz, the Gulf of
+// Oman or off Musandam is Iran's war with the shipping lanes unless the item
+// itself names Yemen or the Houthis (the IRGC's Cape Dao attack filed six
+// cards on 23 September).
 const COMPETING_THEATRE =
-  /غزه|القطاع|الاقصي|القدس|الضفه|رام ?الله|اسراييل|اسرائيل|لبنان|حزب ?الله|الضاحيه|اوكرانيا|السودان|ليبيا|الصومال|كردستان|اربيل|سوريا|دير ?الزور|يونيفيل|gaza|al-?aqsa|jerusalem|west ?bank|ramallah|israel|lebanon|hezbollah|ukraine|sudan|libya|somalia|kurdistan|erbil|syria|unifil/;
+  /هرمز|خليج ?عمان|بحر ?عمان|مسندم|الخليج ?الفارسي|الخليج ?العربي|hormuz|gulf ?of ?oman|musandam|persian ?gulf|arabian ?gulf|غزه|القطاع|الاقصي|القدس|الضفه|رام ?الله|اسراييل|اسرائيل|لبنان|حزب ?الله|الضاحيه|اوكرانيا|السودان|ليبيا|الصومال|كردستان|اربيل|سوريا|دير ?الزور|يونيفيل|gaza|al-?aqsa|jerusalem|west ?bank|ramallah|israel|lebanon|hezbollah|ukraine|sudan|libya|somalia|kurdistan|erbil|syria|unifil/;
 
 /** Observable consequences. A channel breaking news rarely uses doctrinal words first. */
 const OBSERVABLE =

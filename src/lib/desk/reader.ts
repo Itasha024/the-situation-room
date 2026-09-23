@@ -206,6 +206,11 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    an international body's statement counts only when it names this war, its
    parties or its waters — the IMO on vessel transit through Hormuz with Oman
    and Iran is navigation, not this war, and is out of scope;
+   this war's waters are the Red Sea, Bab al-Mandab, the Gulf of Aden and the
+   Arabian Sea off Yemen. A ship attacked in the Strait of Hormuz, the Gulf of
+   Oman, off Musandam or in the Gulf is OUT of scope unless that item itself
+   says the Houthis or Yemen did it — a Houthi-aligned channel reporting or
+   cheering an IRGC attack does not make it a Houthi attack;
    outside powers deciding or debating whether to strike, arm or back a party
    (e.g. Trump weighing strikes on the Houthis after a Saudi request), and
    requests for help between the parties and their allies; foreign media

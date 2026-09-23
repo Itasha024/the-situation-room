@@ -751,7 +751,7 @@ const VESSEL_RE = /\bvessels?\b|\btankers?\b|merchant ships?|bulk carriers?|carg
 const PORT_RE = /\b(?:on|at|hit|hits|struck|strikes? on|target(?:s|ed|ing)?|shelling of|fire on) (?:the )?(?:port|harbou?r|oil terminal)\b|\bport of\b|oil terminal|terminal at/i;
 // A ship pin is an attack on a ship. Traffic figures, cargo unloaded and
 // shipping trends are not events.
-const VESSEL_ATTACK_RE = /attack|struck|\bhit\b|\bhits\b|target|seiz|board|hijack|explo|fire[sd]? (?:on|at)|missile|drone|damag|\bsank\b|sink|intercept|harass|approached by|capsiz|abduct/i;
+const VESSEL_ATTACK_RE = /attack|projectile|struck|\bhit\b|\bhits\b|target|seiz|board|hijack|explo|fire[sd]? (?:on|at)|missile|drone|damag|\bsank\b|sink|intercept|harass|approached by|capsiz|abduct/i;
 // The middle of a country is no place: a pin there says only "somewhere".
 const COUNTRY_PLACE_RE = /^(?:Yemen|Saudi Arabia|Oman|Iran|the Red Sea)$/i;
 const NONMAP_RE = /\bF-?35\b|arms (?:deal|sale)|approved a (?:possible )?sale|State Department|condemn(?:s|ed)?\b|expresses solidarity|appeal|funding|displaced|refugee|humanitarian|Crisis Group|travel warning/i;
@@ -2393,7 +2393,7 @@ function buildMapPins(d) {
     if (!pin || pin.lat == null || pin.lng == null) return;
     if (isWeakHeadline(pin.label)) return;
     if (!pin.url || isHomepageOrSectionUrl(pin.url)) return;
-    const cat = pin.mapCat || classifyForMap(pin.text || pin.label || '', pin.type);
+    const cat = pin.mapCat || classifyForMap(pin.classText || pin.text || pin.label || '', pin.type);
     if (!cat || cat === 'statement') return;
     if (COUNTRY_PLACE_RE.test(String(pin.place || '').trim())) return;
     if (!allowCoordsForCategory(cat, pin.place, pin.lat, pin.lng)) return;
@@ -2478,6 +2478,8 @@ function buildMapPins(d) {
       priority: ev.priority || 2,
       mapOnly: !!ev.mapOnly,
       media: collectMedia(ev),
+      // Headline and body together: the attack is often named only in the headline.
+      classText: [rawLabel, blob].filter(Boolean).join('\n'),
     });
   });
 

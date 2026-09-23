@@ -191,11 +191,18 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    it: Iran or the IRGC acting against the US or Israel (e.g. a drone shot down
    over Hormuz) unless the item itself ties it to Yemen or the Houthis; Gaza,
    Lebanon, Iraq, Syria, Ukraine, Pakistan, Sudan as the subject; domestic
-   politics of any country. In scope: fighting, strikes, launches, sirens and
+   politics of any country. But the exclusion is the THEATRE, not the
+   nationality: foreign fighters, advisers or officers killed, captured or sent
+   to fight IN Yemen are this war, whoever they belong to — Hezbollah
+   publishing photographs of its own men killed in Yemen is a report of this
+   war, not a Lebanese story. In scope: fighting, strikes, launches, sirens and
    alerts in Yemen, in Saudi Arabia, and at sea; statements by the parties
    (Houthis, the Yemeni government, Saudi Arabia) and by the US, Iran, the UN,
    Europe, Turkey, Pakistan, Qatar ABOUT this war; arms sales to a party; a
    party tying Yemen to other fronts ("unity of fronts");
+   an international body's statement counts only when it names this war, its
+   parties or its waters — the IMO on vessel transit through Hormuz with Oman
+   and Iran is navigation, not this war, and is out of scope;
    outside powers deciding or debating whether to strike, arm or back a party
    (e.g. Trump weighing strikes on the Houthis after a Saudi request), and
    requests for help between the parties and their allies; foreign media

@@ -124,8 +124,20 @@ export function onRadar(text: string): boolean {
  */
 const THIN_RULE_AT = Date.parse("2026-09-21T14:30:00+03:00");
 const THIN_REASON = /substantive|teaser|headline|vague|brief|analy|recap|uninformative/i;
+/**
+ * Scope rejections made before the rule that the exclusion is the theatre and
+ * not the nationality — men of a foreign force killed in Yemen are this war.
+ * Those alone are read again: a whole-cache re-read would spend a day of free
+ * quota to change a handful of verdicts, and only items a source still lists
+ * come back round anyway.
+ */
+const SCOPE_RULE_AT = Date.parse("2026-09-23T09:00:00+03:00");
+const SCOPE_REASON = /scope|theatre|theater|unrelated|another war|different war/i;
 function stale(e: CacheEntry): boolean {
-  return e.at < THIN_RULE_AT && !e.reading.publish && THIN_REASON.test(String(e.reading.reject_reason || ""));
+  if (e.reading.publish) return false;
+  const why = String(e.reading.reject_reason || "");
+  if (e.at < THIN_RULE_AT && THIN_REASON.test(why)) return true;
+  return e.at < SCOPE_RULE_AT && SCOPE_REASON.test(why);
 }
 type Cache = Record<string, CacheEntry>;
 type Queued = Candidate & { queuedAt: number };

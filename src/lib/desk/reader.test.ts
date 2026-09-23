@@ -283,7 +283,8 @@ test("a second look no model answered is stamped, not retried every cycle", asyn
       // Already read once and rejected: this is what puts it up for a second look.
       "reader-cache": {
         [contentHash(text)]: {
-          reading: reading({ publish: false, reject_reason: "out-of-scope", headline: "", body: "" }),
+          // Not a scope reason: those are deliberately re-read (see the scope rule).
+          reading: reading({ publish: false, reject_reason: "duplicate of an earlier report", headline: "", body: "" }),
           at: now,
         },
       },
@@ -306,6 +307,38 @@ test("a second look no model answered is stamped, not retried every cycle", asyn
       !((json["reader-missed"] as unknown[]) ?? []).length,
       "an unanswered retry writes nothing to the missed list, which the echo used to fill",
     );
+  } finally {
+    if (key !== undefined) process.env.GEMINI_API_KEY = key;
+    if (groq !== undefined) process.env.GROQ_API_KEY = groq;
+  }
+});
+
+test("a scope rejection made under the old wording is read again; a thin one is not re-read twice", async () => {
+  const { editCandidates } = await import("./editor.ts");
+  const { contentHash } = await import("./reader.ts");
+  const key = process.env.GEMINI_API_KEY;
+  const groq = process.env.GROQ_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GROQ_API_KEY;
+  try {
+    const text = "حزب الله ينشر صور عدد من عناصره الذين قُتلوا في اليمن خلال مشاركتهم في العمليات";
+    // Rejected for scope, before the theatre-not-nationality rule landed.
+    const before = Date.parse("2026-09-22T20:00:00+03:00");
+    const json: Record<string, unknown> = {
+      "reader-cache": {
+        [contentHash(text)]: { reading: reading({ publish: false, reject_reason: "out-of-scope", headline: "", body: "" }), at: before },
+      },
+    };
+    const store = {
+      getJson: async (k: string) => json[k],
+      putJson: async (k: string, v: unknown) => { json[k] = v; },
+      recentDesk: async () => ({ reports: [], events: [], updatedAt: "" }),
+    } as unknown as Parameters<typeof editCandidates>[0];
+
+    const { verdicts, queued } = await editCandidates(store, [{ ...cand(text), url: "https://t.me/x/501" }], Date.now());
+    // Stale: the cached verdict is not reused, so with no reader it waits for one.
+    assert.equal(verdicts.get("https://t.me/x/501")?.kind, "pending", "it goes back for a fresh reading");
+    assert.equal(queued.length, 1, "and waits in the queue rather than standing on the old answer");
   } finally {
     if (key !== undefined) process.env.GEMINI_API_KEY = key;
     if (groq !== undefined) process.env.GROQ_API_KEY = groq;

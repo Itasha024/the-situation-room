@@ -1,37 +1,149 @@
 {
   "note": "Hand corrections to map pins of live reports (the database rows are not edited). remove: not a physical event, or no real place. cat: the right map category. lat/lng/place: the right spot. Applied by buildMapPins in app.js.",
   "fixes": {
-    "live-t-me-almasirah2-299882": { "cat": "strike", "why": "air strikes on Kamaran Island; 'boats' made it a vessel attack" },
-    "live-t-me-shin-persian-10320": { "cat": "strike", "why": "fuel tanks near Riyadh are not a port" },
-    "live-t-me-army21ye-3747": { "cat": "strike", "why": "missile and drone operations, not a port attack" },
-    "live-t-me-army21ye-3748": { "cat": "strike", "why": "missile and drone operations, not a port attack" },
-    "live-www-reuters-com-world-middle-east-major-gulf-stocks-subdued-ahead-potent": { "cat": "strike", "why": "a civil-defence alert in Najran, not a ship" },
-    "live-t-me-alibk3-36861": { "cat": "strike", "why": "damage at King Fahd Air Base, on land" },
-    "live-news-google-com-rss-articles-cbmi5anbvv95cuxobhl0nlqztfzdwergeldrnfziy0n": { "cat": "strike", "why": "air-defence alerts in Riyadh, not ground fighting" },
-    "live-t-me-abdulsalamsalah-2641": { "remove": true, "why": "ship traffic figure, not an attack" },
-    "live-www-eremnews-com-news-arab-world-mdymus8": { "remove": true, "why": "cargo unloaded, not an attack" },
-    "live-aawsat-com-d8-a7-d9-84-d8-a7-d9-82-d8-aa-d8-b5-d8-a7-d8-af-5320739-d8-aa": { "remove": true, "why": "shipping trend, not an attack" },
-    "live-www-wsj-com-logistics-report-carriers-shift-more-containerships-through-": { "remove": true, "why": "shipping trend, not an attack" },
-    "live-t-me-ajanews-513108": { "remove": true, "why": "US deliberations, no event" },
-    "live-www-reuters-com-world-asia-pacific-iran-warns-against-new-escalation-by-": { "remove": true, "why": "statements, no event" },
-    "live-www-foxnews-com-travel-americans-warned-again-rethink-travel-missile-att": { "remove": true, "why": "travel warning, no event" },
-    "live-www-almashhad-news-news-495825": { "remove": true, "why": "fighters sent, no fighting" },
-    "live-t-me-alomhoar-112692": { "remove": true, "why": "reinforcements sent, no fighting" },
-    "live-www-almashhad-news-news-496123": { "remove": true, "why": "recruitment claim, no event" },
-    "live-www-almashhad-news-news-496118": { "remove": true, "why": "a visit to the wounded, no event" },
-    "live-www-eremnews-com-news-arab-world-8vaxv4k": { "remove": true, "why": "plans, no event" },
-    "live-www-almashhad-news-news-496187": { "remove": true, "why": "claim about advisers, no event" },
-    "live-www-almashhad-news-news-496127": { "remove": true, "why": "an agency's account of an operation, no dated event" },
-    "live-www-almashhad-news-news-496154": { "remove": true, "why": "commentary on an earlier strike" },
-    "live-www-almashhad-news-news-496150": { "remove": true, "why": "an arrest, not fighting or a strike" },
-    "live-t-me-naya-foriraq-91332": { "remove": true, "why": "a two-day toll, not one event at one place" },
-    "live-news-google-com-rss-articles-cbmixefvx3lxte1jcdffmndemjb3x2ttawjlrffxuzd": { "remove": true, "why": "pinned at the middle of Yemen" },
-    "live-t-me-alomhoar-112708": { "remove": true, "why": "pinned at the middle of Saudi Arabia" },
-    "live-t-me-shajab-news-67590": { "remove": true, "why": "pinned at the middle of Saudi Arabia" },
-    "live-www-almashhad-news-news-496199": { "remove": true, "why": "missing fighters, no event" },
-    "live-t-me-almasirah2-299716": { "lat": 16.8, "lng": 43.49, "place": "Haydan", "why": "Saada shelling was pinned in Amran" },
-    "live-t-me-sabrennewss-226232": { "lat": 16.8, "lng": 43.49, "place": "Haydan", "why": "Saada shelling was pinned in Amran" },
-    "live-t-me-alarabiyabr-148354": { "lat": 13.15, "lng": 43.9, "place": "Al-Mudaribah", "why": "Al-Modarba is in western Lahj" },
-    "live-t-me-almasirah2-299899": { "lat": 16.94, "lng": 43.26, "place": "Razih district", "why": "Razih district, Saada" }
+    "live-t-me-almasirah2-299882": {
+      "cat": "strike",
+      "why": "air strikes on Kamaran Island; 'boats' made it a vessel attack"
+    },
+    "live-t-me-shin-persian-10320": {
+      "cat": "strike",
+      "why": "fuel tanks near Riyadh are not a port"
+    },
+    "live-t-me-army21ye-3747": {
+      "cat": "strike",
+      "why": "missile and drone operations, not a port attack"
+    },
+    "live-t-me-army21ye-3748": {
+      "cat": "strike",
+      "why": "missile and drone operations, not a port attack"
+    },
+    "live-www-reuters-com-world-middle-east-major-gulf-stocks-subdued-ahead-potent": {
+      "cat": "strike",
+      "why": "a civil-defence alert in Najran, not a ship"
+    },
+    "live-t-me-alibk3-36861": {
+      "remove": true,
+      "why": "satellite images of the Taif base attack, already pinned at Taif"
+    },
+    "live-news-google-com-rss-articles-cbmi5anbvv95cuxobhl0nlqztfzdwergeldrnfziy0n": {
+      "cat": "strike",
+      "why": "air-defence alerts in Riyadh, not ground fighting"
+    },
+    "live-t-me-abdulsalamsalah-2641": {
+      "remove": true,
+      "why": "ship traffic figure, not an attack"
+    },
+    "live-www-eremnews-com-news-arab-world-mdymus8": {
+      "remove": true,
+      "why": "cargo unloaded, not an attack"
+    },
+    "live-aawsat-com-d8-a7-d9-84-d8-a7-d9-82-d8-aa-d8-b5-d8-a7-d8-af-5320739-d8-aa": {
+      "remove": true,
+      "why": "shipping trend, not an attack"
+    },
+    "live-www-wsj-com-logistics-report-carriers-shift-more-containerships-through-": {
+      "remove": true,
+      "why": "shipping trend, not an attack"
+    },
+    "live-t-me-ajanews-513108": {
+      "remove": true,
+      "why": "US deliberations, no event"
+    },
+    "live-www-reuters-com-world-asia-pacific-iran-warns-against-new-escalation-by-": {
+      "remove": true,
+      "why": "statements, no event"
+    },
+    "live-www-foxnews-com-travel-americans-warned-again-rethink-travel-missile-att": {
+      "remove": true,
+      "why": "travel warning, no event"
+    },
+    "live-www-almashhad-news-news-495825": {
+      "remove": true,
+      "why": "fighters sent, no fighting"
+    },
+    "live-t-me-alomhoar-112692": {
+      "remove": true,
+      "why": "reinforcements sent, no fighting"
+    },
+    "live-www-almashhad-news-news-496123": {
+      "remove": true,
+      "why": "recruitment claim, no event"
+    },
+    "live-www-almashhad-news-news-496118": {
+      "remove": true,
+      "why": "a visit to the wounded, no event"
+    },
+    "live-www-eremnews-com-news-arab-world-8vaxv4k": {
+      "remove": true,
+      "why": "plans, no event"
+    },
+    "live-www-almashhad-news-news-496187": {
+      "remove": true,
+      "why": "claim about advisers, no event"
+    },
+    "live-www-almashhad-news-news-496127": {
+      "remove": true,
+      "why": "an agency's account of an operation, no dated event"
+    },
+    "live-www-almashhad-news-news-496154": {
+      "remove": true,
+      "why": "commentary on an earlier strike"
+    },
+    "live-www-almashhad-news-news-496150": {
+      "remove": true,
+      "why": "an arrest, not fighting or a strike"
+    },
+    "live-t-me-naya-foriraq-91332": {
+      "remove": true,
+      "why": "a two-day toll, not one event at one place"
+    },
+    "live-news-google-com-rss-articles-cbmixefvx3lxte1jcdffmndemjb3x2ttawjlrffxuzd": {
+      "remove": true,
+      "why": "pinned at the middle of Yemen"
+    },
+    "live-t-me-alomhoar-112708": {
+      "remove": true,
+      "why": "pinned at the middle of Saudi Arabia"
+    },
+    "live-t-me-shajab-news-67590": {
+      "remove": true,
+      "why": "pinned at the middle of Saudi Arabia"
+    },
+    "live-www-almashhad-news-news-496199": {
+      "remove": true,
+      "why": "missing fighters, no event"
+    },
+    "live-t-me-almasirah2-299716": {
+      "lat": 16.8,
+      "lng": 43.49,
+      "place": "Haydan",
+      "why": "Saada shelling was pinned in Amran"
+    },
+    "live-t-me-sabrennewss-226232": {
+      "lat": 16.8,
+      "lng": 43.49,
+      "place": "Haydan",
+      "why": "Saada shelling was pinned in Amran"
+    },
+    "live-t-me-alarabiyabr-148354": {
+      "lat": 13.15,
+      "lng": 43.9,
+      "place": "Al-Mudaribah",
+      "why": "Al-Modarba is in western Lahj"
+    },
+    "live-t-me-almasirah2-299899": {
+      "lat": 16.94,
+      "lng": 43.26,
+      "place": "Razih district",
+      "why": "Razih district, Saada"
+    },
+    "live-t-me-alibk3-36741": {
+      "remove": true,
+      "why": "satellite images of the Riyadh airport fuel-tank attack, already pinned"
+    },
+    "live-t-me-shin-persian-10323": {
+      "remove": true,
+      "why": "satellite images of the King Khalid airport attack, already pinned"
+    }
   }
 }

@@ -368,3 +368,95 @@ test("a name the reader does not know is dropped from the headline, the role is 
   assert.equal(fixHeadline("Trump: we will not let the Houthis win"), "Trump: we will not let the Houthis win");
   assert.equal(fixHeadline("Houthi leader: Saudi Arabia will pay a price"), "Houthi leader: Saudi Arabia will pay a price");
 });
+
+// Round 12: each case is a card the desk published on 22-23 September.
+test("a correspondent, a doubled speaker and the wrong al-Alimi are put right", async () => {
+  const { fixHeadline } = await import("./reader.ts");
+  assert.equal(
+    fixHeadline("Al Arabiya correspondent: Displaced people killed in Houthi ballistic missile strike on a school in Al-Modarba"),
+    "Displaced people killed in Houthi ballistic missile strike on a school in Al-Modarba",
+  );
+  assert.equal(
+    fixHeadline("Yemeni Presidential Council member Abdullah al-Alimi discusses economic recovery support in New York"),
+    "Presidential Council member discusses economic recovery support in New York",
+  );
+  assert.equal(
+    fixHeadline("Yemen's president Salem Ahmed Al-Khunbashi urges enhanced security readiness in Mukalla"),
+    "Presidential Council member urges enhanced security readiness in Mukalla",
+  );
+  assert.equal(
+    fixHeadline("Houthi political council member Muhammad Al-Farah: Houthi official: UK military support to Saudi Arabia is direct involvement in attacks"),
+    "Houthi official: UK military support to Saudi Arabia is direct involvement in attacks",
+  );
+  assert.equal(
+    fixHeadline("UN Secretary-General Antonio Guterres: UN chief calls for de-escalation in Middle East and restored navigation rights"),
+    "UN chief calls for de-escalation in Middle East and restored navigation rights",
+  );
+  assert.equal(
+    fixHeadline("Yemen Prime Minister Dheifallah Al-Zandani: Yemen prime minister: Bab al-Mandab battle is a red line"),
+    "Yemen's prime minister: Bab al-Mandab battle is a red line",
+  );
+  assert.equal(
+    fixHeadline("Saada human rights office director Yahya Al-Khatib: Saudi forces target border areas daily"),
+    "Saada human rights office director: Saudi forces target border areas daily",
+  );
+  assert.equal(fixHeadline("STC leadership: STC urges calm in Aden"), "STC urges calm in Aden");
+  assert.equal(fixHeadline("Interior minister Ibrahim Haydan: Yemen's interior minister urges vigilance"), "Yemen's interior minister urges vigilance");
+  // What must not change.
+  assert.equal(fixHeadline("Saudi foreign minister: Saudi Arabia rejects Houthi escalation"), "Saudi foreign minister: Saudi Arabia rejects Houthi escalation");
+  assert.equal(fixHeadline("Yemen's president Rashad al-Alimi reiterates commitment to ending the coup"), "Yemen's president reiterates commitment to ending the coup");
+  assert.equal(fixHeadline("Trump: we will not let the Houthis win"), "Trump: we will not let the Houthis win");
+});
+
+test("the card's own outlet leaves its copy; a cited outlet stays", async () => {
+  const { stripOwnOutlet } = await import("./reader.ts");
+  assert.equal(
+    stripOwnOutlet("Al Arabiya reported that a ballistic missile strike launched by Houthi forces hit a school", "Al Arabiya"),
+    "A ballistic missile strike launched by Houthi forces hit a school",
+  );
+  assert.equal(
+    stripOwnOutlet("The UN World Food Programme told Al Arabiya it was unable to operate", "Al Arabiya Breaking"),
+    "The UN World Food Programme said it was unable to operate",
+  );
+  assert.equal(
+    stripOwnOutlet("A military source told Al-Masirah that heavy equipment was seized", "Al-Masirah"),
+    "A military source said heavy equipment was seized",
+  );
+  assert.equal(stripOwnOutlet("Yemen's Houthis are increasingly supplied by China, Wall Street Journal says", "WSJ"), "Yemen's Houthis are increasingly supplied by China");
+  assert.equal(
+    stripOwnOutlet("The Wall Street Journal reported that the Houthis are increasingly supplied by China.", "WSJ"),
+    "The Houthis are increasingly supplied by China.",
+  );
+  assert.equal(
+    stripOwnOutlet("A navigation source told Almashhad that a medium-sized aircraft landed", "Almashhad"),
+    "A navigation source said a medium-sized aircraft landed",
+  );
+  const cited = "The Financial Times reported that Saudi Arabia formally asked Washington to strike";
+  assert.equal(stripOwnOutlet(cited, "Almashhad"), cited);
+});
+
+test("which Houthi spokesperson, and no role the text never gave", async () => {
+  const { spokespersonLabel, dropInventedRole } = await import("./reader.ts");
+  assert.equal(
+    spokespersonLabel("Houthi spokesperson: 52 Saudi strikes hit five governorates", "Sabereen News", "العميد يحيى سريع: 52 غارة"),
+    "Houthi military spokesperson: 52 Saudi strikes hit five governorates",
+  );
+  assert.equal(
+    spokespersonLabel("Houthi spokesperson: Saudi crimes justify the right to self-defence", "Al-Masirah", "ناطق حكومة صنعاء: الجرائم السعودية"),
+    "Houthi government spokesperson: Saudi crimes justify the right to self-defence",
+  );
+  assert.equal(
+    dropInventedRole("UN World Food Programme aid chief: unable to operate in Houthi-controlled areas", "برنامج الأغذية العالمي للعربية: لا نستطيع العمل في مناطق الحوثيين"),
+    "UN World Food Programme: unable to operate in Houthi-controlled areas",
+  );
+  assert.equal(dropInventedRole("UN aid chief Tom Fletcher: Yemen is approaching famine", "فليتشر"), "UN aid chief Tom Fletcher: Yemen is approaching famine");
+});
+
+test("wounded is never written as killed", () => {
+  const src = "إصابة 3 مواطنين وتدمير محطة وقود تزود قوارب الصيادين جراء ثلاث غارات للعدوان السعودي على جزيرة كمران";
+  const bad = reading({ headline: "Houthi media: Saudi air strikes on Kamaran Island kill 3 citizens and destroy fuel station", body: "" });
+  assert.equal(checkReading(bad, src), "killed not in source");
+  assert.ok(repairable("killed not in source"));
+  const good = reading({ headline: "Houthi media: Saudi air strikes on Kamaran Island wound 3 citizens and destroy fuel station", body: "" });
+  assert.equal(checkReading(good, src), null);
+});

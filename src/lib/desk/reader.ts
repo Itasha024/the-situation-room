@@ -191,7 +191,10 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    it: Iran or the IRGC acting against the US or Israel (e.g. a drone shot down
    over Hormuz) unless the item itself ties it to Yemen or the Houthis; Gaza,
    Lebanon, Iraq, Syria, Ukraine, Pakistan, Sudan as the subject; domestic
-   politics of any country. But the exclusion is the THEATRE, not the
+   politics of any country; crime, courts, prices, markets, business and
+   social news with no link to the fighting (fish prices in Aden, a court
+   execution for murder, a defence investment fund, a sheikh storming a
+   courthouse). But the exclusion is the THEATRE, not the
    nationality: foreign fighters, advisers or officers killed, captured or sent
    to fight IN Yemen are this war, whoever they belong to — Hezbollah
    publishing photographs of its own men killed in Yemen is a report of this
@@ -251,12 +254,17 @@ WRITING
   with their figures), weapon and unit. A short item stays whole.
 - Every number, name and place you write must be in the item's text. Add
   nothing: no background, no cause, no casualties, no attribution the text
-  does not give.
+  does not give. Never add a role or title the text does not give: an agency
+  that "told" an outlet something is the agency, not its "aid chief".
+- Wounded is not killed. Write "kill" only when the text says people died;
+  "three citizens were wounded" is "wound 3", never "kill 3".
 - NEVER write about what is missing or unverified: no "no casualties were
   reported", "casualty figures were not given", "details were not immediately
   available", "could not be independently verified", "it was unclear". Never
   name the outlet or say who "carried" or "reported" the item — the card shows
-  the source.
+  the source. That includes its correspondent and anyone who "told" it
+  something: not "Al Arabiya correspondent: …", not "Al Arabiya reported
+  that …", not "a source told Al-Masirah"; write "a military source said".
 - A place a general reader does not know gets a short locator once, in the
   body only: "in Kahbub, south-west Yemen" or "Kahbub in Lahj governorate".
   No "the strategic front of", no chains of district and governorate names.
@@ -282,7 +290,11 @@ any event that happens TO a vessel at a point at sea or in port — seized,
 boarded, detained, intercepted, hijacked, fired on, damaged — as long as it is
 that specific event, not a general mention of Red Sea shipping or a policy
 statement about it. A vessel merely named in a statement (a warning, a
-condemnation, a funding appeal) stays statement or diplomacy.
+condemnation, a funding appeal) stays statement or diplomacy. An island, a
+coast or a port town is land: air strikes on Kamaran island that destroy a
+fuel station serving fishermen's boats are air_strike, not maritime_attack.
+Ship traffic figures, cargo unloaded and shipping trends are economy, never
+maritime_attack.
 
 SIDES (actor_side)
 Both the Houthis (Sanaa) and the recognised government (Aden) call themselves
@@ -385,8 +397,12 @@ const OUTLET_NAMES =
   "Reuters|AP|AFP|Axios|NYT|The New York Times|New York Times|WSJ|The Wall Street Journal|Wall Street Journal|" +
   "The Washington Post|Washington Post|Bloomberg|CNN|BBC|Al Jazeera|Al-Jazeera|Al Arabiya|Al-Arabiya|Politico|" +
   "Fox News|Financial Times|The Guardian|Sky News|Al-Araby(?: TV)?|Al Araby(?: TV)?|Asharq Al-Awsat|Al-Masirah|" +
-  "Al Masirah|Saba|SPA|Media|Reports?|Sources?";
-export const OUTLET_LEAD = new RegExp(`^(?:${OUTLET_NAMES})(?:\\s+(?:sources?|reports?|TV))?\\s*:\\s*`, "i");
+  "Al Masirah|Saba|SPA|Media|Reports?|Sources?|(?:Our )?[Cc]orrespondent";
+// "Al Arabiya correspondent: …" — the reporter is the outlet too.
+export const OUTLET_LEAD = new RegExp(
+  `^(?:${OUTLET_NAMES})(?:\\s+(?:sources?|reports?|TV|Breaking|correspondent|reporter))?\\s*:\\s*`,
+  "i",
+);
 
 /**
  * Headline fixes the model keeps needing: an outlet opening the headline goes
@@ -397,9 +413,13 @@ export function fixHeadline(headline: string): string {
   let h = String(headline || "").trim();
   while (OUTLET_LEAD.test(h)) h = h.replace(OUTLET_LEAD, "");
   h = h.replace(/^(?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi:/i, "Houthi leader:");
+  // Only Rashad al-Alimi is Yemen's president. "Yemen's president Salem
+  // Al-Khunbashi" was a council member given the chairman's title.
+  h = h.replace(/\bYemen's president (?!Rashad\b|[Aa]l-Alimi\b)(?:[A-Z][\w'-]+ ){0,3}(?:[Aa]l-)?[A-Z][\w'-]+(?= |$|:)/g, "Presidential Council member");
   // People readers do not know by name go by their role.
   for (const [name, role] of ROLE_NAMES) h = h.replace(name, (_m, at: number) => (at === 0 ? role.replace(/^the /, "") : role));
   h = h.replace(/\b(Yemen's president)(?:,? \1)+/gi, "$1");
+  h = h.replace(/\b(Presidential Council member)(?:,? \1)+/g, "$1");
   // "Houthi official Dr Omar Al-Bukhiti condemns …" — a name the reader does
   // not know tells them nothing a headline has room for. The role stays and
   // the name goes; the body can carry it if it earns its place there.
@@ -408,8 +428,28 @@ export function fixHeadline(headline: string): string {
     "$1",
   );
   // "Name: role: words" — one speaker, named by role only.
-  h = h.replace(/^[^:]{2,40}:\s+([^:]{2,60}):\s+/, "$1: ");
-  h = h.replace(/^Yemeni ((?:culture|information|foreign|defen[cs]e|interior|oil|finance) minister):/i, "Yemen's $1:");
+  h = h.replace(/^[^:]{2,70}:\s+([^:]{2,60}):\s+/, "$1: ");
+  // "Name: <the same role> calls for …" — the speaker twice. "UN
+  // Secretary-General Antonio Guterres: UN chief calls for de-escalation",
+  // "STC leadership: STC urges …": the second, shorter form stands.
+  const twice = /^([^:]{2,70}):\s+((?:[\w'.-]+ ){0,5}?)((?:calls|urges|warns|condemns|rejects|announces|welcomes|demands|stresses|affirms|accuses|denies|vows|pledges|discusses|meets|receives)\b.*)$/.exec(h);
+  if (twice && twice[2]) {
+    const ROLE_WORD = /\b(?:chief|minister|spokes\w+|official|leader(?:ship)?|president|council|secretary(?:-general)?|envoy|STC|governor|commander)\b/i;
+    const roles = (s: string) => new Set((s.toLowerCase().match(new RegExp(ROLE_WORD.source, "gi")) || []));
+    const first = roles(twice[1]);
+    const second = roles(twice[2]);
+    const BODY = /\b(?:UN|US|EU|GCC|STC|Houthi|Saudi|Yemen(?:'s|i)?|Iran(?:ian)?|Omani?)\b/g;
+    const bodies = (s: string) => new Set(s.match(BODY) || []);
+    const sameBody = [...bodies(twice[2])].some((b) => bodies(twice[1]).has(b));
+    if (second.size && (!first.size || sameBody || [...second].some((w) => first.has(w)))) h = `${twice[2]}${twice[3]}`;
+  }
+  // A role then a name the reader does not know, before the colon: the role
+  // speaks. "Saada human rights office director Yahya Al-Khatib: …".
+  h = h.replace(
+    /^((?:[\w'-]+ ){0,6}?(?:[Gg]overnor|[Dd]irector|[Mm]ember|[Cc]ommander|[Pp]rime [Mm]inister|[Dd]eputy [a-z]+|[Hh]ead)) (?:(?:Dr|Maj|Gen|Brig|Sheikh|Col)\.? ?)*[A-Z][\w'-]+(?: (?:[Aa]l-|[Bb]in )?[A-Z][\w'-]+){1,3}:/,
+    "$1:",
+  );
+  h = h.replace(/^Yemen(?:i)? ((?:culture|information|foreign|defen[cs]e|interior|oil|finance|prime|youth) minister):/i, "Yemen's $1:");
   // "X said that our …" is his own words without the quote: the colon form.
   h = h.replace(/^([^:]{2,60}?) (?:said|says|stated|stressed|affirmed|declared|added) (?:that )?((?:our|we|us|my|I)\b.*)$/, "$1: $2");
   // A spokesman's or minister's statement always takes the colon: "UN
@@ -428,6 +468,10 @@ export function fixHeadline(headline: string): string {
   return h ? h[0].toUpperCase() + h.slice(1) : h;
 }
 const ROLE_NAMES: [RegExp, string][] = [
+  // Two al-Alimis: Abdullah is a council member, only Rashad is the president.
+  // Without this, "Abdullah al-Alimi" came out "Abdullah Yemen's president".
+  [/\b(?:(?:Yemeni |Yemen's |Yemen )?Presidential (?:Leadership )?Council member )?Abdullah [Aa]l-Alimi(?: Bawaz[ei]e?r)?\b/g, "Presidential Council member"],
+  [/\b(?:(?:Yemeni |Yemen's |Yemen )?Presidential (?:Leadership )?Council member(?: and Hadh?ramaut governor)? )?(?:Salem (?:Ahmed )?)?[Aa]l-Khunbashi\b/g, "Presidential Council member"],
   [/\b(?:Yemen's |Yemeni )?(?:[Pp]resident(?:ial (?:Leadership )?Council (?:head|chairman|leader))? )?(?:Rashad )?al-Alimi\b/gi, "Yemen's president"],
   [/\b(?:STC (?:leader|head|chief) )?(?:Aidarous |Aidrous )?al-Zubaidi\b/gi, "the STC leader"],
   [/\b(?:Houthi (?:political council|Supreme Political Council) (?:head|chief) )?(?:Mahdi )?al-Mashat\b/gi, "the Houthi political council head"],
@@ -440,6 +484,62 @@ const ROLE_NAMES: [RegExp, string][] = [
   [/\bHouthi (?:armed forces|military|army) spokes(?:man|person)\b/gi, "Houthi military spokesperson"],
   [/\b(?:(?:the )?UN (?:aid|humanitarian|relief) (?:chief|coordinator|head) )?Tom Fletcher\b/g, "UN aid chief Tom Fletcher"],
 ];
+
+/** The ways a card's own outlet is written: "Al Arabiya Breaking" is Al Arabiya. */
+function ownOutletRe(source: string): string {
+  const base = String(source || "")
+    .replace(/\s*\((?:breaking)\)|\s+Breaking$/i, "")
+    .trim();
+  if (!base) return "";
+  const special: Record<string, string> = {
+    WSJ: "(?:the )?(?:Wall Street Journal|WSJ)",
+    NYT: "(?:the )?(?:New York Times|NYT)",
+    AP: "(?:the )?(?:Associated Press|AP)",
+    Almashhad: "(?:Al[- ]?Mashhad(?: al-Yemeni)?|Almashhad)",
+  };
+  if (special[base]) return special[base];
+  const words = base.split(/[\s-]+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const tv = /^(?:TV|Television)$/i.test(words[words.length - 1] || "");
+  const core = (tv ? words.slice(0, -1) : words).join("[- ]?");
+  return `(?:the )?${core}${tv ? "(?: TV| Television)?" : ""}`;
+}
+
+/**
+ * The card's own outlet out of its copy: it is on the card already. "Al
+ * Arabiya reported that X" is X; "told Al-Masirah" is "said"; "…, Wall Street
+ * Journal says" on the WSJ's own card goes. Another outlet cited by name
+ * (Almashhad quoting the Financial Times) stays: that is the attribution.
+ */
+export function stripOwnOutlet(text: string, source: string): string {
+  const o = ownOutletRe(source);
+  let t = String(text || "");
+  if (!o) return t;
+  const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+  t = t.replace(new RegExp(`^((?:[A-Z][\\w'-]* ){0,3}— )?${o}(?:'s)?(?: correspondent| reporter)?:\\s*`, "i"), "$1");
+  t = t.replace(new RegExp(`(^|— |\\. )${o}(?:'s)?(?: correspondent| reporter)? (?:reported|reports|said|says|stated|learned|revealed) (?:that )?(\\S)`, "gi"), (_m, pre: string, c: string) => `${pre}${c.toUpperCase()}`);
+  t = t.replace(new RegExp(`\\btold ${o}(?: TV)?(?: that)? `, "gi"), "said ");
+  t = t.replace(new RegExp(`,? (?:according to|in (?:a statement|remarks|an interview) to) ${o}(?=[,.]|$)`, "gi"), "");
+  t = t.replace(new RegExp(`,? ${o} (?:says|said|reports|reported)$`, "i"), "");
+  return cap(t.trim());
+}
+
+/**
+ * "Houthi spokesperson" is two people. Saree speaks for the armed forces, and
+ * the government in Sanaa has its own spokesman; a bare label hid which.
+ */
+export function spokespersonLabel(headline: string, source: string, sourceText: string): string {
+  if (!/^Houthi spokesperson\b/.test(headline)) return headline;
+  if (/Saree/i.test(source) || /سريع|Saree/i.test(sourceText)) return headline.replace(/^Houthi spokesperson\b/, "Houthi military spokesperson");
+  if (/(?:ناطق|متحدث)(?: رسمي)?(?: باسم)? (?:ال)?حكومة|government spokes/i.test(sourceText)) return headline.replace(/^Houthi spokesperson\b/, "Houthi government spokesperson");
+  return headline;
+}
+
+/** A role the text never gave: "UN World Food Programme aid chief" for the agency itself. */
+export function dropInventedRole(headline: string, sourceText: string): string {
+  if (!/\baid chief\b/i.test(headline) || /Fletcher/i.test(headline)) return headline;
+  if (/\b(?:chief|head|director|coordinator|chair)\b|فليتشر|مدير|رئيس|منسق|المسؤول/i.test(sourceText)) return headline;
+  return headline.replace(/\s+aid chief\b/i, "");
+}
 
 /** Running prose (the 12-hour brief): the same people by role, "Houthi leader" included. */
 export function roleNamesInProse(text: string): string {
@@ -531,10 +631,12 @@ function numbersIn(text: string): Set<string> {
  */
 const CASUALTY_SRC = /قتيل|قتلى|شهيد|شهداء|جرحى|جريح|مصابين|\bkilled\b|\bwounded\b|\binjured\b|casualties/i;
 const CASUALTY_COPY = /kill|dead|death|died|wound|injur|casualt|lives|bodies/i;
+/** Words that say someone died; the wounded-only words are not among them. */
+const KILLED_SRC = /قتل|قتيل|قتلى|مقتل|استشهد|استشهاد|شهيد|شهداء|وفاة|توفي|مصرع|جثث|جثة|\bkill|\bdead\b|\bdied\b|\bdeaths?\b|\bbodies\b|\bmartyr/i;
 
 /** Failures a second writing can fix; anything else is a judgement, and stands. */
 export function repairable(problem: string): boolean {
-  return /headline length|empty body|casualties dropped|does not lead with its speaker|leads with outlet|written as|banned phrase|source-language/i.test(problem);
+  return /headline length|empty body|casualties dropped|killed not in source|does not lead with its speaker|leads with outlet|written as|banned phrase|source-language/i.test(problem);
 }
 
 /**
@@ -567,6 +669,9 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   // Casualties in the source are never dropped from the copy.
   if (!strict) return null;
   if (CASUALTY_SRC.test(sourceText) && !CASUALTY_COPY.test(`${h} ${b}`)) return "casualties dropped";
+  // Wounded is not killed: "Saudi air strikes on Kamaran Island kill 3
+  // citizens" over a text that says three were wounded.
+  if (/\bkill(?:s|ed|ing)?\b|\bdead\b|\bdeaths?\b|\bdied\b/i.test(h) && !KILLED_SRC.test(sourceText)) return "killed not in source";
   // A Houthi actor is never "Yemeni forces", nor a government one "Houthi".
   if (r.actor_side === "houthi" && /\bYemeni (?:armed )?forces\b|\bYemen's (?:army|armed forces)\b/i.test(`${h} ${b}`)) return "Houthi actor written as Yemeni forces";
   return null;

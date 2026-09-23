@@ -777,7 +777,7 @@ function classifyForMap(text, hintedType) {
   }
   if (!t.trim()) return null;
   if (NONMAP_RE.test(t) && !GROUND_RE.test(t) && !STRIKE_RE.test(t)) return null;
-  if (VESSEL_RE.test(t) && STRIKE_RE.test(t) && VESSEL_ATTACK_RE.test(t) && !PORT_RE.test(t)) return 'vessel';
+  if (VESSEL_RE.test(t) && VESSEL_ATTACK_RE.test(t) && !PORT_RE.test(t)) return 'vessel';
   if (PORT_RE.test(t) && STRIKE_RE.test(t)) return 'port';
   const ground = GROUND_RE.test(t);
   const strike = STRIKE_RE.test(t);

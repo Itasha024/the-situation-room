@@ -27,8 +27,11 @@ import {
   nextPacificMidnight,
   pacificDay,
   repairable,
+  dropInventedRole,
   fixHeadline,
   redundantBody,
+  spokespersonLabel,
+  stripOwnOutlet,
   contentHash,
   groqKey,
   readBatch,
@@ -522,6 +525,11 @@ function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
   const r: Reading = { ...raw, headline: fixHeadline(reword(anglicise(raw.headline))), body: reword(anglicise(raw.body)) };
+  // The outlet is on the card: not in its headline, not in its body. And a
+  // spokesperson or a role is only what the text says it is.
+  r.headline = dropInventedRole(spokespersonLabel(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.source, c.text), c.text);
+  r.body = stripOwnOutlet(r.body, c.source);
+  if (r.speaker_lead) r.speaker_lead = dropInventedRole(spokespersonLabel(r.speaker_lead, c.source, c.text), c.text);
   // One side for both, judged on the whole copy: the body alone may not say "Saudi".
   const side = raw.actor_side ?? (sideWords(`${r.headline} ${r.body}`, undefined) !== `${r.headline} ${r.body}` ? "houthi" : undefined);
   r.headline = sideWords(r.headline, side);

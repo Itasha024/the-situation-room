@@ -5,19 +5,20 @@
  * Server-only.
  *
  *   grounded   only a target the source text itself contains is looked up
- *   bounded    Yemen and Saudi Arabia only; when the text names a governorate
- *              the gazetteer knows, the answer must lie near it
+ *   bounded    Yemen and Saudi Arabia only; when the text names a governorate,
+ *              the answer must lie inside it; never a country or a province
  *   polite     Nominatim's policy: at most one request a second, an
  *              identifying user agent, and every answer (found or not) cached
  *              for good so a name is never asked twice
  */
 
+import { governorateAt } from "./adm1.ts";
 import { anglicise } from "./anglicise.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
 import type { DeskStore } from "./store.ts";
 
-// v3: kind-filtered answers; earlier versions held looser guesses.
-const CACHE_KEY = "geocode-cache-v3";
+// v4: no country or province answers, no common nouns, in the named governorate.
+const CACHE_KEY = "geocode-cache-v4";
 const UA = "yemen-war-desk/1.0 (+https://yemen-war-desk.vercel.app)";
 /** Lookups per tick, at one a second, so a busy tick stays short. */
 export const GEOCODE_BUDGET = 10;
@@ -79,15 +80,26 @@ export function pickHit(rows: NominatimRow[], near: Place | undefined, kinds?: s
     }))
     .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && p.name);
   if (kinds) pts = pts.filter((p) => kinds.includes(p.kind));
+  // A country or a whole province is no spot: "Saudi Arabia" as a point is a
+  // desert 900 km from Jazan. Only a text that says "governorate" may have one.
+  else pts = pts.filter((p) => !/^(?:country|state|province|region)$/.test(p.kind));
+  // A word, not a name: مدرسة ("school") comes back as a place called Mdrsa.
+  pts = pts.filter((p) => !NOT_A_NAME.test(p.name));
   if (!pts.length) return null;
+  // When the text names a governorate, the answer lies in it, not merely near
+  // it: Razih in Saada was pinned 90 km away, in Hajjah.
+  const home = near ? governorateAt(near.lat, near.lng) : null;
   const chosen = near
-    ? pts.find((p) => km(p, near) <= NEAR_KM)
+    ? pts.find((p) => (home ? governorateAt(p.lat, p.lng) === home : km(p, near) <= NEAR_KM))
     : (kinds && pts.length === 1) || pts.every((p) => km(p, pts[0]) <= AGREE_KM)
       ? pts[0]
       : undefined;
   if (!chosen) return null;
   return { name: anglicise(chosen.name), lat: chosen.lat, lng: chosen.lng };
 }
+
+/** Transliterated common nouns that OpenStreetMap stores as names. */
+const NOT_A_NAME = /^(?:al[- ])?(?:mdrs[ae]?|madras[ae]h?|school|masjid|mosque|jami|souq|suq|market|mustashfa|hospital|markaz|cent(?:er|re)|mahatta|station|mukhayam|camp)$/i;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -108,7 +120,7 @@ async function nominatim(q: string): Promise<NominatimRow[] | null> {
 const KIND_PREFIX = /^(?:مديرية|مديريه|محافظة|محافظه|مدينة|مدينه|منطقة|منطقه|قرية|قريه|جبهة|جبهه)\s+/;
 
 /** Words the model sometimes returns as a "target" that name no place. */
-const GENERIC = /^(?:مواقع|موقع|تحصينات|مناطق|منطقة|تجمعات|أهداف|هدف|مدنيين|منازل|مزارع|أحياء|قرى)(?:\s|$)/;
+const GENERIC = /^(?:مواقع|موقع|تحصينات|مناطق|منطقة|تجمعات|أهداف|هدف|مدنيين|منازل|منزل|مزارع|مزرعة|أحياء|قرى|مدرسة|مدرسه|مسجد|جامع|سوق|مستشفى|مركز|محطة|محطه|مخيم|مخيمات|مصنع|جامعة)(?:\s|$)/;
 
 export type NeedsPlace = { targets: string[]; sourceText: string; apply: (hit: GeoHit) => void };
 

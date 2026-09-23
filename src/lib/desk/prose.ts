@@ -50,7 +50,9 @@ function cardLine(r: LiveReport, frontsOf: (r: LiveReport) => string[]): string 
 export function cleanProse(s: unknown, maxSentences: number): string {
   const t = roleNamesInProse(String(s ?? "").replace(/\s+/g, " ").trim());
   if (t.length < 40 || t.length > 1200 || BANNED.test(t)) return "";
-  const sentences = (t.match(/[^.!?]+[.!?]+/g) || [t]).map((x) => x.trim());
+  // A dot between digits is a decimal, not a full stop: "fell 1.1 percent" came
+  // back as "fell 1. 1 percent" once the sentences were joined again.
+  const sentences = (t.match(/(?:[^.!?]|\.(?=\d))+[.!?]+/g) || [t]).map((x) => x.trim());
   // A sentence about absence is dropped; the rest of the paragraph stands.
   const kept = sentences.filter((x) => !ABSENCE.test(x));
   return kept.length ? kept.slice(0, maxSentences).join(" ") : "";

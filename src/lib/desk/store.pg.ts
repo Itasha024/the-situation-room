@@ -211,11 +211,15 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           `;
           if (!inserted.length) {
             // The original of a relayed report turned up after it was stored:
-            // the original replaces the relay as its source and link.
+            // the original replaces the relay as its source and link. Any relay
+            // — a website (Almashhad citing Bloomberg) as well as a channel: a
+            // stored row still "citing" someone is a relay's card. Its text
+            // follows when the original has been read (the "original" rewrite).
             if (!r.citing && r.source) {
               await sql`
                 update desk_report set url = ${r.url}, source = ${r.source}, citing = null, also_reported_by = null
-                 where fp = ${r.fp} and url like 'https://t.me/%' and ${r.url} not like 'https://t.me/%'
+                 where fp = ${r.fp} and url is distinct from ${r.url} and ${r.url} not like 'https://t.me/%'
+                   and (citing is not null or url like 'https://t.me/%')
                    and not exists (select 1 from desk_report d where d.url = ${r.url})
               `;
             }

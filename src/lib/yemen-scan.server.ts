@@ -18,7 +18,7 @@ import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
-import { type ReRead, findCitation, readOriginal, traceOrigins } from "./desk/origin.ts";
+import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
@@ -1144,7 +1144,10 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       if (lead.length < WALLED_UNDER && h.title && rescues < WALLED_RESCUES) {
         rescues += 1;
         const lang = /[؀-ۿ]/.test(h.title) ? "ar" : "en";
-        const full = await readOriginal({ url: page, source: h.source, title: h.title }, lang);
+        // Last, the story as other outlets told it: the WSJ's own paywalled
+        // item is written up by others within hours.
+        const cover = { name: h.source, keys: keywords(h.title, lang, h.source), at: Date.parse(h.at) };
+        const full = await readOriginal({ url: page, source: h.source, title: h.title }, lang, undefined, cover);
         if (full.length > lead.length) lead = full.replace(/\s+/g, " ").trim().slice(0, ARTICLE_CHARS);
       }
       leadCache[key] = { lead, at: now, ...(real ? { real } : {}) };
@@ -1245,6 +1248,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     // Untraced reports keep their relay as source; nothing else changes.
   }
   hintOutlets(state, hits, now);
+  // An outlet does not open a headline, nor close it ("…, WSJ says"): the
+  // source line says who reported it. Only after tracing, which reads the name.
+  for (const r of reports) r.summary = stripAttribution(r.summary, [r.source, r.citing]);
   // A card written from its original replaces the relay's version of it.
   const fromOriginal = new Set(reports.filter((r) => r.tags?.includes("original")).map((r) => r.fp));
   for (let i = reports.length - 1; i >= 0; i -= 1) {

@@ -30,6 +30,17 @@ export function isSectionFront(u: string): boolean {
   }
 }
 
+/** After Google answers 429, links are not resolved for half an hour. */
+const REST_MS = 30 * 60_000;
+let restUntil = 0;
+let resolves = 0;
+let searches = 0;
+/** Searches run since the process started. */
+export const searchCount = () => searches;
+export const resolverResting = () => Date.now() < restUntil;
+/** Links resolved since the process started: the trace spends against it per tick. */
+export const resolveCount = () => resolves;
+
 export const isGnews = (u: string) => /^https:\/\/news\.google\.com\/rss\/articles\//.test(u);
 
 /**
@@ -39,12 +50,17 @@ export const isGnews = (u: string) => /^https:\/\/news\.google\.com\/rss\/articl
  */
 export async function resolveGoogleNews(link: string): Promise<string> {
   const id = /\/articles\/([^?/]+)/.exec(link)?.[1];
-  if (!id) return "";
+  if (!id || resolverResting()) return "";
+  resolves += 1;
   try {
     const page = await fetch(`https://news.google.com/articles/${id}`, {
       headers: { "user-agent": BROWSER_UA },
       signal: AbortSignal.timeout(8000),
-    }).then((r) => (r.ok ? r.text() : ""));
+    }).then((r) => {
+      // Too many: Google asks for a rest, and gets one, rather than a retry.
+      if (r.status === 429) restUntil = Date.now() + REST_MS;
+      return r.ok ? r.text() : "";
+    });
     const sg = /data-n-a-sg="([^"]+)"/.exec(page)?.[1];
     const ts = /data-n-a-ts="([^"]+)"/.exec(page)?.[1];
     if (!sg || !ts) return "";
@@ -69,7 +85,26 @@ export async function resolveGoogleNews(link: string): Promise<string> {
   }
 }
 
-export type GnewsItem = { title: string; link: string; at: number; outlet: string };
+/** An item, with the outlet's name and its home page as Google gives them. */
+export type GnewsItem = { title: string; link: string; at: number; outlet: string; site: string };
+
+/**
+ * The editions a search can run in. An outlet's own headlines are found in its
+ * own language's edition: `site:repubblica.it Taif` finds la Repubblica's
+ * stories in the Italian edition and nothing in the American one.
+ */
+const EDITIONS = {
+  en: "hl=en-US&gl=US&ceid=US:en",
+  ar: "hl=ar&gl=SA&ceid=SA:ar",
+  gb: "hl=en-GB&gl=GB&ceid=GB:en",
+  it: "hl=it&gl=IT&ceid=IT:it",
+  fr: "hl=fr&gl=FR&ceid=FR:fr",
+  de: "hl=de&gl=DE&ceid=DE:de",
+  es: "hl=es-419&gl=ES&ceid=ES:es",
+  tr: "hl=tr&gl=TR&ceid=TR:tr",
+  ru: "hl=ru&gl=RU&ceid=RU:ru",
+} as const;
+export type Edition = keyof typeof EDITIONS;
 
 function decode(s: string): string {
   return s
@@ -79,8 +114,9 @@ function decode(s: string): string {
 }
 
 /** A Google News RSS search. `lang` picks the edition the query is run in. */
-export async function searchGoogleNews(query: string, lang: "en" | "ar" = "en"): Promise<GnewsItem[]> {
-  const ed = lang === "ar" ? "hl=ar&gl=SA&ceid=SA:ar" : "hl=en-US&gl=US&ceid=US:en";
+export async function searchGoogleNews(query: string, lang: Edition = "en"): Promise<GnewsItem[]> {
+  searches += 1;
+  const ed = EDITIONS[lang] ?? EDITIONS.en;
   try {
     const res = await fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(query)}&${ed}`, {
       headers: { "user-agent": BROWSER_UA },
@@ -100,6 +136,7 @@ export async function searchGoogleNews(query: string, lang: "en" | "ar" = "en"):
         link: pick("link").trim(),
         at: Date.parse(pick("pubDate")),
         outlet,
+        site: /<source[^>]*url="([^"]*)"/.exec(m[1])?.[1] ?? "",
       });
     }
     return out;

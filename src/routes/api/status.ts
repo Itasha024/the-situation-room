@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MISSED_KEY, type Missed, USAGE_KEY, type Usage } from "@/lib/desk/editor";
 import { REGISTRY_KEY, ROUTES_KEY, type Registry, type RouteLog } from "@/lib/desk/origin";
 import { getStore } from "@/lib/desk/store";
+import { PROPOSALS_KEY, type Proposal } from "@/lib/desk/control-proposals";
 import { sourceList } from "@/lib/yemen-scan.server";
 
 /**
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/api/status")({
         try {
           const store = await getStore();
           const now = Date.now();
-          const [state, slice, missed, routes, usage, quota, registry] = await Promise.all([
+          const [state, slice, missed, routes, usage, quota, registry, proposals] = await Promise.all([
             store.loadScanState(),
             store.recentDesk(1000),
             store.getJson<Missed[]>(MISSED_KEY),
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/api/status")({
             store.getJson<Usage>(USAGE_KEY),
             store.getJson<Record<string, number>>("reader-quota"),
             store.getJson<Registry>(REGISTRY_KEY),
+            store.getJson<Proposal[]>(PROPOSALS_KEY),
           ]);
           const day = new Map<string, number>();
           for (const row of slice.reports) {
@@ -55,6 +57,8 @@ export const Route = createFileRoute("/api/status")({
             // Outlets a relay named that the desk looked up: their site, or none.
             outlets: Object.fromEntries(Object.entries(registry ?? {}).map(([name, r]) => [name, "site" in r ? r.site : null])),
             usage: usage ?? null,
+            // District control changes the reports support, awaiting the operator (public/control.json).
+            controlProposals: proposals ?? [],
             // Models out of their daily quota, and when they are back.
             resting: Object.fromEntries(Object.entries(quota ?? {}).filter(([, until]) => until > now).map(([m, until]) => [m, new Date(until).toISOString()])),
           });

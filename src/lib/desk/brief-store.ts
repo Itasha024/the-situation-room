@@ -23,6 +23,7 @@ import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fron
 import { writeProse } from "./prose.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
+import { PROPOSALS_KEY, type Proposal, proposeControl } from "./control-proposals.ts";
 
 export const BRIEF_KEY = "brief";
 
@@ -110,6 +111,16 @@ export async function refreshBrief(
     await refreshClaims(store, inWindow, now);
   } catch (err) {
     console.error("[desk] claims refresh failed:", err instanceof Error ? err.message : err);
+  }
+  // Districts the window's capture reports say changed hands: proposed, never applied.
+  try {
+    const fresh = proposeControl(inWindow);
+    if (fresh.length) {
+      const old = (await store.getJson<Proposal[]>(PROPOSALS_KEY)) ?? [];
+      await store.putJson(PROPOSALS_KEY, [...fresh, ...old].slice(0, 40));
+    }
+  } catch (err) {
+    console.error("[desk] control proposals failed:", err instanceof Error ? err.message : err);
   }
   return { brief, built: true };
 }

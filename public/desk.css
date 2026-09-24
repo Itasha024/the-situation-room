@@ -915,3 +915,10 @@ html{scroll-behavior:smooth}
 .tally-box.claims td a{color:inherit;text-decoration:none;border-bottom:1px dotted currentColor}
 .tally-box.claims .h{color:#e08a55}
 .tally-box.claims .g{color:#4ade80}
+
+/* Latest developments: a quiet way down to the fronts. */
+.sit-head{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem}
+.situation .sit-head > h2{margin:0 0 .25rem;font-size:1.05rem;font-weight:700;color:#fff}
+.to-fronts{flex:none;font-size:.72rem;font-weight:600;letter-spacing:.02em;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:.12rem .6rem;transition:color .15s,border-color .15s}
+.to-fronts:hover,.to-fronts:focus-visible{color:var(--text);border-color:#3a4b5f;outline:none}
+.fronts-wrap:focus{outline:none}

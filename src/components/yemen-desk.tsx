@@ -79,7 +79,6 @@ const DESK_HTML = `
 </section>
 <footer>
   <span id="attrib"></span>
-  <span id="disclaimer"></span>
 </footer>
 <div id="media-float" hidden></div>
 `;

@@ -1043,14 +1043,12 @@ function renderFreshness() {
   const last = Date.parse(liveOverlay.scannedAt || '');
   if (!Number.isFinite(last)) { el.textContent = ''; return; }
   const mins = Math.max(0, Math.round((Date.now() - last) / 60000));
-  const hourAgo = Date.now() - 3600 * 1000;
-  const lastHour = (data.reports || []).filter((r) => Date.parse(reportTime(r)) >= hourAgo).length;
-  const ago = mins < 1 ? 'just now' : mins === 1 ? '1 min ago' : mins < 120 ? `${mins} min ago` : `${Math.round(mins / 60)} h ago`;
   if (feedChecking) { el.textContent = 'Checking for new reports…'; return; }
   const news = feedNews.n && Date.now() - feedNews.at < 10 * 60 * 1000
     ? ` · ${feedNews.n} new at ${fmtClock(new Date(feedNews.at).toISOString())}`
     : '';
-  el.textContent = `Last scan ${ago} · ${lastHour} ${lastHour === 1 ? 'report' : 'reports'} in the last hour${news}`;
+  // Only what the reader needs: new cards just in, or a clock that has stopped.
+  el.textContent = mins >= 30 ? `No new scan since ${fmtClock(new Date(last).toISOString())}` : news.replace(/^ · /, '');
   el.classList.toggle('stale-amber', mins >= 15 && mins < 30);
   el.classList.toggle('stale-red', mins >= 30);
 }
@@ -1139,7 +1137,8 @@ function stampText() {
   const scan = health
     ? ` · live scan ${health.ok}/${health.total} sources`
     : ' · live scan every 5 min';
-  return `Updated ${fmtClock(data.updatedAt)} · ${age}s ago${scan}`;
+  const ago = age < 60 ? `${age}s ago` : age < 7200 ? `${Math.round(age / 60)} min ago` : age < 172800 ? `${Math.round(age / 3600)} h ago` : `${Math.round(age / 86400)} days ago`;
+  return `Updated ${fmtClock(data.updatedAt)} · ${ago}${scan}`;
 }
 
 let liveInflight = null;
@@ -1256,7 +1255,7 @@ function cadenceStamp(top = false) {
   const cls = top ? 'cadence at-head' : 'cadence';
   if (!brief) return `<p class="${cls}">Refreshes every 12 hours.</p>`;
   const overdue = Date.now() > Date.parse(brief.nextUpdateAt);
-  return `<p class="${cls}${overdue ? ' late' : ''}">Updated ${escapeHtml(fmtWhen(brief.updatedAt))} · next ${escapeHtml(fmtWhen(brief.nextUpdateAt))}${overdue ? ' · refresh due' : ''}</p>`;
+  return `<p class="${cls}${overdue ? ' late' : ''}">Updates every 12 hours · Next ${escapeHtml(fmtWhen(brief.nextUpdateAt))}${overdue ? ' · refresh due' : ''}</p>`;
 }
 
 function frontActivity(id) {
@@ -1294,7 +1293,7 @@ function renderLiveScan() {
   if (meta) {
     const t = liveOverlay.scannedAt ? fmtClock(liveOverlay.scannedAt) : '—';
     meta.textContent = liveOverlay.scannedAt
-      ? `Last scan ${t}${rows.length ? ` · ${rows.length} items read` : ''}`
+      ? `Last scan ${t}`
       : 'Not scanned yet';
   }
   if (!details || !details.open || !list) return;
@@ -1340,8 +1339,17 @@ function renderSituation(d) {
   const fallback = String((d.situation || {}).summary || '').trim();
   const body = derived || fallback;
   if (!body) { el.innerHTML = ''; return; }
-  el.innerHTML = `<h2>Latest developments</h2>${cadenceStamp(true)}
+  el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2><a class="to-fronts" href="#fronts-wrap">Fronts <span aria-hidden="true">→</span></a></div>${cadenceStamp(true)}
     <p class="situation-window">${escapeHtml(body)}</p>`;
+  const go = el.querySelector('.to-fronts');
+  if (go) go.onclick = (ev) => {
+    ev.preventDefault();
+    const to = document.getElementById('fronts-wrap');
+    if (!to) return;
+    to.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    to.setAttribute('tabindex', '-1');
+    to.focus({ preventScroll: true });
+  };
 }
 
 /*
@@ -1594,7 +1602,7 @@ function wireFeedCard(card) {
     mapBtn.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      showReportOnMap(card.dataset.fp);
+      showReportOnMap(card.dataset.fp, mapBtn);
     };
     // Desktop: resting on the button opens the map beside the card.
     mapBtn.onmouseenter = () => {
@@ -2240,20 +2248,23 @@ function clearEvents() {
 }
 
 /*
- * "Show on map" from a feed card. On a wide screen the page goes to the big
- * map and flies to the pin, clear of the legend; the pin pulses and its note
- * stays shut (the reader has just read the card). On a phone a sheet opens
- * with a small map of that day's pins, and a button to the main map.
+ * "Show on map" from a feed card opens the small map of that day's pins: beside
+ * the button on a wide screen (the same pop-up hovering opens), a sheet on a
+ * phone. Only the pop-up's own "Show on the main map" moves the big map.
  */
 let mappableByFp = new Map();
 let markerByFp = new Map();
 let sheetMap = null;
 
-function showReportOnMap(fp) {
+function showReportOnMap(fp, anchor) {
   const pin = mappableByFp.get(fp);
   if (!pin || !map) return;
-  if (window.innerWidth < 720) openPinSheet(pin);
-  else goToPinOnMainMap(pin);
+  clearTimeout(pinPopTimer);
+  if (window.innerWidth < 720) return openPinSheet(pin);
+  // Hovering may already have opened it beside this button: leave it be.
+  const el = document.getElementById('pin-sheet');
+  if (el && el.classList.contains('show') && frontFloatAnchor === anchor) return;
+  openPinSheet(pin, anchor);
 }
 
 function pulsePin(el) {
@@ -3684,8 +3695,6 @@ async function refresh(first) {
     try { wireUi(data); } catch (e) { console.error(e); }
     const attrib = document.getElementById('attrib');
     if (attrib) attrib.textContent = data.basemapAttribution || '© OpenStreetMap contributors';
-    const disc = document.getElementById('disclaimer');
-    if (disc) disc.textContent = data.sourcesNote || '';
     try { await drawGeo(data); } catch (e) { console.error(e); }
   } else {
     applyMapFilters();

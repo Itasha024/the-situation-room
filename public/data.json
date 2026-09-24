@@ -18817,7 +18817,6 @@
     }
   ],
   "refreshSeconds": 60,
-  "sourcesNote": "Live scanning of the operator's catalogue only: 16 Telegram channels plus scheduled news sites. No Israeli outlets and no X. Every card must carry a link to its source. Statements are never pinned to the map.",
   "uxNote": "Interface model: Liveuamap for the feed and map, DeepState for layers, ISW for a fixed legend and confidence.",
   "transliteration": "English exonyms as used by the international wire services.",
   "recentDigests": [

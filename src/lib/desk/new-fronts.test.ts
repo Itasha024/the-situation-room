@@ -43,3 +43,24 @@ test("the prose never writes about what was not reported; the rest of the paragr
   assert.equal(cleanProse("No fighting was reported in Marib over the period in question at all.", 4), "");
   assert.equal(cleanProse("One. Two strikes hit Saada. Three were reported. Four more. Five here.", 3).split(". ").length, 3);
 });
+
+test("two clusters in one governorate are one front with two spots; in two governorates, two fronts", () => {
+  // Saada: Razih (16.93, 43.25) and Kitaf (17.02, 44.02), ~80 km apart.
+  const razih = [r(1, "A", "Razih", 16.93, 43.25), r(2, "B", "Razih", 16.94, 43.26), r(3, "A", "Razih", 16.92, 43.24), r(4, "C", "Razih", 16.93, 43.25)];
+  const kitaf = [r(5, "A", "Kitaf", 17.02, 44.02), r(6, "B", "Kitaf", 17.03, 44.03), r(7, "C", "Kitaf", 17.01, 44.01), r(8, "A", "Kitaf", 17.02, 44.02)];
+  const one = updateExtraFronts([...razih, ...kitaf], [], () => false, now);
+  assert.equal(one.length, 1);
+  assert.equal(one[0].spots?.length, 2);
+  assert.equal(one[0].name, "Saada");
+  assert.deepEqual(one[0].places.sort(), ["Kitaf", "Razih"]);
+  // Al-Bayda's cluster is another governorate: its own front.
+  const two = updateExtraFronts([...razih, r(9, "A"), r(10, "B"), r(11, "A", "Al-Bayda", 14.02, 45.6), r(12, "C")], [], () => false, now);
+  assert.equal(two.length, 2);
+  // Fronts stored before merging, two in Saada, become one.
+  const stored = updateExtraFronts([], [
+    { id: "x-razih", name: "Razih", spot: [16.93, 43.25], places: ["Razih"], openedAt: "2026-09-20T00:00:00Z", lastActiveAt: "2026-09-21T00:00:00Z" },
+    { id: "x-kitaf", name: "Kitaf", spot: [17.02, 44.02], places: ["Kitaf"], openedAt: "2026-09-21T00:00:00Z", lastActiveAt: "2026-09-21T12:00:00Z" },
+  ], () => false, now);
+  assert.equal(stored.length, 1);
+  assert.equal(stored[0].spots?.length, 2);
+});

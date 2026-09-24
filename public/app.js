@@ -895,16 +895,26 @@ function sameWords(a, b) {
 }
 
 function namedSpeaker(summary) {
-  const m = /^(.{2,48}?)(?::\s|\s(?:says|said|tells|told|warns|warned|denies|denied)\b)/.exec(String(summary || ''));
+  const m = /^(.{2,48}?)(?::\s|\s(?:says|said|tells|told|warns|warned|denies|denied|condemns|condemned|urges|urged|calls for|called for|announces|announced|rejects|rejected|meets|met|stresses|stressed|affirms|affirmed|welcomes|welcomed|discusses|discussed|receives|received)\b)/.exec(String(summary || ''));
   if (!m) return '';
   const who = m[1].trim();
   if (/^(an?|the)\s/i.test(who)) return '';
   if (/^(spokes(?:man|woman|person)|officials?|sources?|commanders?|ministers?)$/i.test(who)) return '';
   // One key per person, whatever the title (as speakerKey on the server).
   const w = who.toLowerCase().replace(/^(?:the\s+)?(?:u\.?s\.?|us|american|former)\s+/, '');
-  const known = /\b(trump|rubio|vance|hegseth|biden|netanyahu|khamenei|araghchi|guterres|grundberg)\b/.exec(w);
+  const known = /\b(trump|rubio|vance|hegseth|biden|netanyahu|khamenei|araghchi|pezeshkian|guterres|grundberg|fletcher)\b/.exec(w);
   if (known) return known[1];
-  if (/bin salman|\bmbs\b|saudi crown prince/.test(w)) return 'mbs';
+  const aliases = [
+    [/bin salman|\bmbs\b|saudi crown prince/, 'mbs'],
+    [/faisal bin farhan|saudi (?:foreign minister|fm)\b/, 'saudi fm'],
+    [/zindani|yemen(?:i|'s)? (?:foreign minister|fm)\b/, 'yemen fm'],
+    [/\balimi\b|presidential (?:leadership )?council (?:head|chair(?:man)?|president)|\bplc (?:head|chair(?:man)?)/, 'alimi'],
+    [/abdul-?malik al-houthi|houthi leader/, 'houthi leader'],
+    [/\bsaree\b|houthi (?:military|armed forces) spokesman/, 'saree'],
+    [/abdul-?salam|houthi (?:chief )?negotiator|houthi spokesman/, 'abdulsalam'],
+    [/turki al-maliki|coalition spokesman/, 'maliki'],
+  ];
+  for (const [re, key] of aliases) if (re.test(w)) return key;
   return w.replace(/^(?:president|secretary of state|secretary|minister|prime minister)\s+/, '');
 }
 
@@ -916,7 +926,7 @@ function attachAccount(keep, other) {
   if (!keep || !other || !other.url || other.source === keep.source) return;
   const list = Array.isArray(keep.alsoReportedBy) ? keep.alsoReportedBy : [];
   if (list.some((a) => a.source === other.source)) return;
-  keep.alsoReportedBy = [...list, { source: other.source, url: other.url }];
+  keep.alsoReportedBy = [...list, { source: other.source, url: other.url, ...(other.summary ? { summary: other.summary } : {}) }];
 }
 
 /** Every report by fp, so a follow-up card can quote the report it replies to. */
@@ -1528,9 +1538,22 @@ function feedCardHtml(r, i) {
       <p class="headline">${escapeHtml(sum)}</p>
       ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
       ${mediaBlock(r.media)}
-      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
+      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener"${a.summary ? ` title="${escapeHtml(a.summary)}"` : ''}>${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
+      ${alsoHeads(also, sum, !lead)}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
+}
+
+/**
+ * The other outlets' own headlines on a folded card: a fold keeps every
+ * account, and their wording is part of it. Shown when the card is open, or
+ * always on a card with no body to open.
+ */
+function alsoHeads(also, sum, always) {
+  const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const heads = (also || []).filter((a) => a.summary && norm(a.summary) !== norm(sum));
+  if (!heads.length) return '';
+  return `<ul class="also-heads${always ? ' always' : ''}">${heads.map((a) => `<li><b>${escapeHtml(canonicalSourceName(a.source))}:</b> ${escapeHtml(a.summary)}</li>`).join('')}</ul>`;
 }
 
 /** "Follows 11:02 · <headline>": the earlier report this one develops. */
@@ -1860,8 +1883,8 @@ async function buildFrontMap(m, front, d) {
   layer.eachLayer((l) => { if (ids.has(l.feature.properties.shapeISO)) l.bringToFront(); });
   govNameLayer(m, mainland.features, byIso);
   saudiCityLayer(m);
-  const spot = front.mapFocus && front.mapFocus.spot;
-  if (Array.isArray(spot) && spot.length === 2) {
+  // A front opened from several clusters in one governorate has a spot for each.
+  for (const spot of frontSpots(front.mapFocus)) {
     const r = (front.mapFocus.spotRadius || 15000) * 1.6;
     L.circle(spot, { radius: r, color: '#fde047', weight: 3, fillColor: '#fde047', fillOpacity: 0.25, interactive: false }).addTo(m);
     lit.extend(L.latLng(spot).toBounds(r * 2));
@@ -2030,6 +2053,13 @@ function clearMapHighlight(opts) {
   if (opts && opts.home) resetHomeView();
 }
 
+/** A front's spots: several for a front opened from clusters in one governorate, else its one spot. */
+function frontSpots(loc) {
+  const ok = (s) => Array.isArray(s) && s.length >= 2 && Number.isFinite(+s[0]) && Number.isFinite(+s[1]);
+  if (loc && Array.isArray(loc.spots) && loc.spots.some(ok)) return loc.spots.filter(ok);
+  return loc && ok(loc.spot) ? [loc.spot] : [];
+}
+
 function highlightFrontOnMap(front) {
   const loc = front.mapFocus || {};
   highlightIds = new Set(loc.ids || []);
@@ -2049,8 +2079,9 @@ function highlightFrontOnMap(front) {
       try { map.removeLayer(frontSpotLayer); } catch (e) {}
       frontSpotLayer = null;
     }
-    if (loc.spot && loc.spot.length >= 2 && window.L) {
-      frontSpotLayer = L.circle([loc.spot[0], loc.spot[1]], {
+    const spots = frontSpots(loc);
+    if (spots.length && window.L) {
+      frontSpotLayer = L.featureGroup(spots.map((s) => L.circle([s[0], s[1]], {
         radius: loc.spotRadius || 9000,
         color: '#f8fafc',
         weight: 2.4,
@@ -2058,7 +2089,7 @@ function highlightFrontOnMap(front) {
         fillOpacity: 0.28,
         className: 'front-spot',
         interactive: false,
-      }).addTo(map);
+      }))).addTo(map);
     }
     if ((highlightIds.has('YE-MY') || highlightIds.has('YE-HN')) && window.L) {
       placeStraitOverlay();
@@ -2116,7 +2147,7 @@ function allFronts(d) {
   const base = [...(d.fronts || [])].sort((a, b) => (a.importance || 99) - (b.importance || 99));
   const opened = ((brief && brief.fronts) || [])
     .filter((f) => f.extra && Array.isArray(f.spot) && !base.some((b) => b.id === f.id))
-    .map((f) => ({ id: f.id, name: f.name, importance: 50, mapFocus: { ids: [], spot: f.spot, spotRadius: 15000 } }));
+    .map((f) => ({ id: f.id, name: f.name, importance: 50, mapFocus: { ids: [], spot: f.spot, spots: Array.isArray(f.spots) ? f.spots : undefined, spotRadius: 15000 } }));
   return [...base, ...opened];
 }
 

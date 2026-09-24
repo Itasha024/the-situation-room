@@ -13,6 +13,7 @@
  */
 
 import type { LiveReport } from "../yemen-scan.server.ts";
+import { alertCities } from "./copies.ts";
 import {
   type FrontCounts,
   type WindowCounts,
@@ -21,7 +22,7 @@ import {
   kineticTotal,
 } from "./synthesis.ts";
 import { num } from "./wire-style.ts";
-import { type ExtraFront, inExtraFront } from "./new-fronts.ts";
+import { type ExtraFront, inExtraFront, spotsOf } from "./new-fronts.ts";
 
 export const CADENCE_HOURS = 12;
 
@@ -121,6 +122,8 @@ export type FrontActivity = {
   /** A front opened for a new cluster of fighting (new-fronts.ts): its map spot. */
   extra?: boolean;
   spot?: [number, number];
+  /** A front opened in one governorate from several clusters: a spot for each. */
+  spots?: [number, number][];
 };
 
 export type Brief = {
@@ -217,7 +220,7 @@ export function buildBrief(
     return Number.isFinite(t) && t >= start;
   });
 
-  const isAlert = (r: LiveReport) => /air raid sirens|air defence alerts/i.test(r.summary);
+  const isAlert = (r: LiveReport) => alertCities(r) !== null;
   const counts = {
     reports: inWindow.length,
     strikes: inWindow.filter((r) => r.type === "strike" && !isAlert(r)).length,
@@ -227,9 +230,9 @@ export function buildBrief(
   };
   const cas = tally(inWindow);
 
-  const tracked = FRONT_MATCH.map(({ id, name, re }) => ({ id, name, spot: undefined as [number, number] | undefined, has: (r: LiveReport) => re.test(`${r.place || ""} ${r.summary} ${r.text}`) }));
-  const opened = extraFronts.map((x) => ({ id: x.id, name: x.name, spot: x.spot, has: (r: LiveReport) => inExtraFront(r, x) }));
-  const fronts: FrontActivity[] = [...tracked, ...opened].map(({ id, name, spot, has }) => {
+  const tracked = FRONT_MATCH.map(({ id, name, re }) => ({ id, name, spot: undefined as [number, number] | undefined, spots: undefined as [number, number][] | undefined, has: (r: LiveReport) => re.test(`${r.place || ""} ${r.summary} ${r.text}`) }));
+  const opened = extraFronts.map((x) => ({ id: x.id, name: x.name, spot: x.spot, spots: spotsOf(x), has: (r: LiveReport) => inExtraFront(r, x) }));
+  const fronts: FrontActivity[] = [...tracked, ...opened].map(({ id, name, spot, spots, has }) => {
     const rows = inWindow.filter(has);
     const f: FrontActivity = {
       id,
@@ -241,7 +244,7 @@ export function buildBrief(
       killed: tally(rows).killed,
       wounded: tally(rows).wounded,
       line: "",
-      ...(spot ? { extra: true, spot } : {}),
+      ...(spot ? { extra: true, spot, ...(spots && spots.length > 1 ? { spots } : {}) } : {}),
     };
     f.line = composeFront({
       front: { ...f, reports: rows.length, id, name },

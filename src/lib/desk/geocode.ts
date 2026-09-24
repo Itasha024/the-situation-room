@@ -13,6 +13,7 @@
  */
 
 import { governorateAt } from "./adm1.ts";
+import { kmApart } from "./copies.ts";
 import { anglicise } from "./anglicise.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
 import type { DeskStore } from "./store.ts";
@@ -39,13 +40,7 @@ type NominatimRow = {
   namedetails?: Record<string, string>;
 };
 
-function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const r = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * r;
-  const dLng = (b.lng - a.lng) * r;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLng / 2) ** 2;
-  return 12742 * Math.asin(Math.sqrt(h));
-}
+const km = kmApart;
 
 /** What the text calls the place, and the OpenStreetMap kinds that match it. */
 const KINDS: [RegExp, string[]][] = [

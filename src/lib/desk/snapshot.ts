@@ -8,6 +8,7 @@
  */
 
 import { PLACE_BY_NAME } from "./gazetteer.ts";
+import { alertCities } from "./copies.ts";
 import { mapsAsPin } from "./relevance.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -27,7 +28,6 @@ const ALERT_CITIES = [
   "Farasan Islands",
 ];
 
-const ALERT_RE = /air raid sirens|air defence alerts/i;
 
 export type DeskReportRow = Record<string, unknown>;
 
@@ -90,7 +90,8 @@ export function toDeskReportRow(r: LiveReport): DeskReportRow {
  * mode we most want to see.
  */
 export function deriveEvents(r: LiveReport): { events: DeskEventRow[]; unplaced: boolean } {
-  if (ALERT_RE.test(r.summary)) {
+  // One alert test for the whole desk (copies.ts): sirens however worded.
+  if (alertCities(r)) {
     const events: DeskEventRow[] = [];
     for (const name of ALERT_CITIES) {
       if (!r.summary.includes(name) && !(r.text || "").includes(name)) continue;
@@ -110,7 +111,8 @@ export function deriveEvents(r: LiveReport): { events: DeskEventRow[]; unplaced:
         mapOnly: true,
       });
     }
-    return { events, unplaced: events.length === 0 };
+    // No listed city ("Makkah", "siren mode"): the report's own pin, as any other.
+    if (events.length) return { events, unplaced: false };
   }
 
   if (!mapsAsPin(r.type)) return { events: [], unplaced: false };

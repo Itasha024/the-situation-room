@@ -290,7 +290,7 @@ test("a report the reader marks a duplicate joins the published card's Also", as
   const reports = [home, dup, other] as never[];
   foldIntoPublished(reports, new Set(["a"]));
   assert.deepEqual((reports as { fp: string }[]).map((r) => r.fp), ["a", "c"]);
-  assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Ali Bk", url: "https://t.me/alibk/2" }]);
+  assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Ali Bk", url: "https://t.me/alibk/2", summary: "Saudi air strike hits popular market near Bab al-Mandab" }]);
 });
 
 test("another outlet retelling a stored card joins its Also, even as a follow-up", async () => {
@@ -302,7 +302,7 @@ test("another outlet retelling a stored card joins its Also, even as a follow-up
   const touched = foldIntoPublished(reports, new Set(), [home] as never[]);
   assert.equal((reports as unknown[]).length, 0);
   assert.equal((touched[0] as { fp: string }).fp, "a");
-  assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Shin Persian", url: "https://t.me/shin_persian/10302" }]);
+  assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Shin Persian", url: "https://t.me/shin_persian/10302", summary: "Trump made no pledge of military support to Yemen's president in a call, sources say" }]);
 });
 
 test("a card written from the original source takes no Also from the outlets relaying it", async () => {
@@ -510,4 +510,111 @@ test("a sympathetic paper does not take a card from the movement's own outlet", 
   foldIntoPublished(reports, new Set());
   assert.equal(reports.length, 1);
   assert.equal((reports[0] as { source: string }).source, "Al-Masirah", "the original keeps the card");
+});
+
+/* ------------------------------------------------------------------ *
+ * Folding one event told by several outlets in different words
+ * ------------------------------------------------------------------ */
+
+const card = (fp: string, source: string, at: string, type: string, summary: string, extra: Record<string, unknown> = {}) => ({
+  live: true, text: "", score: 1, tags: [], fp, url: `https://t.me/${source.replace(/\W/g, "")}/${fp}`, source, at, type, summary, ...extra,
+});
+const HAIFAN = { place: "Haifan", lat: 13.28, lng: 44.27 };
+
+test("figures, not aircraft or years: numbersIn, numbersClash, countedOrNamed", async () => {
+  const { numbersIn, numbersClash, countedOrNamed, casualtyCount } = await import("./desk/copies.ts");
+  assert.deepEqual(numbersIn("F-15 and MQ-9 over Mocha in 2026; 22 vessels crossed"), [22]);
+  assert.deepEqual(casualtyCount("at least 12 people killed and 30 wounded"), [12, 30]);
+  assert.ok(numbersClash("12 killed in strike on Haifan", "17 killed in strike on Haifan"));
+  assert.ok(numbersClash("Kpler: 22 vessels crossed Bab al-Mandab", "Kpler: 31 vessels crossed Bab al-Mandab"));
+  assert.ok(!numbersClash("12 killed in strike on Haifan", "Strike on Haifan kills 12 killed"));
+  assert.ok(countedOrNamed("A Wing Loong II was downed over Mocha"));
+  assert.ok(!countedOrNamed("Saudi warplanes strike Haifan district in Taiz"));
+});
+
+test("a siren is an alert however it is worded; an impact or a lifted alert is not", async () => {
+  const { alertCities } = await import("./desk/copies.ts");
+  assert.deepEqual(alertCities({ summary: "Air raid sirens sound in Jeddah, Saudi Arabia" }), ["jeddah"]);
+  assert.deepEqual(alertCities({ summary: "Saudi Arabia activates siren mode in Makkah province" }), ["makkah"]);
+  assert.deepEqual(alertCities({ summary: "Saudi Civil Defense: Warning alerts issued for Makkah, Taif, Jeddah, Yanbu and Tabuk" }), ["jeddah", "makkah", "taif", "yanbu", "tabuk"]);
+  assert.equal(alertCities({ summary: "Sirens sound as a missile hits Jazan" }), null);
+  assert.equal(alertCities({ summary: "Saudi civil defence lifts security alert in Najran" }), null);
+  assert.equal(alertCities({ summary: "Sirens sound in Tel Aviv" }), null);
+});
+
+test("an identical headline with a figure folds hours later; a plain one does not", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const h = "Kpler data: 22 commodity vessels crossed Bab al-Mandab on Tuesday";
+  const reports = [card("a", "Asharq Al-Awsat", "2026-09-22T08:00:00Z", "economy", h), card("b", "Naya", "2026-09-22T10:10:00Z", "economy", h)] as never[];
+  foldIntoPublished(reports, new Set());
+  assert.equal(reports.length, 1);
+  const w = "A Wing Loong II was shot down over Mocha";
+  const two = [card("c", "Yahya Saree", "2026-09-22T06:00:00Z", "strike", w), card("d", "Al-Mihwar", "2026-09-22T11:14:00Z", "strike", w)] as never[];
+  foldIntoPublished(two, new Set());
+  assert.equal(two.length, 1);
+});
+
+test("one siren burst from several outlets folds by city; a new city or a later burst is its own card", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const taif = card("a", "Ali Bk", "2026-09-24T10:23:00Z", "strike", "Air raid alerts sound over Taif");
+  const list = card("b", "Al-Araby TV", "2026-09-24T10:27:00Z", "strike", "Saudi Civil Defense: Warning alerts issued for Makkah, Taif, Jeddah, Yanbu and Tabuk");
+  const jeddah = card("c", "Sabereen News", "2026-09-24T10:29:00Z", "strike", "Air raid sirens sound in Jeddah, Saudi Arabia");
+  const later = card("d", "Naya", "2026-09-24T10:33:00Z", "strike", "Sirens sound in Taif");
+  const impact = card("e", "Al-Mihwar", "2026-09-24T10:28:00Z", "strike", "Explosions sound in Taif, Saudi Arabia, following ballistic missile launches");
+  const reports = [taif, list, jeddah, later, impact] as never[];
+  foldIntoPublished(reports, new Set());
+  assert.deepEqual((reports as { fp: string }[]).map((r) => r.fp).sort(), ["a", "c", "d", "e"]);
+  assert.deepEqual((taif as { alsoReportedBy?: { source: string; summary?: string }[] }).alsoReportedBy?.map((x) => x.source), ["Al-Araby TV"]);
+});
+
+test("two outlets on one strike, no words in common, one spot, minutes apart: one card", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const a = card("a", "Al-Mihwar", "2026-09-22T10:00:00Z", "strike", "Saudi jets bomb Haifan", HAIFAN);
+  const b = card("b", "Sabereen News", "2026-09-22T10:09:00Z", "strike", "Air raid hits district in Taiz countryside", { ...HAIFAN, lat: 13.3 });
+  const reports = [a, b] as never[];
+  foldIntoPublished(reports, new Set());
+  assert.equal(reports.length, 1);
+  assert.equal((a as { alsoReportedBy?: { summary?: string }[] }).alsoReportedBy?.[0].summary, "Air raid hits district in Taiz countryside");
+});
+
+test("what must stay apart: hours, 25 minutes, clashing tolls, other kinds, one outlet, no real spot", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const pairs: [ReturnType<typeof card>, ReturnType<typeof card>, string][] = [
+    [card("a", "Al-Mihwar", "2026-09-21T10:47:00Z", "strike", "Saudi warplanes strike Haifan district in Taiz", HAIFAN), card("b", "Sabereen News", "2026-09-21T13:59:00Z", "strike", "Saudi warplanes strike Haifan district in Taiz", HAIFAN), "three hours apart"],
+    [card("a", "Al-Mihwar", "2026-09-22T10:00:00Z", "strike", "Saudi jets bomb Haifan", HAIFAN), card("b", "Naya", "2026-09-22T10:25:00Z", "strike", "Air raid hits district in Taiz countryside", HAIFAN), "25 minutes"],
+    [card("a", "Al-Mihwar", "2026-09-22T10:00:00Z", "strike", "12 killed in Saudi strike on Haifan", HAIFAN), card("b", "Naya", "2026-09-22T10:05:00Z", "strike", "17 killed as jets hit Taiz countryside", HAIFAN), "toll clash"],
+    [card("a", "Al-Mihwar", "2026-09-22T10:00:00Z", "strike", "Saudi jets bomb Haifan", HAIFAN), card("b", "Naya", "2026-09-22T10:05:00Z", "combat", "Clashes in Taiz countryside", HAIFAN), "strike vs combat"],
+    [card("a", "Al-Mihwar", "2026-09-22T10:00:00Z", "strike", "Saudi jets bomb Haifan", HAIFAN), card("b", "Al-Mihwar", "2026-09-22T10:05:00Z", "strike", "Second raid on Taiz countryside", HAIFAN), "same outlet"],
+    [card("a", "Al-Mihwar", "2026-09-22T10:00:00Z", "strike", "Missile strike on Saudi Arabia", { place: "Saudi Arabia", lat: 25.62, lng: 42.35 }), card("b", "Naya", "2026-09-22T10:05:00Z", "strike", "Drone hits Saudi facility", { place: "Saudi Arabia", lat: 25.62, lng: 42.35 }), "country centroid"],
+    [card("a", "Ali Bk", "2026-09-22T10:00:00Z", "strike", "Sirens sound in Jazan"), card("b", "Naya", "2026-09-22T10:09:00Z", "strike", "Air raid sirens in Jazan"), "alerts 9 minutes apart"],
+  ];
+  for (const [x, y, why] of pairs) {
+    const reports = [x, y] as never[];
+    foldIntoPublished(reports, new Set());
+    assert.equal(reports.length, 2, why);
+  }
+});
+
+test("one claim with its figure, relayed by other outlets as a statement or a strike: one card", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const own = card("a", "Yahya Saree", "2026-09-22T09:00:00Z", "statement", "Saree: forces carried out 52 strikes on Saudi military targets in 24 hours");
+  const relay = card("b", "Naya", "2026-09-22T09:12:00Z", "strike", "Houthi forces carried out 52 strikes on Saudi military targets, Saree says");
+  const reports = [own, relay] as never[];
+  foldIntoPublished(reports, new Set());
+  assert.equal(reports.length, 1);
+});
+
+test("a foreign minister's lines thread across outlets, whatever title each outlet gives him", async () => {
+  const { threadSpeeches, namedSpeaker } = await import("./yemen-scan.server.ts");
+  assert.equal(namedSpeaker("Saudi Foreign Minister Faisal bin Farhan meets US envoy"), "saudi fm");
+  assert.equal(namedSpeaker("Faisal bin Farhan: the kingdom will defend itself"), "saudi fm");
+  assert.equal(namedSpeaker("Yemen's foreign minister urges pressure on the Houthis"), "yemen fm");
+  const a = card("a", "Al Arabiya Breaking", "2026-09-21T19:46:00Z", "diplomacy", "Saudi Foreign Minister: the kingdom seeks a political solution");
+  const b = card("b", "Al Hadath", "2026-09-21T19:48:00Z", "diplomacy", "Faisal bin Farhan: talks with Washington are ongoing");
+  const other = card("c", "Al Hadath", "2026-09-21T19:50:00Z", "statement", "Trump: we will stand with our Saudi friends");
+  const bare = card("d", "Al Hadath", "2026-09-21T19:52:00Z", "diplomacy", "The kingdom will not accept threats to its security");
+  threadSpeeches([a, b, other, bare] as never[], new Set());
+  assert.equal((b as { replyTo?: string }).replyTo, "a");
+  assert.equal((other as { replyTo?: string }).replyTo, undefined, "another speaker inside the window does not join");
+  assert.equal((bare as { replyTo?: string }).replyTo, "c", "a line with no speaker is its channel's neighbour's");
 });

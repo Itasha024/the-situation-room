@@ -31,7 +31,7 @@ export type LiveReport = {
    * Other outlets that carried the same story. The best-sourced account leads
    * the card; these are kept and linked rather than deleted as duplicates.
    */
-  alsoReportedBy?: { source: string; url: string }[];
+  alsoReportedBy?: { source: string; url: string; summary?: string }[];
   /** The original a relaying post cites, while the original is not yet found. */
   citing?: string;
   /** fp of the earlier report this one directly develops; shown as a reply to it. */

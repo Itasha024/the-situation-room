@@ -19,7 +19,7 @@ import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading 
 import { getStore } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
-import { sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
+import { alertCities, citiesOverlap, countedOrNamed, numbersClash, sameCount, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -751,17 +751,39 @@ function sideOfSource(name: string): OutletSide {
   return outletSide(name, TG.find((c) => c.name === name)?.lean ?? "intl");
 }
 
+/**
+ * The officials this war quotes, each under one key whatever the headline
+ * calls them: "Saudi Foreign Minister", "Saudi Foreign Minister Faisal bin
+ * Farhan" and "Faisal bin Farhan" are one man, and one speech.
+ */
+const SPEAKER_ALIASES: [RegExp, string][] = [
+  [/bin salman|\bmbs\b|saudi crown prince/, "mbs"],
+  [/faisal bin farhan|saudi (?:foreign minister|fm)\b/, "saudi fm"],
+  [/zindani|yemen(?:i|'s)? (?:foreign minister|fm)\b/, "yemen fm"],
+  [/\balimi\b|presidential (?:leadership )?council (?:head|chair(?:man)?|president)|\bplc (?:head|chair(?:man)?)/, "alimi"],
+  [/abdul-?malik al-houthi|houthi leader/, "houthi leader"],
+  [/\bsaree\b|houthi (?:military|armed forces) spokesman/, "saree"],
+  [/abdul-?salam|houthi (?:chief )?negotiator|houthi spokesman/, "abdulsalam"],
+  [/turki al-maliki|coalition spokesman/, "maliki"],
+];
+
 /** One key per person, whatever the title: "US President Donald Trump" is "trump". */
 export function speakerKey(who: string): string {
   const w = who.toLowerCase().replace(/^(?:the\s+)?(?:u\.?s\.?|us|american|former)\s+/, "");
-  const known = /\b(trump|rubio|vance|hegseth|biden|netanyahu|khamenei|araghchi|guterres|grundberg)\b/.exec(w);
+  const known = /\b(trump|rubio|vance|hegseth|biden|netanyahu|khamenei|araghchi|pezeshkian|guterres|grundberg|fletcher)\b/.exec(w);
   if (known) return known[1];
-  if (/bin salman|\bmbs\b|saudi crown prince/.test(w)) return "mbs";
+  for (const [re, key] of SPEAKER_ALIASES) if (re.test(w)) return key;
   return w.replace(/^(?:president|secretary of state|secretary|minister|prime minister)\s+/, "");
 }
 
+/** The verbs a statement or a diplomat's headline opens with after its speaker. */
+const SPEAKER_VERBS =
+  "says|said|tells|told|warns|warned|denies|denied|condemns|condemned|urges|urged|calls for|called for|announces|announced|" +
+  "rejects|rejected|meets|met|stresses|stressed|affirms|affirmed|welcomes|welcomed|discusses|discussed|receives|received";
+const SPEAKER_RE = new RegExp(`^(.{2,48}?)(?::\\s|\\s(?:${SPEAKER_VERBS})\\b)`);
+
 export function namedSpeaker(summary: string): string {
-  const m = /^(.{2,48}?)(?::\s|\s(?:says|said|tells|told|warns|warned|denies|denied)\b)/.exec(summary || "");
+  const m = SPEAKER_RE.exec(summary || "");
   if (!m) return "";
   const who = m[1].trim();
   if (/^(an?|the)\s/i.test(who)) return "";
@@ -775,10 +797,9 @@ const COPY_WINDOW_MS = 30 * 60 * 1000;
 
 function storyKey(r: LiveReport): string {
   const s = r.summary;
-  if (/air raid sirens|air defence alerts/i.test(s)) {
-    const city = /Riyadh|Al-Kharj/i.test(s) ? "riyadh" : "ksa";
-    return `${nightYmd(r.at)}|alert|${city}`;
-  }
+  // An alert is keyed by the city it names, and folds only within a burst.
+  const cities = alertCities(r);
+  if (cities) return `${nightYmd(r.at)}|alert|${cities[0] ?? "ksa"}`;
   if (/crude shipments|East-West pipeline|Yanbu loadings/i.test(s)) return "oil-cancel";
   if (/asked Syria for fighters/i.test(s)) return "syria-fighters";
   const ymd = String(r.at || "").slice(0, 10);
@@ -807,6 +828,14 @@ const STORY_WINDOW_MS = 18 * 3600 * 1000;
  * strikes, and must stay two cards.
  */
 const SAME_HEADLINE_WINDOW_MS = 45 * 60_000;
+/** Sirens across outlets within this long are one alert. */
+const ALERT_BURST_MS = 8 * 60_000;
+/** Two outlets on one field event, in different words, on one spot. */
+const GROUND_WINDOW_MS = 20 * 60_000;
+/** An identical headline carrying a figure or a named object does not happen twice in a night. */
+const SAME_HEADLINE_COUNTED_MS = 8 * 3600_000;
+/** One claim repeated with its figure by other outlets. */
+const CLAIM_WINDOW_MS = 30 * 60_000;
 
 /**
  * A statement or diplomacy report that tells a story already on the desk, as
@@ -842,6 +871,33 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
         (o) => open(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= SAME_HEADLINE_WINDOW_MS && sameHeadline(o, r),
       );
     }
+    const before = (o: LiveReport, ms: number) => Date.parse(o.at) <= t && t - Date.parse(o.at) <= ms;
+    // The same headline from another outlet hours later, when it carries a
+    // figure or a named object: "22 vessels", "a Wing Loong II". A plain
+    // "strike on Haifan" twice in a day is two strikes and never folds here.
+    if (!home && countedOrNamed(r.summary)) {
+      home = homes.find(
+        (o) => open(o) && o.source !== r.source && before(o, SAME_HEADLINE_COUNTED_MS) && nightYmd(o.at) === nightYmd(r.at) && sameHeadline(o, r),
+      );
+    }
+    // One siren burst told by several outlets, city by city: one alert.
+    const cities = alertCities(r);
+    if (!home && cities) {
+      home = homes.find((o) => {
+        const oc = open(o) && before(o, ALERT_BURST_MS) ? alertCities(o) : null;
+        return !!oc && citiesOverlap(oc, cities);
+      });
+    }
+    // One field event, two outlets, no words in common: the same kind of
+    // event on the same spot within minutes, and no casualty figures that
+    // disagree. Two strikes on one district hours apart stay two cards.
+    if (!home && FIELD_TYPES.has(r.type)) {
+      home = homes.find(
+        (o) =>
+          open(o) && o.source !== r.source && o.type === r.type && before(o, GROUND_WINDOW_MS) &&
+          sameGround(o, r) && !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
+      );
+    }
     // Another outlet's "follow-up" that only retells the card it follows.
     if (!home && r.replyTo) {
       const p = homes.find((o) => open(o) && o.fp === r.replyTo);
@@ -850,6 +906,15 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     if (!home && talk(r)) {
       home = homes.find(
         (o) => open(o) && o.source !== r.source && talk(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= STORY_WINDOW_MS && sameStory(o, r),
+      );
+    }
+    // One claim repeated with its figure — Saree's 52 strikes, from Saree, Naya
+    // and Saba — whatever type each reader gave it.
+    if (!home) {
+      home = homes.find(
+        (o) =>
+          open(o) && o.source !== r.source && before(o, CLAIM_WINDOW_MS) && sameCount(o.summary, r.summary) &&
+          sameStory(o, r) && !numbersClash(o.summary, r.summary),
       );
     }
     if (!home) continue;
@@ -864,7 +929,7 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
       sideOfSource(r.source) === sideOfSource(home.source) &&
       scoreReport(r) >= scoreReport(home)
     ) {
-      const relayed = { source: home.source, url: home.url };
+      const relayed = { source: home.source, url: home.url, summary: home.summary };
       home.summary = r.summary;
       home.text = r.text;
       home.url = r.url;
@@ -879,7 +944,7 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     // A card written from the original source needs no "Also": the others
     // only relay it.
     if (isOriginal(home) || r.citing === home.source) continue;
-    const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url }];
+    const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url, summary: r.summary }];
     const seen = new Set([home.source]);
     home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);
     // More outlets, more trust: counted by side, as in the cycle's own grouping.
@@ -985,6 +1050,8 @@ export function isOriginal(r: LiveReport): boolean {
 
 /** A speaker silent this long has finished; the next line starts a new thread. */
 const SPEECH_GAP_MS = 45 * 60 * 1000;
+/** A speakerless line and its channel's named line this close are one speaker's. */
+const NEIGHBOUR_MS = 3 * 60_000;
 /** Lines of a speech another outlet posts after it ended, as long as this after its last line. */
 const LATE_RELAY_MS = 6 * 3600 * 1000;
 
@@ -999,14 +1066,28 @@ const LATE_RELAY_MS = 6 * 3600 * 1000;
 export function threadSpeeches(reports: LiveReport[], _published: Set<string>, stored: LiveReport[] = []): LiveReport[] {
   const inPayload = new Set(reports.map((r) => r.fp));
   const all = [...reports, ...stored.filter((s) => !inPayload.has(s.fp))];
-  const lines = all
-    .filter((r) => r.type === "statement" && namedSpeaker(r.summary))
+  // A foreign minister's lines are typed diplomacy as often as statement.
+  const talk = all
+    .filter((r) => r.type === "statement" || r.type === "diplomacy")
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  // A line that names no speaker ("our forces will respond") is the speaker's
+  // whose line the same channel posted within three minutes of it.
+  const speaker = new Map<LiveReport, string>();
+  for (const r of talk) {
+    let who = namedSpeaker(r.summary);
+    if (!who) {
+      const t = Date.parse(r.at);
+      const next = talk.find((o) => o !== r && o.source === r.source && Math.abs(Date.parse(o.at) - t) <= NEIGHBOUR_MS && namedSpeaker(o.summary));
+      if (next) who = namedSpeaker(next.summary);
+    }
+    if (who) speaker.set(r, who);
+  }
+  const lines = talk.filter((r) => speaker.has(r));
   const byFp = new Map(lines.map((r) => [r.fp, r]));
   const last = new Map<string, LiveReport>();
   const touched: LiveReport[] = [];
   for (const r of lines) {
-    const who = namedSpeaker(r.summary);
+    const who = speaker.get(r)!;
     const prev = last.get(who);
     last.set(who, r);
     // Another outlet posting lines of the speech after it ended (Saba's summary,
@@ -1016,7 +1097,7 @@ export function threadSpeeches(reports: LiveReport[], _published: Set<string>, s
     // A reply to something else than this speech stays; one to an earlier
     // line of it moves to the line now just before it.
     const to = r.replyTo ? byFp.get(r.replyTo) : undefined;
-    if (r.replyTo && !(to && namedSpeaker(to.summary) === who && Date.parse(to.at) < Date.parse(prev.at))) continue;
+    if (r.replyTo && !(to && speaker.get(to) === who && Date.parse(to.at) < Date.parse(prev.at))) continue;
     r.replyTo = prev.fp;
     if (!inPayload.has(r.fp)) touched.push(r);
   }
@@ -1469,11 +1550,21 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       // Statements likewise: one speaker's separate lines are separate cards;
       // only two outlets' copies of the same line fold together.
       let sk = storyKey(r);
-      const copyRule = FIELD_TYPES.has(r.type) && !sk.includes("|alert|");
-      if (copyRule || sk.includes("|stmt|")) {
+      const alertRule = sk.includes("|alert|");
+      const copyRule = FIELD_TYPES.has(r.type) && !alertRule;
+      if (copyRule || alertRule || sk.includes("|stmt|")) {
         const t = Date.parse(r.at);
+        const apart = (g: { lead: LiveReport }) => Math.abs(Date.parse(g.lead.at) - t);
+        // Same words; or, for a field event, another outlet on the same spot
+        // within minutes with no clashing figures; an alert, within its burst.
         const fits = (g: { lead: LiveReport }) =>
-          (!copyRule || Math.abs(Date.parse(g.lead.at) - t) <= COPY_WINDOW_MS) && sameWords(g.lead.summary, r.summary);
+          alertRule
+            ? apart(g) <= ALERT_BURST_MS
+            : copyRule
+              ? (apart(g) <= COPY_WINDOW_MS && sameWords(g.lead.summary, r.summary)) ||
+                (apart(g) <= GROUND_WINDOW_MS && g.lead.source !== r.source && sameGround(g.lead, r) &&
+                  !numbersClash(`${g.lead.summary} ${g.lead.text ?? ""}`, `${r.summary} ${r.text ?? ""}`))
+              : sameWords(g.lead.summary, r.summary);
         let n = 0;
         while (byStory.has(`${sk}#${n}`) && !fits(byStory.get(`${sk}#${n}`)!)) n += 1;
         sk = `${sk}#${n}`;
@@ -1492,11 +1583,11 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   for (const { lead, others } of byStory.values()) {
     if (!others.length) continue;
     // Distinct outlets only: three posts from one channel is one account.
-    const outlets = new Map<string, string>();
-    for (const o of others) if (o.source !== lead.source && o.citing !== lead.source) outlets.set(o.source, o.url);
+    const outlets = new Map<string, { source: string; url: string; summary: string }>();
+    for (const o of others) if (o.source !== lead.source && o.citing !== lead.source) outlets.set(o.source, { source: o.source, url: o.url, summary: o.summary });
     if (isOriginal(lead)) outlets.clear();
     if (outlets.size) {
-      lead.alsoReportedBy = [...outlets].map(([source, url]) => ({ source, url })).slice(0, 6);
+      lead.alsoReportedBy = [...outlets.values()].slice(0, 6);
     }
     // Corroboration moves the trust figure — counted by side inside
     // `credibility`, so five channels of one side count once.

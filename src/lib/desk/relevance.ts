@@ -232,6 +232,23 @@ function commentaryHead(raw: string): boolean {
 }
 
 /**
+ * A religious figure speaking: a mufti, a preacher, "the scholars of Yemen".
+ * Not news, wherever he is, unless something happened TO him in this war
+ * (killed, abducted, arrested) or he holds a post in it. A tribal sheikh is
+ * not a cleric and is not caught: "الشيخ" alone is never the signal.
+ */
+const CLERIC_AR =
+  /(?:^|\s)(?:ال)?(?:مفتي|داعيه|خطيب ?(?:المسجد|الجمعه|الحرم)|رجل ?دين|رجال ?الدين|عالم ?دين)|(?:هيئه|رابطه|جمعيه|اتحاد|مجلس)(?: ال)? ?علماء|(?:^|\s)علماء ?(?:اليمن|المسلمين|الامه|الدين|الشريعه)|شيخ ?الازهر|الازهر ?الشريف/;
+const CLERIC_EN = /\b(?:grand |chief )?mufti\b|\bcleric|\bpreacher|\bulema\b|\bscholars\b|\bimam of\b|al-azhar/i;
+const CLERIC_EVENT = /قتل|مقتل|اغتيال|اختطاف|اختطف|اعتقال|اعتقل|استشهاد|وزير|killed|assassinat|abduct|arrest|detain|kidnap|minister/i;
+
+function clericHead(raw: string): boolean {
+  const head = raw.slice(0, 200);
+  if (!CLERIC_AR.test(normaliseArabic(head)) && !CLERIC_EN.test(head)) return false;
+  return !CLERIC_EVENT.test(normaliseArabic(raw.slice(0, 400)));
+}
+
+/**
  * Exclusive and source-based reporting — category (c).
  *
  * Deliberately broad: missing one of these loses a scoop, and there are many
@@ -542,6 +559,9 @@ export function gate(input: GateInput): Verdict {
   // officials or sources (the FT on the Saudi request) is a report and passes.
   if (COMMENTARY_URL.test(input.url) || commentaryHead(raw)) {
     return out("exclude", "commentary", "Analysis, opinion or a commentator's view, not a report of what happened or was said by a party.");
+  }
+  if (clericHead(raw)) {
+    return out("exclude", "cleric", "A religious figure's statement or sermon: not news unless he holds a post in this war.");
   }
   // Siren language beats the aircraft rule: early-warning SIRENS are an event,
   // early-warning AIRCRAFT are not.

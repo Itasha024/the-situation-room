@@ -30,6 +30,32 @@ export type GateFixture = {
 };
 
 export const GATE_FIXTURES: GateFixture[] = [
+  /* Clerics are not news (user, 23-24 Sep). From live cards. */
+  {
+    name: "a foreign mufti condemning the attacks is a cleric's statement, not news",
+    source: "SPA",
+    text: "Grand Mufti of Albania Bujar Spahiu condemns Houthi attacks on Saudi Arabia. The Grand Mufti of the Republic of Albania, Sheikh Bujar Spahiu, condemned the Houthi attacks targeting the Kingdom of Saudi Arabia.",
+    label: "exclude",
+  },
+  {
+    name: "Botswana's Chief Mufti: a cleric again",
+    source: "SPA",
+    text: "Botswana's Chief Mufti condemns Houthi attacks on Saudi Arabia. Chief Mufti of Botswana Sheikh Abdurrahman Shariff condemned the Houthi drone and missile attacks on the Kingdom.",
+    label: "exclude",
+  },
+  {
+    name: "'the scholars of Yemen' on sanctities: clerics, not a party",
+    source: "Naya",
+    text: "علماء اليمن: يجب إبعاد المقدسات الإسلامية عن التوظيف السياسي والإعلامي",
+    label: "exclude",
+  },
+  {
+    name: "a tribal sheikh killed on the front is not a cleric, and stays",
+    source: "Almashhad",
+    text: "مقتل الشيخ القبلي البارز عبدالله صادق قعبان في مواجهات مع مليشيا الحوثي بجبهة جرداد في تعز",
+    label: "feed",
+  },
+
   /* ---------------------------------------------------------------- *
    * (a) Launches, strikes, impacts, alerts — Yemen, Saudi Arabia, sea
    * ---------------------------------------------------------------- */

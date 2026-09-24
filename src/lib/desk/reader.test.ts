@@ -452,6 +452,42 @@ test("which Houthi spokesperson, and no role the text never gave", async () => {
   assert.equal(dropInventedRole("UN aid chief Tom Fletcher: Yemen is approaching famine", "فليتشر"), "UN aid chief Tom Fletcher: Yemen is approaching famine");
 });
 
+test("a body that adds only a little is dropped; two new facts or a real sentence of news keep it", async () => {
+  const { redundantBody, newNames } = await import("./reader.ts");
+  const long = "أولا جملة طويلة عن الهجوم في المنطقة. ثانيا جملة أخرى عن القوات هناك. ثالثا جملة عن الخسائر والأضرار. رابعا جملة عن ردود الفعل الرسمية. خامسا جملة عن السياق.";
+  // Live, 23 Sep: the governor's name and "discussed threats" is not a body.
+  assert.equal(
+    redundantBody(
+      "Hadhramout governor: Security Committee held high-level meeting on Houthi escalation",
+      "The security committee in Hadhramout in eastern Yemen met under Governor Salem Ahmed Al-Khanbashi to review military developments and discuss Houthi threats.",
+      long,
+    ),
+    true,
+  );
+  // One small addition after an air strike is not a body either.
+  assert.equal(
+    redundantBody(
+      "Air strike hits Al-Wazi'iyah district in western Taiz governorate",
+      "AL-WAZI'IYAH — Local sources said Houthi forces imposed a security cordon around the site following the strike, preventing access and enforcing a media blackout.",
+      long,
+    ),
+    true,
+  );
+  // A commander, a district and a brigade are facts the headline lacks.
+  assert.equal(
+    redundantBody(
+      "Fourth Military Region commander inspects Al-Aghabrah front in Lahj",
+      "AL-AGHBARA — Major General Hamdi Shukri visited troops in Al-Sabihah district, met by the Sixth Brigade commander in the Nation's Shield forces.",
+      long,
+    ),
+    false,
+  );
+  // A source of four sentences is its headline.
+  const four = "جملة أولى عن القصف المدفعي. جملة ثانية عن المواقع المستهدفة. جملة ثالثة عن القوات هناك. جملة رابعة عن الوضع الميداني.";
+  assert.equal(redundantBody("Saudi shelling hits Munabbih district in Saada", "The shelling hit the Al-Raqw area near the border crossing of Al-Thabit.", four), true);
+  assert.deepEqual(newNames("Local sources said Muhammad Shihab al-Muharrami was killed near Kahbub.", "fighter killed in kahbub"), ["Muhammad Shihab al-Muharrami"]);
+});
+
 test("a source of three sentences or fewer is its headline; a longer one needs a real new sentence", async () => {
   const { redundantBody } = await import("./reader.ts");
   const hajjah = "قصف مدفعي سعودي يستهدف المناطق الحدودية في مديريتي بكيل المير وحرض بمحافظة حجة";

@@ -226,6 +226,12 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    warns", "what to know about") — publish=false, reject_reason
    "commentary". News that rests on officials or sources is a report and is
    kept ("the FT reports Saudi Arabia formally asked Washington for strikes").
+   Religious figures are not news: a mufti, cleric, preacher, imam, "scholars"
+   or a body of Ulema condemning, praising or preaching — anywhere, in any
+   country — is publish=false, reject_reason "cleric". The exception is a
+   religious figure who holds an official role in this war (a minister, a
+   commander, a party's named official). A TRIBAL sheikh is not a cleric: a
+   tribal leader killed, abducted or mobilising fighters is news.
 3. SUBSTANTIVE. A reader learns what happened or what was said about what.
    "A spokesman said something" with no content is not a report.
    A news outlet's HEADLINE alone is substantive when it states a fact or a
@@ -250,14 +256,16 @@ WHO DID WHAT TO WHOM — never infer, never assume
 
 WRITING
 - English wire style. headline <= 110 characters, sentence case, no full stop.
-- A short item — three sentences or fewer — is its headline: the whole report
+- A short item — four sentences or fewer — is its headline: the whole report
   goes in the headline (the districts, the target, the weapon) and body is ""
   (empty). Never a body that says the headline again in more words, and never
   a body just to add a little: a place name or a detail belongs in the
   headline. The one exception is casualties the headline cannot hold.
 - A longer item, as a wire story: the headline carries the most important
   facts; the body (1-3 sentences) adds the next ones — detail, figures,
-  context from the text — never a rephrasing of the headline.
+  context from the text — never a rephrasing of the headline. A body earns its
+  place with at least two new facts (figures, named people, places, units, a
+  quote) or casualties; if it would add only one small detail, body is "".
 - A long item is a full article: read ALL of it. The headline carries its
   most important new development wherever in the text it appears — a
   decision, a commitment, a reversal, casualties — not only the opening
@@ -600,15 +608,52 @@ export function redundantBody(headline: string, body: string, sourceText?: strin
     (/\b(?:killed|wounded|injured|dead|died|casualt)/i.test(rest) && !/\b(?:kill|wound|injur|dead|died|death|casualt)/i.test(h)) ||
     (rest.match(/\b\d+(?=\s+(?:\S+\s+){0,3}?(?:killed|wounded|injured|dead|people|civilians|citizens|fighters|soldiers|children|women|members|commanders|officers)\b)/gi) || []).some((n) => !h.includes(n));
   const carries = casualties || (rest.match(/\d+/g) || []).some((n) => !h.includes(n)) || [...counts(rest)].some((n) => !hc.has(n));
-  // The desk's rule: a source of three sentences or fewer is its headline. Only
-  // casualties the headline could not hold earn such a card a body.
-  if (sourceText !== undefined && sourceSentences(sourceText) <= 3) return !casualties;
+  // The desk's rule: a source of four sentences or fewer (three or four lines)
+  // is its headline. Only casualties the headline could not hold earn such a
+  // card a body.
+  if (sourceText !== undefined && sourceSentences(sourceText) <= 4) return !casualties;
   if (carries) return false;
   const fresh = wordsOf(rest).filter((w) => !BODY_FILLER.has(w) && !seen.has(stemOf(w)));
-  // A capitalised name the headline does not have.
-  const names = (rest.match(/(?<=\S\s)[A-Z][\p{L}'-]{2,}/gu) || []).filter((n) => !hl.includes(n.toLowerCase()) && !BODY_FILLER.has(n.toLowerCase()));
-  // "Just a little more" is not a body: it takes a real sentence of new fact.
-  return names.length ? fresh.length <= 3 : fresh.length <= 6;
+  // "Just a little more" is not a body. It takes two new facts (a person, a
+  // place, a unit, a quote the headline lacks), one inside a real sentence of
+  // news, or a long sentence of plain new development.
+  const facts = newNames(rest, hl).length + (rest.match(/["“][^"”]{15,}["”]/g) || []).length;
+  return !(facts >= 2 || (facts === 1 && fresh.length >= 14) || fresh.length >= 18);
+}
+
+/** Capitalised words that name no one in particular. */
+const NOT_A_FACT = new Set(
+  ("the a an he she it they this that these those his her their its local field military security sources source " +
+    "houthi houthis saudi saudis yemen yemeni yemenis government coalition forces force army us u.s. american iranian iran arab " +
+    "islamic red sea president minister governor commander spokesperson spokesman official officials general major colonel " +
+    "brigadier lieutenant captain sheikh dr mr gulf western eastern northern southern").split(" "),
+);
+
+/**
+ * The names in a body the headline does not carry: runs of capitalised words
+ * ("Salem Ahmed Al-Khanbashi", "Sixth Brigade", "Murais") counted once each.
+ * A sentence's first word stands alone only when the next word is capitalised
+ * too, so "Local sources said" is not a name.
+ */
+export function newNames(body: string, headlineLower: string): string[] {
+  const out: string[] = [];
+  for (const sentence of String(body || "").split(/(?<=[.!?])\s+/)) {
+    const tokens = sentence.split(/\s+/).map((t) => t.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}'-]+$/gu, ""));
+    let run: string[] = [];
+    const flush = () => {
+      if (run.length && run.some((w) => !NOT_A_FACT.has(w.toLowerCase()) && !headlineLower.includes(w.toLowerCase()))) {
+        out.push(run.join(" "));
+      }
+      run = [];
+    };
+    tokens.forEach((t, i) => {
+      const cap = /^[A-Z]/.test(t) || (run.length > 0 && /^(?:bin|bint|ibn|of)$|^(?:al|el)-\p{L}/iu.test(t));
+      if (!cap || (i === 0 && !/^[A-Z]/.test(tokens[1] || ""))) return flush();
+      run.push(t);
+    });
+    flush();
+  }
+  return [...new Set(out)];
 }
 
 /** Sentences in a source text, Arabic or English; a Telegram line counts as one. */

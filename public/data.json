@@ -5105,7 +5105,8 @@
       "lat": 12.94,
       "lng": 43.41,
       "side": "neutral",
-      "interest": "neutral"
+      "interest": "neutral",
+      "noMap": true
     },
     {
       "fp": "live-t-me-shebaintelligence-757",
@@ -5183,7 +5184,8 @@
       "confidence": 3,
       "place": "Ras al-Arah",
       "lat": 12.63,
-      "lng": 43.93
+      "lng": 43.93,
+      "noMap": true
     },
     {
       "fp": "live-t-me-shebaintelligence-754",
@@ -5215,7 +5217,8 @@
       "confidence": 3,
       "place": "Mocha",
       "lat": 13.32,
-      "lng": 43.25
+      "lng": 43.25,
+      "noMap": true
     },
     {
       "fp": "map-mayyun-2026-09-11",
@@ -5279,7 +5282,8 @@
       "confidence": 4,
       "place": "Abha",
       "lat": 18.2164,
-      "lng": 42.5053
+      "lng": 42.5053,
+      "noMap": true
     },
     {
       "fp": "hist-ksa-wave73-2026-09-08",
@@ -5294,7 +5298,8 @@
       "confidence": 4,
       "place": "Abha",
       "lat": 18.2164,
-      "lng": 42.5053
+      "lng": 42.5053,
+      "noMap": true
     },
     {
       "fp": "amzan-tanker-yanbu-2026-08-24",
@@ -5686,32 +5691,6 @@
       "url": "https://www.almashhad.news/news/494454",
       "mapOnly": true,
       "label": "Almashhad claims tunnelling at positions overlooking Bab al-Mandab"
-    },
-    {
-      "fp": "almashhad-2026-09-12-ara-lahj",
-      "at": "2026-09-12T08:47:00+03:00",
-      "type": "combat",
-      "lat": 12.63,
-      "lng": 43.93,
-      "place": "Ras al-Arah",
-      "text": "RAS AL-ARAH — Fighting at Ras al-Arah on the western approach to the Lahj to Aden road on 12 September. Full detail is at the source link.",
-      "source": "Almashhad",
-      "url": "https://www.almashhad.news/news/494301",
-      "mapOnly": true,
-      "label": "Fighting at Ras al-Arah on the western approach to the Lahj to Aden road"
-    },
-    {
-      "fp": "almashhad-2026-09-11-mocha-meeting",
-      "at": "2026-09-11T22:00:00+03:00",
-      "type": "strike",
-      "lat": 13.32,
-      "lng": 43.25,
-      "place": "Mocha",
-      "text": "MOCHA — Reports of a strike in Mocha on 11 September. Full detail is at the source link.",
-      "source": "Almashhad",
-      "url": "https://www.almashhad.news/news/494252",
-      "mapOnly": true,
-      "label": "Reports of a strike in Mocha"
     },
     {
       "fp": "almashhad-2026-07-25-marib-jawf-air",
@@ -6718,34 +6697,6 @@
       "label": "Taif — claimed Houthi launch"
     },
     {
-      "fp": "map-ksa-abha-civilians-pin-2026-09-14",
-      "at": "2026-09-14T21:02:00+03:00",
-      "type": "missile",
-      "lat": 18.2164,
-      "lng": 42.5053,
-      "place": "Abha",
-      "text": "ABHA — Abha — claimed Houthi launch on 14 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "priority": 2,
-      "mapOnly": true,
-      "url": "https://www.aljazeera.net/news/2026/9/15/%d8%a7%d9%84%d8%aa%d8%ad%d8%a7%d9%84%d9%81-%d9%8a%d8%b9%d9%84%d9%86-%d8%a5%d8%b5%d8%a7%d8%a8%d8%a9-13-%d9%85%d8%af%d9%86%d9%8a%d8%a7-%d8%a8%d9%87%d8%ac%d9%85%d8%a7%d8%aa-%d8%ad%d9%88%d8%ab%d9%8a%d8%a9",
-      "label": "Abha — claimed Houthi launch"
-    },
-    {
-      "fp": "map-ksa-khamis-abha-taif-civilians-2026-09-14",
-      "at": "2026-09-14T21:00:00+03:00",
-      "type": "missile",
-      "lat": 18.3,
-      "lng": 42.73,
-      "place": "Khamis Mushait",
-      "text": "KHAMIS MUSHAIT — Khamis Mushait, Abha and Taif — claimed civilian casualties on 14 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.net/news/2026/9/15/%d8%a7%d9%84%d8%aa%d8%ad%d8%a7%d9%84%d9%81-%d9%8a%d8%b9%d9%84%d9%86-%d8%a5%d8%b5%d8%a7%d8%a8%d8%a9-13-%d9%85%d8%af%d9%86%d9%8a%d8%a7-%d8%a8%d9%87%d8%ac%d9%85%d8%a7%d8%aa-%d8%ad%d9%88%d8%ab%d9%8a%d8%a9",
-      "priority": 2,
-      "mapOnly": true,
-      "label": "Khamis Mushait, Abha and Taif — claimed civilian casualties"
-    },
-    {
       "fp": "map-mudaraba-lahj-clash-2026-09-14",
       "mapOnly": true,
       "at": "2026-09-14T15:00:00+03:00",
@@ -6804,22 +6755,6 @@
       "url": "https://www.almashhad.news/news/494664",
       "label": "Missiles near the Al-Suwayda camp, Marib",
       "place": "Marib"
-    },
-    {
-      "id": "ev-kahbub",
-      "type": "combat",
-      "lat": 12.85,
-      "lng": 43.55,
-      "when": "2026-09-14",
-      "note": "Yemen Window — Houthi forces digging in on the heights overlooking the strait",
-      "fp": "houthi-kahbub-bab-mandeb-2026-09-14",
-      "at": "2026-09-14T12:00:00+03:00",
-      "text": "KAHBUB — Kahbub heights above Bab al-Mandab on 14 September. Full detail is at the source link.",
-      "mapOnly": true,
-      "source": "Yemen Window",
-      "place": "Kahbub",
-      "url": "https://www.yemen-window.com/news/225464",
-      "label": "Kahbub heights above Bab al-Mandab"
     },
     {
       "id": "ev-zuqar",
@@ -6987,19 +6922,6 @@
       "label": "Air defence alerts sound in Abha"
     },
     {
-      "fp": "hist-ksa-alert-khamis-2026-09-13",
-      "at": "2026-09-13T06:00:00+03:00",
-      "type": "strike",
-      "lat": 18.3,
-      "lng": 42.73,
-      "place": "Khamis Mushait",
-      "text": "KHAMIS MUSHAIT — Air defence alerts sound in Khamis Mushait on 13 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/13/houthi-projectile-wounds-two-damages-mosque-in-jazan-region-saudi-says",
-      "mapOnly": true,
-      "label": "Air defence alerts sound in Khamis Mushait"
-    },
-    {
       "id": "ev-mokha",
       "type": "capture",
       "lat": 13.3197,
@@ -7030,84 +6952,6 @@
       "url": "https://en.majalla.com/node/333085/politics/houthis-seek-expansion-after-reaching-bab-al-mandab",
       "place": "Al-Khokha",
       "label": "Al-Khokha and Hays — reported lost in the coastal offensive"
-    },
-    {
-      "fp": "map-dhubab-2026-09-11",
-      "mapOnly": true,
-      "at": "2026-09-11T14:00:00+03:00",
-      "type": "capture",
-      "lat": 12.9333,
-      "lng": 43.4167,
-      "place": "Dhubab",
-      "text": "DHUBAB — Dhubab — reported seizure on 11 September. Full detail is at the source link.",
-      "source": "Al Majalla",
-      "url": "https://en.majalla.com/node/333085/politics/houthis-seek-expansion-after-reaching-bab-al-mandab",
-      "priority": 2,
-      "label": "Dhubab — reported seizure"
-    },
-    {
-      "fp": "map-hanish-2026-09-11",
-      "mapOnly": true,
-      "at": "2026-09-11T14:00:00+03:00",
-      "type": "capture",
-      "lat": 13.7333,
-      "lng": 42.75,
-      "place": "Hanish Islands",
-      "text": "HANISH ISLANDS — Hanish Islands — reported seizure on 11 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/15/can-the-houthis-hold-on-to-yemens-strategic-western-coast",
-      "priority": 2,
-      "label": "Hanish Islands — reported seizure"
-    },
-    {
-      "fp": "map-mayyun-2026-09-11",
-      "mapOnly": true,
-      "at": "2026-09-11T14:00:00+03:00",
-      "type": "capture",
-      "lat": 12.65,
-      "lng": 43.414,
-      "place": "Mayun",
-      "text": "MAYUN — Mayun (Perim) — government withdrawal and Houthi entry on 11 September. Full detail is at the source link.",
-      "source": "BBC",
-      "url": "https://www.bbc.co.uk/news/articles/c4g7vr0lngwo",
-      "priority": 2,
-      "media": [
-        {
-          "type": "image",
-          "src": "/media/mayun-aerial.jpg",
-          "credit": "The New York Times",
-          "caption": "Aerial view of Mayun (Perim) island in the Bab al-Mandab strait. Shown to place the island — not a photograph of the seizure itself."
-        }
-      ],
-      "label": "Mayun (Perim) — government withdrawal and Houthi entry"
-    },
-    {
-      "fp": "map-bab-2026-09-11",
-      "mapOnly": true,
-      "at": "2026-09-11T14:00:00+03:00",
-      "type": "capture",
-      "lat": 12.7,
-      "lng": 43.47,
-      "place": "Bab al-Mandab",
-      "text": "Bab al-Mandab — Houthi forces on the approaches to the strait on 11 September. Full detail is at the source link.",
-      "source": "RFI",
-      "url": "https://www.rfi.fr/en/international/20260916-capture-of-mocha-marks-turning-point-in-yemen-war-with-ripples-across-red-sea",
-      "priority": 2,
-      "label": "Bab al-Mandab — Houthi forces on the approaches to the strait"
-    },
-    {
-      "fp": "map-mokha-2026-09-10",
-      "mapOnly": true,
-      "at": "2026-09-10T14:00:00+03:00",
-      "type": "capture",
-      "lat": 13.3197,
-      "lng": 43.249,
-      "place": "Mocha",
-      "text": "MOCHA — Mocha — strategic port falls on 10 September. Full detail is at the source link.",
-      "source": "BBC",
-      "url": "https://www.bbc.co.uk/news/articles/c4g7vr0lngwo",
-      "priority": 2,
-      "label": "Mocha — strategic port falls"
     },
     {
       "fp": "map-zuqar-2026-09-10",
@@ -7180,32 +7024,6 @@
       "label": "Al-Khokha — reported to have fallen"
     },
     {
-      "fp": "hist-ksa-day2-abha-2026-09-09",
-      "at": "2026-09-09T10:00:00+03:00",
-      "type": "missile",
-      "lat": 18.2164,
-      "lng": 42.5053,
-      "place": "Abha",
-      "text": "ABHA — Statement on the fighting in Abha on 9 September. Full detail is at the source link.",
-      "source": "Reuters",
-      "url": "https://www.reuters.com/world/middle-east/saudi-arabia-lifts-alert-southern-city-day-after-houthi-strikes-2026-09-09/",
-      "mapOnly": false,
-      "label": "Statement on the fighting in Abha"
-    },
-    {
-      "fp": "hist-ksa-day2-khamis-2026-09-09",
-      "at": "2026-09-09T10:00:00+03:00",
-      "type": "missile",
-      "lat": 18.3,
-      "lng": 42.73,
-      "place": "Khamis Mushait",
-      "text": "KHAMIS MUSHAIT — Statement on the fighting in Khamis Mushait on 9 September. Full detail is at the source link.",
-      "source": "Reuters",
-      "url": "https://www.reuters.com/world/middle-east/saudi-arabia-lifts-alert-southern-city-day-after-houthi-strikes-2026-09-09/",
-      "mapOnly": false,
-      "label": "Statement on the fighting in Khamis Mushait"
-    },
-    {
       "fp": "hist-ksa-day2-jazan-2026-09-09",
       "at": "2026-09-09T10:00:00+03:00",
       "type": "missile",
@@ -7219,32 +7037,6 @@
       "label": "Statement on the fighting in Jazan"
     },
     {
-      "fp": "hist-ksa-alert-abha-2026-09-09",
-      "at": "2026-09-09T09:20:00+03:00",
-      "type": "strike",
-      "lat": 18.2164,
-      "lng": 42.5053,
-      "place": "Abha",
-      "text": "ABHA — Air defence alerts sound in Abha on 9 September. Full detail is at the source link.",
-      "source": "Reuters",
-      "url": "https://www.reuters.com/world/middle-east/saudi-arabia-lifts-alert-southern-city-day-after-houthi-strikes-2026-09-09/",
-      "mapOnly": true,
-      "label": "Air defence alerts sound in Abha"
-    },
-    {
-      "fp": "hist-ksa-alert-khamis-2026-09-09",
-      "at": "2026-09-09T09:20:00+03:00",
-      "type": "strike",
-      "lat": 18.3,
-      "lng": 42.73,
-      "place": "Khamis Mushait",
-      "text": "KHAMIS MUSHAIT — Air defence alerts sound in Khamis Mushait on 9 September. Full detail is at the source link.",
-      "source": "Reuters",
-      "url": "https://www.reuters.com/world/middle-east/saudi-arabia-lifts-alert-southern-city-day-after-houthi-strikes-2026-09-09/",
-      "mapOnly": true,
-      "label": "Air defence alerts sound in Khamis Mushait"
-    },
-    {
       "fp": "hist-ksa-alert-jazan-2026-09-09",
       "at": "2026-09-09T09:20:00+03:00",
       "type": "strike",
@@ -7256,20 +7048,6 @@
       "url": "https://www.reuters.com/world/middle-east/saudi-arabia-lifts-alert-southern-city-day-after-houthi-strikes-2026-09-09/",
       "mapOnly": true,
       "label": "Air defence alerts sound in Jazan"
-    },
-    {
-      "fp": "map-mokha-hospital-missile-2026-09-08",
-      "mapOnly": true,
-      "at": "2026-09-08T20:00:00+03:00",
-      "type": "missile",
-      "lat": 13.3197,
-      "lng": 43.249,
-      "place": "Mocha",
-      "text": "MOCHA — Mocha — missile near the 2 December hospital on 8 September. Full detail is at the source link.",
-      "source": "Yemen Monitor",
-      "url": "https://www.yemenmonitor.com/en/Details/ArtMID/908/ArticleID/181381",
-      "priority": 2,
-      "label": "Mocha — missile near the 2 December hospital"
     },
     {
       "fp": "map-yatma-jawf-plc-2026-09-08",
@@ -7286,60 +7064,6 @@
       "label": "Yatmah, Al-Jawf — claimed government seizure"
     },
     {
-      "fp": "map-saudi-abha-khamis-jazan-najran-2026-09-08",
-      "at": "2026-09-08T14:00:00+03:00",
-      "type": "missile",
-      "lat": 18.2164,
-      "lng": 42.5053,
-      "place": "Abha",
-      "text": "ABHA — Abha, Khamis Mushait, Jazan and Najran — 73 wounded on 8 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/8/saudi-houthi-fighting-in-yemen-escalates-what-happened-and-whats-next",
-      "priority": 1,
-      "mapOnly": true,
-      "label": "Abha, Khamis Mushait, Jazan and Najran — 73 wounded"
-    },
-    {
-      "fp": "map-kadah-front-ongoing-2026-09-08",
-      "mapOnly": true,
-      "at": "2026-09-08T12:00:00+03:00",
-      "type": "combat",
-      "lat": 13.58,
-      "lng": 43.78,
-      "place": "Al-Kadha",
-      "text": "AL-KADHA — Al-Kadha — fighting continues over the supply road on 8 September. Full detail is at the source link.",
-      "source": "Asharq Al-Awsat",
-      "url": "https://english.aawsat.com/arab-world/5315501-yemen-army-pursues-houthis-southeast-hodeidah",
-      "priority": 2,
-      "label": "Al-Kadha — fighting continues over the supply road"
-    },
-    {
-      "fp": "hist-ksa-wave73-abha-2026-09-08",
-      "at": "2026-09-08T08:00:00+03:00",
-      "type": "missile",
-      "lat": 18.2164,
-      "lng": 42.5053,
-      "place": "Abha",
-      "text": "ABHA — Statement on the fighting in Abha on 8 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says",
-      "mapOnly": false,
-      "label": "Statement on the fighting in Abha"
-    },
-    {
-      "fp": "hist-ksa-wave73-khamis-2026-09-08",
-      "at": "2026-09-08T08:00:00+03:00",
-      "type": "missile",
-      "lat": 18.3,
-      "lng": 42.73,
-      "place": "Khamis Mushait",
-      "text": "KHAMIS MUSHAIT — Statement on the fighting in Khamis Mushait on 8 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says",
-      "mapOnly": false,
-      "label": "Statement on the fighting in Khamis Mushait"
-    },
-    {
       "fp": "hist-ksa-wave73-jazan-2026-09-08",
       "at": "2026-09-08T08:00:00+03:00",
       "type": "missile",
@@ -7353,45 +7077,6 @@
       "label": "Statement on the fighting in Jazan"
     },
     {
-      "fp": "hist-ksa-wave73-najran-2026-09-08",
-      "at": "2026-09-08T08:00:00+03:00",
-      "type": "missile",
-      "lat": 17.4917,
-      "lng": 44.1322,
-      "place": "Najran",
-      "text": "NAJRAN — Statement on the fighting in Najran on 8 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says",
-      "mapOnly": false,
-      "label": "Statement on the fighting in Najran"
-    },
-    {
-      "fp": "hist-ksa-alert-abha-2026-09-08",
-      "at": "2026-09-08T07:40:00+03:00",
-      "type": "strike",
-      "lat": 18.2164,
-      "lng": 42.5053,
-      "place": "Abha",
-      "text": "ABHA — Air defence alerts sound in Abha on 8 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says",
-      "mapOnly": true,
-      "label": "Air defence alerts sound in Abha"
-    },
-    {
-      "fp": "hist-ksa-alert-khamis-2026-09-08",
-      "at": "2026-09-08T07:40:00+03:00",
-      "type": "strike",
-      "lat": 18.3,
-      "lng": 42.73,
-      "place": "Khamis Mushait",
-      "text": "KHAMIS MUSHAIT — Air defence alerts sound in Khamis Mushait on 8 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says",
-      "mapOnly": true,
-      "label": "Air defence alerts sound in Khamis Mushait"
-    },
-    {
       "fp": "hist-ksa-alert-jazan-2026-09-08",
       "at": "2026-09-08T07:40:00+03:00",
       "type": "strike",
@@ -7403,19 +7088,6 @@
       "url": "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says",
       "mapOnly": true,
       "label": "Air defence alerts sound in Jazan"
-    },
-    {
-      "fp": "hist-ksa-alert-najran-2026-09-08",
-      "at": "2026-09-08T07:40:00+03:00",
-      "type": "strike",
-      "lat": 17.4917,
-      "lng": 44.1322,
-      "place": "Najran",
-      "text": "NAJRAN — Air defence alerts sound in Najran on 8 September. Full detail is at the source link.",
-      "source": "Al Jazeera",
-      "url": "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says",
-      "mapOnly": true,
-      "label": "Air defence alerts sound in Najran"
     },
     {
       "fp": "map-sharurah-houthi-claim-2026-09-07",
@@ -8724,19 +8396,6 @@
       "mapOnly": false
     },
     {
-      "fp": "live-t-me-shebaintelligence-760",
-      "at": "2026-09-14T03:53:15+03:00",
-      "type": "combat",
-      "lat": 12.94,
-      "lng": 43.41,
-      "place": "Dhubab",
-      "label": "Yemeni government forces advance near Dhubab and western Taiz",
-      "text": "DHUBAB — Yemeni government forces advanced from Khor Umayrah toward Dhubab, reaching the vicinity of Al-Omari Camp, and on a second front reached Al-Ajram west of Taiz.",
-      "source": "Sheba Intelligence",
-      "url": "https://t.me/shebaintelligence/760",
-      "mapOnly": false
-    },
-    {
       "fp": "live-alsahwayemen-net-p-95929",
       "at": "2026-09-18T20:02:00+03:00",
       "type": "combat",
@@ -9471,8 +9130,8 @@
       "fp": "bf-2026-07-25-jazan-missile-0431",
       "at": "2026-07-25T04:31:00+03:00",
       "type": "missile",
-      "lat": 16.8892,
-      "lng": 42.5511,
+      "lat": 16.89,
+      "lng": 42.55,
       "place": "Jazan",
       "label": "Houthi ballistic missiles and drones hit Aramco facilities in Jazan; large fires in the industrial area",
       "text": "JAZAN — The Houthi military said it fired dozens of ballistic missiles and drones at Aramco sites in Jazan; residents filmed fires and smoke, and satellite images later showed burning storage tanks. Saudi civil defence sounded early warnings in Jazan.",
@@ -10983,8 +10642,8 @@
       "fp": "bf-2026-08-09-jazan-missile-0442",
       "at": "2026-08-09T04:42:00+03:00",
       "type": "missile",
-      "lat": 16.8892,
-      "lng": 42.5511,
+      "lat": 16.89,
+      "lng": 42.55,
       "place": "Jazan",
       "label": "Houthi drone hits the Aramco refinery in Jazan; Saudi energy ministry says a fire was put out with no injuries",
       "text": "JAZAN — Houthi drone hits the Aramco refinery in Jazan; Saudi energy ministry says a fire was put out with no injuries.",
@@ -11927,8 +11586,8 @@
       "fp": "bf-2026-08-13-jazan-missile-1811",
       "at": "2026-08-13T18:11:00+03:00",
       "type": "missile",
-      "lat": 16.8892,
-      "lng": 42.5511,
+      "lat": 16.89,
+      "lng": 42.55,
       "place": "Jazan",
       "label": "Houthis say two drones hit the Aramco refinery in Jazan again",
       "text": "JAZAN — Bloomberg reported that the refinery had been hit twice.",
@@ -12687,8 +12346,8 @@
       "fp": "bf-2026-08-18-jazan-missile-1019",
       "at": "2026-08-18T10:19:00+03:00",
       "type": "missile",
-      "lat": 16.8892,
-      "lng": 42.5511,
+      "lat": 16.89,
+      "lng": 42.55,
       "place": "Jazan",
       "label": "Houthis say drones hit the Aramco refinery in Jazan; sirens sound in Jazan",
       "text": "JAZAN — Houthis say drones hit the Aramco refinery in Jazan; sirens sound in Jazan.",
@@ -13366,9 +13025,7 @@
       "text": "AL-HAYMAH — Houthi shelling hits homes in Al-Haymah, south of Hodeidah.",
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/490961",
-      "also": [
-        "https://south24.org/news/html_news/security_military_events_21_august_04_september_2026_EN.html"
-      ],
+      "also": [],
       "mapOnly": true,
       "backfill": true
     },
@@ -13449,9 +13106,7 @@
       "text": "AL-BAYDA — Giants Brigades drones hit two Houthi barracks and fortification equipment on the Al-Bayda front.",
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/491023",
-      "also": [
-        "https://south24.org/news/html_news/security_military_events_21_august_04_september_2026_EN.html"
-      ],
+      "also": [],
       "mapOnly": true,
       "backfill": true
     },
@@ -13707,8 +13362,7 @@
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/491379",
       "also": [
-        "https://www.almashhad.news/news/491428",
-        "https://south24.org/news/html_news/security_military_events_21_august_04_september_2026_EN.html"
+        "https://www.almashhad.news/news/491428"
       ],
       "mapOnly": true,
       "backfill": true
@@ -13724,9 +13378,7 @@
       "text": "KALABA — Houthi attack on Kalaba repelled; eight Houthi fighters killed and 15 wounded, the army says.",
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/491468",
-      "also": [
-        "https://south24.org/news/html_news/security_military_events_21_august_04_september_2026_EN.html"
-      ],
+      "also": [],
       "mapOnly": true,
       "backfill": true
     },
@@ -13896,8 +13548,7 @@
       "also": [
         "https://t.me/Alibk3/34500",
         "https://t.me/Alomhoar/110754",
-        "https://www.almashhad.news/news/491768",
-        "https://www.alarabiya.net/arab-and-world/yemen/2026/08/27/%D8%A7%D8%AD%D8%A8%D8%A7%D8%B7-%D9%85%D8%AD%D8%A7%D9%88%D9%84%D8%AA%D9%8A-%D8%AA%D8%B3%D9%84%D9%84-%D9%84%D9%84%D8%AD%D9%88%D8%AB%D9%8A%D9%8A%D9%86-%D9%81%D9%8A-%D9%85%D8%A7%D8%B1%D8%A8-%D8%B3%D9%82%D9%88%D8%B7-%D9%82%D8%AA%D9%84%D9%89-%D9%88%D8%AC%D8%B1%D8%AD%D9%89"
+        "https://www.almashhad.news/news/491768"
       ],
       "mapOnly": true,
       "backfill": true
@@ -13930,9 +13581,7 @@
       "text": "AL-MASHJAH — Government forces foil Houthi infiltrations at Al-Mashjah, west of Marib, and in the southern desert sector.",
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/491732",
-      "also": [
-        "https://www.alarabiya.net/arab-and-world/yemen/2026/08/27/%D8%A7%D8%AD%D8%A8%D8%A7%D8%B7-%D9%85%D8%AD%D8%A7%D9%88%D9%84%D8%AA%D9%8A-%D8%AA%D8%B3%D9%84%D9%84-%D9%84%D9%84%D8%AD%D9%88%D8%AB%D9%8A%D9%8A%D9%86-%D9%81%D9%8A-%D9%85%D8%A7%D8%B1%D8%A8-%D8%B3%D9%82%D9%88%D8%B7-%D9%82%D8%AA%D9%84%D9%89-%D9%88%D8%AC%D8%B1%D8%AD%D9%89"
-      ],
+      "also": [],
       "mapOnly": true,
       "backfill": true
     },
@@ -14064,8 +13713,7 @@
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/491983",
       "also": [
-        "https://www.almashhad.news/news/491995",
-        "https://south24.org/news/html_news/security_military_events_21_august_04_september_2026_EN.html"
+        "https://www.almashhad.news/news/491995"
       ],
       "mapOnly": true,
       "backfill": true
@@ -14589,8 +14237,7 @@
         "https://t.me/Alibk3/34994",
         "https://t.me/naya_foriraq/89258",
         "https://www.almashhad.news/news/492813",
-        "https://t.me/SabrenNewss/224119",
-        "https://www.alarabiya.net/arab-and-world/yemen/2026/09/03/%D8%A7%D9%84%D9%8A%D9%85%D9%86-10-%D8%B5%D9%88%D8%A7%D8%B1%D9%8A%D8%AE-%D8%A8%D8%A7%D9%84%D9%8A%D8%B3%D8%AA%D9%8A%D8%A9-%D8%AD%D9%88%D8%AB%D9%8A%D8%A9-%D8%AA%D8%B3%D8%AA%D9%87%D8%AF%D9%81-%D8%AA%D8%B9%D8%B2-%D9%88%D8%A7%D9%84%D8%AD%D8%AF%D9%8A%D8%AF%D8%A9"
+        "https://t.me/SabrenNewss/224119"
       ],
       "mapOnly": true,
       "backfill": true
@@ -14614,9 +14261,7 @@
         "https://www.almashhad.news/news/492916",
         "https://t.me/Alibk3/35060",
         "https://t.me/naya_foriraq/89294",
-        "https://t.me/Alibk3/35012",
-        "https://www.aljazeera.com/news/2026/9/3/houthi-fighters-clash-with-yemeni-government-forces-in-countrys-southwest",
-        "https://en.majalla.com/node/333085/politics/houthis-seek-expansion-after-reaching-bab-al-mandab"
+        "https://t.me/Alibk3/35012"
       ],
       "mapOnly": true,
       "backfill": true
@@ -14711,8 +14356,7 @@
       "source": "Almashhad · Sabereen News",
       "url": "https://www.almashhad.news/news/492916",
       "also": [
-        "https://t.me/SabrenNewss/224069",
-        "https://www.arabnews.com/middle-east/yemeni-government-forces-push-back-against-houthi-offensive-in-taiz-hodeidah-3000519"
+        "https://t.me/SabrenNewss/224069"
       ],
       "mapOnly": true,
       "backfill": true
@@ -14746,8 +14390,7 @@
       "also": [
         "https://t.me/naya_foriraq/89342",
         "https://t.me/Alibk3/35077",
-        "https://t.me/Alomhoar/111251",
-        "https://www.arabnews.com/middle-east/yemeni-government-forces-push-back-against-houthi-offensive-in-taiz-hodeidah-3000519"
+        "https://t.me/Alomhoar/111251"
       ],
       "mapOnly": true,
       "backfill": true
@@ -14766,8 +14409,7 @@
       "also": [
         "https://www.almashhad.news/news/492985",
         "https://www.almashhad.news/news/493035",
-        "https://t.me/Alibk3/35074",
-        "https://shebaintelligence.uk/houthi-offensive-aims-to-cut-taiz-off-from-yemens-western-coast"
+        "https://t.me/Alibk3/35074"
       ],
       "mapOnly": true,
       "backfill": true
@@ -14867,8 +14509,7 @@
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/493026",
       "also": [
-        "https://www.almashhad.news/news/493039",
-        "https://www.aljazeera.com/news/2026/9/4/yemens-army-says-recaptured-key-territory-as-clashes-with-houthis-continue"
+        "https://www.almashhad.news/news/493039"
       ],
       "mapOnly": true,
       "backfill": true
@@ -15033,8 +14674,7 @@
         "https://www.almashhad.news/news/493146",
         "https://t.me/Alibk3/35138",
         "https://t.me/Alomhoar/111340",
-        "https://t.me/Alibk3/35157",
-        "https://shebaintelligence.uk/houthi-offensive-aims-to-cut-taiz-off-from-yemens-western-coast"
+        "https://t.me/Alibk3/35157"
       ],
       "mapOnly": true,
       "backfill": true
@@ -15051,8 +14691,7 @@
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/493118",
       "also": [
-        "https://www.almashhad.news/news/493126",
-        "https://www.criticalthreats.org/analysis/iran-update-september-08-2026"
+        "https://www.almashhad.news/news/493126"
       ],
       "mapOnly": true,
       "backfill": true
@@ -15355,8 +14994,7 @@
       "also": [
         "https://www.almashhad.news/news/493279",
         "https://t.me/Alibk3/35171",
-        "https://t.me/Alibk3/35172",
-        "https://www.afp.com/en/toll-yemen-clashes-passes-300-civilians-flee-homes"
+        "https://t.me/Alibk3/35172"
       ],
       "mapOnly": true,
       "backfill": true
@@ -15989,7 +15627,7 @@
       "lng": 44.78,
       "place": "Al-Hazm",
       "label": "Saudi air strikes hit the Al-Hazm prison in Al-Jawf; Houthi media say seven killed, including a child, and seven wounded",
-      "text": "AL-HAZM — Saudi air strikes hit the Al-Hazm prison in Al-Jawf; Houthi media say seven killed, including a child, and seven wounded.",
+      "text": "AL-HAZM — The Houthi health ministry later put the toll at 35 killed and seven wounded.",
       "source": "Ali Bk · Naya · Al-Masirah",
       "url": "https://t.me/Alibk3/35274",
       "also": [
@@ -15997,7 +15635,9 @@
         "https://t.me/almasirah2/297406",
         "https://t.me/almasirah2/297468",
         "https://t.me/almasirah2/297403",
-        "https://en.wikipedia.org/wiki/2026_Yemen_offensives"
+        "https://t.me/almasirah2/297559",
+        "https://t.me/almasirah2/297672",
+        "https://t.me/almasirah2/297966"
       ],
       "mapOnly": true,
       "backfill": true
@@ -16083,10 +15723,7 @@
       "text": "AL-JARRAHI — Government forces enter Al-Jarrahi town and secure the heights over Hays.",
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/493566",
-      "also": [
-        "https://english.aawsat.com/arab-world/5315501-yemen-army-pursues-houthis-southeast-hodeidah",
-        "https://www.afp.com/en/toll-yemen-clashes-passes-300-civilians-flee-homes"
-      ],
+      "also": [],
       "mapOnly": true,
       "backfill": true
     },
@@ -16135,7 +15772,2508 @@
       "text": "MOCHA — Houthi ballistic missile hits the 2 December hospital in Mocha.",
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/493599",
+      "also": [
+        "https://www.yemenmonitor.com/en/Details/ArtMID/908/ArticleID/181381"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-shada-combat-0016",
+      "at": "2026-09-08T00:16:00+03:00",
+      "type": "combat",
+      "lat": 16.89,
+      "lng": 43.19,
+      "place": "Shada",
+      "label": "Houthi media: Saudi rockets and artillery hit villages in Shada",
+      "text": "SHADA — Houthi media: Saudi rockets and artillery hit villages in Shada.",
+      "source": "Sabereen News",
+      "url": "https://t.me/SabrenNewss/224569",
       "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-dhale-combat-0024",
+      "at": "2026-09-08T00:24:00+03:00",
+      "type": "combat",
+      "lat": 13.7,
+      "lng": 44.73,
+      "place": "Al-Dhale",
+      "label": "Heavy clashes on the Al-Dhale fronts; government forces say they took Houthi positions",
+      "text": "AL-DHALE — Heavy clashes on the Al-Dhale fronts; government forces say they took Houthi positions.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493625",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-khamis-mushait-missile-0105",
+      "at": "2026-09-08T01:05:00+03:00",
+      "type": "missile",
+      "lat": 18.3,
+      "lng": 42.73,
+      "place": "Khamis Mushait",
+      "label": "Houthi missiles and drones strike Khamis Mushait and the King Khalid Air Base overnight",
+      "text": "KHAMIS MUSHAIT — The Saudi-led coalition said attacks on Abha, Khamis Mushait, Jazan and Najran wounded 73 civilians, including women and children. The Wall Street Journal said the air base was among the targets.",
+      "source": "Naya · Sabereen News · Al-Mihwar · Ali Bk · Al-Masirah · Almashhad",
+      "url": "https://t.me/naya_foriraq/89594",
+      "also": [
+        "https://t.me/SabrenNewss/224552",
+        "https://t.me/Alomhoar/111463",
+        "https://t.me/Alibk3/35312",
+        "https://t.me/naya_foriraq/89603",
+        "https://t.me/Alomhoar/111475",
+        "https://t.me/naya_foriraq/89615",
+        "https://t.me/almasirah2/297487",
+        "https://www.almashhad.news/news/493665",
+        "https://t.me/almasirah2/297582",
+        "https://t.me/Alomhoar/111495",
+        "https://t.me/almasirah2/297509",
+        "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-abha-missile-0115",
+      "at": "2026-09-08T01:15:00+03:00",
+      "type": "missile",
+      "lat": 18.2164,
+      "lng": 42.5053,
+      "place": "Abha",
+      "label": "Explosions at Abha airport as Houthi missiles cross southern Saudi Arabia",
+      "text": "ABHA — Houthi-aligned outlets said the Abha crude oil station was also hit.",
+      "source": "Al-Mihwar · Sabereen News · Ali Bk · Naya",
+      "url": "https://t.me/Alomhoar/111465",
+      "also": [
+        "https://t.me/SabrenNewss/224555",
+        "https://t.me/Alibk3/35316",
+        "https://t.me/Alibk3/35318",
+        "https://t.me/Alomhoar/111477",
+        "https://t.me/Alomhoar/111478",
+        "https://t.me/naya_foriraq/89612",
+        "https://www.aljazeera.com/news/2026/9/8/saudi-houthi-fighting-in-yemen-escalates-what-happened-and-whats-next",
+        "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-jazan-refinery-port-0248",
+      "at": "2026-09-08T02:48:00+03:00",
+      "type": "port",
+      "lat": 16.62,
+      "lng": 42.62,
+      "place": "Jazan refinery",
+      "label": "Aramco facilities in Jazan hit; the Saudi energy ministry says fires broke out and some operations stopped",
+      "text": "JAZAN REFINERY — Aramco facilities in Jazan hit; the Saudi energy ministry says fires broke out and some operations stopped.",
+      "source": "Naya · Al-Mihwar · Sabereen News · Al-Masirah · Ali Bk · Almashhad",
+      "url": "https://t.me/naya_foriraq/89608",
+      "also": [
+        "https://t.me/Alomhoar/111481",
+        "https://t.me/SabrenNewss/224586",
+        "https://t.me/naya_foriraq/89621",
+        "https://t.me/almasirah2/297526",
+        "https://t.me/Alibk3/35329",
+        "https://www.almashhad.news/news/493678",
+        "https://t.me/Alomhoar/111491",
+        "https://t.me/naya_foriraq/89648",
+        "https://t.me/almasirah2/297583"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-raghwan-missile-0121",
+      "at": "2026-09-08T01:21:00+03:00",
+      "type": "missile",
+      "lat": 15.75,
+      "lng": 45.3,
+      "place": "Raghwan",
+      "label": "Houthi ballistic missile hits the Asdas displacement camp in Raghwan, killing two children and wounding 15",
+      "text": "RAGHWAN — Houthi ballistic missile hits the Asdas displacement camp in Raghwan, killing two children and wounding 15.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493655",
+      "also": [
+        "https://www.almashhad.news/news/493643"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-yatamah-combat-1122",
+      "at": "2026-09-08T11:22:00+03:00",
+      "type": "combat",
+      "lat": 16.62,
+      "lng": 44.85,
+      "place": "Al-Yatamah",
+      "label": "Both sides claim control of Al-Yatamah market in Al-Jawf",
+      "text": "AL-YATAMAH — Both sides claim control of Al-Yatamah market in Al-Jawf.",
+      "source": "Almashhad · Ali Bk · Sabereen News",
+      "url": "https://www.almashhad.news/news/493694",
+      "also": [
+        "https://t.me/Alibk3/35361",
+        "https://t.me/SabrenNewss/224619"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-taiz-combat-1219",
+      "at": "2026-09-08T12:19:00+03:00",
+      "type": "combat",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Houthi shelling hits residential areas near the judicial complex in Taiz",
+      "text": "TAIZ — Houthi shelling hits residential areas near the judicial complex in Taiz.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493700",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-jubah-strike-1251",
+      "at": "2026-09-08T12:51:00+03:00",
+      "type": "strike",
+      "lat": 14.97,
+      "lng": 45.36,
+      "place": "Al-Jubah",
+      "label": "Houthi media: four Saudi air strikes on Al-Jubah, Marib",
+      "text": "AL-JUBAH — Houthi media: four Saudi air strikes on Al-Jubah, Marib.",
+      "source": "Al-Masirah · Al-Mihwar",
+      "url": "https://t.me/almasirah2/297524",
+      "also": [
+        "https://t.me/Alomhoar/111500"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-hashwah-combat-1358",
+      "at": "2026-09-08T13:58:00+03:00",
+      "type": "combat",
+      "lat": 16.55,
+      "lng": 44.6,
+      "place": "Al-Hashwah",
+      "label": "Fighting near the Tayyibat al-Ism camp between Al-Jawf and Saada as government forces advance",
+      "text": "AL-HASHWAH — Fighting near the Tayyibat al-Ism camp between Al-Jawf and Saada as government forces advance.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493707",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-wazi-iyah-combat-1445",
+      "at": "2026-09-08T14:45:00+03:00",
+      "type": "combat",
+      "lat": 13.35,
+      "lng": 43.55,
+      "place": "Al-Wazi'iyah",
+      "label": "Government forces repel a large Houthi attack on Al-Wazi'iyah aimed at the road to Bab al-Mandab",
+      "text": "AL-WAZI'IYAH — Government forces repel a large Houthi attack on Al-Wazi'iyah aimed at the road to Bab al-Mandab.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493718",
+      "also": [
+        "https://www.almashhad.news/news/493733"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-wazi-iyah-strike-1449",
+      "at": "2026-09-08T14:49:00+03:00",
+      "type": "strike",
+      "lat": 13.35,
+      "lng": 43.55,
+      "place": "Al-Wazi'iyah",
+      "label": "Government aircraft strike Houthi positions in Al-Wazi'iyah; Houthi media call them Saudi strikes",
+      "text": "AL-WAZI'IYAH — Government aircraft strike Houthi positions in Al-Wazi'iyah; Houthi media call them Saudi strikes.",
+      "source": "Almashhad · Al-Masirah · Sabereen News · Al-Mihwar",
+      "url": "https://www.almashhad.news/news/493720",
+      "also": [
+        "https://t.me/almasirah2/297530",
+        "https://t.me/SabrenNewss/224621",
+        "https://t.me/Alomhoar/111505"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-razih-combat-1500",
+      "at": "2026-09-08T15:00:00+03:00",
+      "type": "combat",
+      "lat": 16.94,
+      "lng": 43.26,
+      "place": "Razih",
+      "label": "Houthi media: Saudi artillery hits villages in Razih and kills livestock",
+      "text": "RAZIH — Houthi media: Saudi artillery hits villages in Razih and kills livestock.",
+      "source": "Al-Masirah · Sabereen News",
+      "url": "https://t.me/almasirah2/297539",
+      "also": [
+        "https://t.me/SabrenNewss/224625"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-barh-combat-1656",
+      "at": "2026-09-08T16:56:00+03:00",
+      "type": "combat",
+      "lat": 13.48,
+      "lng": 43.72,
+      "place": "Al-Barh",
+      "label": "Government forces capture the commander of a Houthi rapid intervention unit in Al-Barh",
+      "text": "AL-BARH — Government forces capture the commander of a Houthi rapid intervention unit in Al-Barh.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493732",
+      "also": [
+        "https://www.almashhad.news/news/493771"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-hays-combat-1802",
+      "at": "2026-09-08T18:02:00+03:00",
+      "type": "combat",
+      "lat": 13.98,
+      "lng": 43.33,
+      "place": "Hays",
+      "label": "Government forces take Jabal al-Tashwish on the Hays axis",
+      "text": "HAYS — Government forces take Jabal al-Tashwish on the Hays axis.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493738",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-kadha-combat-1837",
+      "at": "2026-09-08T18:37:00+03:00",
+      "type": "combat",
+      "lat": 13.43,
+      "lng": 43.8,
+      "place": "Al-Kadha",
+      "label": "Government forces launch an operation in western Taiz, retaking villages in Al-Kadha and Jabal Habashi and shelling Houthi supplies in Al-Rahbah",
+      "text": "AL-KADHA — Government forces launch an operation in western Taiz, retaking villages in Al-Kadha and Jabal Habashi and shelling Houthi supplies in Al-Rahbah.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493741",
+      "also": [
+        "https://www.almashhad.news/news/493753",
+        "https://english.aawsat.com/arab-world/5315501-yemen-army-pursues-houthis-southeast-hodeidah"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-jazan-refinery-port-1956",
+      "at": "2026-09-08T19:56:00+03:00",
+      "type": "port",
+      "lat": 16.62,
+      "lng": 42.62,
+      "place": "Jazan refinery",
+      "label": "New Houthi missile attack on Aramco facilities in Jazan while damage from the first was still being assessed",
+      "text": "JAZAN REFINERY — Satellite images the next day showed at least three more oil tanks hit, a Houthi-aligned outlet said.",
+      "source": "Al-Mihwar · Ali Bk · Naya · Sabereen News · Al-Masirah",
+      "url": "https://t.me/Alomhoar/111526",
+      "also": [
+        "https://t.me/Alibk3/35391",
+        "https://t.me/naya_foriraq/89689",
+        "https://t.me/SabrenNewss/224654",
+        "https://t.me/almasirah2/297583",
+        "https://t.me/SabrenNewss/224786"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-najran-missile-2001",
+      "at": "2026-09-08T20:01:00+03:00",
+      "type": "missile",
+      "lat": 17.4917,
+      "lng": 44.1322,
+      "place": "Najran",
+      "label": "Explosions in Najran; Houthi-aligned outlets claim an oil facility was hit",
+      "text": "NAJRAN — Saudi civil defence sounded sirens in Jazan, Abha and Najran.",
+      "source": "Naya · Al-Mihwar · Sabereen News · Al-Masirah · Almashhad",
+      "url": "https://t.me/naya_foriraq/89693",
+      "also": [
+        "https://t.me/Alomhoar/111529",
+        "https://t.me/naya_foriraq/89695",
+        "https://t.me/SabrenNewss/224657",
+        "https://t.me/almasirah2/297567",
+        "https://t.me/almasirah2/297568",
+        "https://t.me/almasirah2/297569",
+        "https://www.almashhad.news/news/493751",
+        "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-abha-missile-2001",
+      "at": "2026-09-08T20:01:00+03:00",
+      "type": "missile",
+      "lat": 18.2164,
+      "lng": 42.5053,
+      "place": "Abha",
+      "label": "Explosions in Abha during the evening missile attack",
+      "text": "ABHA — Explosions in Abha during the evening missile attack.",
+      "source": "Naya · Ali Bk",
+      "url": "https://t.me/naya_foriraq/89690",
+      "also": [
+        "https://t.me/Alibk3/35394"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-al-musaymir-combat-2112",
+      "at": "2026-09-08T21:12:00+03:00",
+      "type": "combat",
+      "lat": 13.44,
+      "lng": 44.61,
+      "place": "Al-Musaymir",
+      "label": "Houthi shelling kills two shepherds in Ahamah village, Al-Musaymir",
+      "text": "AL-MUSAYMIR — Houthi shelling kills two shepherds in Ahamah village, Al-Musaymir.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493755",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-ghamr-combat-2214",
+      "at": "2026-09-08T22:14:00+03:00",
+      "type": "combat",
+      "lat": 16.92,
+      "lng": 43.38,
+      "place": "Ghamr",
+      "label": "Houthi media: Saudi artillery shells Ghawr al-Mishwat, Ghamr",
+      "text": "GHAMR — Houthi media: Saudi artillery shells Ghawr al-Mishwat, Ghamr.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/297585",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-08-karish-strike-2215",
+      "at": "2026-09-08T22:15:00+03:00",
+      "type": "strike",
+      "lat": 13.3,
+      "lng": 44.62,
+      "place": "Karish",
+      "label": "Government air strikes hit Houthi reinforcements on the Karish front",
+      "text": "KARISH — Government air strikes hit Houthi reinforcements on the Karish front.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493764",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-wazi-iyah-strike-0021",
+      "at": "2026-09-09T00:21:00+03:00",
+      "type": "strike",
+      "lat": 13.35,
+      "lng": 43.55,
+      "place": "Al-Wazi'iyah",
+      "label": "Government aircraft strike Houthi reinforcements west of Taiz as fighting swings in Al-Wazi'iyah",
+      "text": "AL-WAZI'IYAH — Government aircraft strike Houthi reinforcements west of Taiz as fighting swings in Al-Wazi'iyah.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493799",
+      "also": [
+        "https://www.almashhad.news/news/493800",
+        "https://www.almashhad.news/news/493834"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-taiz-combat-0038",
+      "at": "2026-09-09T00:38:00+03:00",
+      "type": "combat",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Houthi shells hit the judicial complex in Taiz for the second time in hours",
+      "text": "TAIZ — Houthi shells hit the judicial complex in Taiz for the second time in hours.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493808",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-bayda-strike-0038",
+      "at": "2026-09-09T00:38:00+03:00",
+      "type": "strike",
+      "lat": 13.99,
+      "lng": 45.57,
+      "place": "Al-Bayda",
+      "label": "Giants Brigades down a Houthi drone and destroy a Houthi vehicle on the Al-Bayda front",
+      "text": "AL-BAYDA — Giants Brigades down a Houthi drone and destroy a Houthi vehicle on the Al-Bayda front.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493809",
+      "also": [
+        "https://www.almashhad.news/news/493855"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-murays-combat-0043",
+      "at": "2026-09-09T00:43:00+03:00",
+      "type": "combat",
+      "lat": 13.85,
+      "lng": 44.7,
+      "place": "Murays",
+      "label": "Government forces counter-attack on the Murays front after repelling a Houthi assault",
+      "text": "MURAYS — Government forces counter-attack on the Murays front after repelling a Houthi assault.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493810",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-had-combat-0050",
+      "at": "2026-09-09T00:50:00+03:00",
+      "type": "combat",
+      "lat": 13.93,
+      "lng": 45.25,
+      "place": "Al-Had",
+      "label": "Six Giants soldiers killed in fighting on the Al-Had front, Yafa; a Houthi attack is repelled",
+      "text": "AL-HAD — Six Giants soldiers killed in fighting on the Al-Had front, Yafa; a Houthi attack is repelled.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493815",
+      "also": [
+        "https://www.almashhad.news/news/493824"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-sirwah-strike-0655",
+      "at": "2026-09-09T06:55:00+03:00",
+      "type": "strike",
+      "lat": 15.45,
+      "lng": 45.02,
+      "place": "Sirwah",
+      "label": "Houthi media: Saudi aircraft carry out 10 strikes on Sirwah and more on Al-Balaq and Raghwan",
+      "text": "SIRWAH — Houthi media counted 48 Saudi strikes in 12 hours across Al-Jawf, Marib, Taiz, Hodeidah, Saada and Al-Bayda, and 70 by the evening.",
+      "source": "Al-Masirah · Al-Mihwar · Ali Bk",
+      "url": "https://t.me/almasirah2/297607",
+      "also": [
+        "https://t.me/almasirah2/297609",
+        "https://t.me/almasirah2/297614",
+        "https://t.me/almasirah2/297615",
+        "https://t.me/Alomhoar/111604",
+        "https://t.me/Alomhoar/111622",
+        "https://t.me/Alibk3/35527",
+        "https://t.me/almasirah2/297605",
+        "https://t.me/almasirah2/297610",
+        "https://t.me/almasirah2/297628",
+        "https://t.me/almasirah2/297667",
+        "https://t.me/almasirah2/297707"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-khab-wa-al-shaaf-strike-0656",
+      "at": "2026-09-09T06:56:00+03:00",
+      "type": "strike",
+      "lat": 16.45,
+      "lng": 45.2,
+      "place": "Khab wa al-Shaaf",
+      "label": "Houthi media: five Saudi air strikes on Khab wa al-Shaaf and three on Al-Labnat",
+      "text": "KHAB WA AL-SHAAF — Houthi media: five Saudi air strikes on Khab wa al-Shaaf and three on Al-Labnat.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/297606",
+      "also": [
+        "https://t.me/almasirah2/297616"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-barh-strike-0711",
+      "at": "2026-09-09T07:11:00+03:00",
+      "type": "strike",
+      "lat": 13.48,
+      "lng": 43.72,
+      "place": "Al-Barh",
+      "label": "Houthi media: five Saudi air strikes on Al-Barh",
+      "text": "AL-BARH — Houthi media: five Saudi air strikes on Al-Barh.",
+      "source": "Al-Masirah · Sabereen News",
+      "url": "https://t.me/almasirah2/297608",
+      "also": [
+        "https://t.me/SabrenNewss/224720"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-mashjah-strike-0615",
+      "at": "2026-09-09T06:15:00+03:00",
+      "type": "strike",
+      "lat": 15.5,
+      "lng": 45.2,
+      "place": "Al-Mashjah",
+      "label": "Government aircraft and artillery hit Houthi reinforcements arriving at the Al-Mashjah front",
+      "text": "AL-MASHJAH — Government aircraft and artillery hit Houthi reinforcements arriving at the Al-Mashjah front.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493842",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-lahj-combat-0839",
+      "at": "2026-09-09T08:39:00+03:00",
+      "type": "combat",
+      "lat": 13.05,
+      "lng": 44.88,
+      "place": "Lahj",
+      "label": "Houthi sniper kills two young men in Lahj",
+      "text": "LAHJ — Houthi sniper kills two young men in Lahj.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493856",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-yuayrif-combat-0848",
+      "at": "2026-09-09T08:48:00+03:00",
+      "type": "combat",
+      "lat": 14.93,
+      "lng": 45.3,
+      "place": "Al-Yuayrif",
+      "label": "Government forces break a large Houthi attack at Al-Uyayrif, south Marib, and launch an offensive on the southern fronts",
+      "text": "AL-YUAYRIF — Government forces break a large Houthi attack at Al-Uyayrif, south Marib, and launch an offensive on the southern fronts.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493857",
+      "also": [
+        "https://www.almashhad.news/news/493873"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-labnat-strike-0912",
+      "at": "2026-09-09T09:12:00+03:00",
+      "type": "strike",
+      "lat": 16.12,
+      "lng": 45.05,
+      "place": "Al-Labnat",
+      "label": "Government air defences down a Houthi winged drone near Al-Labnat",
+      "text": "AL-LABNAT — Government air defences down a Houthi winged drone near Al-Labnat.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493859",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-khamis-mushait-missile-0925",
+      "at": "2026-09-09T09:25:00+03:00",
+      "type": "missile",
+      "lat": 18.3,
+      "lng": 42.73,
+      "place": "Khamis Mushait",
+      "label": "Sirens and explosions in Khamis Mushait; Saudi early-warning platform issues an alert",
+      "text": "KHAMIS MUSHAIT — Sirens and explosions in Khamis Mushait; Saudi early-warning platform issues an alert.",
+      "source": "Sabereen News · Naya · Almashhad",
+      "url": "https://t.me/SabrenNewss/224740",
+      "also": [
+        "https://t.me/naya_foriraq/89873",
+        "https://www.almashhad.news/news/493862",
+        "https://www.reuters.com/world/middle-east/saudi-arabia-lifts-alert-southern-city-day-after-houthi-strikes-2026-09-09/"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-marib-missile-1108",
+      "at": "2026-09-09T11:08:00+03:00",
+      "type": "missile",
+      "lat": 15.46,
+      "lng": 45.32,
+      "place": "Marib",
+      "label": "Houthi ballistic missile hits a house in Marib city, killing two women and two children",
+      "text": "MARIB — Houthi ballistic missile hits a house in Marib city, killing two women and two children.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493871",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-haifan-combat-1121",
+      "at": "2026-09-09T11:21:00+03:00",
+      "type": "combat",
+      "lat": 13.28,
+      "lng": 44.18,
+      "place": "Haifan",
+      "label": "Clashes and artillery exchanges on the Haifan fronts, south of Taiz",
+      "text": "HAIFAN — Clashes and artillery exchanges on the Haifan fronts, south of Taiz.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493872",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-masharih-combat-1219",
+      "at": "2026-09-09T12:19:00+03:00",
+      "type": "combat",
+      "lat": 13.8,
+      "lng": 44.62,
+      "place": "Al-Masharih",
+      "label": "Government forces repel a Houthi attack on Al-Masharih–Al-Thawkhab, north-west Al-Dhale",
+      "text": "AL-MASHARIH — Government forces repel a Houthi attack on Al-Masharih–Al-Thawkhab, north-west Al-Dhale.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493875",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-khawlan-missile-1233",
+      "at": "2026-09-09T12:33:00+03:00",
+      "type": "missile",
+      "lat": 15.33,
+      "lng": 44.55,
+      "place": "Khawlan",
+      "label": "Houthi ballistic missile falls in Khawlan al-Tiyal, Sanaa province",
+      "text": "KHAWLAN — Houthi ballistic missile falls in Khawlan al-Tiyal, Sanaa province.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493876",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-mocha-missile-1256",
+      "at": "2026-09-09T12:56:00+03:00",
+      "type": "missile",
+      "lat": 13.32,
+      "lng": 43.25,
+      "place": "Mocha",
+      "label": "Houthis fire missiles at government forces around Mocha",
+      "text": "MOCHA — Houthis fire missiles at government forces around Mocha.",
+      "source": "Ali Bk · Sabereen News · Al-Mihwar",
+      "url": "https://t.me/Alibk3/35544",
+      "also": [
+        "https://t.me/SabrenNewss/224793",
+        "https://t.me/Alomhoar/111621"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-mawza-combat-1325",
+      "at": "2026-09-09T13:25:00+03:00",
+      "type": "combat",
+      "lat": 13.26,
+      "lng": 43.53,
+      "place": "Mawza",
+      "label": "Houthi forces push on the Khalid bin al-Walid camp in Mawza and advance in Al-Wazi'iyah; Houthi-aligned outlets say the camp fell and government forces withdrew",
+      "text": "MAWZA — The National Resistance said it killed and captured Houthi commanders of a planned attack on Bab al-Mandab. Houthi-aligned outlets said a government brigade commander was killed.",
+      "source": "Almashhad · Al-Mihwar · Naya · Ali Bk",
+      "url": "https://www.almashhad.news/news/493934",
+      "also": [
+        "https://www.almashhad.news/news/493880",
+        "https://t.me/Alomhoar/111651",
+        "https://t.me/naya_foriraq/89917",
+        "https://t.me/Alibk3/35572",
+        "https://t.me/Alibk3/35594",
+        "https://t.me/Alibk3/35596",
+        "https://t.me/Alomhoar/111680",
+        "https://t.me/Alibk3/35541"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-hazm-combat-1441",
+      "at": "2026-09-09T14:41:00+03:00",
+      "type": "combat",
+      "lat": 16.16,
+      "lng": 44.78,
+      "place": "Al-Hazm",
+      "label": "Government forces advance east of Al-Hazm near Bir al-Maraziq and cut Houthi supply lines",
+      "text": "AL-HAZM — Government forces advance east of Al-Hazm near Bir al-Maraziq and cut Houthi supply lines.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493887",
+      "also": [
+        "https://www.almashhad.news/news/493896"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-hays-missile-1547",
+      "at": "2026-09-09T15:47:00+03:00",
+      "type": "missile",
+      "lat": 13.98,
+      "lng": 43.33,
+      "place": "Hays",
+      "label": "Houthi missiles and drones hit Hays; clashes in Saqm",
+      "text": "HAYS — Houthi missiles and drones hit Hays; clashes in Saqm.",
+      "source": "Naya · Almashhad",
+      "url": "https://t.me/naya_foriraq/89931",
+      "also": [
+        "https://www.almashhad.news/news/493934"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-majzar-combat-1626",
+      "at": "2026-09-09T16:26:00+03:00",
+      "type": "combat",
+      "lat": 15.78,
+      "lng": 45.08,
+      "place": "Majzar",
+      "label": "Government forces take the Mas camp and advance towards Majzar, Marib",
+      "text": "MAJZAR — Government forces take the Mas camp and advance towards Majzar, Marib.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493895",
+      "also": [
+        "https://www.almashhad.news/news/493891"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-abha-missile-1725",
+      "at": "2026-09-09T17:25:00+03:00",
+      "type": "missile",
+      "lat": 18.2164,
+      "lng": 42.5053,
+      "place": "Abha",
+      "label": "Sirens and explosions in Abha and Khamis Mushait; the coalition says Houthi missiles and drones targeted Khamis Mushait, Abha and Jazan",
+      "text": "ABHA — Sirens and explosions in Abha and Khamis Mushait; the coalition says Houthi missiles and drones targeted Khamis Mushait, Abha and Jazan.",
+      "source": "Al-Masirah · Al-Mihwar · Ali Bk · Naya · Sabereen News · Almashhad",
+      "url": "https://t.me/almasirah2/297671",
+      "also": [
+        "https://t.me/Alomhoar/111659",
+        "https://t.me/Alibk3/35567",
+        "https://t.me/naya_foriraq/89920",
+        "https://t.me/SabrenNewss/224815",
+        "https://t.me/SabrenNewss/224817",
+        "https://t.me/naya_foriraq/89924",
+        "https://www.almashhad.news/news/493935",
+        "https://t.me/naya_foriraq/89939",
+        "https://www.reuters.com/world/middle-east/saudi-arabia-lifts-alert-southern-city-day-after-houthi-strikes-2026-09-09/"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-munabbih-combat-1736",
+      "at": "2026-09-09T17:36:00+03:00",
+      "type": "combat",
+      "lat": 17.2,
+      "lng": 43.25,
+      "place": "Munabbih",
+      "label": "Houthi media: Saudi artillery shells Ayyash, Munabbih",
+      "text": "MUNABBIH — Houthi media: Saudi artillery shells Ayyash, Munabbih.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/297686",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-red-sea-missile-1738",
+      "at": "2026-09-09T17:38:00+03:00",
+      "type": "missile",
+      "lat": 14.5,
+      "lng": 42.4,
+      "place": "Red Sea",
+      "label": "Government navy foils a Houthi boat attack in the Red Sea",
+      "text": "RED SEA — Government navy foils a Houthi boat attack in the Red Sea.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493908",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-ghamr-combat-1803",
+      "at": "2026-09-09T18:03:00+03:00",
+      "type": "combat",
+      "lat": 16.92,
+      "lng": 43.38,
+      "place": "Ghamr",
+      "label": "Houthi media: Saudi artillery shells Ghawr al-Mishwat, Ghamr",
+      "text": "GHAMR — Houthi media: Saudi artillery shells Ghawr al-Mishwat, Ghamr.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/297690",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-kitaf-strike-1816",
+      "at": "2026-09-09T18:16:00+03:00",
+      "type": "strike",
+      "lat": 17.15,
+      "lng": 44.3,
+      "place": "Kitaf",
+      "label": "Houthi media: Saudi drone strikes in Kitaf and Al-Buqa",
+      "text": "KITAF — Houthi media: Saudi drone strikes in Kitaf and Al-Buqa.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/297694",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-barh-strike-1823",
+      "at": "2026-09-09T18:23:00+03:00",
+      "type": "strike",
+      "lat": 13.48,
+      "lng": 43.72,
+      "place": "Al-Barh",
+      "label": "Government air strike hits a Houthi commanders' meeting in Al-Kanab, Al-Barh; military sources say the Houthi defence minister, Mohammed Nasser al-Atifi, was among those killed",
+      "text": "AL-BARH — The information was preliminary and not confirmed by the Houthis.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493916",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-09-al-had-combat-1943",
+      "at": "2026-09-09T19:43:00+03:00",
+      "type": "combat",
+      "lat": 13.93,
+      "lng": 45.25,
+      "place": "Al-Had",
+      "label": "Houthi shelling hits schools and villages in Al-Had, Yafa",
+      "text": "AL-HAD — Houthi shelling hits schools and villages in Al-Had, Yafa.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493926",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-hays-combat-0030",
+      "at": "2026-09-10T00:30:00+03:00",
+      "type": "combat",
+      "lat": 13.98,
+      "lng": 43.33,
+      "place": "Hays",
+      "label": "Houthi forces enter Hays; a local activist says they met no resistance",
+      "text": "HAYS — Houthi forces enter Hays; a local activist says they met no resistance.",
+      "source": "Naya · Sabereen News · Al-Mihwar · Ali Bk · Almashhad",
+      "url": "https://t.me/naya_foriraq/89955",
+      "also": [
+        "https://t.me/SabrenNewss/224852",
+        "https://t.me/naya_foriraq/89958",
+        "https://t.me/Alomhoar/111698",
+        "https://t.me/Alibk3/35617",
+        "https://www.almashhad.news/news/494015"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-taif-missile-0053",
+      "at": "2026-09-10T00:53:00+03:00",
+      "type": "missile",
+      "lat": 21.48,
+      "lng": 40.54,
+      "place": "Taif",
+      "label": "Explosions at the King Fahd Air Base in Taif, Houthi-aligned outlets report",
+      "text": "TAIF — Explosions at the King Fahd Air Base in Taif, Houthi-aligned outlets report.",
+      "source": "Ali Bk · Al-Mihwar · Sabereen News · Naya",
+      "url": "https://t.me/Alibk3/35621",
+      "also": [
+        "https://t.me/Alomhoar/111700",
+        "https://t.me/SabrenNewss/224855",
+        "https://t.me/naya_foriraq/89959"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-al-wazi-iyah-combat-0130",
+      "at": "2026-09-10T01:30:00+03:00",
+      "type": "combat",
+      "lat": 13.35,
+      "lng": 43.55,
+      "place": "Al-Wazi'iyah",
+      "label": "Houthi forces take Al-Shuqayrah, the centre of Al-Wazi'iyah district",
+      "text": "AL-WAZI'IYAH — Houthi forces take Al-Shuqayrah, the centre of Al-Wazi'iyah district.",
+      "source": "Ali Bk · Almashhad",
+      "url": "https://t.me/Alibk3/35623",
+      "also": [
+        "https://www.almashhad.news/news/494027"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-al-khokha-combat-0139",
+      "at": "2026-09-10T01:39:00+03:00",
+      "type": "combat",
+      "lat": 13.81,
+      "lng": 43.25,
+      "place": "Al-Khokha",
+      "label": "Houthi forces take Al-Khokha and the Khalid bin al-Walid camp; government-aligned media confirm a withdrawal to Mocha",
+      "text": "AL-KHOKHA — Houthi forces take Al-Khokha and the Khalid bin al-Walid camp; government-aligned media confirm a withdrawal to Mocha.",
+      "source": "Ali Bk · Al-Mihwar · Naya · Almashhad",
+      "url": "https://t.me/Alibk3/35626",
+      "also": [
+        "https://t.me/Alibk3/35633",
+        "https://t.me/Alomhoar/111704",
+        "https://t.me/naya_foriraq/89963",
+        "https://www.almashhad.news/news/494035"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-taiz-missile-0046",
+      "at": "2026-09-10T00:46:00+03:00",
+      "type": "missile",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Houthi ballistic missile launched from east of Taiz city",
+      "text": "TAIZ — Houthi ballistic missile launched from east of Taiz city.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493977",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-marib-missile-0055",
+      "at": "2026-09-10T00:55:00+03:00",
+      "type": "missile",
+      "lat": 15.46,
+      "lng": 45.32,
+      "place": "Marib",
+      "label": "Houthi ballistic missile hits a house in Marib, killing four members of one family",
+      "text": "MARIB — Houthi ballistic missile hits a house in Marib, killing four members of one family.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/493981",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-yakhtul-combat-0356",
+      "at": "2026-09-10T03:56:00+03:00",
+      "type": "combat",
+      "lat": 13.43,
+      "lng": 43.27,
+      "place": "Yakhtul",
+      "label": "Houthi forces take Yakhtul, north of Mocha",
+      "text": "YAKHTUL — Houthi forces take Yakhtul, north of Mocha.",
+      "source": "Ali Bk · Sabereen News · Naya",
+      "url": "https://t.me/Alibk3/35654",
+      "also": [
+        "https://t.me/SabrenNewss/224871",
+        "https://t.me/SabrenNewss/224868",
+        "https://t.me/naya_foriraq/89981"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-khamis-mushait-missile-0352",
+      "at": "2026-09-10T03:52:00+03:00",
+      "type": "missile",
+      "lat": 18.3,
+      "lng": 42.73,
+      "place": "Khamis Mushait",
+      "label": "Sirens and explosions in Abha and Khamis Mushait; Reuters says Saudi Arabia issued four alerts for Khamis Mushait in 24 hours",
+      "text": "KHAMIS MUSHAIT — Sirens and explosions in Abha and Khamis Mushait; Reuters says Saudi Arabia issued four alerts for Khamis Mushait in 24 hours.",
+      "source": "Ali Bk · Sabereen News · Naya · Al-Masirah",
+      "url": "https://t.me/Alibk3/35651",
+      "also": [
+        "https://t.me/SabrenNewss/224869",
+        "https://t.me/naya_foriraq/89984",
+        "https://t.me/naya_foriraq/89985",
+        "https://t.me/almasirah2/297737",
+        "https://t.me/naya_foriraq/90001",
+        "https://t.me/SabrenNewss/224884",
+        "https://t.me/SabrenNewss/224885",
+        "https://t.me/naya_foriraq/90003",
+        "https://t.me/almasirah2/297740"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-al-salif-strike-0746",
+      "at": "2026-09-10T07:46:00+03:00",
+      "type": "strike",
+      "lat": 15.3,
+      "lng": 42.68,
+      "place": "Al-Salif",
+      "label": "Coalition air strikes hit Houthi positions in Al-Salif, Al-Tuhayta and Kamaran island",
+      "text": "AL-SALIF — Coalition air strikes hit Houthi positions in Al-Salif, Al-Tuhayta and Kamaran island.",
+      "source": "Al-Masirah · Almashhad",
+      "url": "https://t.me/almasirah2/297739",
+      "also": [
+        "https://www.almashhad.news/news/494057",
+        "https://www.almashhad.news/news/494032"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-zuqar-island-missile-0800",
+      "at": "2026-09-10T08:00:00+03:00",
+      "type": "missile",
+      "lat": 14,
+      "lng": 42.72,
+      "place": "Zuqar Island",
+      "label": "Houthis fire two ballistic missiles at Zuqar island, then take Zuqar and the Greater and Lesser Hanish islands",
+      "text": "ZUQAR ISLAND — Houthis fire two ballistic missiles at Zuqar island, then take Zuqar and the Greater and Lesser Hanish islands.",
+      "source": "Almashhad · Sabereen News · Ali Bk · Naya",
+      "url": "https://www.almashhad.news/news/494028",
+      "also": [
+        "https://t.me/SabrenNewss/224892",
+        "https://t.me/Alibk3/35682",
+        "https://t.me/naya_foriraq/90057",
+        "https://t.me/naya_foriraq/90030",
+        "https://t.me/SabrenNewss/224943"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-mawza-strike-0929",
+      "at": "2026-09-10T09:29:00+03:00",
+      "type": "strike",
+      "lat": 13.26,
+      "lng": 43.53,
+      "place": "Mawza",
+      "label": "Houthi media: 18 Saudi air strikes on Mawza, Maqbanah and the Mocha junction; 10 on Al-Hazm and Al-Ghayl, three on Al-Jubah",
+      "text": "MAWZA — Houthi media counted 64 strikes in 24 hours across Taiz, Hodeidah, Marib and Al-Jawf.",
+      "source": "Al-Masirah · Al-Mihwar",
+      "url": "https://t.me/almasirah2/297754",
+      "also": [
+        "https://t.me/almasirah2/297755",
+        "https://t.me/almasirah2/297756",
+        "https://t.me/almasirah2/297753",
+        "https://t.me/Alomhoar/111729",
+        "https://t.me/almasirah2/297816"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-hajjah-strike-1106",
+      "at": "2026-09-10T11:06:00+03:00",
+      "type": "strike",
+      "lat": 15.69,
+      "lng": 43.6,
+      "place": "Hajjah",
+      "label": "Houthi military spokesman says a Saudi Karayel drone was shot down over Hajjah",
+      "text": "HAJJAH — Houthi military spokesman says a Saudi Karayel drone was shot down over Hajjah.",
+      "source": "Al-Masirah · Sabereen News · Naya · Ali Bk · Al-Mihwar",
+      "url": "https://t.me/almasirah2/297765",
+      "also": [
+        "https://t.me/SabrenNewss/224910",
+        "https://t.me/naya_foriraq/90009",
+        "https://t.me/Alibk3/35669",
+        "https://t.me/Alomhoar/111733"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-mocha-combat-1032",
+      "at": "2026-09-10T10:32:00+03:00",
+      "type": "combat",
+      "lat": 13.32,
+      "lng": 43.25,
+      "place": "Mocha",
+      "label": "Houthi forces take Mocha city, its port and airport after heavy fighting; government forces withdraw",
+      "text": "MOCHA — Houthi forces take Mocha city, its port and airport after heavy fighting; government forces withdraw.",
+      "source": "Almashhad · Ali Bk · Sabereen News · Al-Mihwar · Naya",
+      "url": "https://www.almashhad.news/news/494041",
+      "also": [
+        "https://www.almashhad.news/news/494039",
+        "https://www.almashhad.news/news/494073",
+        "https://t.me/Alibk3/35671",
+        "https://t.me/Alibk3/35672",
+        "https://t.me/SabrenNewss/224916",
+        "https://t.me/Alomhoar/111736",
+        "https://t.me/naya_foriraq/90048",
+        "https://t.me/Alomhoar/111760",
+        "https://t.me/Alibk3/35721",
+        "https://t.me/SabrenNewss/224953",
+        "https://www.bbc.co.uk/news/articles/c4g7vr0lngwo"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-mocha-missile-1237",
+      "at": "2026-09-10T12:37:00+03:00",
+      "type": "missile",
+      "lat": 13.32,
+      "lng": 43.25,
+      "place": "Mocha",
+      "label": "Houthi missile hits a convoy of families fleeing Hays, Al-Khokha and Mocha towards Aden; about 15 cars burned",
+      "text": "MOCHA — A rights lawyer cited preliminary information of more than 100 civilians killed. The exact place on the road was not given.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494050",
+      "also": [
+        "https://www.almashhad.news/news/494114"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-dhubab-combat-1328",
+      "at": "2026-09-10T13:28:00+03:00",
+      "type": "combat",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Houthi-aligned outlets say Houthi forces took the Al-Umari camps overlooking Bab al-Mandab and Mayun island",
+      "text": "DHUBAB — Clashes at sea off Mayun were also reported.",
+      "source": "Ali Bk · Al-Mihwar",
+      "url": "https://t.me/Alibk3/35703",
+      "also": [
+        "https://t.me/Alibk3/35714",
+        "https://t.me/Alomhoar/111756"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-al-madaribah-combat-1418",
+      "at": "2026-09-10T14:18:00+03:00",
+      "type": "combat",
+      "lat": 13.15,
+      "lng": 43.9,
+      "place": "Al-Madaribah",
+      "label": "Heavy Houthi attack on government positions in the Al-Madaribah mountains, near Al-Aghbarah",
+      "text": "AL-MADARIBAH — Heavy Houthi attack on government positions in the Al-Madaribah mountains, near Al-Aghbarah.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494058",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-dhubab-strike-1449",
+      "at": "2026-09-10T14:49:00+03:00",
+      "type": "strike",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Houthi media: Saudi aircraft carry out about 10 strikes on Dhubab",
+      "text": "DHUBAB — Houthi media: Saudi aircraft carry out about 10 strikes on Dhubab.",
+      "source": "Al-Masirah · Ali Bk · Naya · Al-Mihwar",
+      "url": "https://t.me/almasirah2/297802",
+      "also": [
+        "https://t.me/Alibk3/35716",
+        "https://t.me/naya_foriraq/90070",
+        "https://t.me/almasirah2/297823",
+        "https://t.me/Alomhoar/111784"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-shafar-strike-1449",
+      "at": "2026-09-10T14:49:00+03:00",
+      "type": "strike",
+      "lat": 16.2,
+      "lng": 43.1,
+      "place": "Shafar",
+      "label": "Houthi media: Saudi air strikes on Al-Aqabah east of Shafar and on Matwalah, Abs",
+      "text": "SHAFAR — Houthi media: Saudi air strikes on Al-Aqabah east of Shafar and on Matwalah, Abs.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/297803",
+      "also": [
+        "https://t.me/almasirah2/297844"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-al-hazm-combat-1524",
+      "at": "2026-09-10T15:24:00+03:00",
+      "type": "combat",
+      "lat": 16.16,
+      "lng": 44.78,
+      "place": "Al-Hazm",
+      "label": "Government forces encircle Al-Hazm district",
+      "text": "AL-HAZM — Government forces encircle Al-Hazm district.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494064",
+      "also": [
+        "https://www.almashhad.news/news/494103"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-al-zahir-combat-1642",
+      "at": "2026-09-10T16:42:00+03:00",
+      "type": "combat",
+      "lat": 17.02,
+      "lng": 43.43,
+      "place": "Al-Zahir",
+      "label": "Houthi media: Saudi artillery shells Al-Zahir district, Saada",
+      "text": "AL-ZAHIR — Houthi media: Saudi artillery shells Al-Zahir district, Saada.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/297819",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-10-abha-missile-2214",
+      "at": "2026-09-10T22:14:00+03:00",
+      "type": "missile",
+      "lat": 18.2164,
+      "lng": 42.5053,
+      "place": "Abha",
+      "label": "Houthi ballistic missiles hit Abha and Khamis Mushait; sirens sound",
+      "text": "ABHA — Houthi ballistic missiles hit Abha and Khamis Mushait; sirens sound.",
+      "source": "Al-Mihwar · Ali Bk · Al-Masirah · Naya · Sabereen News",
+      "url": "https://t.me/Alomhoar/111807",
+      "also": [
+        "https://t.me/Alibk3/35754",
+        "https://t.me/Alomhoar/111808",
+        "https://t.me/almasirah2/297852",
+        "https://t.me/naya_foriraq/90121",
+        "https://t.me/SabrenNewss/224969"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-dhubab-combat-0010",
+      "at": "2026-09-11T00:10:00+03:00",
+      "type": "combat",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Heavy fighting around the Al-Umari camp as Houthi forces push south of Mocha",
+      "text": "DHUBAB — Heavy fighting around the Al-Umari camp as Houthi forces push south of Mocha.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494128",
+      "also": [
+        "https://www.almashhad.news/news/494205",
+        "https://en.majalla.com/node/333085/politics/houthis-seek-expansion-after-reaching-bab-al-mandab"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-mocha-strike-0013",
+      "at": "2026-09-11T00:13:00+03:00",
+      "type": "strike",
+      "lat": 13.32,
+      "lng": 43.25,
+      "place": "Mocha",
+      "label": "Air strikes on Mocha after its fall; coalition jets hit Houthi reinforcements on the west coast",
+      "text": "MOCHA — Air strikes on Mocha after its fall; coalition jets hit Houthi reinforcements on the west coast.",
+      "source": "Naya · Almashhad · Al-Mihwar · Sabereen News",
+      "url": "https://t.me/naya_foriraq/90130",
+      "also": [
+        "https://www.almashhad.news/news/494151",
+        "https://t.me/naya_foriraq/90166",
+        "https://t.me/Alomhoar/111847",
+        "https://t.me/SabrenNewss/225010",
+        "https://t.me/SabrenNewss/225020",
+        "https://www.almashhad.news/news/494252"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-ras-al-arah-combat-0141",
+      "at": "2026-09-11T01:41:00+03:00",
+      "type": "combat",
+      "lat": 12.63,
+      "lng": 43.98,
+      "place": "Ras al-Arah",
+      "label": "Houthi-aligned outlets say government forces withdrew from Ras al-Arah, Lahj, under heavy shelling",
+      "text": "RAS AL-ARAH — Houthi-aligned outlets say government forces withdrew from Ras al-Arah, Lahj, under heavy shelling.",
+      "source": "Al-Mihwar",
+      "url": "https://t.me/Alomhoar/111826",
+      "also": [
+        "https://t.me/Alomhoar/111833"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-taiz-missile-0106",
+      "at": "2026-09-11T01:06:00+03:00",
+      "type": "missile",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Series of explosions shakes central Taiz",
+      "text": "TAIZ — Series of explosions shakes central Taiz.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494146",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-mayun-combat-1249",
+      "at": "2026-09-11T12:49:00+03:00",
+      "type": "combat",
+      "lat": 12.65,
+      "lng": 43.414,
+      "place": "Mayun",
+      "label": "Houthi forces take Mayun (Perim) island and the Bab al-Mandab strait, AFP and Houthi-aligned outlets report",
+      "text": "MAYUN — Government sources had denied the night before that the island had fallen.",
+      "source": "Almashhad · Naya · Al-Mihwar",
+      "url": "https://www.almashhad.news/news/494190",
+      "also": [
+        "https://t.me/naya_foriraq/90157",
+        "https://t.me/Alomhoar/111842",
+        "https://www.almashhad.news/news/494135",
+        "https://www.bbc.co.uk/news/articles/c4g7vr0lngwo",
+        "https://www.rfi.fr/en/international/20260916-capture-of-mocha-marks-turning-point-in-yemen-war-with-ripples-across-red-sea"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-hanish-islands-combat-1422",
+      "at": "2026-09-11T14:22:00+03:00",
+      "type": "combat",
+      "lat": 13.71,
+      "lng": 42.72,
+      "place": "Hanish Islands",
+      "label": "Houthi-aligned outlets say 250 government soldiers were captured on the Hanish islands",
+      "text": "HANISH ISLANDS — Houthi-aligned outlets say 250 government soldiers were captured on the Hanish islands.",
+      "source": "Ali Bk · Sabereen News",
+      "url": "https://t.me/Alibk3/35810",
+      "also": [
+        "https://t.me/SabrenNewss/225013",
+        "https://www.aljazeera.com/news/2026/9/15/can-the-houthis-hold-on-to-yemens-strategic-western-coast"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-munabbih-combat-1333",
+      "at": "2026-09-11T13:33:00+03:00",
+      "type": "combat",
+      "lat": 17.2,
+      "lng": 43.25,
+      "place": "Munabbih",
+      "label": "Houthi media: Saudi artillery shells Munabbih and Al-Zahir",
+      "text": "MUNABBIH — Houthi media: Saudi artillery shells Munabbih and Al-Zahir.",
+      "source": "Al-Masirah · Sabereen News",
+      "url": "https://t.me/almasirah2/297911",
+      "also": [
+        "https://t.me/almasirah2/297949",
+        "https://t.me/SabrenNewss/225035"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-al-kadha-combat-1537",
+      "at": "2026-09-11T15:37:00+03:00",
+      "type": "combat",
+      "lat": 13.43,
+      "lng": 43.8,
+      "place": "Al-Kadha",
+      "label": "Heavy fighting in southern and northern Al-Kadha, Al-Maafer",
+      "text": "AL-KADHA — Heavy fighting in southern and northern Al-Kadha, Al-Maafer.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494199",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-al-hazm-strike-1604",
+      "at": "2026-09-11T16:04:00+03:00",
+      "type": "strike",
+      "lat": 16.16,
+      "lng": 44.78,
+      "place": "Al-Hazm",
+      "label": "Government air defences down five Houthi suicide drones east of Al-Hazm",
+      "text": "AL-HAZM — Houthi media said Houthi forces hit government units east of Al-Jawf and burned dozens of vehicles.",
+      "source": "Almashhad · Al-Masirah · Sabereen News",
+      "url": "https://www.almashhad.news/news/494200",
+      "also": [
+        "https://www.almashhad.news/news/494202",
+        "https://t.me/almasirah2/297956",
+        "https://t.me/SabrenNewss/225050"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-dhubab-strike-1633",
+      "at": "2026-09-11T16:33:00+03:00",
+      "type": "strike",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Government and coalition aircraft strike Houthi forces in Dhubab and on the Taiz–Mocha and Mocha–Dhubab roads",
+      "text": "DHUBAB — The government declared a \"kill box\" and warned civilians off the two roads.",
+      "source": "Naya · Almashhad",
+      "url": "https://t.me/naya_foriraq/90201",
+      "also": [
+        "https://www.almashhad.news/news/494222",
+        "https://www.almashhad.news/news/494230",
+        "https://www.almashhad.news/news/494236"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-hays-combat-1643",
+      "at": "2026-09-11T16:43:00+03:00",
+      "type": "combat",
+      "lat": 13.98,
+      "lng": 43.33,
+      "place": "Hays",
+      "label": "Houthi gunfire kills two children and their grandfather from a displaced family in Hays",
+      "text": "HAYS — Houthi gunfire kills two children and their grandfather from a displaced family in Hays.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494203",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-east-west-pipeline-missile-1709",
+      "at": "2026-09-11T17:09:00+03:00",
+      "type": "missile",
+      "lat": 24.2,
+      "lng": 40.4,
+      "place": "East-West pipeline",
+      "label": "Saudi energy ministry says the East-West oil pipeline was hit by repeated attacks, wounding people; a fire was seen south-east of Medina",
+      "text": "EAST-WEST PIPELINE — The exact site was not given; the pin is approximate. A Houthi-aligned outlet later cited satellite images of heavy damage at Pump Station 9.",
+      "source": "Ali Bk · Almashhad · Al-Mihwar · Naya",
+      "url": "https://t.me/Alibk3/35850",
+      "also": [
+        "https://www.almashhad.news/news/494208",
+        "https://t.me/Alomhoar/111824",
+        "https://t.me/naya_foriraq/90217",
+        "https://t.me/Alibk3/36083"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-11-taiz-missile-2239",
+      "at": "2026-09-11T22:39:00+03:00",
+      "type": "missile",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Loud explosion heard in Taiz",
+      "text": "TAIZ — Loud explosion heard in Taiz.",
+      "source": "Naya · Ali Bk · Sabereen News",
+      "url": "https://t.me/naya_foriraq/90220",
+      "also": [
+        "https://t.me/Alibk3/35855",
+        "https://t.me/SabrenNewss/225076"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-khamis-mushait-missile-0021",
+      "at": "2026-09-12T00:21:00+03:00",
+      "type": "missile",
+      "lat": 18.3,
+      "lng": 42.73,
+      "place": "Khamis Mushait",
+      "label": "Houthi missiles hit Khamis Mushait overnight; Saudi alerts sound twice and a large fire is reported in Abha",
+      "text": "KHAMIS MUSHAIT — Houthi missiles hit Khamis Mushait overnight; Saudi alerts sound twice and a large fire is reported in Abha.",
+      "source": "Al-Mihwar · Ali Bk · Naya · Sabereen News · Al-Masirah",
+      "url": "https://t.me/Alomhoar/111897",
+      "also": [
+        "https://t.me/Alibk3/35864",
+        "https://t.me/naya_foriraq/90236",
+        "https://t.me/SabrenNewss/225079",
+        "https://t.me/almasirah2/297983",
+        "https://t.me/naya_foriraq/90238",
+        "https://t.me/Alomhoar/111905",
+        "https://t.me/SabrenNewss/225086",
+        "https://t.me/naya_foriraq/90245",
+        "https://t.me/almasirah2/297985"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-taif-missile-0200",
+      "at": "2026-09-12T02:00:00+03:00",
+      "type": "missile",
+      "lat": 21.48,
+      "lng": 40.54,
+      "place": "Taif",
+      "label": "Houthi-aligned outlets report an attack on the King Fahd Air Base in Taif",
+      "text": "TAIF — Houthi-aligned outlets report an attack on the King Fahd Air Base in Taif.",
+      "source": "Naya · Ali Bk",
+      "url": "https://t.me/naya_foriraq/90247",
+      "also": [
+        "https://t.me/Alibk3/35876"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-jabal-jardad-combat-0128",
+      "at": "2026-09-12T01:28:00+03:00",
+      "type": "combat",
+      "lat": 12.95,
+      "lng": 43.7,
+      "place": "Jabal Jardad",
+      "label": "Houthi forces take Jabal Jardad, overlooking Ras al-Arah, Al-Wazi'iyah and the coast near Bab al-Mandab",
+      "text": "JABAL JARDAD — Houthi-aligned outlets said forces were also pushing east from Haifan towards Al-Turbah.",
+      "source": "Naya · Ali Bk · Al-Mihwar",
+      "url": "https://t.me/naya_foriraq/90242",
+      "also": [
+        "https://t.me/Alibk3/35871",
+        "https://t.me/Alomhoar/111903",
+        "https://t.me/Alibk3/35889"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-mocha-strike-0016",
+      "at": "2026-09-12T00:16:00+03:00",
+      "type": "strike",
+      "lat": 13.32,
+      "lng": 43.25,
+      "place": "Mocha",
+      "label": "Air strike hits a meeting of Houthi commanders in a building in Mocha",
+      "text": "MOCHA — Air strike hits a meeting of Houthi commanders in a building in Mocha.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494252",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-shabwa-combat-0020",
+      "at": "2026-09-12T00:20:00+03:00",
+      "type": "combat",
+      "lat": 14.53,
+      "lng": 46.83,
+      "place": "Shabwa",
+      "label": "Shabwa Defence forces repel a Houthi attack",
+      "text": "SHABWA — Shabwa Defence forces repel a Houthi attack.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494254",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-al-had-strike-0031",
+      "at": "2026-09-12T00:31:00+03:00",
+      "type": "strike",
+      "lat": 13.93,
+      "lng": 45.25,
+      "place": "Al-Had",
+      "label": "About ten Houthi drones attack Al-Had, Yafa; a drone hits a mosque in Al-Mahaji, wounding 10 civilians",
+      "text": "AL-HAD — About ten Houthi drones attack Al-Had, Yafa; a drone hits a mosque in Al-Mahaji, wounding 10 civilians.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494261",
+      "also": [
+        "https://www.almashhad.news/news/494292"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-al-jawf-strike-0045",
+      "at": "2026-09-12T00:45:00+03:00",
+      "type": "strike",
+      "lat": 16.2,
+      "lng": 45.2,
+      "place": "Al-Jawf",
+      "label": "Government air defences down five Houthi drones over Al-Jawf",
+      "text": "AL-JAWF — Government air defences down five Houthi drones over Al-Jawf.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494264",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-sharurah-missile-0407",
+      "at": "2026-09-12T04:07:00+03:00",
+      "type": "missile",
+      "lat": 17.47,
+      "lng": 47.11,
+      "place": "Sharurah",
+      "label": "Houthis say they struck weapons stores and command rooms at the military base in Sharurah; explosions reported and alerts sound in three Saudi provinces",
+      "text": "SHARURAH — Houthis say they struck weapons stores and command rooms at the military base in Sharurah; explosions reported and alerts sound in three Saudi provinces.",
+      "source": "Naya · Al-Mihwar · Ali Bk · Sabereen News · Almashhad · Al-Masirah",
+      "url": "https://t.me/naya_foriraq/90255",
+      "also": [
+        "https://t.me/Alomhoar/111910",
+        "https://t.me/Alibk3/35887",
+        "https://t.me/SabrenNewss/225101",
+        "https://www.almashhad.news/news/494280",
+        "https://t.me/almasirah2/298131",
+        "https://t.me/SabrenNewss/225205",
+        "https://www.almashhad.news/news/494462"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-dhubab-missile-0549",
+      "at": "2026-09-12T05:49:00+03:00",
+      "type": "missile",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Houthi ballistic missile hits Giants Brigades vehicles near the Dhubab junction",
+      "text": "DHUBAB — Houthi ballistic missile hits Giants Brigades vehicles near the Dhubab junction.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494287",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-marib-combat-0757",
+      "at": "2026-09-12T07:57:00+03:00",
+      "type": "combat",
+      "lat": 15.46,
+      "lng": 45.32,
+      "place": "Marib",
+      "label": "Government forces repel two heavy Houthi attacks south and west of Marib and advance on several fronts, besieging Houthi groups in eastern Al-Balaq",
+      "text": "MARIB — Government forces repel two heavy Houthi attacks south and west of Marib and advance on several fronts, besieging Houthi groups in eastern Al-Balaq.",
+      "source": "Almashhad · Ali Bk",
+      "url": "https://www.almashhad.news/news/494299",
+      "also": [
+        "https://www.almashhad.news/news/494333",
+        "https://t.me/Alibk3/35872"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-al-dhale-strike-1010",
+      "at": "2026-09-12T10:10:00+03:00",
+      "type": "strike",
+      "lat": 13.7,
+      "lng": 44.73,
+      "place": "Al-Dhale",
+      "label": "Nation's Shield drone hits a Houthi training camp in Al-Dhale",
+      "text": "AL-DHALE — Nation's Shield drone hits a Houthi training camp in Al-Dhale.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494309",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-taiz-strike-1357",
+      "at": "2026-09-12T13:57:00+03:00",
+      "type": "strike",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Government aircraft hit dozens of Houthi trucks carrying weapons on Sixty Street, north of Taiz",
+      "text": "TAIZ — Government aircraft hit dozens of Houthi trucks carrying weapons on Sixty Street, north of Taiz.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494328",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-ghamr-combat-1617",
+      "at": "2026-09-12T16:17:00+03:00",
+      "type": "combat",
+      "lat": 16.92,
+      "lng": 43.38,
+      "place": "Ghamr",
+      "label": "Houthi media: Saudi artillery shells villages in Ghamr",
+      "text": "GHAMR — Houthi media: Saudi artillery shells villages in Ghamr.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/298085",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-al-bayda-strike-1623",
+      "at": "2026-09-12T16:23:00+03:00",
+      "type": "strike",
+      "lat": 13.99,
+      "lng": 45.57,
+      "place": "Al-Bayda",
+      "label": "Government aircraft carry out more than 20 strikes on Houthi positions in four districts of Al-Bayda",
+      "text": "AL-BAYDA — Houthi media counted 129 Saudi strikes in 48 hours across seven provinces.",
+      "source": "Almashhad · Naya · Al-Mihwar · Al-Masirah",
+      "url": "https://www.almashhad.news/news/494393",
+      "also": [
+        "https://t.me/naya_foriraq/90326",
+        "https://t.me/Alomhoar/111950",
+        "https://t.me/almasirah2/298086",
+        "https://t.me/almasirah2/298087"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-sabir-al-mawadim-combat-1701",
+      "at": "2026-09-12T17:01:00+03:00",
+      "type": "combat",
+      "lat": 13.52,
+      "lng": 44.05,
+      "place": "Sabir al-Mawadim",
+      "label": "Houthi shelling on Al-Shaqab village kills a pregnant woman's unborn child",
+      "text": "SABIR AL-MAWADIM — Houthi shelling on Al-Shaqab village kills a pregnant woman's unborn child.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494344",
+      "also": [
+        "https://www.almashhad.news/news/494377",
+        "https://www.almashhad.news/news/494369"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-al-madaribah-combat-1719",
+      "at": "2026-09-12T17:19:00+03:00",
+      "type": "combat",
+      "lat": 13.15,
+      "lng": 43.9,
+      "place": "Al-Madaribah",
+      "label": "Giants Brigades foil a Houthi infiltration towards Al-Madaribah",
+      "text": "AL-MADARIBAH — Giants Brigades foil a Houthi infiltration towards Al-Madaribah.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494348",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-thirah-strike-1839",
+      "at": "2026-09-12T18:39:00+03:00",
+      "type": "strike",
+      "lat": 13.93,
+      "lng": 45.82,
+      "place": "Thirah",
+      "label": "Government air strike on a Houthi position in Al-Kawr, Thirah front",
+      "text": "THIRAH — Government air strike on a Houthi position in Al-Kawr, Thirah front.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494358",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-hays-strike-1853",
+      "at": "2026-09-12T18:53:00+03:00",
+      "type": "strike",
+      "lat": 13.98,
+      "lng": 43.33,
+      "place": "Hays",
+      "label": "Houthi drone kills a teacher and his son in Hays",
+      "text": "HAYS — Houthi drone kills a teacher and his son in Hays.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494360",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-khamis-mushait-missile-2100",
+      "at": "2026-09-12T21:00:00+03:00",
+      "type": "missile",
+      "lat": 18.3,
+      "lng": 42.73,
+      "place": "Khamis Mushait",
+      "label": "New Houthi missile attack on Khamis Mushait; Saudi alert sounds",
+      "text": "KHAMIS MUSHAIT — New Houthi missile attack on Khamis Mushait; Saudi alert sounds.",
+      "source": "Al-Mihwar · Ali Bk · Naya · Al-Masirah",
+      "url": "https://t.me/Alomhoar/111963",
+      "also": [
+        "https://t.me/Alibk3/35942",
+        "https://t.me/naya_foriraq/90336",
+        "https://t.me/almasirah2/298108"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-al-tuwal-missile-2156",
+      "at": "2026-09-12T21:56:00+03:00",
+      "type": "missile",
+      "lat": 16.78,
+      "lng": 42.83,
+      "place": "Al-Tuwal",
+      "label": "Projectile falls in Al-Tuwal, Jazan, wounding two and damaging a mosque and buildings, Saudi civil defence says",
+      "text": "AL-TUWAL — Projectile falls in Al-Tuwal, Jazan, wounding two and damaging a mosque and buildings, Saudi civil defence says.",
+      "source": "Almashhad · Ali Bk · Al-Mihwar",
+      "url": "https://www.almashhad.news/news/494384",
+      "also": [
+        "https://t.me/Alibk3/35954",
+        "https://t.me/Alomhoar/111968",
+        "https://www.almashhad.news/news/494503"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-ras-al-arah-combat-2315",
+      "at": "2026-09-12T23:15:00+03:00",
+      "type": "combat",
+      "lat": 12.63,
+      "lng": 43.98,
+      "place": "Ras al-Arah",
+      "label": "Houthi-aligned outlets report a Houthi attack on government forces at Ras al-Arah",
+      "text": "RAS AL-ARAH — Houthi-aligned outlets report a Houthi attack on government forces at Ras al-Arah.",
+      "source": "Ali Bk",
+      "url": "https://t.me/Alibk3/35956",
+      "also": [
+        "https://www.almashhad.news/news/494301"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-dhubab-combat-2343",
+      "at": "2026-09-12T23:43:00+03:00",
+      "type": "combat",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Fighting continues in Dhubab and Bab al-Mandab; government sources deny they have fallen",
+      "text": "DHUBAB — Fighting continues in Dhubab and Bab al-Mandab; government sources deny they have fallen.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494398",
+      "also": [
+        "https://www.almashhad.news/news/494341"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-12-sanaa-strike-2010",
+      "at": "2026-09-12T20:10:00+03:00",
+      "type": "strike",
+      "lat": 15.37,
+      "lng": 44.19,
+      "place": "Sanaa",
+      "label": "Loud explosion heard across Sanaa; ambulances rush out",
+      "text": "SANAA — Loud explosion heard across Sanaa; ambulances rush out.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494436",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-al-had-strike-0025",
+      "at": "2026-09-13T00:25:00+03:00",
+      "type": "strike",
+      "lat": 13.93,
+      "lng": 45.25,
+      "place": "Al-Had",
+      "label": "Houthi rockets hit a position and a mosque on the Al-Had front, Yafa, wounding a fighter",
+      "text": "AL-HAD — Houthi rockets hit a position and a mosque on the Al-Had front, Yafa, wounding a fighter.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494418",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-mocha-strike-0052",
+      "at": "2026-09-13T00:52:00+03:00",
+      "type": "strike",
+      "lat": 13.32,
+      "lng": 43.25,
+      "place": "Mocha",
+      "label": "Government aircraft hit Houthi weapons stores in Mocha and Dhubab; five more strikes on the west coast in the evening",
+      "text": "MOCHA — Government aircraft hit Houthi weapons stores in Mocha and Dhubab; five more strikes on the west coast in the evening.",
+      "source": "Almashhad · Ali Bk",
+      "url": "https://www.almashhad.news/news/494428",
+      "also": [
+        "https://www.almashhad.news/news/494547",
+        "https://t.me/Alibk3/35965",
+        "https://t.me/Alibk3/35980"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-al-zahir-al-bayda-strike-0142",
+      "at": "2026-09-13T01:42:00+03:00",
+      "type": "strike",
+      "lat": 14.02,
+      "lng": 45.45,
+      "place": "Al-Zahir, Al-Bayda",
+      "label": "Government aircraft carry out more than 20 strikes on Houthi communications and positions in Al-Zahir, Dhi Na'im and Mukayras",
+      "text": "AL-ZAHIR, AL-BAYDA — Government aircraft carry out more than 20 strikes on Houthi communications and positions in Al-Zahir, Dhi Na'im and Mukayras.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494434",
+      "also": [
+        "https://www.almashhad.news/news/494447"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-al-jawf-strike-0403",
+      "at": "2026-09-13T04:03:00+03:00",
+      "type": "strike",
+      "lat": 16.2,
+      "lng": 45.2,
+      "place": "Al-Jawf",
+      "label": "Houthi media say a hostile drone was shot down over Al-Jawf",
+      "text": "AL-JAWF — Houthi media say a hostile drone was shot down over Al-Jawf.",
+      "source": "Naya",
+      "url": "https://t.me/naya_foriraq/90358",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-al-wazi-iyah-strike-0456",
+      "at": "2026-09-13T04:56:00+03:00",
+      "type": "strike",
+      "lat": 13.35,
+      "lng": 43.55,
+      "place": "Al-Wazi'iyah",
+      "label": "Nation's Shield downs five Houthi drones at Al-Aghbarah on the Al-Wazi'iyah front",
+      "text": "AL-WAZI'IYAH — Nation's Shield downs five Houthi drones at Al-Aghbarah on the Al-Wazi'iyah front.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494445",
+      "also": [
+        "https://www.almashhad.news/news/494493"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-al-taiziyah-strike-0744",
+      "at": "2026-09-13T07:44:00+03:00",
+      "type": "strike",
+      "lat": 13.62,
+      "lng": 44,
+      "place": "Al-Taiziyah",
+      "label": "Houthi media: three Saudi air strikes on Al-Rubay'i, Al-Taiziyah",
+      "text": "AL-TAIZIYAH — Houthi media: three Saudi air strikes on Al-Rubay'i, Al-Taiziyah.",
+      "source": "Al-Masirah · Al-Mihwar",
+      "url": "https://t.me/almasirah2/298157",
+      "also": [
+        "https://t.me/Alomhoar/111986"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-baqim-strike-0745",
+      "at": "2026-09-13T07:45:00+03:00",
+      "type": "strike",
+      "lat": 17.35,
+      "lng": 43.65,
+      "place": "Baqim",
+      "label": "Houthi media: Saudi air strike on Baqim",
+      "text": "BAQIM — Houthi media: Saudi air strike on Baqim.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/298158",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-taiz-combat-0902",
+      "at": "2026-09-13T09:02:00+03:00",
+      "type": "combat",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Government forces and popular resistance repel Houthi attacks in Taiz over 24 hours and later retake positions west of the city",
+      "text": "TAIZ — Government forces and popular resistance repel Houthi attacks in Taiz over 24 hours and later retake positions west of the city.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494470",
+      "also": [
+        "https://www.almashhad.news/news/494554"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-munabbih-combat-1238",
+      "at": "2026-09-13T12:38:00+03:00",
+      "type": "combat",
+      "lat": 17.2,
+      "lng": 43.25,
+      "place": "Munabbih",
+      "label": "Houthi media: Saudi artillery shells Munabbih, Shada, Ghamr and Al-Zahir",
+      "text": "MUNABBIH — Houthi media: Saudi artillery shells Munabbih, Shada, Ghamr and Al-Zahir.",
+      "source": "Al-Masirah",
+      "url": "https://t.me/almasirah2/298184",
+      "also": [
+        "https://t.me/almasirah2/298196",
+        "https://t.me/almasirah2/298220",
+        "https://t.me/almasirah2/298222"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-yanbu-missile-1328",
+      "at": "2026-09-13T13:28:00+03:00",
+      "type": "missile",
+      "lat": 24.0231,
+      "lng": 38.1899,
+      "place": "Yanbu",
+      "label": "Houthi-aligned outlet reports explosions and smoke in Yanbu",
+      "text": "YANBU — Houthi-aligned outlet reports explosions and smoke in Yanbu.",
+      "source": "Naya",
+      "url": "https://t.me/naya_foriraq/90366",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-hanish-islands-strike-1552",
+      "at": "2026-09-13T15:52:00+03:00",
+      "type": "strike",
+      "lat": 13.71,
+      "lng": 42.72,
+      "place": "Hanish Islands",
+      "label": "Houthi-aligned outlet reports Saudi air strikes on Hanish island",
+      "text": "HANISH ISLANDS — Houthi-aligned outlet reports Saudi air strikes on Hanish island.",
+      "source": "Ali Bk · Al-Mihwar",
+      "url": "https://t.me/Alibk3/35992",
+      "also": [
+        "https://t.me/Alomhoar/112017"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-al-shamayatayn-combat-1656",
+      "at": "2026-09-13T16:56:00+03:00",
+      "type": "combat",
+      "lat": 13.1,
+      "lng": 44,
+      "place": "Al-Shamayatayn",
+      "label": "Houthi-aligned outlets say Houthi forces took the villages of Al-Ajram and Al-Ghayl in Bani Omar, Al-Shamayatayn, pushing towards Al-Turbah",
+      "text": "AL-SHAMAYATAYN — Houthi-aligned outlets say Houthi forces took the villages of Al-Ajram and Al-Ghayl in Bani Omar, Al-Shamayatayn, pushing towards Al-Turbah.",
+      "source": "Ali Bk",
+      "url": "https://t.me/Alibk3/35998",
+      "also": [
+        "https://t.me/Alibk3/36004"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-marib-combat-1743",
+      "at": "2026-09-13T17:43:00+03:00",
+      "type": "combat",
+      "lat": 15.46,
+      "lng": 45.32,
+      "place": "Marib",
+      "label": "Government artillery hits a Houthi barracks west of Marib and destroys a BMP vehicle",
+      "text": "MARIB — Government artillery hits a Houthi barracks west of Marib and destroys a BMP vehicle.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494516",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-khamis-mushait-missile-1810",
+      "at": "2026-09-13T18:10:00+03:00",
+      "type": "missile",
+      "lat": 18.3,
+      "lng": 42.73,
+      "place": "Khamis Mushait",
+      "label": "Houthi missiles fired at Khamis Mushait and Abha; sirens sound",
+      "text": "KHAMIS MUSHAIT — Houthi missiles fired at Khamis Mushait and Abha; sirens sound.",
+      "source": "Sabereen News · Naya · Al-Mihwar · Al-Masirah · Ali Bk",
+      "url": "https://t.me/SabrenNewss/225267",
+      "also": [
+        "https://t.me/SabrenNewss/225269",
+        "https://t.me/naya_foriraq/90386",
+        "https://t.me/Alomhoar/112016",
+        "https://t.me/almasirah2/298195",
+        "https://t.me/SabrenNewss/225271",
+        "https://t.me/Alibk3/35989",
+        "https://t.me/naya_foriraq/90388",
+        "https://t.me/Alomhoar/111992",
+        "https://www.aljazeera.com/news/2026/9/13/houthi-projectile-wounds-two-damages-mosque-in-jazan-region-saudi-says"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-13-dhubab-missile-1847",
+      "at": "2026-09-13T18:47:00+03:00",
+      "type": "missile",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Houthi ballistic missiles hit National Resistance assembly areas, the fourth strike in hours",
+      "text": "DHUBAB — Houthi-aligned outlets said four commanders were killed and five wounded at Kahbub, Bab al-Mandab.",
+      "source": "Almashhad · Sabereen News · Al-Mihwar · Ali Bk",
+      "url": "https://www.almashhad.news/news/494525",
+      "also": [
+        "https://www.almashhad.news/news/494551",
+        "https://t.me/SabrenNewss/225306",
+        "https://t.me/Alomhoar/112037",
+        "https://t.me/Alibk3/36016"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-ras-al-arah-combat-0001",
+      "at": "2026-09-14T00:01:00+03:00",
+      "type": "combat",
+      "lat": 12.63,
+      "lng": 43.98,
+      "place": "Ras al-Arah",
+      "label": "Giants Brigades repel a Houthi push towards Ras al-Arah, north-west Lahj",
+      "text": "RAS AL-ARAH — Giants Brigades repel a Houthi push towards Ras al-Arah, north-west Lahj.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494570",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-taiz-strike-0001",
+      "at": "2026-09-14T00:01:00+03:00",
+      "type": "strike",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Air strikes hit Houthi reinforcements south of Marib and west of Taiz city",
+      "text": "TAIZ — Air strikes hit Houthi reinforcements south of Marib and west of Taiz city.",
+      "source": "Ali Bk · Almashhad",
+      "url": "https://t.me/Alibk3/36019",
+      "also": [
+        "https://www.almashhad.news/news/494576"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-taiz-combat-0020",
+      "at": "2026-09-14T00:20:00+03:00",
+      "type": "combat",
+      "lat": 13.58,
+      "lng": 44.02,
+      "place": "Taiz",
+      "label": "Government forces repel a Houthi attack west of Taiz",
+      "text": "TAIZ — Government forces repel a Houthi attack west of Taiz.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494579",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-dab-a-missile-0037",
+      "at": "2026-09-14T00:37:00+03:00",
+      "type": "missile",
+      "lat": 13.35,
+      "lng": 43.85,
+      "place": "Dab'a",
+      "label": "Houthi missile hits Al-Sajiyah village in Dab'a, Taiz",
+      "text": "DAB'A — Houthi missile hits Al-Sajiyah village in Dab'a, Taiz.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494588",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-dhubab-combat-0113",
+      "at": "2026-09-14T01:13:00+03:00",
+      "type": "combat",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Houthi-aligned outlets say Houthi forces pushed back a government advance and took Kahbub at Bab al-Mandab; the government resumes its push on Dhubab in the evening",
+      "text": "DHUBAB — Houthi-aligned outlets say Houthi forces pushed back a government advance and took Kahbub at Bab al-Mandab; the government resumes its push on Dhubab in the evening.",
+      "source": "Ali Bk · Naya · Almashhad",
+      "url": "https://t.me/Alibk3/36021",
+      "also": [
+        "https://t.me/naya_foriraq/90423",
+        "https://www.almashhad.news/news/494636",
+        "https://www.almashhad.news/news/494676",
+        "https://www.yemen-window.com/news/225464",
+        "https://t.me/shebaintelligence/760"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-raghwan-missile-0124",
+      "at": "2026-09-14T01:24:00+03:00",
+      "type": "missile",
+      "lat": 15.75,
+      "lng": 45.3,
+      "place": "Raghwan",
+      "label": "Houthi ballistic missiles hit Marib: three blasts near the Al-Suwayda camp, one in open ground in Raghwan, another on homes and camps in Raghwan in the evening",
+      "text": "RAGHWAN — Houthi ballistic missiles hit Marib: three blasts near the Al-Suwayda camp, one in open ground in Raghwan, another on homes and camps in Raghwan in the evening.",
+      "source": "Almashhad · Al-Mihwar · Sabereen News",
+      "url": "https://www.almashhad.news/news/494602",
+      "also": [
+        "https://www.almashhad.news/news/494620",
+        "https://www.almashhad.news/news/494653",
+        "https://www.almashhad.news/news/494708",
+        "https://t.me/Alomhoar/112042",
+        "https://t.me/SabrenNewss/225314"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-dhubab-strike-0122",
+      "at": "2026-09-14T01:22:00+03:00",
+      "type": "strike",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Houthi-aligned outlet says Saudi air strikes mistakenly hit Giants Brigades forces near Bab al-Mandab",
+      "text": "DHUBAB — Houthi-aligned outlet says Saudi air strikes mistakenly hit Giants Brigades forces near Bab al-Mandab.",
+      "source": "Al-Mihwar",
+      "url": "https://t.me/Alomhoar/112065",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-khamis-mushait-missile-0227",
+      "at": "2026-09-14T02:27:00+03:00",
+      "type": "missile",
+      "lat": 18.3,
+      "lng": 42.73,
+      "place": "Khamis Mushait",
+      "label": "Houthis say dozens of missiles and drones hit hangars, radars and runways at the King Khalid Air Base in Khamis Mushait; alerts sound repeatedly in Abha and Khamis Mushait",
+      "text": "KHAMIS MUSHAIT — Houthis say dozens of missiles and drones hit hangars, radars and runways at the King Khalid Air Base in Khamis Mushait; alerts sound repeatedly in Abha and Khamis Mushait.",
+      "source": "Al-Mihwar · Ali Bk · Sabereen News · Al-Masirah · Almashhad",
+      "url": "https://t.me/Alomhoar/112051",
+      "also": [
+        "https://t.me/Alibk3/36042",
+        "https://t.me/SabrenNewss/225325",
+        "https://t.me/SabrenNewss/225326",
+        "https://t.me/almasirah2/298227",
+        "https://t.me/almasirah2/298228",
+        "https://t.me/almasirah2/298230",
+        "https://t.me/almasirah2/298231",
+        "https://t.me/almasirah2/298233",
+        "https://t.me/Alibk3/36048",
+        "https://t.me/Alibk3/36049",
+        "https://t.me/almasirah2/298256",
+        "https://t.me/almasirah2/298257",
+        "https://t.me/almasirah2/298258",
+        "https://www.almashhad.news/news/494581",
+        "https://www.aljazeera.net/news/2026/9/15/%d8%a7%d9%84%d8%aa%d8%ad%d8%a7%d9%84%d9%81-%d9%8a%d8%b9%d9%84%d9%86-%d8%a5%d8%b5%d8%a7%d8%a8%d8%a9-13-%d9%85%d8%af%d9%86%d9%8a%d8%a7-%d8%a8%d9%87%d8%ac%d9%85%d8%a7%d8%aa-%d8%ad%d9%88%d8%ab%d9%8a%d8%a9"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-abha-missile-0228",
+      "at": "2026-09-14T02:28:00+03:00",
+      "type": "missile",
+      "lat": 18.2164,
+      "lng": 42.5053,
+      "place": "Abha",
+      "label": "Explosions in Abha during the overnight missile waves",
+      "text": "ABHA — Explosions in Abha during the overnight missile waves.",
+      "source": "Sabereen News · Ali Bk · Naya",
+      "url": "https://t.me/SabrenNewss/225322",
+      "also": [
+        "https://t.me/SabrenNewss/225324",
+        "https://t.me/Alibk3/36044",
+        "https://t.me/naya_foriraq/90442",
+        "https://t.me/SabrenNewss/225332",
+        "https://www.aljazeera.net/news/2026/9/15/%d8%a7%d9%84%d8%aa%d8%ad%d8%a7%d9%84%d9%81-%d9%8a%d8%b9%d9%84%d9%86-%d8%a5%d8%b5%d8%a7%d8%a8%d8%a9-13-%d9%85%d8%af%d9%86%d9%8a%d8%a7-%d8%a8%d9%87%d8%ac%d9%85%d8%a7%d8%aa-%d8%ad%d9%88%d8%ab%d9%8a%d8%a9"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-jazan-missile-0231",
+      "at": "2026-09-14T02:31:00+03:00",
+      "type": "missile",
+      "lat": 16.89,
+      "lng": 42.55,
+      "place": "Jazan",
+      "label": "Houthi missiles fired at Jazan and Najran; Houthi-aligned outlets claim hits on oil facilities in Jazan and a refinery in Najran",
+      "text": "JAZAN — Houthi missiles fired at Jazan and Najran; Houthi-aligned outlets claim hits on oil facilities in Jazan and a refinery in Najran.",
+      "source": "Naya · Ali Bk · Sabereen News",
+      "url": "https://t.me/naya_foriraq/90430",
+      "also": [
+        "https://t.me/Alibk3/36045",
+        "https://t.me/SabrenNewss/225327",
+        "https://t.me/naya_foriraq/90437",
+        "https://t.me/naya_foriraq/90436",
+        "https://t.me/SabrenNewss/225336"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-marib-combat-0558",
+      "at": "2026-09-14T05:58:00+03:00",
+      "type": "combat",
+      "lat": 15.46,
+      "lng": 45.32,
+      "place": "Marib",
+      "label": "Government forces repel a heavy Houthi attack west of Marib and destroy 24 vehicles",
+      "text": "MARIB — Government forces repel a heavy Houthi attack west of Marib and destroy 24 vehicles.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494614",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-khamis-mushait-missile-1123",
+      "at": "2026-09-14T11:23:00+03:00",
+      "type": "missile",
+      "lat": 18.3,
+      "lng": 42.73,
+      "place": "Khamis Mushait",
+      "label": "New sirens and explosions in Khamis Mushait and Abha",
+      "text": "KHAMIS MUSHAIT — New sirens and explosions in Khamis Mushait and Abha.",
+      "source": "Naya · Sabereen News · Ali Bk",
+      "url": "https://t.me/naya_foriraq/90477",
+      "also": [
+        "https://t.me/SabrenNewss/225378",
+        "https://t.me/SabrenNewss/225379",
+        "https://t.me/Alibk3/36073",
+        "https://t.me/SabrenNewss/225382",
+        "https://t.me/SabrenNewss/225397"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-al-barh-strike-1538",
+      "at": "2026-09-14T15:38:00+03:00",
+      "type": "strike",
+      "lat": 13.48,
+      "lng": 43.72,
+      "place": "Al-Barh",
+      "label": "Houthi media: Saudi air strike on the Al-Barh bridge kills two civilians and cuts the road; three strikes on Mocha",
+      "text": "AL-BARH — Houthi media: Saudi air strike on the Al-Barh bridge kills two civilians and cuts the road; three strikes on Mocha.",
+      "source": "Al-Masirah · Naya · Sabereen News · Almashhad",
+      "url": "https://t.me/almasirah2/298314",
+      "also": [
+        "https://t.me/almasirah2/298315",
+        "https://t.me/almasirah2/298316",
+        "https://t.me/naya_foriraq/90501",
+        "https://t.me/SabrenNewss/225411",
+        "https://www.almashhad.news/news/494675"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-munabbih-strike-1634",
+      "at": "2026-09-14T16:34:00+03:00",
+      "type": "strike",
+      "lat": 17.2,
+      "lng": 43.25,
+      "place": "Munabbih",
+      "label": "Houthi media: Saudi drone strike and artillery on Ayyash, Munabbih; five air strikes on Kitaf and Al-Buqa",
+      "text": "MUNABBIH — Houthi media: Saudi drone strike and artillery on Ayyash, Munabbih; five air strikes on Kitaf and Al-Buqa.",
+      "source": "Al-Masirah · Sabereen News",
+      "url": "https://t.me/almasirah2/298323",
+      "also": [
+        "https://t.me/almasirah2/298360",
+        "https://t.me/SabrenNewss/225427"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-marib-combat-1642",
+      "at": "2026-09-14T16:42:00+03:00",
+      "type": "combat",
+      "lat": 15.46,
+      "lng": 45.32,
+      "place": "Marib",
+      "label": "Gunmen attack a supply vehicle of the 1st Emergency Division in Bin Mu'ayli, Marib, killing a soldier",
+      "text": "MARIB — Gunmen attack a supply vehicle of the 1st Emergency Division in Bin Mu'ayli, Marib, killing a soldier.",
+      "source": "Almashhad",
+      "url": "https://www.almashhad.news/news/494666",
+      "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-dhubab-strike-1948",
+      "at": "2026-09-14T19:48:00+03:00",
+      "type": "strike",
+      "lat": 12.94,
+      "lng": 43.41,
+      "place": "Dhubab",
+      "label": "Houthi media: Saudi air strikes on Dhubab, with reports of civilian casualties",
+      "text": "DHUBAB — Houthi media: Saudi air strikes on Dhubab, with reports of civilian casualties.",
+      "source": "Al-Masirah · Naya",
+      "url": "https://t.me/almasirah2/298366",
+      "also": [
+        "https://t.me/naya_foriraq/90522"
+      ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-14-najran-missile-2146",
+      "at": "2026-09-14T21:46:00+03:00",
+      "type": "missile",
+      "lat": 17.4917,
+      "lng": 44.1322,
+      "place": "Najran",
+      "label": "Houthi missile attack on Najran; Saudi alert sounds twice",
+      "text": "NAJRAN — Houthi missile attack on Najran; Saudi alert sounds twice.",
+      "source": "Naya · Al-Mihwar · Ali Bk · Al-Masirah · Sabereen News",
+      "url": "https://t.me/naya_foriraq/90517",
+      "also": [
+        "https://t.me/Alomhoar/112125",
+        "https://t.me/Alibk3/36111",
+        "https://t.me/almasirah2/298348",
+        "https://t.me/SabrenNewss/225423",
+        "https://t.me/almasirah2/298356",
+        "https://t.me/Alomhoar/112128"
+      ],
       "mapOnly": true,
       "backfill": true
     }

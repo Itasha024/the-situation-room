@@ -20,7 +20,25 @@ import type { DeskStore } from "./store.ts";
 export const TALLY_KEY = "tally";
 
 type Sides = { houthi: number | null; gov: number | null; saudi: number | null; civilians: number | null; total?: number | null };
-export type TallySource = { name: string; url: string; date: string };
+/** `q`: how the source put it — "at least 51", "more than 104,000", "about 700". */
+export type TallySource = { name: string; url: string; date: string; q?: Qualifier };
+export type Qualifier = "at least" | "more than" | "about";
+
+/**
+ * The qualifier a document puts on a figure. A count reported as "at least"
+ * or "nearly" must not read as exact on the panel.
+ */
+export function qualifierFor(text: string, value: number): Qualifier | undefined {
+  const t = String(text || "");
+  const n = value.toLocaleString("en-US");
+  const k = value >= 1000 && value % 1000 === 0 ? `${value / 1000}(?:,000| thousand)|${value / 1000} ?ألف` : "";
+  const num = `(?:${n.replace(/,/g, ",?")}|${value}${k ? "|" + k : ""})`;
+  const near = (words: string) => new RegExp(`(?:${words})\\s+(?:some\\s+)?${num}(?!\\d)`, "i").test(t);
+  if (near("at least|no fewer than|لا يقل عن|على الأقل")) return "at least";
+  if (near("more than|over|upwards of|أكثر من|ما يزيد عن|ما يزيد على")) return "more than";
+  if (near("about|around|nearly|almost|approximately|some|roughly|نحو|قرابة|حوالي|ما يقارب")) return "about";
+  return undefined;
+}
 export type Tally = {
   since: string;
   killed: Sides;
@@ -184,7 +202,8 @@ export function applyUpdates(current: Tally, updates: Update[], docs: Doc[], now
     // A tenfold jump is a whole-war total or a misread, not this round.
     if (prev != null && prev > 50 && value > prev * 10) continue;
     setField(next, u.field, value);
-    next.from[u.field] = { name: u.source || doc.name, url: doc.url, date: doc.date };
+    const q = qualifierFor(doc.text, value);
+    next.from[u.field] = { name: u.source || doc.name, url: doc.url, date: doc.date, ...(q ? { q } : {}) };
   }
   next.updatedAt = now.toISOString();
   return next;
@@ -226,6 +245,8 @@ You get the CURRENT claims and NEW documents. Return a figure only when a docume
 - by "houthi": the Houthis or their officials and outlets (Yahya Saree, the Sanaa health or human rights ministry, Al-Masirah, Saba, Ansar Allah officials)
 - by "gov": the Yemeni government, its army or army media, the Saudi-led coalition, Saudi officials, or their outlets
 Neutral bodies (UN agencies, news agencies reporting their own count) are NOT a side: skip them.
+"by" is who STATES the figure, never whose losses it counts: Erem News, Almashhad, Al Arabiya, Al Hadath, Asharq Al-Awsat, Okaz, Saudi and Emirati media and the government's army media state "gov" figures, even about Houthi losses; Al-Masirah, Saba, Al-Mayadeen and the Houthi-aligned Telegram channels state "houthi" figures.
+A count for one day, one battle or one front ("63 killed in 24 hours", "90 killed at Kahbub") is not a cumulative total: skip it.
 Fields: killed.houthi / injured.houthi (people on the Houthi side), killed.gov / injured.gov (government side), killed.saudi / injured.saudi (in or from Saudi Arabia), killed.civilians / injured.civilians (only when the text says civilians), killed.total / injured.total (an unsplit total), idp, refugees.
 A side's claim about the other side's losses counts (the coalition saying 1,200 Houthis were killed is killed.houthi by "gov"). Never add up single incidents, never estimate, never use whole-war totals since 2014/2015.
 Return JSON {"updates":[{"field":"killed.houthi","by":"gov","value":1200,"source":"<who stated it>","doc":<document index>}]}.`;
@@ -247,7 +268,8 @@ export function applyClaims(current: Claims, updates: ClaimUpdate[], docs: Doc[]
     // voice revises itself, and a tenfold jump is a whole-war figure.
     if (prev && value < prev.value && prev.name !== u.source) continue;
     if (prev && prev.value > 50 && value > prev.value * 10) continue;
-    next.fields[u.field] = { ...next.fields[u.field], [u.by]: { value, name: u.source || doc.name, url: doc.url, date: doc.date } };
+    const q = qualifierFor(doc.text, value);
+    next.fields[u.field] = { ...next.fields[u.field], [u.by]: { value, name: u.source || doc.name, url: doc.url, date: doc.date, ...(q ? { q } : {}) } };
   }
   next.updatedAt = now.toISOString();
   return next;

@@ -817,6 +817,17 @@ html{scroll-behavior:smooth}
 .tally-row:first-of-type{border-top:0}
 .tally-row strong{font-variant-numeric:tabular-nums;font-weight:600;color:#eaf0f6}
 .tally-note{margin:.45rem 0 0;font-size:.68rem;color:#8fa3b6}
+/* One box at a time: arrows either side, dots below, swipe on a phone. */
+.tally.one{display:block}
+.cas-pager{display:flex;align-items:stretch;gap:.35rem}
+.cas-slide{flex:1;min-width:0;touch-action:pan-y}
+.cas-arrow{flex:0 0 1.9rem;border:1px solid #243244;border-radius:8px;background:#0f1822;color:#c9d4e0;font-size:1.2rem;line-height:1;padding:0}
+.cas-arrow:hover{background:#16222f;color:#fff}
+.cas-dots{display:flex;justify-content:center;gap:.4rem;margin-top:.4rem}
+.cas-dots button{width:.5rem;height:.5rem;border-radius:50%;border:0;padding:0;background:#334155}
+.cas-dots button.on{background:#cbd5e1}
+.tally-row strong .q,.tally-box.claims td .q{font-size:.66rem;font-weight:400;color:#8fa3b6}
+@media (max-width:720px){.cas-arrow{display:none}}
 /* The day row stays one line on any width: shorter labels, then a sideways scroll. */
 .time-filter .tf-short{display:none}
 @media (max-width:720px){

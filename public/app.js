@@ -1378,8 +1378,53 @@ const TALLY_FALLBACK = {
   from: {},
 };
 
-function fmtCount(n) {
-  return Number.isFinite(n) ? Number(n).toLocaleString('en-US') : '—';
+function fmtCount(n, src) {
+  if (!Number.isFinite(n)) return '—';
+  // "at least 51": the qualifier the source put on it (tally.ts qualifierFor).
+  const q = src && src.q ? `<small class="q">${escapeHtml(src.q)}</small> ` : '';
+  return q + Number(n).toLocaleString('en-US');
+}
+
+/*
+ * One box at a time — Killed, Injured, Humanitarian — with arrows on a wide
+ * screen and a swipe on a phone, in Official and Unofficial alike.
+ */
+const CAS_BOXES = ['Killed', 'Injured', 'Humanitarian'];
+let casBox = 0;
+try { casBox = Math.max(0, Math.min(2, Number(localStorage.getItem('desk-cas-box')) || 0)); } catch (e) {}
+
+function casPager(boxes) {
+  const dots = CAS_BOXES.map((n, i) => `<button type="button" data-i="${i}" class="${i === casBox ? 'on' : ''}" aria-label="${n}" aria-current="${i === casBox}"></button>`).join('');
+  return `<div class="cas-pager">
+      <button type="button" class="cas-arrow cas-prev" aria-label="Previous: ${CAS_BOXES[(casBox + 2) % 3]}">‹</button>
+      <div class="cas-slide">${boxes[casBox]}</div>
+      <button type="button" class="cas-arrow cas-next" aria-label="Next: ${CAS_BOXES[(casBox + 1) % 3]}">›</button>
+    </div>
+    <div class="cas-dots" role="tablist">${dots}</div>`;
+}
+
+function wireCasPager(el) {
+  const go = (i) => {
+    casBox = (i + 3) % 3;
+    try { localStorage.setItem('desk-cas-box', String(casBox)); } catch (e) {}
+    renderCasualties();
+  };
+  const prev = el.querySelector('.cas-prev');
+  const next = el.querySelector('.cas-next');
+  if (prev) prev.onclick = () => go(casBox - 1);
+  if (next) next.onclick = () => go(casBox + 1);
+  el.querySelectorAll('.cas-dots button').forEach((b) => { b.onclick = () => go(Number(b.dataset.i) || 0); });
+  const slide = el.querySelector('.cas-slide');
+  if (slide) {
+    let x0 = null;
+    slide.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+    slide.addEventListener('touchend', (e) => {
+      if (x0 == null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      x0 = null;
+      if (Math.abs(dx) > 40) go(casBox + (dx < 0 ? 1 : -1));
+    }, { passive: true });
+  }
 }
 
 /*
@@ -1409,7 +1454,7 @@ function renderClaims(el, t) {
   const c = (brief && brief.claims && brief.claims.fields) || {};
   const tip = (s) => (s ? `${s.name}${s.date ? ', ' + s.date : ''}` : '');
   const cell = (n, src, cls) => {
-    const v = Number.isFinite(n) ? fmtCount(n) : '—';
+    const v = fmtCount(n, src);
     const inner = src && src.url ? `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener">${v}</a>` : v;
     return `<td class="${cls}"${src ? ` title="${escapeHtml(tip(src))}"` : ''}>${inner}</td>`;
   };
@@ -1427,13 +1472,14 @@ function renderClaims(el, t) {
     row('All sides', `${group}.total`, t[group].total),
   ].join('');
   el.innerHTML = `${casModeHtml()}${cadenceStamp(true)}
-    <div class="tally wide">
-      ${box('Killed', sides('killed'))}
-      ${box('Injured', sides('injured'))}
-      ${box('Humanitarian', row('Internally displaced', 'idp', t.idp) + row('Refugees', 'refugees', t.refugees))}
-    </div>
-    <p class="tally-note">Since ${escapeHtml(fmtDay(t.since))}. Includes each side's own figures and claims about the other side, beside the official count. Each figure links to its source.</p>`;
+    <div class="tally one">${casPager([
+      box('Killed', sides('killed')),
+      box('Injured', sides('injured')),
+      box('Humanitarian', row('Internally displaced', 'idp', t.idp) + row('Refugees', 'refugees', t.refugees)),
+    ])}</div>
+    <p class="tally-note">Each side's own figures, and its claims about the other side, beside the official count. Each figure links to its source.</p>`;
   wireCasMode(el);
+  wireCasPager(el);
 }
 
 function renderCasualties() {
@@ -1444,7 +1490,7 @@ function renderCasualties() {
   const row = (label, key, n) => {
     const src = t.from && t.from[key];
     const tip = src ? `${src.name}${src.date ? ', ' + src.date : ''}` : '';
-    return `<div class="tally-row"${tip ? ` title="${escapeHtml(tip)}"` : ''}><span>${label}</span><strong>${fmtCount(n)}</strong></div>`;
+    return `<div class="tally-row"${tip ? ` title="${escapeHtml(tip)}"` : ''}><span>${label}</span><strong>${fmtCount(n, src)}</strong></div>`;
   };
   const sides = (group) => [
     row('Houthi', `${group}.houthi`, t[group].houthi),
@@ -1465,17 +1511,14 @@ function renderCasualties() {
     ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>`
     : escapeHtml(s.name))).join(' · ');
   el.innerHTML = `${casModeHtml()}${cadenceStamp(true)}
-    <div class="tally">
-      <div class="tally-box"><h3>Killed</h3>${sides('killed')}</div>
-      <div class="tally-box"><h3>Injured</h3>${sides('injured')}</div>
-      <div class="tally-box"><h3>Humanitarian</h3>
-        ${row('Internally displaced', 'idp', t.idp)}
-        ${row('Refugees', 'refugees', t.refugees)}
-      </div>
-    </div>
-    <p class="tally-note">Since ${escapeHtml(fmtDay(t.since))}. Official figures only.</p>
+    <div class="tally one">${casPager([
+      `<div class="tally-box"><h3>Killed</h3>${sides('killed')}</div>`,
+      `<div class="tally-box"><h3>Injured</h3>${sides('injured')}</div>`,
+      `<div class="tally-box"><h3>Humanitarian</h3>${row('Internally displaced', 'idp', t.idp)}${row('Refugees', 'refugees', t.refugees)}</div>`,
+    ])}</div>
     ${srcHtml ? `<div class="srcs">Sources: ${srcHtml}</div>` : ''}`;
   wireCasMode(el);
+  wireCasPager(el);
 }
 
 function computeControlShares(d) {

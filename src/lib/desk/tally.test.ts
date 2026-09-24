@@ -91,3 +91,12 @@ test("a claim never goes down unless the same voice revises it, and a side must 
   const sideless = applyClaims(one, [{ field: "killed.gov", by: "un" as never, value: 950, source: "UN", doc: 0 }], d, now);
   assert.equal(sideless.fields["killed.gov"]?.houthi?.value, 900);
 });
+
+test("a figure keeps the qualifier its source put on it", async () => {
+  const { qualifierFor } = await import("./tally.ts");
+  assert.equal(qualifierFor("The UN said at least 674 people were killed", 674), "at least");
+  assert.equal(qualifierFor("more than 104,000 people displaced", 104000), "more than");
+  assert.equal(qualifierFor("nearly 700 killed and thousands wounded", 700), "about");
+  assert.equal(qualifierFor("نزوح أكثر من 132 ألف شخص", 132000), "more than");
+  assert.equal(qualifierFor("WHO recorded 674 deaths", 674), undefined);
+});

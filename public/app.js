@@ -1480,6 +1480,19 @@ function renderCasualties() {
 
 function computeControlShares(d) {
   const sums = { houthi: 0, plc: 0, contested: 0 };
+  // By area, district by district, once the districts are in.
+  if (districtGeo) {
+    const byIso = controlByIso(d);
+    districtGeo.features.forEach((f) => {
+      const s = districtSide(f.properties, byIso);
+      const k = s === 'houthi' ? 'houthi' : (s === 'plc' ? 'plc' : 'contested');
+      sums[k] += f.properties.km2 || 0;
+    });
+    const all = sums.houthi + sums.plc + sums.contested || 1;
+    const hh = Math.round(100 * sums.houthi / all);
+    const pp = Math.round(100 * sums.plc / all);
+    return { houthi: hh, plc: pp, contested: Math.max(0, 100 - hh - pp) };
+  }
   (d.governorates || []).forEach((g) => {
     if (String(g.id || '').startsWith('SA-')) return;
     const w = GOV_WEIGHT[g.id] || 1;
@@ -1853,6 +1866,10 @@ function frontFeatureStyle(feature, byIso, ids) {
   const c = COLORS[ctrl] || COLORS.contested || '#334155';
   const on = controlVisible(ctrl);
   const lit = ids.has(iso);
+  // Districts carry the colours; the governorates outside the front are dimmed.
+  if (districtGeo) {
+    return { fillColor: '#0b0f14', fillOpacity: lit ? 0 : 0.35, color: lit ? '#fde047' : '#0b0f14', weight: lit ? 3.5 : 1.2, opacity: 1 };
+  }
   return {
     fillColor: c,
     fillOpacity: on ? (lit ? 0.88 : 0.55) : 0,
@@ -1870,11 +1887,13 @@ function frontFeatureStyle(feature, byIso, ids) {
  */
 async function buildFrontMap(m, front, d) {
   if (!geoCache) geoCache = await fetch('/yemen-adm1.geojson').then((r) => r.json()).catch(() => null);
+  await loadDistricts();
   if (sheetMap !== m || !geoCache) return;
   const byIso = controlByIso(d);
   const lit = L.latLngBounds([]);
   const mainland = splitIslandFeatures(geoCache).mainland;
   const ids = frontMiniIds(front, mainland.features);
+  districtLayer(m, byIso);
   const layer = L.geoJSON(mainland, {
     interactive: false,
     style: (f) => frontFeatureStyle(f, byIso, ids),
@@ -2228,6 +2247,61 @@ function controlByIso(d) {
   return m;
 }
 
+/*
+ * Control district by district. public/control.json sets the districts whose
+ * control differs from, or splits, their governorate (Mocha and Dhubab are
+ * Houthi while Taiz city is not; Kahbub is fought over); every other district
+ * takes its governorate's. The districts are shaded, and the governorates are
+ * drawn over them as outlines, so a governorate held in part reads as such.
+ */
+let districtGeo = null;
+let districtControl = null;
+let districtLayerMain = null;
+
+async function loadDistricts() {
+  if (districtGeo && districtControl) return true;
+  try {
+    const [g, c] = await Promise.all([
+      fetch('/yemen-adm2.geojson').then((r) => (r.ok ? r.json() : null)),
+      fetch('/control.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)),
+    ]);
+    if (g && c && Array.isArray(g.features)) { districtGeo = g; districtControl = c; }
+  } catch (e) {}
+  return !!(districtGeo && districtControl);
+}
+
+function districtOwn(p) {
+  return (districtControl && districtControl.districts && districtControl.districts[p.id]) || null;
+}
+
+function districtSide(p, byIso) {
+  const own = districtOwn(p);
+  const s = (own && own.side) || (byIso[p.gov] || {}).control;
+  return s === 'mixed' ? 'contested' : s;
+}
+
+function districtStyle(f, byIso) {
+  const ctrl = districtSide(f.properties, byIso);
+  const on = controlVisible(ctrl);
+  return { fillColor: COLORS[ctrl] || COLORS.contested, fillOpacity: on ? 0.55 : 0, color: '#0b0f14', weight: 0.35, opacity: on ? 0.45 : 0.1 };
+}
+
+/** The district layer on a map, beneath the governorate outlines; null before it has loaded. */
+function districtLayer(m, byIso) {
+  if (!districtGeo || !window.L) return null;
+  return L.geoJSON(districtGeo, { style: (f) => districtStyle(f, byIso), interactive: false }).addTo(m);
+}
+
+function districtAt(lat, lng) {
+  if (!districtGeo) return null;
+  for (const f of districtGeo.features) {
+    const g = f.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+    if (polys.some((p) => pointInRing(lng, lat, p[0]))) return f.properties;
+  }
+  return null;
+}
+
 function controlLayerKey(ctrl) {
   if (ctrl === 'houthi' || ctrl === 'plc' || ctrl === 'saudi') return ctrl;
   return 'contested';
@@ -2242,6 +2316,18 @@ function styleFeature(feature, byIso) {
   const c = COLORS[ctrl] || COLORS.contested || '#334155';
   const on = controlVisible(ctrl);
   const hl = highlightIds.has(iso);
+  // Districts carry the colours; the governorate is its outline, and a lit one
+  // a pale wash over its districts.
+  if (districtGeo) {
+    return {
+      fillColor: '#f8fafc',
+      fillOpacity: hl ? 0.18 : 0,
+      color: hl ? '#f8fafc' : '#0b0f14',
+      weight: hl ? 2.6 : 1.3,
+      opacity: 0.9,
+      className: hl && highlightPulse ? 'gov-hl-pulse' : (hl ? 'gov-hl' : ''),
+    };
+  }
   return {
     fillColor: c,
     // Highlighting one governorate used to fade every other one to 0.22, which
@@ -2268,8 +2354,18 @@ function bindGov(feature, layer, byIso) {
     layer.bindPopup(`<strong>${escapeHtml(name)}</strong>${arLine}`);
     return;
   }
-  layer.bindPopup(`<strong>${escapeHtml(name)}</strong>${arLine}<br/>
-    Control: ${escapeHtml(LABELS[g.control] || g.control)}<br/><small>${escapeHtml(g.note || '')}</small>`);
+  const govHtml = `<strong>${escapeHtml(name)}</strong>${arLine}<br/>
+    Control: ${escapeHtml(LABELS[g.control] || g.control)}<br/><small>${escapeHtml(g.note || '')}</small>`;
+  // The district under the click, with its own control and why.
+  layer.on('click', (e) => {
+    const dct = districtAt(e.latlng.lat, e.latlng.lng);
+    const own = dct && districtOwn(dct);
+    const side = dct && districtSide(dct, byIso);
+    const dHtml = dct
+      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${escapeHtml(dct.name)} district</strong><br/>Control: ${escapeHtml(LABELS[side] || side)}${own && own.since ? ` · since ${escapeHtml(fmtDay(own.since))}` : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}`
+      : '';
+    L.popup().setLatLng(e.latlng).setContent(govHtml + dHtml).openOn(layer._map || map);
+  });
 }
 
 function clearEvents() {
@@ -2391,6 +2487,7 @@ function openPinSheet(pin, anchor) {
       if (geoCache) {
         const byIso = controlByIso(data);
         const mainland = splitIslandFeatures(geoCache).mainland;
+        districtLayer(m, byIso);
         L.geoJSON(mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(m);
         govNameLayer(m, mainland.features, byIso);
         saudiCityLayer(m);
@@ -3093,6 +3190,12 @@ async function drawGeo(d) {
   const split = splitIslandFeatures(geoCache);
   islandGeoCache = split.islands;
 
+  if (await loadDistricts()) {
+    if (districtLayerMain) { try { map.removeLayer(districtLayerMain); } catch (e) {} }
+    districtLayerMain = districtLayer(map, byIso);
+    try { renderBars(d); } catch (e) {}
+  }
+
   geoLayer = L.geoJSON(split.mainland, {
     style: (f) => styleFeature(f, byIso),
     onEachFeature: (f, layer) => bindGov(f, layer, byIso),
@@ -3256,6 +3359,7 @@ function setControlDayByIndex(i) {
 function applyMapFilters() {
   if (!data) return;
   const byIso = controlByIso(data);
+  if (districtLayerMain) districtLayerMain.setStyle((f) => districtStyle(f, byIso));
   if (geoLayer) geoLayer.setStyle((f) => styleFeature(f, byIso));
   if (saudiGeoLayer) {
     saudiGeoLayer.setStyle(() => {

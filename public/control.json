@@ -1,0 +1,720 @@
+{
+  "version": 1,
+  "asOf": "2026-09-24",
+  "note": "District control. A district not listed takes its governorate's control (data.json governorates); 'contested' means active fighting inside the district or lines running through it. Rule for a change: two outlets from different sides, or one plus the losing side's acknowledgement.",
+  "sources": {
+    "wiki": "https://en.wikipedia.org/wiki/2026_Yemen_offensives",
+    "majalla": "https://en.majalla.com/node/333085/politics/houthis-seek-expansion-after-reaching-bab-al-mandab",
+    "national": "https://www.thenationalnews.com/news/mena/2026/09/22/houthis-seek-to-control-strategic-kahboub-mountain-range-near-yemens-taiz/",
+    "aj-qarfan": "https://www.aljazeera.com/news/2026/9/23/yemen-government-forces-claim-control-of-mount-qarfan-in-taiz",
+    "desk": "The desk's own reading of Almashhad and the Telegram channels, day by day (map backfill)",
+    "baseline": "Lines as they stood before September 2026 (Sanaa Center, ACLED and Critical Threats maps of 2023-2025)"
+  },
+  "districts": {
+    "al-makha": {
+      "side": "houthi",
+      "since": "2026-09-10",
+      "src": [
+        "wiki",
+        "majalla"
+      ],
+      "note": "Mocha town and port seized 10 September."
+    },
+    "dhubab": {
+      "side": "houthi",
+      "since": "2026-09-11",
+      "src": [
+        "wiki",
+        "majalla",
+        "desk"
+      ],
+      "note": "Seized 10-11 September with Perim; government forces fight at the Bab al-Mandab complex and on Jabal Zalat."
+    },
+    "mawza": {
+      "side": "houthi",
+      "since": "2026-09-11",
+      "src": [
+        "majalla",
+        "desk"
+      ],
+      "note": "Behind the Houthi line after the coast fell; the push east runs from here into Al-Wazi'iyah."
+    },
+    "al-wazi-yah": {
+      "side": "contested",
+      "since": "2026-09-11",
+      "src": [
+        "majalla",
+        "wiki",
+        "desk"
+      ],
+      "note": "Daily fighting: Jabal al-Shuhada, Al-Ghayl, Qardad, Sharirah, Al-Alqamah change hands."
+    },
+    "maqbanah": {
+      "side": "houthi",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "Houthi-held; the government holds the Al-Kadha front on its eastern edge."
+    },
+    "jabal-habashi": {
+      "side": "contested",
+      "src": [
+        "wiki",
+        "desk"
+      ],
+      "note": "Government took Al-Khazan and Al-Makahna (4 Sep); Houthi forces claim Al-Ahtub and Al-Jinan and push on Bani Bakari."
+    },
+    "salah": {
+      "side": "contested",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "The Taiz city front runs through the district (Jabal Jarrah, the judicial complex)."
+    },
+    "hayfan": {
+      "side": "contested",
+      "src": [
+        "majalla",
+        "desk"
+      ],
+      "note": "Split: Houthi forces attack from Hayfan towards Al-Maqatirah; the government holds Al-Ahkum and Al-A'bus fronts."
+    },
+    "as-silw": {
+      "side": "contested",
+      "src": [
+        "baseline"
+      ],
+      "note": "Divided by the southern Taiz front line."
+    },
+    "ash-shamayatayn": {
+      "side": "contested",
+      "since": "2026-09-20",
+      "src": [
+        "majalla",
+        "aj-qarfan",
+        "desk"
+      ],
+      "note": "Houthi forces took the first villages and claim the Rasan heights; the government retook Jabal Numan and Jabal Qarfan (22-23 Sep)."
+    },
+    "shar-ab-as-salam": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "shar-ab-ar-rawnah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "mawiyah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "at-ta-iziyah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "dimnat-khadir": {
+      "side": "houthi",
+      "src": [
+        "baseline",
+        "desk"
+      ]
+    },
+    "al-mudhaffar": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-qahirah": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-ma-afer": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-mawasit": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "sami": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-misrakh": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "sabir-al-mawadim": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "mashr-ah-wa-hadnan": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-madaribah-wa-al-aarah": {
+      "side": "contested",
+      "since": "2026-09-14",
+      "src": [
+        "national",
+        "wiki",
+        "desk"
+      ],
+      "note": "Kahbub and Ras al-Arah: the Giants Brigades and Nation's Shield hold the Kahbub heights (17 Sep) against daily Houthi attacks; Houthi missiles on its villages."
+    },
+    "al-maqatirah": {
+      "side": "contested",
+      "since": "2026-09-24",
+      "src": [
+        "desk"
+      ],
+      "note": "Houthi forces claim Hayjat al-Abd and the Taiz-Aden road (24 Sep); the government says the attack on Al-Ashbut was repelled."
+    },
+    "al-qubaytah": {
+      "side": "contested",
+      "src": [
+        "baseline"
+      ],
+      "note": "Karish and the Taiz border: lines run through it."
+    },
+    "damt": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "juban": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-husha": {
+      "side": "houthi",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "Houthi missiles are fired from Al-Hasha."
+    },
+    "qa-tabah": {
+      "side": "contested",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "The Murais front, north of Al-Dhale."
+    },
+    "ad-dali": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-azariq": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "jahaf": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-hasayn": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "ash-shu-ayb": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "ma-rib-city": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "ma-rib": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "raghwan": {
+      "side": "contested",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "Houthi missiles on camps and homes; lines run through the north of the district."
+    },
+    "sirwah": {
+      "side": "contested",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "The western front: Al-Kassara, Al-Mashjah, Al-Balaq."
+    },
+    "al-jubah": {
+      "side": "contested",
+      "since": "2026-09-09",
+      "src": [
+        "wiki",
+        "desk"
+      ],
+      "note": "Southern Marib fronts (Al-Fulayhah, Umm Raysh): government advances since 9 September."
+    },
+    "majzar": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "madghal-al-jid-an": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "harib-al-qaramish": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "bidbadah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "rahabah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "harib": {
+      "side": "houthi",
+      "src": [
+        "baseline",
+        "desk"
+      ]
+    },
+    "mahliyah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-abdiyah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "jabal-murad": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "khab-wa-ash-sha-f": {
+      "side": "contested",
+      "since": "2026-09-08",
+      "src": [
+        "wiki",
+        "desk"
+      ],
+      "note": "The government took Al-Yatamah (8 Sep); the Houthis hold the rest."
+    },
+    "al-khalaq": {
+      "side": "contested",
+      "since": "2026-09-07",
+      "src": [
+        "wiki",
+        "desk"
+      ],
+      "note": "The government took the Al-Labanat camp (7 Sep) and advances towards Al-Hazm."
+    },
+    "al-hazm": {
+      "side": "houthi",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "Houthi-held; Saudi strikes on the town."
+    },
+    "al-matammah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-mutun": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "az-zahir-ja": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-humaydat": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-maslub": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-ghayl": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "barat-al-anan": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "rajuzah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "kharab-al-marashi": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "mukayras": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "as-sawma-ah": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "az-zahir": {
+      "side": "contested",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "The Al-Bayda front with Yafa and Lahj."
+    },
+    "nati": {
+      "side": "contested",
+      "src": [
+        "baseline"
+      ]
+    },
+    "maswarah": {
+      "side": "contested",
+      "src": [
+        "baseline",
+        "desk"
+      ],
+      "note": "Giants Brigades operations on the Al-Bayda front."
+    },
+    "midi": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ],
+      "note": "Government-held since 2018."
+    },
+    "harad": {
+      "side": "contested",
+      "src": [
+        "baseline",
+        "desk"
+      ]
+    },
+    "hayran": {
+      "side": "contested",
+      "src": [
+        "baseline"
+      ]
+    },
+    "as-sawadiyah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "radman": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "nu-man": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "sabah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-bayda-city": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-bayda": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "rada": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-quraishyah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "wald-rabi": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-arsh": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "ar-ryashyyah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "ash-sharyah": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-malajim": {
+      "side": "houthi",
+      "src": [
+        "baseline"
+      ]
+    },
+    "at-taffah": {
+      "side": "contested",
+      "src": [
+        "baseline"
+      ],
+      "note": "On the Al-Bayda-Abyan line."
+    },
+    "dhi-na-im": {
+      "side": "contested",
+      "src": [
+        "baseline"
+      ],
+      "note": "The front north of Mukayras."
+    },
+    "yafi": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-had": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-maflahi": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "yahr": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-malah": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "tur-al-bahah": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "habil-jabr": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "halmin": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "radfan": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-musaymir": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "tuban": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    },
+    "al-hawtah": {
+      "side": "plc",
+      "src": [
+        "baseline"
+      ]
+    }
+  },
+  "changes": [
+    {
+      "at": "2026-09-10",
+      "district": "al-makha",
+      "to": "houthi",
+      "src": [
+        "wiki"
+      ]
+    },
+    {
+      "at": "2026-09-11",
+      "district": "dhubab",
+      "to": "houthi",
+      "src": [
+        "wiki"
+      ]
+    },
+    {
+      "at": "2026-09-11",
+      "district": "mawza",
+      "to": "houthi",
+      "src": [
+        "majalla"
+      ]
+    },
+    {
+      "at": "2026-09-10",
+      "district": "hays",
+      "to": "houthi",
+      "src": [
+        "wiki"
+      ]
+    },
+    {
+      "at": "2026-09-10",
+      "district": "al-khukhah",
+      "to": "houthi",
+      "src": [
+        "wiki"
+      ]
+    },
+    {
+      "at": "2026-09-14",
+      "district": "al-madaribah-wa-al-aarah",
+      "to": "contested",
+      "src": [
+        "national"
+      ]
+    },
+    {
+      "at": "2026-09-20",
+      "district": "ash-shamayatayn",
+      "to": "contested",
+      "src": [
+        "desk"
+      ]
+    },
+    {
+      "at": "2026-09-24",
+      "district": "al-maqatirah",
+      "to": "contested",
+      "src": [
+        "desk"
+      ]
+    }
+  ]
+}

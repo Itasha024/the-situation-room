@@ -1235,7 +1235,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           // A site whose own listing fails today (Arab News answers some
           // readers 403) is listed through Google News for this read instead.
           if (!listed.length && feed.site && !/news.google.com/.test(feed.url)) {
-            body = await fetchListing(feed.lang === "ar" ? gnews(`site:${feed.site} when:2h`, "ar", "SA", "SA:ar") : gnews(`site:${feed.site} when:2h`));
+            body = await fetchListing(feed.lang === "ar" ? gnews(`site:${feed.site} when:1d`, "ar", "SA", "SA:ar") : gnews(`site:${feed.site} when:1d`));
             listed = body ? parseListing(body) : [];
           }
           const ok = listed.length > 0;

@@ -625,7 +625,10 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
 async function page(url: string): Promise<string> {
   try {
     const res = await fetch(url, { headers: { "user-agent": BROWSER_UA }, signal: AbortSignal.timeout(8000) });
-    return res.ok ? await res.text() : "";
+    if (res.ok) return await res.text();
+    // An unread body left open can trip undici when the socket closes.
+    await res.body?.cancel().catch(() => {});
+    return "";
   } catch {
     return "";
   }

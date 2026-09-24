@@ -37,14 +37,14 @@ export function looseJson(text: string): Record<string, unknown> | null {
   }
 }
 
-async function callOne(m: ChainModel, system: string, user: string, temperature: number): Promise<string> {
+async function callOne(m: ChainModel, system: string, user: string, temperature: number, ms = 90_000): Promise<string> {
   if (m.provider === "groq") {
     const key = groqKey();
     if (!key) throw new Error("no key");
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      signal: AbortSignal.timeout(90_000),
+      signal: AbortSignal.timeout(ms),
       body: JSON.stringify({
         model: m.id,
         temperature,
@@ -62,7 +62,7 @@ async function callOne(m: ChainModel, system: string, user: string, temperature:
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.id}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": key },
-    signal: AbortSignal.timeout(90_000),
+    signal: AbortSignal.timeout(ms),
     body: JSON.stringify({
       ...(gemma ? {} : { system_instruction: { parts: [{ text: system }] } }),
       contents: [{ role: "user", parts: [{ text: gemma ? `${system}\n\n${user}` : user }] }],
@@ -82,11 +82,11 @@ export async function askChain(
   tag: string,
   system: string,
   user: string,
-  { temperature = 0.2, models = WRITER_MODELS }: { temperature?: number; models?: ChainModel[] } = {},
+  { temperature = 0.2, models = WRITER_MODELS, timeoutMs = 90_000 }: { temperature?: number; models?: ChainModel[]; timeoutMs?: number } = {},
 ): Promise<{ json: Record<string, unknown>; model: string } | null> {
   for (const m of models) {
     try {
-      const json = looseJson(await callOne(m, system, user, temperature));
+      const json = looseJson(await callOne(m, system, user, temperature, timeoutMs));
       if (json) {
         console.log(`[${tag}] written by ${m.id}`);
         return { json, model: m.id };

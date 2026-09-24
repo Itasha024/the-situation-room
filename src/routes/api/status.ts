@@ -50,6 +50,8 @@ export const Route = createFileRoute("/api/status")({
             sources,
             missed: (missed ?? []).slice(0, 100),
             routes: routes ?? {},
+            // Each whole site's last read: listed, new to the desk, picked by triage.
+            sites: state.sites ?? {},
             // Outlets a relay named that the desk looked up: their site, or none.
             outlets: Object.fromEntries(Object.entries(registry ?? {}).map(([name, r]) => [name, "site" in r ? r.site : null])),
             usage: usage ?? null,

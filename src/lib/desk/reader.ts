@@ -785,7 +785,10 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string, rec
     // A 429 is either the minute's quota (wait a cycle) or the day's (wait for
     // midnight Pacific, when Google resets it); the body's quota id says which.
     if (res.status === 429) return { error: /PerDay/i.test(await res.text().catch(() => "")) ? "HTTP 429 daily" : "HTTP 429" };
-    if (!res.ok) return { error: `HTTP ${res.status}` };
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return { error: `HTTP ${res.status}` };
+    }
     const json = (await res.json()) as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
     };
@@ -897,6 +900,7 @@ async function callGroq(
     if (!res.ok) {
       // A per-minute limit clears by the next cycle; a daily one does not.
       const wait = Number(res.headers.get("retry-after") || 0);
+      await res.body?.cancel().catch(() => {});
       return { error: `HTTP ${res.status}`, daily: res.status === 429 && wait > 600 };
     }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };

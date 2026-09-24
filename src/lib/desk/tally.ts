@@ -77,7 +77,10 @@ export async function reliefWebDocs(sinceMs: number): Promise<Doc[]> {
       headers: { "user-agent": "curl/8.5.0", accept: "*/*" },
       signal: AbortSignal.timeout(20_000),
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return [];
+    }
     const xml = await res.text();
     const out: Doc[] = [];
     for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {

@@ -86,6 +86,10 @@ export type SourceStatus = {
    * so this is how a possible gap becomes visible instead of silent.
    */
   rolled?: boolean;
+  /** A whole site's listing: articles it named, new to the desk, and picked by triage. */
+  listed?: number;
+  fresh?: number;
+  picked?: number;
 };
 
 export type ScanPayload = {
@@ -129,6 +133,8 @@ export type ScanState = {
    * only whatever fits on the channel's first page.
    */
   lastTgPost?: Record<string, number>;
+  /** A whole site's last read: what its listing named, what was new, what triage picked. */
+  sites?: Record<string, { at: number; ok: boolean; listed: number; fresh: number; picked: number; rolled: boolean }>;
 };
 
 export const EMPTY_SCAN_STATE: ScanState = { scannedOnce: false, lastScanAt: {} };

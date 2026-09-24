@@ -59,7 +59,9 @@ export async function resolveGoogleNews(link: string): Promise<string> {
     }).then((r) => {
       // Too many: Google asks for a rest, and gets one, rather than a retry.
       if (r.status === 429) restUntil = Date.now() + REST_MS;
-      return r.ok ? r.text() : "";
+      if (r.ok) return r.text();
+      // An unread body left open can trip undici when the socket closes.
+      return r.body ? r.body.cancel().then(() => "", () => "") : "";
     });
     const sg = /data-n-a-sg="([^"]+)"/.exec(page)?.[1];
     const ts = /data-n-a-ts="([^"]+)"/.exec(page)?.[1];
@@ -122,7 +124,10 @@ export async function searchGoogleNews(query: string, lang: Edition = "en"): Pro
       headers: { "user-agent": BROWSER_UA },
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return [];
+    }
     const xml = await res.text();
     const out: GnewsItem[] = [];
     for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {

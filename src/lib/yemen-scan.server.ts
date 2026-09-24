@@ -23,6 +23,8 @@ import { sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
+import { type Listed, fetchListing, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
+import { triage } from "./desk/triage.ts";
 
 // The wire types moved to ./desk/types.ts so the store and the scanner can
 // share them without importing each other. Re-exported so existing imports
@@ -32,7 +34,8 @@ export type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/t
 type Channel = { id: string; name: string; lean: "houthi" | "gov" | "south" | "intl" };
 type Cadence = { everyMin: number } | { everyHours: number } | { atHours: number[] } | { atHour: number };
 type ChannelScan = Channel & { cadence: Cadence };
-type RssFeed = { url: string; name: string; id: string; cadence: Cadence };
+/** `whole`: the site's own listing of everything, triaged by a model. */
+type RssFeed = { url: string; name: string; id: string; cadence: Cadence; whole?: boolean; ua?: string; site?: string; lang?: "ar" };
 
 const C5: Cadence = { everyMin: 5 };
 const C15: Cadence = { everyMin: 15 };
@@ -89,35 +92,64 @@ function gnews(q: string, hl = "en-US", gl = "US", ceid = "US:en") {
 
 const YE_AR = "(اليمن OR الحوث OR الحوثي OR صنعاء OR السعودية OR باب المندب)";
 const YE_EN = "(Yemen OR Houthi OR Houthis OR \"Red Sea\" OR \"Bab el-Mandeb\" OR Saudi)";
-const US_TALK = "(Trump OR \"White House\" OR \"State Department\" OR Rubio OR Vance)";
 
+/**
+ * Every website is read WHOLE: the listing a site keeps of all it published —
+ * its RSS feed, or the news sitemap it gives search engines — and a model picks
+ * from the headlines (triage.ts) which articles to open. A keyword search
+ * (`site:X (Yemen OR Houthi …)`) used to stand in for the site, and never saw
+ * an article whose headline lacked those words.
+ *
+ * The sites that refuse any automated reader (Cloudflare: Asharq Al-Awsat,
+ * Erem, Al-Akhbar) and the ones with no working listing (the WSJ's Dow Jones
+ * feeds stopped in January 2025; SPA) are listed through Google News with
+ * `site:` alone and no keywords — every article Google has of theirs in the
+ * window, not the ones that happen to say "Yemen". Nothing is bypassed.
+ *
+ * `site` is the domain an outlet hint (a channel citing it) reads early.
+ */
 const RSS: RssFeed[] = [
-  { id: "almashhad", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5 },
-  { id: "alaraby", url: gnews(`site:alaraby.co.uk ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C30 },
-  { id: "alaraby-pol", url: gnews(`site:alaraby.co.uk/politics ${YE_AR} when:3d`, "ar", "GB", "GB:ar"), name: "Al-Araby Al-Jadeed", cadence: C30 },
+  { id: "almashhad", lang: "ar", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5, whole: true, site: "almashhad.news" },
+  // A browser's user agent is refused (403); a plain client is served.
+  { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss.xml", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C30, whole: true, site: "alaraby.co.uk" },
   // The TV channel's own site (alaraby.com), not the paper's: its interviews
   // with officials are posted there and not on the breaking channel.
-  { id: "alaraby-tv", url: gnews(`site:alaraby.com ${YE_AR} when:2d`, "ar", "QA", "QA:ar"), name: "Al-Araby TV", cadence: C30 },
-  { id: "aawsat", url: gnews(`site:aawsat.com ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C30 },
-  { id: "aawsat-me", url: gnews(`site:aawsat.com (الشرق الأوسط) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C30 },
-  { id: "akhbar", url: gnews(`site:al-akhbar.com ${YE_AR} when:2d`, "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C1H },
-  // No homepage/PDF source: al-akhbar.com answers every automated request with
-  // a Cloudflare bot challenge (403), so Al-Akhbar comes through Google News.
-  { id: "erem", url: gnews(`site:eremnews.com ${YE_AR} when:2d`, "ar", "AE", "AE:ar"), name: "Erem News", cadence: C30 },
-  { id: "alhurra", url: gnews(`site:alhurra.com ${YE_AR} when:2d`, "ar", "US", "US:ar"), name: "Alhurra", cadence: C30 },
-  { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C30 },
-  { id: "reuters", url: gnews(`site:reuters.com ${YE_EN} when:2d`), name: "Reuters", cadence: C30 },
-  { id: "wsj", url: gnews(`site:wsj.com ${YE_EN} when:3d`), name: "WSJ", cadence: C30 },
-  { id: "wapo", url: gnews(`site:washingtonpost.com ${YE_EN} when:3d`), name: "Washington Post", cadence: C30 },
-  { id: "nyt", url: gnews(`site:nytimes.com ${YE_EN} when:3d`), name: "NYT", cadence: C30 },
-  { id: "nypost", url: gnews(`site:nypost.com ${YE_EN} when:3d`), name: "NY Post", cadence: C30 },
-  { id: "axios", url: gnews(`site:axios.com ${YE_EN} when:3d`), name: "Axios", cadence: C30 },
-  { id: "cnn", url: gnews(`site:cnn.com ${YE_EN} when:3d`), name: "CNN", cadence: C30 },
-  { id: "abc", url: gnews(`site:abcnews.go.com ${YE_EN} when:3d`), name: "ABC", cadence: C30 },
-  { id: "cbs", url: gnews(`site:cbsnews.com ${YE_EN} when:3d`), name: "CBS", cadence: C30 },
-  { id: "fox", url: gnews(`site:foxnews.com ${YE_EN} when:3d`), name: "Fox News", cadence: C30 },
-  { id: "us-talk", url: gnews(`${US_TALK} ${YE_EN} (site:reuters.com OR site:wsj.com OR site:washingtonpost.com OR site:nytimes.com OR site:cnn.com OR site:axios.com OR site:state.gov) when:3d`), name: "US media", cadence: C30 },
-  { id: "spa", url: gnews(`site:spa.gov.sa (Yemen OR Houthi OR Houthis OR اليمن OR الحوث) when:2d`, "en", "SA", "SA:en"), name: "SPA", cadence: C5 },
+  { id: "alaraby-tv", lang: "ar", url: "https://www.alaraby.com/rss.xml", name: "Al-Araby TV", cadence: C30, whole: true, site: "alaraby.com" },
+  { id: "aawsat", lang: "ar", url: gnews("site:aawsat.com when:1h", "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C30, whole: true, site: "aawsat.com" },
+  // Hourly, a day wide: the paper's site is behind Cloudflare, and its channel
+  // (every 15 minutes) carries each story's headline as it is published.
+  { id: "akhbar", lang: "ar", url: gnews("site:al-akhbar.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C1H, whole: true, site: "al-akhbar.com" },
+  { id: "erem", lang: "ar", url: gnews("site:eremnews.com when:2h", "ar", "AE", "AE:ar"), name: "Erem News", cadence: C30, whole: true, site: "eremnews.com" },
+  { id: "alhurra", lang: "ar", url: "https://www.alhurra.com/rss", name: "Alhurra", cadence: C30, whole: true, site: "alhurra.com" },
+  { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C30, whole: true, site: "arabnews.com" },
+  { id: "reuters", url: "https://www.reuters.com/arc/outboundfeeds/news-sitemap/?outputType=xml", name: "Reuters", cadence: C30, whole: true, site: "reuters.com" },
+  { id: "wsj", url: gnews("site:wsj.com when:1h"), name: "WSJ", cadence: C30, whole: true, site: "wsj.com" },
+  { id: "wapo", url: "https://feeds.washingtonpost.com/rss/world", name: "Washington Post", cadence: C30, whole: true, site: "washingtonpost.com" },
+  { id: "wapo-nat", url: "https://feeds.washingtonpost.com/rss/national", name: "Washington Post", cadence: C30, whole: true },
+  { id: "wapo-pol", url: "https://feeds.washingtonpost.com/rss/politics", name: "Washington Post", cadence: C30, whole: true },
+  { id: "nyt", url: "https://www.nytimes.com/sitemaps/new/news.xml.gz", name: "NYT", cadence: C30, whole: true, site: "nytimes.com" },
+  { id: "nypost", url: "https://nypost.com/feed/", name: "NY Post", cadence: C30, whole: true, site: "nypost.com" },
+  { id: "axios", url: "https://api.axios.com/feed/", name: "Axios", cadence: C30, whole: true, site: "axios.com" },
+  { id: "cnn", url: "https://edition.cnn.com/sitemap/news.xml", name: "CNN", cadence: C30, whole: true, site: "cnn.com" },
+  { id: "abc", url: "https://abcnews.go.com/abcnews/internationalheadlines", name: "ABC", cadence: C30, whole: true, site: "abcnews.go.com" },
+  { id: "cbs", url: "https://www.cbsnews.com/latest/rss/world", name: "CBS", cadence: C30, whole: true, site: "cbsnews.com" },
+  { id: "fox", url: "https://moxie.foxnews.com/google-publisher/world.xml", name: "Fox News", cadence: C30, whole: true, site: "foxnews.com" },
+  { id: "fox-pol", url: "https://moxie.foxnews.com/google-publisher/politics.xml", name: "Fox News", cadence: C30, whole: true },
+  { id: "spa", lang: "ar", url: gnews("site:spa.gov.sa when:1h", "ar", "SA", "SA:ar"), name: "SPA", cadence: C5, whole: true, site: "spa.gov.sa" },
+  // Safety nets: one keyword search across each language's sites, hourly. A
+  // listing can drop an article (a sitemap's cap, an edited URL); these catch it.
+  {
+    id: "net-ar",
+    url: gnews(`(site:aawsat.com OR site:alaraby.co.uk OR site:alaraby.com OR site:al-akhbar.com OR site:eremnews.com OR site:alhurra.com) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"),
+    name: "Arabic press",
+    cadence: C1H,
+  },
+  {
+    id: "us-talk",
+    url: gnews(`(site:reuters.com OR site:wsj.com OR site:washingtonpost.com OR site:nytimes.com OR site:nypost.com OR site:axios.com OR site:cnn.com OR site:abcnews.go.com OR site:cbsnews.com OR site:foxnews.com OR site:arabnews.com) ${YE_EN} when:1d`),
+    name: "US media",
+    cadence: C1H,
+  },
 ];
 
 /* ------------------------------------------------------------------ *
@@ -318,7 +350,11 @@ async function fetchText(url: string, ms = 8000): Promise<string | null> {
         "accept-language": "ar,en;q=0.8",
       },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // An unread body left open can trip undici when the socket closes.
+      await res.body?.cancel().catch(() => {});
+      return null;
+    }
     return await res.text();
   } catch {
     return null;
@@ -486,7 +522,55 @@ type RawHit = {
   /** The feed's own headline, kept apart from the blob so a walled article can
    *  be looked for under it elsewhere. */
   title?: string;
+  /** From a whole site's listing, picked by triage. */
+  picked?: boolean;
 };
+
+/* ------------------------------------------------------------------ *
+ * Whole-site listings: what the desk has already judged
+ * ------------------------------------------------------------------ */
+
+const SEEN_KEY = "site-seen";
+/** A listed article older than this is not looked at (judged before, or stale). */
+const SEEN_WINDOW_MS = 30 * 3600_000;
+/** The first read of a site takes only its last few hours, as a channel's does. */
+const FIRST_SIGHT_MS = 4 * 3600_000;
+/** Judged articles remembered per site: more than any listing holds in the window. */
+const SEEN_MAX = 1500;
+/** feed id → article key → 1 picked by triage, 0 not ours. */
+type Seen = Record<string, Record<string, 0 | 1>>;
+
+async function loadSeen(): Promise<Seen> {
+  try {
+    return (await (await getStore()).getJson<Seen>(SEEN_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+async function saveSeen(seen: Seen): Promise<void> {
+  for (const id of Object.keys(seen)) {
+    const keys = Object.keys(seen[id]);
+    for (const k of keys.slice(0, Math.max(0, keys.length - SEEN_MAX))) delete seen[id][k];
+  }
+  try {
+    await (await getStore()).putJson(SEEN_KEY, seen);
+  } catch {
+    // Unsaved, the same headlines are judged again next tick: a cost, not a loss.
+  }
+}
+
+/** One listed article as a raw item. Google News titles carry " - Outlet". */
+function listedHit(it: Listed, feed: RssFeed): RawHit | null {
+  let title = decodeEntities(it.title);
+  let source = feed.name;
+  if (isGnews(it.url)) ({ title, source } = outletFromGoogleTitle(title, feed.name));
+  const url = it.url.trim();
+  if (title.length < 12 || !/^https?:\/\//i.test(url) || isIsraeliSource(source, url)) return null;
+  const desc = decodeEntities(it.desc);
+  const at = Number.isFinite(it.at) ? jerusalemIso(new Date(it.at)) : jerusalemIso();
+  return { source, url, text: `${title} ${desc}`.trim().slice(0, 1200), at, lean: "", fromTg: false, title };
+}
 
 function outletFromGoogleTitle(title: string, fallback: string): { title: string; source: string } {
   const m = title.match(/^(.*)\s[-–—]\s+(.{3,48})$/);
@@ -506,6 +590,15 @@ function outletFromGoogleTitle(title: string, fallback: string): { title: string
     : /politico/i.test(outlet) ? "Politico"
     : /cnbc/i.test(outlet) ? "CNBC"
     : /wsj|wall street/i.test(outlet) ? "WSJ"
+    : /new york times/i.test(outlet) ? "NYT"
+    : /washington post/i.test(outlet) ? "Washington Post"
+    : /new york post/i.test(outlet) ? "NY Post"
+    : /^axios/i.test(outlet) ? "Axios"
+    : /^cnn\b/i.test(outlet) ? "CNN"
+    : /^abc news/i.test(outlet) ? "ABC"
+    : /^cbs news/i.test(outlet) ? "CBS"
+    : /arab news/i.test(outlet) ? "Arab News"
+    : /saudi press agency|^spa$/i.test(outlet) ? "SPA"
     : fallback === "US media" ? outlet.replace(/\s+/g, " ").slice(0, 28)
     : fallback;
   return { title: m[1].trim(), source: mapped };
@@ -875,7 +968,7 @@ export function hintOutlets(state: ScanState, hits: { text: string; source: stri
   const out: string[] = [];
   for (const feed of RSS) {
     if (out.length >= HINTS_PER_TICK) break;
-    const site = /site:([a-z0-9.-]+)/i.exec(decodeURIComponent(feed.url))?.[1];
+    const site = feed.site;
     const last = state.lastScanAt[`web:${feed.id}`] ?? 0;
     // Already hinted, or read in the last ten minutes: nothing to add.
     if (!site || !sites.has(site) || (state.lastScanAt[`hint:web:${feed.id}`] ?? 0) > last || now - last < 10 * 60_000) continue;
@@ -1046,11 +1139,60 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       })(),
     );
   }
+  // What each whole site listed that the desk had not judged before: its
+  // headlines go to triage together, after every listing is in.
+  const seen = await loadSeen();
+  const unjudged: { feed: RssFeed; hit: RawHit; key: string }[] = [];
   for (const feed of dueRss) {
     jobs.push(
       (async () => {
         // What we had already read from this feed, before this read moves it on.
         const lastRead = state.lastScanAt[`web:${feed.id}`] ?? 0;
+        if (feed.whole) {
+          let body = await fetchListing(feed.url, feed.ua);
+          let listed = body ? parseListing(body) : [];
+          // A site whose own listing fails today (Arab News answers some
+          // readers 403) is listed through Google News for this read instead.
+          if (!listed.length && feed.site && !/news.google.com/.test(feed.url)) {
+            body = await fetchListing(feed.lang === "ar" ? gnews(`site:${feed.site} when:2h`, "ar", "SA", "SA:ar") : gnews(`site:${feed.site} when:2h`));
+            listed = body ? parseListing(body) : [];
+          }
+          const ok = listed.length > 0;
+          const mine = (seen[feed.id] ??= {});
+          const firstSight = Object.keys(mine).length === 0;
+          // A listing reaches back days (a sitemap, Axios); what is older than
+          // this was judged before, or is not news any more. On first sight
+          // only the last few hours are read, as a channel is.
+          const window = firstSight ? FIRST_SIGHT_MS : SEEN_WINDOW_MS;
+          const rows: RawHit[] = [];
+          let fresh = 0;
+          for (const it of listed) {
+            if (Number.isFinite(it.at) && now - it.at > window) {
+              // Older than a first read reaches: set aside unjudged, so the
+              // next read does not take the whole day back as new.
+              if (firstSight && now - it.at <= SEEN_WINDOW_MS) mine[`u${urlKey(it.url)}`] = 0;
+              continue;
+            }
+            const hit = listedHit(it, feed);
+            if (!hit) continue;
+            const key = `u${urlKey(it.url)}`;
+            const verdict = mine[key];
+            if (verdict === 1) rows.push({ ...hit, picked: true });
+            else if (verdict === undefined) {
+              fresh += 1;
+              unjudged.push({ feed, hit, key });
+            }
+          }
+          if (ok) sourcesOk += 1;
+          hits.push(...rows);
+          // Every article in the window is new to the desk: the listing may
+          // have filled up since the last read and dropped some unseen.
+          const inWindow = listed.filter((it) => !Number.isFinite(it.at) || now - it.at <= window).length;
+          const rolled = !firstSight && !!lastRead && inWindow >= 20 && fresh === inWindow;
+          state.lastScanAt[`web:${feed.id}`] = Date.now();
+          status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length, rolled, listed: listed.length, fresh });
+          return;
+        }
         const body = await fetchText(feed.url, 8000);
         let rows: RawHit[] = [];
         const ok = !!(body && /<item[\s>]/i.test(body));
@@ -1071,6 +1213,29 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   }
   await Promise.allSettled(jobs);
   state.scannedOnce = true;
+
+  // A model reads the new headlines and picks what could be this war's; the
+  // rest are remembered as judged and never fetched. Headlines no model got to
+  // (a spent quota) are judged by keyword now and asked about again next tick.
+  if (unjudged.length) {
+    const { picked, judged } = await triage(
+      unjudged.map((u, i) => ({ id: String(i), title: u.hit.title ?? "", desc: u.hit.text.slice((u.hit.title ?? "").length).trim(), source: u.feed.name })),
+    );
+    const pickedBy: Record<string, number> = {};
+    unjudged.forEach((u, i) => {
+      const id = String(i);
+      if (judged.has(id)) seen[u.feed.id][u.key] = picked.has(id) ? 1 : 0;
+      if (!picked.has(id)) return;
+      hits.push({ ...u.hit, picked: true });
+      pickedBy[u.feed.id] = (pickedBy[u.feed.id] ?? 0) + 1;
+    });
+    for (const s of status) if (s.listed !== undefined) s.picked = pickedBy[s.id] ?? 0;
+  }
+  for (const s of status) {
+    if (s.listed === undefined) continue;
+    (state.sites ??= {})[s.id] = { at: now, ok: s.ok, listed: s.listed, fresh: s.fresh ?? 0, picked: s.picked ?? 0, rolled: !!s.rolled };
+  }
+  await saveSeen(seen);
 
   // A feed that lists last week's articles is not reporting last week's news.
   const fresh = hits.filter((h) => {
@@ -1105,6 +1270,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // since each costs two requests to Google.
   let resolves = 0;
   let rescues = 0;
+  // What triage picked from a whole site is opened first.
+  toFetch.sort((a, b) => Number(!!b.picked) - Number(!!a.picked));
   const fetchable = toFetch.filter((h) => !isGnews(h.url) || resolves++ < GNEWS_RESOLVES).slice(0, BODY_FETCHES);
   await Promise.allSettled(
     fetchable.map(async (h) => {
@@ -1156,6 +1323,24 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     }),
   );
   await saveLeadCache(leadCache);
+  // One article under two addresses — Google's redirect and the outlet's own
+  // link, from two listings — is one item: the WSJ's China story went out as
+  // two cards. An unresolved Google item takes the address its outlet's own
+  // copy of the same headline has.
+  const direct = new Map<string, string>();
+  for (const h of hits) if (h.title && !isGnews(h.url)) direct.set(`${h.source}|${titleKey(h.title)}`, h.url);
+  for (const h of hits) {
+    const own = h.title && isGnews(h.url) ? direct.get(`${h.source}|${titleKey(h.title)}`) : undefined;
+    if (own) h.url = own;
+  }
+  const oneEach = new Map<string, RawHit>();
+  for (const h of hits) {
+    const k = h.fromTg ? h.url : cleanUrl(h.url);
+    const had = oneEach.get(k);
+    if (!had || h.text.length > had.text.length) oneEach.set(k, had ? { ...h, picked: h.picked || had.picked } : h);
+  }
+  hits.length = 0;
+  hits.push(...oneEach.values());
   // An item still on Google's redirect waits a few cycles for its address,
   // then goes out as it is rather than be missed.
   const resolved = hits.filter((h) => !isGnews(h.url) || (leadCache[h.url]?.tries ?? 0) >= GNEWS_HOLD_TRIES);
@@ -1180,7 +1365,10 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   for (const h of hits) {
     const c = toLiveReport(h.source, h.url, h.text, h.at, h.text.slice(0, 80), h.lean, officialDown);
     pre.set(h.url, c);
-    if (c.outcome === "exclude") continue;
+    // A whole site's article that triage picked goes to the reader even when
+    // no keyword matched it: that is what reading the site whole is for.
+    const picked = h.picked && !["excluded-source", "no-article", "bad-url"].includes(c.reason);
+    if (c.outcome === "exclude" && !picked) continue;
     candidates.push({
       source: h.source,
       url: h.url,
@@ -1461,7 +1649,28 @@ export type TickResult = {
  * — calling it more often than the schedule simply finds fewer sources due —
  * so an over-eager clock costs nothing.
  */
+/**
+ * Node 24's fetch (undici) now and then throws an assertion from a socket that
+ * closes while its response is paused — about one tick in ten, measured locally,
+ * on no one request. Uncaught, it ended the whole tick. That one error is logged
+ * and let go: the request it belonged to still ends at its own timeout. Every
+ * other uncaught error ends the process as before.
+ */
+let undiciGuard = false;
+function guardUndici(): void {
+  if (undiciGuard || typeof process === "undefined" || typeof process.on !== "function") return;
+  undiciGuard = true;
+  process.on("uncaughtException", (err: Error & { code?: string }) => {
+    if (err?.code === "ERR_ASSERTION" && /undici/.test(err.stack ?? "")) {
+      console.error("[tick] undici assertion let go:", err.message.slice(0, 80));
+      return;
+    }
+    throw err;
+  });
+}
+
 export async function runScanCycle(): Promise<TickResult> {
+  guardUndici();
   const store = await getStore();
   const state = await store.loadScanState();
   const prev = await store.loadPayload();

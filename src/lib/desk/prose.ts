@@ -13,6 +13,24 @@ import type { LiveReport } from "./types.ts";
 import { roleNamesInProse } from "./reader.ts";
 import { askChain } from "./models.ts";
 import { outletSide } from "./digest.ts";
+import { CONTROL, CONTROL_AS_OF } from "./control-data.ts";
+
+const GOV_NAME: Record<string, string> = {
+  "YE-TA": "Taiz", "YE-LA": "Lahj", "YE-DA": "Al-Dhale", "YE-MA": "Marib", "YE-JA": "Al-Jawf", "YE-BA": "Al-Bayda",
+  "YE-HU": "Hodeidah", "YE-HJ": "Hajjah", "YE-SD": "Saada", "YE-SH": "Shabwa", "YE-AB": "Abyan",
+};
+
+/**
+ * Who holds what, district by district (public/control.json): the contested
+ * districts and those that changed hands this round. The writer reads it as
+ * background, so a front is described from where its lines actually run.
+ */
+export function controlContext(): string[] {
+  const side = (s: string) => (s === "plc" ? "government" : s === "houthi" ? "Houthi" : "contested");
+  return CONTROL.filter((d) => d.side === "contested" || d.since).map(
+    (d) => `${d.name} (${GOV_NAME[d.gov] ?? d.gov}): ${side(d.side)}${d.since ? ` since ${d.since}` : ""}${d.note ? ` — ${d.note}` : ""}`,
+  );
+}
 
 export type ProseFront = { id: string; name: string; incidents: number; previous: string };
 export type Prose = { situation: string; fronts: Record<string, string>; model?: string };
@@ -32,6 +50,7 @@ Rules:
 - No clock times. Keep every casualty figure you mention exact; never drop reported deaths from the lead.
 - A cumulative toll stays cumulative: a figure for the whole round (since July) is written as such ("since the round began in July"), never as the toll of recent or current fighting.
 - Never mention the desk, reports, cards, logging, counts of reports or "the window". No hype.
+- CONTROL lists who holds the contested districts and what changed hands this round. It is background: use it to place a front's fighting correctly (who holds the town, where the line runs), never as news of its own, and never contradict a newer report with it.
 - Past tense for events, present for the state of play.
 Return ONLY JSON {"situation":"...","fronts":{"<id>":"..."}}.`;
 
@@ -83,6 +102,8 @@ export async function writeProse(
       `PREVIOUS SITUATION: ${previousSituation || "(none)"}`,
       "FRONTS:",
       ...fronts.map((f) => `- ${f.id} = ${f.name}; previous: ${f.previous || "(none)"}`),
+      `CONTROL (as of ${CONTROL_AS_OF}):`,
+      ...controlContext().map((l) => `- ${l}`),
       "REPORTS:",
       ...sorted.slice(-cap).map((r) => cardLine(r, frontsOf)),
     ].join("\n");

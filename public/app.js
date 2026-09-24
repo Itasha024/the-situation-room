@@ -2213,11 +2213,19 @@ function allFronts(d) {
   return [...base, ...opened];
 }
 
+/*
+ * One front at a time: tabs with every front's name, arrows either side on a
+ * wide screen, a swipe on a phone. The choice is remembered.
+ */
+let frontIdx = 0;
+try { frontIdx = Math.max(0, Number(localStorage.getItem('desk-front')) || 0); } catch (e) {}
+
 function renderFronts(d) {
   const fronts = allFronts(d);
   const stamp = document.getElementById('fronts-stamp');
   if (stamp) stamp.innerHTML = cadenceStamp(true);
-  document.getElementById('fronts').innerHTML = fronts.map((f, i) => {
+  if (frontIdx >= fronts.length) frontIdx = 0;
+  const cards = fronts.map((f, i) => {
     const act = frontActivity(f.id);
     /*
      * The composed paragraph replaces the curated prose rather than sitting
@@ -2234,7 +2242,7 @@ function renderFronts(d) {
     const showSum = sum && !textOverlap(plain, sum);
     const showDir = dir && !textOverlap(plain, dir) && !textOverlap(sum, dir);
     const showDetail = detail && !textOverlap(sum, detail) && detail.length > Math.max(80, (sum.length || 0) + 40);
-    return `<article class="front-card">
+    return `<article class="front-card"${i === frontIdx ? '' : ' hidden'} role="tabpanel" aria-label="${escapeHtml(f.name)}">
       <div class="front-head">
         <strong>${escapeHtml(f.name)}</strong>
         <button type="button" class="front-map-btn" data-i="${i}" aria-expanded="false" aria-label="Show where this is">Map</button>
@@ -2250,6 +2258,35 @@ function renderFronts(d) {
       <button type="button" class="toggle-front">Read more</button>` : ''}
     </article>`;
   }).join('');
+  const tabs = fronts.map((f, i) => `<button type="button" role="tab" data-i="${i}" aria-selected="${i === frontIdx}" class="${i === frontIdx ? 'on' : ''}">${escapeHtml(f.name)}</button>`).join('');
+  const box = document.getElementById('fronts');
+  box.classList.add('one-front');
+  box.innerHTML = `<div class="front-tabs" role="tablist" aria-label="Fronts">${tabs}</div>
+    <div class="front-pager">
+      <button type="button" class="front-arrow front-prev" aria-label="Previous front">‹</button>
+      <div class="front-slide">${cards}</div>
+      <button type="button" class="front-arrow front-next" aria-label="Next front">›</button>
+    </div>
+    <div class="front-count">${frontIdx + 1} / ${fronts.length}</div>`;
+  const goFront = (i) => {
+    frontIdx = (i + fronts.length) % fronts.length;
+    try { localStorage.setItem('desk-front', String(frontIdx)); } catch (e) {}
+    renderFronts(d);
+    const tab = box.querySelector('.front-tabs button.on');
+    if (tab && tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  };
+  box.querySelectorAll('.front-tabs button').forEach((b) => { b.onclick = () => goFront(Number(b.dataset.i) || 0); });
+  box.querySelector('.front-prev').onclick = () => goFront(frontIdx - 1);
+  box.querySelector('.front-next').onclick = () => goFront(frontIdx + 1);
+  const slide = box.querySelector('.front-slide');
+  let fx0 = null;
+  slide.addEventListener('touchstart', (e) => { fx0 = e.touches[0].clientX; }, { passive: true });
+  slide.addEventListener('touchend', (e) => {
+    if (fx0 == null) return;
+    const dx = e.changedTouches[0].clientX - fx0;
+    fx0 = null;
+    if (Math.abs(dx) > 40) goFront(frontIdx + (dx < 0 ? 1 : -1));
+  }, { passive: true });
 
   document.querySelectorAll('.toggle-front').forEach((btn) => {
     btn.onclick = () => {

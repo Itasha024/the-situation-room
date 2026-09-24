@@ -936,3 +936,16 @@ html{scroll-behavior:smooth}
 .to-fronts{flex:none;font-size:.72rem;font-weight:600;letter-spacing:.02em;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:.12rem .6rem;transition:color .15s,border-color .15s}
 .to-fronts:hover,.to-fronts:focus-visible{color:var(--text);border-color:#3a4b5f;outline:none}
 .fronts-wrap:focus{outline:none}
+
+/* Fronts, one at a time: tabs above, arrows either side, a swipe on a phone. */
+#fronts.one-front{display:block}
+.front-tabs{display:flex;gap:.35rem;overflow-x:auto;padding-bottom:.4rem;margin-bottom:.35rem;scrollbar-width:thin}
+.front-tabs button{flex:0 0 auto;border:1px solid #243244;border-radius:999px;background:#0f1822;color:#9fb3c8;font-size:.72rem;padding:.25rem .65rem;white-space:nowrap}
+.front-tabs button.on{background:#1e2d3d;color:#eaf0f6;border-color:#3b5068}
+.front-pager{display:flex;align-items:stretch;gap:.35rem}
+.front-slide{flex:1;min-width:0;touch-action:pan-y}
+.front-slide .front-card[hidden]{display:none}
+.front-arrow{flex:0 0 1.9rem;border:1px solid #243244;border-radius:8px;background:#0f1822;color:#c9d4e0;font-size:1.2rem;line-height:1;padding:0}
+.front-arrow:hover{background:#16222f;color:#fff}
+.front-count{text-align:center;font-size:.66rem;color:#8fa3b6;margin-top:.3rem}
+@media (max-width:720px){.front-arrow{display:none}}

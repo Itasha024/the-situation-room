@@ -85,6 +85,55 @@ const TG: ChannelScan[] = [
   { id: "eremnews", name: "Erem News", lean: "gov", cadence: C15 },
 ];
 
+/**
+ * X accounts, read through FxTwitter's public API (api.fxtwitter.com, the
+ * open-source embed service): an account's latest 20 posts as JSON, no login,
+ * no key. x.com itself serves nothing without one, the Nitter mirrors are
+ * down or behind bot checks, and Twitter's syndication endpoint answers 429 —
+ * all tried on 24 September. Public posts only, read at a polite interval.
+ */
+type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence };
+const X_ACCOUNTS: XAccount[] = [{ handle: "war_cube", name: "The Cube", lean: "intl", cadence: C15 }];
+
+type FxStatus = {
+  url?: string;
+  id?: string;
+  text?: string;
+  raw_text?: { text?: string };
+  created_timestamp?: number;
+  replying_to?: { screen_name?: string } | null;
+  reposted_by?: unknown;
+  author?: { screen_name?: string };
+};
+
+/** One account's own posts as raw items: reposts and replies to others left out. */
+export function parseFxStatuses(json: unknown, acct: XAccount): RawHit[] {
+  const list = (json as { results?: FxStatus[] })?.results;
+  if (!Array.isArray(list)) return [];
+  const own = acct.handle.toLowerCase();
+  const out: RawHit[] = [];
+  for (const s of list) {
+    if (s.reposted_by || String(s.author?.screen_name ?? own).toLowerCase() !== own) continue;
+    // A reply to someone else is a conversation; a reply to itself is a thread.
+    const to = s.replying_to?.screen_name?.toLowerCase();
+    if (to && to !== own) continue;
+    const text = decodeEntities(String(s.raw_text?.text ?? s.text ?? "")).trim();
+    const url = s.url || (s.id ? `https://x.com/${acct.handle}/status/${s.id}` : "");
+    if (!url || text.length < 12) continue;
+    const ms = Number(s.created_timestamp) * 1000;
+    out.push({
+      source: acct.name,
+      url,
+      text,
+      at: jerusalemIso(Number.isFinite(ms) && ms > 0 ? new Date(ms) : new Date()),
+      lean: acct.lean,
+      // A post, whole as it stands: no article to fetch behind it.
+      fromTg: true,
+    });
+  }
+  return out;
+}
+
 function gnews(q: string, hl = "en-US", gl = "US", ceid = "US:en") {
   const enc = encodeURIComponent(q);
   return `https://news.google.com/rss/search?q=${enc}&hl=${hl}&gl=${gl}&ceid=${ceid}`;
@@ -458,7 +507,11 @@ const RSS_ITEMS = 100;
 
 /** Every source the clock reads, with its lastScanAt key: the status page's list. */
 export function sourceList(): { key: string; name: string }[] {
-  return [...TG.map((c) => ({ key: `tg:${c.id}`, name: c.name })), ...RSS.map((f) => ({ key: `web:${f.id}`, name: f.name }))];
+  return [
+    ...TG.map((c) => ({ key: `tg:${c.id}`, name: c.name })),
+    ...X_ACCOUNTS.map((a) => ({ key: `x:${a.handle}`, name: a.name })),
+    ...RSS.map((f) => ({ key: `web:${f.id}`, name: f.name })),
+  ];
 }
 /** Extra `?before=` pages read from one channel to reach the last post seen. */
 const TG_BACKFILL_PAGES = 4;
@@ -1178,6 +1231,30 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   const status: SourceStatus[] = [];
   const jobs: Promise<void>[] = [];
 
+  for (const acct of X_ACCOUNTS.filter((a) => cadenceDue(state, `x:${a.handle}`, a.cadence, now))) {
+    jobs.push(
+      (async () => {
+        let rows: RawHit[] = [];
+        let ok = false;
+        try {
+          const res = await fetch(`https://api.fxtwitter.com/2/profile/${acct.handle}/statuses`, {
+            headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)", accept: "application/json" },
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (res.ok) {
+            rows = parseFxStatuses(await res.json(), acct);
+            ok = true;
+          } else await res.body?.cancel().catch(() => {});
+        } catch {
+          // Unread this tick; the status says so.
+        }
+        if (ok) sourcesOk += 1;
+        hits.push(...rows);
+        state.lastScanAt[`x:${acct.handle}`] = Date.now();
+        status.push({ id: acct.handle, name: acct.name, kind: "x", ok, cadence: cadenceLabel(acct.cadence), hits: rows.length });
+      })(),
+    );
+  }
   for (const ch of dueTg) {
     jobs.push(
       (async () => {
@@ -1656,8 +1733,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     }
   }
 
-  const tried = dueTg.length + dueRss.length;
-  const skipped = TG.length + RSS.length - tried;
+  const tried = status.length;
+  const skipped = Math.max(0, TG.length + X_ACCOUNTS.length + RSS.length - tried);
   const cycleNote = skipped
     ? `${tried} sources this cycle; ${skipped} on a slower schedule (dailies and agencies).`
     : `All ${tried} sources scanned this cycle.`;

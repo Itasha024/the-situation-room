@@ -4,7 +4,11 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 
 **No Israeli sources.** Every named source on a card must have a real article/post URL.
 
-**X / Twitter is off.** The public syndication endpoint returns HTTP 429 under bulk scan, and there is no free persistent X API on this desk. When a working free pipe exists it can be reattached; until then X is not scanned.
+**X / Twitter: read through FxTwitter.** An account's latest 20 public posts come from FxTwitter's open API (`api.fxtwitter.com/2/profile/<handle>/statuses`), every 15 minutes, with no login and no key. Reposts and replies to other accounts are left out; an account's own threads are kept. Each post then goes through the same gate and reader as a Telegram post. Tried on 24 September and not usable: x.com itself (login), the Nitter mirrors (down or behind bot checks, which the desk does not bypass), xcancel (451) and Twitter's syndication endpoint (429). `/api/status` shows each account's last read.
+
+| X account | How often |
+|---|---|
+| The Cube — `@war_cube` | every 15 minutes |
 
 ---
 

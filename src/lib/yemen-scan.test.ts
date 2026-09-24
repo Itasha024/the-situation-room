@@ -618,3 +618,19 @@ test("a foreign minister's lines thread across outlets, whatever title each outl
   assert.equal((other as { replyTo?: string }).replyTo, undefined, "another speaker inside the window does not join");
   assert.equal((bare as { replyTo?: string }).replyTo, "c", "a line with no speaker is its channel's neighbour's");
 });
+
+test("an X account's own posts and threads are read; reposts and replies to others are not", async () => {
+  const { parseFxStatuses } = await import("./yemen-scan.server.ts");
+  const acct = { handle: "war_cube", name: "The Cube", lean: "intl", cadence: { everyMin: 15 } } as never;
+  const json = {
+    results: [
+      { id: "1", url: "https://x.com/war_cube/status/1", text: "Unusual fire near Riyadh between two substations", created_timestamp: 1790244000, author: { screen_name: "war_cube" } },
+      { id: "2", url: "https://x.com/war_cube/status/2", text: "Map changed, the Kahbub heights now shaded", created_timestamp: 1790244100, author: { screen_name: "war_cube" }, replying_to: { screen_name: "war_cube" } },
+      { id: "3", url: "https://x.com/war_cube/status/3", text: "@someone should know about this one", created_timestamp: 1790244200, author: { screen_name: "war_cube" }, replying_to: { screen_name: "someone" } },
+      { id: "4", url: "https://x.com/other/status/4", text: "A repost of someone else's footage", created_timestamp: 1790244300, author: { screen_name: "other" }, reposted_by: { screen_name: "war_cube" } },
+    ],
+  };
+  const rows = parseFxStatuses(json, acct);
+  assert.deepEqual(rows.map((r: { url: string }) => r.url), ["https://x.com/war_cube/status/1", "https://x.com/war_cube/status/2"]);
+  assert.equal((rows[0] as { fromTg: boolean }).fromTg, true);
+});

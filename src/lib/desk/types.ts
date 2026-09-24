@@ -75,7 +75,7 @@ export type RawScanHit = {
 export type SourceStatus = {
   id: string;
   name: string;
-  kind: "tg" | "web";
+  kind: "tg" | "web" | "x";
   ok: boolean;
   cadence: string;
   hits: number;

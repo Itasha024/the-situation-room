@@ -18,6 +18,8 @@ logs/
 scripts/tick-hidden.vbs
 public/desk-lead-cache.json
 public/desk-reader-*.json
+public/desk-rows-*.json
+public/desk-tick-usage.json
 # What a local tick writes out beside the payload. The deployed desk builds
 # these from the database on every cycle, so a committed copy is only ever
 # one machine's last run showing up as a diff in everybody else's.

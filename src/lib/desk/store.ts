@@ -50,6 +50,18 @@ export interface DeskStore {
    */
   getJson<T>(key: string): Promise<T | null>;
   putJson(key: string, value: unknown): Promise<void>;
+  deleteJson(key: string): Promise<void>;
+
+  /**
+   * Caches of many small entries (article leads by URL, readings by content
+   * hash), one row each. They were one blob apiece, read and written whole
+   * every tick: 12 MB a tick, the whole free database egress many times over.
+   * Now a tick reads only the entries it looks up and writes only those it set.
+   */
+  getMany<T>(prefix: string, ids: string[]): Promise<Record<string, T>>;
+  putMany(prefix: string, entries: Record<string, unknown>): Promise<void>;
+  /** Drop a cache's entries not written for `olderThanMs`. */
+  prune(prefix: string, olderThanMs: number): Promise<number>;
 
   /**
    * Fold new reports into the desk snapshot — the feed rows and the map pins.
@@ -72,7 +84,7 @@ export interface DeskStore {
    * `before` (an ISO time) pages back: only rows strictly older are returned,
    * so "Show earlier reports" can walk the whole archive a page at a time.
    */
-  recentDesk(limit?: number, before?: string): Promise<DeskSlice>;
+  recentDesk(limit?: number, before?: string, opts?: { events?: boolean }): Promise<DeskSlice>;
 }
 
 export type MergeResult = {
@@ -87,6 +99,36 @@ export type MergeResult = {
   /** Set when persistence failed. The tick reports this instead of hiding it. */
   error?: string;
 };
+
+/**
+ * What the store moved, for the status page: database bytes read and written
+ * since the counter was last reset (the tick resets it at its start). Supabase
+ * bills egress, so this is the figure to watch.
+ */
+export const dbMeter = { read: 0, written: 0, queries: 0 };
+export function resetDbMeter(): void {
+  dbMeter.read = 0;
+  dbMeter.written = 0;
+  dbMeter.queries = 0;
+}
+
+/**
+ * A blob cache from before the per-row caches, moved once into rows and then
+ * deleted. `idOf` turns the blob's key into the row id.
+ */
+export async function migrateBlob(
+  store: DeskStore,
+  blobKey: string,
+  prefix: string,
+  idOf: (key: string) => string = (k) => k,
+): Promise<void> {
+  const blob = await store.getJson<Record<string, unknown>>(blobKey);
+  if (!blob || typeof blob !== "object") return;
+  const rows: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(blob)) rows[idOf(k)] = v;
+  await store.putMany(prefix, rows);
+  await store.deleteJson(blobKey);
+}
 
 const rawDatabaseUrl = typeof process !== "undefined" ? process.env.DATABASE_URL : undefined;
 const databaseUrl = rawDatabaseUrl && rawDatabaseUrl.trim() ? rawDatabaseUrl : undefined;

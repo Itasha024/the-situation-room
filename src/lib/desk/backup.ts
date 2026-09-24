@@ -19,9 +19,13 @@ export async function backupDaily(): Promise<boolean> {
   const made = await sql.query(
     `insert into desk_backup (day, data)
      select current_date, jsonb_build_object(
-       'state',   coalesce((select jsonb_agg(t) from desk_state t),  '[]'::jsonb),
+       -- The caches (row:*) are left out: they rebuild themselves.
+       'state',   coalesce((select jsonb_agg(t) from desk_state t where t.key not like 'row:%'),  '[]'::jsonb),
        'reports', coalesce((select jsonb_agg(t) from desk_report t), '[]'::jsonb),
        'events',  coalesce((select jsonb_agg(t) from desk_event t),  '[]'::jsonb))
+     -- Checked first: the snapshot of every table was built on every tick and
+     -- then thrown away by the conflict.
+     where not exists (select 1 from desk_backup b where b.day = current_date)
      on conflict (day) do nothing
      returning day`,
   );

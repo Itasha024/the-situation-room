@@ -37,7 +37,7 @@ import {
   readBatch,
   readerKey,
 } from "./reader.ts";
-import type { DeskStore } from "./store.ts";
+import { type DeskStore, migrateBlob } from "./store.ts";
 import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
@@ -61,13 +61,28 @@ export type EditorVerdict =
   | { kind: "reject"; reason: string; note: string }
   | { kind: "pending"; note: string };
 
+/** The old whole-cache blob, moved into rows once. */
 const CACHE_KEY = "reader-cache";
+const CACHE_PREFIX = "read";
 const QUEUE_KEY = "reader-queue";
 const QUOTA_KEY = "reader-quota";
 /** Model calls per model on the quota's (Pacific) day: the status page's count. */
 export const USAGE_KEY = "reader-usage";
 export type Usage = { day: string; calls: Record<string, number> };
-const CACHE_MAX = 6000;
+/** Readings not written for two weeks are dropped: nothing that old is listed again. */
+const CACHE_KEEP_MS = 14 * 24 * 3600 * 1000;
+const PRUNE_EVERY_MS = 3600 * 1000;
+let lastPrune = 0;
+let migrated = false;
+async function migrateOnce(store: DeskStore): Promise<void> {
+  if (migrated) return;
+  migrated = true;
+  try {
+    await migrateBlob(store, CACHE_KEY, CACHE_PREFIX);
+  } catch {
+    migrated = false;
+  }
+}
 /** A queued item older than this is no longer news; it is dropped from the queue. */
 const QUEUE_TTL_MS = 24 * 3600 * 1000;
 /** How far back, and how many, published reports the reader sees for follow-ups. */
@@ -181,7 +196,6 @@ export async function editCandidates(
   fresh: Candidate[],
   now = Date.now(),
 ): Promise<{ verdicts: Map<string, EditorVerdict>; queued: Candidate[]; modelNote: string }> {
-  const cache = (await store.getJson<Cache>(CACHE_KEY)) ?? {};
   const queue = ((await store.getJson<Queued[]>(QUEUE_KEY)) ?? []).filter((q) => now - q.queuedAt < QUEUE_TTL_MS);
 
   // This cycle's items plus anything still waiting from earlier cycles.
@@ -189,6 +203,16 @@ export async function editCandidates(
   for (const q of queue) byUrl.set(q.url, q);
   for (const c of fresh) byUrl.set(c.url, { ...c, queuedAt: byUrl.get(c.url)?.queuedAt ?? now });
   const all = [...byUrl.values()];
+
+  // Only this cycle's readings are fetched, one row each, and only those
+  // written this cycle are saved (the whole cache was 2.6 MB a tick each way).
+  await migrateOnce(store);
+  const cache: Cache = await store.getMany<CacheEntry>(CACHE_PREFIX, all.map((c) => contentHash(c.text)));
+  const dirty = new Set<string>();
+  const setEntry = (hash: string, e: CacheEntry) => {
+    cache[hash] = e;
+    dirty.add(hash);
+  };
 
   const verdicts = new Map<string, EditorVerdict>();
   const readingOf = new Map<string, Reading>();
@@ -244,7 +268,7 @@ export async function editCandidates(
   const fixes: { c: Queued; note: string }[] = [];
   if (unread.length && anyReader) {
     try {
-      const { reports } = await store.recentDesk(RECENT_MAX);
+      const { reports } = await store.recentDesk(RECENT_MAX, undefined, { events: false });
       for (const r of reports) {
         if (now - Date.parse(String(r.at)) > RECENT_MS || !r.fp) continue;
         const ref = "r" + (recent.length + 1);
@@ -286,7 +310,7 @@ export async function editCandidates(
         return;
       }
       unref(r, c);
-      cache[contentHash(c.text)] = { reading: r, at: now };
+      setEntry(contentHash(c.text), { reading: r, at: now });
       const v = decide(r, c);
       verdicts.set(c.url, v);
       readingOf.set(c.url, r);
@@ -300,7 +324,7 @@ export async function editCandidates(
       continue;
     }
     const copy = { ...r };
-    cache[contentHash(c.text)] = { reading: copy, at: now };
+    setEntry(contentHash(c.text), { reading: copy, at: now });
     verdicts.set(c.url, decide(copy, c));
     readingOf.set(c.url, copy);
   }
@@ -344,7 +368,7 @@ export async function editCandidates(
       if (v?.kind === "publish" && entry) {
         verdicts.set(c.url, v);
         readingOf.set(c.url, entry.reading);
-        cache[contentHash(c.text)] = entry;
+        setEntry(contentHash(c.text), entry);
       }
       missed.unshift({ at: new Date(now).toISOString(), source: c.source, url: c.url, text: c.text.replace(/\s+/g, " ").slice(0, 280), reason: `check: ${note}`, second: outcome });
     });
@@ -398,12 +422,12 @@ export async function editCandidates(
         // unanswered retry echoed every cycle filled all 200 missed slots with
         // 14 URLs and pushed the real misses off the list unread.
         const entry = cache[hash];
-        if (entry) cache[hash] = { ...entry, secondTriedAt: now };
+        if (entry) setEntry(hash, { ...entry, secondTriedAt: now });
         return;
       }
       r.follows_up = "";
       r.duplicate_of = "";
-      cache[hash] = { reading: r, at: now, second: true };
+      setEntry(hash, { reading: r, at: now, second: true });
       const v = decide(r, c);
       const outcome = v.kind === "publish" ? "published" : `rejected again: ${v.kind === "reject" ? v.note : ""}`;
       if (v.kind === "publish") {
@@ -447,10 +471,11 @@ export async function editCandidates(
     // Unplaced stays unplaced; the report itself is unaffected.
   }
 
-  const kept = Object.entries(cache)
-    .sort((a, b) => b[1].at - a[1].at)
-    .slice(0, CACHE_MAX);
-  await store.putJson(CACHE_KEY, Object.fromEntries(kept));
+  await store.putMany(CACHE_PREFIX, Object.fromEntries([...dirty].map((h) => [h, cache[h]])));
+  if (now - lastPrune > PRUNE_EVERY_MS) {
+    lastPrune = now;
+    await store.prune(CACHE_PREFIX, CACHE_KEEP_MS).catch(() => 0);
+  }
   await store.putJson(QUEUE_KEY, stillQueued);
   await store.putJson(QUOTA_KEY, quota);
   await store.putJson(USAGE_KEY, calls24);

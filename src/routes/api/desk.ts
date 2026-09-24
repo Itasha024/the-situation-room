@@ -41,7 +41,12 @@ export const Route = createFileRoute("/api/desk")({
             { ok: true, store: store.kind, ...slice },
             // Short, for the same reason as /api/scan: the tick can land at any
             // moment and readers should see it promptly.
-            { "cache-control": "public, max-age=30" },
+            {
+              "cache-control": "public, max-age=30",
+              // Every visitor's poll was a function call and a 400-row database
+              // read. The edge serves them now: a minute fresh, refreshed behind.
+              "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=240",
+            },
           );
         } catch (err) {
           const message = err instanceof Error ? err.message : "desk read failed";

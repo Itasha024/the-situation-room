@@ -12,7 +12,7 @@
 import type { Sql } from "../db.ts";
 import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import { deriveEvents, hasArticlePath } from "./snapshot.ts";
-import type { DeskSlice, DeskStore, MergeResult } from "./store.ts";
+import { dbMeter, type DeskSlice, type DeskStore, type MergeResult } from "./store.ts";
 import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
 
 const SCAN_STATE_KEY = "scan_state";
@@ -49,20 +49,59 @@ const defaultSqlProvider: SqlProvider = async () => {
   return getSql();
 };
 
+/** A state row held in memory is only kept when smaller than this. */
+const MEM_MAX = 2_000_000;
+/** Rows per multi-row upsert. */
+const PUT_CHUNK = 400;
+
 export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): DeskStore {
+  /**
+   * The rows this instance last read or wrote, with their version. A warm
+   * instance asks only for a row's `updated_at` (a few bytes) and downloads the
+   * value again only when someone else changed it: most state rows are written
+   * by the tick itself, so the next tick on the same instance reads almost
+   * nothing. The JSON text is kept, and parsed afresh on each read, so a caller
+   * that mutates what it got cannot change the copy held here.
+   */
+  const mem = new Map<string, { ver: string; text: string }>();
+
   const readState = async <T>(key: string): Promise<T | null> => {
     const sql = await sqlProvider();
-    const rows = await sql<{ value: T }>`select value from desk_state where key = ${key}`;
-    return rows.length ? rows[0].value : null;
+    dbMeter.queries += 1;
+    const held = mem.get(key);
+    if (held) {
+      const v = await sql<{ ver: string }>`select updated_at::text as ver from desk_state where key = ${key}`;
+      dbMeter.read += 40;
+      if (!v.length) {
+        mem.delete(key);
+        return null;
+      }
+      if (v[0].ver === held.ver) return JSON.parse(held.text) as T;
+      dbMeter.queries += 1;
+    }
+    const rows = await sql<{ v: string; ver: string }>`select value::text as v, updated_at::text as ver from desk_state where key = ${key}`;
+    if (!rows.length) return null;
+    const { v, ver } = rows[0];
+    dbMeter.read += v.length;
+    if (v.length < MEM_MAX) mem.set(key, { ver, text: v });
+    else mem.delete(key);
+    return JSON.parse(v) as T;
   };
 
   const writeState = async (key: string, value: unknown): Promise<void> => {
     const sql = await sqlProvider();
-    await sql`
+    const text = pgJson(value);
+    dbMeter.queries += 1;
+    dbMeter.written += text.length;
+    const rows = await sql<{ ver: string }>`
       insert into desk_state (key, value, updated_at)
-      values (${key}, ${pgJson(value)}::jsonb, now())
+      values (${key}, ${text}::jsonb, now())
       on conflict (key) do update set value = excluded.value, updated_at = now()
+      returning updated_at::text as ver
     `;
+    // What was written is what a read would return: no need to read it back.
+    if (rows.length && text.length < MEM_MAX) mem.set(key, { ver: rows[0].ver, text });
+    else mem.delete(key);
   };
 
   return {
@@ -94,6 +133,64 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       return writeState(`json:${key}`, value);
     },
 
+    async deleteJson(key: string): Promise<void> {
+      const sql = await sqlProvider();
+      mem.delete(`json:${key}`);
+      dbMeter.queries += 1;
+      await sql`delete from desk_state where key = ${`json:${key}`}`;
+    },
+
+    async getMany<T>(prefix: string, ids: string[]): Promise<Record<string, T>> {
+      const out: Record<string, T> = {};
+      const want = [...new Set(ids)];
+      if (!want.length) return out;
+      const sql = await sqlProvider();
+      const head = `row:${prefix}:`;
+      for (let i = 0; i < want.length; i += PUT_CHUNK) {
+        const keys = want.slice(i, i + PUT_CHUNK).map((id) => head + id);
+        dbMeter.queries += 1;
+        const rows = await sql<{ key: string; v: string }>`
+          select key, value::text as v from desk_state where key = any(${keys}::text[])
+        `;
+        for (const r of rows) {
+          dbMeter.read += r.v.length + r.key.length;
+          out[r.key.slice(head.length)] = JSON.parse(r.v) as T;
+        }
+      }
+      return out;
+    },
+
+    async putMany(prefix: string, entries: Record<string, unknown>): Promise<void> {
+      const list = Object.entries(entries);
+      if (!list.length) return;
+      const sql = await sqlProvider();
+      for (let i = 0; i < list.length; i += PUT_CHUNK) {
+        const chunk = list.slice(i, i + PUT_CHUNK);
+        const keys = chunk.map(([id]) => `row:${prefix}:${id}`);
+        const values = chunk.map(([, v]) => pgJson(v));
+        dbMeter.queries += 1;
+        dbMeter.written += values.reduce((n, v) => n + v.length, 0);
+        await sql`
+          insert into desk_state (key, value, updated_at)
+          select k, v::jsonb, now() from unnest(${keys}::text[], ${values}::text[]) as t(k, v)
+          on conflict (key) do update set value = excluded.value, updated_at = now()
+        `;
+      }
+    },
+
+    async prune(prefix: string, olderThanMs: number): Promise<number> {
+      const sql = await sqlProvider();
+      const cut = new Date(Date.now() - olderThanMs).toISOString();
+      dbMeter.queries += 1;
+      const gone = await sql<{ n: number }>`
+        with d as (
+          delete from desk_state where key like ${`row:${prefix}:%`} and updated_at < ${cut}::timestamptz
+          returning 1
+        ) select count(*)::int as n from d
+      `;
+      return gone[0]?.n ?? 0;
+    },
+
     async loadPayload(): Promise<ScanPayload | null> {
       const p = await readState<ScanPayload>(PAYLOAD_KEY);
       if (!p || !Array.isArray(p.reports) || !p.scannedAt) return null;
@@ -116,7 +213,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
      * `at` comes back as a Date from `pg`, so it is normalised to ISO here —
      * the page compares timestamps as strings.
      */
-    async recentDesk(limit = 400, before?: string): Promise<DeskSlice> {
+    async recentDesk(limit = 400, before?: string, opts: { events?: boolean } = {}): Promise<DeskSlice> {
       const cursor = before && Number.isFinite(Date.parse(before)) ? before : null;
       const sql = await sqlProvider();
       const iso = (v: unknown): string =>
@@ -132,13 +229,16 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
          order by at desc
          limit ${limit}
       `;
-      const events = await sql<Record<string, unknown>>`
+      // The tick's own look-backs want the cards only: the pins are not read.
+      const events = opts.events === false ? [] : await sql<Record<string, unknown>>`
         select fp, at, type, lat, lng, place, label, body, source, url, map_only
           from desk_event
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
          order by at desc
          limit ${limit}
       `;
+      dbMeter.queries += 2;
+      dbMeter.read += JSON.stringify(reports).length + JSON.stringify(events).length;
 
       return {
         updatedAt: reports.length ? iso(reports[0].at) : null,

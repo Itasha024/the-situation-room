@@ -32,12 +32,15 @@ export const Route = createFileRoute("/api/brief")({
 
 function ok(brief: Brief, tally: Tally, claims: Claims) {
   const secondsLeft = Math.max(60, Math.round((Date.parse(brief.nextUpdateAt) - Date.now()) / 1000));
-  return json({ ...brief, tally, claims }, 200, `public, max-age=${Math.min(secondsLeft, 1800)}`);
+  const age = Math.min(secondsLeft, 1800);
+  // The edge holds it until the window turns (at most ten minutes), so visitors
+  // never each cost a function call and a database read.
+  return json({ ...brief, tally, claims }, 200, `public, max-age=${age}`, `public, s-maxage=${Math.min(age, 600)}, stale-while-revalidate=60`);
 }
 
-function json(body: unknown, status = 200, cache = "no-store") {
+function json(body: unknown, status = 200, cache = "no-store", cdn?: string) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": cache },
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": cache, ...(cdn ? { "cdn-cache-control": cdn } : {}) },
   });
 }

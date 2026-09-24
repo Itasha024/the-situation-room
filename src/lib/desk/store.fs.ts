@@ -10,7 +10,7 @@
  * a half-written `data.json` that fails to parse and blanks the desk.
  */
 
-import { readFile, rename, writeFile } from "node:fs/promises";
+import { readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
@@ -30,6 +30,8 @@ const PAYLOAD_FILES = [
   join(PUBLIC_DIR, "live-reports.json"),
   join(process.cwd(), ".vercel", "output", "static", "live-reports.json"),
 ];
+
+const rowsFile = (prefix: string) => join(PUBLIC_DIR, `desk-rows-${prefix}.json`);
 
 async function readJson<T>(path: string): Promise<T | null> {
   try {
@@ -102,6 +104,38 @@ export function createFsStore(): DeskStore {
       await writeJsonAtomic(join(PUBLIC_DIR, `desk-${key}.json`), value);
     },
 
+    async deleteJson(key: string): Promise<void> {
+      await unlink(join(PUBLIC_DIR, `desk-${key}.json`)).catch(() => {});
+    },
+
+    /** Locally a cache's rows share one file: `desk-rows-<prefix>.json`. */
+    async getMany<T>(prefix: string, ids: string[]): Promise<Record<string, T>> {
+      const all = (await readJson<Record<string, { v: T; at: number }>>(rowsFile(prefix))) ?? {};
+      const out: Record<string, T> = {};
+      for (const id of ids) if (id in all) out[id] = all[id].v;
+      return out;
+    },
+
+    async putMany(prefix: string, entries: Record<string, unknown>): Promise<void> {
+      if (!Object.keys(entries).length) return;
+      const all = (await readJson<Record<string, { v: unknown; at: number }>>(rowsFile(prefix))) ?? {};
+      const at = Date.now();
+      for (const [id, v] of Object.entries(entries)) all[id] = { v, at };
+      await writeJsonAtomic(rowsFile(prefix), all);
+    },
+
+    async prune(prefix: string, olderThanMs: number): Promise<number> {
+      const all = (await readJson<Record<string, { v: unknown; at: number }>>(rowsFile(prefix))) ?? {};
+      const cut = Date.now() - olderThanMs;
+      let n = 0;
+      for (const [id, row] of Object.entries(all)) if (row.at < cut) {
+        delete all[id];
+        n += 1;
+      }
+      if (n) await writeJsonAtomic(rowsFile(prefix), all);
+      return n;
+    },
+
     async loadPayload(): Promise<ScanPayload | null> {
       for (const p of PAYLOAD_FILES) {
         const parsed = await readJson<ScanPayload>(p);
@@ -130,7 +164,7 @@ export function createFsStore(): DeskStore {
      * two drivers answering the same question, so `/api/desk` behaves
      * identically in development and deployed.
      */
-    async recentDesk(limit = 400, before?: string): Promise<DeskSlice> {
+    async recentDesk(limit = 400, before?: string, _opts?: { events?: boolean }): Promise<DeskSlice> {
       const cut = before ? Date.parse(before) : NaN;
       const older = (r: Record<string, unknown>) =>
         !Number.isFinite(cut) || Date.parse(String(r.at || "")) < cut;

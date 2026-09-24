@@ -231,3 +231,44 @@ test("a value with NUL or half an emoji is still saved (Postgres refuses both in
   const back = await store.getJson<{ text: string }>("nul-test");
   assert.equal(back?.text, "Sanaa strike end");
 });
+
+test("cache rows: only the ids asked for come back, and a write replaces", async () => {
+  const store = createPgStore(provider);
+  await store.putMany("lead", { a1: { lead: "one", at: 1 }, b2: { lead: "two", at: 2 } });
+  await store.putMany("lead", { b2: { lead: "two again", at: 3 } });
+  const got = await store.getMany<{ lead: string }>("lead", ["b2", "zz"]);
+  assert.deepEqual(Object.keys(got), ["b2"]);
+  assert.equal(got.b2.lead, "two again");
+  // Another cache's rows are apart.
+  assert.deepEqual(await store.getMany("read", ["a1"]), {});
+});
+
+test("cache rows not written for the keep period are pruned; fresh ones stay", async () => {
+  const store = createPgStore(provider);
+  await store.putMany("prune", { old: 1, fresh: 2 });
+  await sql`update desk_state set updated_at = now() - interval '10 days' where key = 'row:prune:old'`;
+  assert.equal(await store.prune("prune", 7 * 24 * 3600 * 1000), 1);
+  assert.deepEqual(await store.getMany("prune", ["old", "fresh"]), { fresh: 2 });
+});
+
+test("an old blob cache moves into rows once and is deleted", async () => {
+  const { migrateBlob } = await import("./store.ts");
+  const store = createPgStore(provider);
+  await store.putJson("blob-test", { "https://x/1": { lead: "L", at: 5 } });
+  await migrateBlob(store, "blob-test", "mig", (k) => k.replace(/\W/g, ""));
+  assert.equal(await store.getJson("blob-test"), null);
+  assert.deepEqual(await store.getMany("mig", ["httpsx1"]), { httpsx1: { lead: "L", at: 5 } });
+});
+
+test("a row held in memory is re-read when another instance changes it, and not mutated by callers", async () => {
+  const a = createPgStore(provider);
+  const b = createPgStore(provider);
+  await a.putJson("ver-test", { n: 1 });
+  const first = await a.getJson<{ n: number }>("ver-test");
+  first!.n = 99; // a caller mutating what it got
+  assert.equal((await a.getJson<{ n: number }>("ver-test"))?.n, 1, "the held copy is untouched");
+  await b.putJson("ver-test", { n: 2 });
+  assert.equal((await a.getJson<{ n: number }>("ver-test"))?.n, 2, "another writer's change is seen");
+  await b.deleteJson("ver-test");
+  assert.equal(await a.getJson("ver-test"), null, "and so is a delete");
+});

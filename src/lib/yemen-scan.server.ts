@@ -10,13 +10,14 @@
  *   reason — why it was kept or dropped, so the operator can audit the judgement
  */
 
+import { createHash } from "node:crypto";
 import { type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
 import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
 import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
-import { getStore } from "./desk/store.ts";
+import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { alertCities, citiesOverlap, countedOrNamed, numbersClash, sameCount, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
@@ -545,11 +546,18 @@ const ARTICLE_CHARS = 5000;
 const ITEM_CHARS = 5600;
 /** Reports kept in the cycle payload (the scan box and carry-forward). */
 const PAYLOAD_REPORTS = 300;
-/** Raw items kept in the cycle payload for the scan box. */
-const PAYLOAD_RAW_HITS = 400;
+/**
+ * Raw items kept in the cycle payload for the scan box: the last three hours,
+ * at most 150. Every tick re-reads the payload and every visitor downloads it.
+ */
+const PAYLOAD_RAW_HITS = 150;
+const RAW_HITS_MS = 3 * 3600 * 1000;
 
+/** The old whole-cache blob, moved into rows once. */
 const LEAD_CACHE_KEY = "lead-cache";
-const LEAD_CACHE_MAX = 3000;
+const LEAD_PREFIX = "lead";
+/** Well past the oldest item a listing is read for (MAX_ITEM_AGE_MS): never looked up again. */
+const LEAD_KEEP_MS = 7 * 24 * 3600 * 1000;
 /** url → the lead paragraph pulled from it ("" when the page had none). */
 type LeadCache = Record<string, { lead: string; at: number; real?: string; tries?: number }>;
 /** Google News links resolved to their article per cycle (two requests each). */
@@ -1186,7 +1194,7 @@ async function storedCards(): Promise<LiveReport[]> {
   try {
     const store = await getStore();
     const since = Date.now() - STORY_WINDOW_MS;
-    return (await store.recentDesk(150)).reports
+    return (await store.recentDesk(150, undefined, { events: false })).reports
       .filter((r) => Date.parse(String(r.at)) >= since)
       .map((r) => ({ ...(r as unknown as LiveReport), text: String((r as { text?: string }).text ?? ""), live: true as const }));
   } catch {
@@ -1194,23 +1202,41 @@ async function storedCards(): Promise<LiveReport[]> {
   }
 }
 
-async function loadLeadCache(): Promise<LeadCache> {
+/** A lead's row id: its URL, hashed (URLs run long). */
+const leadId = (url: string) => createHash("sha256").update(url).digest("hex").slice(0, 24);
+let leadMigrated = false;
+let leadPrunedAt = 0;
+
+/**
+ * The leads of these URLs only, one row each. The cache was one 9.5 MB blob,
+ * read and written whole every tick: most of the database egress that ran out
+ * the free plan.
+ */
+async function loadLeadCache(urls: string[]): Promise<LeadCache> {
   try {
     const store = await getStore();
-    return (await store.getJson<LeadCache>(LEAD_CACHE_KEY)) ?? {};
+    if (!leadMigrated) {
+      await migrateBlob(store, LEAD_CACHE_KEY, LEAD_PREFIX, leadId);
+      leadMigrated = true;
+    }
+    const rows = await store.getMany<LeadCache[string]>(LEAD_PREFIX, urls.map(leadId));
+    const out: LeadCache = {};
+    for (const u of urls) if (rows[leadId(u)]) out[u] = rows[leadId(u)];
+    return out;
   } catch {
     return {};
   }
 }
 
-/** Keep the newest entries only, so the cache cannot grow without bound. */
-async function saveLeadCache(cache: LeadCache): Promise<void> {
-  const kept = Object.entries(cache)
-    .sort((a, b) => b[1].at - a[1].at)
-    .slice(0, LEAD_CACHE_MAX);
+/** Only the entries this tick set are written; entries a week old are dropped. */
+async function saveLeadCache(cache: LeadCache, changed: Set<string>): Promise<void> {
   try {
     const store = await getStore();
-    await store.putJson(LEAD_CACHE_KEY, Object.fromEntries(kept));
+    await store.putMany(LEAD_PREFIX, Object.fromEntries([...changed].filter((u) => cache[u]).map((u) => [leadId(u), cache[u]])));
+    if (Date.now() - leadPrunedAt > 3600_000) {
+      leadPrunedAt = Date.now();
+      await store.prune(LEAD_PREFIX, LEAD_KEEP_MS);
+    }
   } catch {
     /* a lost cache only costs refetches */
   }
@@ -1406,7 +1432,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // Thin RSS teasers get their lead paragraph pulled so the gate has something
   // to judge. The same items reappear cycle after cycle, so leads are cached by
   // URL and each article page is fetched once.
-  const leadCache = await loadLeadCache();
+  const leadable = (h: RawHit) => !(h.fromTg || (h.text.length >= 500 && !isGnews(h.url)) || /\.pdf(\?|$)/i.test(h.url));
+  const leadCache = await loadLeadCache(hits.filter(leadable).map((h) => h.url));
+  const leadChanged = new Set<string>();
   const addLead = (h: RawHit, lead: string) => {
     if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, ITEM_CHARS);
   };
@@ -1414,7 +1442,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   for (const h of hits) {
     // A Google News item is resolved to its article even with a long teaser:
     // Google's redirect sends readers to a robot check.
-    if (h.fromTg || (h.text.length >= 500 && !isGnews(h.url)) ||/\.pdf(\?|$)/i.test(h.url)) continue;
+    if (!leadable(h)) continue;
     const cached = leadCache[h.url];
     // A Google News entry cached before links were resolved holds Google's
     // own page, not the article: it is fetched again.
@@ -1437,6 +1465,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       const real = isGnews(key) ? await resolveGoogleNews(key) : "";
       if (isGnews(key) && !real) {
         leadCache[key] = { lead: "", at: now, tries: (leadCache[key]?.tries ?? 0) + 1 };
+        leadChanged.add(key);
         return; // retried next cycle
       }
       const page = real || key;
@@ -1476,11 +1505,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         if (full.length > lead.length) lead = full.replace(/\s+/g, " ").trim().slice(0, ARTICLE_CHARS);
       }
       leadCache[key] = { lead, at: now, ...(real ? { real } : {}) };
+      leadChanged.add(key);
       addLead(h, lead);
       if (real) h.url = cleanUrl(real);
     }),
   );
-  await saveLeadCache(leadCache);
+  await saveLeadCache(leadCache, leadChanged);
   // One article under two addresses — Google's redirect and the outlet's own
   // link, from two listings — is one item: the WSJ's China story went out as
   // two cards. An unresolved Google item takes the address its outlet's own
@@ -1751,6 +1781,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     sourcesOk,
     // Newest-seen first: what the scanner just pulled sits at the top of the box.
     rawHits: rawHits
+      .filter((h) => !(now - Date.parse(h.seenAt || h.at) > RAW_HITS_MS))
       .sort((a, b) => Date.parse(b.seenAt || b.at) - Date.parse(a.seenAt || a.at) || Date.parse(b.at) - Date.parse(a.at))
       .slice(0, PAYLOAD_RAW_HITS),
     sourceStatus: status.sort((a, b) => a.name.localeCompare(b.name)),
@@ -1807,6 +1838,7 @@ export type TickResult = {
   cycleNote?: string;
   /** True when this tick closed a 12-hour window and composed its brief. */
   briefBuilt?: boolean;
+  usage?: TickUsage;
   error?: string;
 };
 
@@ -1837,8 +1869,15 @@ function guardUndici(): void {
   });
 }
 
+/** The last ticks' database traffic and CPU, for the status page. */
+export const TICK_USAGE_KEY = "tick-usage";
+export type TickUsage = { at: string; tookMs: number; cpuMs: number; dbReadKB: number; dbWrittenKB: number; queries: number };
+
 export async function runScanCycle(): Promise<TickResult> {
   guardUndici();
+  resetDbMeter();
+  const started = Date.now();
+  const cpu0 = typeof process !== "undefined" && process.cpuUsage ? process.cpuUsage() : null;
   const store = await getStore();
   const state = await store.loadScanState();
   const prev = await store.loadPayload();
@@ -1881,8 +1920,26 @@ export async function runScanCycle(): Promise<TickResult> {
     }
   }
 
+  // What this tick cost: Supabase bills egress, Vercel bills CPU.
+  const cpu = cpu0 ? process.cpuUsage(cpu0) : null;
+  const usage: TickUsage = {
+    at: new Date().toISOString(),
+    tookMs: Date.now() - started,
+    cpuMs: cpu ? Math.round((cpu.user + cpu.system) / 1000) : 0,
+    dbReadKB: Math.round(dbMeter.read / 1024),
+    dbWrittenKB: Math.round(dbMeter.written / 1024),
+    queries: dbMeter.queries,
+  };
+  try {
+    const log = (await store.getJson<TickUsage[]>(TICK_USAGE_KEY)) ?? [];
+    await store.putJson(TICK_USAGE_KEY, [usage, ...log].slice(0, 48));
+  } catch {
+    /* the meter must never cost the tick */
+  }
+
   return {
     ok: !error,
+    usage,
     scannedAt: payload.scannedAt,
     sourcesTried: payload.sourcesTried,
     sourcesOk: payload.sourcesOk,

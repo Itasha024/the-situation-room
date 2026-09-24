@@ -991,7 +991,7 @@ let deskArchive = { reports: [], events: [], updatedAt: null };
 
 async function pullDesk() {
   try {
-    const res = await fetch('/api/desk?limit=400&ts=' + Date.now());
+    const res = await fetch('/api/desk?limit=400');
     if (!res.ok) return;
     const body = await res.json();
     if (!body || body.ok === false) return;
@@ -1216,7 +1216,7 @@ async function pullLive(opts) {
   if (!liveInflight) {
     liveInflight = (async () => {
       try {
-        const res = await fetch('/api/scan?ts=' + Date.now());
+        const res = await fetch('/api/scan');
         if (!res.ok) throw new Error('scan ' + res.status);
         ingestLivePayload(await res.json());
       } catch (e) {
@@ -1249,7 +1249,7 @@ function paintLive() {
 
 async function pullBrief() {
   try {
-    const res = await fetch('/api/brief?ts=' + Date.now());
+    const res = await fetch('/api/brief');
     if (!res.ok) return;
     const b = await res.json();
     if (b && b.ok) brief = b;

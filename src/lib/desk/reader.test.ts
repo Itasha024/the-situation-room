@@ -37,6 +37,20 @@ function cand(text: string, source = "Shajab News", lean = "houthi"): Candidate 
   return { source, url: "https://t.me/x/1", text, at: "2026-09-21T10:00:00+03:00", lean, fp: "live-x", score: 50, tags: [] };
 }
 
+/** A store in memory: state keys in `json`, each cache's rows under `rows:<prefix>`. */
+function memStore(json: Record<string, unknown>) {
+  const rows = (p: string) => ((json[`rows:${p}`] ??= {}) as Record<string, unknown>);
+  return {
+    getJson: async (k: string) => json[k] ?? null,
+    putJson: async (k: string, v: unknown) => { json[k] = v; },
+    deleteJson: async (k: string) => { delete json[k]; },
+    getMany: async (p: string, ids: string[]) => Object.fromEntries(ids.filter((i) => i in rows(p)).map((i) => [i, rows(p)[i]])),
+    putMany: async (p: string, e: Record<string, unknown>) => { Object.assign(rows(p), e); },
+    prune: async () => 0,
+    recentDesk: async () => ({ reports: [], events: [], updatedAt: "" }),
+  };
+}
+
 test("a figure the source does not contain blocks publication", () => {
   const r = reading({ headline: "Saree: Saudi jets carried out 30 strikes", body: "Saudi jets carried out 30 strikes." });
   assert.match(String(checkReading(r, SAREE)), /figure not in source: 30/);
@@ -289,16 +303,14 @@ test("a second look no model answered is stamped, not retried every cycle", asyn
         },
       },
     };
-    const store = {
-      getJson: async (k: string) => json[k],
-      putJson: async (k: string, v: unknown) => { json[k] = v; },
-      recentDesk: async () => ({ reports: [], events: [], updatedAt: "" }),
-    } as unknown as Parameters<typeof editCandidates>[0];
+    const store = memStore(json) as unknown as Parameters<typeof editCandidates>[0];
 
     const candidate = { ...cand(text), url: "https://t.me/x/99" };
     await editCandidates(store, [candidate], now);
 
-    const cache = json["reader-cache"] as Record<string, { secondTriedAt?: number; second?: boolean }>;
+    // The old blob moved into rows on first use, and is gone.
+    assert.equal(json["reader-cache"], undefined, "the blob is deleted once moved");
+    const cache = json["rows:read"] as Record<string, { secondTriedAt?: number; second?: boolean }>;
     const entry = cache[contentHash(text)];
     assert.ok(entry, "the reading stays in the cache");
     assert.equal(entry.secondTriedAt, now, "the attempt is stamped even though no model answered");
@@ -325,15 +337,11 @@ test("a scope rejection made under the old wording is read again; a thin one is 
     // Rejected for scope, before the theatre-not-nationality rule landed.
     const before = Date.parse("2026-09-22T20:00:00+03:00");
     const json: Record<string, unknown> = {
-      "reader-cache": {
+      "rows:read": {
         [contentHash(text)]: { reading: reading({ publish: false, reject_reason: "out-of-scope", headline: "", body: "" }), at: before },
       },
     };
-    const store = {
-      getJson: async (k: string) => json[k],
-      putJson: async (k: string, v: unknown) => { json[k] = v; },
-      recentDesk: async () => ({ reports: [], events: [], updatedAt: "" }),
-    } as unknown as Parameters<typeof editCandidates>[0];
+    const store = memStore(json) as unknown as Parameters<typeof editCandidates>[0];
 
     const { verdicts, queued } = await editCandidates(store, [{ ...cand(text), url: "https://t.me/x/501" }], Date.now());
     // Stale: the cached verdict is not reused, so with no reader it waits for one.

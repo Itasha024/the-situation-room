@@ -4,7 +4,7 @@ import { MISSED_KEY, type Missed, USAGE_KEY, type Usage } from "@/lib/desk/edito
 import { REGISTRY_KEY, ROUTES_KEY, type Registry, type RouteLog } from "@/lib/desk/origin";
 import { getStore } from "@/lib/desk/store";
 import { PROPOSALS_KEY, type Proposal } from "@/lib/desk/control-proposals";
-import { sourceList } from "@/lib/yemen-scan.server";
+import { TICK_USAGE_KEY, type TickUsage, sourceList } from "@/lib/yemen-scan.server";
 
 /**
  * The desk's own health, for the operator: what each source gave in 24 hours,
@@ -18,15 +18,16 @@ export const Route = createFileRoute("/api/status")({
         try {
           const store = await getStore();
           const now = Date.now();
-          const [state, slice, missed, routes, usage, quota, registry, proposals] = await Promise.all([
+          const [state, slice, missed, routes, usage, quota, registry, proposals, ticks] = await Promise.all([
             store.loadScanState(),
-            store.recentDesk(1000),
+            store.recentDesk(1000, undefined, { events: false }),
             store.getJson<Missed[]>(MISSED_KEY),
             store.getJson<RouteLog>(ROUTES_KEY),
             store.getJson<Usage>(USAGE_KEY),
             store.getJson<Record<string, number>>("reader-quota"),
             store.getJson<Registry>(REGISTRY_KEY),
             store.getJson<Proposal[]>(PROPOSALS_KEY),
+            store.getJson<TickUsage[]>(TICK_USAGE_KEY),
           ]);
           const day = new Map<string, number>();
           for (const row of slice.reports) {
@@ -57,6 +58,8 @@ export const Route = createFileRoute("/api/status")({
             // Outlets a relay named that the desk looked up: their site, or none.
             outlets: Object.fromEntries(Object.entries(registry ?? {}).map(([name, r]) => [name, "site" in r ? r.site : null])),
             usage: usage ?? null,
+            // Each recent tick's database traffic (Supabase bills egress) and CPU (Vercel bills it).
+            ticks: ticks ?? [],
             // District control changes the reports support, awaiting the operator (public/control.json).
             controlProposals: proposals ?? [],
             // Models out of their daily quota, and when they are back.

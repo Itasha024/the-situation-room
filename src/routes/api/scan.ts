@@ -20,6 +20,9 @@ export const Route = createFileRoute("/api/scan")({
               // Short: the tick can land at any moment and readers should see
               // it promptly, but this still absorbs a burst of visitors.
               "cache-control": "public, max-age=30",
+              // Served by Vercel's edge, not by a function and a database read
+              // per visitor: a minute fresh, then refreshed in the background.
+              "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=240",
             },
           });
         } catch (err) {

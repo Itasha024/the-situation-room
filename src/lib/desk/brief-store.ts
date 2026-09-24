@@ -48,7 +48,7 @@ export async function refreshBrief(
   // to the next brief, even when this one is built late.
   const start = Date.parse(w.startedAt);
   const end = Date.parse(w.updatedAt);
-  const { reports } = await store.recentDesk(WINDOW_ROWS);
+  const { reports } = await store.recentDesk(WINDOW_ROWS, undefined, { events: false });
   const inWindow = reports
     .map((r) => r as unknown as LiveReport)
     .filter((r) => {

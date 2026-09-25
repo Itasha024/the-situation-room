@@ -27,7 +27,8 @@ test("a wave on Saudi Arabia from three outlets is one card: three places, the s
     headline: "Houthis fire missiles and 2 drones at Jazan, Najran and Yanbu; Saudi air defences intercept one over Najran",
     body: "",
   });
-  const { groups, written } = await combineGroups(plans, ask, rank);
+  const { groups, written, tried } = await combineGroups(plans, ask, rank);
+  assert.equal(tried, 1);
   assert.equal(written, 1);
   assert.equal(groups.length, 1);
   const [g] = groups;

@@ -226,7 +226,7 @@ export async function combineGroups(
   ask: Ask,
   rank: (r: LiveReport) => number,
   store?: DeskStore,
-): Promise<{ groups: Group[]; written: number; asked: number }> {
+): Promise<{ groups: Group[]; written: number; asked: number; tried: number }> {
   type Job = { parts: Group[]; group: Group; all: LiveReport[]; places: Place[]; key: string };
   const jobs: Job[] = [];
   const out: Group[] = [];
@@ -270,5 +270,5 @@ export async function combineGroups(
     } else if (j.parts.length > 1) out.push(...j.parts);
     else out.push(j.group);
   });
-  return { groups: out, written, asked };
+  return { groups: out, written, asked, tried: jobs.length };
 }

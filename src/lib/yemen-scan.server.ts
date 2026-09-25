@@ -1711,7 +1711,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // one area is one card, and the group is written once from every account
   // (combine.ts). The other outlets are "Also", as links only.
   const earlier = new Set((prev?.reports ?? []).map((r) => r.fp));
-  const { groups, written: combined, asked: combineAsked } = await combineGroups(
+  const { groups, written: combined, tried: combineTried } = await combineGroups(
     planWaves(
       [...byStory.values()].map((g) => pickLead(members(g), leadRank)),
       (r) => !earlier.has(r.fp),
@@ -1803,7 +1803,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     : `All ${tried} sources scanned this cycle.`;
   // Say plainly when the reader could not run: a quiet feed must not look
   // like a quiet war.
-  const readerNote = (modelNote ? ` Reader: ${modelNote}.` : "") + (combineAsked ? ` Combined ${combined} of ${combineAsked} groups into one card.` : "");
+  const readerNote = (modelNote ? ` Reader: ${modelNote}.` : "") + (combineTried ? ` Combined ${combined} of ${combineTried} groups into one card each.` : "");
 
   return {
     ok: true,

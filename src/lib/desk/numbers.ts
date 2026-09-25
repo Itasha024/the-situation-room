@@ -95,6 +95,14 @@ const newer = (a: Cell | undefined, b: Cell | undefined): Cell | undefined => {
   return a.value >= b.value ? a : b;
 };
 
+const host = (url: string | undefined) => {
+  try {
+    return new URL(String(url)).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+};
+
 /** One day's or one battle's toll, filed as if it were a total. */
 const tooSmall = (cell: Cell) => cell.value < 20;
 
@@ -126,8 +134,8 @@ export function mergeNumbers(tally: Tally | null, claims: Claims | null, base: N
   for (const [key, bySide] of Object.entries(claims?.fields ?? {})) {
     for (const [col, claim] of Object.entries(bySide ?? {}) as [Column, Cell][]) {
       if (!claim || tooSmall(claim)) continue;
-      // The same figure from the same page already stands in another column.
-      if (Object.values(cells[key] ?? {}).some((x) => x && x.value === claim.value && x.url && x.url === claim.url)) continue;
+      // The same figure from the same site already stands in another column.
+      if (Object.values(cells[key] ?? {}).some((x) => x && x.value === claim.value && host(x.url) && host(x.url) === host(claim.url))) continue;
       const side = sideOf(claim.name);
       put(key, side && side !== col ? side : col, claim);
     }

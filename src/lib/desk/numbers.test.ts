@@ -45,10 +45,10 @@ test("every baseline cell names its source, a date and a link", () => {
   }
 });
 
-test("one figure from one page is shown once, in the baseline's column", () => {
+test("one figure from one site is shown once, in the baseline's column", () => {
   const claims: Claims = {
     updatedAt: "2026-09-24T21:00:00Z",
-    fields: { "killed.houthi": { gov: { value: 693, name: "Almashhad", url: "https://www.almashhad.news/news/496403", date: "2026-09-24" } } },
+    fields: { "killed.houthi": { gov: { value: 693, name: "Almashhad", url: "https://www.almashhad.news/news/496331", date: "2026-09-24" } } },
   };
   const n = mergeNumbers(TALLY_SEED, claims);
   assert.equal(n.cells["killed.houthi"].houthi?.value, 693);

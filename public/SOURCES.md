@@ -25,7 +25,8 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 | SPA | every 5 minutes |
 | Al-Araby Al-Jadeed, Al-Araby TV | every 30 minutes |
 | Asharq Al-Awsat | every 30 minutes |
-| Erem News, Alhurra, Arab News | every 30 minutes |
+| Erem News, Alhurra, Arab News, Suhail | every 30 minutes |
+| Sheba Intelligence | every hour |
 | Reuters, WSJ, Washington Post, NYT, NY Post, Axios, CNN, ABC, CBS, Fox | every 30 minutes |
 | Keyword safety nets (Arabic sites, English sites) | every hour |
 | Al-Akhbar: the whole English edition, and the Arabic site via Google News | once a day, 07:00 Beirut |
@@ -88,6 +89,8 @@ model got to are judged by keyword for now and asked about again next read.
 | CBS | `cbsnews.com/latest/rss/world` | 30 min |
 | Fox News | `moxie.foxnews.com/google-publisher/world.xml`, `/politics.xml` | 30 min |
 | SPA | Google News, `site:spa.gov.sa` alone, Arabic edition, last hour | 5 min |
+| Sheba Intelligence | its section pages: news, reports, investigations, politics, daily brief (no feed; its sitemap re-dates old articles) | hourly |
+| Suhail | `suhail.net/news_rss.php?top=0` (every item) | 30 min |
 
 Any site whose own listing fails on a read is listed through Google News (a day wide; what was judged before is skipped)
 (`site:` alone) for that read. Nothing behind Cloudflare or a paywall is
@@ -127,6 +130,16 @@ Operator filter (not a dump of the wire):
 
 The live-scan box shows the **raw** scan (closed by default): every item read, kept or dropped, with the reason.
 
+## One card per event
+
+Several outlets telling one event in one scan (a wave of strikes by one side on one area included) become **one** card, written from every account. The lead source is the most fitting one (the speaker's own channel, then an official outlet, the original of a relay, an agency); the others are listed under "Also" as links only. A card that only repeats its headline has no body.
+
+A post with its own picture or video (launches, strikes, ships, battle footage, satellite images, front maps) carries it on the card, played from X or Telegram directly. Portraits, meetings, text cards, graphic content and prisoners are left out.
+
 ## Map
 
 Icons, not dots: missile = launch/strike/siren; swords = ground combat; ship = vessel; crane = port. Statements stay in the feed only.
+
+Control is shaded by district (`control.json`, the hand baseline of 24 Sep). Every 12 hours the desk changes a district only when two outlets from different sides, or a wire, report it taken; a claim by one side makes it contested. The control shares are computed from the shaded area.
+
+Map tiles: OpenStreetMap in the Original look, Esri Canvas (grey) in Day and Night; both need their credit line, shown on the map.

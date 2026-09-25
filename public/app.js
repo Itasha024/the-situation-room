@@ -1386,11 +1386,12 @@ function renderLiveScan() {
 /*
  * The prose names the places the desk's pins stand on. Each name links to the
  * pin of the report its sentence was written from: the pin at that place whose
- * headline shares the most words with the sentence, the newest on a tie. A
- * click takes the main map to it (Latest developments, Fronts).
+ * headline shares the most words with the sentence, else the newest there. A
+ * click takes the main map to it and makes it jump (Latest developments, Fronts).
  */
 const NOT_A_PIN_NAME = /^(?:yemen|saudi arabia|the red sea)$/i;
 const PROSE_PIN_MS = 36 * 3600 * 1000;
+const PROSE_WEEK_MS = 7 * 24 * 3600 * 1000;
 /** How far either side of a place name its clause is read, in characters. */
 const PROSE_REACH = 60;
 const PROSE_COMMON = new Set(('saudi arabia yemen yemeni houthi houthis government forces coalition province governorate ' +
@@ -1404,7 +1405,8 @@ function pinsForProse() {
   if (!mappableByFp.size && data && window.L) { try { buildMapPins(data); } catch (e) {} }
   // The prose's own window: the reports it was written from, not today's.
   const end = Date.parse((brief && brief.updatedAt) || '') || Date.now();
-  return [...mappableByFp.values()].filter((p) => p.place && Date.parse(p.at) >= end - PROSE_PIN_MS && Date.parse(p.at) <= end + 3600e3);
+  // The week before it too: a place the prose names finds its newest pin there.
+  return [...mappableByFp.values()].filter((p) => p.place && Date.parse(p.at) >= end - PROSE_WEEK_MS && Date.parse(p.at) <= end + 3600e3);
 }
 
 /** A text's words of four letters or more, cut to six: "recapturing" meets "recapture". */
@@ -1412,44 +1414,84 @@ function proseWords(s) {
   return new Set((String(s || '').toLowerCase().match(/[a-zÀ-ɏ']{4,}/g) || []).map((w) => w.slice(0, 6)));
 }
 
+/** The governorates and provinces the prose names, under every spelling the pins use. */
+const PROSE_REGIONS = [
+  ['hodeidah', 'hudaydah', 'hudaidah'], ['saada', "sa'dah", 'sadah'], ['marib', "ma'rib"], ['dhale', "dhale'", "ad dali'", 'dalea'],
+  ['mahrah', 'mahra'], ['hadramout', 'hadramawt', 'hadhramout', 'hadhramaut'], ['bayda', 'baydha', 'beida'], ['sanaa', "sana'a"],
+  ['mecca', 'makkah'], ['jizan', 'jazan'], ['taiz', "ta'izz"], ['abyan'], ['shabwa', 'shabwah'], ['lahj'], ['aden'], ['jawf'],
+  ['hajjah'], ['amran'], ['dhamar'], ['raymah'], ['mahwit'], ['socotra'], ['najran'], ['asir', "'asir"], ['riyadh'],
+];
+/** A place name used as the name of a thing ("the Mecca defense pact") is not a place. */
+const NAME_OF_A_THING = /^\s+(?:defen[cs]e\s+)?(?:pact|agreement|accord|talks|summit|declaration|process|conference|initiative)\b/i;
+
+/** A name as a pattern that forgives the vowels a transliteration moves: Qurfan = Qarfan, Saada = Sa'dah. */
+function placePattern(name) {
+  const core = name.toLowerCase().replace(/^(?:al|el|ad|as|ash|ar)[- ]/, '').replace(/[^a-z' -]/g, '').replace(/'/g, '');
+  if (core.replace(/[^a-z]/g, '').length < 3) return null;
+  const pre = "(?:\\b(?:al|el|ad|as|ash|ar)[- ])?\\b";
+  // Two consonants are too few to forgive vowels by ("Aden" would meet "done").
+  if (core.replace(/[^a-z]|[aeiouy]/g, '').replace(/(.)\1+/g, '$1').length < 3) return `${pre}${core.replace(/[- ]+/g, '[- ]')}\\b`;
+  const body = core.split(/[- ]+/).filter(Boolean).map((w) => w.replace(/h$/, '')
+    .split(/[aeiouy]+/)
+    .map((c) => c.split('').map((ch) => ch + '+').join(''))
+    .join("[aeiouy']{0,2}")).join('[- ]');
+  return `${pre}${body}h?\\b`;
+}
+
 function linkPlaces(text, pins) {
   const t = String(text || '');
   if (!pins || !pins.length) return escapeHtml(t);
   const norm = t.replace(/[’‘]/g, "'").replace(/[‐-―]/g, '-');
-  const byCore = new Map();
+  // Every part of every pin's place ("Jabal Qurfan, Taiz" is both), and each
+  // governorate by all its spellings, so a governorate named in the prose finds
+  // a pin inside it.
+  const regionOf = (s) => PROSE_REGIONS.find((r) => r.includes(s.toLowerCase().replace(/^(?:al|as|ad|ar|ash)[- ]/, '')));
+  const byKey = new Map();
+  const add = (key, name, p) => {
+    const pat = placePattern(name);
+    if (!pat) return;
+    if (!byKey.has(key)) byKey.set(key, { pats: new Set(), pins: new Set() });
+    byKey.get(key).pats.add(pat);
+    byKey.get(key).pins.add(p);
+  };
   for (const p of pins) {
-    const name = String(p.place).split(',')[0].replace(/[’‘]/g, "'").replace(/[‐-―]/g, '-').trim();
-    const core = name.replace(/^(?:al|el)[- ]/i, '');
-    if (core.length < 3 || NOT_A_PIN_NAME.test(name)) continue;
-    const k = core.toLowerCase();
-    if (!byCore.has(k)) byCore.set(k, { core, pins: [] });
-    byCore.get(k).pins.push(p);
+    for (const seg of String(p.place).split(',')) {
+      const name = seg.replace(/[’‘]/g, "'").replace(/[‐-―]/g, '-').trim();
+      if (!name || NOT_A_PIN_NAME.test(name)) continue;
+      const r = regionOf(name);
+      if (r) r.forEach((alias) => add(`r:${r[0]}`, alias, p));
+      else add(`p:${placePattern(name)}`, name, p);
+    }
   }
+  const end = Date.parse((brief && brief.updatedAt) || '') || Date.now();
+  const inWindow = (p) => Date.parse(p.at) >= end - PROSE_PIN_MS;
+  const entries = [...byKey.values()].map((v) => ({
+    re: new RegExp([...v.pats].sort((a, b) => b.length - a.length).join('|'), 'gi'),
+    pins: [...v.pins],
+    len: Math.max(...[...v.pats].map((s) => s.length)),
+  })).sort((a, b) => b.len - a.len);
   const spans = [];
-  const linked = new Set();
   for (const m of norm.matchAll(/[^.!?]+[.!?]*/g)) {
     const sent = m[0];
-    for (const [k, { core, pins: ps }] of byCore) {
-      if (linked.has(k)) continue;
-      const re = new RegExp(`(?:\\b(?:al|el)[- ])?${core.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-      const hit = re.exec(sent);
-      if (!hit) continue;
-      const start = m.index + hit.index;
-      const end = start + hit[0].length;
-      if (spans.some((s) => start < s[1] && end > s[0])) continue;
-      // The words around the name must share one of their own with the report,
-      // past places and the war's everyday words: "the Mecca defense pact" is
-      // not the siren alert in Makkah province, and in a long sentence only the
-      // clause at the name speaks for it.
-      const words = proseWords(sent.slice(Math.max(0, hit.index - PROSE_REACH), hit.index + hit[0].length + PROSE_REACH));
-      const place = proseWords(core);
-      const own = (w) => words.has(w) && !place.has(w) && !PROSE_COMMON.has(w);
-      const best = ps
-        .map((p) => ({ p, n: [...proseWords(p.label)].filter(own).length }))
-        .sort((a, b) => b.n - a.n || Date.parse(b.p.at) - Date.parse(a.p.at))[0];
-      if (!best || best.n < 1) continue;
-      spans.push([start, end, best.p]);
-      linked.add(k);
+    for (const { re, pins: ps } of entries) {
+      re.lastIndex = 0;
+      for (const hit of sent.matchAll(re)) {
+        const start = m.index + hit.index;
+        const stop = start + hit[0].length;
+        if (spans.some((s) => start < s[1] && stop > s[0])) continue;
+        if (NAME_OF_A_THING.test(sent.slice(hit.index + hit[0].length))) continue;
+        // The pin whose report the clause at the name was written from: the words
+        // around it shared with the report, past places and the war's everyday
+        // words; else the newest pin there in the prose's window, else this week.
+        const words = proseWords(sent.slice(Math.max(0, hit.index - PROSE_REACH), hit.index + hit[0].length + PROSE_REACH));
+        const place = proseWords(hit[0]);
+        const own = (w) => words.has(w) && !place.has(w) && !PROSE_COMMON.has(w);
+        const newest = (a, b) => Date.parse(b.at) - Date.parse(a.at);
+        const scored = ps.map((p) => ({ p, n: [...proseWords(p.label)].filter(own).length }))
+          .sort((a, b) => b.n - a.n || (inWindow(b.p) - inWindow(a.p)) || newest(a.p, b.p));
+        const best = scored[0] && scored[0].p;
+        if (best) spans.push([start, stop, best]);
+      }
     }
   }
   spans.sort((a, b) => a[0] - b[0]);
@@ -1468,7 +1510,7 @@ function wireProsePins(root) {
     a.onclick = (ev) => {
       ev.preventDefault();
       const pin = mappableByFp.get(a.dataset.fp);
-      if (pin) goToPinOnMainMap(pin);
+      if (pin) goToPinOnMainMap(pin, { note: false });
     };
   });
 }
@@ -2393,14 +2435,14 @@ function renderFronts(d) {
         <strong>${escapeHtml(f.name)}</strong>
         <button type="button" class="front-map-btn" data-i="${i}" aria-expanded="false" aria-label="Show where this is">Map</button>
       </div>
-      ${f.where ? `<p class="front-where">${escapeHtml(f.where)}</p>` : ''}
-      ${plain ? `<p class="front-plain">${escapeHtml(plain)}</p>` : ''}
-      ${showSum ? `<p class="front-sum">${escapeHtml(sum)}</p>` : ''}
-      ${showDir ? `<p class="front-dir">${escapeHtml(dir)}</p>` : ''}
+      ${f.where ? `<p class="front-where">${linkPlaces(f.where, pins)}</p>` : ''}
+      ${plain ? `<p class="front-plain">${linkPlaces(plain, pins)}</p>` : ''}
+      ${showSum ? `<p class="front-sum">${linkPlaces(sum, pins)}</p>` : ''}
+      ${showDir ? `<p class="front-dir">${linkPlaces(dir, pins)}</p>` : ''}
       ${composed ? `<p class="front-composed">${linkPlaces(composed, pins)}</p>` : ''}
       ${!composed && act ? `<p class="front-activity">${linkPlaces(act.line, pins)}</p>` : ''}
       ${composed ? '' : `<div class="srcs">Source: ${sourceAnchors(f.sources || [], '')}</div>`}
-      ${showDetail ? `<div class="full">${escapeHtml(detail)}</div>
+      ${showDetail ? `<div class="full">${linkPlaces(detail, pins)}</div>
       <button type="button" class="toggle-front">Read more</button>` : ''}
     </article>`;
   });
@@ -2623,7 +2665,8 @@ function pulsePin(el) {
   setTimeout(() => ev.classList.remove('pin-pulse'), 5200);
 }
 
-function goToPinOnMainMap(pin) {
+/** `note: false` only makes the pin jump; the reader opens it by clicking it. */
+function goToPinOnMainMap(pin, { note = true } = {}) {
   if (highlightIds.size) clearMapHighlight({});
   const ymd = jerusalemYmd(pin.at);
   if (mapMode !== 'day' || effectiveMapDate() !== ymd) {
@@ -2655,7 +2698,7 @@ function goToPinOnMainMap(pin) {
     const land = () => {
       if (done) return;
       done = true;
-      if (m) { try { m.openPopup(); } catch (e) {} pulsePin(m.getElement()); }
+      if (m) { if (note) { try { m.openPopup(); } catch (e) {} } pulsePin(m.getElement()); }
     };
     map.once('moveend', land);
     setTimeout(land, 1200);

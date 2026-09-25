@@ -255,7 +255,7 @@ const YEMEN: Place[] = [
     kind: "hill",
     country: "Yemen",
     region: "in Lahj governorate, overlooking the Bab al-Mandab strait",
-    aliases: ["كهبوب", "كحبوب", "Kahbub", "Kahboub", "כַ?ּ?הבּ?וּ?ב", "כהבוב"],
+    aliases: ["كهبوب", "كحبوب", "Kahbub", "Kahboub", "Khaboub", "Khabboub", "Khabub", "Kahbob", "כַ?ּ?הבּ?וּ?ב", "כהבוב"],
   },
   {
     name: "Harib",

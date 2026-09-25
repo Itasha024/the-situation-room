@@ -321,6 +321,9 @@ coast or a port town is land: air strikes on Kamaran island that destroy a
 fuel station serving fishermen's boats are air_strike, not maritime_attack.
 Ship traffic figures, cargo unloaded and shipping trends are economy, never
 maritime_attack.
+maritime_attack always names the ship or boat it happened to. A hit on an
+airport, an air base or a port on land, or an alert, is air_strike,
+missile_launch, drone_attack or air_raid_alert, never maritime_attack.
 
 SIDES (actor_side)
 Both the Houthis (Sanaa) and the recognised government (Aden) call themselves

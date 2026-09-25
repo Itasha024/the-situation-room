@@ -765,7 +765,15 @@ function classifyForMap(text, hintedType) {
   const hint = String(hintedType || '').toLowerCase();
   // The reader's type is final. A strike stays a strike: an island, a coast or
   // a word like "boats" does not turn it into an attack on a ship.
-  if (hint === 'vessel') return VESSEL_ATTACK_RE.test(t) ? 'vessel' : null;
+  // A ship icon needs a ship and something done to it; an airport, an air
+  // base, an alert or a port hit the reader typed as a ship attack is drawn
+  // as what it is (the server does the same for new cards: maritime.ts).
+  if (hint === 'vessel') {
+    if (VESSEL_RE.test(t) && VESSEL_ATTACK_RE.test(t)) return 'vessel';
+    if (/port|harbou?r|oil terminal|refinery/i.test(t) && VESSEL_ATTACK_RE.test(t)) return 'port';
+    if (/airport|air ?base|alerts?|sirens?|intercept|missile|drone|air ?strikes?|hangar/i.test(t)) return 'strike';
+    return null;
+  }
   if (hint === 'port') return 'port';
   if (hint === 'statement' || hint === 'diplomacy' || hint === 'intel') return 'statement';
   if (hint === 'combat' || hint === 'clash' || hint === 'capture' || hint === 'military') return 'combat';

@@ -13,6 +13,7 @@
 
 import { anglicise } from "./anglicise.ts";
 import { type NeedsPlace, geocodeJobs } from "./geocode.ts";
+import { maritimeType, seaPlace } from "./maritime.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
 import { type OutletSide, credibility, outletSide } from "./credibility.ts";
 import {
@@ -469,6 +470,8 @@ export async function editCandidates(
     const r = readingOf.get(c.url);
     if (v?.kind !== "publish" || !r || v.report.place) continue;
     if (v.report.type === "statement" || v.report.type === "diplomacy") continue;
+    // A street address for a ship is a place on land: a ship is placed only from the gazetteer's waters and ports.
+    if (v.report.type === "vessel") continue;
     const report = v.report;
     jobs.push({
       targets: r.targets || [],
@@ -657,7 +660,8 @@ function placesFor(r: Reading, sourceText: string): Place[] {
 }
 
 export function toReport(r: Reading, c: Candidate): LiveReport {
-  const type = TYPE_OF[r.event_type] ?? "statement";
+  // A "maritime_attack" that names no ship is typed by what its copy says.
+  const type = maritimeType(TYPE_OF[r.event_type] ?? "statement", `${r.headline || ""} ${r.body || ""}`);
   const spoken = type === "statement" || type === "diplomacy";
   // Statements are never pinned and carry no dateline: the desk knows what was
   // said, not where.
@@ -697,7 +701,8 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
   if (r.duplicate_of && r.duplicate_of !== c.fp && !c.tags.includes("original")) row.duplicateOf = r.duplicate_of;
   else if (r.follows_up && r.follows_up !== c.fp) row.replyTo = r.follows_up;
   row.confidence = confidenceOf(row, []);
-  const place = places.find((p) => p.country !== "sea") || places[0];
+  // A ship is pinned at sea or in port, never on an inland town.
+  const place = type === "vessel" ? seaPlace(places) : places.find((p) => p.country !== "sea") || places[0];
   if (place) {
     row.place = place.name;
     row.lat = place.lat;

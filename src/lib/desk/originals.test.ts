@@ -86,3 +86,13 @@ test("a relay is held while its original is looked for, and published from the r
     globalThis.fetch = realFetch;
   }
 });
+
+test("a leader's words are looked for in his own country's outlets, his office and the wires only", async () => {
+  const { speakerOutlet } = await import("./originals.ts");
+  assert.equal(speakerOutlet(macron, "www.liberation.fr"), true);
+  assert.equal(speakerOutlet(macron, "elysee.fr"), true);
+  assert.equal(speakerOutlet(macron, "www.reuters.com"), true);
+  assert.equal(speakerOutlet(macron, "www.internazionale.it"), false);
+  assert.equal(speakerOutlet(macron, "www.connaissancedesenergies.org"), false);
+  assert.equal(speakerOutlet(SPEAKERS.find((s) => s.name === "Abbas Araghchi")!, "breakingthenews.net"), false);
+});

@@ -98,11 +98,24 @@ async function ownPost(sp: Speaker, keys: string[], reportAt: number): Promise<H
   }
 }
 
+/** A country's own web domain: an outlet under it is that country's press. */
+const COUNTRY_TLD: Record<string, string> = { FR: "fr", IT: "it", DE: "de", UK: "uk", IR: "ir", TR: "tr", RU: "ru", EG: "eg", OM: "om", QA: "qa", AE: "ae", PK: "pk", CN: "cn" };
+
+/** Is this outlet where the speaker's own words are first reported: his office, his country's press, a wire? */
+export function speakerOutlet(sp: Pick<Speaker, "country" | "official">, host: string): boolean {
+  const h = host.toLowerCase().replace(/^www\./, "");
+  const under = (site: string) => h === site || h.endsWith(`.${site}`);
+  if (sp.official && under(sp.official)) return true;
+  if ([...(SPEAKER_PRESS[sp.country] ?? []), ...WIRE_SITES].some(under)) return true;
+  const tld = COUNTRY_TLD[sp.country];
+  return !!tld && h.endsWith(`.${tld}`);
+}
+
 /**
  * Where a leader's words were first published: his own post, his office, his
- * country's press in his language, any outlet in his language, then in
- * English. Among the matches, the earliest: the first report of an interview
- * is nearest to it.
+ * country's press and the wires in his language, then in English. Never any
+ * outlet at all: an Italian magazine is not where Macron's interview is. Among
+ * the matches, the earliest: the first report of an interview is nearest to it.
  */
 export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[], reportAt: number, isIsraeli: (outlet: string) => boolean): Promise<Hit | null> {
   const all = [...new Set([...trKeys, ...keys])];
@@ -116,22 +129,32 @@ export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[
   const own = trKeys.length ? trKeys : keys;
   if (sp.official) tries.push({ q: `site:${sp.official} ${k3(own)} when:3d`, ed: sp.edition, ks: own });
   tries.push({ q: `(${or(press.slice(0, 12))}) ${name} ${k3(own)} when:2d`, ed: sp.edition, ks: own });
+  // His language's edition at large, kept to his country's outlets.
   tries.push({ q: `${name} ${k3(own)} when:2d`, ed: sp.edition, ks: own });
-  if (trKeys.length) tries.push({ q: `${name} ${k3(keys)} when:2d`, ed: "en", ks: keys });
+  if (trKeys.length) tries.push({ q: `(${or(press.slice(0, 12))}) ${name} ${k3(keys)} when:2d`, ed: "en", ks: keys });
   for (const t of tries) {
     const items = await searchGoogleNews(t.q, t.ed);
     const fit = items
       .filter((i: GnewsItem) => new RegExp(name, "i").test(i.title) || (!!sp.official && i.site.includes(sp.official)))
       .filter((i) => shared(i.title, t.ks) >= 2 && !isIsraeli(i.outlet))
       .filter((i) => i.at >= reportAt - 48 * 3600_000 && i.at <= reportAt + 2 * 3600_000)
+      .filter((i) => !i.site || speakerOutlet(sp, hostOfSite(i.site)))
       .sort((a, b) => a.at - b.at);
     for (const hit of fit.slice(0, 2)) {
       const url = await resolveGoogleNews(hit.link);
-      if (url) return { url, source: hit.outlet || sp.name, title: hit.title };
+      if (url && speakerOutlet(sp, hostOfSite(url))) return { url, source: hit.outlet || sp.name, title: hit.title };
     }
   }
   return null;
 }
+
+const hostOfSite = (u: string) => {
+  try {
+    return new URL(/^https?:/.test(u) ? u : `https://${u}`).hostname;
+  } catch {
+    return "";
+  }
+};
 
 /** The speaker a Cited stands for, when it is one. */
 export function speakerNamed(name: string): Speaker | null {
@@ -204,10 +227,18 @@ export function learnSource(learned: Learned[], hit: Hit, known: (host: string) 
   const x = /(?:^|\.)(?:x|twitter)\.com$/.test(host) ? /^\/([^/]+)\//.exec(new URL(hit.url).pathname)?.[1] : undefined;
   const site = x ? x.toLowerCase() : host;
   if (known(x ? `x:${site}` : host) || learned.some((l) => l.site === site)) return false;
+  if (!x && !fromItsCountry({ site, country: meta.country })) return false;
   learned.push({ site, name: hit.source, kind: x ? "x" : "site", lang: meta.lang, country: meta.country, learnedAt: now, from: meta.from });
   return true;
 }
 
 export async function loadLearned(store: DeskStore): Promise<Learned[]> {
-  return (await store.getJson<Learned[]>(LEARNED_KEY)) ?? [];
+  // An outlet learned before the country rule (an Italian magazine for
+  // Macron's words, an aggregator for Araghchi's) is not read.
+  return ((await store.getJson<Learned[]>(LEARNED_KEY)) ?? []).filter((l) => l.kind === "x" || fromItsCountry(l));
+}
+
+/** A learned outlet belongs to the country whose words it carried: its press, its domain, or a wire. */
+function fromItsCountry(l: { site: string; country?: string }): boolean {
+  return !l.country || speakerOutlet({ country: l.country, official: undefined }, l.site);
 }

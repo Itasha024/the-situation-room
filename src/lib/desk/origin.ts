@@ -26,6 +26,22 @@ import { BROWSER_UA, type Edition, type GnewsItem, resolveCount, resolveGoogleNe
 import { FULL_TEXT_MAX } from "./reader.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
+import type { Listed } from "./sitemap.ts";
+import { ownCarrier, speakerOf } from "./speakers.ts";
+import {
+  type Hit,
+  type Learned,
+  LEARNED_KEY,
+  SPEAKER_PRESS,
+  WIRE_SITES,
+  learnSource,
+  loadLearned,
+  ownCandidates,
+  searchSpeaker,
+  speakerNamed,
+  translateKeys,
+  whichCarries,
+} from "./originals.ts";
 
 export type Cited = {
   name: string;
@@ -41,6 +57,8 @@ export type Cited = {
   wire?: boolean;
   /** Said TO the outlet (an interview): the network's site first, then its country's outlets. */
   told?: boolean;
+  /** A foreign leader's words (speakers.ts): looked for as he said them, in his language. */
+  speaker?: string;
 };
 
 /** Each country's main outlets: where "British media" or "a US official" is looked for. */
@@ -509,9 +527,41 @@ export type Found = {
 
 /** The original, read in full and queued for the reader to write the card from. */
 export type ReRead = { source: string; url: string; text: string; at: string; lean: string; fp: string; score: number; tags: string[] };
-type Entry =
-  | { found: Found; at: number; cited?: Cited; keys?: string[]; report?: LiveReport }
-  | { cited: Cited; keys: string[]; arKeys?: string[]; firstAt: number; lastAt: number; report: LiveReport };
+/**
+ * A report waiting for its original. `holdUntil`: until then the relay is not
+ * published at all (the desk's rule: nothing goes out from a relay while the
+ * original may still be found); `released` once it went out, found or not.
+ * `follows`: another relay of the same words, settled with the first one.
+ */
+type Waiting = {
+  cited: Cited;
+  keys: string[];
+  arKeys?: string[];
+  trKeys?: string[];
+  firstAt: number;
+  lastAt: number;
+  report: LiveReport;
+  holdUntil?: number;
+  released?: boolean;
+  follows?: string;
+};
+type Entry = { found: Found; at: number; cited?: Cited; keys?: string[]; report?: LiveReport; held?: boolean } | Waiting;
+
+/** How long a relay is held back while its original is looked for. */
+export const HOLD_MS = 3 * 3600_000;
+/** A held report is searched again this often: often at first, then less. */
+const holdEvery = (age: number) => (age < 3600_000 ? 10 * 60_000 : 20 * 60_000);
+/** Held reports searched per tick, before any other retry. */
+const HOLD_BUDGET = 6;
+
+export type TraceOptions = {
+  /** Reports held back this tick: the caller does not publish them. */
+  held?: Set<string>;
+  /** An outlet's own recent articles (its listing), by site. */
+  listingOf?: (site: string) => Promise<Listed[]>;
+  /** Does the desk already read this host? */
+  knownHost?: (host: string) => boolean;
+};
 
 /** Paths that are never the article itself: video, photo and live pages, a bare front page. */
 const NOT_ARTICLE = /\/(?:video|videos|pictures|graphics|live)\//i;
@@ -827,6 +877,7 @@ export async function traceOrigins(
   sourceText: Map<string, string>,
   now = Date.now(),
   reread: ReRead[] = [],
+  opts: TraceOptions = {},
 ): Promise<LiveReport[]> {
   const started = Date.now();
   const inTime = () => Date.now() - started < TRACE_MS;
@@ -837,7 +888,10 @@ export async function traceOrigins(
   const cache = (await store.getJson<Record<string, Entry>>(CACHE_KEY)) ?? {};
   const registry = (await store.getJson<Registry>(REGISTRY_KEY)) ?? {};
   const regBefore = JSON.stringify(registry);
+  let learned: Learned[] | null = null;
+  let dirtyLearned = false;
   let budget = ORIGIN_BUDGET;
+  let holds = HOLD_BUDGET;
   let reads = READ_BUDGET;
   let covers = COVERAGE_BUDGET;
   let discovers = DISCOVER_BUDGET;
@@ -894,7 +948,7 @@ ${text}`.trim(),
     });
   };
 
-  /** What this report relays from: the table, a name the reader wrote, or an unnamed group. */
+  /** What this report relays from: the table, a name the reader wrote, a foreign leader's words, or an unnamed group. */
   const citationOf = async (r: LiveReport, text: string): Promise<Cited | null> => {
     const lead = isPost(r.url) ? `${r.summary}\n${r.text ?? ""}` : `${r.summary}\n${(r.text ?? "").slice(0, LEAD_CHARS)}`;
     const cited = findCitation(text, r.source, r.url) ?? findCitation(lead, r.source, r.url);
@@ -904,8 +958,56 @@ ${text}`.trim(),
       const c = await resolveNamed(n, registry, now, () => discovers-- > 0 && inTime());
       if (c) return c;
     }
+    const sp = speakerOf(r.summary, isPost(r.url) ? text : "");
+    // His words on his own channel, in his country's press or on a wire are
+    // first-hand; so are words said to the carrier itself.
+    if (sp && !ownCarrier(sp, r.url, [...(SPEAKER_PRESS[sp.country] ?? []), ...WIRE_SITES]) && !saidTo(`${text}\n${lead}`, r.source)) {
+      return { name: sp.name, site: sp.official ?? "", lang: "en", kind: "official", country: sp.country, speaker: sp.name };
+    }
     return findGroup(text, r.url) ?? findGroup(lead, r.url);
   };
+
+  /**
+   * Look for the original: a leader's words as he said them; otherwise the
+   * outlet's site, its name elsewhere, its country's press; last, the outlet's
+   * own recent articles, read and matched by a model.
+   */
+  const find = async (e: Waiting): Promise<Found | null> => {
+    const at = Date.parse(e.report.at);
+    const sp = e.cited.speaker ? speakerNamed(e.cited.speaker) : null;
+    if (sp) {
+      if (!e.trKeys) e.trKeys = await translateKeys(e.keys, sp.lang);
+      const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o));
+      return hit ? { url: hit.url, source: hit.source, title: hit.title } : null;
+    }
+    const found = await search(e.cited, e.keys, e.arKeys ?? [], at);
+    if (found || !e.cited.site || !opts.listingOf || !canWork()) return found;
+    const cands = ownCandidates(await opts.listingOf(e.cited.site), e.keys, at);
+    if (!cands.length) return null;
+    const urls = await Promise.all(cands.map(async (c) => (/news\.google\.com/.test(c.url) ? await resolveGoogleNews(c.url) : c.url)));
+    const texts = await Promise.all(urls.map(async (u) => (u ? articleText(await page(u)) : "")));
+    const claim = `${e.report.summary}. ${e.report.text ?? ""}`.trim();
+    const i = await whichCarries(claim, texts.map((t, j) => `${cands[j].title}\n${t || cands[j].desc}`));
+    return i >= 0 && urls[i] ? { url: urls[i], source: e.cited.name, title: cands[i].title } : null;
+  };
+
+  /** A found original at an outlet the desk does not read becomes one of its sources. */
+  const learn = async (f: Found, e: { cited?: Cited }, fp: string) => {
+    if (!opts.knownHost) return;
+    learned ??= await loadLearned(store);
+    const sp = e.cited?.speaker ? speakerNamed(e.cited.speaker) : null;
+    const hit: Hit = { url: f.url, source: f.source, title: f.title };
+    if (learnSource(learned, hit, opts.knownHost, { lang: sp?.lang ?? (e.cited?.lang === "ar" ? "Arabic" : "English"), country: e.cited?.country, from: fp }, now)) {
+      console.log(`[origin] learned a source: ${f.source} (${hostOf(f.url)})`);
+      dirtyLearned = true;
+    }
+  };
+
+  /** Held speaker reports still waiting: a second channel's account of the same words waits with them. */
+  const heldSpeakers = () =>
+    Object.entries(cache)
+      .filter((x): x is [string, Waiting] => !("found" in x[1]) && !!x[1].holdUntil && !x[1].released && !x[1].follows && !!x[1].cited.speaker)
+      .sort((a, b) => a[1].firstAt - b[1].firstAt);
 
   for (const r of reports) {
     const text = sourceText.get(r.url);
@@ -917,44 +1019,108 @@ ${text}`.trim(),
     }
     if (prior) {
       r.citing = prior.cited.name;
+      if (prior.holdUntil && !prior.released) opts.held?.add(r.fp);
       continue; // waiting: retried below
     }
     if (!text) continue;
     const cited = await citationOf(r, text);
-    if (!cited) continue;
+    if (!cited) {
+      const copy = `${r.summary}\n${r.text ?? ""}`;
+      const leader = opts.held
+        ? heldSpeakers().find(([, e]) => {
+            const same = e.keys.filter((k) => copy.toLowerCase().includes(k.toLowerCase()));
+            // Three of its words, a name among them, within the hold.
+            return same.length >= 3 && same.some((k) => /^[A-Z]/.test(k)) && Math.abs(Date.parse(r.at) - Date.parse(e.report.at)) < HOLD_MS;
+          })
+        : undefined;
+      if (leader) {
+        const [lfp, le] = leader;
+        cache[r.fp] = { cited: le.cited, keys: le.keys, firstAt: now, lastAt: now, report: { ...r }, holdUntil: le.holdUntil, follows: lfp };
+        opts.held?.add(r.fp);
+        dirty = true;
+      }
+      continue;
+    }
     const keys = searchKeys(`${r.summary}\n${r.text ?? ""}`, cited);
     const arKeys = /[ء-ي]/.test(text) ? arabicKeys(text) : [];
     if (keys.length < 2) continue;
     r.citing = cited.name;
-    const entry: Entry = { cited, keys, arKeys, firstAt: now, lastAt: 0, report: { ...r } };
+    const entry: Waiting = { cited, keys, arKeys, firstAt: now, lastAt: 0, report: { ...r }, ...(opts.held ? { holdUntil: now + HOLD_MS } : {}) };
     cache[r.fp] = entry;
     dirty = true;
-    if (budget <= 0 || !canWork()) continue;
-    budget -= 1;
-    entry.lastAt = now;
-    const found = await search(cited, keys, arKeys, Date.parse(r.at));
-    if (found) {
-      const e = (cache[r.fp] = { found, at: now, cited, keys });
-      apply(r, found);
-      await readFrom(r, e);
+    if (budget > 0 && canWork()) {
+      budget -= 1;
+      entry.lastAt = now;
+      const found = await find(entry);
+      if (found) {
+        const e = (cache[r.fp] = { found, at: now, cited, keys });
+        apply(r, found);
+        await readFrom(r, e);
+        await learn(found, e, r.fp);
+        continue;
+      }
     }
+    // Not found yet: the relay is held back while the search goes on.
+    if (entry.holdUntil) opts.held?.add(r.fp);
   }
 
-  // Retries: hourly, for a day after the report. Then originals found but not
-  // yet read, when their next try is due.
   const late: LiveReport[] = [];
+  /** Another relay held with this one: dropped when the original is found, released with it when not. */
+  const settleFollowers = (lfp: string, found: Found | null) => {
+    for (const [fp, e] of Object.entries(cache)) {
+      if ("found" in e || e.follows !== lfp || e.released) continue;
+      e.released = true;
+      dirty = true;
+      if (found) cache[fp] = { found: { ...found, readBy: lfp }, at: now, cited: e.cited, keys: e.keys, held: true };
+      else late.push({ ...e.report });
+    }
+  };
+
+  // Held reports first: searched every few minutes for three hours, then
+  // published from the relay if the original never turned up.
+  const held = Object.entries(cache)
+    .filter((x): x is [string, Waiting] => !("found" in x[1]) && !!x[1].holdUntil && !x[1].released && !x[1].follows)
+    .sort((a, b) => a[1].firstAt - b[1].firstAt);
+  for (const [fp, e] of held) {
+    if (now >= (e.holdUntil ?? 0)) {
+      e.released = true;
+      dirty = true;
+      late.push({ ...e.report, citing: e.cited.name });
+      settleFollowers(fp, null);
+      console.log(`[origin] no original for ${fp} in ${HOLD_MS / 3600_000} h: published from the relay`);
+      continue;
+    }
+    if (holds <= 0 || !canWork() || now - e.lastAt < holdEvery(now - e.firstAt)) continue;
+    holds -= 1;
+    e.lastAt = now;
+    dirty = true;
+    const found = await find(e);
+    if (!found) continue;
+    const r = { ...e.report };
+    const fe = (cache[fp] = { found, at: now, cited: e.cited, keys: e.keys, held: true });
+    apply(r, found);
+    await readFrom(r, fe);
+    await learn(found, fe, fp);
+    settleFollowers(fp, found);
+    late.push(r);
+  }
+
+  // Released reports: hourly, for a day after the report, the published relay
+  // is swapped for its original if it turns up. Then originals found but not
+  // yet read, when their next try is due.
   for (const [fp, e] of Object.entries(cache)) {
     if (budget <= 0 || !canWork()) break;
-    if ("found" in e || now - e.firstAt > GIVE_UP_MS || now - e.lastAt < RETRY_MS) continue;
+    if ("found" in e || e.follows || (e.holdUntil && !e.released) || now - e.firstAt > GIVE_UP_MS || now - e.lastAt < RETRY_MS) continue;
     budget -= 1;
     e.lastAt = now;
     dirty = true;
-    const found = await search(e.cited, e.keys, e.arKeys ?? [], Date.parse(e.report.at));
+    const found = await find(e);
     if (!found) continue;
     const r = { ...e.report };
     const fe = (cache[fp] = { found, at: now, cited: e.cited, keys: e.keys });
     apply(r, found);
     await readFrom(r, fe);
+    await learn(found, fe, fp);
     late.push(r);
   }
   for (const e of Object.values(cache)) {
@@ -974,6 +1140,7 @@ ${text}`.trim(),
     await store.putJson(ROUTES_KEY, log);
   }
   if (JSON.stringify(registry) !== regBefore) await store.putJson(REGISTRY_KEY, registry);
+  if (dirtyLearned && learned) await store.putJson(LEARNED_KEY, learned);
   if (dirty) {
     const stamp = (e: Entry) => ("found" in e ? e.at : e.firstAt);
     const kept = Object.entries(cache)
@@ -982,4 +1149,12 @@ ${text}`.trim(),
     await store.putJson(CACHE_KEY, Object.fromEntries(kept));
   }
   return late;
+}
+
+/** Words said to the carrier itself ("told Al Arabiya", "في مقابلة مع العربية"): first-hand. */
+export function saidTo(text: string, carrier: string): boolean {
+  const first = carrier.split(/\s+/).find((w) => w.length >= 3 && !/^(?:al|the)$/i.test(w));
+  if (!first) return false;
+  const name = first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(String.raw`(?:\btold|\binterview with|\bin remarks to|\bspeaking to|لـ|في مقابلة مع|في حديث (?:ل|مع))\s*(?:the\s+)?[«"]?(?:al-?\s?)?${name}`, "i").test(text);
 }

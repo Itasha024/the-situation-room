@@ -25,6 +25,7 @@ import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
+import { type Learned, loadLearned } from "./desk/originals.ts";
 import { triage } from "./desk/triage.ts";
 import { askChain } from "./desk/models.ts";
 import { combineGroups, members, pickLead, planWaves } from "./desk/combine.ts";
@@ -207,6 +208,59 @@ const RSS: RssFeed[] = [
     cadence: C1H,
   },
 ];
+
+const LEARNED_NAME = "Learned outlets";
+
+/**
+ * Outlets where the origin search found an original the desk had not been
+ * reading (originals.ts): each is listed hourly from then on, through Google
+ * News, several sites to a query and one query per language.
+ */
+function learnedFeeds(learned: Learned[]): RssFeed[] {
+  const eds: Record<string, [string, string, string]> = { ar: ["ar", "SA", "SA:ar"], fr: ["fr", "FR", "FR:fr"], en: ["en-US", "US", "US:en"] };
+  const byEd = new Map<string, string[]>();
+  for (const l of learned) {
+    if (l.kind !== "site") continue;
+    const ed = l.lang === "Arabic" ? "ar" : l.lang === "French" ? "fr" : "en";
+    byEd.set(ed, [...(byEd.get(ed) ?? []), l.site]);
+  }
+  const out: RssFeed[] = [];
+  for (const [ed, sites] of byEd) {
+    for (let i = 0; i < sites.length; i += 8) {
+      const q = `(${sites.slice(i, i + 8).map((x) => `site:${x}`).join(" OR ")}) when:2h`;
+      out.push({ id: `learned-${ed}-${i / 8}`, url: gnews(q, ...eds[ed]), name: LEARNED_NAME, cadence: C1H, whole: true, ...(ed === "ar" ? { lang: "ar" as const } : {}) });
+    }
+  }
+  return out;
+}
+
+/** Does the desk read this host (a site listing) or this X account ("x:handle") already? */
+function readsHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/^www./, "");
+  if (h.startsWith("x:")) return X_ACCOUNTS.some((a) => `x:${a.handle.toLowerCase()}` === h);
+  if (h === "t.me") return true;
+  return RSS.some((f) => {
+    const site = f.site ?? (/news.google.com/.test(f.url) ? "" : new URL(f.url).hostname.replace(/^www./, ""));
+    return !!site && (h === site || h.endsWith(`.${site}`) || site.endsWith(`.${h}`));
+  });
+}
+
+/** An outlet's own recent articles, from the listing the desk reads it by; one fetch per site per tick. */
+const listingMemo = new Map<string, { at: number; items: Promise<Listed[]> }>();
+function siteListing(site: string): Promise<Listed[]> {
+  const hit = listingMemo.get(site);
+  if (hit && Date.now() - hit.at < 4 * 60_000) return hit.items;
+  const feeds = RSS.filter((f) => f.whole && (f.site === site || (f.site ?? "").endsWith(`.${site}`) || (!!f.site && site.endsWith(`.${f.site}`))));
+  const items = (async () => {
+    const lists = await Promise.all(feeds.map(async (f) => {
+      const body = await fetchListing(f.url, f.ua);
+      return body ? parseListing(body) : [];
+    }));
+    return lists.flat();
+  })();
+  listingMemo.set(site, { at: Date.now(), items });
+  return items;
+}
 
 /* ------------------------------------------------------------------ *
  * Cadence bookkeeping
@@ -666,7 +720,7 @@ function outletFromGoogleTitle(title: string, fallback: string): { title: string
     : /^cbs news/i.test(outlet) ? "CBS"
     : /arab news/i.test(outlet) ? "Arab News"
     : /saudi press agency|^spa$/i.test(outlet) ? "SPA"
-    : fallback === "US media" ? outlet.replace(/\s+/g, " ").slice(0, 28)
+    : fallback === "US media" || fallback === LEARNED_NAME ? outlet.replace(/\s+/g, " ").slice(0, 28)
     : fallback;
   return { title: m[1].trim(), source: mapped };
 }
@@ -1222,8 +1276,15 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   const dueTg = TG.filter((ch) => cadenceDue(state, `tg:${ch.id}`, ch.cadence, now));
   // A feed an outlet hint named (a channel citing the WSJ) is read now, not at its hour.
   const hinted = (id: string) => (state.lastScanAt[`hint:web:${id}`] ?? 0) > (state.lastScanAt[`web:${id}`] ?? 0);
+  let learned: Learned[] = [];
+  try {
+    learned = await loadLearned(await getStore());
+  } catch {
+    // Unread, the learned outlets wait for the next tick.
+  }
   const dueRss = [
     ...RSS.filter((feed) => hinted(feed.id) || cadenceDue(state, `web:${feed.id}`, feed.cadence, now)),
+    ...learnedFeeds(learned).filter((feed) => cadenceDue(state, `web:${feed.id}`, feed.cadence, now)),
     ...speakerSearches(prev?.reports ?? [], state, now),
   ];
   let sourcesOk = 0;
@@ -1594,7 +1655,15 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   let late: LiveReport[] = [];
   const reread: ReRead[] = [];
   try {
-    late = await traceOrigins(await getStore(), reports, new Map(hits.map((h) => [h.url, h.text])), now, reread);
+    const held = new Set<string>();
+    late = await traceOrigins(await getStore(), reports, new Map(hits.map((h) => [h.url, h.text])), now, reread, {
+      held,
+      listingOf: siteListing,
+      knownHost: readsHost,
+    });
+    // A relay whose original is still being looked for is not published yet.
+    for (let i = reports.length - 1; i >= 0; i -= 1) if (held.has(reports[i].fp)) reports.splice(i, 1);
+    if (held.size) console.log(`[origin] ${held.size} relay(s) held while their original is looked for`);
     // Originals read in full go to the reader next cycle; the card is then
     // rewritten from the original's text under the same fp.
     await queueForReading(await getStore(), reread, now);
@@ -1765,7 +1834,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     // deleted two days earlier on the status page, still advertising the
     // daily 07:00 read it was dropped for failing — the page went on
     // describing a capability the desk no longer had.
-    const real = new Set([...TG.map((c) => c.id), ...RSS.map((f) => f.id)]);
+    const real = new Set([...TG.map((c) => c.id), ...RSS.map((f) => f.id), ...learnedFeeds(learned).map((f) => f.id)]);
     for (const s of prev.sourceStatus) {
       if (s?.id && !haveS.has(s.id) && real.has(s.id)) status.push(s);
     }

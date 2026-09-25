@@ -5,6 +5,7 @@ import { REGISTRY_KEY, ROUTES_KEY, type Registry, type RouteLog } from "@/lib/de
 import { CPU_KEY, type CpuMeter, metered } from "@/lib/desk/cpu-meter";
 import { getStore } from "@/lib/desk/store";
 import { CONTROL_LIVE_KEY, type ControlLive } from "@/lib/desk/control-live";
+import { LEARNED_KEY, type Learned } from "@/lib/desk/originals";
 import { TICK_USAGE_KEY, type TickUsage, sourceList } from "@/lib/yemen-scan.server";
 
 /**
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/api/status")({
         try {
           const store = await getStore();
           const now = Date.now();
-          const [state, slice, missed, routes, usage, quota, registry, controlLive, ticks, cpu] = await Promise.all([
+          const [state, slice, missed, routes, usage, quota, registry, controlLive, ticks, cpu, learned] = await Promise.all([
             store.loadScanState(),
             store.recentDesk(1000, undefined, { events: false }),
             store.getJson<Missed[]>(MISSED_KEY),
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/api/status")({
             store.getJson<ControlLive>(CONTROL_LIVE_KEY),
             store.getJson<TickUsage[]>(TICK_USAGE_KEY),
             store.getJson<CpuMeter>(CPU_KEY),
+            store.getJson<Learned[]>(LEARNED_KEY),
           ]);
           const day = new Map<string, number>();
           for (const row of slice.reports) {
@@ -66,6 +68,8 @@ export const Route = createFileRoute("/api/status")({
             cpu: cpu ?? {},
             // District control changes the 12-hour clock applied over public/control.json.
             controlChanges: controlLive?.changes ?? [],
+            // Outlets and X accounts the origin search found originals at, now read hourly.
+            learned: learned ?? [],
             // Models out of their daily quota, and when they are back.
             resting: Object.fromEntries(Object.entries(quota ?? {}).filter(([, until]) => until > now).map(([m, until]) => [m, new Date(until).toISOString()])),
           });

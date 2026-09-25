@@ -1430,7 +1430,8 @@ function placePattern(name) {
   if (core.replace(/[^a-z]/g, '').length < 3) return null;
   const pre = "(?:\\b(?:al|el|ad|as|ash|ar)[- ])?\\b";
   // Two consonants are too few to forgive vowels by ("Aden" would meet "done").
-  if (core.replace(/[^a-z]|[aeiouy]/g, '').replace(/(.)\1+/g, '$1').length < 3) return `${pre}${core.replace(/[- ]+/g, '[- ]')}\\b`;
+  // (A closing h is optional, so it doesn't count: "Riyadh" would meet "Red".)
+  if (core.replace(/h\b/g, '').replace(/[^a-z]|[aeiouy]/g, '').replace(/(.)\1+/g, '$1').length < 3) return `${pre}${core.replace(/[- ]+/g, '[- ]')}\\b`;
   const body = core.split(/[- ]+/).filter(Boolean).map((w) => w.replace(/h$/, '')
     .split(/[aeiouy]+/)
     .map((c) => c.split('').map((ch) => ch + '+').join(''))

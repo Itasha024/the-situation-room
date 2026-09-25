@@ -364,6 +364,8 @@ function mediaBlock(items, compact) {
 function cardMediaHtml(m) {
   if (!m || typeof m !== 'object' || Array.isArray(m) || !m.thumb) return Array.isArray(m) ? mediaBlock(m) : '';
   const d = Number(m.duration) || 0;
+  // A video over a minute and a half is a TV package, not the moment: not shown.
+  if (m.kind === 'video' && d > 90) return '';
   const dur = m.kind === 'video' && d ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}` : '';
   const video = m.kind === 'video';
   const where = m.from === 'tg' ? 'Telegram' : 'X';
@@ -407,6 +409,7 @@ function wireCardMedia(card) {
   }
   const still = box.querySelector('.cm-still');
   if (!still) return;
+  if (box.dataset.kind === 'photo' && img) pinchInCard(still, img);
   const gone = () => { box.innerHTML = ''; box.appendChild(still); box.classList.add('cm-gone'); };
   const tgPlayer = () => {
     const { embed } = box.dataset;
@@ -540,6 +543,85 @@ function zoomInFrame(frame, img) {
   };
   img.addEventListener('pointerup', up);
   img.addEventListener('pointercancel', up);
+}
+
+/**
+ * On a phone, two fingers zoom into a card's picture where it stands: the
+ * picture keeps its place and size in the card. One finger then moves around
+ * the zoomed picture; a tap, or pinching back out, returns it. Without a pinch
+ * a tap still opens it large.
+ */
+function pinchInCard(box, img) {
+  if (!box || !img || box._pinch) return;
+  box._pinch = true;
+  let s = 1;
+  let x = 0;
+  let y = 0;
+  let from = null;
+  let last = null;
+  let zoomedAt = 0;
+  const apply = (anim) => {
+    if (s <= 1.02) { s = 1; x = 0; y = 0; }
+    const mx = (box.clientWidth * (s - 1)) / 2;
+    const my = (box.clientHeight * (s - 1)) / 2;
+    x = Math.max(-mx, Math.min(mx, x));
+    y = Math.max(-my, Math.min(my, y));
+    img.style.transition = anim ? 'transform .18s ease-out' : 'none';
+    img.style.transform = s === 1 ? '' : `translate(${x}px,${y}px) scale(${s})`;
+    box.classList.toggle('pinched', s > 1);
+  };
+  const two = (t) => {
+    const r = box.getBoundingClientRect();
+    return {
+      d: Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY) || 1,
+      cx: (t[0].clientX + t[1].clientX) / 2 - r.left - r.width / 2,
+      cy: (t[0].clientY + t[1].clientY) / 2 - r.top - r.height / 2,
+    };
+  };
+  box.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      from = { ...two(e.touches), s, x, y };
+    } else if (e.touches.length === 1 && s > 1) {
+      last = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  }, { passive: false });
+  box.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && from) {
+      e.preventDefault();
+      const now = two(e.touches);
+      const ns = Math.max(1, Math.min(5, (from.s * now.d) / from.d));
+      // The point between the fingers stays under them, and follows them.
+      x = now.cx - ((from.cx - from.x) * ns) / from.s;
+      y = now.cy - ((from.cy - from.y) * ns) / from.s;
+      s = ns;
+      zoomedAt = Date.now();
+      apply(false);
+    } else if (e.touches.length === 1 && s > 1 && last) {
+      e.preventDefault();
+      x += e.touches[0].clientX - last.x;
+      y += e.touches[0].clientY - last.y;
+      last = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      zoomedAt = Date.now();
+      apply(false);
+    }
+  }, { passive: false });
+  const end = (e) => {
+    if (e.touches.length < 2) from = null;
+    if (!e.touches.length) { last = null; if (s <= 1.02) apply(true); }
+  };
+  box.addEventListener('touchend', end);
+  box.addEventListener('touchcancel', end);
+  // iOS pinches the whole page otherwise.
+  box.addEventListener('gesturestart', (e) => e.preventDefault());
+  // A tap on a zoomed picture returns it; right after a pinch, nothing opens.
+  box.addEventListener('click', (e) => {
+    if (s > 1 || Date.now() - zoomedAt < 400) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (Date.now() - zoomedAt >= 400) { s = 1; apply(true); }
+    }
+  }, true);
 }
 
 function wireMediaClicks(root) {
@@ -1892,7 +1974,7 @@ function feedCardHtml(r, i) {
       ${replyQuote(r)}
       <p class="headline">${escapeHtml(sum)}</p>
       ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
-      ${cardMediaHtml(r.media)}
+      ${!Array.isArray(r.media) && (r.type === 'statement' || r.type === 'diplomacy') ? '' : cardMediaHtml(r.media)}
       ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
@@ -2794,8 +2876,8 @@ function pulsePin(el) {
   setTimeout(() => ev.classList.remove('pin-pulse'), 5200);
 }
 
-/** `note: false` only makes the pin jump; the reader opens it by clicking it. */
-function goToPinOnMainMap(pin, { note = true } = {}) {
+/** A link only makes the pin jump; the reader opens its report by clicking it. */
+function goToPinOnMainMap(pin, { note = false } = {}) {
   if (highlightIds.size) clearMapHighlight({});
   const ymd = jerusalemYmd(pin.at);
   if (mapMode !== 'day' || effectiveMapDate() !== ymd) {

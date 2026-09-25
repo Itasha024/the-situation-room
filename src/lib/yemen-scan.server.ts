@@ -238,9 +238,6 @@ const RSS: RssFeed[] = [
   { id: "almashhad", lang: "ar", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5, whole: true, site: "almashhad.news" },
   // A browser's user agent is refused (403); a plain client is served.
   { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss.xml", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C30, whole: true, site: "alaraby.co.uk" },
-  // The TV channel's own site (alaraby.com), not the paper's: its interviews
-  // with officials are posted there and not on the breaking channel.
-  { id: "alaraby-tv", lang: "ar", url: "https://www.alaraby.com/rss.xml", name: "Al-Araby TV", cadence: C30, whole: true, site: "alaraby.com" },
   { id: "aawsat", lang: "ar", url: gnews("site:aawsat.com when:1h", "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C30, whole: true, site: "aawsat.com" },
   // Hourly, a day wide: the paper's site is behind Cloudflare, and its channel
   // (every 15 minutes) carries each story's headline as it is published.
@@ -290,7 +287,7 @@ const RSS: RssFeed[] = [
   // listing can drop an article (a sitemap's cap, an edited URL); these catch it.
   {
     id: "net-ar",
-    url: gnews(`(site:aawsat.com OR site:alaraby.co.uk OR site:alaraby.com OR site:al-akhbar.com OR site:eremnews.com OR site:alhurra.com) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"),
+    url: gnews(`(site:aawsat.com OR site:alaraby.co.uk OR site:al-akhbar.com OR site:eremnews.com OR site:alhurra.com) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"),
     name: "Arabic press",
     cadence: C1H,
   },

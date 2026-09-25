@@ -5,9 +5,10 @@
  * A post having media is not a reason to show it. What goes in: launch
  * footage, strikes and impacts at a named place, interceptions, a ship hit or
  * burning, battlefield footage (a position taken, vehicles destroyed), damage
- * to a named site, satellite images, front-line maps from OSINT accounts, and a
- * leader's speech only when the speech is the card's news. What stays out:
- * logos and "breaking" cards, portraits, meetings and handshakes, file or
+ * to a named site, satellite images and front-line maps from OSINT accounts.
+ * What stays out: speeches and interviews, a video over a minute and a half (a
+ * TV package, not the moment), logos and "breaking" cards, portraits, meetings
+ * and handshakes, the wounded in hospital, file or
  * archive footage, studio clips, montages set to music, text-only graphics,
  * anything graphic (bodies, blood, the wounded), prisoners' faces, and a
  * duplicate of media on another card.
@@ -101,8 +102,13 @@ const FOOTAGE = /شاهد|مشاهد|لحظة|لحظات|فيديو|بالفيد
 const NOT_FOOTAGE = /يستقبل|استقبل|يلتقي|التقى|لقاء|اجتماع|يترأس|ترأس|مؤتمر صحفي|أرشيف|ارشيفية|صورة أرشيفية|meets?\b|met with|meeting|received|receives|handshake|press conference|archive|file (?:photo|image)|portrait|condolence|تعزية|عزاء|نعي|mourn/i;
 /** A map of the front from an OSINT account. */
 const MAP = /خريطة|map of|frontline map|control map|situation map/i;
-/** A speech that is itself the news. */
-const SPEECH = /Houthi leader|Armed Forces spokesperson|Houthi spokesperson|كلمة|خطاب|بيان/i;
+/** Footage is the moment itself: a longer video is a TV package or a talk. */
+export const MAX_VIDEO_SECONDS = 90;
+
+/** Too long to be the moment itself. */
+export function tooLong(m: Pick<Media, "kind" | "duration">): boolean {
+  return m.kind === "video" && (m.duration ?? 0) > MAX_VIDEO_SECONDS;
+}
 
 /** Could this card show its post's media? The still is looked at after. */
 export function mediaCandidate(r: Pick<LiveReport, "type" | "summary" | "text">, postText: string): boolean {
@@ -110,7 +116,8 @@ export function mediaCandidate(r: Pick<LiveReport, "type" | "summary" | "text">,
   if (NOT_FOOTAGE.test(t)) return false;
   if (r.type === "strike" || r.type === "combat" || r.type === "vessel" || r.type === "port") return true;
   if (MAP.test(t)) return true;
-  if ((r.type === "statement" || r.type === "diplomacy") && SPEECH.test(r.summary) && FOOTAGE.test(t)) return true;
+  // A speech, a statement or a meeting never shows its video.
+  if (r.type === "statement" || r.type === "diplomacy") return false;
   return FOOTAGE.test(postText);
 }
 
@@ -170,10 +177,10 @@ async function askGemini(model: string, prompt: string, mime: string, bytes: str
   return (j.candidates?.[0]?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? "").join("");
 }
 
-const KEEP = new Set(["launch", "strike", "interception", "ship", "battlefield", "damage", "satellite", "map", "speech"]);
+const KEEP = new Set(["launch", "strike", "interception", "ship", "battlefield", "damage", "satellite", "map"]);
 
 const PROMPT = `You look at the still of a video or photo attached to a news post about the war in Yemen, and say what it shows.
-Classes: launch (a missile or drone launch), strike (an explosion, impact or smoke at a place), interception (air defence, a missile shot down), ship (a ship attacked, burning or seized), battlefield (fighters at a position, captured ground, destroyed vehicles), damage (a damaged building or site), satellite (satellite imagery), map (a map of the front), speech (a leader or spokesman speaking to camera), portrait (a person posing or a headshot), meeting (officials meeting, handshakes, a conference), studio (a TV studio or presenter), logo (a logo, a text card, an infographic of text), crowd (a rally or funeral), other.
+Classes: launch (a missile or drone launch), strike (an explosion, impact or smoke at a place), interception (air defence, a missile shot down), ship (a ship attacked, burning or seized), battlefield (fighters at a position, captured ground, destroyed vehicles), damage (a damaged building or site), satellite (satellite imagery), map (a map of the front), speech (a leader or spokesman speaking to camera), interview (someone talking to a reporter or a microphone, a witness), hospital (the wounded or patients in a hospital), portrait (a person posing or a headshot), meeting (officials meeting, handshakes, a conference), studio (a TV studio or presenter), logo (a logo, a text card, an infographic of text), crowd (a rally or funeral), other.
 graphic: true if it shows bodies, blood, wounded people close up, or a prisoner's face.
 Answer ONLY JSON {"class":"...","graphic":true|false}.`;
 
@@ -214,11 +221,9 @@ The post says: ${caption.slice(0, 400)}`;
   return null;
 }
 
-/** Does the look keep it? The in-classes, never graphic; a speech only on a speech card. */
-export function keeps(look: { cls: string; graphic: boolean }, r: Pick<LiveReport, "type" | "summary">): boolean {
-  if (look.graphic || !KEEP.has(look.cls)) return false;
-  if (look.cls === "speech") return (r.type === "statement" || r.type === "diplomacy") && SPEECH.test(r.summary);
-  return true;
+/** Does the look keep it? The in-classes, never graphic. */
+export function keeps(look: { cls: string; graphic: boolean }, _r?: Pick<LiveReport, "type" | "summary">): boolean {
+  return !look.graphic && KEEP.has(look.cls);
 }
 
 /**
@@ -238,7 +243,7 @@ export async function attachMedia(
   let looked = 0;
   let given = 0;
   for (const c of cards) {
-    if (c.r.media || usedThumbs.has(c.media.thumb) || !mediaCandidate(c.r, c.postText)) continue;
+    if (c.r.media || usedThumbs.has(c.media.thumb) || tooLong(c.media) || !mediaCandidate(c.r, c.postText)) continue;
     if (looked >= VISION_TICK || log.n >= VISION_DAY) break;
     looked += 1;
     log.n += 1;

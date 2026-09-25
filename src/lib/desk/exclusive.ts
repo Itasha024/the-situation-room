@@ -41,17 +41,30 @@ export function ownInformation(text: string, source: string): boolean {
   const names = OWN_NAMES[source];
   if (!names) return true;
   if (isExclusive(text, source)) return true;
-  const t = String(text || "").slice(0, 4000);
+  // Outlets word it many ways; any sign that the outlet itself was told,
+  // shown, or went and saw counts. Other agencies' news does not.
+  const t = String(text || "").slice(0, 6000);
   for (const n of names.en) {
-    const name = String.raw`(?:the\s+)?${esc(n)}`;
-    if (new RegExp(String.raw`\b(?:told|tells|said to|speaking to|spoke to|in an? (?:exclusive )?interview with|interviewed by|in remarks to|in a statement to|obtained by|seen by)\s+${name}\b`, "i").test(t)) return true;
-    if (new RegExp(String.raw`\b${esc(n)}\b[^.\n]{0,30}\b(?:has |have )?(?:learned|obtained|reviewed)`, "i").test(t)) return true;
+    const name = String.raw`(?:the\s+)?${esc(n)}(?:'s)?`;
+    if (new RegExp(String.raw`\b(?:told|tells|telling|informed|said to|say to|says to|speaking (?:to|with)|spoke (?:to|with)|talking to|talked to|in (?:an? )?(?:exclusive |phone |telephone |special )?(?:interview|conversation|call|remarks|comments|statement|statements)s? (?:with|to)|interviewed by|confirmed to|revealed to|briefed|according to (?:sources|officials|documents|a source|an official)[^.\n]{0,60}(?:to|by|with))\s+${name}\b`, "i").test(t)) return true;
+    if (new RegExp(String.raw`\b(?:obtained|seen|reviewed|viewed|verified|confirmed|gathered)\s+by\s+${name}\b`, "i").test(t)) return true;
+    if (new RegExp(String.raw`\b${esc(n)}\b[^.\n]{0,40}\b(?:has |have |had )?(?:learned|learnt|obtained|reviewed|understands|can reveal|can confirm|has seen|was told|were told|visited|toured|witnessed|correspondent)`, "i").test(t)) return true;
+    if (new RegExp(String.raw`\b${esc(n)}(?:'s)?\s+(?:correspondent|reporter|sources?|team)\b`, "i").test(t)) return true;
   }
   for (const n of names.ar) {
     const to = toAr(n);
-    if (new RegExp(String.raw`(?:قال|قالت|أكد|أكدت|كشف|كشفت|أوضح|أوضحت|صرح|صرّح|صرحت|أفاد|أفادت|تحدث|تحدثت|مصادر|مصدر|مسؤول|مسؤولون)[^.\n]{0,50}${to}`).test(t)) return true;
-    if (new RegExp(String.raw`(?:حديث|مقابلة|تصريح|تصريحات|حوار|لقاء)[^.\n]{0,15}(?:خاص(?:ة)?\s*)?(?:${to}|مع${Q}${esc(n)})`).test(t)) return true;
-    if (new RegExp(String.raw`(?:علمت|حصلت|اطلعت|تلقت)(?:\s+عليها|\s+عليه)?${Q}${esc(n)}`).test(t)) return true;
+    const nm = `${Q}${esc(n)}`;
+    // Words said to it: "قال مسؤول لـ«الشرق الأوسط»", "أبلغ مصدر «إرم نيوز»".
+    if (new RegExp(String.raw`(?:قال|قالت|يقول|تقول|أكد|أكدت|يؤكد|كشف|كشفت|يكشف|أوضح|أوضحت|صرح|صرّح|صرحت|أفاد|أفادت|تحدث|تحدثت|أشار|أشارت|أضاف|أضافت|نفى|نفت|رجح|رجّح|توقع|أعرب|اعتبر|أبلغت?|يبلغ|مصادر|مصدر|مسؤول|مسؤولون|مسؤولين|قيادي|قياديون|ضابط|مستشار|دبلوماسي|دبلوماسيون|شهود|سكان|مواطنون|مطلع|مطلعة)[^.\n]{0,90}(?:${to}|أبلغت?${nm})`).test(t)) return true;
+    if (new RegExp(String.raw`(?:أبلغ|أبلغت|يبلغ|أخبر|أخبرت)[^.\n]{0,40}${nm}`).test(t)) return true;
+    // An interview or statement given to it or with it.
+    if (new RegExp(String.raw`(?:حديث|حديثه|حديثها|مقابلة|تصريح|تصريحات|تصريحه|حوار|لقاء|اتصال|مكالمة|رسالة|ردّ|رد)[^.\n]{0,25}(?:خاص(?:ة)?\s*)?(?:${to}|مع${nm}|أجرته${nm}|أجرتها${nm})`).test(t)) return true;
+    // What it learned, got hold of, saw, checked.
+    if (new RegExp(String.raw`(?:علمت|حصلت|اطلعت|تلقت|رصدت|وثقت|تابعت|زارت|تحققت|استطلعت|انفردت|تنفرد|تكشف|كشفت|تنشر|نشرت|تنقل|نقلت)(?:\s+عليها|\s+عليه)?${nm}`).test(t)) return true;
+    if (new RegExp(String.raw`(?:حصلت|اطلعت|وصلت)[^.\n]{0,15}(?:عليها|عليه|إلى|الى)?${nm}`).test(t)) return true;
+    // Its own correspondent or its own sources.
+    if (new RegExp(String.raw`(?:مراسل|مراسلة|موفد|موفدة|فريق|مصادر)${nm}`).test(t)) return true;
+    if (new RegExp(String.raw`(?:مراسلنا|مراسلتنا|موفدنا|مصادرنا|علمنا|حصلنا)`).test(t)) return true;
   }
   return false;
 }

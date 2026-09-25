@@ -72,7 +72,6 @@ model got to are judged by keyword for now and asked about again next read.
 |---|---|---|
 | Almashhad | `almashhad.news/feed` | 5 min |
 | Al-Araby Al-Jadeed | `alaraby.co.uk/rss.xml` (answers a plain client, 403 to a browser) | 30 min |
-| Al-Araby TV | `alaraby.com/rss.xml` | 30 min |
 | Asharq Al-Awsat | Google News, `site:aawsat.com` alone, last hour (Cloudflare 403) | 30 min |
 | Erem News | Google News, `site:eremnews.com` alone, 2 h (Cloudflare 403) | 30 min |
 | Al-Akhbar | Google News, `site:al-akhbar.com` alone, 1 day (Cloudflare 403); its channel every 15 min | 1 h |

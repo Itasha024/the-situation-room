@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { keeps, mediaCandidate, tgMedia, xMedia } from "./media.ts";
+import { keeps, mediaCandidate, tgMedia, tooLong, xMedia } from "./media.ts";
 
 test("an X post's video: the ~640 mp4, its still and length; else its first photo", () => {
   const v = xMedia(
@@ -75,7 +75,7 @@ test("a Telegram post's own file and shape, as t.me/s gives them (Ali Bk, 25 Sep
 test("which cards may show their post's media", () => {
   const strike = { type: "strike" as const, summary: "Houthi missile hits Jizan", text: "" };
   assert.equal(mediaCandidate(strike, "صاروخ على جيزان"), true);
-  assert.equal(mediaCandidate({ type: "statement", summary: "Armed Forces spokesperson announces strikes on Riyadh", text: "" }, "شاهد | كلمة المتحدث"), true);
+  assert.equal(mediaCandidate({ type: "statement", summary: "Armed Forces spokesperson announces strikes on Riyadh", text: "" }, "شاهد | كلمة المتحدث"), false);
   assert.equal(mediaCandidate({ type: "statement", summary: "Governor calls for calm", text: "" }, "المحافظ يدعو للتهدئة"), false);
   assert.equal(mediaCandidate({ type: "diplomacy", summary: "Foreign minister meets Omani envoy", text: "" }, "شاهد | لحظة اللقاء"), false);
   assert.equal(mediaCandidate({ type: "combat", summary: "Clashes in Hays", text: "" }, "صورة أرشيفية من جبهة حيس"), false);
@@ -90,5 +90,13 @@ test("the look keeps the event, never what is graphic or a portrait", () => {
   assert.equal(keeps({ cls: "portrait", graphic: false }, strike), false);
   assert.equal(keeps({ cls: "logo", graphic: false }, strike), false);
   assert.equal(keeps({ cls: "speech", graphic: false }, strike), false);
-  assert.equal(keeps({ cls: "speech", graphic: false }, { type: "statement", summary: "Houthi leader: attacks will continue" }), true);
+  assert.equal(keeps({ cls: "speech", graphic: false }, { type: "statement", summary: "Houthi leader: attacks will continue" }), false);
+  assert.equal(keeps({ cls: "interview", graphic: false }, strike), false);
+  assert.equal(keeps({ cls: "hospital", graphic: false }, strike), false);
+});
+
+test("a video over a minute and a half is a TV package, not the moment", () => {
+  assert.equal(tooLong({ kind: "video", duration: 183 }), true);
+  assert.equal(tooLong({ kind: "video", duration: 40 }), false);
+  assert.equal(tooLong({ kind: "photo" }), false);
 });

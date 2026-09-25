@@ -31,3 +31,18 @@ test("the six sites give only their own information: exclusives, their sources, 
   assert.equal(ownInformation("علمت «الأخبار» أن الوفد السعودي وصل إلى مسقط", "Al-Akhbar"), true);
   assert.equal(ownInformation("قال المتحدث في مقابلة مع الحرة إن الضربات ستستمر", "Alhurra"), true);
 });
+
+test("own information is read loosely: outlets word it many ways", async () => {
+  const { ownInformation } = await import("./exclusive.ts");
+  assert.equal(ownInformation("Officials speaking with Arab News said the talks had stalled", "Arab News"), true);
+  assert.equal(ownInformation("Documents reviewed by Asharq Al-Awsat show the shipments", "Asharq Al-Awsat"), true);
+  assert.equal(ownInformation("Arab News understands the delegation arrived on Monday", "Arab News"), true);
+  assert.equal(ownInformation("Alhurra's correspondent in Marib reported heavy clashes", "Alhurra"), true);
+  assert.equal(ownInformation("وأبلغ مصدر عسكري «إرم نيوز» أن القوات تقدمت", "Erem News"), true);
+  assert.equal(ownInformation("ونفى المتحدث في اتصال مع «العربي الجديد» الأنباء", "Al-Araby Al-Jadeed"), true);
+  assert.equal(ownInformation("وأفاد مراسل الحرة بأن الاشتباكات تجددت", "Alhurra"), true);
+  assert.equal(ownInformation("وثيقة اطلعت عليها «الشرق الأوسط» تظهر الخطة", "Asharq Al-Awsat"), true);
+  assert.equal(ownInformation("وقال شهود لـ«العربي الجديد» إن الغارات استهدفت المدينة", "Al-Araby Al-Jadeed"), true);
+  assert.equal(ownInformation("ذكرت وكالة رويترز أن المحادثات توقفت", "Al-Araby Al-Jadeed"), false);
+  assert.equal(ownInformation("The Saudi-led coalition said it intercepted a drone", "Arab News"), false);
+});

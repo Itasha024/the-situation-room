@@ -69,7 +69,7 @@ const DESK_HTML = `
   <h2>The conflict in numbers</h2>
   <div id="casualties"></div>
 </section>
-<section class="timeline-wrap">
+<section class="timeline-wrap" id="timeline-wrap">
   <h2>Timeline</h2>
   <div id="timeline"></div>
 </section>

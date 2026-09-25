@@ -4,9 +4,9 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Yemen War Desk";
-const ASSET_V = "desk-en-2";
+const ASSET_V = "desk-en-3";
 // The reader's theme on <html> before first paint; the broadsheet pair also loads its two fonts.
-const THEME_BOOT = `try{var t=localStorage.getItem("desk-theme");if(t==="broadsheet-day"||t==="broadsheet-night"){var d=document.documentElement;d.dataset.theme=t;d.dataset.set="broadsheet";var l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap";document.head.appendChild(l)}}catch(e){}`;
+const THEME_BOOT = `try{var t=localStorage.getItem("desk-theme");if(t==="broadsheet-day"||t==="broadsheet-night"){var d=document.documentElement;d.dataset.theme=t;d.dataset.set="broadsheet";var l=document.createElement("link");l.id="desk-fonts";l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap";document.head.appendChild(l)}}catch(e){}`;
 
 export const Route = createRootRoute({
   head: () => ({

@@ -27,18 +27,25 @@
 // Reader's theme: Original (as built), Broadsheet Day or Broadsheet Night. The broadsheet
 // pair recolours the sides, the district edges and the map tiles; Original is untouched.
 const THEMES = ['original', 'broadsheet-day', 'broadsheet-night'];
-const THEME = (() => { try { const t = localStorage.getItem('desk-theme'); return THEMES.includes(t) ? t : 'original'; } catch (e) { return 'original'; } })();
+let THEME = (() => { try { const t = localStorage.getItem('desk-theme'); return THEMES.includes(t) ? t : 'original'; } catch (e) { return 'original'; } })();
 const THEME_SIDES = {
   'broadsheet-day': { houthi: '#a8372a', plc: '#0d7680', saudi: '#5f86ad', contested: '#b07d1a', mixed: '#7d6b99' },
   'broadsheet-night': { houthi: '#e2694f', plc: '#3fb0b3', saudi: '#7aa5d6', contested: '#d9aa45', mixed: '#a898c4' },
 };
-const EDGE = THEME === 'broadsheet-day' ? '#5c4a3d' : '#0b0f14';
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
-const TILE_URL = THEME === 'broadsheet-day' ? ESRI + 'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-  : THEME === 'broadsheet-night' ? ESRI + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const TILE_ATTR = THEME === 'original' ? null : 'Tiles © Esri — Esri, DeLorme, NAVTEQ';
-const COLORS = Object.assign({ houthi: '#c45c26', plc: '#22c55e', saudi: '#1f8a7a', contested: '#e9c46a', mixed: '#457b9d' }, THEME_SIDES[THEME] || {});
+const BASE_COLORS = { houthi: '#c45c26', plc: '#22c55e', saudi: '#1f8a7a', contested: '#e9c46a', mixed: '#457b9d' };
+const COLORS = {};
+let EDGE, TILE_URL, TILE_ATTR;
+// Everything the map draws with follows THEME; re-run on a switch.
+function themeValues() {
+  EDGE = THEME === 'broadsheet-day' ? '#5c4a3d' : '#0b0f14';
+  TILE_URL = THEME === 'broadsheet-day' ? ESRI + 'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+    : THEME === 'broadsheet-night' ? ESRI + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  TILE_ATTR = THEME === 'original' ? null : 'Tiles © Esri — Esri, DeLorme, NAVTEQ';
+  Object.assign(COLORS, BASE_COLORS, THEME_SIDES[THEME] || {});
+}
+themeValues();
 const sideColor = (c) => (THEME_SIDES[THEME] && COLORS[c.id]) || c.color || COLORS[c.id];
 const EVENT_COLORS = { combat: '#facc15', strike: '#dc2626', vessel: '#06b6d4', port: '#f97316' };
 
@@ -187,6 +194,8 @@ function annotatePlaces(text) {
  * ---------------------------------------------------------------- */
 
 let map;
+let baseTiles = null;
+let baseAttr = '© OpenStreetMap';
 let geoLayer;
 let saudiGeoLayer = null;
 let eventLayers = [];
@@ -1610,7 +1619,9 @@ async function pullBrief() {
     const b = await res.json();
     if (b && b.ok) brief = b;
   } catch (e) { /* the panels fall back to their curated copy */ }
+  finally { briefTried = true; }
 }
+let briefTried = false;
 
 /**
  * The stamp under every 12-hourly panel. Says plainly when the panel last
@@ -1838,18 +1849,9 @@ function renderSituation(d) {
   const fallback = String((d.situation || {}).summary || '').trim();
   const body = derived || fallback;
   if (!body) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2><a class="to-fronts" href="#fronts-wrap">Fronts <span aria-hidden="true">→</span></a></div>${cadenceStamp(true)}
+  el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2></div>${cadenceStamp(true)}
     <p class="situation-window">${linkPlaces(body, pinsForProse())}</p>`;
   wireProsePins(el);
-  const go = el.querySelector('.to-fronts');
-  if (go) go.onclick = (ev) => {
-    ev.preventDefault();
-    const to = document.getElementById('fronts-wrap');
-    if (!to) return;
-    to.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    to.setAttribute('tabindex', '-1');
-    to.focus({ preventScroll: true });
-  };
 }
 
 /*
@@ -2045,6 +2047,9 @@ function computeControlShares(d) {
 }
 
 function renderBars(d) {
+  // Until the districts and the live control layer are in, the shares would be the rough
+  // governorate count (the "9% contested" flash), so nothing is drawn yet.
+  if ((!districtGeo && !districtsTried) || !briefTried) return;
   const shares = computeControlShares(d);
   const rows = (d.control || []).filter((c) => c.id !== 'saudi').map((c) => {
     const pct = shares[c.id] != null ? shares[c.id] : c.pct;
@@ -2123,10 +2128,18 @@ function offerJumpBack(from) {
   btn.setAttribute('aria-label', 'Back to the report you came from');
   btn.hidden = true;
   const feed = document.getElementById('feed');
+  const rail = document.getElementById('rail');
+  // On a PC the button sits inside the Latest reports column, above its bottom edge;
+  // on a phone it stays at the foot of the screen.
   const place = () => {
     const box = (feed || document.body).getBoundingClientRect();
     btn.style.left = `${Math.round(box.left + box.width / 2)}px`;
+    const r = rail && window.innerWidth > 720 ? rail.getBoundingClientRect() : null;
+    btn.style.bottom = r ? `${Math.max(18, Math.round(window.innerHeight - Math.min(r.bottom, window.innerHeight) + 14))}px` : '';
   };
+  const onMove = () => { if (!btn.hidden) place(); };
+  window.addEventListener('scroll', onMove, { passive: true });
+  window.addEventListener('resize', onMove);
   const io = new IntersectionObserver(([e]) => {
     btn.hidden = e.isIntersecting;
     if (!btn.hidden) place();
@@ -2135,6 +2148,8 @@ function offerJumpBack(from) {
   function stop() {
     io.disconnect();
     clearTimeout(timer);
+    window.removeEventListener('scroll', onMove);
+    window.removeEventListener('resize', onMove);
     btn.remove();
     if (jumpBack && jumpBack.btn === btn) jumpBack = null;
   }
@@ -2829,6 +2844,7 @@ let districtGeo = null;
 let districtControl = null;
 let districtLayerMain = null;
 
+let districtsTried = false;
 async function loadDistricts() {
   if (districtGeo && districtControl) return true;
   try {
@@ -2838,6 +2854,7 @@ async function loadDistricts() {
     ]);
     if (g && c && Array.isArray(g.features)) { districtGeo = g; districtControl = c; }
   } catch (e) {}
+  districtsTried = true;
   return !!(districtGeo && districtControl);
 }
 
@@ -3376,9 +3393,10 @@ function ensureMap(d) {
   map = L.map('map', { zoomControl: true, attributionControl: true, closePopupOnClick: false }).setView([18.5, 45.5], 5.4);
   try { window.__yemenMap = map; } catch (e) {}
   map.on('zoomend', syncStraitForZoom);
-  L.tileLayer(TILE_URL, {
+  baseAttr = d.basemapAttribution || '© OpenStreetMap';
+  baseTiles = L.tileLayer(TILE_URL, {
     maxZoom: 18,
-    attribution: TILE_ATTR || d.basemapAttribution || '© OpenStreetMap',
+    attribution: TILE_ATTR || baseAttr,
   }).addTo(map);
   map.on('popupopen', (e) => {
     syncOpenNotes();
@@ -4390,6 +4408,7 @@ async function refresh(first) {
   const shown = first ? null : new Set([...(feedEl ? feedEl.querySelectorAll('.card') : [])].map((el) => el.dataset.fp));
 
   const baseP = fetchData();
+  const distP = first ? loadDistricts() : null;
   if (first) await hydrateSnapshot();
   const liveP = pullLive({ silent: true });
   const briefP = pullBrief();
@@ -4402,7 +4421,9 @@ async function refresh(first) {
   // The archive carries the bulk of the feed, so it is worth a short wait on
   // first paint rather than letting the page render a stub and jump.
   await Promise.race([deskP, new Promise((r) => setTimeout(r, first ? 2500 : 1200))]);
+  if (distP) await Promise.race([distP, new Promise((r) => setTimeout(r, 3000))]);
   data = applyLiveOverlay(applyDeskArchive(base));
+  if (first) briefP.then(() => { try { data && renderBars(data); } catch (e) {} });
   const stamp = document.getElementById('updated');
   if (stamp) stamp.textContent = stampText();
   renderBars(data);
@@ -4436,30 +4457,181 @@ async function refresh(first) {
   if (map) setTimeout(() => map && map.invalidateSize(), 30);
 }
 
-/* Theme switch, top right: three icons, no words. A pick is remembered and the page reloads
- * so the map redraws in that theme's colours. */
+/* Theme button, top right: one button that steps Original → Day → Night. It shows the icon of
+ * the look a click goes to, inside a turning arrow, with three pips for where you are. The
+ * switch happens in place: fonts and tiles load first, then the page cross-fades. */
+const THEME_ICONS = {
+  original: ['Original', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>'],
+  'broadsheet-day': ['Day', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>'],
+  'broadsheet-night': ['Night', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M20 14.2A8 8 0 1 1 9.8 4a6.3 6.3 0 0 0 10.2 10.2z"/></svg>'],
+};
+const FONTS_URL = 'https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap';
+const nextTheme = (t) => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length];
+
+function paintThemeButton(btn) {
+  const nx = nextTheme(THEME);
+  btn.querySelector('.ts-ico').innerHTML = THEME_ICONS[nx][1];
+  btn.querySelectorAll('.ts-pips i').forEach((p, i) => p.classList.toggle('on', THEMES[i] === THEME));
+  const say = `Theme: ${THEME_ICONS[THEME][0]} · click for ${THEME_ICONS[nx][0]}`;
+  btn.title = say;
+  btn.setAttribute('aria-label', say);
+}
+
+function loadThemeFonts() {
+  let l = document.getElementById('desk-fonts');
+  const fontsIn = () => (document.fonts ? Promise.all(['500 1em "Newsreader"', 'italic 400 1em "Newsreader"', '600 1em "Libre Franklin"', '400 1em "Libre Franklin"'].map((f) => document.fonts.load(f))) : null);
+  if (l && l.sheet) return Promise.resolve(fontsIn()).catch(() => {});
+  return new Promise((res) => {
+    if (!l) {
+      l = document.createElement('link');
+      l.id = 'desk-fonts';
+      l.rel = 'stylesheet';
+      l.href = FONTS_URL;
+      document.head.appendChild(l);
+    }
+    l.addEventListener('load', res, { once: true });
+    l.addEventListener('error', res, { once: true });
+  }).then(fontsIn).catch(() => {});
+}
+
+let themeBusy = false;
+async function setTheme(t) {
+  if (!THEMES.includes(t) || t === THEME || themeBusy) return;
+  themeBusy = true;
+  try {
+    const broad = t !== 'original';
+    const waits = [];
+    if (broad) waits.push(loadThemeFonts());
+    THEME = t;
+    themeValues();
+    // The new tiles load under a clear layer first, so nothing blinks in.
+    let tiles = null;
+    if (map && baseTiles) {
+      tiles = L.tileLayer(TILE_URL, { maxZoom: 18, attribution: TILE_ATTR || baseAttr, opacity: 0 }).addTo(map);
+      waits.push(new Promise((r) => tiles.once('load', r)));
+    }
+    await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, 1800))]);
+    const apply = () => {
+      const h = document.documentElement;
+      if (broad) { h.dataset.theme = t; h.dataset.set = 'broadsheet'; } else { delete h.dataset.theme; delete h.dataset.set; }
+      if (tiles) { tiles.setOpacity(1); try { map.removeLayer(baseTiles); } catch (e) {} baseTiles = tiles; }
+      try { closePinSheet(); } catch (e) {}
+      if (data) {
+        try { applyMapFilters(); } catch (e) { console.error(e); }
+        try { renderLegend(data); } catch (e) { console.error(e); }
+        try { renderBars(data); } catch (e) { console.error(e); }
+      }
+      const btn = document.querySelector('.theme-step');
+      if (btn) paintThemeButton(btn);
+    };
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // A page that is not painting never runs the transition's callback, so it runs anyway
+    // after half a second, once.
+    let done = false;
+    const run = () => { if (done) return; done = true; apply(); };
+    if (document.startViewTransition && !reduce) {
+      const vt = document.startViewTransition(run);
+      await Promise.race([vt.updateCallbackDone.catch(() => {}), new Promise((r) => setTimeout(r, 500))]);
+      if (!done) { try { vt.skipTransition(); } catch (e) {} run(); }
+    } else {
+      run();
+    }
+    try { localStorage.setItem('desk-theme', t); } catch (e) {}
+  } finally {
+    themeBusy = false;
+  }
+}
+
 function installThemeButton() {
   const stamp = document.querySelector('.stamp');
-  if (!stamp || stamp.querySelector('.theme-sw')) return;
-  const ICONS = {
-    original: ['Original', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>'],
-    'broadsheet-day': ['Day', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>'],
-    'broadsheet-night': ['Night', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.2A8 8 0 1 1 9.8 4a6.3 6.3 0 0 0 10.2 10.2z"/></svg>'],
-  };
-  const btns = THEMES.map((t) => `<button type="button" data-theme-pick="${t}" class="${t === THEME ? 'on' : ''}" aria-pressed="${t === THEME}" aria-label="${ICONS[t][0]} theme" title="${ICONS[t][0]}">${ICONS[t][1]}</button>`).join('');
-  stamp.insertAdjacentHTML('afterbegin', `<div class="theme-sw" role="group" aria-label="Theme">${btns}</div>`);
-  stamp.querySelector('.theme-sw').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-theme-pick]');
-    if (!b || b.dataset.themePick === THEME) return;
-    try { localStorage.setItem('desk-theme', b.dataset.themePick); } catch (err) { return; }
-    location.reload();
+  if (!stamp || stamp.querySelector('.theme-step')) return;
+  stamp.insertAdjacentHTML('afterbegin', `<button type="button" class="theme-step">
+    <span class="ts-ring" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M27 16a11 11 0 1 1-3.2-7.8"/><path d="M24.6 3.8l-.6 4.6-4.6-.5"/></svg><span class="ts-ico"></span></span>
+    <span class="ts-pips" aria-hidden="true"><i></i><i></i><i></i></span>
+  </button>`);
+  const btn = stamp.querySelector('.theme-step');
+  paintThemeButton(btn);
+  btn.addEventListener('click', () => {
+    btn.classList.remove('turn');
+    void btn.offsetWidth;
+    btn.classList.add('turn');
+    setTheme(nextTheme(THEME));
   });
+}
+
+/* Section menu: a slim tab on the left edge (a round button at the foot of the screen on a
+ * phone) that opens a short list of the page's sections and marks the one in view. */
+const SECTIONS = [
+  ['situation', 'Latest developments'],
+  ['rail', 'Latest reports'],
+  ['fronts-wrap', 'Fronts'],
+  ['cas-wrap', 'The conflict in numbers'],
+  ['timeline-wrap', 'Timeline'],
+];
+const sectionBox = (id) => {
+  const el = document.getElementById(id);
+  // On a PC the reports column sits beside the map, so the jump goes to the map's top.
+  return el && id === 'rail' && window.innerWidth > 720 ? (el.closest('.stage') || el) : el;
+};
+function installSectionNav() {
+  if (document.getElementById('sec-nav')) return;
+  const items = SECTIONS.filter(([id]) => document.getElementById(id));
+  if (!items.length) return;
+  const nav = document.createElement('nav');
+  nav.id = 'sec-nav';
+  nav.className = 'sec-nav';
+  nav.setAttribute('aria-label', 'Sections');
+  nav.innerHTML = `<button type="button" class="sec-tab" aria-expanded="false" aria-controls="sec-list" aria-label="Sections" title="Sections">
+      <span class="sec-ticks" aria-hidden="true">${items.map(() => '<i></i>').join('')}</span>
+    </button>
+    <ol class="sec-list" id="sec-list">${items.map(([id, name]) => `<li><a href="#${id}" data-sec="${id}">${name}</a></li>`).join('')}</ol>`;
+  document.body.appendChild(nav);
+  const tab = nav.querySelector('.sec-tab');
+  const open = (on) => { nav.classList.toggle('open', on); tab.setAttribute('aria-expanded', String(on)); };
+  tab.addEventListener('click', (e) => { e.stopPropagation(); open(!nav.classList.contains('open')); });
+  // A mouse opens it by hovering; leaving closes it after a moment.
+  const hover = () => window.matchMedia && window.matchMedia('(hover: hover)').matches;
+  let leaveT = 0;
+  nav.addEventListener('mouseenter', () => { if (hover()) { clearTimeout(leaveT); open(true); } });
+  nav.addEventListener('mouseleave', () => { if (hover()) leaveT = setTimeout(() => open(false), 280); });
+  document.addEventListener('click', (e) => { if (!nav.contains(e.target)) open(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') open(false); });
+  nav.querySelectorAll('[data-sec]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const to = sectionBox(a.dataset.sec);
+      if (to) to.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      open(false);
+    });
+  });
+  // The section in view is the last one whose top has passed a third of the way down the screen.
+  const ticks = [...nav.querySelectorAll('.sec-ticks i')];
+  const links = [...nav.querySelectorAll('[data-sec]')];
+  const mark = () => {
+    const y = window.innerHeight / 3;
+    let cur = items[0][0];
+    items.forEach(([id]) => {
+      const el = sectionBox(id);
+      if (el && el.getBoundingClientRect().top <= y) cur = id;
+    });
+    links.forEach((a, i) => {
+      const on = a.dataset.sec === cur;
+      a.classList.toggle('on', on);
+      if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+      if (ticks[i]) ticks[i].classList.toggle('on', on);
+    });
+  };
+  let raf = 0;
+  window.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(mark); }, { passive: true });
+  window.addEventListener('resize', mark);
+  mark();
 }
 
 async function startYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
   try { installThemeButton(); } catch (e) { console.error(e); }
+  try { installSectionNav(); } catch (e) { console.error(e); }
 
   if (window.__yemenDeskTimer) { clearInterval(window.__yemenDeskTimer); window.__yemenDeskTimer = null; }
   if (window.__yemenLiveTimer) { clearInterval(window.__yemenLiveTimer); window.__yemenLiveTimer = null; }

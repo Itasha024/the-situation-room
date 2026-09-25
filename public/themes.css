@@ -1,16 +1,49 @@
 /* Themes. Original is desk.css as built and is not touched here; everything below the switch
    applies only to Broadsheet Day and Broadsheet Night (html[data-set="broadsheet"]). */
 
-/* The switch, top right: three icons */
-.theme-sw{display:inline-flex;flex:none;gap:2px;padding:2px;margin-inline-end:.5rem;border:1px solid var(--t-line-strong,#334155);border-radius:8px}
-.theme-sw button{display:grid;place-items:center;width:26px;height:24px;padding:0;background:transparent;border:0;border-radius:6px;color:var(--t-muted,#8fa0b4);cursor:pointer}
-.theme-sw button svg{width:15px;height:15px}
-.theme-sw button:hover{color:var(--t-text,#eaf0f6)}
-.theme-sw button.on{background:var(--t-surface-3,#1a2433);color:var(--t-strong,#fff)}
-html[data-set="broadsheet"] .theme-sw{border-radius:2px}
-html[data-set="broadsheet"] .theme-sw button{border-radius:1px}
-html[data-set="broadsheet"] .theme-sw button.on{background:var(--accent-ui);color:var(--on-accent)}
-@media (max-width:720px){.top{position:relative}.top .brand{padding-inline-end:6rem}.theme-sw{position:absolute;top:.8rem;right:1rem;margin:0}}
+/* The theme button, top right: the next look's icon in a turning arrow, three pips for where you are */
+.theme-step{display:inline-flex;align-items:center;gap:6px;flex:none;height:30px;padding:0 9px 0 4px;margin-inline-end:.5rem;background:transparent;border:1px solid var(--t-line-strong,#334155);border-radius:999px;color:var(--t-muted,#8fa0b4);cursor:pointer;transition:color .2s,border-color .2s,background .2s}
+.theme-step:hover,.theme-step:focus-visible{color:var(--t-strong,#fff);border-color:var(--t-muted,#8fa0b4);outline:none}
+.ts-ring{position:relative;display:grid;place-items:center;width:24px;height:24px}
+.ts-ring>svg{position:absolute;inset:0;width:24px;height:24px;opacity:.75;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.ts-ico{display:grid;place-items:center;width:12px;height:12px;transition:transform .5s cubic-bezier(.2,.7,.2,1),opacity .25s}
+.ts-ico svg{width:12px;height:12px}
+.theme-step:hover .ts-ring>svg{transform:rotate(40deg)}
+.theme-step.turn .ts-ring>svg{animation:ts-spin .55s cubic-bezier(.2,.7,.2,1)}
+.theme-step.turn .ts-ico{animation:ts-pop .55s cubic-bezier(.2,.7,.2,1)}
+@keyframes ts-spin{from{transform:rotate(-200deg)}to{transform:rotate(0)}}
+@keyframes ts-pop{0%{transform:scale(.4) rotate(-90deg);opacity:0}100%{transform:none;opacity:1}}
+.ts-pips{display:inline-flex;gap:3px}
+.ts-pips i{width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.3;transition:opacity .2s,transform .2s}
+.ts-pips i.on{opacity:1;transform:scale(1.25)}
+html[data-set="broadsheet"] .theme-step{border-radius:2px}
+html[data-set="broadsheet"] .ts-pips i{border-radius:0}
+html[data-set="broadsheet"] .ts-pips i.on{background:var(--accent-ui)}
+@media (max-width:720px){.top{position:relative}.top .brand{padding-inline-end:5.5rem}.theme-step{position:absolute;top:.75rem;right:1rem;margin:0}}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.32s;animation-timing-function:ease}
+
+/* The section menu: a slim tab on the left edge; on a phone a round button at the foot */
+.sec-nav{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:1100;display:flex;align-items:center}
+.sec-tab{display:grid;place-items:center;width:20px;padding:13px 0;background:var(--t-surface-3,#1a2433);border:1px solid var(--t-line-strong,#2a3a4e);border-left:0;border-radius:0 8px 8px 0;color:var(--t-muted,#8fa0b4);cursor:pointer;box-shadow:0 4px 14px #0005;transition:width .2s,color .2s}
+.sec-tab:hover,.sec-tab:focus-visible,.sec-nav.open .sec-tab{color:var(--t-strong,#fff);outline:none}
+.sec-ticks{display:flex;flex-direction:column;gap:5px}
+.sec-ticks i{display:block;width:7px;height:2px;border-radius:1px;background:currentColor;opacity:.7;transition:width .2s,opacity .2s}
+.sec-ticks i.on{width:9px;opacity:1;background:var(--accent-ui,var(--t-link,#7eb6ff))}
+.sec-list{list-style:none;margin:0 0 0 8px;padding:.35rem;min-width:13rem;background:var(--t-glass,rgba(8,12,18,.94));border:1px solid var(--t-line-strong,#2a3a4e);border-radius:10px;box-shadow:0 10px 30px #0007;opacity:0;visibility:hidden;transform:translateX(-8px);transition:opacity .18s,transform .18s,visibility 0s .18s}
+.sec-nav.open .sec-list{opacity:1;visibility:visible;transform:none;transition:opacity .18s,transform .18s}
+.sec-list a{display:block;padding:.42rem .7rem;border-radius:6px;color:var(--t-text,#d7e2ef);text-decoration:none;font-size:.8rem;white-space:nowrap;border-left:2px solid transparent}
+.sec-list a:hover,.sec-list a:focus-visible{background:var(--t-surface-3,#1a2433);outline:none}
+.sec-list a.on{color:var(--t-strong,#fff);border-left-color:var(--accent-ui,var(--t-link,#7eb6ff));font-weight:600}
+html[data-set="broadsheet"] .sec-tab{border-radius:0 2px 2px 0}
+html[data-set="broadsheet"] .sec-list{border-radius:2px}
+html[data-set="broadsheet"] .sec-list a{border-radius:0;font-family:var(--f-body)}
+@media (max-width:720px){
+  .sec-nav{top:auto;bottom:16px;left:12px;transform:none;flex-direction:column-reverse;align-items:flex-start}
+  .sec-tab{width:40px;height:40px;padding:0;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:50%}
+  .sec-ticks{gap:4px}.sec-ticks i{width:14px}.sec-ticks i.on{width:14px}
+  .sec-list{margin:0 0 8px;transform:translateY(8px)}
+}
+@media (prefers-reduced-motion:reduce){.ts-ring>svg,.ts-ico,.sec-list{transition:none!important;animation:none!important}}
 
 /* Broadsheet: section titles carry a short accent bar */
 html[data-set="broadsheet"] :is(.rail-head h2,.sit-head>h2,.situation>h2,.fronts-wrap>h2,.cas-wrap>h2,.timeline-wrap>h2){position:relative;padding-top:.55rem}
@@ -76,21 +109,21 @@ html[data-set="broadsheet"] h1{font-size:1.75rem;font-weight:600;letter-spacing:
 html[data-set="broadsheet"] .sub{font:italic 400 .86rem/1.3 "Newsreader",Georgia,serif;color:var(--t-muted)}
 html[data-set="broadsheet"] .stamp{font:500 .7rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--t-muted)}
 html[data-set="broadsheet"] .pulse{background:var(--plc)}
-/* Control shares: no boxes, rules and serif figures */
+/* Control shares: boxes like the Original, serif figures */
 html[data-set="broadsheet"] .bars{border-bottom:1px solid var(--t-line-strong);gap:1.2rem;padding:.7rem 1rem .8rem}
-html[data-set="broadsheet"] .bar{background:transparent;border:0;border-top:3px solid var(--t-strong);border-radius:0;padding:.45rem 0 0}
+html[data-set="broadsheet"] .bar{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-radius:4px;padding:.5rem .7rem .6rem}
 html[data-set="broadsheet"] .bar h3{font:600 .66rem/1.2 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--t-text-2)}
 html[data-set="broadsheet"] .bar .pct{font:600 1.9rem/1.05 "Newsreader",Georgia,serif;letter-spacing:-.01em}
 html[data-set="broadsheet"] .track{height:2px;border-radius:0;background:var(--t-line)}
 /* Latest developments */
-html[data-set="broadsheet"] .situation{background:transparent;border-bottom:1px solid var(--t-line-strong);padding:.8rem 1rem .9rem}
+html[data-set="broadsheet"] .situation{background:var(--t-surface-1);border-bottom:1px solid var(--t-line-strong);padding:.8rem 1rem .9rem}
 html[data-set="broadsheet"] .situation p,html[data-set="broadsheet"] .situation-window,html[data-set="broadsheet"] .front-sum,html[data-set="broadsheet"] .phase-sum,html[data-set="broadsheet"] .front-card .full,html[data-set="broadsheet"] .front-card .front-composed,html[data-set="broadsheet"] .phase-card .full p{font-family:"Newsreader",Georgia,serif;font-size:1.02rem;line-height:1.55;color:var(--t-text)}
 html[data-set="broadsheet"] .rail h2,html[data-set="broadsheet"] .situation h2,html[data-set="broadsheet"] .fronts-wrap h2,html[data-set="broadsheet"] .cas-wrap h2,html[data-set="broadsheet"] .timeline-wrap>h2{font-size:1.4rem;font-weight:600;letter-spacing:-.006em;color:var(--t-strong)}
 html[data-set="broadsheet"] .cadence{font:italic 400 .8rem/1.3 "Newsreader",Georgia,serif;color:var(--t-muted)}
 html[data-set="broadsheet"] .to-fronts{background:transparent;border-color:var(--accent-ui);color:var(--accent-ui);text-transform:uppercase;letter-spacing:.08em;font-size:.64rem}
-/* Live scan: a plain ruled line */
+/* Live scan */
 html[data-set="broadsheet"] .live-scan{background:transparent;border-bottom:1px solid var(--t-line-strong);padding:.2rem 1rem}
-html[data-set="broadsheet"] .live-scan details{background:transparent;border:0;border-radius:0;padding:0}
+html[data-set="broadsheet"] .live-scan details{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-radius:4px;padding:.15rem .65rem .2rem}
 html[data-set="broadsheet"] .live-scan summary::before{color:var(--accent-ui)}
 html[data-set="broadsheet"] .live-scan .ls-title{font:600 .68rem/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase}
 html[data-set="broadsheet"] .live-scan .ls-meta{font:italic .8rem "Newsreader",Georgia,serif}
@@ -124,13 +157,14 @@ html[data-set="broadsheet"] .leg-ico.combat{background:var(--ink-fight)}
 html[data-set="broadsheet"] .leg-ico.strike{background:var(--ink-strike)}
 html[data-set="broadsheet"] .leg-ico.vessel{background:var(--ink-vessel)}
 html[data-set="broadsheet"] .leg-ico.port{background:var(--ink-port)}
-/* Latest reports: ruled items, not boxes */
+/* Latest reports: boxed cards with the side colour on the left edge, as in the Original */
 html[data-set="broadsheet"] .rail{background:var(--t-bg)}
 html[data-set="broadsheet"] .feed-legend{font:italic .78rem "Newsreader",Georgia,serif;color:var(--t-muted)}
-html[data-set="broadsheet"] .feed-legend .sw{border-radius:0;width:14px;height:3px}
-html[data-set="broadsheet"] .card{background:transparent;border:0;border-top:1px solid var(--t-line-strong);border-inline-start:0!important;border-radius:0;padding:.75rem .1rem .85rem}
-html[data-set="broadsheet"] .card.lean-houthi{border-top:3px solid var(--houthi)}
-html[data-set="broadsheet"] .card.lean-gov{border-top:3px solid var(--plc)}
+html[data-set="broadsheet"] .feed-legend .sw{border-radius:0;width:3px;height:12px}
+html[data-set="broadsheet"] .card{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-inline-start:3px solid var(--t-faint);border-radius:4px;padding:.65rem .75rem .75rem}
+html[data-set="broadsheet"] :is(.card.lean-south,.card.lean-indep,.card.lean-intl,.card.lean-other){border-inline-start-color:var(--t-faint)!important}
+html[data-set="broadsheet"] .card.lean-houthi{border-inline-start-color:var(--houthi)!important}
+html[data-set="broadsheet"] .card.lean-gov{border-inline-start-color:var(--plc)!important}
 html[data-set="broadsheet"] .card .headline{font-size:1.12rem;font-weight:500;line-height:1.28;color:var(--t-strong)}
 html[data-set="broadsheet"] .card .lead,html[data-set="broadsheet"] .card .full{font-family:"Newsreader",Georgia,serif;font-size:.92rem;line-height:1.5;color:var(--t-text-2)}
 html[data-set="broadsheet"] .card time{font:600 .62rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--t-text-2)}
@@ -141,9 +175,9 @@ html[data-set="broadsheet"] .card .actions button,html[data-set="broadsheet"] .c
 html[data-set="broadsheet"] .card .meta .card-map{background:transparent;border:1px solid var(--t-line-strong);color:var(--t-text-2);font:600 .6rem/1 var(--f-body);letter-spacing:.07em;text-transform:uppercase}
 html[data-set="broadsheet"] .card .also{font:italic .78rem "Newsreader",Georgia,serif}
 html[data-set="broadsheet"] .card .reply-to{border-left-color:var(--accent-ui);background:var(--t-surface-2);font-family:"Newsreader",Georgia,serif;font-style:italic;font-size:.8rem}
-/* Fronts, numbers, timeline: ruled pages, not boxes */
+/* Fronts, numbers, timeline: boxed pagers, as in the Original */
 html[data-set="broadsheet"] .fronts-wrap,html[data-set="broadsheet"] .cas-wrap,html[data-set="broadsheet"] .timeline-wrap{background:transparent}
-html[data-set="broadsheet"] .pager{background:transparent;border:0;border-top:1px solid var(--t-strong);border-bottom:1px solid var(--t-line-strong);border-radius:0}
+html[data-set="broadsheet"] .pager{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-radius:4px}
 html[data-set="broadsheet"] .pager .front-card,html[data-set="broadsheet"] .pager .phase-card{padding:.9rem 2.8rem}
 html[data-set="broadsheet"] .pager .tally-box{padding:.8rem 2.8rem .9rem}
 html[data-set="broadsheet"] .front-card strong,html[data-set="broadsheet"] .phase-head strong{font:600 1.2rem/1.25 "Newsreader",Georgia,serif;color:var(--t-strong)}
@@ -164,3 +198,15 @@ html[data-set="broadsheet"] .leaflet-popup-content{font-family:var(--f-body)}
 /* Light-page contrast fixes */
 html[data-theme="broadsheet-day"] .bar .pct{filter:none}
 html[data-theme="broadsheet-day"] .card .headline{font-weight:500}
+/* Buttons that are white text on a coloured fill: --t-strong is dark on Day paper */
+html[data-set="broadsheet"] .pin-sheet .front-float-go{background:var(--accent-ui);color:var(--on-accent)}
+/* Night: map notes are dark, so the ink meant for a white note turns light */
+html[data-theme="broadsheet-night"] :is(.leaflet-popup,.pin-sheet){--t-on-light:var(--t-text);--t-faint:var(--t-muted)}
+html[data-theme="broadsheet-night"] .leaflet-popup-content :is(a,.pop-toggle){color:var(--t-link)}
+html[data-theme="broadsheet-night"] .leaflet-popup-content .media-open{background:var(--t-surface-2)}
+html[data-theme="broadsheet-night"] .leaflet-container a.leaflet-popup-close-button{color:var(--t-muted)}
+html[data-theme="broadsheet-day"] .leaflet-popup-content :is(a,.pop-toggle){color:var(--t-link)}
+html[data-set="broadsheet"] .leaflet-popup-content :is(a.src-link,.pop-src a){color:var(--t-link)!important;border-bottom-color:color-mix(in srgb,var(--t-link) 40%,transparent)}
+html[data-theme="broadsheet-day"] .leaflet-popup-content .pop-meta{color:var(--t-muted)}
+html[data-theme="broadsheet-night"] .leaflet-control-attribution{background:var(--t-glass)!important;color:var(--t-muted)}
+html[data-theme="broadsheet-night"] .leaflet-control-attribution a{color:var(--t-link)}

@@ -60,6 +60,8 @@ export type Cited = {
   told?: boolean;
   /** A foreign leader's words (speakers.ts): looked for as he said them, in his language. */
   speaker?: string;
+  /** The outlets he gave the words to ("told CNN"): his interview there is first-hand too. */
+  spokeTo?: string[];
 };
 
 /** Each country's main outlets: where "British media" or "a US official" is looked for. */
@@ -991,7 +993,8 @@ ${text}`.trim(),
     // His words on his own channel, in his country's press or on a wire are
     // first-hand; so are words said to the carrier itself.
     if (sp && !ownCarrier(sp, r.url, [...(SPEAKER_PRESS[sp.country] ?? []), ...WIRE_SITES]) && !saidTo(`${text}\n${lead}`, r.source)) {
-      return { name: sp.name, site: sp.official ?? "", lang: "en", kind: "official", country: sp.country, speaker: sp.name };
+      const to = spokeTo(`${lead}\n${text}`);
+      return { name: sp.name, site: sp.official ?? "", lang: "en", kind: "official", country: sp.country, speaker: sp.name, ...(to.length ? { spokeTo: to } : {}) };
     }
     return findGroup(text, r.url) ?? findGroup(lead, r.url);
   };
@@ -1006,7 +1009,7 @@ ${text}`.trim(),
     const sp = e.cited.speaker ? speakerNamed(e.cited.speaker) : null;
     if (sp) {
       if (!e.trKeys) e.trKeys = await translateKeys(e.keys, sp.lang);
-      const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o));
+      const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o), e.cited.spokeTo ?? []);
       return hit && !ISRAELI_HOST.test(hostOf(hit.url)) ? { url: hit.url, source: hit.source, title: hit.title } : null;
     }
     const claim = `${e.report.summary}. ${e.report.text ?? ""}`.trim();
@@ -1190,6 +1193,27 @@ ${text}`.trim(),
     await store.putJson(CACHE_KEY, Object.fromEntries(kept));
   }
   return late;
+}
+
+/**
+ * The outlets a speaker gave his words to, by the names the text uses: "told
+ * CNN", "in an interview with Le Monde", "لشبكة CNN". Names in Latin letters
+ * only, since they are matched against the outlet names Google News gives.
+ */
+export function spokeTo(text: string): string[] {
+  const name = String.raw`((?:(?:Le|La|Les|Der|Die|El|The|Al-)\s?)?[A-Z][\w'&.-]*(?:\s+(?:[A-Z][\w'&.-]*|de|du|di|of|al-\w+)){0,3})`;
+  const out = new Set<string>();
+  const en = new RegExp(String.raw`\b(?:told|(?:in|during) an? (?:interview|conversation) with|interviewed by|in remarks to|speaking to|said to)\s+(?:the\s+)?(?:(?:American|British|French|German|Italian|US|U\.S\.) (?:network|newspaper|channel|magazine|broadcaster)\s+)?${name}`, "g");
+  const ar = new RegExp(String.raw`(?:في مقابلة مع|في حديث (?:لـ?|مع)|لقناة|لصحيفة|لشبكة|لمجلة|لوكالة)\s*(?:قناة|صحيفة|شبكة|مجلة|وكالة)?\s*[«"]?${name}`, "g");
+  for (const re of [en, ar]) {
+    for (const m of text.matchAll(re)) {
+      const n = m[1].replace(/[.'-]+$/, "").trim();
+      // A person or a pronoun is not an outlet ("told him", "told Macron"); a
+      // lone first word of a sentence neither.
+      if (n.length >= 2 && !/^(?:He|She|They|It|His|Her|The|A|An|President|Minister|Prime|King|Crown)$/.test(n)) out.add(n);
+    }
+  }
+  return [...out].slice(0, 3);
 }
 
 /** Words said to the carrier itself ("told Al Arabiya", "في مقابلة مع العربية"): first-hand. */

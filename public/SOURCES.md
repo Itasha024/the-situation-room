@@ -28,7 +28,7 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 | Erem News, Alhurra, Arab News | every 30 minutes |
 | Reuters, WSJ, Washington Post, NYT, NY Post, Axios, CNN, ABC, CBS, Fox | every 30 minutes |
 | Keyword safety nets (Arabic sites, English sites) | every hour |
-| Al-Akhbar (via Google News) | every hour |
+| Al-Akhbar: the whole English edition, and the Arabic site via Google News | once a day, 07:00 Beirut |
 
 First boot of the process hits **all** sources once, then the clock above.
 
@@ -74,7 +74,7 @@ model got to are judged by keyword for now and asked about again next read.
 | Al-Araby Al-Jadeed | `alaraby.co.uk/rss.xml` (answers a plain client, 403 to a browser) | 30 min |
 | Asharq Al-Awsat | Google News, `site:aawsat.com` alone, last hour (Cloudflare 403) | 30 min |
 | Erem News | Google News, `site:eremnews.com` alone, 2 h (Cloudflare 403) | 30 min |
-| Al-Akhbar | Google News, `site:al-akhbar.com` alone, 1 day (Cloudflare 403); its channel every 15 min | 1 h |
+| Al-Akhbar | English edition `en.al-akhbar.com`: the front page and the Yemen, Arabian Peninsula, Arab, World and Politics pages, full text (its sitemap has no headlines); the Arabic site, and its PDF edition, through Google News `site:al-akhbar.com` alone, 1 day (Cloudflare 403); its channel every 15 min | daily 07:00 |
 | Alhurra | `alhurra.com/rss` | 30 min |
 | Arab News | `arabnews.com/rss.xml`; Google News `site:` when it answers 403 | 30 min |
 | Reuters | `reuters.com/arc/outboundfeeds/news-sitemap` (all sections) | 30 min |
@@ -107,6 +107,13 @@ A post that relays an outlet or an official ("the WSJ reports", "British media:"
 "a US official told …") is traced to the original, which is read in full; the
 card becomes the original's. An outlet the desk does not know is looked up on
 Google News and its site remembered (`outlets` in `/api/status`).
+
+A leader's words are looked for where he said them: his own post, his office,
+his country's press and the wires, and any outlet he spoke to himself ("told
+CNN", "in an interview with Le Monde"), wherever it is from. Such an outlet is
+not added to the sources: it carried one interview. An original found at an
+outlet the desk does not read, the cited outlet's own site or a leader's own
+country's press, becomes a source (`learned` in `/api/status`).
 
 ---
 

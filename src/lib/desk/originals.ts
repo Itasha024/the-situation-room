@@ -113,11 +113,13 @@ export function speakerOutlet(sp: Pick<Speaker, "country" | "official">, host: s
 
 /**
  * Where a leader's words were first published: his own post, his office, his
- * country's press and the wires in his language, then in English. Never any
- * outlet at all: an Italian magazine is not where Macron's interview is. Among
- * the matches, the earliest: the first report of an interview is nearest to it.
+ * country's press and the wires in his language, then in English; and an
+ * outlet he gave the words to himself ("told CNN"), wherever it is from. Never
+ * any outlet at all: an Italian magazine is not where Macron's interview is.
+ * Among the matches, the earliest: the first report of an interview is
+ * nearest to it.
  */
-export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[], reportAt: number, isIsraeli: (outlet: string) => boolean): Promise<Hit | null> {
+export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[], reportAt: number, isIsraeli: (outlet: string) => boolean, spokeTo: string[] = []): Promise<Hit | null> {
   const all = [...new Set([...trKeys, ...keys])];
   const post = await ownPost(sp, all, reportAt);
   if (post) return post;
@@ -128,24 +130,40 @@ export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[
   const tries: { q: string; ed: Edition; ks: string[] }[] = [];
   const own = trKeys.length ? trKeys : keys;
   if (sp.official) tries.push({ q: `site:${sp.official} ${k3(own)} when:3d`, ed: sp.edition, ks: own });
+  // The outlet he spoke to, first and by its name: the interview is there, and
+  // his own press may only be relaying it. In English, then in his language.
+  for (const to of spokeTo.slice(0, 2)) {
+    tries.push({ q: `"${to}" ${name} ${k3(keys)} when:3d`, ed: "en", ks: keys });
+    if (trKeys.length) tries.push({ q: `"${to}" ${name} ${k3(trKeys)} when:3d`, ed: sp.edition, ks: trKeys });
+  }
   tries.push({ q: `(${or(press.slice(0, 12))}) ${name} ${k3(own)} when:2d`, ed: sp.edition, ks: own });
   // His language's edition at large, kept to his country's outlets.
   tries.push({ q: `${name} ${k3(own)} when:2d`, ed: sp.edition, ks: own });
   if (trKeys.length) tries.push({ q: `(${or(press.slice(0, 12))}) ${name} ${k3(keys)} when:2d`, ed: "en", ks: keys });
+  const toldHere = (outlet: string) => spokeTo.some((to) => sameOutlet(outlet, to));
   for (const t of tries) {
     const items = await searchGoogleNews(t.q, t.ed);
     const fit = items
       .filter((i: GnewsItem) => new RegExp(name, "i").test(i.title) || (!!sp.official && i.site.includes(sp.official)))
       .filter((i) => shared(i.title, t.ks) >= 2 && !isIsraeli(i.outlet))
       .filter((i) => i.at >= reportAt - 48 * 3600_000 && i.at <= reportAt + 2 * 3600_000)
-      .filter((i) => !i.site || speakerOutlet(sp, hostOfSite(i.site)))
+      .filter((i) => !i.site || speakerOutlet(sp, hostOfSite(i.site)) || toldHere(i.outlet))
       .sort((a, b) => a.at - b.at);
     for (const hit of fit.slice(0, 2)) {
       const url = await resolveGoogleNews(hit.link);
-      if (url && speakerOutlet(sp, hostOfSite(url))) return { url, source: hit.outlet || sp.name, title: hit.title };
+      if (url && (speakerOutlet(sp, hostOfSite(url)) || toldHere(hit.outlet))) return { url, source: hit.outlet || sp.name, title: hit.title };
     }
   }
   return null;
+}
+
+/** One outlet by two spellings of its name: "CNN" and "CNN International", "Le Monde" and "Le Monde.fr". */
+export function sameOutlet(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/\.(?:com|fr|de|it|co\.uk|net|org)\b/g, "").replace(/^(?:the|al-)\s*/, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  const x = norm(a);
+  const y = norm(b);
+  if (x.length < 2 || y.length < 2) return false;
+  return x === y || x.startsWith(`${y} `) || y.startsWith(`${x} `);
 }
 
 const hostOfSite = (u: string) => {

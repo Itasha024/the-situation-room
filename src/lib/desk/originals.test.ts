@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { HOLD_MS, saidTo, traceOrigins } from "./origin.ts";
-import { learnSource, ownCandidates, type Learned } from "./originals.ts";
+import { HOLD_MS, saidTo, spokeTo, traceOrigins } from "./origin.ts";
+import { learnSource, ownCandidates, sameOutlet, type Learned } from "./originals.ts";
 import { ownCarrier, speakerOf, SPEAKERS } from "./speakers.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -21,6 +21,18 @@ test("his own channel, his country's press or a wire is first-hand; so are words
   assert.equal(saidTo("Rubio told Al Arabiya that Washington backs Riyadh", "Al Arabiya"), true);
   assert.equal(saidTo("قال روبيو في مقابلة مع العربية", "العربية"), true);
   assert.equal(saidTo("Rubio said on Fox News that Washington backs Riyadh", "Al Arabiya"), false);
+});
+
+test("a leader who spoke to a foreign outlet: that outlet is where his words are", () => {
+  assert.deepEqual(spokeTo("French President Emmanuel Macron told CNN that France will protect Yanbu"), ["CNN"]);
+  assert.deepEqual(spokeTo("Araghchi said in an interview with Le Monde on Thursday that Tehran…"), ["Le Monde"]);
+  assert.deepEqual(spokeTo("قال ماكرون في حديث لشبكة CNN إن فرنسا"), ["CNN"]);
+  assert.deepEqual(spokeTo("Macron told reporters in Paris that he told him nothing"), []);
+  assert.equal(sameOutlet("CNN International", "CNN"), true);
+  assert.equal(sameOutlet("Le Monde.fr", "Le Monde"), true);
+  assert.equal(sameOutlet("The Guardian", "Guardian"), true);
+  assert.equal(sameOutlet("CNN", "CNBC"), false);
+  assert.equal(sameOutlet("MSN", "Le Monde"), false);
 });
 
 test("the outlet's own articles closest to the claim are the candidates (the CNN case)", () => {

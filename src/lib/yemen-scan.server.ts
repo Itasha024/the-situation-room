@@ -68,6 +68,8 @@ const C15: Cadence = { everyMin: 15 };
 const C30: Cadence = { everyMin: 30 };
 /** The weeklies and the quieter sections: hourly is still six times a day. */
 const C1H: Cadence = { everyHours: 1 };
+/** Al-Akhbar, a morning paper in Beirut (the same clock as Jerusalem's): once a day, when it is out. */
+const AKHBAR_DAILY: Cadence = { atHour: 7 };
 
 /** Operator-supplied Telegram list — exclusive catalog. */
 const TG: ChannelScan[] = [
@@ -239,9 +241,10 @@ const RSS: RssFeed[] = [
   // A browser's user agent is refused (403); a plain client is served.
   { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss.xml", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C30, whole: true, site: "alaraby.co.uk" },
   { id: "aawsat", lang: "ar", url: gnews("site:aawsat.com when:1h", "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C30, whole: true, site: "aawsat.com" },
-  // Hourly, a day wide: the paper's site is behind Cloudflare, and its channel
-  // (every 15 minutes) carries each story's headline as it is published.
-  { id: "akhbar", lang: "ar", url: gnews("site:al-akhbar.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C1H, whole: true, site: "al-akhbar.com" },
+  // Once a day, when the morning paper is out, a day wide: the site is behind
+  // Cloudflare, and its channel (every 15 minutes) carries each story's
+  // headline as it is published.
+  { id: "akhbar", lang: "ar", url: gnews("site:al-akhbar.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: AKHBAR_DAILY, whole: true, site: "al-akhbar.com" },
   { id: "erem", lang: "ar", url: gnews("site:eremnews.com when:2h", "ar", "AE", "AE:ar"), name: "Erem News", cadence: C30, whole: true, site: "eremnews.com" },
   { id: "alhurra", lang: "ar", url: "https://www.alhurra.com/rss", name: "Alhurra", cadence: C30, whole: true, site: "alhurra.com" },
   { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C30, whole: true, site: "arabnews.com" },
@@ -273,12 +276,15 @@ const RSS: RssFeed[] = [
   // Suhail: the government-aligned channel's site, every item it publishes.
   { id: "suhail", lang: "ar", url: "https://suhail.net/news_rss.php?lang=arabic&top=0", name: "Suhail", cadence: C30, whole: true, site: "suhail.net" },
   // Al-Akhbar's English edition carries the paper's pieces in full (the
-  // Arabic site refuses every reader): its Yemen and Arabian Peninsula pages.
-  ...["yemen", "peninsula"].map((sec): RssFeed => ({
-    id: `akhbar-en-${sec}`,
-    url: `https://en.al-akhbar.com/category/${sec}`,
+  // Arabic site, and its PDF edition, refuse every reader). Once a day at
+  // 07:00, the whole edition: the front page and every section that carries
+  // the war, since a Yemen story often sits inside a Lebanon or world piece.
+  // Its sitemap has no headlines, so the pages are read instead.
+  ...["", "category/yemen", "category/peninsula", "category/arab", "category/world", "category/politics"].map((sec): RssFeed => ({
+    id: `akhbar-en-${sec.replace("category/", "") || "home"}`,
+    url: `https://en.al-akhbar.com/${sec}`,
     name: "Al-Akhbar",
-    cadence: C1H,
+    cadence: AKHBAR_DAILY,
     whole: true,
     site: "en.al-akhbar.com",
     html: /^https:\/\/en\.al-akhbar\.com\/news\/[a-z0-9-]{20,}/,

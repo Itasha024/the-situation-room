@@ -200,7 +200,9 @@ export async function editCandidates(
 
   // This cycle's items plus anything still waiting from earlier cycles.
   const byUrl = new Map<string, Queued>();
-  for (const q of queue) byUrl.set(q.url, q);
+  // One X test post per account: a newer pick replaces the one still queued.
+  const testing = new Set(fresh.filter(isXTest).map((c) => c.source));
+  for (const q of queue) if (!(isXTest(q) && testing.has(q.source))) byUrl.set(q.url, q);
   for (const c of fresh) byUrl.set(c.url, { ...c, queuedAt: byUrl.get(c.url)?.queuedAt ?? now });
   const all = [...byUrl.values()];
 
@@ -240,7 +242,9 @@ export async function editCandidates(
   const key = readerKey();
   const anyReader = !!key || !!groqKey();
   let modelNote = anyReader ? "" : "reader off: GEMINI_API_KEY not set";
-  unread.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  // An X test post goes first: it proves the route, and an older post would
+  // otherwise wait behind every newer item.
+  unread.sort((a, b) => Number(isXTest(b)) - Number(isXTest(a)) || Date.parse(b.at) - Date.parse(a.at));
   // A post forwarded by several channels is read once; the copies take its reading.
   const copyOf = new Map<Queued, Queued>();
   const firstOf = new Map<string, Queued>();
@@ -546,7 +550,14 @@ export function reword(s: string): string {
 /** A channel's line of the Houthi leader's speech: his title, then a colon. */
 const HOUTHI_LEADER_LINE = /^\s*(?:السيد القائد|قائد الثورة|السيد عبد ?الملك(?: بدر الدين)? الحوثي)[^:\n]{0,30}:/;
 
+/** A post the scan sent as the one-off test of a new X account ("<name> (X test)"). */
+export function isXTest(c: Pick<Candidate, "source">): boolean {
+  return c.source.endsWith("(X test)");
+}
+
 function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
+  // The X test is published whatever its topic: the editor asked for it.
+  if (isXTest(c)) [raw, strict] = [{ ...raw, publish: true }, false];
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
   const r: Reading = { ...raw, headline: fixHeadline(reword(anglicise(raw.headline))), body: reword(anglicise(raw.body)) };

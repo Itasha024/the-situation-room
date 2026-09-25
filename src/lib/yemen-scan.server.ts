@@ -99,16 +99,17 @@ type XAccount = {
   lean: Channel["lean"];
   cadence: Cadence;
   /**
-   * A test of the route, end to end: the account's newest post the topic
-   * filters would drop goes through the reader anyway, as a card sourced
-   * "<name> (X test)". Once per account (`X_TEST_KEY` remembers it).
+   * A test of the route, end to end: the account's newest real post (an
+   * off-topic one first) goes through the reader and is published whatever its
+   * topic, as a card sourced "<name> (X test)". Read every tick until then.
+   * Once per account (`X_TEST_KEY` remembers it).
    */
   test?: boolean;
 };
-const X_ACCOUNTS: XAccount[] = [{ handle: "war_cube", name: "The Cube", lean: "intl", cadence: C15, test: true }];
+const X_ACCOUNTS: XAccount[] = [{ handle: "war_cube", name: "The Cube", lean: "intl", cadence: C5, test: true }];
 const X_TEST_KEY = "x-test";
 const X_TEST_NOTE =
-  "[Desk test of a new X source, approved by the editor: this post is off the desk's topic on purpose. " +
+  "[Desk test of a new X source, approved by the editor: this post may be off the desk's topic. " +
   "Ignore the scope rules for it: publish=true, and write it as an ordinary report of what the post says.]\n";
 
 type FxStatus = {
@@ -1565,14 +1566,14 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   for (const h of hits) if (Date.parse(h.at) > now + 10 * 60_000) h.at = cycleSeenAt;
   const pre = new Map<string, Composed>();
   for (const h of hits) pre.set(h.url, toLiveReport(h.source, h.url, h.text, h.at, h.text.slice(0, 80), h.lean, officialDown));
-  // The X test: per flagged account not yet proven, its newest post the
-  // keyword gate drops — an off-topic one, which is the point of the proof.
+  // The X test: per flagged account not yet proven, its newest post with
+  // something to say — one the keyword gate drops first, as the proof asked.
   const xTestDone = (await (await getStore()).getJson<Record<string, string>>(X_TEST_KEY)) ?? {};
   const xTest = new Map<string, string>();
   for (const a of X_ACCOUNTS.filter((x) => x.test && !xTestDone[x.handle])) {
     const own = hits
-      .filter((h) => h.url.includes(`x.com/${a.handle}/status/`) && pre.get(h.url)?.outcome === "exclude")
-      .sort((p, q) => Date.parse(q.at) - Date.parse(p.at));
+      .filter((h) => h.url.includes(`x.com/${a.handle}/status/`) && h.text.replace(/https?:\/\/\S+/g, "").trim().length >= 60)
+      .sort((p, q) => Number(pre.get(q.url)?.outcome === "exclude") - Number(pre.get(p.url)?.outcome === "exclude") || Date.parse(q.at) - Date.parse(p.at));
     if (own[0]) xTest.set(own[0].url, a.handle);
   }
   const candidates: Candidate[] = [];

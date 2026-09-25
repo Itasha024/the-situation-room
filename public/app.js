@@ -1387,9 +1387,11 @@ function renderLiveScan() {
  */
 const NOT_A_PIN_NAME = /^(?:yemen|saudi arabia|the red sea)$/i;
 const PROSE_PIN_MS = 36 * 3600 * 1000;
+/** How far either side of a place name its clause is read, in characters. */
+const PROSE_REACH = 60;
 const PROSE_COMMON = new Set(('saudi arabia yemen yemeni houthi houthis government forces coalition province governorate ' +
   'district area areas reported report reports said says over from with that this their were have been also into after ' +
-  'while near city town military sources media').split(' '));
+  'while near city town military sources media defense defence ministry minister ministers officials security').split(' '));
 
 function pinsForProse() {
   if (!mappableByFp.size && data && window.L) { try { buildMapPins(data); } catch (e) {} }
@@ -1415,11 +1417,13 @@ function linkPlaces(text, pins) {
     if (!byCore.has(k)) byCore.set(k, { core, pins: [] });
     byCore.get(k).pins.push(p);
   }
+  // Place names never count as the shared word: "Taiz and Lahj" says nothing
+  // about which Lahj report a clause was written from.
+  const placeWords = new Set([...byCore.values()].flatMap(({ core }) => [...proseWords(core)]));
   const spans = [];
   const linked = new Set();
   for (const m of norm.matchAll(/[^.!?]+[.!?]*/g)) {
     const sent = m[0];
-    const words = proseWords(sent);
     for (const [k, { core, pins: ps }] of byCore) {
       if (linked.has(k)) continue;
       const re = new RegExp(`(?:\\b(?:al|el)[- ])?${core.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
@@ -1428,11 +1432,12 @@ function linkPlaces(text, pins) {
       const start = m.index + hit.index;
       const end = start + hit[0].length;
       if (spans.some((s) => start < s[1] && end > s[0])) continue;
-      // The sentence must share a word of its own with the report, past the
-      // place and the war's everyday words: "the Mecca defense pact" is not the
-      // siren alert in Makkah province.
-      const place = proseWords(core);
-      const own = (w) => words.has(w) && !place.has(w) && !PROSE_COMMON.has(w);
+      // The words around the name must share one of their own with the report,
+      // past places and the war's everyday words: "the Mecca defense pact" is
+      // not the siren alert in Makkah province, and in a long sentence only the
+      // clause at the name speaks for it.
+      const words = proseWords(sent.slice(Math.max(0, hit.index - PROSE_REACH), hit.index + hit[0].length + PROSE_REACH));
+      const own = (w) => words.has(w) && !placeWords.has(w) && !PROSE_COMMON.has(w);
       const best = ps
         .map((p) => ({ p, n: [...proseWords(p.label)].filter(own).length }))
         .sort((a, b) => b.n - a.n || Date.parse(b.p.at) - Date.parse(a.p.at))[0];

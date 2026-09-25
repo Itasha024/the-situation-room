@@ -198,7 +198,7 @@ function typeFor(a: Action): DeskType {
 const HOUTHI_SRC_RE =
   /Ali Bk|Sabereen|Mihwar|Masirah|Saree|^YPA$|Mayadeen|Baghdad Today|Hazam|Hezam|Ezzi\b|Murtada|Abdulsalam|Ansarollah|^Saba$|al-?Houthi|Al-?Thawrah|Shajab|Naya|Shin Persian|Al-?Aqsa|Sanaa Foreign/i;
 const GOV_SRC_RE =
-  /Hadath|Arabiya|Arab News|SPA|September|Asharq|Sakani|Okaz|Al-?Watan|Bin Saeed|Saudi|Giants|Nation'?s? Shield|South24|Aden|Yemeni Army|Yemen Defence|Yemen Foreign|Coalition spokesman|Dhabyani|Taha Saleh|Basha Report|2 December|Yemen TV|al-Alimi|Eryani|Mahrami|Zindani|Zouba|Tareq Saleh|National Resistance|Southern Transitional|Zubaidi|GCC Secretariat|Suhail|Sheba/i;
+  /Hadath|Arabiya|Arab News|SPA|September|Asharq|Sakani|Okaz|Al-?Watan|Bin Saeed|Saudi|Giants|Nation'?s? Shield|South24|Aden|Yemeni Army|Yemen Defence|Yemen Foreign|Coalition spokesman|Dhabyani|Taha Saleh|Basha Report|2 December|Yemen TV|al-Alimi|Eryani|Mahrami|Zindani|Zouba|Tareq Saleh|National Resistance|Southern Transitional|Zubaidi|GCC Secretariat|Suhail|Sheba|Hemyari|Rougui/i;
 
 function sidesOf(source: string, text: string, lean: string) {
   const houthiSrc = HOUTHI_SRC_RE.test(source) || lean === "houthi";

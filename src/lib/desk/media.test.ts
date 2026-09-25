@@ -56,6 +56,22 @@ test("a Telegram post's video: its still, its length and Telegram's own player",
   assert.equal(tgMedia(`<div class="tgme_widget_message_text">نص فقط</div>`, "https://t.me/a/1"), undefined);
 });
 
+test("a Telegram post's own file and shape, as t.me/s gives them (Ali Bk, 25 Sep)", () => {
+  const video = `<a class="tgme_widget_message_video_player js-message_video_player" href="https://t.me/Alibk3/37041"><i class="tgme_widget_message_video_thumb" style="background-image:url('https://cdn4.telesco.pe/file/t.jpg')"></i>
+<div class="tgme_widget_message_video_wrap" style="width:624px;padding-top:67.307692307692%">
+  <video src="https://cdn4.telesco.pe/file/2ccd834ef9.mp4?token=A&amp;b=1" class="tgme_widget_message_video js-message_video" width="100%" height="100%"></video>
+</div><time class="message_video_duration js-message_video_duration">0:03</time>`;
+  const v = tgMedia(video, "https://t.me/Alibk3/37041");
+  assert.equal(v?.src, "https://cdn4.telesco.pe/file/2ccd834ef9.mp4?token=A&b=1");
+  assert.equal(v?.w, 624);
+  assert.equal(v?.h, 420);
+  assert.equal(v?.duration, 3);
+  const photo = `<a class="tgme_widget_message_photo_wrap 5310288489968508240" href="https://t.me/Alibk3/37029" style="width:780px;background-image:url('https://cdn4.telesco.pe/file/p.jpg')">
+  <div class="tgme_widget_message_photo" style="padding-top:102.5641025641%"></div></a>`;
+  const p = tgMedia(photo, "https://t.me/Alibk3/37029");
+  assert.deepEqual([p?.kind, p?.w, p?.h], ["photo", 780, 800]);
+});
+
 test("which cards may show their post's media", () => {
   const strike = { type: "strike" as const, summary: "Houthi missile hits Jizan", text: "" };
   assert.equal(mediaCandidate(strike, "صاروخ على جيزان"), true);

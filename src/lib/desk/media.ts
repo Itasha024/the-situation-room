@@ -61,23 +61,34 @@ export function xMedia(media: { all?: FxMedia[] } | undefined, post: string): Me
 /** The video (else the first photo) of one post's block on a t.me/s page. */
 export function tgMedia(block: string, post: string): Media | undefined {
   const bg = (cls: string) => new RegExp(`${cls}[^>]*background-image:url\\('([^']+)'\\)`).exec(block)?.[1];
+  // Its shape: the box's width, and its height as a share of it ("width:624px;padding-top:67.3%").
+  const shape = (width: RegExp, pad: RegExp) => {
+    const w = Number(width.exec(block)?.[1]);
+    const p = Number(pad.exec(block)?.[1]);
+    return w > 0 && p > 0 ? { w, h: Math.round((w * p) / 100) } : {};
+  };
   const video = /tgme_widget_message_video_player/.test(block);
   if (video) {
     const thumb = bg("tgme_widget_message_video_thumb");
     if (!thumb) return undefined;
     const d = /message_video_duration[^>]*>(\d+):(\d{2})</.exec(block);
     const m = /\/([^/]+)\/(\d+)$/.exec(post);
+    // The file itself, when Telegram puts it on the page (not for a big video).
+    const src = /<video[^>]*\ssrc="(https:\/\/[^"]+)"/.exec(block)?.[1]?.replace(/&amp;/g, "&");
     return {
       kind: "video",
       from: "tg",
       post,
       thumb,
+      ...(src ? { src } : {}),
       ...(m ? { embed: `https://t.me/${m[1]}/${m[2]}?embed=1&mode=tme` } : {}),
       ...(d ? { duration: Number(d[1]) * 60 + Number(d[2]) } : {}),
+      ...shape(/message_video_wrap"[^>]*width:(\d+)px/, /message_video_wrap"[^>]*padding-top:([\d.]+)%/),
     };
   }
   const photo = bg("tgme_widget_message_photo_wrap");
-  return photo ? { kind: "photo", from: "tg", post, thumb: photo } : undefined;
+  if (!photo) return undefined;
+  return { kind: "photo", from: "tg", post, thumb: photo, ...shape(/message_photo_wrap[^>]*width:(\d+)px/, /message_photo"[^>]*padding-top:([\d.]+)%/) };
 }
 
 /* ------------------------------------------------------------------ *

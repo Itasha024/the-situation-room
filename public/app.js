@@ -355,9 +355,11 @@ function mediaBlock(items, compact) {
 
 /**
  * A card's picture or video from its X or Telegram post (src/lib/desk/media.ts):
- * a 16:9 still with ▶ and its length. Nothing plays until it is clicked; an X
- * video then plays in place from X, a Telegram one in Telegram's own player,
- * and a picture opens large. A still that no longer loads leaves the link.
+ * the picture itself at its own shape, a video's still with ▶ and its length.
+ * Nothing plays until it is clicked; a video then plays in place from X or
+ * Telegram, and a picture opens large. Telegram's file links expire, so a
+ * failing one is asked for anew (/api/tgmedia); only then Telegram's own
+ * player, and last the link.
  */
 function cardMediaHtml(m) {
   if (!m || typeof m !== 'object' || Array.isArray(m) || !m.thumb) return Array.isArray(m) ? mediaBlock(m) : '';
@@ -365,8 +367,11 @@ function cardMediaHtml(m) {
   const dur = m.kind === 'video' && d ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}` : '';
   const video = m.kind === 'video';
   const where = m.from === 'tg' ? 'Telegram' : 'X';
-  return `<div class="cm${video ? ' cm-video' : ''}" data-kind="${escapeHtml(m.kind)}" data-from="${escapeHtml(m.from)}" data-src="${escapeHtml(m.src || '')}" data-embed="${escapeHtml(m.embed || '')}" data-thumb="${escapeHtml(m.thumb)}">
-      <button type="button" class="cm-still" aria-label="${video ? 'Play the video' : 'Open the picture'}">
+  const w = Number(m.w) || 0;
+  const h = Number(m.h) || 0;
+  const shape = w > 0 && h > 0 ? ` style="aspect-ratio:${w}/${h}"` : '';
+  return `<div class="cm${video ? ' cm-video' : ' cm-photo'}" data-kind="${escapeHtml(m.kind)}" data-from="${escapeHtml(m.from)}" data-post="${escapeHtml(m.post || '')}" data-src="${escapeHtml(m.src || '')}" data-embed="${escapeHtml(m.embed || '')}" data-thumb="${escapeHtml(m.thumb)}">
+      <button type="button" class="cm-still"${shape} aria-label="${video ? 'Play the video' : 'Open the picture'}">
         <img src="${escapeHtml(m.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">
         ${video ? '<span class="cm-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>' : ''}
         ${dur ? `<span class="cm-dur">${dur}</span>` : ''}
@@ -375,17 +380,63 @@ function cardMediaHtml(m) {
     </div>`;
 }
 
+/** Fresh links for a Telegram post's media, asked once per card. */
+function freshTgMedia(box) {
+  if (box._fresh) return box._fresh;
+  const post = /t\.me\/([A-Za-z0-9_]+)\/(\d+)/.exec(box.dataset.post || '');
+  box._fresh = !post ? Promise.resolve(null)
+    : fetch(`/api/tgmedia?post=${post[1]}/${post[2]}`).then((r) => r.json()).then((j) => (j && j.ok && j.media) || null).catch(() => null);
+  return box._fresh;
+}
+
 function wireCardMedia(card) {
   const box = card && card.querySelector('.cm');
   if (!box) return;
   const img = box.querySelector('.cm-still img');
-  if (img) img.onerror = () => box.classList.add('cm-gone');
+  if (img) {
+    img.onerror = () => {
+      if (box.dataset.from !== 'tg' || img.dataset.retried) { box.classList.add('cm-gone'); return; }
+      img.dataset.retried = '1';
+      freshTgMedia(box).then((m) => {
+        if (!m || !m.thumb) { box.classList.add('cm-gone'); return; }
+        box.dataset.thumb = m.thumb;
+        if (m.src) box.dataset.src = m.src;
+        img.src = m.thumb;
+      });
+    };
+  }
   const still = box.querySelector('.cm-still');
   if (!still) return;
+  const gone = () => { box.innerHTML = ''; box.appendChild(still); box.classList.add('cm-gone'); };
+  const tgPlayer = () => {
+    const { embed } = box.dataset;
+    if (embed) box.innerHTML = `<iframe class="cm-player cm-tg" src="${escapeHtml(embed)}" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer" title="Telegram video"></iframe>`;
+    else gone();
+  };
+  // The video's own file, in a frame that names no referrer (X's video host
+  // refuses one that names another site). A failing Telegram file is asked
+  // for anew once, then Telegram's own player, then the link.
+  const play = (src, retried) => {
+    const { from, thumb } = box.dataset;
+    const doc = `<meta name="referrer" content="no-referrer"><style>html,body{margin:0;height:100%;background:#000}video{width:100%;height:100%;display:block}</style>`
+      + `<video controls autoplay playsinline poster="${escapeHtml(thumb)}" src="${escapeHtml(src)}"></video>`;
+    const ratio = still.style.aspectRatio;
+    box.innerHTML = `<iframe class="cm-player cm-xv" srcdoc="${escapeHtml(doc)}" referrerpolicy="no-referrer" allow="autoplay; fullscreen" allowfullscreen title="Video"${ratio ? ` style="aspect-ratio:${ratio}"` : ''}></iframe>`;
+    const frame = box.querySelector('iframe');
+    frame.onload = () => {
+      const v = frame.contentDocument && frame.contentDocument.querySelector('video');
+      if (!v) return;
+      v.onerror = () => {
+        if (from !== 'tg') { gone(); return; }
+        if (retried) { tgPlayer(); return; }
+        freshTgMedia(box).then((m) => (m && m.src ? play(m.src, true) : tgPlayer()));
+      };
+    };
+  };
   still.onclick = (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
-    const { kind, from, src, embed, thumb } = box.dataset;
+    const { kind, from, src, thumb } = box.dataset;
     if (kind === 'photo') {
       const flo = document.getElementById('media-float');
       if (!flo) return;
@@ -397,17 +448,10 @@ function wireCardMedia(card) {
       flo.onclick = (e) => { if (e.target === flo) close(); };
       return;
     }
-    if (from === 'x' && src) {
-      // X's video host refuses a request that names another site as its
-      // referrer, so the player sits in a frame that names none.
-      const doc = `<meta name="referrer" content="no-referrer"><style>html,body{margin:0;height:100%;background:#000}video{width:100%;height:100%;display:block}</style>`
-        + `<video controls autoplay playsinline poster="${escapeHtml(thumb)}" src="${escapeHtml(src)}"></video>`;
-      box.innerHTML = `<iframe class="cm-player cm-xv" srcdoc="${escapeHtml(doc)}" referrerpolicy="no-referrer" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>`;
-    } else if (embed) {
-      box.innerHTML = `<iframe class="cm-player cm-tg" src="${escapeHtml(embed)}" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer" title="Telegram video"></iframe>`;
-    } else {
-      box.classList.add('cm-gone');
-    }
+    if (src) play(src, false);
+    // A card saved before the file was kept: ask for it now.
+    else if (from === 'tg') freshTgMedia(box).then((m) => (m && m.src ? play(m.src, true) : tgPlayer()));
+    else gone();
   };
 }
 
@@ -1937,11 +1981,16 @@ function mediaTestCards() {
       media: { kind: 'video', from: 'x', post: x, thumb: 'https://pbs.twimg.com/media/HTA5vTEWUAAchW1.jpg', src: 'https://video.twimg.com/amplify_video/2103243072716832769/vid/avc1/710x360/FsT-_qcTVd03YGVs.mp4?tag=29', duration: 71 },
     },
     {
-      fp: 'media-test-tg', at: now, source: 'Ali Bk (Telegram) · TEST', url: 'https://t.me/Alibk3/37041', type: 'strike', live: true,
-      summary: 'TEST — Satellite images show direct hits on King Fahd Air Base in Taif',
-      text: 'Sample card to show a Telegram video on a card.',
-      media: { kind: 'video', from: 'tg', post: 'https://t.me/Alibk3/37041', embed: 'https://t.me/Alibk3/37041?embed=1&mode=tme', duration: 3,
-        thumb: 'https://cdn4.telesco.pe/file/kg5joOV_FCLhXGxnzXxGJCtpuF4iDhZx8TY65EVshG6zlvIVDeifrvG53jJnX-YxwRRBv9eOid4uf7tusWCiukHW3iBUPbfwQu_Zu4eurRZ-GzKadWXQTRCHf9ZBI-aEst3typZq9CsZSiXDqg7N_lfC7uTs05PFthI2NPGG5xJVfBm7UA9mY7tKCGwHPhOIOyXz7b_9RWt_bJQqCBOO2ujjWaH2TczYYlKtdkolN73R-kTMjELnM3mKgFsIlIlZNqthmOBgBDDPgSOLs9wNwAYyRgBUQNRzVucH9pTGdEFyMAkIDGgoF-c07E6tDHvV-2IMcYkpIGqORFy5XWhMSw' },
+      fp: 'media-test-tg-photo', at: now, source: 'Ali Bk (Telegram) · TEST', url: "https://t.me/Alibk3/37033", type: 'combat', live: true,
+      summary: "TEST — Heavy clashes in the Kahbub mountains, Ali Bk map shows",
+      text: "Sample card to show a Telegram picture on a card, at its own shape.",
+      media: {"kind":"photo","from":"tg","post":"https://t.me/Alibk3/37033","thumb":"https://cdn4.telesco.pe/file/FYOmwOqC1GvIuN3Oz6Baungau6OCuqZmB8oQgHpd2LSH06FL_VvWlmndvBA0r6vEKMA7fxyS-YxRPWa4HfrytiTaJfWXwb6KxmYlaEOXoOlnjXJ3ERE0ZePtjLc14GIs2TgIITnh6Su4NdbUfZSHq_YGnOT3N_Xdb8MMofT_Y8IijRvmH9mPqDKD6xYfMj0182Y6w6_Lfx5WXSVV-xqA7a5fJLNGkCUeh9DaPVb8ufUiOGUAAfGfe1tDsBFP9TpJ57uv_pv9J-RG8PKCfz_Vc7dNMx0C-s8T-qtx68MH4X3q3Wpvia2JzCc0f_T5su8bpUpbRIiNnt9hIkCgPU_oHg.jpg","w":800,"h":468},
+    },
+    {
+      fp: 'media-test-tg', at: now, source: 'Ali Bk (Telegram) · TEST', url: "https://t.me/Alibk3/37041", type: 'combat', live: true,
+      summary: "TEST — Satellite images show direct hits on King Fahd Air Base in Taif",
+      text: "Sample card to show a Telegram video on a card; it plays the file itself, like X.",
+      media: {"kind":"video","from":"tg","post":"https://t.me/Alibk3/37041","thumb":"https://cdn4.telesco.pe/file/kg5joOV_FCLhXGxnzXxGJCtpuF4iDhZx8TY65EVshG6zlvIVDeifrvG53jJnX-YxwRRBv9eOid4uf7tusWCiukHW3iBUPbfwQu_Zu4eurRZ-GzKadWXQTRCHf9ZBI-aEst3typZq9CsZSiXDqg7N_lfC7uTs05PFthI2NPGG5xJVfBm7UA9mY7tKCGwHPhOIOyXz7b_9RWt_bJQqCBOO2ujjWaH2TczYYlKtdkolN73R-kTMjELnM3mKgFsIlIlZNqthmOBgBDDPgSOLs9wNwAYyRgBUQNRzVucH9pTGdEFyMAkIDGgoF-c07E6tDHvV-2IMcYkpIGqORFy5XWhMSw","src":"https://cdn4.telesco.pe/file/2ccd834ef9.mp4?token=GKCEbUCkx9aS4pilvYh_MuEaJZCUcUz6JG2DeXm6bQGNjDH8-RefXLetyCDqjoFsWqbE49p5URMNnJc4_tbNzapIEWWkPOgF2sZHwbOmr_LyuvVpa5WJdL6tV7guqPp8iQ72qJh2LltWncDfIAqcctPkFuuOi_hk2zhK7CRD13RKtwkMHkpn5jGb5nA1mfOfZ9xfENvl4niUkZKyan1kRJk7okAYRTooBdsq-A9bTqevigpjL42p7X2_vIaqLMv18diaiRcKjiHwcWXHJd4HDBdAahxcb4pRgpF69EoNmlDCzgapGE9QOXgYpUHsVA90tA5QJHndH2g739xCbweb8Q","embed":"https://t.me/Alibk3/37041?embed=1&mode=tme","duration":3,"w":624,"h":420},
     },
   ].map((r, i) => feedCardHtml(r, i)).join('');
 }

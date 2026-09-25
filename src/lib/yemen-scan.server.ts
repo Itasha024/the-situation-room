@@ -103,9 +103,15 @@ const TG: ChannelScan[] = [
  * down or behind bot checks, and Twitter's syndication endpoint answers 429 —
  * all tried on 24 September. Public posts only, read at a polite interval.
  */
-type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence };
+type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence; only?: RegExp };
 const C10: Cadence = { everyMin: 10 };
-const X = (handle: string, name: string, lean: Channel["lean"], cadence: Cadence): XAccount => ({ handle, name, lean, cadence });
+const X = (handle: string, name: string, lean: Channel["lean"], cadence: Cadence, only?: RegExp): XAccount => ({ handle, name, lean, cadence, ...(only ? { only } : {}) });
+/**
+ * Sky News Arabia's breaking account posts about 150 times a day, most of it
+ * other agencies' news. Only what its own sources told it goes on: "مصادر
+ * لسكاي نيوز عربية", "لـ«سكاي نيوز عربية»", "خاص", "told Sky News Arabia".
+ */
+export const SKY_OWN = /لـ?\s*[«"“]?\s*سكاي\s*نيوز\s*عربية|علمت\s*[«"“]?\s*سكاي|(?:^|[\s|:«"(])(?:خاص|حصري|حصريا|حصرياً)(?=[\s|:»")]|$)|(?:told|to|tells)\s+Sky\s+News\s+Arabia|Sky\s+News\s+Arabia\s+(?:has\s+)?learned|exclusive/i;
 /**
  * Read by tier, to spare the processor and FxTwitter's goodwill: the accounts
  * that break news every 10 minutes, the officials and the slower channels
@@ -129,6 +135,7 @@ const X_ACCOUNTS: XAccount[] = [
   X("2decnews", "2 December News", "gov", C10),
   X("South24_net", "South24", "gov", C10),
   X("yementvyem", "Yemen TV", "gov", C10),
+  X("SkyNewsArabia_B", "Sky News Arabia", "intl", C10, SKY_OWN),
   // Every 30 minutes: the leaders, the ministries' other voices, the parties.
   X("PresidentRashad", "Rashad al-Alimi", "gov", C30),
   X("ERYANIM", "Muammar al-Eryani", "gov", C30),
@@ -146,6 +153,8 @@ const X_ACCOUNTS: XAccount[] = [
   X("Alsakaniali", "Ali al-Sakani", "gov", C30),
   X("South24E", "South24 English", "gov", C30),
   X("GCCSG", "GCC Secretariat", "gov", C30),
+  X("FaresALhemyari", "Fares al-Hemyari", "gov", C30),
+  X("alrougui", "Malik al-Rougui", "gov", C30),
   X("yemenmofa2025", "Sanaa Foreign Ministry", "houthi", C30),
   X("hezamalasad", "Hezam al-Asad", "houthi", C30),
   X("hussinalezzi5", "Hussein al-Ezzi", "houthi", C30),
@@ -185,6 +194,7 @@ export function parseFxStatuses(json: unknown, acct: XAccount): RawHit[] {
     const text = decodeEntities(String(s.raw_text?.text ?? s.text ?? "")).trim();
     const url = s.url || (s.id ? `https://x.com/${acct.handle}/status/${s.id}` : "");
     if (!url || text.length < 12) continue;
+    if (acct.only && !acct.only.test(text)) continue;
     const media = xMedia(s.media, url);
     const ms = Number(s.created_timestamp) * 1000;
     out.push({

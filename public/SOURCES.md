@@ -9,6 +9,9 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 | X account | How often |
 |---|---|
 | The Cube — `@war_cube` | every 5 minutes |
+| Spokesmen, ministries and front reporters (`@Yah_Saree`, `@abdusalamsalah`, `@spokespersonyem`, `@Yem_army_media`, `@YemenMOD`, `@CJFCSpox`, `@modgovksa`, `@KSAMOFA`, `@maldhabyani`, `@taha_saleh_taiz`, `@BashaReport`, `@SaudiNews50`, `@2decnews`, `@South24_net`, `@yementvyem`) | every 10 minutes |
+| Sky News Arabia breaking — `@SkyNewsArabia_B`: **only posts where sources spoke to Sky News Arabia itself** ("مصادر لسكاي نيوز عربية", "لـ«سكاي نيوز عربية»", "خاص", "told Sky News Arabia"); the rest (other agencies' news) is dropped before the reader | every 10 minutes |
+| Leaders, parties and the slower channels (`@PresidentRashad`, `@ERYANIM`, `@AbuZar3a`, `@tarikyemen`, `@AidrosAlzubidi`, `@Moh_Alhouthi`, `@hezamalasad` and others), plus journalists Fares al-Hemyari (`@FaresALhemyari`) and Malik al-Rougui (`@alrougui`, West Coast front) | every 30 minutes |
 
 ---
 

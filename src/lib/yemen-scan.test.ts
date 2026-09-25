@@ -647,6 +647,26 @@ test("an X account's own posts and threads are read; reposts and replies to othe
   assert.equal((rows[0] as { fromTg: boolean }).fromTg, true);
 });
 
+test("Sky News Arabia's account: only what its own sources told it", async () => {
+  const { parseFxStatuses, SKY_OWN } = await import("./yemen-scan.server.ts");
+  const acct = { handle: "SkyNewsArabia_B", name: "Sky News Arabia", lean: "intl", cadence: { everyMin: 10 }, only: SKY_OWN } as never;
+  const post = (id: string, text: string) => ({ id, url: `https://x.com/SkyNewsArabia_B/status/${id}`, text, created_timestamp: 1790244000, author: { screen_name: "SkyNewsArabia_B" } });
+  const rows = parseFxStatuses(
+    {
+      results: [
+        post("1", "مصادر لسكاي نيوز عربية: وصول تعزيزات إلى جبهة الخوخة"),
+        post("2", "مسؤول يمني لـ«سكاي نيوز عربية»: الحوثيون يحشدون في الحديدة"),
+        post("3", "خاص | قائد ميداني: السيطرة على مواقع جديدة في كهبوب"),
+        post("4", "تاس: روسيا تعلن إسقاط مسيرات أوكرانية"),
+        post("5", "ترامب: سنعقد اجتماعا مهما الأسبوع المقبل"),
+        post("6", "Saudi official told Sky News Arabia the talks were postponed"),
+      ],
+    },
+    acct,
+  );
+  assert.deepEqual(rows.map((r: { url: string }) => r.url.split("/").pop()), ["1", "2", "3", "6"]);
+});
+
 test("an X post is new only when its id is past the last one read; a pinned old post is not", async () => {
   const { newerX } = await import("./yemen-scan.server.ts");
   assert.equal(newerX("2103415802196001183", undefined), true);

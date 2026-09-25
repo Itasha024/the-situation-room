@@ -1387,6 +1387,9 @@ function renderLiveScan() {
  */
 const NOT_A_PIN_NAME = /^(?:yemen|saudi arabia|the red sea)$/i;
 const PROSE_PIN_MS = 36 * 3600 * 1000;
+const PROSE_COMMON = new Set(('saudi arabia yemen yemeni houthi houthis government forces coalition province governorate ' +
+  'district area areas reported report reports said says over from with that this their were have been also into after ' +
+  'while near city town military sources media').split(' '));
 
 function pinsForProse() {
   if (!mappableByFp.size && data && window.L) { try { buildMapPins(data); } catch (e) {} }
@@ -1425,10 +1428,16 @@ function linkPlaces(text, pins) {
       const start = m.index + hit.index;
       const end = start + hit[0].length;
       if (spans.some((s) => start < s[1] && end > s[0])) continue;
+      // The sentence must share a word of its own with the report, past the
+      // place and the war's everyday words: "the Mecca defense pact" is not the
+      // siren alert in Makkah province.
+      const place = proseWords(core);
+      const own = (w) => words.has(w) && !place.has(w) && !PROSE_COMMON.has(w);
       const best = ps
-        .map((p) => ({ p, n: [...proseWords(p.label)].filter((w) => words.has(w)).length }))
-        .sort((a, b) => b.n - a.n || Date.parse(b.p.at) - Date.parse(a.p.at))[0].p;
-      spans.push([start, end, best]);
+        .map((p) => ({ p, n: [...proseWords(p.label)].filter(own).length }))
+        .sort((a, b) => b.n - a.n || Date.parse(b.p.at) - Date.parse(a.p.at))[0];
+      if (!best || best.n < 1) continue;
+      spans.push([start, end, best.p]);
       linked.add(k);
     }
   }

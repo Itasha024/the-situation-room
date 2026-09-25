@@ -12,6 +12,7 @@
  */
 
 import { anglicise } from "./anglicise.ts";
+import { respell } from "./spelling.ts";
 import { type NeedsPlace, geocodeJobs } from "./geocode.ts";
 import { maritimeType, seaPlace } from "./maritime.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
@@ -569,7 +570,7 @@ const HOUTHI_LEADER_LINE = /^\s*(?:السيد القائد|قائد الثورة
 function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
-  const r: Reading = { ...raw, headline: fixHeadline(reword(anglicise(raw.headline))), body: reword(anglicise(raw.body)) };
+  const r: Reading = { ...raw, headline: fixHeadline(reword(respell(anglicise(raw.headline)))), body: reword(respell(anglicise(raw.body))) };
   // The outlet is on the card: not in its headline, not in its body. And a
   // spokesperson or a role is only what the text says it is.
   r.headline = dropInventedRole(spokespersonLabel(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.source, c.text), c.text);

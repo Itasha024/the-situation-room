@@ -20,6 +20,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { SPELLING_RULES, spellingHints } from "./spelling.ts";
 
 export type ReaderItem = {
   id: string;
@@ -264,6 +265,7 @@ WRITING
 - Spell each place once, the usual English way, and never explain the
   spelling: no "also spelled", "also written", "also known as" or a second
   spelling in brackets.
+${SPELLING_RULES}
 - A short item — four sentences or fewer — is its headline: the whole report
   goes in the headline (the districts, the target, the weapon) and body is ""
   (empty). Never a body that says the headline again in more words, and never
@@ -868,6 +870,7 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string, rec
     source_alignment: i.alignment,
     posted_at: i.postedAt,
     text: i.text.slice(0, i.full ? FULL_TEXT_MAX : 2400),
+    ...(spellingHints(i.text) ? { spelling: spellingHints(i.text) } : {}),
     ...(i.fix ? { fix_previous: i.fix } : {}),
   }));
   const ctrl = new AbortController();
@@ -978,6 +981,7 @@ async function callGroq(
     source_alignment: i.alignment,
     posted_at: i.postedAt,
     text: i.text.slice(0, i.full ? 6000 : 1600),
+    ...(spellingHints(i.text) ? { spelling: spellingHints(i.text) } : {}),
     ...(i.fix ? { fix_previous: i.fix } : {}),
   }));
   const ctrl = new AbortController();

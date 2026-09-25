@@ -22,6 +22,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { respell } from "./spelling.ts";
 
 import { alertCities } from "./copies.ts";
 import { governorateAt } from "./adm1.ts";
@@ -202,10 +203,10 @@ export function toWritten(json: Record<string, unknown> | null, all: LiveReport[
   if (!json) return null;
   // The outlets are on the card: "…, says Al-Masirah" is not the headline's.
   const headline = stripAttribution(
-    stripSpellingNotes(roleNamesInProse(String(json.headline ?? "").trim())).replace(/[.\s]+$/, ""),
+    respell(stripSpellingNotes(roleNamesInProse(String(json.headline ?? "").trim()))).replace(/[.\s]+$/, ""),
     all.map((r) => r.source),
   );
-  let body = stripSpellingNotes(roleNamesInProse(String(json.body ?? "").trim()));
+  let body = respell(stripSpellingNotes(roleNamesInProse(String(json.body ?? "").trim())));
   // The same rule as a single card: short accounts make a headline-only card.
   if (redundantBody(headline, body, accountsSource(all))) body = "";
   const w = { headline: headline ? headline[0].toUpperCase() + headline.slice(1) : "", body };

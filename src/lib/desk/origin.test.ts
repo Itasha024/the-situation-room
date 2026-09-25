@@ -178,3 +178,10 @@ test("words said TO the carrier are its own, not a relay of US media", () => {
   assert.equal(findGroup("US official told Al Arabiya that options are being weighed", "https://t.me/alarabiyaBr/1"), null);
   assert.equal(findGroup("مسؤولون أمريكيون: البنتاغون منقسم بشأن الضربات", "https://t.me/x/1")?.name, "US officials");
 });
+
+test("an original must name the war's ground: a UNICEF release on Jordan is not the Yemen one", async () => {
+  const { theatre } = await import("./origin.ts");
+  assert.equal(theatre("United Kingdom adds £2.85 Million to Partnership with UNICEF to Improve Education for Vulnerable Children in Jordan"), false);
+  assert.equal(theatre("Child malnutrition rises in Yemen as fighting intensifies, says UNICEF"), true);
+  assert.equal(theatre("million children under five face risk acute malnutrition Yemen"), true);
+});

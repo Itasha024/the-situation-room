@@ -58,6 +58,16 @@ test("a figure the source does not contain blocks publication", () => {
   assert.equal(checkReading(ok, SAREE), null);
 });
 
+test("a figure written with its thousands word in the source is the same figure", () => {
+  const src = "عاجل | اليونيسف: نحو 130 ألفا بينهم 71 ألف طفل نزحوا خلال الأسابيع الثلاثة الماضية معظمهم من #تعز بعد تصاعد القتال";
+  const r = reading({ event_type: "statement", speaker_lead: "UNICEF", headline: "UNICEF: about 130,000 people, including 71,000 children, displaced in Yemen in three weeks", body: "" });
+  assert.equal(checkReading(r, src), null);
+  const m = reading({ event_type: "statement", speaker_lead: "UNICEF", headline: "UNICEF: over 2,200,000 children under five in Yemen at risk of acute malnutrition", body: "" });
+  assert.equal(checkReading(m, "اليونيسف: أكثر من 2.2 مليون طفل دون الخامسة في #اليمن مهددون بسوء التغذية الحاد"), null);
+  const bad = reading({ event_type: "statement", speaker_lead: "UNICEF", headline: "UNICEF: about 140,000 people displaced in Yemen", body: "" });
+  assert.match(String(checkReading(bad, src)), /figure not in source: 140000/);
+});
+
 test("filler, sourcing labels and partisan words never publish", () => {
   for (const body of [
     "Clashes were reported. No casualties were reported.",

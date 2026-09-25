@@ -743,12 +743,33 @@ export function contentHash(text: string): string {
   return createHash("sha256").update(`v${PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
 }
 
-/** Western digits for every number in a text, Arabic-Indic included. */
-function numbersIn(text: string): Set<string> {
+/** "137 ألف", "2.2 million": the word that multiplies the number before it. */
+const SCALE: [RegExp, number][] = [
+  [/^(?:ألف|الف|آلاف|thousand)/i, 1e3],
+  [/^(?:مليون|ملايين|million)/i, 1e6],
+  [/^(?:مليار|billion)/i, 1e9],
+];
+
+/**
+ * Western digits for every number in a text, Arabic-Indic included. In a
+ * source, a number with its scale word counts in full too: "130 ألفا" is the
+ * 130,000 the copy writes.
+ */
+export function figuresIn(text: string, scaled = false): Set<string> {
   const western = String(text || "")
     .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
-  return new Set((western.match(/\d+(?:[.,]\d+)*/g) || []).map((n) => n.replace(/,/g, "")));
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/٫/g, ".");
+  const out = new Set<string>();
+  for (const m of western.matchAll(/\d+(?:[.,]\d+)*/g)) {
+    const n = m[0].replace(/,/g, "");
+    out.add(n);
+    if (!scaled) continue;
+    const after = western.slice((m.index ?? 0) + m[0].length).replace(/^\s+/, "");
+    const scale = SCALE.find(([re]) => re.test(after))?.[1];
+    if (scale) out.add(String(Math.round(Number(n) * scale)));
+  }
+  return out;
 }
 
 /**
@@ -805,8 +826,8 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
 
   // Every figure must come from the source. Years and ordinals in dates are
   // numbers too, so they are held to the same rule.
-  const have = numbersIn(sourceText);
-  for (const n of numbersIn(`${h} ${b}`)) {
+  const have = figuresIn(sourceText, true);
+  for (const n of figuresIn(`${h} ${b}`)) {
     if (!have.has(n)) return `figure not in source: ${n}`;
   }
 

@@ -768,7 +768,18 @@ html{scroll-behavior:smooth}
 .card .also a{color:#9fb4cc;text-decoration:none}
 .card .also a:hover{text-decoration:underline}
 .card .citing{color:#8b98a8}
-.flag-excl{display:inline-block;padding:.02rem .38rem;border:1px solid #a16207;border-radius:999px;color:#fcd34d;font-size:.6rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.5;white-space:nowrap}
+.cm{position:relative;margin:.45rem 0 .1rem}
+.cm-still{position:relative;display:block;width:100%;aspect-ratio:16/9;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#05080c;cursor:pointer}
+.cm-still img{display:block;width:100%;height:100%;object-fit:cover}
+.cm-play{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;display:grid;place-items:center;border-radius:50%;background:rgba(8,12,18,.72);border:1px solid rgba(255,255,255,.35);transition:background .2s,transform .2s}
+.cm-play svg{width:20px;height:20px;margin-left:3px;fill:#fff}
+.cm-still:hover .cm-play,.cm-still:focus-visible .cm-play{background:rgba(185,28,28,.85);transform:scale(1.06)}
+.cm-dur{position:absolute;right:6px;bottom:6px;padding:.05rem .35rem;border-radius:4px;background:rgba(0,0,0,.75);color:#fff;font-size:.62rem;font-variant-numeric:tabular-nums}
+.cm-link{display:none;font-size:.7rem;color:#7eb6ff}
+.cm.cm-gone .cm-still{display:none}
+.cm.cm-gone .cm-link{display:inline-block}
+.cm-player{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:8px;background:#000}
+.cm-tg{aspect-ratio:auto;height:440px;background:transparent}
 .front-card .front-composed{margin:.35rem 0 0;font-size:.78rem;line-height:1.5;color:#c9d4e0}
 
 /* The conflict in numbers: three plain boxes, no accent colour. */
@@ -917,3 +928,5 @@ html{scroll-behavior:smooth}
 .pg-dots button:focus-visible{outline:1px solid #4a6380;outline-offset:0}
 .tally-box.claims td.none{color:#556579;font-weight:400}
 @media (prefers-reduced-motion:reduce){.pg-slide{transform:none!important}.pg-dots button::before{transition:none}}
+.prose-pin{color:inherit;text-decoration:underline dotted rgba(126,182,255,.7);text-underline-offset:3px;text-decoration-thickness:1px;cursor:pointer}
+.prose-pin:hover,.prose-pin:focus-visible{color:#7eb6ff;text-decoration-style:solid}

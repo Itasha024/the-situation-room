@@ -353,6 +353,60 @@ function mediaBlock(items, compact) {
   }).join('') + '</div>';
 }
 
+/**
+ * A card's picture or video from its X or Telegram post (src/lib/desk/media.ts):
+ * a 16:9 still with ▶ and its length. Nothing plays until it is clicked; an X
+ * video then plays in place from X, a Telegram one in Telegram's own player,
+ * and a picture opens large. A still that no longer loads leaves the link.
+ */
+function cardMediaHtml(m) {
+  if (!m || typeof m !== 'object' || Array.isArray(m) || !m.thumb) return Array.isArray(m) ? mediaBlock(m) : '';
+  const d = Number(m.duration) || 0;
+  const dur = m.kind === 'video' && d ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}` : '';
+  const video = m.kind === 'video';
+  const where = m.from === 'tg' ? 'Telegram' : 'X';
+  return `<div class="cm${video ? ' cm-video' : ''}" data-kind="${escapeHtml(m.kind)}" data-from="${escapeHtml(m.from)}" data-src="${escapeHtml(m.src || '')}" data-embed="${escapeHtml(m.embed || '')}" data-thumb="${escapeHtml(m.thumb)}">
+      <button type="button" class="cm-still" aria-label="${video ? 'Play the video' : 'Open the picture'}">
+        <img src="${escapeHtml(m.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">
+        ${video ? '<span class="cm-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>' : ''}
+        ${dur ? `<span class="cm-dur">${dur}</span>` : ''}
+      </button>
+      <a class="cm-link" href="${escapeHtml(m.post)}" target="_blank" rel="noopener">${video ? '▶ Watch' : 'View'} on ${where}</a>
+    </div>`;
+}
+
+function wireCardMedia(card) {
+  const box = card && card.querySelector('.cm');
+  if (!box) return;
+  const img = box.querySelector('.cm-still img');
+  if (img) img.onerror = () => box.classList.add('cm-gone');
+  const still = box.querySelector('.cm-still');
+  if (!still) return;
+  still.onclick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const { kind, from, src, embed, thumb } = box.dataset;
+    if (kind === 'photo') {
+      const flo = document.getElementById('media-float');
+      if (!flo) return;
+      flo.hidden = false;
+      flo.classList.add('show');
+      flo.innerHTML = `<button type="button" class="media-float-close">Close</button><img src="${escapeHtml(thumb)}" alt="" referrerpolicy="no-referrer">`;
+      const close = () => { flo.classList.remove('show'); flo.hidden = true; flo.innerHTML = ''; };
+      flo.querySelector('.media-float-close').onclick = close;
+      flo.onclick = (e) => { if (e.target === flo) close(); };
+      return;
+    }
+    if (from === 'x' && src) {
+      box.innerHTML = `<video class="cm-player" controls autoplay playsinline preload="none" poster="${escapeHtml(thumb)}" src="${escapeHtml(src)}"></video>`;
+    } else if (embed) {
+      box.innerHTML = `<iframe class="cm-player cm-tg" src="${escapeHtml(embed)}" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer" title="Telegram video"></iframe>`;
+    } else {
+      box.classList.add('cm-gone');
+    }
+  };
+}
+
 function wireMediaClicks(root) {
   if (!root) return;
   root.querySelectorAll('.media-open').forEach((btn) => {
@@ -1051,20 +1105,15 @@ async function pullOlderDesk() {
  * after 15 minutes, red after 30 — so a stalled clock is visible on the page
  * instead of a quiet feed that merely looks like a quiet war.
  */
-/** A refresh in flight, and the cards the last one brought: shown under the feed. */
-let feedChecking = false;
-
 function renderFreshness() {
   const el = document.getElementById('feed-fresh');
   if (!el || !data) return;
   const last = Date.parse(liveOverlay.scannedAt || '');
   if (!Number.isFinite(last)) { el.textContent = ''; return; }
   const mins = Math.max(0, Math.round((Date.now() - last) / 60000));
-  if (feedChecking) { el.textContent = 'Checking for new reports…'; return; }
-  // Only a clock that has stopped is said; new cards flash in the feed itself.
-  el.textContent = mins >= 30 ? `No new scan since ${fmtClock(new Date(last).toISOString())}` : '';
-  el.classList.toggle('stale-amber', mins >= 15 && mins < 30);
-  el.classList.toggle('stale-red', mins >= 30);
+  // The reader never sees the scan at work: no line under the heading that
+  // comes and goes and moves the column. The header's dot tells a stall.
+  el.textContent = '';
   // The header's dot: green while the scans arrive, amber then red when they stop.
   const dot = document.querySelector('.stamp .pulse');
   if (dot) {
@@ -1139,9 +1188,7 @@ function applyLiveOverlay(base) {
 }
 
 function stampText() {
-  const age = Math.max(0, Math.round((Date.now() - new Date(data.updatedAt).getTime()) / 1000));
-  const ago = age < 60 ? `${age}s ago` : age < 7200 ? `${Math.round(age / 60)} min ago` : age < 172800 ? `${Math.round(age / 3600)} h ago` : `${Math.round(age / 86400)} days ago`;
-  return `Updated ${fmtClock(data.updatedAt)} · ${ago}`;
+  return `Updated ${fmtClock(data.updatedAt)}`;
 }
 
 let liveInflight = null;
@@ -1332,6 +1379,80 @@ function renderLiveScan() {
  * Panels
  * ---------------------------------------------------------------- */
 
+/*
+ * The prose names the places the desk's pins stand on. Each name links to the
+ * pin of the report its sentence was written from: the pin at that place whose
+ * headline shares the most words with the sentence, the newest on a tie. A
+ * click takes the main map to it (Latest developments, Fronts).
+ */
+const NOT_A_PIN_NAME = /^(?:yemen|saudi arabia|the red sea)$/i;
+const PROSE_PIN_MS = 36 * 3600 * 1000;
+
+function pinsForProse() {
+  if (!mappableByFp.size && data && window.L) { try { buildMapPins(data); } catch (e) {} }
+  // The prose's own window: the reports it was written from, not today's.
+  const end = Date.parse((brief && brief.updatedAt) || '') || Date.now();
+  return [...mappableByFp.values()].filter((p) => p.place && Date.parse(p.at) >= end - PROSE_PIN_MS && Date.parse(p.at) <= end + 3600e3);
+}
+
+function proseWords(s) {
+  return new Set(String(s || '').toLowerCase().match(/[a-zÀ-ɏ']{4,}/g) || []);
+}
+
+function linkPlaces(text, pins) {
+  const t = String(text || '');
+  if (!pins || !pins.length) return escapeHtml(t);
+  const norm = t.replace(/[’‘]/g, "'").replace(/[‐-―]/g, '-');
+  const byCore = new Map();
+  for (const p of pins) {
+    const name = String(p.place).split(',')[0].replace(/[’‘]/g, "'").replace(/[‐-―]/g, '-').trim();
+    const core = name.replace(/^(?:al|el)[- ]/i, '');
+    if (core.length < 3 || NOT_A_PIN_NAME.test(name)) continue;
+    const k = core.toLowerCase();
+    if (!byCore.has(k)) byCore.set(k, { core, pins: [] });
+    byCore.get(k).pins.push(p);
+  }
+  const spans = [];
+  const linked = new Set();
+  for (const m of norm.matchAll(/[^.!?]+[.!?]*/g)) {
+    const sent = m[0];
+    const words = proseWords(sent);
+    for (const [k, { core, pins: ps }] of byCore) {
+      if (linked.has(k)) continue;
+      const re = new RegExp(`(?:\\b(?:al|el)[- ])?${core.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      const hit = re.exec(sent);
+      if (!hit) continue;
+      const start = m.index + hit.index;
+      const end = start + hit[0].length;
+      if (spans.some((s) => start < s[1] && end > s[0])) continue;
+      const best = ps
+        .map((p) => ({ p, n: [...proseWords(p.label)].filter((w) => words.has(w)).length }))
+        .sort((a, b) => b.n - a.n || Date.parse(b.p.at) - Date.parse(a.p.at))[0].p;
+      spans.push([start, end, best]);
+      linked.add(k);
+    }
+  }
+  spans.sort((a, b) => a[0] - b[0]);
+  let out = '';
+  let at = 0;
+  for (const [s, e, p] of spans) {
+    out += `${escapeHtml(t.slice(at, s))}<a href="#map" class="prose-pin" data-fp="${escapeHtml(p.fp)}" title="${escapeHtml(p.label)}">${escapeHtml(t.slice(s, e))}</a>`;
+    at = e;
+  }
+  return out + escapeHtml(t.slice(at));
+}
+
+function wireProsePins(root) {
+  if (!root) return;
+  root.querySelectorAll('.prose-pin').forEach((a) => {
+    a.onclick = (ev) => {
+      ev.preventDefault();
+      const pin = mappableByFp.get(a.dataset.fp);
+      if (pin) goToPinOnMainMap(pin);
+    };
+  });
+}
+
 function renderSituation(d) {
   const el = document.getElementById('situation');
   if (!el) return;
@@ -1343,7 +1464,8 @@ function renderSituation(d) {
   const body = derived || fallback;
   if (!body) { el.innerHTML = ''; return; }
   el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2><a class="to-fronts" href="#fronts-wrap">Fronts <span aria-hidden="true">→</span></a></div>${cadenceStamp(true)}
-    <p class="situation-window">${escapeHtml(body)}</p>`;
+    <p class="situation-window">${linkPlaces(body, pinsForProse())}</p>`;
+  wireProsePins(el);
   const go = el.querySelector('.to-fronts');
   if (go) go.onclick = (ev) => {
     ev.preventDefault();
@@ -1388,6 +1510,15 @@ function pagerHtml(kind, slides, idx, labels) {
       <button type="button" class="pg-arrow pg-next" aria-label="Next"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>` : ''}
     </div>
     ${many ? `<div class="pg-dots" role="tablist">${dots}</div>` : ''}`;
+}
+
+/** A page turned: the box read out on the last one closes, so the pager is its own height again. */
+function closeReadMore(root, cardSel, btnSel) {
+  root.querySelectorAll(`${cardSel}.open`).forEach((c) => {
+    c.classList.remove('open');
+    const b = c.querySelector(btnSel);
+    if (b) b.textContent = 'Read more';
+  });
 }
 
 function wirePager(root, idx, onChange, opts) {
@@ -1463,8 +1594,8 @@ const NUM_BOXES = [
   ['Injured', [['Houthi', 'injured.houthi'], ['Government', 'injured.gov'], ['Saudi Arabia', 'injured.saudi'], ['Civilians', 'injured.civilians'], ['All sides', 'injured.total']]],
   ['Humanitarian', [['Displaced in Yemen', 'idp'], ['Refugees abroad', 'refugees'], ['Facing acute hunger', 'food']]],
 ];
+/** Every load opens on Killed. */
 let casBox = 0;
-try { casBox = Math.max(0, Math.min(2, Number(localStorage.getItem('desk-cas-box')) || 0)); } catch (e) {}
 
 /** Cells from the tally alone, while /api/brief has not answered. */
 function fallbackNumbers(t) {
@@ -1500,10 +1631,7 @@ function renderCasualties() {
   el.innerHTML = `${cadenceStamp(true)}
     <div class="tally one">${pagerHtml('numbers', boxes, casBox, NUM_BOXES.map((b) => b[0]))}</div>
 `;
-  wirePager(el, casBox, (i) => {
-    casBox = i;
-    try { localStorage.setItem('desk-cas-box', String(i)); } catch (e) {}
-  });
+  wirePager(el, casBox, (i) => { casBox = i; });
 }
 
 function computeControlShares(d) {
@@ -1573,13 +1701,12 @@ function feedCardHtml(r, i) {
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
         <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">, citing ${escapeHtml(r.citing)}</span>` : ''}</span>
-        ${Array.isArray(r.flags) && r.flags.includes('exclusive') ? '<span class="flag-excl" title="A piece the outlet has on its own">Exclusive</span>' : ''}
         ${mappableByFp.has(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
       </div>
       ${replyQuote(r)}
       <p class="headline">${escapeHtml(sum)}</p>
       ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
-      ${mediaBlock(r.media)}
+      ${cardMediaHtml(r.media)}
       ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
@@ -1649,6 +1776,7 @@ function offerJumpBack(from) {
 
 function wireFeedCard(card) {
   if (!card) return;
+  wireCardMedia(card);
   const mapBtn = card.querySelector('.card-map');
   if (mapBtn) {
     mapBtn.onclick = (ev) => {
@@ -2188,16 +2316,16 @@ function allFronts(d) {
 
 /*
  * One front at a time, in the shared pager (dots under the box, arrows inside
- * it on a wide screen, a swipe on a phone). The choice is remembered.
+ * it on a wide screen, a swipe on a phone). Every load opens on Bab al-Mandab.
  */
-let frontIdx = 0;
-try { frontIdx = Math.max(0, Number(localStorage.getItem('desk-front')) || 0); } catch (e) {}
+let frontIdx = null;
 
 function renderFronts(d) {
   const fronts = allFronts(d);
   const stamp = document.getElementById('fronts-stamp');
   if (stamp) stamp.innerHTML = cadenceStamp(true);
-  if (frontIdx >= fronts.length) frontIdx = 0;
+  if (frontIdx == null || frontIdx >= fronts.length) frontIdx = Math.max(0, fronts.findIndex((f) => f.id === 'bab' || /Bab al-Mandab/i.test(f.name || '')));
+  const pins = pinsForProse();
   const cards = fronts.map((f, i) => {
     const act = frontActivity(f.id);
     /*
@@ -2224,8 +2352,8 @@ function renderFronts(d) {
       ${plain ? `<p class="front-plain">${escapeHtml(plain)}</p>` : ''}
       ${showSum ? `<p class="front-sum">${escapeHtml(sum)}</p>` : ''}
       ${showDir ? `<p class="front-dir">${escapeHtml(dir)}</p>` : ''}
-      ${composed ? `<p class="front-composed">${escapeHtml(composed)}</p>` : ''}
-      ${!composed && act ? `<p class="front-activity">${escapeHtml(act.line)}</p>` : ''}
+      ${composed ? `<p class="front-composed">${linkPlaces(composed, pins)}</p>` : ''}
+      ${!composed && act ? `<p class="front-activity">${linkPlaces(act.line, pins)}</p>` : ''}
       ${composed ? '' : `<div class="srcs">Source: ${sourceAnchors(f.sources || [], '')}</div>`}
       ${showDetail ? `<div class="full">${escapeHtml(detail)}</div>
       <button type="button" class="toggle-front">Read more</button>` : ''}
@@ -2234,9 +2362,10 @@ function renderFronts(d) {
   const box = document.getElementById('fronts');
   box.classList.add('one-front');
   box.innerHTML = pagerHtml('fronts', cards, frontIdx, fronts.map((f) => f.name));
+  wireProsePins(box);
   wirePager(box, frontIdx, (i) => {
     frontIdx = i;
-    try { localStorage.setItem('desk-front', String(i)); } catch (e) {}
+    closeReadMore(box, '.front-card', '.toggle-front');
   });
 
   document.querySelectorAll('.toggle-front').forEach((btn) => {
@@ -3475,7 +3604,8 @@ function renderTimeline(d) {
   });
   const idx = timelineIdx == null ? last : Math.min(timelineIdx, last);
   el.innerHTML = pagerHtml('timeline', slides, idx, phases.map((p, i) => (i === last ? `Now: ${p.title}` : p.title)));
-  wirePager(el, idx, (i) => { timelineIdx = i; }, { wrap: false });
+  // An open box left behind would keep the pager at its height: it closes.
+  wirePager(el, idx, (i) => { timelineIdx = i; closeReadMore(el, '.phase-card', '.toggle-phase'); }, { wrap: false });
   el.querySelectorAll('.toggle-phase').forEach((btn) => {
     btn.onclick = () => {
       const card = btn.closest('.phase-card');
@@ -3830,7 +3960,7 @@ async function refresh(first) {
   if (first) await Promise.all([loadGazetteer(), loadMapFixes()]);
   const feedEl = document.getElementById('feed');
   const shown = first ? null : new Set([...(feedEl ? feedEl.querySelectorAll('.card') : [])].map((el) => el.dataset.fp));
-  if (!first) { feedChecking = true; renderFreshness(); }
+
   const baseP = fetchData();
   if (first) await hydrateSnapshot();
   const liveP = pullLive({ silent: true });
@@ -3848,11 +3978,11 @@ async function refresh(first) {
   const stamp = document.getElementById('updated');
   if (stamp) stamp.textContent = stampText();
   renderBars(data);
-  renderSituation(data);
   renderLiveScan();
   renderCasualties(data);
-  feedChecking = false;
   renderFeed(data);
+  // After the feed: its render builds the pin index the prose links to.
+  renderSituation(data);
   // New cards since the last refresh flash once.
   if (shown && shown.size && feedEl) {
     [...feedEl.querySelectorAll('.card')].filter((el) => !shown.has(el.dataset.fp)).forEach(flashCard);

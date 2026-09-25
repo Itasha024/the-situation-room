@@ -481,6 +481,10 @@ async function confirmed(url: string, keys: string[]): Promise<boolean> {
   return distinctive(text, keys) >= 3;
 }
 
+/** The war's own ground and parties: a story about it names one of them. */
+const THEATRE = /\b(?:Yemen|Yemeni|Houthis?|Ansar Allah|Saudi|Red Sea|Bab al-Mandab|Gulf of Aden|Aden|Sanaa|Hodeidah|Taiz|Marib|Mocha|Lahj|Hadramout|Jizan|Najran)\b/i;
+export const theatre = (text: string): boolean => THEATRE.test(text);
+
 /** Shared words, each weighted by how early it ranks in `want`. */
 export function weight(title: string, want: string[]): number {
   const have = stems(title);
@@ -666,6 +670,10 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
       // procurement" — and its page must show them.
       const strong = distinctive(hit.title, t.keys) >= 3;
       if (t.min && !strong && !(await confirmed(url, t.keys))) continue;
+      // The story's war must be in it: UNICEF's "2.2 million children under
+      // five in Yemen" matched a UNICEF release on Jordan's schools by its
+      // common words alone.
+      if (theatre(t.keys.join(" ")) && !theatre(hit.title) && !theatre(await page(url))) continue;
       return { url, source: t.credit(hit) ?? cited.name, title: hit.title };
     }
   }

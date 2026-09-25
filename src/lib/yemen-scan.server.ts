@@ -22,11 +22,12 @@ import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { alertCities, citiesOverlap, countedOrNamed, numbersClash, sameCount, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
-import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
+import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { type Learned, loadLearned } from "./desk/originals.ts";
 import { isExclusive } from "./desk/exclusive.ts";
+import { attachMedia, tgMedia, xMedia } from "./desk/media.ts";
 import { triage } from "./desk/triage.ts";
 import { askChain } from "./desk/models.ts";
 import { combineGroups, members, pickLead, planWaves } from "./desk/combine.ts";
@@ -167,6 +168,7 @@ type FxStatus = {
   replying_to?: { screen_name?: string } | null;
   reposted_by?: unknown;
   author?: { screen_name?: string };
+  media?: Parameters<typeof xMedia>[0];
 };
 
 /** One account's own posts as raw items: reposts and replies to others left out. */
@@ -183,6 +185,7 @@ export function parseFxStatuses(json: unknown, acct: XAccount): RawHit[] {
     const text = decodeEntities(String(s.raw_text?.text ?? s.text ?? "")).trim();
     const url = s.url || (s.id ? `https://x.com/${acct.handle}/status/${s.id}` : "");
     if (!url || text.length < 12) continue;
+    const media = xMedia(s.media, url);
     const ms = Number(s.created_timestamp) * 1000;
     out.push({
       source: acct.name,
@@ -192,6 +195,7 @@ export function parseFxStatuses(json: unknown, acct: XAccount): RawHit[] {
       lean: acct.lean,
       // A post, whole as it stands: no article to fetch behind it.
       fromTg: true,
+      ...(media ? { media } : {}),
     });
   }
   return out;
@@ -729,6 +733,8 @@ type RawHit = {
   title?: string;
   /** From a whole site's listing, picked by triage. */
   picked?: boolean;
+  /** The post's picture or video (X, Telegram): a candidate for the card, looked at before it is shown. */
+  media?: Media;
 };
 
 /* ------------------------------------------------------------------ *
@@ -912,7 +918,8 @@ export function parseTelegram(html: string, ch: Channel): RawHit[] {
     let at = jerusalemIso();
     const parsed = Date.parse(datetime);
     if (Number.isFinite(parsed)) at = jerusalemIso(new Date(parsed));
-    const base = { source: ch.name, at, lean: ch.lean, fromTg: true, ...(replyUrl && replyUrl !== url ? { replyUrl } : {}) };
+    const media = tgMedia(p, url);
+    const base = { source: ch.name, at, lean: ch.lean, fromTg: true, ...(replyUrl && replyUrl !== url ? { replyUrl } : {}), ...(media ? { media } : {}) };
     // An edition post carries a dozen stories; each of ours becomes its own
     // candidate so one is never judged by the other eleven.
     const outside = [...p.matchAll(/href="(https?:\/\/[^"]+)"/gi)]
@@ -1027,6 +1034,8 @@ const GROUND_WINDOW_MS = 20 * 60_000;
 const SAME_HEADLINE_COUNTED_MS = 8 * 3600_000;
 /** One claim repeated with its figure by other outlets. */
 const CLAIM_WINDOW_MS = 30 * 60_000;
+/** The reader's "same event as": no further back than this. */
+const DUPLICATE_WINDOW_MS = 6 * 3600_000;
 
 /**
  * A statement or diplomacy report that tells a story already on the desk, as
@@ -1050,7 +1059,16 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     const t = Date.parse(r.at);
     const open = (o: LiveReport) => o !== r && !gone.has(o) && o.fp !== r.fp;
     // The reader said it: this is another outlet on an event already published.
-    let home = r.duplicateOf ? homes.find((o) => open(o) && o.fp === r.duplicateOf) : undefined;
+    // Held to the code's own test: within hours, and no casualty figures that
+    // disagree (UNICEF's 15 children killed was folded into a card on 693
+    // Houthi deaths from the night before).
+    let home = r.duplicateOf
+      ? homes.find(
+          (o) =>
+            open(o) && o.fp === r.duplicateOf && Math.abs(t - Date.parse(o.at)) <= DUPLICATE_WINDOW_MS &&
+            !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
+        )
+      : undefined;
     // The same post forwarded by another channel, seen in a later scan.
     if (!home && r.copyKey) home = homes.find((o) => open(o) && o.copyKey === r.copyKey && Date.parse(o.at) <= t);
     // One event, two outlets, and the reader wrote both up in the same words.
@@ -1925,6 +1943,22 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     if (r && to && to.fp !== r.fp && !r.replyTo && Date.parse(to.at) <= Date.parse(r.at)) r.replyTo = to.fp;
   }
   const newCards = uniqReports.filter((r) => !published.has(r.fp));
+  // A new card from a post with a picture or video that shows the event
+  // carries it (media.ts): a merged card takes the first of its accounts'.
+  try {
+    const mediaByUrl = new Map(hits.filter((h) => h.media).map((h) => [h.url, { media: h.media as Media, postText: h.text }]));
+    if (mediaByUrl.size) {
+      const used = new Set([...stored, ...uniqReports].map((r) => r.media?.thumb).filter((t): t is string => !!t));
+      const cands = newCards.flatMap((r) => {
+        const own = mediaByUrl.get(r.url) ?? (r.alsoReportedBy ?? []).map((a) => mediaByUrl.get(a.url)).find(Boolean);
+        return own && !r.media ? [{ r, ...own }] : [];
+      });
+      const given = await attachMedia(await getStore(), cands, used);
+      if (given) console.log(`[media] ${given} card(s) given a picture or video`);
+    }
+  } catch (err) {
+    console.error("[media] failed:", err instanceof Error ? err.message : err);
+  }
   linkFollowUps(newCards, [...stored, ...uniqReports]);
   const touched = [...foldIntoPublished(uniqReports, published, stored), ...threadSpeeches(uniqReports, published, stored)];
   // Every link, whatever made it, passes the rules of links.ts; then one

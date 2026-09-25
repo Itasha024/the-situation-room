@@ -293,6 +293,17 @@ test("a report the reader marks a duplicate joins the published card's Also", as
   assert.deepEqual((home as { alsoReportedBy?: unknown }).alsoReportedBy, [{ source: "Ali Bk", url: "https://t.me/alibk/2", summary: "Saudi air strike hits popular market near Bab al-Mandab" }]);
 });
 
+test("the reader's duplicate is refused when hours apart or its toll disagrees", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const home = { ...base, fp: "a", url: "https://www.almashhad.news/news/496403", source: "Almashhad", at: "2026-09-24T21:10:27Z", type: "casualties", summary: "Houthi forces suffer 693 deaths since July including 159 officers" };
+  const unicef = { ...base, fp: "b", url: "https://t.me/AjaNews/513979", source: "Al Jazeera", at: "2026-09-25T10:44:22Z", type: "casualties", summary: "UNICEF: 15 children killed, 14 wounded and 3 missing in Yemen since September 3", duplicateOf: "a" };
+  const reports = [home, unicef] as never[];
+  foldIntoPublished(reports, new Set(["a"]));
+  assert.deepEqual((reports as { fp: string }[]).map((r) => r.fp), ["a", "b"]);
+  assert.equal((home as { alsoReportedBy?: unknown }).alsoReportedBy, undefined);
+});
+
 test("another outlet retelling a stored card joins its Also, even as a follow-up", async () => {
   const { foldIntoPublished } = await import("./yemen-scan.server.ts");
   const base = { live: true, score: 1, tags: [] } as const;

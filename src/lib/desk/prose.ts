@@ -25,9 +25,9 @@ const GOV_NAME: Record<string, string> = {
  * districts and those that changed hands this round. The writer reads it as
  * background, so a front is described from where its lines actually run.
  */
-export function controlContext(): string[] {
+export function controlContext(rows: typeof CONTROL = CONTROL): string[] {
   const side = (s: string) => (s === "plc" ? "government" : s === "houthi" ? "Houthi" : "contested");
-  return CONTROL.filter((d) => d.side === "contested" || d.since).map(
+  return rows.filter((d) => d.side === "contested" || d.since).map(
     (d) => `${d.name} (${GOV_NAME[d.gov] ?? d.gov}): ${side(d.side)}${d.since ? ` since ${d.since}` : ""}${d.note ? ` — ${d.note}` : ""}`,
   );
 }
@@ -86,6 +86,7 @@ export async function writeProse(
   fronts: ProseFront[],
   previousSituation: string,
   frontsOf: (r: LiveReport) => string[] = () => [],
+  control: string[] = controlContext(),
 ): Promise<Prose | null> {
   const sorted = [...reports]
     .filter((r) => r.summary)
@@ -103,7 +104,7 @@ export async function writeProse(
       "FRONTS:",
       ...fronts.map((f) => `- ${f.id} = ${f.name}; previous: ${f.previous || "(none)"}`),
       `CONTROL (as of ${CONTROL_AS_OF}):`,
-      ...controlContext().map((l) => `- ${l}`),
+      ...control.map((l) => `- ${l}`),
       "REPORTS:",
       ...sorted.slice(-cap).map((r) => cardLine(r, frontsOf)),
     ].join("\n");

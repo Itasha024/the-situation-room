@@ -64,6 +64,7 @@ export async function refreshTimelineNow(
   store: DeskStore,
   reports: LiveReport[],
   now = new Date(),
+  control: string[] = controlContext(),
 ): Promise<TimelineNow | null> {
   const saved = (await store.getJson<TimelineNow>(TIMELINE_NOW_KEY)) ?? null;
   if (!nowDue(saved, now)) return saved;
@@ -79,7 +80,7 @@ export async function refreshTimelineNow(
       `ENTRY SUMMARY: ${base.summary}`,
       `ENTRY DETAIL: ${base.detail}`,
       `CONTROL (as of ${CONTROL_AS_OF}):`,
-      ...controlContext().map((l) => `- ${l}`),
+      ...control.map((l) => `- ${l}`),
       "HEADLINES:",
       ...recent.slice(-cap).map((r) => {
         const side = outletSide(String(r.source || ""));

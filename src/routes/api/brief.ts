@@ -7,6 +7,7 @@ import { getStore } from "@/lib/desk/store";
 import { mergeNumbers } from "@/lib/desk/numbers";
 import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally";
 import { TIMELINE_NOW_KEY, type TimelineNow } from "@/lib/desk/timeline-now";
+import { CONTROL_LIVE_KEY, type ControlLive } from "@/lib/desk/control-live";
 
 /**
  * The 12-hour brief: the general status, the fronts and the numbers.
@@ -24,7 +25,9 @@ export const Route = createFileRoute("/api/brief")({
           const store = await getStore();
           const { brief } = await refreshBrief(store);
           const timelineNow = (await store.getJson<TimelineNow>(TIMELINE_NOW_KEY)) ?? null;
-          return ok(brief, await readTally(store), await readClaims(store), timelineNow);
+          const live = (await store.getJson<ControlLive>(CONTROL_LIVE_KEY)) ?? null;
+          const controlLive = live ? { districts: live.districts, asOf: live.asOf } : null;
+          return ok(brief, await readTally(store), await readClaims(store), timelineNow, controlLive);
         } catch (err) {
           const msg = err instanceof Error ? err.message : "brief failed";
           return json({ ok: false, error: msg, ...briefWindow() }, 500);
@@ -34,12 +37,12 @@ export const Route = createFileRoute("/api/brief")({
   },
 });
 
-function ok(brief: Brief, tally: Tally, claims: Claims, timelineNow: TimelineNow | null) {
+function ok(brief: Brief, tally: Tally, claims: Claims, timelineNow: TimelineNow | null, controlLive: Pick<ControlLive, "districts" | "asOf"> | null) {
   const secondsLeft = Math.max(60, Math.round((Date.parse(brief.nextUpdateAt) - Date.now()) / 1000));
   const age = Math.min(secondsLeft, 1800);
   // The edge holds it until the window turns (at most ten minutes), so visitors
   // never each cost a function call and a database read.
-  return json({ ...brief, tally, claims, figures: mergeNumbers(tally, claims), timelineNow }, 200, `public, max-age=${age}`, `public, s-maxage=${Math.min(age, 600)}, stale-while-revalidate=60`);
+  return json({ ...brief, tally, claims, figures: mergeNumbers(tally, claims), timelineNow, controlLive }, 200, `public, max-age=${age}`, `public, s-maxage=${Math.min(age, 600)}, stale-while-revalidate=60`);
 }
 
 function json(body: unknown, status = 200, cache = "no-store", cdn?: string) {

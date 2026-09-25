@@ -4,7 +4,7 @@ import { MISSED_KEY, type Missed, USAGE_KEY, type Usage } from "@/lib/desk/edito
 import { REGISTRY_KEY, ROUTES_KEY, type Registry, type RouteLog } from "@/lib/desk/origin";
 import { CPU_KEY, type CpuMeter, metered } from "@/lib/desk/cpu-meter";
 import { getStore } from "@/lib/desk/store";
-import { PROPOSALS_KEY, type Proposal } from "@/lib/desk/control-proposals";
+import { CONTROL_LIVE_KEY, type ControlLive } from "@/lib/desk/control-live";
 import { TICK_USAGE_KEY, type TickUsage, sourceList } from "@/lib/yemen-scan.server";
 
 /**
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/api/status")({
         try {
           const store = await getStore();
           const now = Date.now();
-          const [state, slice, missed, routes, usage, quota, registry, proposals, ticks, cpu] = await Promise.all([
+          const [state, slice, missed, routes, usage, quota, registry, controlLive, ticks, cpu] = await Promise.all([
             store.loadScanState(),
             store.recentDesk(1000, undefined, { events: false }),
             store.getJson<Missed[]>(MISSED_KEY),
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/api/status")({
             store.getJson<Usage>(USAGE_KEY),
             store.getJson<Record<string, number>>("reader-quota"),
             store.getJson<Registry>(REGISTRY_KEY),
-            store.getJson<Proposal[]>(PROPOSALS_KEY),
+            store.getJson<ControlLive>(CONTROL_LIVE_KEY),
             store.getJson<TickUsage[]>(TICK_USAGE_KEY),
             store.getJson<CpuMeter>(CPU_KEY),
           ]);
@@ -64,8 +64,8 @@ export const Route = createFileRoute("/api/status")({
             ticks: ticks ?? [],
             // Processor time per endpoint per day (calls, ms): what the Vercel bill counts.
             cpu: cpu ?? {},
-            // District control changes the reports support, awaiting the operator (public/control.json).
-            controlProposals: proposals ?? [],
+            // District control changes the 12-hour clock applied over public/control.json.
+            controlChanges: controlLive?.changes ?? [],
             // Models out of their daily quota, and when they are back.
             resting: Object.fromEntries(Object.entries(quota ?? {}).filter(([, until]) => until > now).map(([m, until]) => [m, new Date(until).toISOString()])),
           });

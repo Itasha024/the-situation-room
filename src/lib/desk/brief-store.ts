@@ -20,10 +20,10 @@
 import type { LiveReport } from "./types.ts";
 import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
-import { writeProse } from "./prose.ts";
+import { controlContext, writeProse } from "./prose.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
-import { PROPOSALS_KEY, type Proposal, proposeControl } from "./control-proposals.ts";
+import { CONTROL_LIVE_KEY, type ControlLive, mergedControl, updateControlLive } from "./control-live.ts";
 import { refreshTimelineNow } from "./timeline-now.ts";
 
 export const BRIEF_KEY = "brief";
@@ -80,6 +80,15 @@ export async function refreshBrief(
   history.extraFronts = extraFronts;
 
   const brief = buildBrief(inWindow, now, history);
+  // District control moves first, so the prose is written from where the lines now run.
+  let controlLines = controlContext();
+  try {
+    const live = updateControlLive((await store.getJson<ControlLive>(CONTROL_LIVE_KEY)) ?? null, inWindow, now);
+    await store.putJson(CONTROL_LIVE_KEY, live);
+    controlLines = controlContext(mergedControl(live));
+  } catch (err) {
+    console.error("[desk] control update failed:", err instanceof Error ? err.message : err);
+  }
   // The prose is written from the cards; the composed lines stay where the
   // model gave nothing usable.
   try {
@@ -93,6 +102,7 @@ export async function refreshBrief(
       })),
       saved?.brief.situation?.line || "",
       (r) => frontIdsOf(r, extraFronts),
+      controlLines,
     );
     if (prose?.situation) brief.situation = { ...brief.situation, line: prose.situation, model: prose.model };
     for (const f of brief.fronts) if (prose?.fronts[f.id]) f.line = prose.fronts[f.id];
@@ -113,19 +123,9 @@ export async function refreshBrief(
   } catch (err) {
     console.error("[desk] claims refresh failed:", err instanceof Error ? err.message : err);
   }
-  // Districts the window's capture reports say changed hands: proposed, never applied.
-  try {
-    const fresh = proposeControl(inWindow);
-    if (fresh.length) {
-      const old = (await store.getJson<Proposal[]>(PROPOSALS_KEY)) ?? [];
-      await store.putJson(PROPOSALS_KEY, [...fresh, ...old].slice(0, 40));
-    }
-  } catch (err) {
-    console.error("[desk] control proposals failed:", err instanceof Error ? err.message : err);
-  }
   // The Timeline's "Now" box, rewritten every three days from the cards.
   try {
-    await refreshTimelineNow(store, all, now);
+    await refreshTimelineNow(store, all, now, controlLines);
   } catch (err) {
     console.error("[desk] timeline now failed:", err instanceof Error ? err.message : err);
   }

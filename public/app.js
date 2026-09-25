@@ -2300,8 +2300,23 @@ async function loadDistricts() {
   return !!(districtGeo && districtControl);
 }
 
+/**
+ * A district's own control: the 12-hour clock's live layer (/api/brief
+ * "controlLive", from the capture reports) over the hand baseline. A past day
+ * on the control slider shows the baseline only.
+ */
 function districtOwn(p) {
+  const live = !activeControlYmd && brief && brief.controlLive && brief.controlLive.districts ? brief.controlLive.districts[p.id] : null;
+  if (live) return live;
   return (districtControl && districtControl.districts && districtControl.districts[p.id]) || null;
+}
+
+/** The outlets behind a change the 12-hour clock made, as links. */
+function liveSrcHtml(own) {
+  const src = own && Array.isArray(own.src) ? own.src.filter((x) => x && typeof x === 'object' && x.outlet) : [];
+  if (!src.length) return '';
+  const links = src.map((x) => (x.url ? `<a href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${escapeHtml(x.outlet)}</a>` : escapeHtml(x.outlet)));
+  return `<br/><small>Reported by ${links.join(', ')}</small>`;
 }
 
 function districtSide(p, byIso) {
@@ -2392,7 +2407,7 @@ function bindGov(feature, layer, byIso) {
     const own = dct && districtOwn(dct);
     const side = dct && districtSide(dct, byIso);
     const dHtml = dct
-      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${escapeHtml(dct.name)} district</strong><br/>Control: ${escapeHtml(LABELS[side] || side)}${own && own.since ? ` · since ${escapeHtml(fmtDay(own.since))}` : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}`
+      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${escapeHtml(dct.name)} district</strong><br/>Control: ${escapeHtml(LABELS[side] || side)}${own && own.since ? ` · since ${escapeHtml(fmtDay(own.since))}` : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}${liveSrcHtml(own)}`
       : '';
     L.popup().setLatLng(e.latlng).setContent(govHtml + dHtml).openOn(layer._map || map);
   });
@@ -3888,7 +3903,7 @@ async function startYemenDesk() {
     window.__yemenBriefTimer = setInterval(async () => {
       if (document.hidden) return;
       await pullBrief();
-      if (data) { renderSituation(data); renderCasualties(data); renderFronts(data); renderTimeline(data); }
+      if (data) { renderSituation(data); renderCasualties(data); renderFronts(data); renderTimeline(data); renderBars(data); applyMapFilters(); }
     }, 10 * 60 * 1000);
   };
 

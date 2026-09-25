@@ -26,6 +26,7 @@ import { createHash } from "node:crypto";
 import { alertCities } from "./copies.ts";
 import { governorateAt } from "./adm1.ts";
 import { PLACE_BY_NAME, datelineFor, type Place } from "./gazetteer.ts";
+import { stripAttribution } from "./origin.ts";
 import { redundantBody, roleNamesInProse } from "./reader.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
@@ -185,7 +186,11 @@ export function combineProblem(w: Written, all: LiveReport[], places: Place[]): 
 /** The model's answer made a card's copy, or null when it fails the checks. */
 export function toWritten(json: Record<string, unknown> | null, all: LiveReport[], places: Place[]): Written | null {
   if (!json) return null;
-  const headline = roleNamesInProse(String(json.headline ?? "").trim()).replace(/[.\s]+$/, "");
+  // The outlets are on the card: "…, says Al-Masirah" is not the headline's.
+  const headline = stripAttribution(
+    roleNamesInProse(String(json.headline ?? "").trim()).replace(/[.\s]+$/, ""),
+    all.map((r) => r.source),
+  );
   let body = roleNamesInProse(String(json.body ?? "").trim());
   if (redundantBody(headline, body)) body = "";
   const w = { headline: headline ? headline[0].toUpperCase() + headline.slice(1) : "", body };
@@ -226,6 +231,7 @@ export async function combineGroups(
   ask: Ask,
   rank: (r: LiveReport) => number,
   store?: DeskStore,
+  isNew: (r: LiveReport) => boolean = () => true,
 ): Promise<{ groups: Group[]; written: number; asked: number; tried: number }> {
   type Job = { parts: Group[]; group: Group; all: LiveReport[]; places: Place[]; key: string };
   const jobs: Job[] = [];
@@ -234,7 +240,10 @@ export async function combineGroups(
     const all = parts.flatMap(members);
     const group = parts.length > 1 ? pickLead(all, rank) : parts[0];
     const places = placesOf(all);
-    if (parts.length > 1 || outlets(all) > 1) jobs.push({ parts, group, all: members(group), places, key: keyOf(all) });
+    // Written only from one scan's accounts: a card an earlier scan published
+    // keeps its text, and a later account of it is only "Also".
+    if ((parts.length > 1 || outlets(all) > 1) && all.every(isNew)) jobs.push({ parts, group, all: members(group), places, key: keyOf(all) });
+    else if (parts.length > 1) out.push(...parts);
     else out.push(group);
   }
   // Waves first (they are split back if unwritten), then the most accounts.

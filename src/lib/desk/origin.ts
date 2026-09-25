@@ -812,6 +812,8 @@ export function stripAttribution(headline: string, outlets: (string | undefined)
   if (open && isOutlet(open[1]) && !/\b(?:minister|president|leader|spokes\w*|official|envoy|commander)\b/i.test(open[1])) return cap(open[2]);
   const end = /^(.+?),\s+((?:the\s+)?[^,]{2,50}?)\s+(?:says|say|reports?|reported|said)\.?$/i.exec(h);
   if (end && isOutlet(end[2])) return end[1];
+  const after = /^(.+?),\s+(?:says|reports?|reported|said|according to)\s+((?:the\s+)?[^,]{2,50}?)\.?$/i.exec(h);
+  if (after && isOutlet(after[2])) return after[1];
   return h;
 }
 

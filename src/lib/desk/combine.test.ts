@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { actorOf, combineGroups, combineProblem, members, pickLead, placesOf, planWaves, waveKey, type Group } from "./combine.ts";
+import { actorOf, combineGroups, combineProblem, members, pickLead, placesOf, planWaves, toWritten, waveKey, type Group } from "./combine.ts";
 import { PLACE_BY_NAME } from "./gazetteer.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -64,6 +64,17 @@ test("a wave is what one scan found, however far apart; a card an earlier scan p
   assert.equal(planWaves([wave[0], late].map(one), (r) => r.fp !== "a").length, 2);
 });
 
+test("a card an earlier scan published keeps its text: a later account of it is only Also", async () => {
+  const a = card("p", "Al Jazeera", "Air strike hits Marib, killing 3", "Marib", 0);
+  const b = card("q", "Al Arabiya", "Strike in Marib kills 3 and wounds 5", "Marib", 4);
+  let calls = 0;
+  const ask = async () => ((calls += 1), { headline: "Air strike in Marib kills 3 and wounds 5", body: "" });
+  const { groups, written, tried } = await combineGroups([[{ lead: a, others: [b] }]], ask, rank, undefined, (r) => r.fp !== "p");
+  assert.equal([calls, written, tried].join(), "0,0,0");
+  assert.equal(groups[0].lead.summary, "Air strike hits Marib, killing 3");
+  assert.equal(groups[0].others.length, 1);
+});
+
 test("the speaker's own channel leads over a relay of his words", () => {
   const relay = card("r", "Naya", "Yahya Saree: forces fired a ballistic missile at Jazan in a long quoted relay", "Jazan");
   const own = card("s", "Yahya Saree", "Forces fired a missile at Jazan", "Jazan", 1);
@@ -81,4 +92,11 @@ test("one event from two outlets is written once; one outlet alone is left as it
   assert.equal(written, 1);
   assert.equal(groups.find((g) => g.lead.fp === "p")?.lead.summary, "Air strike in Marib kills 3 and wounds 5");
   assert.equal(groups.find((g) => g.lead.fp === "z")?.lead.summary, "Statement on talks");
+});
+
+test("a written headline that ends by naming an outlet loses the attribution", () => {
+  const a = card("y", "Reuters", "War risk premiums rise for tankers in Yanbu", "Yanbu");
+  const b = card("w", "Al-Masirah", "Insurance up for tankers docking in Yanbu", "Yanbu", 2);
+  const w = toWritten({ headline: "War risk premiums for tankers docking in Yanbu rise to about 3%, says Al-Masirah", body: "" }, [a, b], placesOf([a, b]));
+  assert.equal(w?.headline, "War risk premiums for tankers docking in Yanbu rise to about 3%");
 });

@@ -1711,14 +1711,16 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // one area is one card, and the group is written once from every account
   // (combine.ts). The other outlets are "Also", as links only.
   const earlier = new Set((prev?.reports ?? []).map((r) => r.fp));
+  const isNew = (r: LiveReport) => !earlier.has(r.fp);
   const { groups, written: combined, tried: combineTried } = await combineGroups(
     planWaves(
       [...byStory.values()].map((g) => pickLead(members(g), leadRank)),
-      (r) => !earlier.has(r.fp),
+      isNew,
     ),
     async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000 }))?.json ?? null,
     leadRank,
     await getStore(),
+    isNew,
   );
   for (const { lead, others } of groups) {
     if (!others.length) continue;

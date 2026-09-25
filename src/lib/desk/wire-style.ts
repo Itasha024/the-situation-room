@@ -178,7 +178,7 @@ const SPEAKER_RULES: [RegExp, string, string][] = [
   [/سلطان العرادة|العرادة|al-?Arada/i, "the governor of Marib", "Marib's governor"],
   [/ترامب|Trump/i, "US President Donald Trump", "Trump"],
   [/روبيو|Rubio/i, "US Secretary of State Marco Rubio", "Rubio"],
-  [/فانس|Vance/i, "US Vice-President JD Vance", "Vance"],
+  [/فانس|\bVance\b/i, "US Vice-President JD Vance", "Vance"],
 ];
 
 /** Body form → card-opening form, for the named figures above. */

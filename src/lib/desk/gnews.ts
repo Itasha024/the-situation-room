@@ -141,7 +141,7 @@ export async function searchGoogleNews(query: string, lang: Edition = "en"): Pro
         link: pick("link").trim(),
         at: Date.parse(pick("pubDate")),
         outlet,
-        site: /<source[^>]*url="([^"]*)"/.exec(m[1])?.[1] ?? "",
+        site: /<source[^>]*\burl="([^"]*)"/.exec(m[1])?.[1] ?? "",
       });
     }
     return out;

@@ -117,6 +117,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
         // Dropping these made every Telegram read a first sight (no paging back
         // to the last post read) and lost each site's last listing figures.
         ...(s.lastTgPost && typeof s.lastTgPost === "object" ? { lastTgPost: s.lastTgPost } : {}),
+        ...(s.lastXPost && typeof s.lastXPost === "object" ? { lastXPost: s.lastXPost } : {}),
         ...(s.sites && typeof s.sites === "object" ? { sites: s.sites } : {}),
       };
     },
@@ -221,7 +222,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
 
       const reports = await sql<Record<string, unknown>>`
         select fp, url, at, source, type, summary, body, priority, confidence,
-               score, tier, place, lat, lng, also_reported_by, citing,
+               score, tier, place, lat, lng, also_reported_by, citing, media, flags,
                -- A reply to a row since deleted leads nowhere: shown as none.
                case when exists (select 1 from desk_report p where p.fp = d.reply_to) then reply_to end as reply_to
           from desk_report d
@@ -267,6 +268,8 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           if (r.also_reported_by) row.alsoReportedBy = r.also_reported_by;
           if (r.reply_to) row.replyTo = r.reply_to;
           if (r.citing) row.citing = r.citing;
+          if (r.media) row.media = r.media;
+          if (Array.isArray(r.flags) && r.flags.length) row.flags = r.flags;
           return row as DeskReportRow;
         }),
         events: events.map(
@@ -304,13 +307,14 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             const inserted = await sql<{ fp: string }>`
               insert into desk_report
                 (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
-                 also_reported_by, reply_to, citing)
+                 also_reported_by, reply_to, citing, media, flags)
               select
                 ${r.fp}, ${r.url}, ${r.at}::timestamptz, ${r.source}, ${r.type}, ${pgSafe(r.summary)}, ${r.text == null ? null : pgSafe(r.text)},
                 ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
                 ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
                 ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb,
-                ${r.replyTo ?? null}, ${r.citing ?? null}
+                ${r.replyTo ?? null}, ${r.citing ?? null},
+                ${r.media ? pgJson(r.media) : null}::jsonb, ${r.flags?.length ? pgJson(r.flags) : null}::jsonb
                -- A card deleted by hand stays deleted.
                where not exists (select 1 from desk_state s where s.key = ${DROPPED_KEY} and s.value ? ${r.fp})
               on conflict do nothing
@@ -356,6 +360,15 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                          -- Written from the original: the outlets that relayed it are no "Also".
                          also_reported_by = null
                    where fp = ${r.fp} and (summary is distinct from ${r.summary} or url is distinct from ${r.url})
+                `;
+              }
+              // A picture or a label found after the card was stored (a later
+              // account of it carried the video; the original was an exclusive).
+              if (r.media || r.flags?.length) {
+                await sql`
+                  update desk_report set media = coalesce(media, ${r.media ? pgJson(r.media) : null}::jsonb),
+                         flags = coalesce(flags, ${r.flags?.length ? pgJson(r.flags) : null}::jsonb)
+                   where fp = ${r.fp} and ((media is null and ${!!r.media}) or (flags is null and ${!!r.flags?.length}))
                 `;
               }
               // Another outlet's take on this story arrived after it was stored.

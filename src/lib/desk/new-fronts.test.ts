@@ -34,7 +34,7 @@ test("prose that mentions the desk or logging is thrown out", () => {
 
 test("prose names people by role", () => {
   const t = cleanProse("Houthi spokesperson Brigadier General Yahya Saree said Saudi forces carried out 157 strikes. Abdul Malik al-Houthi said the war would widen.", 5);
-  assert.equal(t, "The Houthi military spokesperson said Saudi forces carried out 157 strikes. The Houthi leader said the war would widen.");
+  assert.equal(t, "The Houthi Armed Forces spokesperson said Saudi forces carried out 157 strikes. The Houthi leader said the war would widen.");
 });
 
 test("the prose never writes about what was not reported; the rest of the paragraph stands", () => {

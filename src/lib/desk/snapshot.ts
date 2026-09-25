@@ -76,6 +76,8 @@ export function toDeskReportRow(r: LiveReport): DeskReportRow {
     ...(r.alsoReportedBy?.length ? { alsoReportedBy: r.alsoReportedBy } : {}),
     ...(r.replyTo ? { replyTo: r.replyTo } : {}),
     ...(r.citing ? { citing: r.citing } : {}),
+    ...(r.media ? { media: r.media } : {}),
+    ...(r.flags?.length ? { flags: r.flags } : {}),
     // Set only on rows the reader wrote; also the trust figure's inputs.
     ...(r.side ? { side: r.side, interest: r.interest, hasTime: r.hasTime } : {}),
   };

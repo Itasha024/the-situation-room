@@ -362,10 +362,19 @@ STATEMENTS (event_type statement or diplomacy)
 - speaker_lead: a bare surname only for a figure an international reader knows
   (Trump, Rubio, Bin Salman, Grundberg). Abdul Malik
   al-Houthi (السيد القائد, قائد الثورة) is always "Houthi leader"; Yahya Saree
-  (the Houthi armed forces spokesman) is always "Houthi spokesperson"; al-Alimi is
-  "Yemen's president", al-Mashat "the Houthi political council head",
-  al-Zubaidi "the STC leader", in the headline and wherever a reader would not
-  know the name.
+  (the Houthi armed forces spokesman) is always "Houthi Armed Forces
+  spokesperson"; Mohammed Abdulsalam (محمد عبدالسلام) "Houthi spokesperson";
+  Rashad al-Alimi is "Yemen's president", al-Mashat "the Houthi political
+  council head", al-Zubaidi "the STC leader", in the headline and wherever a
+  reader would not know the name.
+- Other titles: Abu Zaraa al-Mahrami (أبو زرعة المحرمي) "Presidential Council
+  member and Giants Brigades commander"; Tareq Saleh "Presidential Council
+  member and National Resistance commander"; Abdullah al-Alimi Bawazir
+  "Presidential Council member"; Muammar al-Eryani "Yemen's information
+  minister"; Shaya al-Zindani "Yemen's prime minister"; Afrah al-Zouba "Yemen's
+  foreign minister"; Turki al-Maliki "the coalition spokesman"; Majed
+  al-Nuzaili "Yemeni armed forces spokesman" (the government's); Hussein
+  al-Ezzi, Hezam al-Asad and Mohammed Ali al-Houthi "Houthi official".
 - Tom Fletcher is "UN aid chief Tom Fletcher". An official's "we" is his
   organisation: a UN official's "we fear famine" is "the UN fears famine" in the
   body. One person is never "they": "Fletcher told Al Arabiya the UN fears …".
@@ -511,9 +520,9 @@ const ROLE_NAMES: [RegExp, string][] = [
   // Both used to come out as "Houthi spokesperson", so a military claim of a
   // launch and a government statement about a strike reached the feed under
   // one name, and a reader had no way to tell which of them was speaking.
-  [/\b(?:(?:the )?(?:Houthi|Yemeni|Sanaa) (?:armed forces |military |army )?spokes(?:man|person) )?(?:Brig(?:adier)?\.? (?:Gen(?:eral)?\.? )?)?(?:Yahya )?Saree\b/gi, "the Houthi military spokesperson"],
+  [/\b(?:(?:the )?(?:Houthi|Yemeni|Sanaa) (?:armed forces |military |army )?spokes(?:man|person) )?(?:Brig(?:adier)?\.? (?:Gen(?:eral)?\.? )?)?(?:Yahya )?Saree\b/gi, "the Houthi Armed Forces spokesperson"],
   [/\b(?:the )?Houthi government spokes(?:man|person)\b/gi, "Houthi government spokesperson"],
-  [/\bHouthi (?:armed forces|military|army) spokes(?:man|person)\b/gi, "Houthi military spokesperson"],
+  [/\bHouthi (?:armed forces|military|army) spokes(?:man|person)\b/gi, "Houthi Armed Forces spokesperson"],
   [/\b(?:(?:the )?UN (?:aid|humanitarian|relief) (?:chief|coordinator|head) )?Tom Fletcher\b/g, "UN aid chief Tom Fletcher"],
 ];
 
@@ -561,7 +570,7 @@ export function stripOwnOutlet(text: string, source: string): string {
  */
 export function spokespersonLabel(headline: string, source: string, sourceText: string): string {
   if (!/^Houthi spokesperson\b/.test(headline)) return headline;
-  if (/Saree/i.test(source) || /سريع|Saree/i.test(sourceText)) return headline.replace(/^Houthi spokesperson\b/, "Houthi military spokesperson");
+  if (/Saree/i.test(source) || /سريع|Saree/i.test(sourceText)) return headline.replace(/^Houthi spokesperson\b/, "Houthi Armed Forces spokesperson");
   if (/(?:ناطق|متحدث)(?: رسمي)?(?: باسم)? (?:ال)?حكومة|government spokes/i.test(sourceText)) return headline.replace(/^Houthi spokesperson\b/, "Houthi government spokesperson");
   return headline;
 }

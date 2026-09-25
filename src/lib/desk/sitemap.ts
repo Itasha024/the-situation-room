@@ -86,7 +86,10 @@ export async function fetchListing(url: string, ua = "YemenDesk/2.0 (OSINT desk)
 
 /** A short, stable id for a URL: the seen-set keeps these, not the URLs. */
 export function urlKey(u: string): string {
-  const s = u.replace(/^https?:\/\/(?:www\.)?/, "").replace(/[?#].*$/, "").replace(/\/+$/, "");
+  // An article id in the query ("news_details.php?sid=33503") is the article;
+  // any other query (Google's "?oc=5", tracking) is not.
+  const id = /[?&]((?:s|n|p)?id|article|story)=(\d+)/i.exec(u);
+  const s = u.replace(/^https?:\/\/(?:www\.)?/, "").replace(/[?#].*$/, "").replace(/\/+$/, "") + (id ? `?${id[1].toLowerCase()}=${id[2]}` : "");
   let h = 2166136261;
   for (let i = 0; i < s.length; i += 1) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return (h >>> 0).toString(36);
@@ -102,4 +105,36 @@ export function titleKey(t: string): string {
     .split(" ")
     .slice(0, 14)
     .join(" ");
+}
+
+/**
+ * A site with no feed, listed from its own section pages (Sheba Intelligence,
+ * Al-Akhbar's English edition): every link to an article, its headline the
+ * longest text linked to it. A date in the link text ("31.07.2026") is kept;
+ * otherwise the article is undated and is new when the desk has not seen it.
+ */
+export function parseHtmlListing(html: string, base: string, article: RegExp): Listed[] {
+  const byUrl = new Map<string, { texts: string[]; at: number }>();
+  for (const m of html.matchAll(/<a\b[^>]*\bhref=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+    let url: string;
+    try {
+      url = new URL(decode(m[1]), base).toString();
+    } catch {
+      continue;
+    }
+    if (!article.test(url)) continue;
+    const text = decode(m[2]);
+    const d = /\b(\d{1,2})\.(\d{1,2})\.(20\d\d)\b/.exec(text);
+    const e = byUrl.get(url) ?? { texts: [], at: NaN };
+    if (d) e.at = Date.UTC(+d[3], +d[2] - 1, +d[1], 12);
+    // The headline without the section, author and date printed before it.
+    if (text) e.texts.push(d ? text.slice(d.index + d[0].length).trim() || text : text);
+    byUrl.set(url, e);
+  }
+  const out: Listed[] = [];
+  for (const [url, e] of byUrl) {
+    const title = e.texts.sort((a, b) => b.length - a.length)[0] ?? "";
+    if (title.length >= 12) out.push({ url, title, desc: "", at: e.at });
+  }
+  return out;
 }

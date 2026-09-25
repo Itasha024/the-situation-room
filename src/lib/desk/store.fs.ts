@@ -88,6 +88,7 @@ export function createFsStore(): DeskStore {
         // Dropping these made every Telegram read a first sight (no paging back
         // to the last post read) and lost each site's last listing figures.
         ...(s.lastTgPost && typeof s.lastTgPost === "object" ? { lastTgPost: s.lastTgPost } : {}),
+        ...(s.lastXPost && typeof s.lastXPost === "object" ? { lastXPost: s.lastXPost } : {}),
         ...(s.sites && typeof s.sites === "object" ? { sites: s.sites } : {}),
       };
     },

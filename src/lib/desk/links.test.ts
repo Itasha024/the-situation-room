@@ -149,7 +149,7 @@ test("a link never points forward in time", () => {
 test("one speaker by any of his titles", () => {
   assert.equal(speakerKey("Kuwaiti crown prince"), speakerKey("Kuwait's crown prince"));
   assert.equal(speakerKey("UN human rights chief Volker Turk"), speakerKey("UN human rights chief"));
-  assert.equal(speakerKey("Houthi military spokesperson"), "saree");
+  assert.equal(speakerKey("Houthi Armed Forces spokesperson"), "saree");
 });
 
 test("checkLinks removes what breaks the rules and keeps the rest", () => {
@@ -203,7 +203,7 @@ test("no model, no change", async () => {
 });
 
 test("two cards of the same second never follow each other", () => {
-  const a = card({ at: "2026-09-24T18:00:00Z", source: "Yahya Saree", type: "strike", summary: "Houthi military spokesperson: Houthi forces carry out extensive missile and drone operation targeting Jizan" });
+  const a = card({ at: "2026-09-24T18:00:00Z", source: "Yahya Saree", type: "strike", summary: "Houthi Armed Forces spokesperson: Houthi forces carry out extensive missile and drone operation targeting Jizan" });
   const b = card({ at: "2026-09-24T18:00:00Z", source: "Al-Masirah", type: "strike", summary: "Houthi forces launch missile and drone strikes on military targets in Jizan" });
   assert.equal(linkOk(a, b) && linkOk(b, a), false);
 });

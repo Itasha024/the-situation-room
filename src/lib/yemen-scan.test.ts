@@ -635,3 +635,14 @@ test("an X account's own posts and threads are read; reposts and replies to othe
   assert.deepEqual(rows.map((r: { url: string }) => r.url), ["https://x.com/war_cube/status/1", "https://x.com/war_cube/status/2"]);
   assert.equal((rows[0] as { fromTg: boolean }).fromTg, true);
 });
+
+test("an X post is new only when its id is past the last one read; a pinned old post is not", async () => {
+  const { newerX } = await import("./yemen-scan.server.ts");
+  assert.equal(newerX("2103415802196001183", undefined), true);
+  assert.equal(newerX("2103415802196001183", "2103415802196001183"), false);
+  assert.equal(newerX("2103415802196001190", "2103415802196001183"), true);
+  // A pinned post from January sits first in the list and is older.
+  assert.equal(newerX("2011000000000000000", "2103415802196001183"), false);
+  assert.equal(newerX("999", "1000"), false);
+  assert.equal(newerX("1000", "999"), true);
+});

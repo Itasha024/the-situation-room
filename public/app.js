@@ -1573,6 +1573,7 @@ function feedCardHtml(r, i) {
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
         <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">, citing ${escapeHtml(r.citing)}</span>` : ''}</span>
+        ${Array.isArray(r.flags) && r.flags.includes('exclusive') ? '<span class="flag-excl" title="A piece the outlet has on its own">Exclusive</span>' : ''}
         ${mappableByFp.has(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
       </div>
       ${replyQuote(r)}

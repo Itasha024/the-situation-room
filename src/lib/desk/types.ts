@@ -8,6 +8,23 @@
 
 import type { DeskType } from "./digest.ts";
 
+/**
+ * One picture or video on a card. `post` is the X or Telegram post it is
+ * from (the fallback link); `src` a playable file (X), `embed` Telegram's
+ * own player for the post; `thumb` the still shown before it plays.
+ */
+export type Media = {
+  kind: "video" | "photo";
+  from: "x" | "tg";
+  post: string;
+  thumb: string;
+  src?: string;
+  embed?: string;
+  duration?: number;
+  w?: number;
+  h?: number;
+};
+
 export type LiveReport = {
   fp: string;
   at: string;
@@ -40,6 +57,10 @@ export type LiveReport = {
   replyTo?: string;
   /** fp of a published report telling this same event with nothing new; folded into its "Also", never stored. */
   duplicateOf?: string;
+  /** The post's picture or video, when it shows the event (media.ts). */
+  media?: Media;
+  /** Labels shown on the card: "exclusive" (a piece the outlet has on its own). */
+  flags?: string[];
   /** `copyKey` of the post it was written from: forwards of one post share it. */
   copyKey?: string;
   /** Inputs to the trust figure — see credibility.ts. */
@@ -135,6 +156,8 @@ export type ScanState = {
    * only whatever fits on the channel's first page.
    */
   lastTgPost?: Record<string, number>;
+  /** X handle → id of the newest post already read (ids grow with time). */
+  lastXPost?: Record<string, string>;
   /** A whole site's last read: what its listing named, what was new, what triage picked. */
   sites?: Record<string, { at: number; ok: boolean; listed: number; fresh: number; picked: number; rolled: boolean }>;
 };

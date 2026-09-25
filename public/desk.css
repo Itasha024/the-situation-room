@@ -768,6 +768,7 @@ html{scroll-behavior:smooth}
 .card .also a{color:#9fb4cc;text-decoration:none}
 .card .also a:hover{text-decoration:underline}
 .card .citing{color:#8b98a8}
+.flag-excl{display:inline-block;padding:.02rem .38rem;border:1px solid #a16207;border-radius:999px;color:#fcd34d;font-size:.6rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1.5;white-space:nowrap}
 .front-card .front-composed{margin:.35rem 0 0;font-size:.78rem;line-height:1.5;color:#c9d4e0}
 
 /* The conflict in numbers: three plain boxes, no accent colour. */

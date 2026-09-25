@@ -24,8 +24,9 @@ import { alertCities, citiesOverlap, countedOrNamed, numbersClash, sameCount, sa
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
-import { type Listed, fetchListing, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
+import { type Listed, fetchListing, parseHtmlListing, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { type Learned, loadLearned } from "./desk/originals.ts";
+import { isExclusive } from "./desk/exclusive.ts";
 import { triage } from "./desk/triage.ts";
 import { askChain } from "./desk/models.ts";
 import { combineGroups, members, pickLead, planWaves } from "./desk/combine.ts";
@@ -43,7 +44,8 @@ type Channel = { id: string; name: string; lean: "houthi" | "gov" | "south" | "i
 type Cadence = { everyMin: number } | { everyHours: number } | { atHours: number[] } | { atHour: number };
 type ChannelScan = Channel & { cadence: Cadence };
 /** `whole`: the site's own listing of everything, triaged by a model. */
-type RssFeed = { url: string; name: string; id: string; cadence: Cadence; whole?: boolean; ua?: string; site?: string; lang?: "ar" };
+/** `html`: no feed; the site's section page is read and every link matching this pattern is an article. */
+type RssFeed = { url: string; name: string; id: string; cadence: Cadence; whole?: boolean; ua?: string; site?: string; lang?: "ar"; html?: RegExp };
 
 const C5: Cadence = { everyMin: 5 };
 const C15: Cadence = { everyMin: 15 };
@@ -101,7 +103,60 @@ const TG: ChannelScan[] = [
  * all tried on 24 September. Public posts only, read at a polite interval.
  */
 type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence };
-const X_ACCOUNTS: XAccount[] = [{ handle: "war_cube", name: "The Cube", lean: "intl", cadence: C5 }];
+const C10: Cadence = { everyMin: 10 };
+const X = (handle: string, name: string, lean: Channel["lean"], cadence: Cadence): XAccount => ({ handle, name, lean, cadence });
+/**
+ * Read by tier, to spare the processor and FxTwitter's goodwill: the accounts
+ * that break news every 10 minutes, the officials and the slower channels
+ * every half hour. Only posts newer than the last one read go on.
+ */
+const X_ACCOUNTS: XAccount[] = [
+  X("war_cube", "The Cube", "intl", C5),
+  // Every 10 minutes: the military spokesmen, the ministries, the reporters on the fronts.
+  X("Yah_Saree", "Yahya Saree", "houthi", C10),
+  X("abdusalamsalah", "Mohammed Abdulsalam", "houthi", C10),
+  X("spokespersonyem", "Yemeni Army spokesman", "gov", C10),
+  X("Yem_army_media", "Yemeni Army Media", "gov", C10),
+  X("YemenMOD", "Yemen Defence Ministry", "gov", C10),
+  X("CJFCSpox", "Coalition spokesman", "gov", C10),
+  X("modgovksa", "Saudi Defence Ministry", "gov", C10),
+  X("KSAMOFA", "Saudi Foreign Ministry", "gov", C10),
+  X("maldhabyani", "Mohammed al-Dhabyani", "gov", C10),
+  X("taha_saleh_taiz", "Taha Saleh", "gov", C10),
+  X("BashaReport", "Basha Report", "gov", C10),
+  X("SaudiNews50", "Saudi News", "gov", C10),
+  X("2decnews", "2 December News", "gov", C10),
+  X("South24_net", "South24", "gov", C10),
+  X("yementvyem", "Yemen TV", "gov", C10),
+  // Every 30 minutes: the leaders, the ministries' other voices, the parties.
+  X("PresidentRashad", "Rashad al-Alimi", "gov", C30),
+  X("ERYANIM", "Muammar al-Eryani", "gov", C30),
+  X("AbuZar3a", "Abu Zaraa al-Mahrami", "gov", C30),
+  X("ALalimiBawzer", "Abdullah al-Alimi", "gov", C30),
+  X("Shaya_Zindani", "Shaya al-Zindani", "gov", C30),
+  X("afrah_alzouba", "Afrah al-Zouba", "gov", C30),
+  X("tarikyemen", "Tareq Saleh", "gov", C30),
+  X("yemen_mofa", "Yemen Foreign Ministry", "gov", C30),
+  X("nrfyemen", "National Resistance", "gov", C30),
+  X("P_B_N_R", "National Resistance Political Bureau", "gov", C30),
+  X("diralwatan", "Nation's Shield", "gov", C30),
+  X("STCSouthArabia", "Southern Transitional Council", "gov", C30),
+  X("AidrosAlzubidi", "Aidarous al-Zubaidi", "gov", C30),
+  X("Alsakaniali", "Ali al-Sakani", "gov", C30),
+  X("South24E", "South24 English", "gov", C30),
+  X("GCCSG", "GCC Secretariat", "gov", C30),
+  X("yemenmofa2025", "Sanaa Foreign Ministry", "houthi", C30),
+  X("hezamalasad", "Hezam al-Asad", "houthi", C30),
+  X("hussinalezzi5", "Hussein al-Ezzi", "houthi", C30),
+  X("Moh_Alhouthi", "Mohammed Ali al-Houthi", "houthi", C30),
+];
+
+/** Newer than the last post read: X ids grow with time. A pinned post is old and falls out here. */
+export function newerX(id: string, seen: string | undefined): boolean {
+  if (!/^\d+$/.test(id)) return false;
+  if (!seen) return true;
+  return id.length !== seen.length ? id.length > seen.length : id > seen;
+}
 
 type FxStatus = {
   url?: string;
@@ -193,6 +248,30 @@ const RSS: RssFeed[] = [
   { id: "fox", url: "https://moxie.foxnews.com/google-publisher/world.xml", name: "Fox News", cadence: C30, whole: true, site: "foxnews.com" },
   { id: "fox-pol", url: "https://moxie.foxnews.com/google-publisher/politics.xml", name: "Fox News", cadence: C30, whole: true },
   { id: "spa", lang: "ar", url: gnews("site:spa.gov.sa when:1h", "ar", "SA", "SA:ar"), name: "SPA", cadence: C5, whole: true, site: "spa.gov.sa" },
+  // Sheba Intelligence: exclusives on the Houthis, the Red Sea and the Horn,
+  // from its section pages (no feed; its sitemap re-dates old articles).
+  ...["news", "reports", "investigations", "politics", "daily-news-brief"].map((sec): RssFeed => ({
+    id: `sheba-${sec}`,
+    url: `https://shebaintelligence.uk/${sec}`,
+    name: "Sheba Intelligence",
+    cadence: C1H,
+    whole: true,
+    site: "shebaintelligence.uk",
+    html: /^https:\/\/shebaintelligence\.uk\/[a-z0-9-]{25,}$/,
+  })),
+  // Suhail: the government-aligned channel's site, every item it publishes.
+  { id: "suhail", lang: "ar", url: "https://suhail.net/news_rss.php?lang=arabic&top=0", name: "Suhail", cadence: C30, whole: true, site: "suhail.net" },
+  // Al-Akhbar's English edition carries the paper's pieces in full (the
+  // Arabic site refuses every reader): its Yemen and Arabian Peninsula pages.
+  ...["yemen", "peninsula"].map((sec): RssFeed => ({
+    id: `akhbar-en-${sec}`,
+    url: `https://en.al-akhbar.com/category/${sec}`,
+    name: "Al-Akhbar",
+    cadence: C1H,
+    whole: true,
+    site: "en.al-akhbar.com",
+    html: /^https:\/\/en\.al-akhbar\.com\/news\/[a-z0-9-]{20,}/,
+  })),
   // Safety nets: one keyword search across each language's sites, hourly. A
   // listing can drop an article (a sitemap's cap, an edited URL); these catch it.
   {
@@ -544,7 +623,12 @@ export function extractLead(html: string): string {
   // tags alone leaves their contents behind, and a site that styles its links
   // inline puts a `<style>` block inside its first paragraph.
   const body = html.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ");
-  const paras = [...body.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
+  // A Next.js page (en.al-akhbar.com) carries its article in the script
+  // payload, the tags escaped: "<p>Egyptian sources told …".
+  const payload = html.includes("\\u003cp")
+    ? html.replace(/\\u003c/g, "<").replace(/\\u003e/g, ">").replace(/\\u0026/g, "&").replace(/\\"/g, '"').replace(/\\n/g, " ")
+    : "";
+  const paras = [...`${body} ${payload}`.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
     .map((m) => decodeEntities(m[1]))
     .filter((p) => p.length > 50 && !/copyright|subscribe|cookie|javascript|sign in|all rights reserved/i.test(p));
   const parts: string[] = [];
@@ -787,11 +871,19 @@ export function newestTgPost(html: string, channel: string): number {
  * go forward, each judged on its own. Anything that is not a digest, and any
  * digest with nothing of ours in it, is left exactly as it was.
  */
+/** Words that place a piece in this war: an exclusive about something else is not forced in. */
+const THIS_WAR = /اليمن|يمني|الحوث|صنعاء|عدن|تعز|مأرب|الحديدة|السعودي|البحر الأحمر|باب المندب|أنصار الله|Yemen|Houthi|Sanaa|Sana'a|Aden|Taiz|Marib|Hodeidah|Saudi|Red Sea|Bab al-Mandab|Ansar Allah/i;
+
 const DIGEST_MARK = /[◼⬛⬜🖋]️?/gu;
 const OURS = /اليمن|يمني|الحوث|صنعاء|السعود|عدن|تعز|مأرب|الحديدة|Yemen|Houthi|Saudi|Sanaa|Aden|Taiz|Marib/i;
 
+/** The edition's footer ("اقرأ عدد اليوم عبر الرابط"), not a story. */
+const DIGEST_FOOTER = /اقرأ عدد اليوم|ـــــ/;
+/** A teaser post: two or three paragraphs, then "read the whole piece" and its link. */
+const TEASER = /لقراءة\s+(?:الموضوع|المقال|الخبر|التقرير|الحوار|المقابلة)?\s*كامل/;
+
 export function splitDigest(text: string, links: string[]): { text: string; href?: string }[] {
-  const parts = text.split(DIGEST_MARK).map((t) => t.trim()).filter((t) => t.length >= 25);
+  const parts = text.split(DIGEST_MARK).map((t) => t.trim()).filter((t) => t.length >= 25 && !DIGEST_FOOTER.test(t));
   if (parts.length < 3) return [];
   const ours = parts.filter((t) => OURS.test(t));
   if (!ours.length || ours.length === parts.length) return [];
@@ -826,7 +918,15 @@ export function parseTelegram(html: string, ch: Channel): RawHit[] {
     const outside = [...p.matchAll(/href="(https?:\/\/[^"]+)"/gi)]
       .map((m) => decodeEntities(m[1]))
       .filter((h) => !/t\.me\//.test(h));
-    const pieces = splitDigest(text, outside);
+    // A teaser (Al-Akhbar's morning pieces): its text is the story's opening,
+    // its link the article; the card is the article's, not the channel post's.
+    if (TEASER.test(text) && outside.length) {
+      items.push({ ...base, url: outside[outside.length - 1].trim(), text });
+      continue;
+    }
+    // An edition's story links, when the post lists one per headline.
+    const articles = outside.filter((h) => /\/NewspaperArticles\//i.test(h));
+    const pieces = splitDigest(text, articles.length ? articles : outside);
     if (pieces.length) {
       pieces.forEach((piece, n) => {
         items.push({ ...base, url: piece.href || `${url}#${n + 1}`, text: piece.text });
@@ -835,7 +935,13 @@ export function parseTelegram(html: string, ch: Channel): RawHit[] {
     }
     items.push({ ...base, url, text });
   }
-  return items;
+  // A digest headline and its teaser name one article: the fuller text stays.
+  const byUrl = new Map<string, RawHit>();
+  for (const it of items) {
+    const was = byUrl.get(it.url);
+    if (!was || it.text.length > was.text.length) byUrl.set(it.url, it);
+  }
+  return [...byUrl.values()];
 }
 
 /* ------------------------------------------------------------------ *
@@ -1292,7 +1398,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   const status: SourceStatus[] = [];
   const jobs: Promise<void>[] = [];
 
-  for (const acct of X_ACCOUNTS.filter((a) => cadenceDue(state, `x:${a.handle}`, a.cadence, now))) {
+  // X accounts an original was found at join the half-hourly tier.
+  const learnedX = learned.filter((l) => l.kind === "x" && !X_ACCOUNTS.some((x) => x.handle.toLowerCase() === l.site)).map((l) => X(l.site, l.name, "intl", C30));
+  for (const acct of [...X_ACCOUNTS, ...learnedX].filter((a) => cadenceDue(state, `x:${a.handle}`, a.cadence, now))) {
     jobs.push(
       (async () => {
         let rows: RawHit[] = [];
@@ -1303,7 +1411,13 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
             signal: AbortSignal.timeout(10_000),
           });
           if (res.ok) {
-            rows = parseFxStatuses(await res.json(), acct);
+            const all = parseFxStatuses(await res.json(), acct);
+            // Only what is new since the last read; on first sight, the last few hours.
+            const seenId = state.lastXPost?.[acct.handle];
+            const idOf = (u: string) => /\/status\/(\d+)/.exec(u)?.[1] ?? "";
+            rows = all.filter((r) => newerX(idOf(r.url), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS));
+            const newest = all.map((r) => idOf(r.url)).reduce((m, id) => (newerX(id, m || undefined) ? id : m), seenId ?? "");
+            if (newest) (state.lastXPost ??= {})[acct.handle] = newest;
             ok = true;
           } else await res.body?.cancel().catch(() => {});
         } catch {
@@ -1353,7 +1467,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           }
           state.lastScanAt[replayKey] = now;
         }
-        const newest = Math.max(seen, ...rows.map((r) => tgPostNo(r.url)));
+        const newest = Math.max(seen, ok ? newestTgPost(html as string, ch.id) : 0, ...rows.map((r) => tgPostNo(r.url)));
         if (newest > 0) (state.lastTgPost ??= {})[ch.id] = newest;
         if (ok) sourcesOk += 1;
         hits.push(...rows);
@@ -1373,7 +1487,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         const lastRead = state.lastScanAt[`web:${feed.id}`] ?? 0;
         if (feed.whole) {
           let body = await fetchListing(feed.url, feed.ua);
-          let listed = body ? parseListing(body) : [];
+          let listed = body ? (feed.html ? parseHtmlListing(body, feed.url, feed.html) : parseListing(body)) : [];
           // A site whose own listing fails today (Arab News answers some
           // readers 403) is listed through Google News for this read instead.
           if (!listed.length && feed.site && !/news.google.com/.test(feed.url)) {
@@ -1390,6 +1504,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           const rows: RawHit[] = [];
           let fresh = 0;
           for (const it of listed) {
+            // An undated article on a section page: on first sight the whole
+            // page is what was there before; only what appears later is new.
+            if (!Number.isFinite(it.at) && firstSight) {
+              mine[`u${urlKey(it.url)}`] = 0;
+              continue;
+            }
             if (Number.isFinite(it.at) && now - it.at > window) {
               // Older than a first read reaches: set aside unjudged, so the
               // next read does not take the whole day back as new.
@@ -1447,8 +1567,10 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     const pickedBy: Record<string, number> = {};
     unjudged.forEach((u, i) => {
       const id = String(i);
-      if (judged.has(id)) seen[u.feed.id][u.key] = picked.has(id) ? 1 : 0;
-      if (!picked.has(id)) return;
+      // An exclusive on this war is always read, whatever the triage made of it.
+      const forced = !picked.has(id) && isExclusive(u.hit.text, u.feed.name) && THIS_WAR.test(u.hit.text);
+      if (judged.has(id) || forced) seen[u.feed.id][u.key] = picked.has(id) || forced ? 1 : 0;
+      if (!picked.has(id) && !forced) return;
       hits.push({ ...u.hit, picked: true });
       pickedBy[u.feed.id] = (pickedBy[u.feed.id] ?? 0) + 1;
     });
@@ -1620,6 +1742,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     let note = c.note;
     let kept = false;
     if (v?.kind === "publish") {
+      if (isExclusive(h.text, h.source)) v.report.flags = [...new Set([...(v.report.flags ?? []), "exclusive"])];
       reports.push(v.report);
       [outcome, reason, note, kept] = ["feed", "kept", "", true];
     } else if (v?.kind === "reject") {

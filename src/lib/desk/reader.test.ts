@@ -243,8 +243,8 @@ test("a spokesman's statement takes the colon; Saree speaks for the military", a
   const { fixHeadline } = await import("./reader.ts");
   assert.equal(fixHeadline("UN spokesman says talks on Yemen will resume next week"), "UN spokesman: talks on Yemen will resume next week");
   assert.equal(fixHeadline("Yemen's government spokesman warns that the Houthis are preparing an offensive"), "Yemen's government spokesman: the Houthis are preparing an offensive");
-  assert.equal(fixHeadline("Yahya Saree: Houthi forces fired missiles at Jizan"), "Houthi military spokesperson: Houthi forces fired missiles at Jizan");
-  assert.equal(fixHeadline("Houthi military spokesman Yahya Saree says drones hit Abha airport"), "Houthi military spokesperson: drones hit Abha airport");
+  assert.equal(fixHeadline("Yahya Saree: Houthi forces fired missiles at Jizan"), "Houthi Armed Forces spokesperson: Houthi forces fired missiles at Jizan");
+  assert.equal(fixHeadline("Houthi military spokesman Yahya Saree says drones hit Abha airport"), "Houthi Armed Forces spokesperson: drones hit Abha airport");
   assert.equal(fixHeadline("Trump says he spoke with Bin Salman"), "Trump says he spoke with Bin Salman");
 });
 
@@ -357,13 +357,13 @@ test("the military spokesman and the government spokesman are two people", async
   const { fixHeadline } = await import("./reader.ts");
   assert.equal(
     fixHeadline("Yahya Saree: Houthi forces launched a ballistic missile at Riyadh"),
-    "Houthi military spokesperson: Houthi forces launched a ballistic missile at Riyadh",
+    "Houthi Armed Forces spokesperson: Houthi forces launched a ballistic missile at Riyadh",
   );
   assert.equal(
     fixHeadline("Houthi government spokesman: Saudi strike hits prisoner facility in Al-Jawf"),
     "Houthi government spokesperson: Saudi strike hits prisoner facility in Al-Jawf",
   );
-  assert.equal(fixHeadline("Houthi armed forces spokesman announced a new operation"), "Houthi military spokesperson announced a new operation");
+  assert.equal(fixHeadline("Houthi armed forces spokesman announced a new operation"), "Houthi Armed Forces spokesperson announced a new operation");
 });
 
 test("a name the reader does not know is dropped from the headline, the role is not", async () => {
@@ -447,7 +447,7 @@ test("which Houthi spokesperson, and no role the text never gave", async () => {
   const { spokespersonLabel, dropInventedRole } = await import("./reader.ts");
   assert.equal(
     spokespersonLabel("Houthi spokesperson: 52 Saudi strikes hit five governorates", "Sabereen News", "العميد يحيى سريع: 52 غارة"),
-    "Houthi military spokesperson: 52 Saudi strikes hit five governorates",
+    "Houthi Armed Forces spokesperson: 52 Saudi strikes hit five governorates",
   );
   assert.equal(
     spokespersonLabel("Houthi spokesperson: Saudi crimes justify the right to self-defence", "Al-Masirah", "ناطق حكومة صنعاء: الجرائم السعودية"),

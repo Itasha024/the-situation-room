@@ -770,8 +770,8 @@ function classifyForMap(text, hintedType) {
   // as what it is (the server does the same for new cards: maritime.ts).
   if (hint === 'vessel') {
     if (VESSEL_RE.test(t) && VESSEL_ATTACK_RE.test(t)) return 'vessel';
-    if (/port|harbou?r|oil terminal|refinery/i.test(t) && VESSEL_ATTACK_RE.test(t)) return 'port';
-    if (/airport|air ?base|alerts?|sirens?|intercept|missile|drone|air ?strikes?|hangar/i.test(t)) return 'strike';
+    if (/\bport\b|harbou?r|oil terminal|refinery/i.test(t) && VESSEL_ATTACK_RE.test(t)) return 'port';
+    if (/airport|air ?base|\balerts?\b|sirens?|intercept|missile|drone|air ?strikes?|hangar/i.test(t)) return 'strike';
     return null;
   }
   if (hint === 'port') return 'port';

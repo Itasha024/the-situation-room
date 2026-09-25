@@ -226,6 +226,11 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    warns", "what to know about") — publish=false, reject_reason
    "commentary". News that rests on officials or sources is a report and is
    kept ("the FT reports Saudi Arabia formally asked Washington for strikes").
+   An open-source (OSINT) analyst's OWN finding is a report, not commentary:
+   a frontline it mapped, satellite imagery it read, footage it geolocated
+   ("Houthi attempts on Jabal Balaq in Marib fail, satellite imagery shows").
+   Write what was found and how it was seen. Its questions to followers,
+   teasers ("a map is coming") and bare opinions stay publish=false.
    Religious figures are not news: a mufti, cleric, preacher, imam, "scholars"
    or a body of Ulema condemning, praising or preaching — anywhere, in any
    country — is publish=false, reject_reason "cleric". The exception is a

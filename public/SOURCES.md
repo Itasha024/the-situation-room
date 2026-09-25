@@ -4,11 +4,11 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 
 **No Israeli sources.** Every named source on a card must have a real article/post URL.
 
-**X / Twitter: read through FxTwitter.** An account's latest 20 public posts come from FxTwitter's open API (`api.fxtwitter.com/2/profile/<handle>/statuses`), every 15 minutes, with no login and no key. Reposts and replies to other accounts are left out; an account's own threads are kept. Each post then goes through the same gate and reader as a Telegram post. Tried on 24 September and not usable: x.com itself (login), the Nitter mirrors (down or behind bot checks, which the desk does not bypass), xcancel (451) and Twitter's syndication endpoint (429). `/api/status` shows each account's last read.
+**X / Twitter: read through FxTwitter.** An account's latest 20 public posts come from FxTwitter's open API (`api.fxtwitter.com/2/profile/<handle>/statuses`), every 5 minutes, with no login and no key. Reposts and replies to other accounts are left out; an account's own threads are kept. Each post then goes through the same gate and reader as a Telegram post; the reader is told it is an open-source analyst, whose own findings (a frontline mapped from satellite imagery, footage geolocated) are reports and whose questions and teasers are not. Tried on 24 September and not usable: x.com itself (login), the Nitter mirrors (down or behind bot checks, which the desk does not bypass), xcancel (451) and Twitter's syndication endpoint (429). `/api/status` shows each account's last read.
 
 | X account | How often |
 |---|---|
-| The Cube — `@war_cube` | every 15 minutes |
+| The Cube — `@war_cube` | every 5 minutes |
 
 ---
 

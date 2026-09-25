@@ -151,11 +151,27 @@ const THIN_REASON = /substantive|teaser|headline|vague|brief|analy|recap|uninfor
  */
 const SCOPE_RULE_AT = Date.parse("2026-09-23T09:00:00+03:00");
 const SCOPE_REASON = /scope|theatre|theater|unrelated|another war|different war/i;
-function stale(e: CacheEntry): boolean {
+/**
+ * X posts turned down as commentary before the rule that an open-source
+ * analyst's own finding (a frontline mapped from satellite imagery, footage
+ * geolocated) is a report. Only X posts are read again.
+ */
+const OSINT_RULE_AT = Date.parse("2026-09-25T03:55:00+03:00");
+const OSINT_REASON = /commentary|analy|opinion/i;
+function stale(e: CacheEntry, c: Pick<Candidate, "url">): boolean {
   if (e.reading.publish) return false;
   const why = String(e.reading.reject_reason || "");
   if (e.at < THIN_RULE_AT && THIN_REASON.test(why)) return true;
+  if (e.at < OSINT_RULE_AT && isXPost(c) && OSINT_REASON.test(why)) return true;
   return e.at < SCOPE_RULE_AT && SCOPE_REASON.test(why);
+}
+
+/** A post on an X account: the desk reads open-source analysts there. */
+function isXPost(c: Pick<Candidate, "url">): boolean {
+  return /^https:\/\/x\.com\/[^/]+\/status\//.test(c.url);
+}
+function alignmentOf(c: Candidate): string {
+  return isXPost(c) ? "open-source (OSINT) analyst's own X account, no declared alignment" : ALIGNMENT[outletSide(c.source, c.lean)];
 }
 type Cache = Record<string, CacheEntry>;
 type Queued = Candidate & { queuedAt: number };
@@ -200,9 +216,7 @@ export async function editCandidates(
 
   // This cycle's items plus anything still waiting from earlier cycles.
   const byUrl = new Map<string, Queued>();
-  // One X test post per account: a newer pick replaces the one still queued.
-  const testing = new Set(fresh.filter(isXTest).map((c) => c.source));
-  for (const q of queue) if (!(isXTest(q) && testing.has(q.source))) byUrl.set(q.url, q);
+  for (const q of queue) byUrl.set(q.url, q);
   for (const c of fresh) byUrl.set(c.url, { ...c, queuedAt: byUrl.get(c.url)?.queuedAt ?? now });
   const all = [...byUrl.values()];
 
@@ -221,7 +235,7 @@ export async function editCandidates(
   const unread: Queued[] = [];
   for (const c of all) {
     const hit = cache[contentHash(c.text)];
-    if (hit && !stale(hit)) {
+    if (hit && !stale(hit, c)) {
       verdicts.set(c.url, decide(hit.reading, c, !hit.loose));
       readingOf.set(c.url, hit.reading);
     } else unread.push(c);
@@ -242,9 +256,7 @@ export async function editCandidates(
   const key = readerKey();
   const anyReader = !!key || !!groqKey();
   let modelNote = anyReader ? "" : "reader off: GEMINI_API_KEY not set";
-  // An X test post goes first: it proves the route, and an older post would
-  // otherwise wait behind every newer item.
-  unread.sort((a, b) => Number(isXTest(b)) - Number(isXTest(a)) || Date.parse(b.at) - Date.parse(a.at));
+  unread.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   // A post forwarded by several channels is read once; the copies take its reading.
   const copyOf = new Map<Queued, Queued>();
   const firstOf = new Map<string, Queued>();
@@ -293,7 +305,7 @@ export async function editCandidates(
     const items: ReaderItem[] = batch.map((c, n) => ({
       id: String(n),
       source: c.source,
-      alignment: ALIGNMENT[outletSide(c.source, c.lean)],
+      alignment: alignmentOf(c),
       postedAt: c.at,
       text: c.text,
       full: c.tags.includes("original"),
@@ -344,7 +356,7 @@ export async function editCandidates(
     const items: ReaderItem[] = batch.map(({ c, note }, n) => ({
       id: String(n),
       source: c.source,
-      alignment: ALIGNMENT[outletSide(c.source, c.lean)],
+      alignment: alignmentOf(c),
       postedAt: c.at,
       text: c.text,
       full: c.tags.includes("original"),
@@ -407,7 +419,7 @@ export async function editCandidates(
       const items: ReaderItem[] = batch.map((c, n) => ({
         id: String(n),
         source: c.source,
-        alignment: ALIGNMENT[outletSide(c.source, c.lean)],
+        alignment: alignmentOf(c),
         postedAt: c.at,
         text: c.text,
       }));
@@ -550,26 +562,7 @@ export function reword(s: string): string {
 /** A channel's line of the Houthi leader's speech: his title, then a colon. */
 const HOUTHI_LEADER_LINE = /^\s*(?:السيد القائد|قائد الثورة|السيد عبد ?الملك(?: بدر الدين)? الحوثي)[^:\n]{0,30}:/;
 
-/** A post the scan sent as the one-off test of a new X account ("<name> (X test)"). */
-export function isXTest(c: Pick<Candidate, "source">): boolean {
-  return c.source.endsWith("(X test)");
-}
-
 function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
-  // The X test is published whatever its topic: the editor asked for it. A
-  // reader that declined it wrote nothing, so the post's own words are the copy.
-  if (isXTest(c)) {
-    const post = c.text
-      .replace(/^\[Desk test[^\]]*\]\s*/, "")
-      .replace(/https?:\/\/\S+/g, "")
-      .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    const [first = "", ...rest] = post.split(/(?<=[.!?])\s+/);
-    const headline = first.length > 140 ? first.slice(0, 139).replace(/\s+\S*$/, "") : first;
-    raw = String(raw.headline || "").trim() ? { ...raw } : { ...raw, headline, body: rest.join(" "), event_type: raw.event_type || "statement" };
-    [raw, strict] = [{ ...raw, publish: true }, false];
-  }
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
   const r: Reading = { ...raw, headline: fixHeadline(reword(anglicise(raw.headline))), body: reword(anglicise(raw.body)) };
@@ -727,8 +720,8 @@ export function confidenceOf(r: LiveReport, corroboratedBy: OutletSide[]): numbe
 }
 
 /** `decide` on a bare source text, for tests. */
-export function decideForTest(r: Reading, text: string, source = "Al-Masirah"): EditorVerdict {
-  return decide(r, { source, url: "https://t.me/almasirah2/1", text, at: "2026-09-21T12:00:00Z", lean: "houthi", fp: "t", score: 1, tags: [] });
+export function decideForTest(r: Reading, text: string): EditorVerdict {
+  return decide(r, { source: "Al-Masirah", url: "https://t.me/almasirah2/1", text, at: "2026-09-21T12:00:00Z", lean: "houthi", fp: "t", score: 1, tags: [] });
 }
 
 /**

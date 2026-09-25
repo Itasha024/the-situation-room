@@ -671,11 +671,16 @@ html{scroll-behavior:smooth}
   display:none;align-items:center;justify-content:center;padding:1.5rem 1rem;
 }
 #media-float.show{display:flex;flex-direction:column;gap:.6rem}
-#media-float img{max-width:min(920px,96vw);max-height:78vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px #000c}
+.media-float-frame{position:relative;display:inline-block;max-width:min(920px,96vw)}
+#media-float img{display:block;max-width:min(920px,96vw);max-height:78vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px #000c}
+/* The × sits on the picture's top right corner, in the same small square as the other buttons. */
 .media-float-close{
-  align-self:flex-end;background:#15202c;color:#eaf0f6;border:1px solid #3d536b;
-  border-radius:8px;padding:.28rem .65rem;font:inherit;font-size:.78rem;cursor:pointer;
+  position:absolute;top:8px;right:8px;width:32px;height:32px;padding:0;display:grid;place-items:center;
+  background:rgba(12,18,26,.82);color:#eaf0f6;border:1px solid rgba(255,255,255,.22);border-radius:8px;cursor:pointer;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:background .15s,border-color .15s;
 }
+.media-float-close:hover{background:rgba(12,18,26,.95);border-color:rgba(255,255,255,.45)}
+.media-float-close svg{width:16px;height:16px;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;fill:none}
 .media-float-cap{margin:0;max-width:min(920px,96vw);font-size:.78rem;line-height:1.4;color:#d7e2ef;text-align:center}
 
 .live-scan{padding:.35rem 1rem .5rem;border-bottom:1px solid var(--line);background:#0a1018}

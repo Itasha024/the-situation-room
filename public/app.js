@@ -441,14 +441,7 @@ function wireCardMedia(card) {
     ev.stopPropagation();
     const { kind, from, src, thumb } = box.dataset;
     if (kind === 'photo') {
-      const flo = document.getElementById('media-float');
-      if (!flo) return;
-      flo.hidden = false;
-      flo.classList.add('show');
-      flo.innerHTML = `<button type="button" class="media-float-close">Close</button><img src="${escapeHtml(thumb)}" alt="" referrerpolicy="no-referrer">`;
-      const close = () => { flo.classList.remove('show'); flo.hidden = true; flo.innerHTML = ''; };
-      flo.querySelector('.media-float-close').onclick = close;
-      flo.onclick = (e) => { if (e.target === flo) close(); };
+      openMediaFloat(thumb);
       return;
     }
     if (src) play(src, false);
@@ -458,21 +451,25 @@ function wireCardMedia(card) {
   };
 }
 
+/** A picture opened large, with a small × square on its top right corner. */
+function openMediaFloat(src) {
+  const flo = document.getElementById('media-float');
+  if (!flo || !src) return;
+  flo.hidden = false;
+  flo.classList.add('show');
+  flo.innerHTML = `<div class="media-float-frame"><img src="${escapeHtml(src)}" alt="" referrerpolicy="no-referrer"><button type="button" class="media-float-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  const close = () => { flo.classList.remove('show'); flo.hidden = true; flo.innerHTML = ''; };
+  flo.querySelector('.media-float-close').onclick = close;
+  flo.onclick = (e) => { if (e.target === flo) close(); };
+}
+
 function wireMediaClicks(root) {
   if (!root) return;
   root.querySelectorAll('.media-open').forEach((btn) => {
     btn.onclick = (ev) => {
       if (ev) { ev.preventDefault(); ev.stopPropagation(); }
       const src = btn.getAttribute('data-src');
-      const flo = document.getElementById('media-float');
-      if (!src || !flo) return;
-      flo.hidden = false;
-      flo.classList.add('show');
-      flo.innerHTML = `<button type="button" class="media-float-close">Close</button><img src="${escapeHtml(src)}" alt="">`;
-      const close = () => { flo.classList.remove('show'); flo.hidden = true; flo.innerHTML = ''; };
-      const cl = flo.querySelector('.media-float-close');
-      if (cl) cl.onclick = close;
-      flo.onclick = (e) => { if (e.target === flo) close(); };
+      if (src) openMediaFloat(src);
     };
   });
 }

@@ -1391,7 +1391,10 @@ const PROSE_PIN_MS = 36 * 3600 * 1000;
 const PROSE_REACH = 60;
 const PROSE_COMMON = new Set(('saudi arabia yemen yemeni houthi houthis government forces coalition province governorate ' +
   'district area areas reported report reports said says over from with that this their were have been also into after ' +
-  'while near city town military sources media defense defence ministry minister ministers officials security').split(' '));
+  'while near city town military sources media defense defence ministry minister ministers officials security ' +
+  // The governorates: "Taiz and Lahj" says nothing of which Lahj report a clause was written from.
+  'taiz lahj marib saada hodeidah sanaa aden dhale jawf hajjah abyan shabwa bayda dhamar amran mahrah hadramout ' +
+  'raymah mahwit socotra jizan najran asir').split(' ').map((w) => w.slice(0, 6)));
 
 function pinsForProse() {
   if (!mappableByFp.size && data && window.L) { try { buildMapPins(data); } catch (e) {} }
@@ -1400,8 +1403,9 @@ function pinsForProse() {
   return [...mappableByFp.values()].filter((p) => p.place && Date.parse(p.at) >= end - PROSE_PIN_MS && Date.parse(p.at) <= end + 3600e3);
 }
 
+/** A text's words of four letters or more, cut to six: "recapturing" meets "recapture". */
 function proseWords(s) {
-  return new Set(String(s || '').toLowerCase().match(/[a-zÀ-ɏ']{4,}/g) || []);
+  return new Set((String(s || '').toLowerCase().match(/[a-zÀ-ɏ']{4,}/g) || []).map((w) => w.slice(0, 6)));
 }
 
 function linkPlaces(text, pins) {
@@ -1417,9 +1421,6 @@ function linkPlaces(text, pins) {
     if (!byCore.has(k)) byCore.set(k, { core, pins: [] });
     byCore.get(k).pins.push(p);
   }
-  // Place names never count as the shared word: "Taiz and Lahj" says nothing
-  // about which Lahj report a clause was written from.
-  const placeWords = new Set([...byCore.values()].flatMap(({ core }) => [...proseWords(core)]));
   const spans = [];
   const linked = new Set();
   for (const m of norm.matchAll(/[^.!?]+[.!?]*/g)) {
@@ -1437,7 +1438,8 @@ function linkPlaces(text, pins) {
       // not the siren alert in Makkah province, and in a long sentence only the
       // clause at the name speaks for it.
       const words = proseWords(sent.slice(Math.max(0, hit.index - PROSE_REACH), hit.index + hit[0].length + PROSE_REACH));
-      const own = (w) => words.has(w) && !placeWords.has(w) && !PROSE_COMMON.has(w);
+      const place = proseWords(core);
+      const own = (w) => words.has(w) && !place.has(w) && !PROSE_COMMON.has(w);
       const best = ps
         .map((p) => ({ p, n: [...proseWords(p.label)].filter(own).length }))
         .sort((a, b) => b.n - a.n || Date.parse(b.p.at) - Date.parse(a.p.at))[0];

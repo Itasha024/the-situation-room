@@ -398,7 +398,11 @@ function wireCardMedia(card) {
       return;
     }
     if (from === 'x' && src) {
-      box.innerHTML = `<video class="cm-player" controls autoplay playsinline preload="none" poster="${escapeHtml(thumb)}" src="${escapeHtml(src)}"></video>`;
+      // X's video host refuses a request that names another site as its
+      // referrer, so the player sits in a frame that names none.
+      const doc = `<meta name="referrer" content="no-referrer"><style>html,body{margin:0;height:100%;background:#000}video{width:100%;height:100%;display:block}</style>`
+        + `<video controls autoplay playsinline poster="${escapeHtml(thumb)}" src="${escapeHtml(src)}"></video>`;
+      box.innerHTML = `<iframe class="cm-player cm-xv" srcdoc="${escapeHtml(doc)}" referrerpolicy="no-referrer" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>`;
     } else if (embed) {
       box.innerHTML = `<iframe class="cm-player cm-tg" src="${escapeHtml(embed)}" loading="lazy" allow="autoplay; fullscreen" referrerpolicy="no-referrer" title="Telegram video"></iframe>`;
     } else {

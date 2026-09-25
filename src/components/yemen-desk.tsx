@@ -70,12 +70,8 @@ const DESK_HTML = `
   <div id="casualties"></div>
 </section>
 <section class="timeline-wrap">
-  <div class="timeline-head">
-    <div><h2>Timeline</h2></div>
-    <button type="button" id="btn-now" class="ghost" title="Select the current phase and reset the map to today">Jump to now</button>
-  </div>
-  <div class="timeline" id="timeline"></div>
-  <div class="phase" id="phase"></div>
+  <h2>Timeline</h2>
+  <div id="timeline"></div>
 </section>
 <footer>
   <span id="attrib"></span>

@@ -1390,7 +1390,8 @@ function pagerHtml(kind, slides, idx, labels) {
     ${many ? `<div class="pg-dots" role="tablist">${dots}</div>` : ''}`;
 }
 
-function wirePager(root, idx, onChange) {
+function wirePager(root, idx, onChange, opts) {
+  const wrap = !opts || opts.wrap !== false;
   const pager = root.querySelector('.pager');
   if (!pager) return;
   const slides = [...pager.querySelectorAll('.pg-slide')];
@@ -1398,6 +1399,7 @@ function wirePager(root, idx, onChange) {
   const n = slides.length;
   let cur = idx;
   const go = (i, dir) => {
+    if (!wrap && (i < 0 || i >= n)) return;
     const next = ((i % n) + n) % n;
     if (n < 2 || next === cur) return;
     const d = dir || (next > cur ? 1 : -1);
@@ -1417,10 +1419,18 @@ function wirePager(root, idx, onChange) {
     to.inert = false;
     dots.forEach((b, j) => { b.classList.toggle('on', j === next); b.setAttribute('aria-selected', String(j === next)); });
     cur = next;
+    ends();
     onChange(next);
   };
   const prev = pager.querySelector('.pg-prev');
   const nextBtn = pager.querySelector('.pg-next');
+  // Without wrapping, an arrow with nowhere to go is hidden.
+  const ends = () => {
+    if (wrap) return;
+    if (prev) prev.hidden = cur === 0;
+    if (nextBtn) nextBtn.hidden = cur === n - 1;
+  };
+  ends();
   if (prev) prev.onclick = () => go(cur - 1, -1);
   if (nextBtn) nextBtn.onclick = () => go(cur + 1, 1);
   dots.forEach((b) => { b.onclick = () => go(Number(b.dataset.i) || 0); });
@@ -3404,74 +3414,59 @@ function applyMapFilters() {
  * Timeline and legend
  * ---------------------------------------------------------------- */
 
+/*
+ * The Timeline, one phase at a time in the same pager as Fronts and Numbers.
+ * It opens on Now; the left arrow (or a swipe right) steps back one phase at a
+ * time to the origins. The Now box takes the text the server rewrites every
+ * three days (/api/brief "timelineNow"); earlier phases never change.
+ */
+let timelineIdx = null;
+
+function phaseDates(p, isNow) {
+  const fmt = (s) => {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(s || ''));
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, 15)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : String(s || '');
+  };
+  if (isNow) return `${fmt(p.from)} – now`;
+  return fmt(p.from) + (p.to && p.to !== p.from ? ` – ${fmt(p.to)}` : '');
+}
+
 function renderTimeline(d) {
   const el = document.getElementById('timeline');
+  if (!el) return;
   const phases = d.timeline || [];
-  el.innerHTML = phases.map((t) => {
-    const isNow = t.id === 'phase_2026_09_offensive' || t === phases[phases.length - 1];
-    const title = isNow && t.id === 'phase_2026_09_offensive' ? `${t.title} · now` : t.title;
-    return `<button type="button" class="chip" data-id="${escapeHtml(t.id)}">
-      <b>${escapeHtml(title)}</b>
-      <i>${escapeHtml((t.from || '') + (t.to ? ' – ' + t.to : ''))}</i>
-    </button>`;
-  }).join('');
-
-  const showPhase = (phase) => {
-    el.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c.dataset.id === phase.id));
-    const box = document.getElementById('phase');
-    box.classList.add('show');
-    box.innerHTML = `
+  if (!phases.length) { el.innerHTML = ''; return; }
+  const last = phases.length - 1;
+  const live = brief && brief.timelineNow && brief.timelineNow.summary ? brief.timelineNow : null;
+  const slides = phases.map((p, i) => {
+    const isNow = i === last;
+    const summary = (isNow && live ? live.summary : p.summary || p.mapNote || '').trim();
+    const detail = (isNow && live ? live.detail : p.detail || (p.bullets || []).join(' ')).trim();
+    const asOf = isNow && live && live.asOf ? new Date(live.asOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    return `<article class="phase-card${isNow ? ' now' : ''}">
       <div class="phase-head">
-        <strong>${escapeHtml(phase.title)}</strong>
-        <span class="muted">${escapeHtml((phase.from || '') + (phase.to ? ' – ' + phase.to : ''))}</span>
+        <strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong>
+        <span class="muted">${escapeHtml(phaseDates(p, isNow))}</span>
       </div>
-      <p class="phase-sum">${escapeHtml(phase.summary || phase.mapNote || '')}</p>
-      <div class="full">
-        <p>${escapeHtml(phase.detail || (phase.bullets || []).join(' '))}</p>
-        ${phase.mapNote ? `<p class="muted">On the map: ${escapeHtml(phase.mapNote)}</p>` : ''}
-        <div class="srcs">Source: ${sourceCreditsHtml(phase.sources || [], '')}</div>
+      <p class="phase-sum">${escapeHtml(summary)}</p>
+      ${detail ? `<div class="full">
+        <p>${escapeHtml(detail)}</p>
+        ${p.mapNote && !isNow ? `<p class="muted">On the map: ${escapeHtml(p.mapNote)}</p>` : ''}
+        <div class="srcs">${asOf ? `Updated ${escapeHtml(asOf)} · ` : ''}Source: ${sourceCreditsHtml(p.sources || [], '')}</div>
       </div>
-      <button type="button" class="toggle-phase">Read more</button>`;
-    const btn = box.querySelector('.toggle-phase');
+      <button type="button" class="toggle-phase">Read more</button>` : ''}
+    </article>`;
+  });
+  const idx = timelineIdx == null ? last : Math.min(timelineIdx, last);
+  el.innerHTML = pagerHtml('timeline', slides, idx, phases.map((p, i) => (i === last ? `Now: ${p.title}` : p.title)));
+  wirePager(el, idx, (i) => { timelineIdx = i; }, { wrap: false });
+  el.querySelectorAll('.toggle-phase').forEach((btn) => {
     btn.onclick = () => {
-      const open = box.classList.toggle('open');
+      const card = btn.closest('.phase-card');
+      const open = card.classList.toggle('open');
       btn.textContent = open ? 'Hide' : 'Read more';
     };
-  };
-
-  el.querySelectorAll('.chip').forEach((btn) => {
-    btn.onclick = () => {
-      const phase = phases.find((x) => x.id === btn.dataset.id);
-      if (phase) showPhase(phase);
-    };
   });
-
-  function goPresent(opts) {
-    const scroll = !opts || opts.scroll !== false;
-    const current = phases.find((p) => p.id === 'phase_2026_09_offensive') || phases[phases.length - 1];
-    if (current) showPhase(current);
-    mapDate = todayYmd();
-    mapMode = 'day';
-    activeEpoch = null;
-    try { document.body.classList.remove('ctrl-mode'); } catch (e) {}
-    const inp = document.getElementById('map-date');
-    if (inp) { inp.value = mapDate; inp.max = mapDate; }
-    if (data) renderEvents(data);
-    syncDayNav();
-    if (scroll) {
-      const chip = el.querySelector('.chip.on');
-      const box = document.getElementById('phase');
-      const target = chip || box || document.getElementById('btn-now');
-      if (target && target.scrollIntoView) {
-        try { target.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {
-          try { target.scrollIntoView(false); } catch (e2) {}
-        }
-      }
-    }
-  }
-
-  document.getElementById('btn-now').onclick = () => goPresent({ scroll: true });
-  goPresent({ scroll: false });
 }
 
 let legendFitWired = false;
@@ -3851,6 +3846,8 @@ async function refresh(first) {
   ensureMap(data);
   if (first) {
     try { renderTimeline(data); } catch (e) { console.error(e); }
+    // A brief slower than first paint still brings the Now box's latest text.
+    briefP.then(() => { try { if (brief && brief.timelineNow) renderTimeline(data); } catch (e) { console.error(e); } });
     try { renderLegend(data); } catch (e) { console.error(e); }
     try { wireUi(data); } catch (e) { console.error(e); }
     const attrib = document.getElementById('attrib');
@@ -3891,7 +3888,7 @@ async function startYemenDesk() {
     window.__yemenBriefTimer = setInterval(async () => {
       if (document.hidden) return;
       await pullBrief();
-      if (data) { renderSituation(data); renderCasualties(data); renderFronts(data); }
+      if (data) { renderSituation(data); renderCasualties(data); renderFronts(data); renderTimeline(data); }
     }, 10 * 60 * 1000);
   };
 

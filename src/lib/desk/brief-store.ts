@@ -24,6 +24,7 @@ import { writeProse } from "./prose.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
 import { PROPOSALS_KEY, type Proposal, proposeControl } from "./control-proposals.ts";
+import { refreshTimelineNow } from "./timeline-now.ts";
 
 export const BRIEF_KEY = "brief";
 
@@ -121,6 +122,12 @@ export async function refreshBrief(
     }
   } catch (err) {
     console.error("[desk] control proposals failed:", err instanceof Error ? err.message : err);
+  }
+  // The Timeline's "Now" box, rewritten every three days from the cards.
+  try {
+    await refreshTimelineNow(store, all, now);
+  } catch (err) {
+    console.error("[desk] timeline now failed:", err instanceof Error ? err.message : err);
   }
   return { brief, built: true };
 }

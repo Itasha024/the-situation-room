@@ -20842,7 +20842,7 @@
     {
       "id": "phase_2026_01_stc_plc",
       "from": "2026-01",
-      "to": "2026-08",
+      "to": "2026-06",
       "sources": [
         {
           "name": "Open agency reporting, 2026",
@@ -20851,24 +20851,28 @@
       ],
       "title": "Realignment in the south before the 2026 round",
       "summary": "In early 2026 a political and military reshuffle in the south narrowed the split between separatist forces and the Presidential Council, in preparation for renewed fighting in the west.",
-      "detail": "Years of friction between the Southern Transitional Council and the government had weakened the ability to face the Houthis on a single front. Open-source reporting from early 2026 described separatist structures being dissolved or reintegrated and realigned under the Presidential Council in Aden, alongside reinforcements and coordination. This was not peace in the south, but an attempt to stop fighting each other before the big round on the coast. Both sides therefore entered the September 2026 escalation in the west better prepared.",
+      "detail": "Years of friction between the Southern Transitional Council and the government had weakened the ability to face the Houthis on a single front. Open-source reporting from early 2026 described separatist structures being dissolved or reintegrated and realigned under the Presidential Council in Aden, alongside reinforcements and coordination. This was not peace in the south, but an attempt to stop fighting each other before the big round on the coast. Both sides therefore entered the round that began in July 2026 better prepared.",
       "mapNote": "The south is more aligned against the coastal front — still no decision.",
       "bullets": []
     },
     {
       "id": "phase_2026_09_offensive",
-      "from": "2026-09",
-      "to": "2026-09",
+      "from": "2026-07",
+      "to": "",
       "sources": [
+        {
+          "name": "Desk archive, July–September 2026",
+          "url": ""
+        },
         {
           "name": "Al Jazeera",
           "url": "https://www.aljazeera.com/news/2026/9/14/why-the-houthi-advance-towards-yemens-marib-taiz-matters"
         }
       ],
-      "title": "September 2026: the Red Sea coast, and the present",
-      "summary": "In September 2026 the Houthis broke back onto the west coast, took the port city of Mocha and closed on the Bab al-Mandab strait, while fighting continued in western Taiz and Lahj and mass displacement spread from the coast.",
-      "detail": "After years of relative stalemate since the 2022 truce, a broad round of fighting opened on the Red Sea coast. Houthi forces advanced south and captured Mocha, a port city in south-western Yemen, then reported further progress towards Bab al-Mandab and a presence on sensitive islands including Mayun and Hanish, though some of those reports remain disputed or only partly verified. Control of the coast and of the approaches to the strait affects international shipping and the government's ability to hold the country's south-west. Government forces and tribal allies counter-attacked around Al-Wazi'iyah in western Taiz, near Hays and in Lahj, and tried to halt the advance. Pressure continued around Marib, the energy stronghold in the east, alongside fire and launches tied to Saudi Arabia and to the sea. UN agencies reported tens and then hundreds of thousands displaced from the west coast. The coast and the strait are the heart of the current round.",
-      "mapNote": "The west coast, Bab al-Mandab, Taiz, Lahj and Marib.",
+      "title": "July 2026 to now: the war resumes",
+      "summary": "The war resumed in July 2026, when strikes on Sanaa airport ended years of de-escalation and the Houthis answered with missiles on Saudi Arabia and a blockade of Saudi-linked shipping. In September they took Mocha and closed on the Bab al-Mandab strait, while government forces pushed in Al-Jawf, Al-Bayda and western Taiz.",
+      "detail": "The round opened on 13 July 2026, when government jets struck the runways at Sanaa and Hodeidah airports to stop an Iranian aircraft landing. The Houthis called it the end of the de-escalation in place since the 2022 truce and fired missiles and drones at Abha, Jeddah, Jazan and Yanbu, hitting Aramco sites; on 20 July they declared a naval blockade of Saudi-linked shipping and attacked Saudi tankers in the Red Sea. Coalition and government air strikes answered in Hodeidah, Saada, Marib and Al-Jawf. Through August the Houthis kept up missile, drone and explosive-boat attacks on the port of Mocha, the government's foothold on the west coast. In early September government forces opened offensives in Al-Jawf, Al-Bayda and west of Taiz, and the Houthis struck back on the coast: they took Hays, Al-Khokha and on 10 September Mocha itself, and pushed towards Bab al-Mandab and the islands off it. Fighting has since spread along the Taiz, Lahj and Al-Dhale lines, and Houthi missiles keep reaching Saudi cities while Saudi air strikes and artillery hit northern Yemen. Hundreds of thousands have been displaced from the west coast.",
+      "mapNote": "The west coast and Bab al-Mandab, Taiz, Lahj, Al-Dhale, Marib and Al-Jawf, and the Saudi border.",
       "bullets": []
     }
   ],

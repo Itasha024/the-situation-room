@@ -185,3 +185,8 @@ test("an original must name the war's ground: a UNICEF release on Jordan is not 
   assert.equal(theatre("Child malnutrition rises in Yemen as fighting intensifies, says UNICEF"), true);
   assert.equal(theatre("million children under five face risk acute malnutrition Yemen"), true);
 });
+
+test("a relay of Sheba Intelligence is traced to the desk's own Sheba, however it is spelled", () => {
+  assert.equal(findCitation("Shaba Intelligence reports the sudden two-to-three-day ban on fishing near Bab al-Mandab", "Khabar")?.site, "shebaintelligence.uk");
+  assert.equal(findCitation("Sheba Intelligence: Houthis order fishermen out of the Red Sea", "Khabar")?.name, "Sheba Intelligence");
+});

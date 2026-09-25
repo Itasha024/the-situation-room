@@ -38,7 +38,7 @@ test("the outlet's own articles closest to the claim are the candidates (the CNN
 test("an outlet an original was found at is learned once; one the desk reads is not", () => {
   const learned: Learned[] = [];
   const known = (h: string) => h === "cnn.com" || h === "x:war_cube";
-  const meta = { lang: "French", country: "FR", from: "fp1" };
+  const meta = { lang: "French", country: "FR", from: "fp1", speaker: true };
   assert.equal(learnSource(learned, { url: "https://www.liberation.fr/international/x", source: "Libération" }, known, meta), true);
   assert.equal(learnSource(learned, { url: "https://www.liberation.fr/politique/y", source: "Libération" }, known, meta), false);
   assert.equal(learnSource(learned, { url: "https://cnn.com/a", source: "CNN" }, known, meta), false);
@@ -95,4 +95,15 @@ test("a leader's words are looked for in his own country's outlets, his office a
   assert.equal(speakerOutlet(macron, "www.internazionale.it"), false);
   assert.equal(speakerOutlet(macron, "www.connaissancedesenergies.org"), false);
   assert.equal(speakerOutlet(SPEAKERS.find((s) => s.name === "Abbas Araghchi")!, "breakingthenews.net"), false);
+});
+
+test("only the cited outlet's own site is learned, never one that only carried the words, nor an Israeli one (25 Sep)", () => {
+  const learned: Learned[] = [];
+  const known = () => false;
+  // UNICEF's figures found on Khabar, a minister's words on Fana: carriers, not sources.
+  assert.equal(learnSource(learned, { url: "https://www.khabaragency.net/news253333.html", source: "وكالة خبر للأنباء" }, known, { lang: "English", from: "a", site: "unicef.org" }), false);
+  assert.equal(learnSource(learned, { url: "https://www.fananews.com/language/en/x/", source: "Fana News -" }, known, { lang: "English", from: "b", site: "unicef.org" }), false);
+  assert.equal(learnSource(learned, { url: "https://www.jfeed.com/news/houthis-eu", source: "JFeed" }, known, { lang: "English", from: "c", site: "jfeed.com" }), false);
+  assert.equal(learnSource(learned, { url: "https://www.unicef.org/press-releases/hunger", source: "UNICEF -" }, known, { lang: "English", from: "d", site: "unicef.org" }), true);
+  assert.deepEqual(learned.map((l) => [l.site, l.name, l.via]), [["unicef.org", "UNICEF", "own"]]);
 });

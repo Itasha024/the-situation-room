@@ -26,7 +26,7 @@ import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatu
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { type Learned, loadLearned } from "./desk/originals.ts";
-import { isExclusive } from "./desk/exclusive.ts";
+import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { attachMedia, tgMedia, xMedia } from "./desk/media.ts";
 import { triage } from "./desk/triage.ts";
 import { askChain } from "./desk/models.ts";
@@ -347,7 +347,8 @@ function siteListing(site: string): Promise<Listed[]> {
   const items = (async () => {
     const lists = await Promise.all(feeds.map(async (f) => {
       const body = await fetchListing(f.url, f.ua);
-      return body ? parseListing(body) : [];
+      // A site with no feed (Sheba, Al-Akhbar English) is listed from its section pages.
+      return body ? (f.html ? parseHtmlListing(body, f.url, f.html) : parseListing(body)) : [];
     }));
     return lists.flat();
   })();
@@ -457,7 +458,7 @@ function confidenceFrom(tier: string, score: number): number {
 }
 
 function isIsraeliSource(source: string, url: string): boolean {
-  return /israel|jpost|haaretz|ynet|walla\.co|maariv|kan\.org|\.inn\.co|israelnationalnews|timesofisrael|i24news/i.test(
+  return /israel|jpost|haaretz|ynet|walla\.co|maariv|kan\.org|\.inn\.co|israelnationalnews|timesofisrael|i24news|jfeed|\bjns\.org|allisrael|debka|\.il\//i.test(
     `${source} ${url}`,
   );
 }
@@ -1746,6 +1747,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     // no keyword matched it: that is what reading the site whole is for.
     const picked = h.picked && !["excluded-source", "no-article", "bad-url"].includes(c.reason);
     if (c.outcome === "exclude" && !picked) continue;
+    // Erem, Asharq Al-Awsat, Al-Araby, Al-Akhbar, Alhurra, Arab News: only what
+    // they have on their own. An original a relay pointed to is read regardless.
+    if (!h.fromTg && OWN_ONLY.has(h.source) && !ownInformation(h.text, h.source)) continue;
     candidates.push({
       source: h.source,
       url: h.url,

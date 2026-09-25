@@ -30,6 +30,7 @@ import type { Listed } from "./sitemap.ts";
 import { ownCarrier, speakerOf } from "./speakers.ts";
 import {
   type Hit,
+  ISRAELI_HOST,
   type Learned,
   LEARNED_KEY,
   SPEAKER_PRESS,
@@ -108,6 +109,8 @@ const CITABLE: [RegExp, Cited][] = [
   // Sky News Arabia is Emirati and its own outlet; Sky News is British.
   [/سكاي نيوز(?! عربية)|Sky News(?! Arabia)/i, O("Sky News", "news.sky.com", "UK")],
   [/لويدز ليست|Lloyd'?s List/i, O("Lloyd's List", "lloydslist.com", "UK")],
+  // One of the desk's own sites, spelled as the relays spell it ("Shaba Intelligence").
+  [/شي?با\s*(?:إنتليجنس|انتليجنس|للاستخبارات)|Sh[ae]ba\s+Intelligence/i, O("Sheba Intelligence", "shebaintelligence.uk", "UK")],
   [/تريد ?ويندز|TradeWinds/i, O("TradeWinds", "tradewindsnews.com", "UK")],
   [/لاريبوبليكا|لا ريبوبليكا|ريبوبليكا|Repubblica/i, O("La Repubblica", "repubblica.it", "IT")],
   [/كورييري ديلا سيرا|كورييري|Corriere/i, O("Corriere della Sera", "corriere.it", "IT")],
@@ -527,6 +530,8 @@ export type Found = {
   /** Reads that came back empty, and when the next may be tried. */
   fails?: number;
   nextReadAt?: number;
+  /** Found at an outlet that only carried the words: never learned as a source. */
+  carrier?: boolean;
 };
 
 /** The original, read in full and queued for the reader to write the card from. */
@@ -582,7 +587,7 @@ function articlePath(url: string): boolean {
 /** The rare names among the keys: what an Italian headline shares with an English summary ("Taif", "Eurofighter"). */
 const rareNames = (keys: string[]) => keys.filter((w) => /^[A-Z]/.test(w) && !COMMON.has(stem(w)) && !/^(?:Italian|French|German|British|Iranian|Italy|France|Germany|Britain)$/.test(w));
 
-type Try = { q: string; ed: Edition; min: number; keys: string[]; credit: (i: GnewsItem) => string | null };
+type Try = { q: string; ed: Edition; min: number; keys: string[]; credit: (i: GnewsItem) => string | null; anywhere?: boolean };
 
 /**
  * Where to look, in order: the outlet's own site in its own language; then the
@@ -640,12 +645,19 @@ export function searchPlan(cited: Cited, keys: string[], arKeys: string[] = []):
   }
   if (cited.kind === "official" || cited.told) {
     // Last, anywhere: the words carried by any outlet, on a close match.
-    push({ q: `${k(keys)} when:2d`, ed: "en", min: 3, keys, credit: (i) => i.outlet || null });
+    push({ q: `${k(keys)} when:2d`, ed: "en", min: 3, keys, credit: (i) => i.outlet || null, anywhere: true });
   }
   return plan;
 }
 
-async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: number): Promise<Found | null> {
+/**
+ * `claim` is the relay's own account. A story found "anywhere" shares words,
+ * not necessarily facts: Fana's "Iran President Meets Prime Minister, Minister
+ * of Foreign Affairs in New York" stood in for a Yemeni minister's words at a
+ * UNICEF event. Such a find counts only when a model reads its page and finds
+ * the claim there.
+ */
+async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: number, claim = ""): Promise<Found | null> {
   for (const t of searchPlan(cited, keys, arKeys)) {
     const items = await searchGoogleNews(t.q, t.ed);
     // Enough shared words to count, then the best fit: a word ranked early (the
@@ -664,7 +676,7 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
     // A video page or a section front is not the article: try the next fit.
     for (const hit of ranked.slice(0, 2)) {
       const url = await resolveGoogleNews(hit.link);
-      if (!url || !articlePath(url) || ISRAELI.test(hit.outlet)) continue;
+      if (!url || !articlePath(url) || ISRAELI.test(hit.outlet) || ISRAELI_HOST.test(hostOf(url))) continue;
       // Three of the story's own words in the headline is the story; fewer —
       // "China Expands Drug Chemicals Control" for "China expands secret
       // procurement" — and its page must show them.
@@ -674,6 +686,11 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
       // five in Yemen" matched a UNICEF release on Jordan's schools by its
       // common words alone.
       if (theatre(t.keys.join(" ")) && !theatre(hit.title) && !theatre(await page(url))) continue;
+      if (t.anywhere) {
+        const body = claim ? articleText(await page(url)) : "";
+        if (!body || (await whichCarries(claim, [`${hit.title}\n${body}`])) !== 0) continue;
+        return { url, source: t.credit(hit) ?? cited.name, title: hit.title, carrier: true };
+      }
       return { url, source: t.credit(hit) ?? cited.name, title: hit.title };
     }
   }
@@ -790,7 +807,7 @@ async function reconstruct(f: Found, c: Coverage): Promise<string> {
   const accounts = await Promise.all(
     items.map(async (i) => {
       const url = await resolveGoogleNews(i.link);
-      const text = url ? articleText(await page(url)) : "";
+      const text = url && !ISRAELI_HOST.test(hostOf(url)) ? articleText(await page(url)) : "";
       return text.length >= 300 ? `[${i.outlet}] ${text.slice(0, Math.floor(FULL_TEXT_MAX / 4))}` : "";
     }),
   );
@@ -959,12 +976,16 @@ ${text}`.trim(),
   /** What this report relays from: the table, a name the reader wrote, a foreign leader's words, or an unnamed group. */
   const citationOf = async (r: LiveReport, text: string): Promise<Cited | null> => {
     const lead = isPost(r.url) ? `${r.summary}\n${r.text ?? ""}` : `${r.summary}\n${(r.text ?? "").slice(0, LEAD_CHARS)}`;
+    // Words said at a body's event ("told a UNICEF event in New York") are the
+    // speaker's own, not the body's: the minister's own ministry posting them
+    // is the original.
+    const spokeAt = (c: Cited) => c.told && c.kind === "official";
     const cited = findCitation(text, r.source, r.url) ?? findCitation(lead, r.source, r.url);
-    if (cited) return cited;
+    if (cited) return spokeAt(cited) ? null : cited;
     for (const n of namedOutlets(lead)) {
       if (nameWords(n.name).some((w) => r.source.toLowerCase().includes(w) || r.url.toLowerCase().includes(w))) continue;
       const c = await resolveNamed(n, registry, now, () => discovers-- > 0 && inTime());
-      if (c) return c;
+      if (c) return spokeAt(c) ? null : c;
     }
     const sp = speakerOf(r.summary, isPost(r.url) ? text : "");
     // His words on his own channel, in his country's press or on a wire are
@@ -986,26 +1007,38 @@ ${text}`.trim(),
     if (sp) {
       if (!e.trKeys) e.trKeys = await translateKeys(e.keys, sp.lang);
       const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o));
-      return hit ? { url: hit.url, source: hit.source, title: hit.title } : null;
+      return hit && !ISRAELI_HOST.test(hostOf(hit.url)) ? { url: hit.url, source: hit.source, title: hit.title } : null;
     }
-    const found = await search(e.cited, e.keys, e.arKeys ?? [], at);
-    if (found || !e.cited.site || !opts.listingOf || !canWork()) return found;
-    const cands = ownCandidates(await opts.listingOf(e.cited.site), e.keys, at);
-    if (!cands.length) return null;
-    const urls = await Promise.all(cands.map(async (c) => (/news\.google\.com/.test(c.url) ? await resolveGoogleNews(c.url) : c.url)));
-    const texts = await Promise.all(urls.map(async (u) => (u ? articleText(await page(u)) : "")));
     const claim = `${e.report.summary}. ${e.report.text ?? ""}`.trim();
-    const i = await whichCarries(claim, texts.map((t, j) => `${cands[j].title}\n${t || cands[j].desc}`));
-    return i >= 0 && urls[i] ? { url: urls[i], source: e.cited.name, title: cands[i].title } : null;
+    const own = async (): Promise<Found | null> => {
+      if (!e.cited.site || !opts.listingOf || !canWork()) return null;
+      const cands = ownCandidates(await opts.listingOf(e.cited.site), e.keys, at);
+      if (!cands.length) return null;
+      const urls = await Promise.all(cands.map(async (c) => (/news\.google\.com/.test(c.url) ? await resolveGoogleNews(c.url) : c.url)));
+      const texts = await Promise.all(urls.map(async (u) => (u ? articleText(await page(u)) : "")));
+      const i = await whichCarries(claim, texts.map((t, j) => `${cands[j].title}\n${t || cands[j].desc}`));
+      return i >= 0 && urls[i] ? { url: urls[i], source: e.cited.name, title: cands[i].title } : null;
+    };
+    // A site the desk reads itself (Sheba) is looked for in its own listing
+    // first: that is where the story is, and it costs no search.
+    const ours = !!e.cited.site && !!opts.knownHost?.(e.cited.site);
+    if (ours) {
+      const hit = await own();
+      if (hit) return hit;
+    }
+    const found = await search(e.cited, e.keys, e.arKeys ?? [], at, claim);
+    if (found || ours) return found;
+    return own();
   };
 
   /** A found original at an outlet the desk does not read becomes one of its sources. */
   const learn = async (f: Found, e: { cited?: Cited }, fp: string) => {
-    if (!opts.knownHost) return;
+    if (!opts.knownHost || f.carrier) return;
     learned ??= await loadLearned(store);
     const sp = e.cited?.speaker ? speakerNamed(e.cited.speaker) : null;
     const hit: Hit = { url: f.url, source: f.source, title: f.title };
-    if (learnSource(learned, hit, opts.knownHost, { lang: sp?.lang ?? (e.cited?.lang === "ar" ? "Arabic" : "English"), country: e.cited?.country, from: fp }, now)) {
+    const meta = { lang: sp?.lang ?? (e.cited?.lang === "ar" ? "Arabic" : "English"), country: e.cited?.country, from: fp, site: e.cited?.site, speaker: !!sp };
+    if (learnSource(learned, hit, opts.knownHost, meta, now)) {
       console.log(`[origin] learned a source: ${f.source} (${hostOf(f.url)})`);
       dirtyLearned = true;
     }

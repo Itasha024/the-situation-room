@@ -177,14 +177,15 @@ export function ownCandidates(listing: Listed[], keys: string[], reportAt: numbe
   const names = keys.filter((k) => /^[A-Z]/.test(k));
   const words = keys.filter((k) => !/^[A-Z]/.test(k));
   return listing
-    .filter((l) => l.at <= reportAt + 3600_000 && l.at >= reportAt - 48 * 3600_000)
+    // An undated item from a section page (Sheba) is on its page now: recent.
+    .filter((l) => !Number.isFinite(l.at) || (l.at <= reportAt + 3600_000 && l.at >= reportAt - 48 * 3600_000))
     .map((l) => {
       const t = `${l.title} ${l.desc} ${slug(l.url)}`;
       // A name shared counts twice a word: "Houthis" places a story, "talks" does not.
       return { l, s: 2 * shared(t, names) + shared(t, words) };
     })
     .filter((x) => x.s >= 2)
-    .sort((a, b) => b.s - a.s || b.l.at - a.l.at)
+    .sort((a, b) => b.s - a.s || (b.l.at || 0) - (a.l.at || 0))
     .slice(0, n)
     .map((x) => x.l);
 }
@@ -210,7 +211,13 @@ export async function whichCarries(claim: string, texts: string[]): Promise<numb
  * ------------------------------------------------------------------ */
 
 export const LEARNED_KEY = "learned-sources";
-export type Learned = { site: string; name: string; kind: "site" | "x"; lang: string; country?: string; learnedAt: number; from: string };
+export type Learned = { site: string; name: string; kind: "site" | "x"; lang: string; country?: string; learnedAt: number; from: string; via?: "own" | "press" };
+
+/**
+ * Israeli outlets, by address: never a source and never learned. A name check
+ * alone let JFeed through as the "original" of a Houthi message to the EU.
+ */
+export const ISRAELI_HOST = /(?:^|\.)(?:[a-z0-9-]+\.il|jfeed\.com|jpost\.com|timesofisrael\.com|haaretz\.com|ynetnews\.com|i24news\.tv|israelnationalnews\.com|israelhayom\.com|jns\.org|allisrael\.com|debka\.com)$/i;
 
 const hostOf = (url: string) => {
   try {
@@ -220,22 +227,34 @@ const hostOf = (url: string) => {
   }
 };
 
-/** Record the outlet (or X account) an original was found at, once, unless the desk reads it already. */
-export function learnSource(learned: Learned[], hit: Hit, known: (host: string) => boolean, meta: { lang: string; country?: string; from: string }, now = Date.now()): boolean {
+/**
+ * Record the outlet (or X account) an original was found at, once, unless the
+ * desk reads it already. Only the cited outlet's own site, or a leader's own
+ * country's press: an outlet that merely carried the words (Khabar for
+ * UNICEF's figures, Fana for a Yemeni minister) is one more relay.
+ */
+export function learnSource(learned: Learned[], hit: Hit, known: (host: string) => boolean, meta: { lang: string; country?: string; from: string; site?: string; speaker?: boolean }, now = Date.now()): boolean {
   const host = hostOf(hit.url);
-  if (!host || /\.il$/.test(host) || /news\.google\.com$/.test(host)) return false;
+  if (!host || ISRAELI_HOST.test(host) || /news\.google\.com$/.test(host)) return false;
   const x = /(?:^|\.)(?:x|twitter)\.com$/.test(host) ? /^\/([^/]+)\//.exec(new URL(hit.url).pathname)?.[1] : undefined;
   const site = x ? x.toLowerCase() : host;
   if (known(x ? `x:${site}` : host) || learned.some((l) => l.site === site)) return false;
-  if (!x && !fromItsCountry({ site, country: meta.country })) return false;
-  learned.push({ site, name: hit.source, kind: x ? "x" : "site", lang: meta.lang, country: meta.country, learnedAt: now, from: meta.from });
+  const own = !!meta.site && (host === meta.site || host.endsWith(`.${meta.site}`));
+  const press = !!meta.speaker && !!meta.country && fromItsCountry({ site, country: meta.country });
+  if (!x && !own && !press) return false;
+  const name = hit.source.replace(/[\s|:–—-]+$/, "").trim() || site;
+  learned.push({ site, name, kind: x ? "x" : "site", lang: meta.lang, country: meta.country, learnedAt: now, from: meta.from, ...(x ? {} : { via: own ? ("own" as const) : ("press" as const) }) });
   return true;
 }
 
 export async function loadLearned(store: DeskStore): Promise<Learned[]> {
   // An outlet learned before the country rule (an Italian magazine for
-  // Macron's words, an aggregator for Araghchi's) is not read.
-  return ((await store.getJson<Learned[]>(LEARNED_KEY)) ?? []).filter((l) => l.kind === "x" || fromItsCountry(l));
+  // Macron's words, an aggregator for Araghchi's) is not read; nor one learned
+  // before the own-site rule with no country to check it by (Khabar, Fana,
+  // JFeed, 25 Sep); nor ever an Israeli one.
+  return ((await store.getJson<Learned[]>(LEARNED_KEY)) ?? []).filter(
+    (l) => !ISRAELI_HOST.test(l.site) && (l.kind === "x" || (fromItsCountry(l) && (!!l.via || !!l.country))),
+  );
 }
 
 /** A learned outlet belongs to the country whose words it carried: its press, its domain, or a wire. */

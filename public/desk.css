@@ -671,8 +671,10 @@ html{scroll-behavior:smooth}
   display:none;align-items:center;justify-content:center;padding:1.5rem 1rem;
 }
 #media-float.show{display:flex;flex-direction:column;gap:.6rem}
-.media-float-frame{position:relative;display:inline-block;max-width:min(920px,96vw)}
-#media-float img{display:block;max-width:min(920px,96vw);max-height:78vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px #000c}
+.media-float-frame{position:relative;display:inline-block;max-width:min(920px,96vw);overflow:hidden;border-radius:8px;box-shadow:0 8px 40px #000c}
+#media-float img{display:block;max-width:min(920px,96vw);max-height:78vh;object-fit:contain;cursor:zoom-in;touch-action:none;user-select:none;-webkit-user-select:none;transform-origin:center;transition:transform .15s ease-out}
+.media-float-frame.zoomed img{cursor:grab}
+.media-float-frame.zoomed.dragging img{cursor:grabbing;transition:none}
 /* The × sits on the picture's top right corner, in the same small square as the other buttons. */
 .media-float-close{
   position:absolute;top:8px;right:8px;width:32px;height:32px;padding:0;display:grid;place-items:center;

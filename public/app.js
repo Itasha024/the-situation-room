@@ -461,6 +461,85 @@ function openMediaFloat(src) {
   const close = () => { flo.classList.remove('show'); flo.hidden = true; flo.innerHTML = ''; };
   flo.querySelector('.media-float-close').onclick = close;
   flo.onclick = (e) => { if (e.target === flo) close(); };
+  zoomInFrame(flo.querySelector('.media-float-frame'), flo.querySelector('img'));
+}
+
+/**
+ * Zoom into the picture inside its frame; the frame keeps its size. The wheel
+ * or a pinch zooms at the pointer, a double click or double tap zooms in or
+ * back out, and a zoomed picture is dragged to move around it.
+ */
+function zoomInFrame(frame, img) {
+  if (!frame || !img) return;
+  let s = 1;
+  let x = 0;
+  let y = 0;
+  const pts = new Map();
+  let pinch = null;
+  let lastTap = 0;
+  let tapFrom = null;
+  const apply = () => {
+    if (s <= 1.01) { s = 1; x = 0; y = 0; }
+    const mx = (frame.clientWidth * (s - 1)) / 2;
+    const my = (frame.clientHeight * (s - 1)) / 2;
+    x = Math.max(-mx, Math.min(mx, x));
+    y = Math.max(-my, Math.min(my, y));
+    img.style.transform = s === 1 ? '' : `translate(${x}px,${y}px) scale(${s})`;
+    frame.classList.toggle('zoomed', s > 1);
+  };
+  // The point under the pointer stays where it is.
+  const zoomAt = (to, cx, cy) => {
+    const ns = Math.max(1, Math.min(5, to));
+    const r = frame.getBoundingClientRect();
+    const px = cx - r.left - r.width / 2;
+    const py = cy - r.top - r.height / 2;
+    x = px - ((px - x) * ns) / s;
+    y = py - ((py - y) * ns) / s;
+    s = ns;
+    apply();
+  };
+  img.draggable = false;
+  img.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoomAt(s * (e.deltaY < 0 ? 1.25 : 0.8), e.clientX, e.clientY);
+  }, { passive: false });
+  img.addEventListener('dblclick', (e) => { e.preventDefault(); zoomAt(s > 1 ? 1 : 2.5, e.clientX, e.clientY); });
+  img.addEventListener('pointerdown', (e) => {
+    img.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    tapFrom = pts.size === 1 ? { x: e.clientX, y: e.clientY } : null;
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, s };
+    }
+    frame.classList.add('dragging');
+  });
+  img.addEventListener('pointermove', (e) => {
+    const was = pts.get(e.pointerId);
+    if (!was) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2 && pinch) {
+      const [a, b] = [...pts.values()];
+      zoomAt((pinch.s * Math.hypot(a.x - b.x, a.y - b.y)) / pinch.d, (a.x + b.x) / 2, (a.y + b.y) / 2);
+    } else if (pts.size === 1 && s > 1) {
+      x += e.clientX - was.x;
+      y += e.clientY - was.y;
+      apply();
+    }
+  });
+  const up = (e) => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (!pts.size) frame.classList.remove('dragging');
+    // A double tap on a phone, where no dblclick comes.
+    const still = tapFrom && Math.hypot(e.clientX - tapFrom.x, e.clientY - tapFrom.y) < 10;
+    if (e.type === 'pointerup' && e.pointerType === 'touch' && !pts.size && still) {
+      const now = Date.now();
+      if (now - lastTap < 300) { zoomAt(s > 1 ? 1 : 2.5, e.clientX, e.clientY); lastTap = 0; } else lastTap = now;
+    }
+  };
+  img.addEventListener('pointerup', up);
+  img.addEventListener('pointercancel', up);
 }
 
 function wireMediaClicks(root) {

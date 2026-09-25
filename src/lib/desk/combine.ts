@@ -9,9 +9,10 @@
  *
  * Two things here:
  *
- *   waves    — strike and alert cards of one side against one area within an
- *              hour (Houthi missiles on Jizan, Najran and Yanbu; Saudi shelling
- *              on Razih, Shada and Munabbih) are one card naming every place.
+ *   waves    — strike and alert cards of one side against one area, new in the
+ *              same scan (Houthi missiles on Jizan, Najran and Yanbu; Saudi
+ *              shelling on Razih, Shada and Munabbih), are one card naming every
+ *              place. The same scan only, as the editor asked: never across scans.
  *   combine  — one model call writes the group's single headline and body from
  *              all its accounts. Checked in code: every place and every figure
  *              the accounts gave must still be in it, and it must be English.
@@ -34,8 +35,6 @@ export type Written = { headline: string; body: string };
 /** Asks a model; null when none answered. */
 export type Ask = (system: string, user: string) => Promise<Record<string, unknown> | null>;
 
-/** Cards of one wave arrive within this long of another card of it. */
-export const WAVE_WINDOW_MS = 60 * 60_000;
 /** Model calls per tick; the rest keep their lead card as written. */
 export const COMBINE_CALLS = 3;
 /** The combine step never holds the tick longer than this. */
@@ -89,23 +88,18 @@ export function waveKey(r: LiveReport): string | null {
  * Groups of one wave together. A single group stays as it was; a wave is the
  * list of groups it took in, oldest first.
  */
-export function planWaves(groups: Group[], windowMs = WAVE_WINDOW_MS): Group[][] {
+export function planWaves(groups: Group[], isNew: (r: LiveReport) => boolean = () => true): Group[][] {
   const out: Group[][] = [];
-  const open = new Map<string, Group[][]>();
+  const open = new Map<string, Group[]>();
   const t = (g: Group) => Date.parse(g.lead.at);
   for (const g of [...groups].sort((a, b) => t(a) - t(b))) {
-    const k = waveKey(g.lead);
-    if (!k) {
-      out.push([g]);
-      continue;
-    }
-    const waves = open.get(k) ?? [];
-    const wave = waves.find((w) => w.some((x) => Math.abs(t(x) - t(g)) <= windowMs));
+    // A card an earlier scan already published is never folded into a wave.
+    const k = isNew(g.lead) ? waveKey(g.lead) : null;
+    const wave = k ? open.get(k) : undefined;
     if (wave) wave.push(g);
     else {
       const w = [g];
-      waves.push(w);
-      open.set(k, waves);
+      if (k) open.set(k, w);
       out.push(w);
     }
   }
@@ -137,7 +131,7 @@ export function placesOf(all: LiveReport[]): Place[] {
 
 const SYSTEM = `You are the editor of a wire desk covering the war in Yemen. The accounts
 below come from several outlets. They tell ONE event, or one wave of attacks by
-one side on one area within an hour. Write ONE report of it.
+one side on one area. Write ONE report of it.
 
 - Carry every fact from every account: every place, every figure, every weapon,
   every named unit, person or object, and the outcome (intercepted, hit, killed).

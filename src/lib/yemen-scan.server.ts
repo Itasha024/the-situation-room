@@ -1743,8 +1743,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // One card per event: the most fitting account leads, a wave of strikes on
   // one area is one card, and the group is written once from every account
   // (combine.ts). The other outlets are "Also", as links only.
+  const earlier = new Set((prev?.reports ?? []).map((r) => r.fp));
   const { groups, written: combined, asked: combineAsked } = await combineGroups(
-    planWaves([...byStory.values()].map((g) => pickLead(members(g), leadRank))),
+    planWaves(
+      [...byStory.values()].map((g) => pickLead(members(g), leadRank)),
+      (r) => !earlier.has(r.fp),
+    ),
     async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000 }))?.json ?? null,
     leadRank,
     await getStore(),

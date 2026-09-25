@@ -294,104 +294,116 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
         const sql = await sqlProvider();
 
         for (const r of reports) {
-          if (!r.url || !hasArticlePath(r.url)) continue;
+          // One card that fails to save (a clash on its link) must not stop
+          // the cards after it: a tick once lost every older card this way.
+          try {
+            if (!r.url || !hasArticlePath(r.url)) continue;
 
-          // `returning fp` tells us whether this row was genuinely new, so the
-          // tick reports real numbers rather than assuming every insert landed.
-          const inserted = await sql<{ fp: string }>`
-            insert into desk_report
-              (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
-               also_reported_by, reply_to, citing)
-            select
-              ${r.fp}, ${r.url}, ${r.at}::timestamptz, ${r.source}, ${r.type}, ${pgSafe(r.summary)}, ${r.text == null ? null : pgSafe(r.text)},
-              ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
-              ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
-              ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb,
-              ${r.replyTo ?? null}, ${r.citing ?? null}
-             -- A card deleted by hand stays deleted.
-             where not exists (select 1 from desk_state s where s.key = ${DROPPED_KEY} and s.value ? ${r.fp})
-            on conflict do nothing
-            returning fp
-          `;
-          if (!inserted.length) {
-            // The original of a relayed report turned up after it was stored:
-            // the original replaces the relay as its source and link. Any relay
-            // — a website (Almashhad citing Bloomberg) as well as a channel: a
-            // stored row still "citing" someone is a relay's card. Its text
-            // follows when the original has been read (the "original" rewrite).
-            if (!r.citing && r.source) {
-              await sql`
-                update desk_report set url = ${r.url}, source = ${r.source}, citing = null, also_reported_by = null
-                 where fp = ${r.fp} and url is distinct from ${r.url} and ${r.url} not like 'https://t.me/%'
-                   and (citing is not null or url like 'https://t.me/%')
-                   and not exists (select 1 from desk_report d where d.url = ${r.url})
-              `;
-            }
-            // The party's own outlet took the card from a paper that had only
-            // been relaying it. Same card, same place in the feed; the copy,
-            // the link and the byline change hands, and the relay is kept in
-            // "Also" rather than dropped — so the swap is visible, not silent.
-            if (r.tags?.includes("lead-swap")) {
-              await sql`
-                update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)},
-                       url = ${r.url}, source = ${r.source}, citing = null,
-                       also_reported_by = ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb
-                 where fp = ${r.fp} and source is distinct from ${r.source}
-              `;
-            }
-            // The card rewritten from its original's full text replaces the
-            // relay's version: headline, body, source and link.
-            if (r.tags?.includes("original")) {
-              await sql`
-                update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)}, url = ${r.url}, source = ${r.source}, citing = null,
-                       -- Written from the original: the outlets that relayed it are no "Also".
-                       also_reported_by = null
-                 where fp = ${r.fp} and (summary is distinct from ${r.summary} or url is distinct from ${r.url})
-              `;
-            }
-            // Another outlet's take on this story arrived after it was stored.
-            if (r.alsoReportedBy?.length) {
-              const also = pgJson(r.alsoReportedBy);
-              await sql`
-                update desk_report set also_reported_by = ${also}::jsonb, confidence = coalesce(${r.confidence ?? null}, confidence)
-                 where fp = ${r.fp} and also_reported_by is distinct from ${also}::jsonb
-              `;
-            }
-            // A speech line re-threaded: a late line took its place in time.
-            // Only ever to an older row that exists.
-            if (r.replyTo) {
-              await sql`
-                update desk_report set reply_to = ${r.replyTo}
-                 where fp = ${r.fp} and reply_to is distinct from ${r.replyTo}
-                   and exists (select 1 from desk_report p where p.fp = ${r.replyTo} and p.at < ${r.at}::timestamptz)
-              `;
-            }
-            // Stored earlier without a place (the geocoder had not found it
-            // yet): take the place now, and let its pin be added below.
-            if (r.lat == null || r.lng == null) continue;
-            const placed = await sql<{ fp: string }>`
-              update desk_report set place = ${r.place ?? null}, lat = ${r.lat}, lng = ${r.lng}
-               where fp = ${r.fp} and lat is null
+            // `returning fp` tells us whether this row was genuinely new, so the
+            // tick reports real numbers rather than assuming every insert landed.
+            const inserted = await sql<{ fp: string }>`
+              insert into desk_report
+                (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
+                 also_reported_by, reply_to, citing)
+              select
+                ${r.fp}, ${r.url}, ${r.at}::timestamptz, ${r.source}, ${r.type}, ${pgSafe(r.summary)}, ${r.text == null ? null : pgSafe(r.text)},
+                ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
+                ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
+                ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb,
+                ${r.replyTo ?? null}, ${r.citing ?? null}
+               -- A card deleted by hand stays deleted.
+               where not exists (select 1 from desk_state s where s.key = ${DROPPED_KEY} and s.value ? ${r.fp})
+              on conflict do nothing
               returning fp
             `;
-            if (!placed.length) continue;
-          } else out.reportsAdded += 1;
+            if (!inserted.length) {
+              // The original of a relayed report turned up after it was stored:
+              // the original replaces the relay as its source and link. Any relay
+              // — a website (Almashhad citing Bloomberg) as well as a channel: a
+              // stored row still "citing" someone is a relay's card. Its text
+              // follows when the original has been read (the "original" rewrite).
+              if (!r.citing && r.source) {
+                await sql`
+                  update desk_report set url = ${r.url}, source = ${r.source}, citing = null, also_reported_by = null
+                   where fp = ${r.fp} and url is distinct from ${r.url} and ${r.url} not like 'https://t.me/%'
+                     and (citing is not null or url like 'https://t.me/%')
+                     and not exists (select 1 from desk_report d where d.url = ${r.url})
+                `;
+              }
+              // The party's own outlet took the card from a paper that had only
+              // been relaying it. Same card, same place in the feed; the copy,
+              // the link and the byline change hands, and the relay is kept in
+              // "Also" rather than dropped — so the swap is visible, not silent.
+              if (r.tags?.includes("lead-swap")) {
+                await sql`
+                  update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)},
+                         url = case when exists (select 1 from desk_report d where d.url = ${r.url} and d.fp <> ${r.fp}) then url else ${r.url} end,
+                         source = case when exists (select 1 from desk_report d where d.url = ${r.url} and d.fp <> ${r.fp}) then source else ${r.source} end,
+                         citing = null,
+                         also_reported_by = ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb
+                   where fp = ${r.fp} and source is distinct from ${r.source}
+                `;
+              }
+              // The card rewritten from its original's full text replaces the
+              // relay's version: headline, body, source and link.
+              if (r.tags?.includes("original")) {
+                await sql`
+                  update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)},
+                         -- Another card already holds the original's link: keep this one's.
+                         url = case when exists (select 1 from desk_report d where d.url = ${r.url} and d.fp <> ${r.fp}) then url else ${r.url} end,
+                         source = case when exists (select 1 from desk_report d where d.url = ${r.url} and d.fp <> ${r.fp}) then source else ${r.source} end,
+                         citing = null,
+                         -- Written from the original: the outlets that relayed it are no "Also".
+                         also_reported_by = null
+                   where fp = ${r.fp} and (summary is distinct from ${r.summary} or url is distinct from ${r.url})
+                `;
+              }
+              // Another outlet's take on this story arrived after it was stored.
+              if (r.alsoReportedBy?.length) {
+                const also = pgJson(r.alsoReportedBy);
+                await sql`
+                  update desk_report set also_reported_by = ${also}::jsonb, confidence = coalesce(${r.confidence ?? null}, confidence)
+                   where fp = ${r.fp} and also_reported_by is distinct from ${also}::jsonb
+                `;
+              }
+              // A speech line re-threaded: a late line took its place in time.
+              // Only ever to an older row that exists.
+              if (r.replyTo) {
+                await sql`
+                  update desk_report set reply_to = ${r.replyTo}
+                   where fp = ${r.fp} and reply_to is distinct from ${r.replyTo}
+                     and exists (select 1 from desk_report p where p.fp = ${r.replyTo} and p.at < ${r.at}::timestamptz)
+                `;
+              }
+              // Stored earlier without a place (the geocoder had not found it
+              // yet): take the place now, and let its pin be added below.
+              if (r.lat == null || r.lng == null) continue;
+              const placed = await sql<{ fp: string }>`
+                update desk_report set place = ${r.place ?? null}, lat = ${r.lat}, lng = ${r.lng}
+                 where fp = ${r.fp} and lat is null
+                returning fp
+              `;
+              if (!placed.length) continue;
+            } else out.reportsAdded += 1;
 
-          const { events, unplaced } = deriveEvents(r);
-          for (const e of events) {
-            const ev = await sql<{ fp: string }>`
-              insert into desk_event
-                (fp, at, type, lat, lng, place, label, body, source, url, map_only)
-              values (
-                ${e.fp}, ${e.at}, ${e.type}, ${e.lat}, ${e.lng}, ${e.place ?? null},
-                ${e.label}, ${e.text ?? null}, ${e.source ?? null}, ${e.url ?? null}, ${e.mapOnly}
-              )
-              on conflict (fp) do nothing
-              returning fp
-            `;
-            if (ev.length) out.eventsAdded += 1;
+            const { events, unplaced } = deriveEvents(r);
+            for (const e of events) {
+              const ev = await sql<{ fp: string }>`
+                insert into desk_event
+                  (fp, at, type, lat, lng, place, label, body, source, url, map_only)
+                values (
+                  ${e.fp}, ${e.at}, ${e.type}, ${e.lat}, ${e.lng}, ${e.place ?? null},
+                  ${e.label}, ${e.text ?? null}, ${e.source ?? null}, ${e.url ?? null}, ${e.mapOnly}
+                )
+                on conflict (fp) do nothing
+                returning fp
+              `;
+              if (ev.length) out.eventsAdded += 1;
+            }
+            if (unplaced) out.unplaced.push({ fp: r.fp, summary: r.summary, place: r.place });
+          } catch (err) {
+            out.error ??= `${r.fp}: ${err instanceof Error ? err.message : "desk write failed"}`;
           }
-          if (unplaced) out.unplaced.push({ fp: r.fp, summary: r.summary, place: r.place });
         }
       } catch (err) {
         out.error = err instanceof Error ? err.message : "desk write failed";

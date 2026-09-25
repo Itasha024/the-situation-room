@@ -46,16 +46,21 @@ test("no model, or a write-up that drops a place or a figure: the wave is split 
   assert.match(combineProblem({ headline: "Houthis fire drones at Jazan, Najran and Yanbu", body: "" }, wave, placesOf(wave)), /figures left out: 2/);
 });
 
-test("different areas, different sides, clashes and cards hours apart are never one wave", () => {
+test("different areas, different sides and clashes are never one wave", () => {
   const marib = card("m", "Saba", "Saudi air strike hits Marib", "Marib", 5);
   const taiz = card("t", "Al-Mihwar", "Houthi shelling hits Taiz", "Taiz", 5);
   const clash = card("k", "Al-Mihwar", "Clashes in Sirwah", "Sirwah", 6, "combat");
-  const late = card("l", "Al-Masirah", "Houthi missile targets Jazan", "Jazan", 200);
   assert.equal(waveKey(clash), null);
   assert.equal(actorOf(taiz), "houthi");
   assert.equal(actorOf(card("x", "Saba", "Houthis say Saudi shelling hits Marib", "Marib")), "saudi");
-  const plans = planWaves([wave[0], marib, taiz, clash, late].map(one));
-  assert.equal(plans.length, 5);
+  const plans = planWaves([wave[0], marib, taiz, clash].map(one));
+  assert.equal(plans.length, 4);
+});
+
+test("a wave is what one scan found, however far apart; a card an earlier scan published never joins", () => {
+  const late = card("l", "Al-Masirah", "Houthi missile targets Najran", "Najran", 200);
+  assert.equal(planWaves([wave[0], late].map(one)).length, 1);
+  assert.equal(planWaves([wave[0], late].map(one), (r) => r.fp !== "a").length, 2);
 });
 
 test("the speaker's own channel leads over a relay of his words", () => {

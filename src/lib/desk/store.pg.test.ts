@@ -272,3 +272,20 @@ test("a row held in memory is re-read when another instance changes it, and not 
   await b.deleteJson("ver-test");
   assert.equal(await a.getJson("ver-test"), null, "and so is a delete");
 });
+
+test("a card rewritten to a link another card holds keeps its own link, and the cards after it are still saved", async () => {
+  const store = createPgStore(provider);
+  await store.mergeIntoDesk([
+    report({ fp: "live-clash-a", url: "https://t.me/alhadath/1", source: "Al Hadath" }),
+    report({ fp: "live-clash-b", url: "https://t.me/alarabiya/2", source: "Al Arabiya" }),
+  ]);
+  const res = await store.mergeIntoDesk([
+    report({ fp: "live-clash-b", url: "https://t.me/alhadath/1", source: "Al Hadath", summary: "Rewritten from the original", tags: ["original"] }),
+    report({ fp: "live-clash-c", url: "https://example.com/news/after-the-clash" }),
+  ]);
+  assert.equal(res.error, undefined);
+  assert.equal(res.reportsAdded, 1, "the card after the clash is saved");
+  const rows = await sql<{ url: string; summary: string }>`select url, summary from desk_report where fp = ${"live-clash-b"}`;
+  assert.equal(rows[0].url, "https://t.me/alarabiya/2");
+  assert.equal(rows[0].summary, "Rewritten from the original");
+});

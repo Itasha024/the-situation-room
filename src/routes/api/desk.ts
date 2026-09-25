@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/desk")({
       GET: async ({ request }) => {
         try {
           const url = new URL(request.url);
-          const asked = Number(url.searchParams.get("limit"));
+          const asked = Number(url.searchParams.get("limit") || NaN);
           // Bounded so a crafted query cannot ask the desk to serialise the
           // entire archive on every request.
           const limit = Number.isFinite(asked) ? Math.min(Math.max(asked, 1), 1000) : 400;

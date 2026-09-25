@@ -1391,7 +1391,7 @@ const PROSE_PIN_MS = 36 * 3600 * 1000;
 const PROSE_REACH = 60;
 const PROSE_COMMON = new Set(('saudi arabia yemen yemeni houthi houthis government forces coalition province governorate ' +
   'district area areas reported report reports said says over from with that this their were have been also into after ' +
-  'while near city town military sources media defense defence ministry minister ministers officials security ' +
+  'while near city town military sources media front fronts defense defence ministry minister ministers officials security ' +
   // The governorates: "Taiz and Lahj" says nothing of which Lahj report a clause was written from.
   'taiz lahj marib saada hodeidah sanaa aden dhale jawf hajjah abyan shabwa bayda dhamar amran mahrah hadramout ' +
   'raymah mahwit socotra jizan najran asir').split(' ').map((w) => w.slice(0, 6)));
@@ -1874,6 +1874,31 @@ function wireFeedCard(card) {
   }
 }
 
+/**
+ * `?media-test` only: two sample cards built from real posts, to show how a
+ * card's picture or video looks and plays. Nothing is stored; no reader sees it.
+ */
+function mediaTestCards() {
+  if (!/[?&]media-test\b/.test(location.search)) return '';
+  const now = new Date().toISOString();
+  const x = 'https://x.com/Yem_army_media/status/2103244538957459764';
+  return [
+    {
+      fp: 'media-test-x', at: now, source: 'Yemeni Armed Forces (X) · TEST', url: x, type: 'strike', live: true,
+      summary: 'TEST — Government drone strikes Houthi vehicles north of the front, army media video shows',
+      text: 'Sample card to show a video on a card. The Yemeni army media office posted drone footage of the Eighth Brigade striking Houthi vehicles.',
+      media: { kind: 'video', from: 'x', post: x, thumb: 'https://pbs.twimg.com/media/HTA5vTEWUAAchW1.jpg', src: 'https://video.twimg.com/amplify_video/2103243072716832769/vid/avc1/710x360/FsT-_qcTVd03YGVs.mp4?tag=29', duration: 71 },
+    },
+    {
+      fp: 'media-test-tg', at: now, source: 'Ali Bk (Telegram) · TEST', url: 'https://t.me/Alibk3/37041', type: 'strike', live: true,
+      summary: 'TEST — Satellite images show direct hits on King Fahd Air Base in Taif',
+      text: 'Sample card to show a Telegram video on a card.',
+      media: { kind: 'video', from: 'tg', post: 'https://t.me/Alibk3/37041', embed: 'https://t.me/Alibk3/37041?embed=1&mode=tme', duration: 3,
+        thumb: 'https://cdn4.telesco.pe/file/kg5joOV_FCLhXGxnzXxGJCtpuF4iDhZx8TY65EVshG6zlvIVDeifrvG53jJnX-YxwRRBv9eOid4uf7tusWCiukHW3iBUPbfwQu_Zu4eurRZ-GzKadWXQTRCHf9ZBI-aEst3typZq9CsZSiXDqg7N_lfC7uTs05PFthI2NPGG5xJVfBm7UA9mY7tKCGwHPhOIOyXz7b_9RWt_bJQqCBOO2ujjWaH2TczYYlKtdkolN73R-kTMjELnM3mKgFsIlIlZNqthmOBgBDDPgSOLs9wNwAYyRgBUQNRzVucH9pTGdEFyMAkIDGgoF-c07E6tDHvV-2IMcYkpIGqORFy5XWhMSw' },
+    },
+  ].map((r, i) => feedCardHtml(r, i)).join('');
+}
+
 function renderFeed(d) {
   const all = sortedReports(d);
   const slice = all.slice(0, reportsShown);
@@ -1883,7 +1908,7 @@ function renderFeed(d) {
   // whether to offer "Show on map" from `mappableByFp`, so a stale index means
   // a report that is on the map renders without the button.
   if (data && window.L) { try { buildMapPins(data); } catch (e) {} }
-  document.getElementById('feed').innerHTML = slice.map((r, i) => feedCardHtml(r, i)).join('');
+  document.getElementById('feed').innerHTML = mediaTestCards() + slice.map((r, i) => feedCardHtml(r, i)).join('');
   document.querySelectorAll('#feed .card').forEach(wireFeedCard);
   const more = document.getElementById('btn-more-reports');
   if (reportsShown < all.length) {
@@ -2611,9 +2636,25 @@ function goToPinOnMainMap(pin) {
   setTimeout(() => {
     if (!map) return;
     try { map.invalidateSize(); } catch (e) {}
-    const m = markerByFp.get(pin.fp);
+    // A pin the day's map folded into another at its spot (or capped out) has
+    // no marker of its own: draw it, so the link lands on its own report.
+    let m = markerByFp.get(pin.fp);
+    if (!m) {
+      const cat = pin.mapCat || classifyForMap(pin.text || pin.label || '', (pin.type || '').toLowerCase()) || pinCategory((pin.type || '').toLowerCase());
+      if (!layersOn[cat]) layersOn[cat] = true;
+      paintedPinKeys.delete(pinPaintKey({ ...pin, mapCat: cat }));
+      placeMapPin({ ...pin, mapCat: cat });
+      m = markerByFp.get(pin.fp);
+    }
     const ll = m ? m.getLatLng() : L.latLng(pin.lat, pin.lng);
-    map.once('moveend', () => pulsePin(m && m.getElement()));
+    let done = false;
+    const land = () => {
+      if (done) return;
+      done = true;
+      if (m) { try { m.openPopup(); } catch (e) {} pulsePin(m.getElement()); }
+    };
+    map.once('moveend', land);
+    setTimeout(land, 1200);
     try {
       map.flyToBounds(L.latLngBounds(ll, ll), { ...legendPadding(), maxZoom: Math.max(map.getZoom(), 8), duration: 0.8 });
     } catch (e) {}

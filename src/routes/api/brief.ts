@@ -3,6 +3,7 @@ import type { Brief } from "@/lib/desk/brief";
 import { briefWindow } from "@/lib/desk/brief";
 import { refreshBrief } from "@/lib/desk/brief-store";
 import { getStore } from "@/lib/desk/store";
+import { mergeNumbers } from "@/lib/desk/numbers";
 import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally";
 
 /**
@@ -35,7 +36,7 @@ function ok(brief: Brief, tally: Tally, claims: Claims) {
   const age = Math.min(secondsLeft, 1800);
   // The edge holds it until the window turns (at most ten minutes), so visitors
   // never each cost a function call and a database read.
-  return json({ ...brief, tally, claims }, 200, `public, max-age=${age}`, `public, s-maxage=${Math.min(age, 600)}, stale-while-revalidate=60`);
+  return json({ ...brief, tally, claims, numbers: mergeNumbers(tally, claims) }, 200, `public, max-age=${age}`, `public, s-maxage=${Math.min(age, 600)}, stale-while-revalidate=60`);
 }
 
 function json(body: unknown, status = 200, cache = "no-store", cdn?: string) {

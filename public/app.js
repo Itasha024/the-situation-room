@@ -1378,147 +1378,129 @@ const TALLY_FALLBACK = {
   from: {},
 };
 
-function fmtCount(n, src) {
-  if (!Number.isFinite(n)) return '—';
-  // "at least 51": the qualifier the source put on it (tally.ts qualifierFor).
-  const q = src && src.q ? `<small class="q">${escapeHtml(src.q)}</small> ` : '';
-  return q + Number(n).toLocaleString('en-US');
+/*
+ * One pager for Fronts and Numbers. Every slide sits in the same grid cell, so
+ * the box is as tall as its tallest slide and the section under it never
+ * moves. Dots under the box, arrows inside it on a wide screen, a swipe on a
+ * phone, the arrow keys from the keyboard; a short slide-and-fade between
+ * slides, a plain fade when the reader asks for less motion.
+ */
+function pagerHtml(kind, slides, idx, labels) {
+  const many = slides.length > 1;
+  const items = slides.map((s, i) => `<div class="pg-slide${i === idx ? ' on' : ''}" data-i="${i}" role="group" aria-roledescription="slide" aria-label="${escapeHtml(labels[i])} (${i + 1} of ${slides.length})"${i === idx ? '' : ' aria-hidden="true" inert'}>${s}</div>`).join('');
+  const dots = labels.map((l, i) => `<button type="button" role="tab" data-i="${i}" title="${escapeHtml(l)}" aria-label="${escapeHtml(l)}" aria-selected="${i === idx}" class="${i === idx ? 'on' : ''}"></button>`).join('');
+  return `<div class="pager pager-${kind}${many ? ' many' : ''}" aria-roledescription="carousel">
+      <div class="pg-track">${items}</div>
+      ${many ? `<button type="button" class="pg-arrow pg-prev" aria-label="Previous"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
+      <button type="button" class="pg-arrow pg-next" aria-label="Next"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>` : ''}
+    </div>
+    ${many ? `<div class="pg-dots" role="tablist">${dots}</div>` : ''}`;
+}
+
+function wirePager(root, idx, onChange) {
+  const pager = root.querySelector('.pager');
+  if (!pager) return;
+  const slides = [...pager.querySelectorAll('.pg-slide')];
+  const dots = [...root.querySelectorAll('.pg-dots button')];
+  const n = slides.length;
+  let cur = idx;
+  const go = (i, dir) => {
+    const next = ((i % n) + n) % n;
+    if (n < 2 || next === cur) return;
+    const d = dir || (next > cur ? 1 : -1);
+    const from = slides[cur];
+    const to = slides[next];
+    // The new slide comes in from the side it is on; the old one leaves the other way.
+    to.style.transition = 'none';
+    to.style.setProperty('--from', String(d));
+    void to.offsetWidth;
+    to.style.transition = '';
+    from.style.setProperty('--from', String(-d));
+    from.classList.remove('on');
+    from.setAttribute('aria-hidden', 'true');
+    from.inert = true;
+    to.classList.add('on');
+    to.removeAttribute('aria-hidden');
+    to.inert = false;
+    dots.forEach((b, j) => { b.classList.toggle('on', j === next); b.setAttribute('aria-selected', String(j === next)); });
+    cur = next;
+    onChange(next);
+  };
+  const prev = pager.querySelector('.pg-prev');
+  const nextBtn = pager.querySelector('.pg-next');
+  if (prev) prev.onclick = () => go(cur - 1, -1);
+  if (nextBtn) nextBtn.onclick = () => go(cur + 1, 1);
+  dots.forEach((b) => { b.onclick = () => go(Number(b.dataset.i) || 0); });
+  root.onkeydown = (e) => {
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1, -1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1, 1); }
+  };
+  let x0 = null;
+  let y0 = null;
+  const track = pager.querySelector('.pg-track');
+  track.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  track.addEventListener('touchend', (e) => {
+    if (x0 == null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    const dy = e.changedTouches[0].clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) go(cur + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+  }, { passive: true });
 }
 
 /*
- * One box at a time — Killed, Injured, Humanitarian — with arrows on a wide
- * screen and a swipe on a phone, in Official and Unofficial alike.
+ * The conflict in numbers: Killed, Injured, Humanitarian, one box at a time.
+ * Each row a group of people, each column who counts them — the official
+ * count, the Houthis' own sources, the government's or Saudi Arabia's — and
+ * every figure links to where it was published (numbers.ts, /api/brief).
  */
-const CAS_BOXES = ['Killed', 'Injured', 'Humanitarian'];
+const NUM_BOXES = [
+  ['Killed', [['Houthi', 'killed.houthi'], ['Government', 'killed.gov'], ['Saudi Arabia', 'killed.saudi'], ['Civilians', 'killed.civilians'], ['All sides', 'killed.total']]],
+  ['Injured', [['Houthi', 'injured.houthi'], ['Government', 'injured.gov'], ['Saudi Arabia', 'injured.saudi'], ['Civilians', 'injured.civilians'], ['All sides', 'injured.total']]],
+  ['Humanitarian', [['Displaced in Yemen', 'idp'], ['Refugees abroad', 'refugees'], ['Facing acute hunger', 'food']]],
+];
 let casBox = 0;
 try { casBox = Math.max(0, Math.min(2, Number(localStorage.getItem('desk-cas-box')) || 0)); } catch (e) {}
 
-function casPager(boxes) {
-  const dots = CAS_BOXES.map((n, i) => `<button type="button" data-i="${i}" class="${i === casBox ? 'on' : ''}" aria-label="${n}" aria-current="${i === casBox}"></button>`).join('');
-  return `<div class="cas-pager">
-      <button type="button" class="cas-arrow cas-prev" aria-label="Previous: ${CAS_BOXES[(casBox + 2) % 3]}">‹</button>
-      <div class="cas-slide">${boxes[casBox]}</div>
-      <button type="button" class="cas-arrow cas-next" aria-label="Next: ${CAS_BOXES[(casBox + 1) % 3]}">›</button>
-    </div>
-    <div class="cas-dots" role="tablist">${dots}</div>`;
-}
-
-function wireCasPager(el) {
-  const go = (i) => {
-    casBox = (i + 3) % 3;
-    try { localStorage.setItem('desk-cas-box', String(casBox)); } catch (e) {}
-    renderCasualties();
+/** Cells from the tally alone, while /api/brief has not answered. */
+function fallbackNumbers(t) {
+  const cells = {};
+  const put = (key, v) => {
+    if (Number.isFinite(v)) cells[key] = { official: { ...((t.from || {})[key] || { name: '', url: '', date: '' }), value: v } };
   };
-  const prev = el.querySelector('.cas-prev');
-  const next = el.querySelector('.cas-next');
-  if (prev) prev.onclick = () => go(casBox - 1);
-  if (next) next.onclick = () => go(casBox + 1);
-  el.querySelectorAll('.cas-dots button').forEach((b) => { b.onclick = () => go(Number(b.dataset.i) || 0); });
-  const slide = el.querySelector('.cas-slide');
-  if (slide) {
-    let x0 = null;
-    slide.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
-    slide.addEventListener('touchend', (e) => {
-      if (x0 == null) return;
-      const dx = e.changedTouches[0].clientX - x0;
-      x0 = null;
-      if (Math.abs(dx) > 40) go(casBox + (dx < 0 ? 1 : -1));
-    }, { passive: true });
-  }
+  ['killed', 'injured'].forEach((g) => Object.keys(t[g] || {}).forEach((k) => put(`${g}.${k}`, t[g][k])));
+  put('idp', t.idp);
+  put('refugees', t.refugees);
+  return { cells };
 }
 
-/*
- * Official | Unofficial. Official is the panel as it always was. Unofficial
- * sets each side's own figures (tally.ts, "tally-claims") beside the official
- * one, in the side's feed colour, so a reader sees who is counting what.
- */
-let casMode = 'official';
-try { if (localStorage.getItem('desk-cas-mode') === 'unofficial') casMode = 'unofficial'; } catch (e) {}
-
-function casModeHtml() {
-  const b = (id, label) => `<button type="button" role="tab" data-mode="${id}" aria-selected="${casMode === id}" class="${casMode === id ? 'on' : ''}">${label}</button>`;
-  return `<div class="cas-mode" role="tablist" aria-label="Which numbers">${b('official', 'Official')}${b('unofficial', 'Unofficial')}</div>`;
-}
-
-function wireCasMode(el) {
-  el.querySelectorAll('.cas-mode button').forEach((btn) => {
-    btn.onclick = () => {
-      casMode = btn.dataset.mode === 'unofficial' ? 'unofficial' : 'official';
-      try { localStorage.setItem('desk-cas-mode', casMode); } catch (e) {}
-      renderCasualties();
-    };
-  });
-}
-
-function renderClaims(el, t) {
-  const c = (brief && brief.claims && brief.claims.fields) || {};
-  const tip = (s) => (s ? `${s.name}${s.date ? ', ' + s.date : ''}` : '');
-  const cell = (n, src, cls) => {
-    const v = fmtCount(n, src);
-    const inner = src && src.url ? `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener">${v}</a>` : v;
-    return `<td class="${cls}"${src ? ` title="${escapeHtml(tip(src))}"` : ''}>${inner}</td>`;
-  };
-  const row = (label, key, official) => {
-    const side = c[key] || {};
-    return `<tr><th scope="row">${label}</th>${cell(official, t.from && t.from[key], 'off')}${cell(side.houthi && side.houthi.value, side.houthi, 'h')}${cell(side.gov && side.gov.value, side.gov, 'g')}</tr>`;
-  };
-  const head = '<tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
-  const box = (title, rows) => `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows}</table></div>`;
-  const sides = (group) => [
-    row('Houthi', `${group}.houthi`, t[group].houthi),
-    row('Government', `${group}.gov`, t[group].gov),
-    row('Saudi Arabia', `${group}.saudi`, t[group].saudi),
-    row('Civilians', `${group}.civilians`, t[group].civilians),
-    row('All sides', `${group}.total`, t[group].total),
-  ].join('');
-  el.innerHTML = `${casModeHtml()}${cadenceStamp(true)}
-    <div class="tally one">${casPager([
-      box('Killed', sides('killed')),
-      box('Injured', sides('injured')),
-      box('Humanitarian', row('Internally displaced', 'idp', t.idp) + row('Refugees', 'refugees', t.refugees)),
-    ])}</div>
-    <p class="tally-note">Each side's own figures, and its claims about the other side, beside the official count. Each figure links to its source.</p>`;
-  wireCasMode(el);
-  wireCasPager(el);
+function numCell(c, cls) {
+  if (!c || !Number.isFinite(c.value)) return `<td class="${cls} none" title="Not published: no count for this round from these sources">—</td>`;
+  const n = c.value >= 1e6 ? `${(c.value / 1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M` : Number(c.value).toLocaleString('en-US');
+  const q = c.q ? `<small class="q">${escapeHtml(c.q)}</small> ` : '';
+  const when = c.date ? new Date(`${c.date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  const tip = [c.name, when].filter(Boolean).join(', ') + (c.note ? ` — ${c.note}` : '');
+  const inner = c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${q}${n}</a>` : `${q}${n}`;
+  return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}</td>`;
 }
 
 function renderCasualties() {
   const el = document.getElementById('casualties');
   if (!el) return;
-  const t = (brief && brief.tally) || TALLY_FALLBACK;
-  if (casMode === 'unofficial') { renderClaims(el, t); return; }
-  const row = (label, key, n) => {
-    const src = t.from && t.from[key];
-    const tip = src ? `${src.name}${src.date ? ', ' + src.date : ''}` : '';
-    return `<div class="tally-row"${tip ? ` title="${escapeHtml(tip)}"` : ''}><span>${label}</span><strong>${fmtCount(n, src)}</strong></div>`;
-  };
-  const sides = (group) => [
-    row('Houthi', `${group}.houthi`, t[group].houthi),
-    row('Government', `${group}.gov`, t[group].gov),
-    row('Saudi Arabia', `${group}.saudi`, t[group].saudi),
-    row('Civilians', `${group}.civilians`, t[group].civilians),
-    // A total no official body split by side (e.g. the UN's overall count).
-    Number.isFinite(t[group].total) ? row('All sides', `${group}.total`, t[group].total) : '',
-  ].join('');
-  const seen = new Set();
-  const sources = Object.values(t.from || {}).filter((s) => {
-    const k = s && s.name;
-    if (!k || seen.has(k)) return false;
-    seen.add(k);
-    return true;
+  const nums = (brief && brief.numbers) || fallbackNumbers((brief && brief.tally) || TALLY_FALLBACK);
+  const head = '<tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
+  const boxes = NUM_BOXES.map(([title, rows]) => `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows.map(([label, key]) => {
+    const r = nums.cells[key] || {};
+    return `<tr><th scope="row">${label}</th>${numCell(r.official, 'off')}${numCell(r.houthi, 'h')}${numCell(r.gov, 'g')}</tr>`;
+  }).join('')}</table></div>`);
+  el.innerHTML = `${cadenceStamp(true)}
+    <div class="tally one">${pagerHtml('numbers', boxes, casBox, NUM_BOXES.map((b) => b[0]))}</div>
+    <p class="tally-note">Every figure links to where it was published; hover for who and when. A dash means no count for this round has been published.</p>`;
+  wirePager(el, casBox, (i) => {
+    casBox = i;
+    try { localStorage.setItem('desk-cas-box', String(i)); } catch (e) {}
   });
-  const srcHtml = sources.map((s) => (s.url
-    ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>`
-    : escapeHtml(s.name))).join(' · ');
-  el.innerHTML = `${casModeHtml()}${cadenceStamp(true)}
-    <div class="tally one">${casPager([
-      `<div class="tally-box"><h3>Killed</h3>${sides('killed')}</div>`,
-      `<div class="tally-box"><h3>Injured</h3>${sides('injured')}</div>`,
-      `<div class="tally-box"><h3>Humanitarian</h3>${row('Internally displaced', 'idp', t.idp)}${row('Refugees', 'refugees', t.refugees)}</div>`,
-    ])}</div>
-    ${srcHtml ? `<div class="srcs">Sources: ${srcHtml}</div>` : ''}`;
-  wireCasMode(el);
-  wireCasPager(el);
 }
 
 function computeControlShares(d) {
@@ -2201,8 +2183,8 @@ function allFronts(d) {
 }
 
 /*
- * One front at a time: tabs with every front's name, arrows either side on a
- * wide screen, a swipe on a phone. The choice is remembered.
+ * One front at a time, in the shared pager (dots under the box, arrows inside
+ * it on a wide screen, a swipe on a phone). The choice is remembered.
  */
 let frontIdx = 0;
 try { frontIdx = Math.max(0, Number(localStorage.getItem('desk-front')) || 0); } catch (e) {}
@@ -2229,7 +2211,7 @@ function renderFronts(d) {
     const showSum = sum && !textOverlap(plain, sum);
     const showDir = dir && !textOverlap(plain, dir) && !textOverlap(sum, dir);
     const showDetail = detail && !textOverlap(sum, detail) && detail.length > Math.max(80, (sum.length || 0) + 40);
-    return `<article class="front-card"${i === frontIdx ? '' : ' hidden'} role="tabpanel" aria-label="${escapeHtml(f.name)}">
+    return `<article class="front-card">
       <div class="front-head">
         <strong>${escapeHtml(f.name)}</strong>
         <button type="button" class="front-map-btn" data-i="${i}" aria-expanded="false" aria-label="Show where this is">Map</button>
@@ -2244,36 +2226,14 @@ function renderFronts(d) {
       ${showDetail ? `<div class="full">${escapeHtml(detail)}</div>
       <button type="button" class="toggle-front">Read more</button>` : ''}
     </article>`;
-  }).join('');
-  const tabs = fronts.map((f, i) => `<button type="button" role="tab" data-i="${i}" aria-selected="${i === frontIdx}" class="${i === frontIdx ? 'on' : ''}">${escapeHtml(f.name)}</button>`).join('');
+  });
   const box = document.getElementById('fronts');
   box.classList.add('one-front');
-  box.innerHTML = `<div class="front-tabs" role="tablist" aria-label="Fronts">${tabs}</div>
-    <div class="front-pager">
-      <button type="button" class="front-arrow front-prev" aria-label="Previous front">‹</button>
-      <div class="front-slide">${cards}</div>
-      <button type="button" class="front-arrow front-next" aria-label="Next front">›</button>
-    </div>
-    <div class="front-count">${frontIdx + 1} / ${fronts.length}</div>`;
-  const goFront = (i) => {
-    frontIdx = (i + fronts.length) % fronts.length;
-    try { localStorage.setItem('desk-front', String(frontIdx)); } catch (e) {}
-    renderFronts(d);
-    const tab = box.querySelector('.front-tabs button.on');
-    if (tab && tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  };
-  box.querySelectorAll('.front-tabs button').forEach((b) => { b.onclick = () => goFront(Number(b.dataset.i) || 0); });
-  box.querySelector('.front-prev').onclick = () => goFront(frontIdx - 1);
-  box.querySelector('.front-next').onclick = () => goFront(frontIdx + 1);
-  const slide = box.querySelector('.front-slide');
-  let fx0 = null;
-  slide.addEventListener('touchstart', (e) => { fx0 = e.touches[0].clientX; }, { passive: true });
-  slide.addEventListener('touchend', (e) => {
-    if (fx0 == null) return;
-    const dx = e.changedTouches[0].clientX - fx0;
-    fx0 = null;
-    if (Math.abs(dx) > 40) goFront(frontIdx + (dx < 0 ? 1 : -1));
-  }, { passive: true });
+  box.innerHTML = pagerHtml('fronts', cards, frontIdx, fronts.map((f) => f.name));
+  wirePager(box, frontIdx, (i) => {
+    frontIdx = i;
+    try { localStorage.setItem('desk-front', String(i)); } catch (e) {}
+  });
 
   document.querySelectorAll('.toggle-front').forEach((btn) => {
     btn.onclick = () => {

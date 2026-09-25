@@ -723,6 +723,30 @@ const CASUALTY_COPY = /kill|dead|death|died|wound|injur|casualt|lives|bodies/i;
 /** Words that say someone died; the wounded-only words are not among them. */
 const KILLED_SRC = /قتل|قتيل|قتلى|مقتل|استشهد|استشهاد|شهيد|شهداء|وفاة|توفي|مصرع|جثث|جثة|\bkill|\bdead\b|\bdied\b|\bdeaths?\b|\bbodies\b|\bmartyr/i;
 
+/** Words an English sentence of four or more words almost never goes without. */
+const FUNCTION_WORDS = new Set(
+  ("the a an of to in on at by for from with and or but is are was were be been has have had will would not no " +
+    "we our us it its this that they their he his she her as than into after over").split(" "),
+);
+
+/**
+ * Arabic spelled in Latin letters instead of translated: "Qwa Al-Haymna
+ * Asthdft Al-Ymn Lamtlakh Waml Al-Nhda" went out as three lines of a speech.
+ * No English function word, and vowelless words among "Al-" words.
+ * The speaker before a colon is left out: a name may be spelled so.
+ */
+export function transliterated(headline: string): boolean {
+  const said = String(headline || "").replace(/^[^:]{2,80}:\s+/, "");
+  const words = said.split(/[^\p{L}'’-]+/u).filter(Boolean);
+  if (words.length < 4) return false;
+  if (words.some((w) => FUNCTION_WORDS.has(w.toLowerCase()))) return false;
+  const stem = (w: string) => w.replace(/^(?:al|el)-/i, "");
+  const al = words.filter((w) => /^(?:al|el)-/i.test(w)).length;
+  // "Asthdft", "Qbwl", "Al-Ymn"; an acronym (GCC, UKMTO) is not one.
+  const vowelless = words.filter((w) => stem(w).length >= 3 && !/^\p{Lu}+$/u.test(stem(w)) && !/[aeiouy]/i.test(stem(w).slice(1))).length;
+  return vowelless >= 2 || (al >= 2 && vowelless >= 1);
+}
+
 /** Failures a second writing can fix; anything else is a judgement, and stands. */
 export function repairable(problem: string): boolean {
   return /headline length|empty body|casualties dropped|killed not in source|does not lead with its speaker|leads with outlet|written as|banned phrase|source-language/i.test(problem);
@@ -739,6 +763,7 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   if (h.length < 12 || h.length > 140) return "headline length";
   if (b && b.length < 20) return "empty body";
   if (/[؀-ۿ֐-׿]/.test(h + b)) return "source-language text in copy";
+  if (transliterated(h)) return "headline written as transliterated Arabic";
   for (const re of BANNED_PHRASES) if (re.test(`${h} ${b}`)) return `banned phrase: ${re.source}`;
 
   // Every figure must come from the source. Years and ordinals in dates are

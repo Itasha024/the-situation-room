@@ -28,6 +28,10 @@ import { type Listed, fetchListing, parseListing, titleKey, urlKey } from "./des
 import { triage } from "./desk/triage.ts";
 import { askChain } from "./desk/models.ts";
 import { combineGroups, members, pickLead, planWaves } from "./desk/combine.ts";
+import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
+import { TRIAGE_MODELS } from "./desk/triage.ts";
+
+export { checkLinks, namedSpeaker, speakerKey };
 
 // The wire types moved to ./desk/types.ts so the store and the scanner can
 // share them without importing each other. Re-exported so existing imports
@@ -803,55 +807,9 @@ function hourOfIso(iso: string): number {
   return Number.isFinite(h) ? h : 0;
 }
 
-/**
- * The speaker a statement headline opens with — "Al-Mashat says …",
- * "Trump: …" — lowercased, or "" when there is none or it is generic. "A
- * spokesman" or "the official" in two posts are not known to be one person,
- * so they are never grouped on that alone.
- */
 /** A channel's side by its name; outlets not on the list are international. */
 function sideOfSource(name: string): OutletSide {
   return outletSide(name, TG.find((c) => c.name === name)?.lean ?? "intl");
-}
-
-/**
- * The officials this war quotes, each under one key whatever the headline
- * calls them: "Saudi Foreign Minister", "Saudi Foreign Minister Faisal bin
- * Farhan" and "Faisal bin Farhan" are one man, and one speech.
- */
-const SPEAKER_ALIASES: [RegExp, string][] = [
-  [/bin salman|\bmbs\b|saudi crown prince/, "mbs"],
-  [/faisal bin farhan|saudi (?:foreign minister|fm)\b/, "saudi fm"],
-  [/zindani|yemen(?:i|'s)? (?:foreign minister|fm)\b/, "yemen fm"],
-  [/\balimi\b|presidential (?:leadership )?council (?:head|chair(?:man)?|president)|\bplc (?:head|chair(?:man)?)/, "alimi"],
-  [/abdul-?malik al-houthi|houthi leader/, "houthi leader"],
-  [/\bsaree\b|houthi (?:military|armed forces) spokesman/, "saree"],
-  [/abdul-?salam|houthi (?:chief )?negotiator|houthi spokesman/, "abdulsalam"],
-  [/turki al-maliki|coalition spokesman/, "maliki"],
-];
-
-/** One key per person, whatever the title: "US President Donald Trump" is "trump". */
-export function speakerKey(who: string): string {
-  const w = who.toLowerCase().replace(/^(?:the\s+)?(?:u\.?s\.?|us|american|former)\s+/, "");
-  const known = /\b(trump|rubio|vance|hegseth|biden|netanyahu|khamenei|araghchi|pezeshkian|guterres|grundberg|fletcher)\b/.exec(w);
-  if (known) return known[1];
-  for (const [re, key] of SPEAKER_ALIASES) if (re.test(w)) return key;
-  return w.replace(/^(?:president|secretary of state|secretary|minister|prime minister)\s+/, "");
-}
-
-/** The verbs a statement or a diplomat's headline opens with after its speaker. */
-const SPEAKER_VERBS =
-  "says|said|tells|told|warns|warned|denies|denied|condemns|condemned|urges|urged|calls for|called for|announces|announced|" +
-  "rejects|rejected|meets|met|stresses|stressed|affirms|affirmed|welcomes|welcomed|discusses|discussed|receives|received";
-const SPEAKER_RE = new RegExp(`^(.{2,48}?)(?::\\s|\\s(?:${SPEAKER_VERBS})\\b)`);
-
-export function namedSpeaker(summary: string): string {
-  const m = SPEAKER_RE.exec(summary || "");
-  if (!m) return "";
-  const who = m[1].trim();
-  if (/^(an?|the)\s/i.test(who)) return "";
-  if (/^(spokes(?:man|woman|person)|officials?|sources?|commanders?|ministers?)$/i.test(who)) return "";
-  return speakerKey(who);
 }
 
 const FIELD_TYPES = new Set(["combat", "strike", "economy", "vessel", "port"]);
@@ -1044,36 +1002,22 @@ export function speakerSearches(reports: LiveReport[], state: ScanState, now: nu
 
 /** A follow-up this soon after the same outlet's card on the same story replies to it. */
 const FOLLOW_MS = 15 * 60_000;
-const FOLLOW_GENERIC = new Set(
-  ("saudi houthi houthis forces yemen yemeni government says said sources source report reports strike strikes " +
-    "raid raids attack attacks target targets targeted amid after over into with from their against new").split(" "),
-);
-const followWords = (s: string) =>
-  new Set(
-    String(s || "")
-      .toLowerCase()
-      .split(/[^\p{L}\p{N}]+/u)
-      .filter((w) => w.length >= 4 && !FOLLOW_GENERIC.has(w))
-      .map((w) => w.replace(/(?:ing|ed|es|s)$/, "")),
-  );
 
 /**
- * "Fuel shortages in Sanaa" then, a minute later from the same outlet, "Houthis
- * allocate fuel to military operations": the second follows the first. Same
- * source, within 15 minutes, and a word of substance in common.
+ * "Fighting on Jabal Qurfan" then, minutes later from the same outlet, "Jabal
+ * Qurfan recaptured": the second follows the first. Same source, within 15
+ * minutes, and the rules of links.ts — a shared place or named thing, or one
+ * speaker's lines. A word in common is not enough: "control", "wadi",
+ * "missile" tied Kahbub to Marib and Beihan to Haifan.
  */
 export function linkFollowUps(fresh: LiveReport[], pool: LiveReport[]): void {
+  const who = speakersOf([...pool, ...fresh]);
   for (const r of fresh) {
     if (r.replyTo) continue;
-    // A statement threads only onto the same speaker's line from the same outlet
-    // (an interview given in several posts); other cards by a shared word.
-    const who = namedSpeaker(r.summary);
-    if (r.type === "statement" && !who) continue;
     const t = Date.parse(r.at);
-    const mine = followWords(r.summary);
     const prev = pool
       .filter((x) => x.fp !== r.fp && x.source === r.source && Date.parse(x.at) < t && t - Date.parse(x.at) <= FOLLOW_MS)
-      .filter((x) => (who ? namedSpeaker(x.summary) === who : [...followWords(x.summary)].some((w) => mine.has(w))))
+      .filter((x) => linkOk(r, x, who))
       .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
     if (prev) r.replyTo = prev.fp;
   }
@@ -1774,8 +1718,23 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     const to = h.replyUrl ? byUrl.get(h.replyUrl) : undefined;
     if (r && to && to.fp !== r.fp && !r.replyTo && Date.parse(to.at) <= Date.parse(r.at)) r.replyTo = to.fp;
   }
-  linkFollowUps(uniqReports.filter((r) => !published.has(r.fp)), [...stored, ...uniqReports]);
+  const newCards = uniqReports.filter((r) => !published.has(r.fp));
+  linkFollowUps(newCards, [...stored, ...uniqReports]);
   const touched = [...foldIntoPublished(uniqReports, published, stored), ...threadSpeeches(uniqReports, published, stored)];
+  // Every link, whatever made it, passes the rules of links.ts; then one
+  // model call picks, among the cards the rules allow, the one each new card
+  // develops — or none — which also finds the links nobody made.
+  checkLinks([...uniqReports, ...touched], [...stored, ...uniqReports]);
+  try {
+    const judged = await judgeLinks(
+      newCards.filter((r) => uniqReports.includes(r)),
+      [...stored, ...uniqReports],
+      async (system, user) => (await askChain("links", system, user, { temperature: 0, models: TRIAGE_MODELS.slice(0, 2), timeoutMs: 12_000 }))?.json ?? null,
+    );
+    if (judged.length) console.log(`[links] judge changed ${judged.length} link(s)`);
+  } catch (err) {
+    console.error("[links] judge failed:", err instanceof Error ? err.message : err);
+  }
   if (prev && Array.isArray(prev.rawHits)) {
     const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));
     for (const h of prev.rawHits) {

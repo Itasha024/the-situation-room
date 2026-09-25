@@ -521,3 +521,19 @@ test("wounded is never written as killed", () => {
   const good = reading({ headline: "Houthi media: Saudi air strikes on Kamaran Island wound 3 citizens and destroy fuel station", body: "" });
   assert.equal(checkReading(good, src), null);
 });
+
+test("a headline left in transliterated Arabic fails the check and is sent back for a second writing", async () => {
+  const { transliterated, repairable } = await import("./reader.ts");
+  for (const h of [
+    "Al-Lama Mftah: Qwa Al-Haymna Asthdft Al-Ymn Lamtlakh Waml Al-Nhda",
+    "Al-Lama Mftah: Al-Shb Al-Ymny Kan Sayqf M Al-Ndham Al-Sabq Lw Sa Lantza Al-Syada",
+    "Al-Lama Mftah: Mshkla Al-Ymn Kant Fy Qbwl Al-Ndham Al-Sabq Al-Khdw Lltbya Al-Kharjya",
+  ]) assert.equal(transliterated(h), true, h);
+  for (const h of [
+    "Al-Lama Mftah: Saudi Arabia sought to impose dictates in Yemen",
+    "Houthi shelling hits Al-Hazm, Al-Maslub",
+    "UKMTO: GCC states track ship attack near Musandam",
+    "Yanbu port targeted",
+  ]) assert.equal(transliterated(h), false, h);
+  assert.equal(repairable("headline written as transliterated Arabic"), true);
+});

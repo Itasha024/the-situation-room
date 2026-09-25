@@ -382,15 +382,16 @@ test("a Telegram reply keeps its own link, and names the post it replies to", as
   assert.equal(h.replyUrl, "https://t.me/naya_foriraq/91167");
 });
 
-test("the same outlet following up within minutes replies to its earlier card", async () => {
+test("the same outlet following up within minutes replies to its earlier card on the same spot, not on a shared word", async () => {
   const { linkFollowUps } = await import("./yemen-scan.server.ts");
-  const a = { fp: "a", source: "Al Hadath", at: "2026-09-21T20:53:00+03:00", summary: "Indications of fuel shortages in Sanaa, sources say", type: "economy" };
-  const b = { fp: "b", source: "Al Hadath", at: "2026-09-21T20:54:00+03:00", summary: "Houthi forces begin allocating fuel stocks for military operations", type: "economy" };
-  const c = { fp: "c", source: "Al Hadath", at: "2026-09-21T20:55:00+03:00", summary: "Saudi air raid targets Al-Hazm district", type: "strike" };
-  const pool = [a, b, c] as never[];
+  const a = { fp: "a", source: "Almashhad", at: "2026-09-24T21:00:00Z", summary: "Yemeni government forces foil Houthi attacks and recapture Jabal Qurfan in Taiz", type: "combat" };
+  const b = { fp: "b", source: "Almashhad", at: "2026-09-24T21:10:00Z", summary: "Yemeni government forces recapture Jabal Qurfan in Taiz and kill 5 Houthi fighters", type: "combat" };
+  const c = { fp: "c", source: "Almashhad", at: "2026-09-24T21:12:00Z", summary: "Houthi artillery shelling hits Wadi Khar in Beihan, Shabwah", type: "combat" };
+  const d = { fp: "d", source: "Almashhad", at: "2026-09-24T21:05:00Z", summary: "Yemeni government forces thwart Houthi infiltration and secure Wadi Al-Muqatrah in Haifan", type: "combat" };
+  const pool = [a, b, c, d] as never[];
   linkFollowUps([b, c] as never[], pool);
   assert.equal((b as { replyTo?: string }).replyTo, "a");
-  assert.equal((c as { replyTo?: string }).replyTo, undefined);
+  assert.equal((c as { replyTo?: string }).replyTo, undefined, "\"Wadi\" in both is not one place");
 });
 
 test("a card quoting a US official has his own sources searched this tick, once an hour", async () => {

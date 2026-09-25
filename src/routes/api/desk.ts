@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { checkLinks } from "@/lib/desk/links";
 import { getStore } from "@/lib/desk/store";
 
 /**
@@ -36,6 +37,9 @@ export const Route = createFileRoute("/api/desk")({
 
           const store = await getStore();
           const slice = await store.recentDesk(limit, before);
+          // Cards stored before the link rules keep their row; a link that
+          // breaks the rules is just not shown (links.ts).
+          checkLinks(slice.reports as never[], slice.reports as never[]);
 
           return json(
             { ok: true, store: store.kind, ...slice },

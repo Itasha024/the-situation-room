@@ -22,7 +22,7 @@ import {
   kineticTotal,
 } from "./synthesis.ts";
 import { num } from "./wire-style.ts";
-import { type ExtraFront, inExtraFront, spotsOf } from "./new-fronts.ts";
+import { type ExtraFront, inExtraFront, spotsOf, whereOf } from "./new-fronts.ts";
 
 export const CADENCE_HOURS = 12;
 
@@ -121,6 +121,8 @@ export type FrontActivity = {
   line: string;
   /** A front opened for a new cluster of fighting (new-fronts.ts): its map spot. */
   extra?: boolean;
+  /** Where an opened front is, under its name (the hand-written fronts carry their own). */
+  where?: string;
   spot?: [number, number];
   /** A front opened in one governorate from several clusters: a spot for each. */
   spots?: [number, number][];
@@ -231,8 +233,8 @@ export function buildBrief(
   const cas = tally(inWindow);
 
   const tracked = FRONT_MATCH.map(({ id, name, re }) => ({ id, name, spot: undefined as [number, number] | undefined, spots: undefined as [number, number][] | undefined, has: (r: LiveReport) => re.test(`${r.place || ""} ${r.summary} ${r.text}`) }));
-  const opened = extraFronts.map((x) => ({ id: x.id, name: x.name, spot: x.spot, spots: spotsOf(x), has: (r: LiveReport) => inExtraFront(r, x) }));
-  const fronts: FrontActivity[] = [...tracked, ...opened].map(({ id, name, spot, spots, has }) => {
+  const opened = extraFronts.map((x) => ({ id: x.id, name: x.name, spot: x.spot, spots: spotsOf(x), where: whereOf(x), has: (r: LiveReport) => inExtraFront(r, x) }));
+  const fronts: FrontActivity[] = [...tracked, ...opened].map(({ id, name, spot, spots, has, ...rest }) => {
     const rows = inWindow.filter(has);
     const f: FrontActivity = {
       id,
@@ -244,7 +246,7 @@ export function buildBrief(
       killed: tally(rows).killed,
       wounded: tally(rows).wounded,
       line: "",
-      ...(spot ? { extra: true, spot, ...(spots && spots.length > 1 ? { spots } : {}) } : {}),
+      ...(spot ? { extra: true, spot, ...(spots && spots.length > 1 ? { spots } : {}), ...("where" in rest && rest.where ? { where: rest.where } : {}) } : {}),
     };
     f.line = composeFront({
       front: { ...f, reports: rows.length, id, name },

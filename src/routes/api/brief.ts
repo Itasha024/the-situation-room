@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { Brief } from "@/lib/desk/brief";
 import { briefWindow } from "@/lib/desk/brief";
 import { refreshBrief } from "@/lib/desk/brief-store";
+import { metered } from "@/lib/desk/cpu-meter";
 import { getStore } from "@/lib/desk/store";
 import { mergeNumbers } from "@/lib/desk/numbers";
 import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally";
@@ -17,7 +18,7 @@ import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally
 export const Route = createFileRoute("/api/brief")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: () => metered("brief", async () => {
         try {
           const store = await getStore();
           const { brief } = await refreshBrief(store);
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/api/brief")({
           const msg = err instanceof Error ? err.message : "brief failed";
           return json({ ok: false, error: msg, ...briefWindow() }, 500);
         }
-      },
+      }),
     },
   },
 });

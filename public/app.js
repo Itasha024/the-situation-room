@@ -1053,7 +1053,6 @@ async function pullOlderDesk() {
  */
 /** A refresh in flight, and the cards the last one brought: shown under the feed. */
 let feedChecking = false;
-let feedNews = { n: 0, at: 0 };
 
 function renderFreshness() {
   const el = document.getElementById('feed-fresh');
@@ -1062,13 +1061,16 @@ function renderFreshness() {
   if (!Number.isFinite(last)) { el.textContent = ''; return; }
   const mins = Math.max(0, Math.round((Date.now() - last) / 60000));
   if (feedChecking) { el.textContent = 'Checking for new reports…'; return; }
-  const news = feedNews.n && Date.now() - feedNews.at < 10 * 60 * 1000
-    ? ` · ${feedNews.n} new at ${fmtClock(new Date(feedNews.at).toISOString())}`
-    : '';
-  // Only what the reader needs: new cards just in, or a clock that has stopped.
-  el.textContent = mins >= 30 ? `No new scan since ${fmtClock(new Date(last).toISOString())}` : news.replace(/^ · /, '');
+  // Only a clock that has stopped is said; new cards flash in the feed itself.
+  el.textContent = mins >= 30 ? `No new scan since ${fmtClock(new Date(last).toISOString())}` : '';
   el.classList.toggle('stale-amber', mins >= 15 && mins < 30);
   el.classList.toggle('stale-red', mins >= 30);
+  // The header's dot: green while the scans arrive, amber then red when they stop.
+  const dot = document.querySelector('.stamp .pulse');
+  if (dot) {
+    dot.classList.toggle('stale-amber', mins >= 15 && mins < 30);
+    dot.classList.toggle('stale-red', mins >= 30);
+  }
 }
 
 /**
@@ -1136,27 +1138,10 @@ function applyLiveOverlay(base) {
   return base;
 }
 
-/**
- * Overall source health, not this cycle's fetch count.
- *
- * Sources are on staggered schedules, so a cycle where nothing was due is
- * normal — but reporting it as "0/0 sources" reads as a broken desk. The
- * accumulated per-source status is the honest answer to "is the desk healthy".
- */
-function sourceHealth() {
-  const all = Array.isArray(liveOverlay.sourceStatus) ? liveOverlay.sourceStatus : [];
-  if (!all.length) return null;
-  return { ok: all.filter((s) => s && s.ok).length, total: all.length };
-}
-
 function stampText() {
   const age = Math.max(0, Math.round((Date.now() - new Date(data.updatedAt).getTime()) / 1000));
-  const health = sourceHealth();
-  const scan = health
-    ? ` · live scan ${health.ok}/${health.total} sources`
-    : ' · live scan every 5 min';
   const ago = age < 60 ? `${age}s ago` : age < 7200 ? `${Math.round(age / 60)} min ago` : age < 172800 ? `${Math.round(age / 3600)} h ago` : `${Math.round(age / 86400)} days ago`;
-  return `Updated ${fmtClock(data.updatedAt)} · ${ago}${scan}`;
+  return `Updated ${fmtClock(data.updatedAt)} · ${ago}`;
 }
 
 let liveInflight = null;
@@ -1504,7 +1489,7 @@ function renderCasualties() {
   }).join('')}</table></div>`);
   el.innerHTML = `${cadenceStamp(true)}
     <div class="tally one">${pagerHtml('numbers', boxes, casBox, NUM_BOXES.map((b) => b[0]))}</div>
-    <p class="tally-note">Every figure links to where it was published; hover for who and when. A dash means no count for this round has been published.</p>`;
+`;
   wirePager(el, casBox, (i) => {
     casBox = i;
     try { localStorage.setItem('desk-cas-box', String(i)); } catch (e) {}
@@ -2186,7 +2171,7 @@ function allFronts(d) {
   const base = [...(d.fronts || [])].sort((a, b) => (a.importance || 99) - (b.importance || 99));
   const opened = ((brief && brief.fronts) || [])
     .filter((f) => f.extra && Array.isArray(f.spot) && !base.some((b) => b.id === f.id))
-    .map((f) => ({ id: f.id, name: f.name, importance: 50, mapFocus: { ids: [], spot: f.spot, spots: Array.isArray(f.spots) ? f.spots : undefined, spotRadius: 15000 } }));
+    .map((f) => ({ id: f.id, name: f.name, where: f.where || '', importance: 50, mapFocus: { ids: [], spot: f.spot, spots: Array.isArray(f.spots) ? f.spots : undefined, spotRadius: 15000 } }));
   return [...base, ...opened];
 }
 
@@ -2856,8 +2841,17 @@ function ensureMap(d) {
 /** The notes open on the map now. */
 function openNotes() {
   const out = [];
-  if (map) map.eachLayer((l) => { if (l.getPopup && l.isPopupOpen && l.isPopupOpen()) out.push(l); });
+  // A pin's note is bound to its pin; a district's note stands on its own.
+  if (map) map.eachLayer((l) => {
+    if (l.getPopup && l.isPopupOpen && l.isPopupOpen()) out.push(l);
+    else if (l instanceof L.Popup && l._source == null) out.push(l);
+  });
   return out;
+}
+
+function closeNote(l) {
+  if (l instanceof L.Popup) map.closePopup(l);
+  else l.closePopup();
 }
 
 /** Keeps the map's state in step with its open notes: the class, and "Close all (N)" when 2+. */
@@ -2875,7 +2869,7 @@ function syncOpenNotes() {
     btn.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      openNotes().forEach((l) => l.closePopup());
+      openNotes().forEach(closeNote);
       syncOpenNotes();
     };
     wrap.appendChild(btn);
@@ -3848,13 +3842,9 @@ async function refresh(first) {
   renderCasualties(data);
   feedChecking = false;
   renderFeed(data);
-  // New cards since the last refresh flash once, and are counted under the feed.
+  // New cards since the last refresh flash once.
   if (shown && shown.size && feedEl) {
-    const fresh = [...feedEl.querySelectorAll('.card')].filter((el) => !shown.has(el.dataset.fp));
-    if (fresh.length) {
-      feedNews = { n: fresh.length, at: Date.now() };
-      fresh.forEach(flashCard);
-    }
+    [...feedEl.querySelectorAll('.card')].filter((el) => !shown.has(el.dataset.fp)).forEach(flashCard);
   }
   renderFreshness();
   renderFronts(data);
@@ -3885,11 +3875,21 @@ async function startYemenDesk() {
 
   const bootTimers = () => {
     const jsonMs = Math.max(30, Number(data?.refreshSeconds) || 60) * 1000;
-    window.__yemenDeskTimer = setInterval(() => refresh(false), jsonMs);
-    window.__yemenLiveTimer = setInterval(() => pullLive({ silent: true }), 5 * 60 * 1000);
+    // A tab in the background asks nothing; it catches up the moment it is shown.
+    window.__yemenDeskTimer = setInterval(() => { if (!document.hidden) refresh(false); }, jsonMs);
+    window.__yemenLiveTimer = setInterval(() => { if (!document.hidden) pullLive({ silent: true }); }, 5 * 60 * 1000);
+    if (!window.__yemenVisHook) {
+      window.__yemenVisHook = true;
+      let hiddenAt = 0;
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { hiddenAt = Date.now(); return; }
+        if (hiddenAt && Date.now() - hiddenAt > jsonMs) refresh(false);
+      });
+    }
     // The brief only changes on a 12-hour boundary; checking every 10 minutes is
     // enough to cross it promptly without hammering the endpoint.
     window.__yemenBriefTimer = setInterval(async () => {
+      if (document.hidden) return;
       await pullBrief();
       if (data) { renderSituation(data); renderCasualties(data); renderFronts(data); }
     }, 10 * 60 * 1000);

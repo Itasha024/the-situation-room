@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { metered } from "@/lib/desk/cpu-meter";
 import { scanYemenSources } from "@/lib/yemen-scan.server";
 
 /**
@@ -11,7 +12,7 @@ import { scanYemenSources } from "@/lib/yemen-scan.server";
 export const Route = createFileRoute("/api/scan")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: () => metered("scan", async () => {
         try {
           const payload = await scanYemenSources();
           return new Response(JSON.stringify(payload), {
@@ -21,8 +22,9 @@ export const Route = createFileRoute("/api/scan")({
               // it promptly, but this still absorbs a burst of visitors.
               "cache-control": "public, max-age=30",
               // Served by Vercel's edge, not by a function and a database read
-              // per visitor: a minute fresh, then refreshed in the background.
-              "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=240",
+              // per visitor: two minutes fresh (the tick runs every five), then
+              // refreshed in the background.
+              "cdn-cache-control": "public, s-maxage=120, stale-while-revalidate=300",
             },
           });
         } catch (err) {
@@ -32,7 +34,7 @@ export const Route = createFileRoute("/api/scan")({
             headers: { "content-type": "application/json; charset=utf-8" },
           });
         }
-      },
+      }),
     },
   },
 });

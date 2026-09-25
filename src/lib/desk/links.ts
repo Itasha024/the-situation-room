@@ -267,6 +267,12 @@ const ALERT_RE = /siren|alarm|early warning|warning alerts?|alerts? (?:issued|so
 const ALL_CLEAR_RE = /danger (?:has )?(?:cleared|passed|over)|all[- ]clear|alerts? (?:status )?(?:lifted|ended|over)|lifts? (?:the |its )?(?:security )?alert|sirens? (?:stop|end)/i;
 const GROUND_RE = /clash|fight|battle|advanc|captur|seiz|control|repel|repuls|thwart|foil|infiltrat|ambush|offensive|\bpush|reinforc|withdr|retreat/i;
 
+/** Does a headline name this speaker (by a word of the speaker's own, not a title)? */
+function names(headline: string, speaker: string): boolean {
+  const words = new Set(String(headline || "").toLowerCase().split(/[^\p{L}\p{N}]+/u));
+  return speaker.split(/[^\p{L}\p{N}]+/u).some((w) => w.length >= 4 && !STOP.has(w) && words.has(w));
+}
+
 /**
  * May `child` follow `parent`? `who` is `speakersOf` over the cards at hand;
  * without it each card's own headline speaker is used.
@@ -279,10 +285,14 @@ export function linkOk(child: Card, parent: Card, who?: Map<string, string>): bo
   if (!Number.isFinite(gap) || gap < 0 || (gap === 0 && child.fp < parent.fp)) return false;
   const speaker = (c: Card) => who?.get(c.fp) ?? ownSpeaker(c);
   const s = speaker(child);
-  if (s && s === speaker(parent)) {
+  const ps = speaker(parent);
+  if (s && s === ps) {
     if (gap <= BRIEFING_MS) return true;
     if (TALK.has(child.type) && TALK.has(parent.type) && gap <= STORY_MS) return true;
   }
+  // Two speakers' words are two stories, unless the later one answers the
+  // earlier by name: Macron on Yanbu does not follow the League on Yanbu.
+  if (s && ps && s !== ps && TALK.has(child.type) && TALK.has(parent.type) && !names(child.summary, ps)) return false;
   // An all-clear follows its alert, across the kingdom unless both name cities.
   if (ALL_CLEAR_RE.test(child.summary) && ALERT_RE.test(parent.summary) && gap <= ATTACK_MS) {
     const x = allPlaces(child);

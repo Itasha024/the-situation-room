@@ -710,6 +710,16 @@ function tgPostNo(url: string): number {
   return m ? Number(m[1]) : 0;
 }
 
+/** The newest post number on a channel page, without parsing its posts. */
+export function newestTgPost(html: string, channel: string): number {
+  const own = channel.toLowerCase();
+  let max = 0;
+  for (const m of html.matchAll(/data-post="([^"/]+)\/(\d+)"/g)) {
+    if (m[1].toLowerCase() === own) max = Math.max(max, Number(m[2]));
+  }
+  return max;
+}
+
 /**
  * A newspaper posts its edition as one message: a cover, then a dozen
  * headlines from a dozen different sections, sometimes with a link each.
@@ -1250,11 +1260,15 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       (async () => {
         const html = await fetchText(`https://t.me/s/${ch.id}`);
         const ok = !!(html && html.includes("tgme_widget_message"));
-        const rows = ok ? parseTelegram(html as string, ch) : [];
+        const seen = state.lastTgPost?.[ch.id] ?? 0;
+        // Nothing posted since the last read: the page is not parsed at all
+        // (most ticks, for most channels; Vercel bills the processor time).
+        const replaying = REPLAY.channels.has(ch.id) && now < REPLAY.until && !state.lastScanAt[`replay5:${ch.id}`];
+        const quiet = ok && seen > 0 && !replaying && newestTgPost(html as string, ch.id) <= seen;
+        const rows = ok && !quiet ? parseTelegram(html as string, ch) : [];
         // A busy channel can post more between two scans than its first page
         // holds. Page back until we reach the last post already read, so a
         // burst never leaves a gap. First sight of a channel: no backfill.
-        const seen = state.lastTgPost?.[ch.id] ?? 0;
         for (let page = 0; ok && seen && page < TG_BACKFILL_PAGES; page += 1) {
           const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));
           if (!Number.isFinite(oldest) || oldest <= seen + 1) break;

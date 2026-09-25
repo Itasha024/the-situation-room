@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { metered } from "@/lib/desk/cpu-meter";
 import { runScanCycle } from "@/lib/yemen-scan.server";
 import { getStore } from "@/lib/desk/store";
 
@@ -20,9 +21,9 @@ import { getStore } from "@/lib/desk/store";
 export const Route = createFileRoute("/api/tick")({
   server: {
     handlers: {
-      POST: async ({ request }) => tick(request),
+      POST: async ({ request }) => metered("tick", () => tick(request)),
       // GET is allowed too: several free schedulers can only issue GETs.
-      GET: async ({ request }) => tick(request),
+      GET: async ({ request }) => metered("tick", () => tick(request)),
     },
   },
 });

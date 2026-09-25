@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { metered } from "@/lib/desk/cpu-meter";
 import { checkLinks } from "@/lib/desk/links";
 import { getStore } from "@/lib/desk/store";
 
@@ -21,10 +22,18 @@ import { getStore } from "@/lib/desk/store";
  *
  * A READ, never a scan — a page view must never trigger outbound fetches.
  */
+/**
+ * The edge asks each region's copy anew; one instance serves several regions.
+ * The same answer is kept a minute here, so those misses cost no database read
+ * and no link check.
+ */
+const MEMO_MS = 60_000;
+const memo = new Map<string, { at: number; body: string }>();
+
 export const Route = createFileRoute("/api/desk")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      GET: ({ request }) => metered("desk", async () => {
         try {
           const url = new URL(request.url);
           const asked = Number(url.searchParams.get("limit") || NaN);
@@ -35,21 +44,26 @@ export const Route = createFileRoute("/api/desk")({
           // Paging back: rows strictly older than this ISO time.
           const before = url.searchParams.get("before") || undefined;
 
-          const store = await getStore();
-          const slice = await store.recentDesk(limit, before);
-          // Cards stored before the link rules keep their row; a link that
-          // breaks the rules is just not shown (links.ts).
-          checkLinks(slice.reports as never[], slice.reports as never[]);
+          const key = `${limit}|${before ?? ""}`;
+          let hit = memo.get(key);
+          if (!hit || Date.now() - hit.at > MEMO_MS) {
+            const store = await getStore();
+            const slice = await store.recentDesk(limit, before);
+            // Cards stored before the link rules keep their row; a link that
+            // breaks the rules is just not shown (links.ts).
+            checkLinks(slice.reports as never[], slice.reports as never[]);
+            hit = { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
+            if (memo.size > 20) memo.clear();
+            memo.set(key, hit);
+          }
 
-          return json(
-            { ok: true, store: store.kind, ...slice },
-            // Short, for the same reason as /api/scan: the tick can land at any
-            // moment and readers should see it promptly.
+          return raw(
+            hit.body,
+            // New cards reach the page through /api/scan within minutes; this
+            // is the archive behind them, so the edge keeps it five minutes.
             {
               "cache-control": "public, max-age=30",
-              // Every visitor's poll was a function call and a 400-row database
-              // read. The edge serves them now: a minute fresh, refreshed behind.
-              "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=240",
+              "cdn-cache-control": "public, s-maxage=300, stale-while-revalidate=900",
             },
           );
         } catch (err) {
@@ -58,13 +72,17 @@ export const Route = createFileRoute("/api/desk")({
           // exact failure this endpoint exists to end.
           return json({ ok: false, error: message, reports: [], events: [] }, {}, 500);
         }
-      },
+      }),
     },
   },
 });
 
 function json(body: unknown, headers: Record<string, string> = {}, status = 200) {
-  return new Response(JSON.stringify(body), {
+  return raw(JSON.stringify(body), headers, status);
+}
+
+function raw(body: string, headers: Record<string, string> = {}, status = 200) {
+  return new Response(body, {
     status,
     headers: { "content-type": "application/json; charset=utf-8", ...headers },
   });

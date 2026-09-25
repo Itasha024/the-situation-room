@@ -8,7 +8,8 @@ html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Inter",sy
 h1{margin:0;font-size:1.15rem}
 .sub{margin:.15rem 0 0;color:var(--muted);font-size:.78rem}
 .stamp{display:flex;align-items:center;gap:.4rem;color:var(--muted);font-size:.75rem;white-space:nowrap}
-.pulse{width:.45rem;height:.45rem;border-radius:50%;background:var(--accent);animation:p 1.5s infinite}
+.pulse{width:.45rem;height:.45rem;border-radius:50%;background:#22c55e;animation:p 1.5s infinite}
+.pulse.stale-amber{background:#f5b54a}.pulse.stale-red{background:#f87171}
 @keyframes p{0%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}70%{box-shadow:0 0 0 8px transparent}}
 .bars{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;padding:.55rem 1rem;border-bottom:1px solid var(--line)}
 .bar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.5rem .65rem}

@@ -59,6 +59,9 @@ const WRONG: [Fx, Fx][] = [
   // 140
   [{"at":"2026-09-23T10:47:44.000Z","source":"AFP","type":"strike","summary":"Fighting between Houthis and Saudi-backed forces kills 154 in two days","place":"Mocha","lat":13.32,"lng":43.25},
    {"at":"2026-09-23T10:44:05.000Z","source":"Al-Mihwar","type":"statement","summary":"Yemeni official: we will target all US interests in the region if it backs Saudi Arabia"}],
+  // 25 Sep: two speakers' words that share only a city.
+  [{"at":"2026-09-25T08:28:23.000Z","source":"Al-Aqsa TV","type":"diplomacy","summary":"French President Emmanuel Macron: France will send soldiers and defense systems to Saudi Arabia to protect Yanbu facility"},
+   {"at":"2026-09-24T20:41:00.000Z","source":"SPA","type":"diplomacy","summary":"Muslim World League condemns Houthi missile attacks on Taif and Yanbu"}],
 ];
 
 const RIGHT: [Fx, Fx][] = [

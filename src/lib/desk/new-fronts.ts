@@ -43,6 +43,42 @@ const GOVERNORATE: Record<string, string> = {
   "YE-SH": "Shabwa", "YE-SN": "Sanaa", "YE-SU": "Socotra", "YE-TA": "Taiz",
 };
 
+/** Where each governorate is, for a reader who does not know Yemen. */
+const GOV_WHERE: Record<string, string> = {
+  "YE-AB": "Abyan governorate, on the southern coast east of Aden",
+  "YE-AD": "Aden, the government's port capital in the south",
+  "YE-AM": "Amran governorate, north of Sanaa",
+  "YE-BA": "Al-Bayda governorate, in central Yemen between Sanaa and the south",
+  "YE-DA": "Al-Dhale governorate, in the southern highlands north of Aden",
+  "YE-DH": "Dhamar governorate, in the highlands south of Sanaa",
+  "YE-HD": "Hadramawt, Yemen's largest governorate, in the east",
+  "YE-HJ": "Hajjah governorate, in the north-west, on the Saudi border and the Red Sea",
+  "YE-HU": "Hodeidah governorate, on the Red Sea coast",
+  "YE-IB": "Ibb governorate, in the central highlands north of Taiz",
+  "YE-JA": "Al-Jawf governorate, in the northern desert on the Saudi border",
+  "YE-LA": "Lahj governorate, north and west of Aden",
+  "YE-MA": "Marib governorate, east of Sanaa, home of Yemen's oil and gas",
+  "YE-MR": "Al-Mahra governorate, in the far east on the Omani border",
+  "YE-MW": "Al-Mahwit governorate, west of Sanaa",
+  "YE-RA": "Raymah governorate, in the western highlands",
+  "YE-SA": "The capital, Sanaa",
+  "YE-SD": "Saada governorate, the Houthis' northern heartland on the Saudi border",
+  "YE-SH": "Shabwa governorate, in the south between Abyan and Hadramawt",
+  "YE-SN": "Sanaa governorate, around the capital",
+  "YE-SU": "The Socotra archipelago, in the Arabian Sea",
+  "YE-TA": "Taiz governorate, in the south-west between the highlands and the Red Sea coast",
+};
+
+/** The line under an opened front's name, as the hand-written fronts have: where it is. */
+export function whereOf(f: ExtraFront): string {
+  const gov = f.gov ?? governorateAt(f.spot[0], f.spot[1]) ?? "";
+  const base = GOV_WHERE[gov] ?? "";
+  const places = f.places.filter((p) => p !== GOVERNORATE[gov] && p !== f.name).slice(0, 3);
+  const around = places.length ? `around ${places.length > 1 ? `${places.slice(0, -1).join(", ")} and ${places.at(-1)}` : places[0]}` : "";
+  if (base && around) return `${base}: ${around}`;
+  return base || (around ? around[0].toUpperCase() + around.slice(1) : "");
+}
+
 const at = (p: [number, number]) => ({ lat: p[0], lng: p[1] });
 
 function slug(s: string): string {

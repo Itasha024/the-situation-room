@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { MISSED_KEY, type Missed, USAGE_KEY, type Usage } from "@/lib/desk/editor";
 import { REGISTRY_KEY, ROUTES_KEY, type Registry, type RouteLog } from "@/lib/desk/origin";
+import { CPU_KEY, type CpuMeter, metered } from "@/lib/desk/cpu-meter";
 import { getStore } from "@/lib/desk/store";
 import { PROPOSALS_KEY, type Proposal } from "@/lib/desk/control-proposals";
 import { TICK_USAGE_KEY, type TickUsage, sourceList } from "@/lib/yemen-scan.server";
@@ -14,11 +15,11 @@ import { TICK_USAGE_KEY, type TickUsage, sourceList } from "@/lib/yemen-scan.ser
 export const Route = createFileRoute("/api/status")({
   server: {
     handlers: {
-      GET: async () => {
+      GET: () => metered("status", async () => {
         try {
           const store = await getStore();
           const now = Date.now();
-          const [state, slice, missed, routes, usage, quota, registry, proposals, ticks] = await Promise.all([
+          const [state, slice, missed, routes, usage, quota, registry, proposals, ticks, cpu] = await Promise.all([
             store.loadScanState(),
             store.recentDesk(1000, undefined, { events: false }),
             store.getJson<Missed[]>(MISSED_KEY),
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/api/status")({
             store.getJson<Registry>(REGISTRY_KEY),
             store.getJson<Proposal[]>(PROPOSALS_KEY),
             store.getJson<TickUsage[]>(TICK_USAGE_KEY),
+            store.getJson<CpuMeter>(CPU_KEY),
           ]);
           const day = new Map<string, number>();
           for (const row of slice.reports) {
@@ -60,6 +62,8 @@ export const Route = createFileRoute("/api/status")({
             usage: usage ?? null,
             // Each recent tick's database traffic (Supabase bills egress) and CPU (Vercel bills it).
             ticks: ticks ?? [],
+            // Processor time per endpoint per day (calls, ms): what the Vercel bill counts.
+            cpu: cpu ?? {},
             // District control changes the reports support, awaiting the operator (public/control.json).
             controlProposals: proposals ?? [],
             // Models out of their daily quota, and when they are back.
@@ -68,7 +72,7 @@ export const Route = createFileRoute("/api/status")({
         } catch (err) {
           return json({ ok: false, error: err instanceof Error ? err.message : "status failed" }, 500);
         }
-      },
+      }),
     },
   },
 });
@@ -76,6 +80,6 @@ export const Route = createFileRoute("/api/status")({
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "cdn-cache-control": "public, s-maxage=60" },
   });
 }

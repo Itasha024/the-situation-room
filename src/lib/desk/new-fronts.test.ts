@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { updateExtraFronts, type ExtraFront } from "./new-fronts.ts";
+import { updateExtraFronts, whereOf, type ExtraFront } from "./new-fronts.ts";
 import { cleanProse } from "./prose.ts";
 
 const now = new Date("2026-09-22T00:00:00Z");
@@ -63,4 +63,10 @@ test("two clusters in one governorate are one front with two spots; in two gover
   ], () => false, now);
   assert.equal(stored.length, 1);
   assert.equal(stored[0].spots?.length, 2);
+});
+
+test("an opened front says where it is, as the hand-written fronts do", () => {
+  const f: ExtraFront = { id: "x-al-dhaher", name: "Saada", spot: [16.95, 43.6], gov: "YE-SD", places: ["Al-Dhaher", "Razih", "Saada"], openedAt: "", lastActiveAt: "" };
+  assert.equal(whereOf(f), "Saada governorate, the Houthis' northern heartland on the Saudi border: around Al-Dhaher and Razih");
+  assert.equal(whereOf({ ...f, gov: "YE-XX", places: ["Brom"] }), "Around Brom");
 });

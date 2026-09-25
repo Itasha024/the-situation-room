@@ -31,6 +31,7 @@ import {
   dropInventedRole,
   fixHeadline,
   redundantBody,
+  stripSpellingNotes,
   spokespersonLabel,
   stripOwnOutlet,
   contentHash,
@@ -599,6 +600,9 @@ function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
     r.headline = `Houthi leader: ${r.headline}`;
     r.speaker_lead = "Houthi leader";
   }
+  // A place is spelled once; notes on its other spellings go.
+  r.headline = stripSpellingNotes(r.headline);
+  r.body = stripSpellingNotes(r.body);
   // A short report is its headline: a body that only says it again goes.
   if (redundantBody(r.headline, r.body, c.text)) r.body = "";
   const problem = checkReading(r, c.text, strict);

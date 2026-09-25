@@ -261,6 +261,9 @@ WHO DID WHAT TO WHOM — never infer, never assume
 
 WRITING
 - English wire style. headline <= 110 characters, sentence case, no full stop.
+- Spell each place once, the usual English way, and never explain the
+  spelling: no "also spelled", "also written", "also known as" or a second
+  spelling in brackets.
 - A short item — four sentences or fewer — is its headline: the whole report
   goes in the headline (the districts, the target, the weapon) and body is ""
   (empty). Never a body that says the headline again in more words, and never
@@ -588,6 +591,31 @@ const BODY_FILLER = new Set(
 );
 const stemOf = (w: string) => w.replace(/(?:ing|ed|es|s)$/, "");
 const wordsOf = (s: string) => s.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3);
+
+const SPELL_VERB = String.raw`(?:also|otherwise|alternatively|sometimes)\s+(?:spelled|spelt|written|transliterated|rendered|known\s+as|called)`;
+/** A sentence that is only about how a name is spelled. */
+const SPELL_SENTENCE = new RegExp(String.raw`^[^.!?,]{1,40}\s(?:is|are)\s+${SPELL_VERB}\b[^.!?]*[.!?]?$`, "i");
+/** ", which is also spelled Al-Aghbarah", "(also Kahboub)", "(or Khaboub)". */
+const SPELL_CLAUSE = new RegExp(String.raw`,?\s*(?:which\s+is\s+|that\s+is\s+|is\s+)?${SPELL_VERB}\s+(?:as\s+)?[^,.;:()]+`, "gi");
+const SPELL_BRACKET = new RegExp(String.raw`\s*\((?:${SPELL_VERB}|also|or|aka|a\.k\.a\.|spelled|spelt|transliterated)\b[^()]{0,60}\)`, "gi");
+
+/**
+ * Notes on how a name is spelled are cut: the desk spells a place once, the
+ * usual way, and nobody needs the alternatives ("the Al-Aghabrah front, which
+ * is also spelled Al-Aghbarah").
+ */
+export function stripSpellingNotes(s: string): string {
+  const t = String(s || "");
+  if (!/\b(?:spelled|spelt|written|transliterated|rendered|known\s+as|called|also|aka|a\.k\.a\.)\b/i.test(t)) return t;
+  const sentences = t.match(/(?:[^.!?]|\.(?=\d))+[.!?]*/g) || [t];
+  return sentences
+    .filter((x) => !SPELL_SENTENCE.test(x.trim()))
+    .map((x) => x.replace(SPELL_BRACKET, "").replace(SPELL_CLAUSE, ""))
+    .join("")
+    .replace(/\s+([,.;:])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 
 /**
  * A body that only says the headline again in more words ("There are

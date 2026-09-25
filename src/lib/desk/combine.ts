@@ -27,7 +27,7 @@ import { alertCities } from "./copies.ts";
 import { governorateAt } from "./adm1.ts";
 import { PLACE_BY_NAME, datelineFor, type Place } from "./gazetteer.ts";
 import { stripAttribution } from "./origin.ts";
-import { redundantBody, roleNamesInProse } from "./reader.ts";
+import { redundantBody, roleNamesInProse, stripSpellingNotes } from "./reader.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -139,7 +139,8 @@ one side on one area. Write ONE report of it.
 - Attribute each side's claim to that side ("the Houthis said", "Saudi media
   said"). Where accounts give different figures, give both, attributed.
 - Add nothing the accounts do not say. No background, no analysis.
-- English only; places in the English spelling the accounts use.
+- English only; places in the English spelling the accounts use. Spell each
+  place once, the usual way; never explain a spelling ("also spelled").
 - Headline: one sentence, wire style, sentence case, no full stop, at most 30
   words. It names the places.
 - Body: one to four sentences with the facts the headline has no room for.
@@ -156,6 +157,19 @@ function accountsText(all: LiveReport[]): string {
       return `[${i + 1}] ${r.source}, ${hhmm}\nHeadline: ${r.summary}${body ? `\nBody: ${body}` : ""}`;
     })
     .join("\n\n");
+}
+
+/**
+ * What the accounts had to say, for the "short source is its headline" rule:
+ * the longest account, headline and body. A group of one-line posts stays a
+ * headline.
+ */
+export function accountsSource(all: LiveReport[]): string {
+  const texts = all.map((r) => {
+    const body = String(r.text || "").replace(/^[^—]{2,30}—s*/, "").trim();
+    return `${String(r.summary || "").replace(/[.s]+$/, "")}. ${body}`.trim();
+  });
+  return texts.sort((a, b) => b.length - a.length)[0] ?? "";
 }
 
 /** The figures an account states: tolls, counts, calibres. Times and dates are not facts to carry. */
@@ -188,11 +202,12 @@ export function toWritten(json: Record<string, unknown> | null, all: LiveReport[
   if (!json) return null;
   // The outlets are on the card: "…, says Al-Masirah" is not the headline's.
   const headline = stripAttribution(
-    roleNamesInProse(String(json.headline ?? "").trim()).replace(/[.\s]+$/, ""),
+    stripSpellingNotes(roleNamesInProse(String(json.headline ?? "").trim())).replace(/[.\s]+$/, ""),
     all.map((r) => r.source),
   );
-  let body = roleNamesInProse(String(json.body ?? "").trim());
-  if (redundantBody(headline, body)) body = "";
+  let body = stripSpellingNotes(roleNamesInProse(String(json.body ?? "").trim()));
+  // The same rule as a single card: short accounts make a headline-only card.
+  if (redundantBody(headline, body, accountsSource(all))) body = "";
   const w = { headline: headline ? headline[0].toUpperCase() + headline.slice(1) : "", body };
   return combineProblem(w, all, places) ? null : w;
 }

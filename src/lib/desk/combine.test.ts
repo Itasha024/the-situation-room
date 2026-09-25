@@ -100,3 +100,17 @@ test("a written headline that ends by naming an outlet loses the attribution", (
   const w = toWritten({ headline: "War risk premiums for tankers docking in Yanbu rise to about 3%, says Al-Masirah", body: "" }, [a, b], placesOf([a, b]));
   assert.equal(w?.headline, "War risk premiums for tankers docking in Yanbu rise to about 3%");
 });
+
+test("a merged card of one-line posts is its headline, with no spelling notes (Kahbub, 25 Sep 08:34)", () => {
+  const a = card("k1", "Ali Bk", "Fierce clashes between Houthi forces and pro-Saudi forces in the Kahbub mountains and on the Al-Aghabrah front", "Kahbub");
+  const b = card("k2", "The Cube", "Heavy clashes continue between Houthi forces and government forces along Khaboub and Jabal Aghbar fronts", "Kahbub", 2);
+  const w = toWritten(
+    {
+      headline: "Fierce clashes have broken out between Houthi forces and pro-Saudi forces in the Kahbub mountains and the Al-Aghabrah front between Taiz and Lahj governorates",
+      body: "The fighting involved Houthi forces and Saudi-backed forces in the Kahbub mountains and the Al-Aghabrah front, which is also spelled Al-Aghbarah.",
+    },
+    [a, b],
+    placesOf([a, b]),
+  );
+  assert.equal(w?.body, "");
+});

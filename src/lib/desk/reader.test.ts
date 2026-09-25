@@ -9,7 +9,7 @@ import test from "node:test";
 
 import { credibility } from "./credibility.ts";
 import { type Candidate, toReport } from "./editor.ts";
-import { type Reading, checkReading, nextPacificMidnight, pacificDay, repairable } from "./reader.ts";
+import { type Reading, checkReading, nextPacificMidnight, pacificDay, repairable, stripSpellingNotes } from "./reader.ts";
 
 function reading(over: Partial<Reading>): Reading {
   return {
@@ -536,4 +536,14 @@ test("a headline left in transliterated Arabic fails the check and is sent back 
     "Yanbu port targeted",
   ]) assert.equal(transliterated(h), false, h);
   assert.equal(repairable("headline written as transliterated Arabic"), true);
+});
+
+test("notes on how a name is spelled are cut", () => {
+  assert.equal(
+    stripSpellingNotes("The fighting was in the Kahbub mountains and the Al-Aghabrah front, which is also spelled Al-Aghbarah."),
+    "The fighting was in the Kahbub mountains and the Al-Aghabrah front.",
+  );
+  assert.equal(stripSpellingNotes("Clashes on Jabal Kahbub (also Khaboub) left 3 dead."), "Clashes on Jabal Kahbub left 3 dead.");
+  assert.equal(stripSpellingNotes("Houthi shelling hit Hays. Hays is also written Hais. Two were wounded."), "Houthi shelling hit Hays. Two were wounded.");
+  assert.equal(stripSpellingNotes("A group called the Southern Giants attacked."), "A group called the Southern Giants attacked.");
 });

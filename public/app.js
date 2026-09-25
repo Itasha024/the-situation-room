@@ -1594,22 +1594,9 @@ function feedCardHtml(r, i) {
       <p class="headline">${escapeHtml(sum)}</p>
       ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
       ${mediaBlock(r.media)}
-      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener"${a.summary ? ` title="${escapeHtml(a.summary)}"` : ''}>${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
-      ${alsoHeads(also, sum, !lead)}
+      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
-}
-
-/**
- * The other outlets' own headlines on a folded card: a fold keeps every
- * account, and their wording is part of it. Shown when the card is open, or
- * always on a card with no body to open.
- */
-function alsoHeads(also, sum, always) {
-  const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
-  const heads = (also || []).filter((a) => a.summary && norm(a.summary) !== norm(sum));
-  if (!heads.length) return '';
-  return `<ul class="also-heads${always ? ' always' : ''}">${heads.map((a) => `<li><b>${escapeHtml(canonicalSourceName(a.source))}:</b> ${escapeHtml(a.summary)}</li>`).join('')}</ul>`;
 }
 
 /** "Follows 11:02 · <headline>": the earlier report this one develops. */

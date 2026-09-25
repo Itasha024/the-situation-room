@@ -26,6 +26,8 @@ import type { LiveReport, RawScanHit, ScanPayload, ScanState, SourceStatus } fro
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { triage } from "./desk/triage.ts";
+import { askChain } from "./desk/models.ts";
+import { combineGroups, members, pickLead, planWaves } from "./desk/combine.ts";
 
 // The wire types moved to ./desk/types.ts so the store and the scanner can
 // share them without importing each other. Re-exported so existing imports
@@ -1193,6 +1195,24 @@ function scoreReport(x: LiveReport): number {
   );
 }
 const OWN_CHANNELS = new Set(["Yahya Saree", "Mohammed Abdulsalam"]);
+/** Official bodies' own outlets: the original of their statements. */
+const OFFICIAL_OUTLETS = new Set(["SPA", "Saba"]);
+
+/**
+ * Which account of an event leads its card: the speaker's own channel, then
+ * an official body's own outlet for its statement, the original a relay
+ * cited, an agency, then the best-written account.
+ */
+export function leadRank(r: LiveReport): number {
+  const spoken = r.type === "statement" || r.type === "diplomacy";
+  return (
+    (OWN_CHANNELS.has(r.source) ? 4000 : 0) +
+    (spoken && OFFICIAL_OUTLETS.has(r.source) ? 2000 : 0) +
+    (isOriginal(r) ? 1000 : 0) +
+    (r.tier === "agency" ? 500 : 0) +
+    scoreReport(r)
+  );
+}
 
 /* ------------------------------------------------------------------ *
  * Persist to the desk snapshot
@@ -1720,11 +1740,20 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       }
     });
 
-  for (const { lead, others } of byStory.values()) {
+  // One card per event: the most fitting account leads, a wave of strikes on
+  // one area is one card, and the group is written once from every account
+  // (combine.ts). The other outlets are "Also", as links only.
+  const { groups, written: combined, asked: combineAsked } = await combineGroups(
+    planWaves([...byStory.values()].map((g) => pickLead(members(g), leadRank))),
+    async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000 }))?.json ?? null,
+    leadRank,
+    await getStore(),
+  );
+  for (const { lead, others } of groups) {
     if (!others.length) continue;
     // Distinct outlets only: three posts from one channel is one account.
-    const outlets = new Map<string, { source: string; url: string; summary: string }>();
-    for (const o of others) if (o.source !== lead.source && o.citing !== lead.source) outlets.set(o.source, { source: o.source, url: o.url, summary: o.summary });
+    const outlets = new Map<string, { source: string; url: string }>();
+    for (const o of others) if (o.source !== lead.source && o.citing !== lead.source) outlets.set(o.source, { source: o.source, url: o.url });
     if (isOriginal(lead)) outlets.clear();
     if (outlets.size) {
       lead.alsoReportedBy = [...outlets.values()].slice(0, 6);
@@ -1736,7 +1765,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       lead.confidence = confidenceOf(lead, sides);
     }
   }
-  const uniqReports = [...byStory.values()].map((g) => g.lead).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  const uniqReports = groups.map((g) => g.lead).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 
   // Carry forward what earlier cycles found, so a quiet cycle does not empty the desk.
   if (prev && Array.isArray(prev.reports)) {
@@ -1803,7 +1832,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     : `All ${tried} sources scanned this cycle.`;
   // Say plainly when the reader could not run: a quiet feed must not look
   // like a quiet war.
-  const readerNote = modelNote ? ` Reader: ${modelNote}.` : "";
+  const readerNote = (modelNote ? ` Reader: ${modelNote}.` : "") + (combineAsked ? ` Combined ${combined} of ${combineAsked} groups into one card.` : "");
 
   return {
     ok: true,

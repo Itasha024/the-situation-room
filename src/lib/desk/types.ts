@@ -23,6 +23,8 @@ export type LiveReport = {
   place?: string;
   lat?: number;
   lng?: number;
+  /** Every place of a card written from several accounts (a wave of strikes): one map pin each. */
+  places?: { name: string; lat: number; lng: number }[];
   /** 1–100 interest score from the gate. */
   score?: number;
   tier?: "agency" | "claim" | "unverified";

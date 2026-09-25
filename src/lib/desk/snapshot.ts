@@ -119,8 +119,26 @@ export function deriveEvents(r: LiveReport): { events: DeskEventRow[]; unplaced:
 
   if (r.lat == null || r.lng == null) return { events: [], unplaced: true };
 
+  // A card written from a wave names several places: a pin at each, all
+  // opening the same card. The first is the card's own pin.
+  const more = (r.places ?? []).filter((p) => p.name !== r.place);
+  const extra: DeskEventRow[] = more.map((p) => ({
+    fp: `${r.fp}-pin-${p.name.replace(/s+/g, "-")}`,
+    at: r.at,
+    type: r.type,
+    lat: p.lat,
+    lng: p.lng,
+    place: p.name,
+    label: r.summary,
+    text: r.text,
+    source: r.source,
+    url: r.url,
+    mapOnly: true,
+  }));
+
   return {
     events: [
+      ...extra,
       {
         fp: r.fp,
         at: r.at,

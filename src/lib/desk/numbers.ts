@@ -42,7 +42,18 @@ export const BASELINE: Numbers = {
       official: c(2998, "WHO", "https://www.almashhad.news/news/496321", "2026-09-24", undefined, "Wounded in the escalation, all sides"),
     },
     "killed.houthi": {
-      gov: c(693, "Almashhad monitoring unit", "https://www.almashhad.news/news/496403", "2026-09-24", "at least", "Houthi dead the movement's own media announced, 1 July to 22 September"),
+      // The movement's own death notices, added up by Almashhad: the Houthis' own count.
+      houthi: c(693, "Houthi death notices (Almashhad count)", "https://www.almashhad.news/news/496403", "2026-09-24", "at least", "Dead the movement's own media announced, 1 July to 22 September"),
+      gov: c(1000, "National Resistance", "https://www.2dec.net/last83440.html", "2026-09-13", "more than", "West Coast only, 9 August to 10 September"),
+    },
+    "killed.gov": {
+      gov: c(500, "National Resistance", "https://www.2dec.net/last83440.html", "2026-09-13", "more than", "Its own dead on the West Coast, 9 August to 10 September"),
+    },
+    "injured.gov": {
+      gov: c(1500, "National Resistance", "https://www.2dec.net/last83440.html", "2026-09-13", "about", "Its own wounded on the West Coast, 9 August to 10 September"),
+    },
+    "killed.saudi": {
+      official: c(1, "Saudi Civil Defense", "https://saudigazette.com.sa/article/664646/saudi-arabia/civil-defense-one-killed-two-injured-as-houthi-drone-intercepted-in-taif", "2026-09-17", undefined, "A resident killed by a downed drone's debris in Taif"),
     },
     "killed.civilians": {
       official: c(150, "Yemeni human rights ministry", "https://aa.com.tr/en/middle-east/150-civilians-killed-by-houthi-fire-since-sept-3-yemeni-government-says/4056487", "2026-09-14", undefined, "Killed by Houthi fire in Taiz, Hodeidah and Marib since 3 September"),

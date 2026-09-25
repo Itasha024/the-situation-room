@@ -28,7 +28,7 @@ test("a claim filed under the wrong side moves to its own side; a battle's toll 
     },
   };
   const n = mergeNumbers(TALLY_SEED, claims);
-  assert.equal(n.cells["killed.houthi"].houthi, undefined);
+  assert.equal(n.cells["killed.houthi"].houthi?.value, 693);
   assert.equal(n.cells["killed.houthi"].gov?.value, 900);
   assert.equal(n.cells["killed.gov"]?.houthi, undefined);
 });

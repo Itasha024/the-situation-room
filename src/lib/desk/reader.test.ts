@@ -554,6 +554,12 @@ test("notes on how a name is spelled are cut", () => {
     "The fighting was in the Kahbub mountains and the Al-Aghabrah front.",
   );
   assert.equal(stripSpellingNotes("Clashes on Jabal Kahbub (also Khaboub) left 3 dead."), "Clashes on Jabal Kahbub left 3 dead.");
+  // A model's glued words (live, 25 Sep, Reuters).
+  assert.equal(
+    stripSpellingNotes("Military chiefs of Saudi Arabia, Turkey and Pakistanto discuss military aid"),
+    "Military chiefs of Saudi Arabia, Turkey and Pakistan to discuss military aid",
+  );
+  assert.equal(stripSpellingNotes("Omanis and Iranians meet in Muscat"), "Omanis and Iranians meet in Muscat");
   assert.equal(stripSpellingNotes("Houthi shelling hit Hays. Hays is also written Hais. Two were wounded."), "Houthi shelling hit Hays. Two were wounded.");
   assert.equal(stripSpellingNotes("A group called the Southern Giants attacked."), "A group called the Southern Giants attacked.");
 });

@@ -608,13 +608,23 @@ const SPELL_SENTENCE = new RegExp(String.raw`^[^.!?,]{1,40}\s(?:is|are)\s+${SPEL
 const SPELL_CLAUSE = new RegExp(String.raw`,?\s*(?:which\s+is\s+|that\s+is\s+|is\s+)?${SPELL_VERB}\s+(?:as\s+)?[^,.;:()]+`, "gi");
 const SPELL_BRACKET = new RegExp(String.raw`\s*\((?:${SPELL_VERB}|also|or|aka|a\.k\.a\.|spelled|spelt|transliterated)\b[^()]{0,60}\)`, "gi");
 
+const GLUED = new RegExp(
+  String.raw`\b(Pakistan|Turkey|Türkiye|Saudi|Arabia|Yemen|Iran|Egypt|Oman|Qatar|Kuwait|Bahrain|Jordan|Israel|Sudan|Emirates|UAE|Houthi|Houthis|Sanaa|Aden|Marib|Taiz|Hodeidah|Riyadh|Jizan|Najran|Washington|Russia|China|Britain|France)(to|and|in|of|on|for|at|the|from|with|after|over|says|said)\b`,
+  "g",
+);
+
+/** A name a model glued to the next word ("Turkey and Pakistanto discuss") is split again. */
+export function unglue(s: string): string {
+  return s.replace(GLUED, "$1 $2");
+}
+
 /**
  * Notes on how a name is spelled are cut: the desk spells a place once, the
  * usual way, and nobody needs the alternatives ("the Al-Aghabrah front, which
  * is also spelled Al-Aghbarah").
  */
 export function stripSpellingNotes(s: string): string {
-  const t = String(s || "");
+  const t = unglue(String(s || ""));
   if (!/\b(?:spelled|spelt|written|transliterated|rendered|known\s+as|called|also|aka|a\.k\.a\.)\b/i.test(t)) return t;
   const sentences = t.match(/(?:[^.!?]|\.(?=\d))+[.!?]*/g) || [t];
   return sentences

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { metered } from "@/lib/desk/cpu-meter";
 import { checkLinks } from "@/lib/desk/links";
+import { unglue } from "@/lib/desk/reader";
 import { getStore } from "@/lib/desk/store";
 
 /**
@@ -52,6 +53,8 @@ export const Route = createFileRoute("/api/desk")({
             // Cards stored before the link rules keep their row; a link that
             // breaks the rules is just not shown (links.ts).
             checkLinks(slice.reports as never[], slice.reports as never[]);
+            // A word a model glued to a name is shown split; the row is left as it is.
+            for (const r of slice.reports) r.summary = unglue(String(r.summary ?? ""));
             hit = { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
             if (memo.size > 20) memo.clear();
             memo.set(key, hit);

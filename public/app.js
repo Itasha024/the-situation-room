@@ -426,11 +426,14 @@ function wireCardMedia(card) {
     frame.onload = () => {
       const v = frame.contentDocument && frame.contentDocument.querySelector('video');
       if (!v) return;
-      v.onerror = () => {
+      const failed = () => {
         if (from !== 'tg') { gone(); return; }
         if (retried) { tgPlayer(); return; }
         freshTgMedia(box).then((m) => (m && m.src ? play(m.src, true) : tgPlayer()));
       };
+      // A dead link can fail before the frame has loaded.
+      if (v.error) failed();
+      else v.addEventListener('error', failed, { once: true });
     };
   };
   still.onclick = (ev) => {

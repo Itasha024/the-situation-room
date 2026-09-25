@@ -3116,7 +3116,7 @@ function openPinSheet(pin, anchor) {
       [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
         const me = p.fp === pin.fp;
         const icon = L.divIcon({ className: 'ev-wrap', html: eventIconHtml(p.mapCat, me ? ' pin-pulse' : '', escapeHtml(p.label || '')), iconSize: [34, 42], iconAnchor: [17, 40] });
-        L.marker([p.lat, p.lng], { icon, zIndexOffset: me ? 2000 : 0 }).bindPopup(popupHtml(p), { maxWidth: 260 }).addTo(m);
+        L.marker([p.lat, p.lng], { icon, zIndexOffset: me ? 2000 : 0 }).bindPopup(popupHtml(p), { maxWidth: 260, className: popLeanClass(p) }).addTo(m);
       });
     },
   });
@@ -3297,6 +3297,12 @@ function popupHtml(ev) {
     <button type="button" class="pop-toggle">Read more</button>` : ''}`;
 }
 
+/** A pin note's class for its source's side, as on the report cards: the note's top rule takes that colour. */
+function popLeanClass(ev) {
+  const l = sourceLean(sourceOf(ev));
+  return `pop-lean-${l === 'houthi' || l === 'gov' ? l : 'indep'}`;
+}
+
 function placeMapPin(ev) {
   if (!map || !ev || ev.lat == null || ev.lng == null) return;
   const t = (ev.type || '').toLowerCase();
@@ -3316,6 +3322,7 @@ function placeMapPin(ev) {
   });
   const m = L.marker([ev.lat, ev.lng], { icon, zIndexOffset: Math.round(1000 - ageH), riseOnHover: true })
     .bindPopup(popupHtml(ev), {
+      className: popLeanClass(ev),
       maxWidth: (ev.media && ev.media.length) ? 320 : 300,
       maxHeight: 360,
       autoPan: false,
@@ -4052,11 +4059,20 @@ function renderTimeline(d) {
   el.innerHTML = pagerHtml('timeline', slides, idx, phases.map((p, i) => (i === last ? `Now: ${p.title}` : p.title)));
   // An open box left behind would keep the pager at its height: it closes.
   wirePager(el, idx, (i) => { timelineIdx = i; closeReadMore(el, '.phase-card', '.toggle-phase'); }, { wrap: false });
+  // The whole box opens and closes it, as a report card does; links keep their own click.
   el.querySelectorAll('.toggle-phase').forEach((btn) => {
-    btn.onclick = () => {
-      const card = btn.closest('.phase-card');
+    const card = btn.closest('.phase-card');
+    const toggle = () => {
       const open = card.classList.toggle('open');
       btn.textContent = open ? 'Hide' : 'Read more';
+    };
+    btn.onclick = (ev) => { ev.stopPropagation(); toggle(); };
+    card.classList.add('expandable');
+    card.onclick = (ev) => {
+      if (ev.target.closest('a, button')) return;
+      const sel = window.getSelection && String(window.getSelection() || '');
+      if (sel) return;
+      toggle();
     };
   });
 }
@@ -4531,6 +4547,9 @@ async function setTheme(t) {
     const run = () => { if (done) return; done = true; apply(); };
     if (document.startViewTransition && !reduce) {
       const vt = document.startViewTransition(run);
+      // A skipped fade rejects these; that is expected, not an error.
+      vt.ready.catch(() => {});
+      vt.finished.catch(() => {});
       await Promise.race([vt.updateCallbackDone.catch(() => {}), new Promise((r) => setTimeout(r, 500))]);
       if (!done) { try { vt.skipTransition(); } catch (e) {} run(); }
     } else {
@@ -4587,13 +4606,16 @@ function installSectionNav() {
     <ol class="sec-list" id="sec-list">${items.map(([id, name]) => `<li><a href="#${id}" data-sec="${id}">${name}</a></li>`).join('')}</ol>`;
   document.body.appendChild(nav);
   const tab = nav.querySelector('.sec-tab');
+  const list = nav.querySelector('.sec-list');
   const open = (on) => { nav.classList.toggle('open', on); tab.setAttribute('aria-expanded', String(on)); };
   tab.addEventListener('click', (e) => { e.stopPropagation(); open(!nav.classList.contains('open')); });
-  // A mouse opens it by hovering; leaving closes it after a moment.
+  // A mouse opens it by hovering the tab itself; the open list keeps it open, and
+  // leaving both closes it after a moment. The empty strip beside the tab does nothing.
   const hover = () => window.matchMedia && window.matchMedia('(hover: hover)').matches;
   let leaveT = 0;
-  nav.addEventListener('mouseenter', () => { if (hover()) { clearTimeout(leaveT); open(true); } });
-  nav.addEventListener('mouseleave', () => { if (hover()) leaveT = setTimeout(() => open(false), 280); });
+  tab.addEventListener('mouseenter', () => { if (hover()) { clearTimeout(leaveT); open(true); } });
+  list.addEventListener('mouseenter', () => { if (hover() && nav.classList.contains('open')) clearTimeout(leaveT); });
+  [tab, list].forEach((el) => el.addEventListener('mouseleave', () => { if (hover()) leaveT = setTimeout(() => open(false), 280); }));
   document.addEventListener('click', (e) => { if (!nav.contains(e.target)) open(false); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') open(false); });
   nav.querySelectorAll('[data-sec]').forEach((a) => {

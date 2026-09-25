@@ -24,7 +24,6 @@ const DESK_HTML = `
   <details id="live-scan-details">
     <summary>
       <span class="ls-title">Live scan</span>
-      <span class="ls-meta" id="live-scan-meta">Not scanned yet</span>
     </summary>
     <div class="ls-list" id="live-scan-list"></div>
   </details>

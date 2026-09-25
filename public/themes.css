@@ -210,3 +210,18 @@ html[data-set="broadsheet"] .leaflet-popup-content :is(a.src-link,.pop-src a){co
 html[data-theme="broadsheet-day"] .leaflet-popup-content .pop-meta{color:var(--t-muted)}
 html[data-theme="broadsheet-night"] .leaflet-control-attribution{background:var(--t-glass)!important;color:var(--t-muted)}
 html[data-theme="broadsheet-night"] .leaflet-control-attribution a{color:var(--t-link)}
+
+/* R20: the menu reacts to its tab and open list only; the strip beside it lets clicks through. */
+.sec-nav{pointer-events:none}
+.sec-tab,.sec-nav.open .sec-list{pointer-events:auto}
+/* A pin note's top rule takes its source's side colour, as the report cards' edge does. */
+html[data-set="broadsheet"] .leaflet-popup.pop-lean-houthi .leaflet-popup-content-wrapper{border-top-color:var(--houthi)}
+html[data-set="broadsheet"] .leaflet-popup.pop-lean-gov .leaflet-popup-content-wrapper{border-top-color:var(--plc)}
+html[data-set="broadsheet"] .leaflet-popup.pop-lean-indep .leaflet-popup-content-wrapper{border-top-color:var(--t-faint)}
+/* The Now tag sits at the middle of the title line, its word centred in the box. */
+.phase-head strong{display:inline-flex;align-items:center;gap:.5rem}
+.phase-head .now-tag{display:inline-flex;flex:none;align-items:center;justify-content:center;margin:0;line-height:1;vertical-align:middle}
+html[data-set="broadsheet"] .phase-head .now-tag{padding:.24rem .4rem .2rem calc(.4rem + .1em)}
+.phase-card.expandable{cursor:pointer}
+/* Night: the map button's words a touch stronger on the salmon. */
+html[data-theme="broadsheet-night"] .pin-sheet .front-float-go{color:#0d0b0a;font-weight:600;letter-spacing:.01em}

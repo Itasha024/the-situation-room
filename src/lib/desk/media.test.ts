@@ -56,6 +56,26 @@ test("a Telegram post's video: its still, its length and Telegram's own player",
   assert.equal(tgMedia(`<div class="tgme_widget_message_text">نص فقط</div>`, "https://t.me/a/1"), undefined);
 });
 
+test("a post's several pictures: the first, then the rest in order (X and a Telegram album)", () => {
+  const x = xMedia(
+    { all: [{ type: "photo", url: "https://pbs.twimg.com/media/a.jpg?name=orig", width: 800, height: 600 }, { type: "photo", url: "https://pbs.twimg.com/media/b.jpg?name=orig" }] },
+    "https://x.com/war_cube/status/4",
+  );
+  assert.equal(x?.thumb, "https://pbs.twimg.com/media/a.jpg?name=medium");
+  assert.deepEqual(x?.more, [{ thumb: "https://pbs.twimg.com/media/b.jpg?name=medium" }]);
+  // army21ye 3765, 24 Sep: two pictures side by side.
+  const album = `<div class="tgme_widget_message_grouped_wrap js-message_grouped_wrap" style="width:453px;"><div class="tgme_widget_message_grouped" style="padding-top:90.728%"><div class="tgme_widget_message_grouped_layer" style="width:453px;height:411px"><a class="tgme_widget_message_photo_wrap grouped_media_wrap blured js-message_photo" style="left:0px;top:0px;width:200px;height:411px;background-image:url('https://cdn4.telesco.pe/file/one.jpg')" data-ratio="0.48625" href="https://t.me/army21ye/3765?single"><div class="grouped_media_helper"><div class="tgme_widget_message_photo grouped_media"></div></div></a><a class="tgme_widget_message_photo_wrap grouped_media_wrap blured js-message_photo" style="left:202px;top:0px;width:251px;height:411px;background-image:url('https://cdn4.telesco.pe/file/two.jpg')" data-ratio="0.605" href="https://t.me/army21ye/3766?single"></a></div></div></div>`;
+  assert.deepEqual(tgMedia(album, "https://t.me/army21ye/3765"), {
+    kind: "photo",
+    from: "tg",
+    post: "https://t.me/army21ye/3765",
+    thumb: "https://cdn4.telesco.pe/file/one.jpg",
+    w: 1000,
+    h: 2057,
+    more: [{ thumb: "https://cdn4.telesco.pe/file/two.jpg", w: 1000, h: 1653 }],
+  });
+});
+
 test("a Telegram post's own file and shape, as t.me/s gives them (Ali Bk, 25 Sep)", () => {
   const video = `<a class="tgme_widget_message_video_player js-message_video_player" href="https://t.me/Alibk3/37041"><i class="tgme_widget_message_video_thumb" style="background-image:url('https://cdn4.telesco.pe/file/t.jpg')"></i>
 <div class="tgme_widget_message_video_wrap" style="width:624px;padding-top:67.307692307692%">

@@ -23,6 +23,8 @@ export type Media = {
   duration?: number;
   w?: number;
   h?: number;
+  /** A post's other pictures, after the first: the card shows them one at a time. */
+  more?: { thumb: string; w?: number; h?: number }[];
 };
 
 export type LiveReport = {

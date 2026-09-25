@@ -36,7 +36,10 @@ type FxMedia = {
   formats?: { url?: string; container?: string; bitrate?: number }[];
 };
 
-/** The first video of an X post (else its first photo), as FxTwitter lists it. */
+/** A post's pictures after the first, at most this many. */
+const MAX_MORE = 9;
+
+/** The first video of an X post (else its photos), as FxTwitter lists it. */
 export function xMedia(media: { all?: FxMedia[] } | undefined, post: string): Media | undefined {
   const all = media?.all ?? [];
   const v = all.find((m) => m.type === "video" || m.type === "gif");
@@ -54,12 +57,15 @@ export function xMedia(media: { all?: FxMedia[] } | undefined, post: string): Me
       ...(v.width && v.height ? { w: v.width, h: v.height } : {}),
     };
   }
-  const p = all.find((m) => m.type === "photo" && m.url);
-  if (p?.url) return { kind: "photo", from: "x", post, thumb: p.url.replace(/\?name=orig$/, "?name=medium"), ...(p.width && p.height ? { w: p.width, h: p.height } : {}) };
-  return undefined;
+  const photos = all
+    .filter((m) => m.type === "photo" && m.url)
+    .map((p) => ({ thumb: String(p.url).replace(/\?name=orig$/, "?name=medium"), ...(p.width && p.height ? { w: p.width, h: p.height } : {}) }));
+  if (!photos.length) return undefined;
+  const [first, ...more] = photos;
+  return { kind: "photo", from: "x", post, ...first, ...(more.length ? { more: more.slice(0, MAX_MORE) } : {}) };
 }
 
-/** The video (else the first photo) of one post's block on a t.me/s page. */
+/** The video (else the photos) of one post's block on a t.me/s page. */
 export function tgMedia(block: string, post: string): Media | undefined {
   const bg = (cls: string) => new RegExp(`${cls}[^>]*background-image:url\\('([^']+)'\\)`).exec(block)?.[1];
   // Its shape: the box's width, and its height as a share of it ("width:624px;padding-top:67.3%").
@@ -89,6 +95,18 @@ export function tgMedia(block: string, post: string): Media | undefined {
   }
   const photo = bg("tgme_widget_message_photo_wrap");
   if (!photo) return undefined;
+  // An album: each picture in its own box, its shape given as width / height.
+  if (/tgme_widget_message_grouped_wrap/.test(block)) {
+    const photos = [...block.matchAll(/<a class="tgme_widget_message_photo_wrap[^"]*"[^>]*>/g)].flatMap((a) => {
+      const thumb = /background-image:url\('([^']+)'\)/.exec(a[0])?.[1];
+      const r = Number(/data-ratio="([\d.]+)"/.exec(a[0])?.[1]);
+      return thumb ? [{ thumb, ...(r > 0 ? { w: 1000, h: Math.round(1000 / r) } : {}) }] : [];
+    });
+    if (photos.length > 1) {
+      const [first, ...more] = photos;
+      return { kind: "photo", from: "tg", post, ...first, more: more.slice(0, MAX_MORE) };
+    }
+  }
   return { kind: "photo", from: "tg", post, thumb: photo, ...shape(/message_photo_wrap[^>]*width:(\d+)px/, /message_photo"[^>]*padding-top:([\d.]+)%/) };
 }
 

@@ -793,6 +793,21 @@ html{scroll-behavior:smooth}
 .cm.cm-gone .cm-link{display:inline-block}
 .cm-player{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:8px;background:#000}
 .cm-tg{aspect-ratio:auto;height:440px;background:transparent}
+/* A post's several pictures: one at a time, dots on the picture, arrows on hover. */
+.cm-album .cm-still img.cm-slide{position:absolute;inset:0;opacity:0;transition:opacity .26s ease}
+.cm-album .cm-still img.cm-slide.on{opacity:1}
+.cm-dots{position:absolute;left:50%;bottom:8px;z-index:2;display:flex;gap:1px;padding:0 5px;border-radius:999px;background:rgba(0,0,0,.5);transform:translateX(-50%);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.cm-dots button{display:flex;align-items:center;padding:6px 3px;border:0;border-radius:999px;background:none;cursor:pointer}
+.cm-dots button::before{content:"";width:6px;height:6px;border-radius:999px;background:rgba(255,255,255,.5);transition:width .26s cubic-bezier(.2,.7,.2,1),background-color .26s}
+.cm-dots button.on::before{width:16px;background:#fff}
+.cm-arrow{position:absolute;top:50%;z-index:2;width:30px;height:30px;margin-top:-15px;display:grid;place-items:center;padding:0;border:1px solid rgba(255,255,255,.3);border-radius:50%;background:rgba(8,12,18,.6);opacity:0;transition:opacity .2s;cursor:pointer}
+.cm-prev{left:8px}.cm-next{right:8px}
+.cm-arrow svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.cm-album:hover .cm-arrow,.cm-arrow:focus-visible{opacity:1}
+.cm-album.cm-first .cm-prev,.cm-album.cm-last .cm-next{visibility:hidden}
+.cm.cm-gone .cm-dots,.cm.cm-gone .cm-arrow{display:none}
+@media (hover:none){.cm-arrow{display:none}}
+@media (prefers-reduced-motion:reduce){.cm-album .cm-still img.cm-slide,.cm-dots button::before{transition:none}}
 .front-card .front-composed{margin:.35rem 0 0;font-size:.78rem;line-height:1.5;color:#c9d4e0}
 
 /* The conflict in numbers: three plain boxes, no accent colour. */

@@ -369,17 +369,80 @@ function cardMediaHtml(m) {
   const dur = m.kind === 'video' && d ? `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}` : '';
   const video = m.kind === 'video';
   const where = m.from === 'tg' ? 'Telegram' : 'X';
-  const w = Number(m.w) || 0;
-  const h = Number(m.h) || 0;
-  const shape = w > 0 && h > 0 ? ` style="aspect-ratio:${w}/${h}"` : '';
-  return `<div class="cm${video ? ' cm-video' : ' cm-photo'}" data-kind="${escapeHtml(m.kind)}" data-from="${escapeHtml(m.from)}" data-post="${escapeHtml(m.post || '')}" data-src="${escapeHtml(m.src || '')}" data-embed="${escapeHtml(m.embed || '')}" data-thumb="${escapeHtml(m.thumb)}">
+  // A post's several pictures: one at a time, dots on the picture.
+  const pics = !video && Array.isArray(m.more) && m.more.length
+    ? [{ thumb: m.thumb, w: m.w, h: m.h }, ...m.more.filter((p) => p && p.thumb)].slice(0, 10)
+    : null;
+  let w = Number(m.w) || 0;
+  let h = Number(m.h) || 0;
+  // An album's box is never taller than 4:5, so a tall first picture does not stretch the card.
+  if (pics && w > 0 && h > 0 && w / h < 0.8) h = Math.round(w / 0.8);
+  const shape = w > 0 && h > 0 ? ` style="aspect-ratio:${w}/${h}"` : (pics ? ' style="aspect-ratio:4/3"' : '');
+  const imgs = pics
+    ? pics.map((p, i) => `<img class="cm-slide${i ? '' : ' on'}" src="${escapeHtml(p.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"${i ? ' aria-hidden="true"' : ''}>`).join('')
+    : `<img src="${escapeHtml(m.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">`;
+  const nav = pics
+    ? `<span class="cm-dots" role="tablist">${pics.map((_, i) => `<button type="button" class="${i ? '' : 'on'}" data-i="${i}" aria-label="Picture ${i + 1} of ${pics.length}"></button>`).join('')}</span>
+       <button type="button" class="cm-arrow cm-prev" aria-label="Previous picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+       <button type="button" class="cm-arrow cm-next" aria-label="Next picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`
+    : '';
+  return `<div class="cm${video ? ' cm-video' : ' cm-photo'}${pics ? ' cm-album' : ''}" data-kind="${escapeHtml(m.kind)}" data-from="${escapeHtml(m.from)}" data-post="${escapeHtml(m.post || '')}" data-src="${escapeHtml(m.src || '')}" data-embed="${escapeHtml(m.embed || '')}" data-thumb="${escapeHtml(m.thumb)}">
       <button type="button" class="cm-still"${shape} aria-label="${video ? 'Play the video' : 'Open the picture'}">
-        <img src="${escapeHtml(m.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">
+        ${imgs}
         ${video ? '<span class="cm-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>' : ''}
         ${dur ? `<span class="cm-dur">${dur}</span>` : ''}
       </button>
+      ${nav}
       <a class="cm-link" href="${escapeHtml(m.post)}" target="_blank" rel="noopener">${video ? '▶ Watch' : 'View'} on ${where}</a>
     </div>`;
+}
+
+/**
+ * An album on a card: the dots on the picture, the arrows on a computer and a
+ * swipe on a phone move between its pictures. Returns the picture now shown.
+ */
+function wireAlbum(box, still) {
+  const slides = [...still.querySelectorAll('.cm-slide')];
+  const dots = [...box.querySelectorAll('.cm-dots button')];
+  let at = 0;
+  const go = (i) => {
+    const to = Math.max(0, Math.min(slides.length - 1, i));
+    if (to === at) return;
+    if (still._unpinch) still._unpinch();
+    slides[at].classList.remove('on');
+    slides[at].setAttribute('aria-hidden', 'true');
+    slides[to].classList.add('on');
+    slides[to].removeAttribute('aria-hidden');
+    dots.forEach((d, k) => d.classList.toggle('on', k === to));
+    at = to;
+    box.classList.toggle('cm-first', at === 0);
+    box.classList.toggle('cm-last', at === slides.length - 1);
+  };
+  box.classList.add('cm-first');
+  const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+  dots.forEach((d) => { d.onclick = (e) => { stop(e); go(Number(d.dataset.i)); }; });
+  box.querySelector('.cm-prev').onclick = (e) => { stop(e); go(at - 1); };
+  box.querySelector('.cm-next').onclick = (e) => { stop(e); go(at + 1); };
+  // One finger across the picture turns it; a pinched picture moves instead.
+  let from = null;
+  let swipedAt = 0;
+  still.addEventListener('touchstart', (e) => {
+    from = e.touches.length === 1 && !still.classList.contains('pinched') ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { passive: true });
+  still.addEventListener('touchend', (e) => {
+    if (!from || e.touches.length) return;
+    const dx = e.changedTouches[0].clientX - from.x;
+    const dy = e.changedTouches[0].clientY - from.y;
+    from = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      swipedAt = Date.now();
+      go(at + (dx < 0 ? 1 : -1));
+    }
+  });
+  still.addEventListener('click', (e) => {
+    if (Date.now() - swipedAt < 400) { e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+  return { current: () => slides[at], index: () => at, slides };
 }
 
 /** Fresh links for a Telegram post's media, asked once per card. */
@@ -394,6 +457,7 @@ function freshTgMedia(box) {
 function wireCardMedia(card) {
   const box = card && card.querySelector('.cm');
   if (!box) return;
+  if (box.classList.contains('cm-album')) { wireAlbumCard(box); return; }
   const img = box.querySelector('.cm-still img');
   if (img) {
     img.onerror = () => {
@@ -451,6 +515,30 @@ function wireCardMedia(card) {
     // A card saved before the file was kept: ask for it now.
     else if (from === 'tg') freshTgMedia(box).then((m) => (m && m.src ? play(m.src, true) : tgPlayer()));
     else gone();
+  };
+}
+
+/** A card's album: each picture refreshed from Telegram when its link has expired; a click opens the one shown. */
+function wireAlbumCard(box) {
+  const still = box.querySelector('.cm-still');
+  if (!still) return;
+  const album = wireAlbum(box, still);
+  album.slides.forEach((img, i) => {
+    img.onerror = () => {
+      if (box.dataset.from !== 'tg' || img.dataset.retried) { if (!i) box.classList.add('cm-gone'); return; }
+      img.dataset.retried = '1';
+      freshTgMedia(box).then((m) => {
+        const p = m && (i ? (m.more || [])[i - 1] : m);
+        if (p && p.thumb) img.src = p.thumb;
+        else if (!i) box.classList.add('cm-gone');
+      });
+    };
+  });
+  pinchInCard(still, album.current);
+  still.onclick = (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    openMediaFloat(album.current().src);
   };
 }
 
@@ -551,9 +639,11 @@ function zoomInFrame(frame, img) {
  * the zoomed picture; a tap, or pinching back out, returns it. Without a pinch
  * a tap still opens it large.
  */
-function pinchInCard(box, img) {
-  if (!box || !img || box._pinch) return;
+function pinchInCard(box, pic) {
+  if (!box || !pic || box._pinch) return;
   box._pinch = true;
+  // An album's picture changes: always the one shown.
+  const cur = () => (typeof pic === 'function' ? pic() : pic);
   let s = 1;
   let x = 0;
   let y = 0;
@@ -566,7 +656,8 @@ function pinchInCard(box, img) {
     const my = (box.clientHeight * (s - 1)) / 2;
     x = Math.max(-mx, Math.min(mx, x));
     y = Math.max(-my, Math.min(my, y));
-    img.style.transition = anim ? 'transform .18s ease-out' : 'none';
+    const img = cur();
+    img.style.transition = anim ? 'transform .18s ease-out, opacity .26s ease' : 'opacity .26s ease';
     img.style.transform = s === 1 ? '' : `translate(${x}px,${y}px) scale(${s})`;
     box.classList.toggle('pinched', s > 1);
   };
@@ -612,6 +703,7 @@ function pinchInCard(box, img) {
   };
   box.addEventListener('touchend', end);
   box.addEventListener('touchcancel', end);
+  box._unpinch = () => { if (s > 1) { s = 1; apply(false); } };
   // iOS pinches the whole page otherwise.
   box.addEventListener('gesturestart', (e) => e.preventDefault());
   // A tap on a zoomed picture returns it; right after a pinch, nothing opens.
@@ -2127,7 +2219,7 @@ function wireFeedCard(card) {
 }
 
 /**
- * `?media-test` only: two sample cards built from real posts, to show how a
+ * `?media-test` only: sample cards built from real posts, to show how a
  * card's picture or video looks and plays. Nothing is stored; no reader sees it.
  */
 function mediaTestCards() {
@@ -2146,6 +2238,12 @@ function mediaTestCards() {
       summary: "TEST — Heavy clashes in the Kahbub mountains, Ali Bk map shows",
       text: "Sample card to show a Telegram picture on a card, at its own shape.",
       media: {"kind":"photo","from":"tg","post":"https://t.me/Alibk3/37033","thumb":"https://cdn4.telesco.pe/file/FYOmwOqC1GvIuN3Oz6Baungau6OCuqZmB8oQgHpd2LSH06FL_VvWlmndvBA0r6vEKMA7fxyS-YxRPWa4HfrytiTaJfWXwb6KxmYlaEOXoOlnjXJ3ERE0ZePtjLc14GIs2TgIITnh6Su4NdbUfZSHq_YGnOT3N_Xdb8MMofT_Y8IijRvmH9mPqDKD6xYfMj0182Y6w6_Lfx5WXSVV-xqA7a5fJLNGkCUeh9DaPVb8ufUiOGUAAfGfe1tDsBFP9TpJ57uv_pv9J-RG8PKCfz_Vc7dNMx0C-s8T-qtx68MH4X3q3Wpvia2JzCc0f_T5su8bpUpbRIiNnt9hIkCgPU_oHg.jpg","w":800,"h":468},
+    },
+    {
+      fp: 'media-test-tg-album', at: now, source: 'Yemeni Armed Forces (Telegram) · TEST', url: "https://t.me/army21ye/3765", type: 'strike', live: true,
+      summary: "TEST — A post with two pictures: dots on the picture move between them",
+      text: "Sample card to show a post's several pictures on one card.",
+      media: {"kind":"photo","from":"tg","post":"https://t.me/army21ye/3765","thumb":"https://cdn4.telesco.pe/file/JESB0N4aJ8bpbyQc093Mg2SfVHbpYhLW82BmG19IhlmW6Op2DCWtLSvrrI5Cedf2VfBVWoD9ZbBOIo57Xu8wud3tJKeNdZB5yjjuhknj0hTcMGlM6IJHI2sJJmEFu6jcrbXm7_BLErLxEoR5S0prep_xNhxxYUa4pZWLhQHXDL3LC5sJOPm-vJDo8h8_93q36INKAyWNE5SPZFuVtLGHqjt0nPcvFqQFo9JB4E9gee1TTnMSe0OwveYsR_H1JyJQ_XnEgEHW0Q-pmRNBAXprD5gQ5QDwypIS8ToCv5TODv6USeEiSnuxyBzxL3zEmxbzzvvAgcdu965U5hkCYVbNqw.jpg","w":1000,"h":2057,"more":[{"thumb":"https://cdn4.telesco.pe/file/uscAdRrV3RB68KfywmzkIhX_XYZ2Lj0wW1JCkOAvnzeEZmfCCn6uDtBhI4pK3J4TaEF0mO_RCDJHpxLV7W-jkPmDLuzavs6v0hn9bKRvFqq9gbvRa_roLM2TpsAxyXK1iDr_fo8tdvXv4_EgJkrBNhJDPNuXnMbGuH2hjskBFauL3VWrRCBgtEALIV3XEo-zBh6cLsDwX1_eLdacnh-pW7k4-AQJzGKVvVbEjY2oh_fC_UzJgiiuPmL51ZoUvDyYsXNzXvVn40lBGFq2tiFInvut7f8Tq7tTjNz1V8QB6P9pVf0MLr8kEwKSzdhFihyM8CZitjR7hCTdfe-hxhR-xQ.jpg","w":1000,"h":1653}]},
     },
     {
       fp: 'media-test-tg', at: now, source: 'Ali Bk (Telegram) · TEST', url: "https://t.me/Alibk3/37041", type: 'combat', live: true,

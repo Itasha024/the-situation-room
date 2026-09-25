@@ -14,6 +14,7 @@ import { Route as ApiBriefRouteImport } from './routes/api/brief'
 import { Route as ApiDeskRouteImport } from './routes/api/desk'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiStatusRouteImport } from './routes/api/status'
+import { Route as ApiTgmediaRouteImport } from './routes/api/tgmedia'
 import { Route as ApiTickRouteImport } from './routes/api/tick'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const ApiStatusRoute = ApiStatusRouteImport.update({
   path: '/api/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTgmediaRoute = ApiTgmediaRouteImport.update({
+  id: '/api/tgmedia',
+  path: '/api/tgmedia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTickRoute = ApiTickRouteImport.update({
   id: '/api/tick',
   path: '/api/tick',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
   '/api/status': typeof ApiStatusRoute
+  '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
   '/api/status': typeof ApiStatusRoute
+  '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
 }
 export interface FileRoutesById {
@@ -70,15 +78,28 @@ export interface FileRoutesById {
   '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
   '/api/status': typeof ApiStatusRoute
+  '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/api/brief' | '/api/desk' | '/api/scan' | '/api/status' | '/api/tick'
+    | '/'
+    | '/api/brief'
+    | '/api/desk'
+    | '/api/scan'
+    | '/api/status'
+    | '/api/tgmedia'
+    | '/api/tick'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/api/brief' | '/api/desk' | '/api/scan' | '/api/status' | '/api/tick'
+    | '/'
+    | '/api/brief'
+    | '/api/desk'
+    | '/api/scan'
+    | '/api/status'
+    | '/api/tgmedia'
+    | '/api/tick'
   id:
     | '__root__'
     | '/'
@@ -86,6 +107,7 @@ export interface FileRouteTypes {
     | '/api/desk'
     | '/api/scan'
     | '/api/status'
+    | '/api/tgmedia'
     | '/api/tick'
   fileRoutesById: FileRoutesById
 }
@@ -95,6 +117,7 @@ export interface RootRouteChildren {
   ApiDeskRoute: typeof ApiDeskRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiStatusRoute: typeof ApiStatusRoute
+  ApiTgmediaRoute: typeof ApiTgmediaRoute
   ApiTickRoute: typeof ApiTickRoute
 }
 
@@ -135,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tgmedia': {
+      id: '/api/tgmedia'
+      path: '/api/tgmedia'
+      fullPath: '/api/tgmedia'
+      preLoaderRoute: typeof ApiTgmediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tick': {
       id: '/api/tick'
       path: '/api/tick'
@@ -151,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeskRoute: ApiDeskRoute,
   ApiScanRoute: ApiScanRoute,
   ApiStatusRoute: ApiStatusRoute,
+  ApiTgmediaRoute: ApiTgmediaRoute,
   ApiTickRoute: ApiTickRoute,
 }
 export const routeTree = rootRouteImport

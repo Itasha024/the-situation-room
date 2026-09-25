@@ -24,7 +24,22 @@
  * Palette and category marks
  * ---------------------------------------------------------------- */
 
-const COLORS = { houthi: '#c45c26', plc: '#22c55e', saudi: '#1f8a7a', contested: '#e9c46a', mixed: '#457b9d' };
+// Reader's theme: Original (as built), Broadsheet Day or Broadsheet Night. The broadsheet
+// pair recolours the sides, the district edges and the map tiles; Original is untouched.
+const THEMES = ['original', 'broadsheet-day', 'broadsheet-night'];
+const THEME = (() => { try { const t = localStorage.getItem('desk-theme'); return THEMES.includes(t) ? t : 'original'; } catch (e) { return 'original'; } })();
+const THEME_SIDES = {
+  'broadsheet-day': { houthi: '#a8372a', plc: '#0d7680', saudi: '#5f86ad', contested: '#b07d1a', mixed: '#7d6b99' },
+  'broadsheet-night': { houthi: '#e2694f', plc: '#3fb0b3', saudi: '#7aa5d6', contested: '#d9aa45', mixed: '#a898c4' },
+};
+const EDGE = THEME === 'broadsheet-day' ? '#5c4a3d' : '#0b0f14';
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+const TILE_URL = THEME === 'broadsheet-day' ? ESRI + 'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+  : THEME === 'broadsheet-night' ? ESRI + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTR = THEME === 'original' ? null : 'Tiles © Esri — Esri, DeLorme, NAVTEQ';
+const COLORS = Object.assign({ houthi: '#c45c26', plc: '#22c55e', saudi: '#1f8a7a', contested: '#e9c46a', mixed: '#457b9d' }, THEME_SIDES[THEME] || {});
+const sideColor = (c) => (THEME_SIDES[THEME] && COLORS[c.id]) || c.color || COLORS[c.id];
 const EVENT_COLORS = { combat: '#facc15', strike: '#dc2626', vessel: '#06b6d4', port: '#f97316' };
 
 /*
@@ -2033,7 +2048,7 @@ function renderBars(d) {
   const shares = computeControlShares(d);
   const rows = (d.control || []).filter((c) => c.id !== 'saudi').map((c) => {
     const pct = shares[c.id] != null ? shares[c.id] : c.pct;
-    const color = c.id === 'plc' ? COLORS.plc : (c.color || COLORS[c.id]);
+    const color = c.id === 'plc' ? COLORS.plc : sideColor(c);
     return `<div class="bar" title="${escapeHtml(c.note || '')}">
       <h3>${escapeHtml(c.name)}</h3>
       <div class="pct" style="color:${color}">${pct}%</div>
@@ -2408,12 +2423,12 @@ function frontFeatureStyle(feature, byIso, ids) {
   const lit = ids.has(iso);
   // Districts carry the colours; the governorates outside the front are dimmed.
   if (districtGeo) {
-    return { fillColor: '#0b0f14', fillOpacity: lit ? 0 : 0.35, color: lit ? '#fde047' : '#0b0f14', weight: lit ? 3.5 : 1.2, opacity: 1 };
+    return { fillColor: EDGE, fillOpacity: lit ? 0 : 0.35, color: lit ? '#fde047' : EDGE, weight: lit ? 3.5 : 1.2, opacity: 1 };
   }
   return {
     fillColor: c,
     fillOpacity: on ? (lit ? 0.88 : 0.55) : 0,
-    color: lit ? '#fde047' : '#0b0f14',
+    color: lit ? '#fde047' : EDGE,
     weight: lit ? 3.5 : 1.2,
     opacity: on ? 1 : 0.2,
   };
@@ -2854,7 +2869,7 @@ function districtSide(p, byIso) {
 function districtStyle(f, byIso) {
   const ctrl = districtSide(f.properties, byIso);
   const on = controlVisible(ctrl);
-  return { fillColor: COLORS[ctrl] || COLORS.contested, fillOpacity: on ? 0.55 : 0, color: '#0b0f14', weight: 0.35, opacity: on ? 0.45 : 0.1 };
+  return { fillColor: COLORS[ctrl] || COLORS.contested, fillOpacity: on ? 0.55 : 0, color: EDGE, weight: 0.35, opacity: on ? 0.45 : 0.1 };
 }
 
 /** The district layer on a map, beneath the governorate outlines; null before it has loaded. */
@@ -2893,7 +2908,7 @@ function styleFeature(feature, byIso) {
     return {
       fillColor: '#f8fafc',
       fillOpacity: hl ? 0.18 : 0,
-      color: hl ? '#f8fafc' : '#0b0f14',
+      color: hl ? '#f8fafc' : EDGE,
       weight: hl ? 2.6 : 1.3,
       opacity: 0.9,
       className: hl && highlightPulse ? 'gov-hl-pulse' : (hl ? 'gov-hl' : ''),
@@ -2906,7 +2921,7 @@ function styleFeature(feature, byIso) {
     // The highlight reads perfectly well from its brighter fill, white border
     // and pulse — the rest of the map keeps its real control colours.
     fillOpacity: on ? (hl ? 0.88 : 0.55) : 0,
-    color: hl ? '#f8fafc' : '#0b0f14',
+    color: hl ? '#f8fafc' : EDGE,
     weight: hl ? 2.6 : (on ? 1.2 : 0.6),
     opacity: on ? 1 : 0.2,
     className: hl && highlightPulse ? 'gov-hl-pulse' : (hl ? 'gov-hl' : ''),
@@ -3050,7 +3065,7 @@ function openMapPop({ title, anchor, build, go }) {
   frontFloatAnchor = anchor || null;
   frontFloatOpenedAt = Date.now();
   sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false, zoomSnap: 0.5 }).setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2]);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(sheetMap);
+  L.tileLayer(TILE_URL, { maxZoom: 18 }).addTo(sheetMap);
   build(sheetMap);
   setTimeout(() => { try { sheetMap && sheetMap.invalidateSize(); } catch (e) {} }, 60);
   el.querySelector('.pin-sheet-x').onclick = closePinSheet;
@@ -3361,9 +3376,9 @@ function ensureMap(d) {
   map = L.map('map', { zoomControl: true, attributionControl: true, closePopupOnClick: false }).setView([18.5, 45.5], 5.4);
   try { window.__yemenMap = map; } catch (e) {}
   map.on('zoomend', syncStraitForZoom);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer(TILE_URL, {
     maxZoom: 18,
-    attribution: d.basemapAttribution || '© OpenStreetMap',
+    attribution: TILE_ATTR || d.basemapAttribution || '© OpenStreetMap',
   }).addTo(map);
   map.on('popupopen', (e) => {
     syncOpenNotes();
@@ -3810,7 +3825,7 @@ async function drawGeo(d) {
       saudiGeoLayer = L.geoJSON(saudiGeoCache, {
         style: () => {
           const on = controlVisible('saudi');
-          return { fillColor: COLORS.saudi, fillOpacity: on ? 0.38 : 0, color: '#0b0f14', weight: 0.8, opacity: on ? 0.75 : 0.15 };
+          return { fillColor: COLORS.saudi, fillOpacity: on ? 0.38 : 0, color: EDGE, weight: 0.8, opacity: on ? 0.75 : 0.15 };
         },
         onEachFeature: (f, layer) => bindGov(f, layer, byIso),
       }).addTo(map);
@@ -3865,7 +3880,7 @@ function drawIslands(d) {
     return {
       fillColor: col,
       fillOpacity: on ? (hl ? 0.92 : 0.78) : 0,
-      color: hl ? '#f8fafc' : '#0b0f14',
+      color: hl ? '#f8fafc' : EDGE,
       weight: hl ? 2.4 : 1.15,
       opacity: on ? 1 : 0.15,
       className: hl && highlightPulse ? 'gov-hl-pulse' : (hl ? 'gov-hl' : ''),
@@ -3905,7 +3920,7 @@ function drawControlOverlays(epoch) {
     if (!ctrl) return;
     const col = COLORS[ctrl] || COLORS.contested;
     const poly = L.polygon(area.ring, {
-      color: '#0b0f14', weight: 1.1, fillColor: col, fillOpacity: 0.7, pane: 'islands', interactive: true,
+      color: EDGE, weight: 1.1, fillColor: col, fillOpacity: 0.7, pane: 'islands', interactive: true,
     }).bindPopup(`<strong>${escapeHtml(area.name)}</strong><br/>Control: ${escapeHtml(LABELS[ctrl] || ctrl)}`);
     poly.addTo(map);
     controlOverlayLayers.push(poly);
@@ -3961,7 +3976,7 @@ function applyMapFilters() {
   if (saudiGeoLayer) {
     saudiGeoLayer.setStyle(() => {
       const on = controlVisible('saudi');
-      return { fillColor: COLORS.saudi, fillOpacity: on ? 0.38 : 0, color: '#0b0f14', weight: 0.8, opacity: on ? 0.75 : 0.15 };
+      return { fillColor: COLORS.saudi, fillOpacity: on ? 0.38 : 0, color: EDGE, weight: 0.8, opacity: on ? 0.75 : 0.15 };
     });
   }
   drawIslands(data);
@@ -4068,7 +4083,7 @@ function controlShortName(c) {
 function popLegendHtml() {
   const sides = (data && Array.isArray(data.control) ? data.control : []).filter((c) => c && c.color);
   if (!sides.length) return '';
-  const row = (c) => `<span><i class="sw" style="background:${escapeHtml(c.color)}"></i>${escapeHtml(controlShortName(c))}</span>`;
+  const row = (c) => `<span><i class="sw" style="background:${escapeHtml(sideColor(c))}"></i>${escapeHtml(controlShortName(c))}</span>`;
   return `<div class="pop-legend">${sides.map(row).join('')}</div>`;
 }
 
@@ -4091,7 +4106,7 @@ function renderLegend(d) {
       ${escapeHtml(label)}
     </button>`;
   };
-  const controlRows = (d.control || []).map((c) => row(controlLayerKey(c.id), c.color, shortName(c))).join('');
+  const controlRows = (d.control || []).map((c) => row(controlLayerKey(c.id), sideColor(c), shortName(c))).join('');
   const legend = document.getElementById('legend');
   legend.classList.toggle('collapsed', legendCollapsed);
   legend.innerHTML = `
@@ -4421,9 +4436,30 @@ async function refresh(first) {
   if (map) setTimeout(() => map && map.invalidateSize(), 30);
 }
 
+/* Theme switch, top right: three icons, no words. A pick is remembered and the page reloads
+ * so the map redraws in that theme's colours. */
+function installThemeButton() {
+  const stamp = document.querySelector('.stamp');
+  if (!stamp || stamp.querySelector('.theme-sw')) return;
+  const ICONS = {
+    original: ['Original', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>'],
+    'broadsheet-day': ['Day', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>'],
+    'broadsheet-night': ['Night', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20 14.2A8 8 0 1 1 9.8 4a6.3 6.3 0 0 0 10.2 10.2z"/></svg>'],
+  };
+  const btns = THEMES.map((t) => `<button type="button" data-theme-pick="${t}" class="${t === THEME ? 'on' : ''}" aria-pressed="${t === THEME}" aria-label="${ICONS[t][0]} theme" title="${ICONS[t][0]}">${ICONS[t][1]}</button>`).join('');
+  stamp.insertAdjacentHTML('afterbegin', `<div class="theme-sw" role="group" aria-label="Theme">${btns}</div>`);
+  stamp.querySelector('.theme-sw').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-theme-pick]');
+    if (!b || b.dataset.themePick === THEME) return;
+    try { localStorage.setItem('desk-theme', b.dataset.themePick); } catch (err) { return; }
+    location.reload();
+  });
+}
+
 async function startYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
+  try { installThemeButton(); } catch (e) { console.error(e); }
 
   if (window.__yemenDeskTimer) { clearInterval(window.__yemenDeskTimer); window.__yemenDeskTimer = null; }
   if (window.__yemenLiveTimer) { clearInterval(window.__yemenLiveTimer); window.__yemenLiveTimer = null; }

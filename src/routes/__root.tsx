@@ -4,7 +4,9 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Yemen War Desk";
-const ASSET_V = "desk-en-1";
+const ASSET_V = "desk-en-2";
+// The reader's theme on <html> before first paint; the broadsheet pair also loads its two fonts.
+const THEME_BOOT = `try{var t=localStorage.getItem("desk-theme");if(t==="broadsheet-day"||t==="broadsheet-night"){var d=document.documentElement;d.dataset.theme=t;d.dataset.set="broadsheet";var l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap";document.head.appendChild(l)}}catch(e){}`;
 
 export const Route = createRootRoute({
   head: () => ({
@@ -28,6 +30,7 @@ export const Route = createRootRoute({
       },
       { rel: "stylesheet", href: "/vendor/leaflet/leaflet.css" },
       { rel: "stylesheet", href: `/desk.css?v=${ASSET_V}` },
+      { rel: "stylesheet", href: `/themes.css?v=${ASSET_V}` },
       { rel: "preload", href: "/vendor/leaflet/leaflet.js", as: "script" },
       { rel: "preload", href: `/app.js?v=${ASSET_V}`, as: "script" },
       { rel: "preload", href: "/data.json", as: "fetch", crossOrigin: "anonymous" },
@@ -44,6 +47,7 @@ function RootDocument() {
     <html lang="en" dir="ltr" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body>
         <PreviewHostBridge />

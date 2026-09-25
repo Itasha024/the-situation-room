@@ -1,0 +1,166 @@
+/* Themes. Original is desk.css as built and is not touched here; everything below the switch
+   applies only to Broadsheet Day and Broadsheet Night (html[data-set="broadsheet"]). */
+
+/* The switch, top right: three icons */
+.theme-sw{display:inline-flex;flex:none;gap:2px;padding:2px;margin-inline-end:.5rem;border:1px solid var(--t-line-strong,#334155);border-radius:8px}
+.theme-sw button{display:grid;place-items:center;width:26px;height:24px;padding:0;background:transparent;border:0;border-radius:6px;color:var(--t-muted,#8fa0b4);cursor:pointer}
+.theme-sw button svg{width:15px;height:15px}
+.theme-sw button:hover{color:var(--t-text,#eaf0f6)}
+.theme-sw button.on{background:var(--t-surface-3,#1a2433);color:var(--t-strong,#fff)}
+html[data-set="broadsheet"] .theme-sw{border-radius:2px}
+html[data-set="broadsheet"] .theme-sw button{border-radius:1px}
+html[data-set="broadsheet"] .theme-sw button.on{background:var(--accent-ui);color:var(--on-accent)}
+@media (max-width:720px){.top{position:relative}.top .brand{padding-inline-end:6rem}.theme-sw{position:absolute;top:.8rem;right:1rem;margin:0}}
+
+/* Broadsheet: section titles carry a short accent bar */
+html[data-set="broadsheet"] :is(.rail-head h2,.sit-head>h2,.situation>h2,.fronts-wrap>h2,.cas-wrap>h2,.timeline-wrap>h2){position:relative;padding-top:.55rem}
+html[data-set="broadsheet"] :is(.rail-head h2,.sit-head>h2,.situation>h2,.fronts-wrap>h2,.cas-wrap>h2,.timeline-wrap>h2)::before{content:"";position:absolute;left:0;top:0;width:28px;height:3px;background:var(--accent-ui)}
+/* Broadsheet: buttons, pager, figures, NOW label */
+html[data-set="broadsheet"] :is(.layers button,.ghost,.more,.time-filter button,.time-filter input[type="date"],.to-fronts,.front-map-btn,.card .meta .card-map){border-radius:var(--r-btn)!important}
+html[data-set="broadsheet"] :is(.time-filter button.on,#time-filter button.on){background:var(--accent-ui)!important;border-color:var(--accent-ui)!important;color:var(--on-accent)!important;outline:0!important}
+html[data-set="broadsheet"] .pg-arrow{width:30px;height:30px;margin-top:-15px;border-radius:var(--r-btn);background:var(--t-bg);border:1px solid var(--t-line-strong);color:var(--t-text)}
+html[data-set="broadsheet"] :is(.pg-arrow:hover,.pg-arrow:focus-visible){background:var(--accent-ui);border-color:var(--accent-ui);color:var(--on-accent)}
+html[data-set="broadsheet"] .pg-dots{gap:3px}
+html[data-set="broadsheet"] .pg-dots button{padding:8px 2px}
+html[data-set="broadsheet"] .pg-dots button::before{width:12px;height:2px;border-radius:0;background:var(--t-line-strong)}
+html[data-set="broadsheet"] .pg-dots button:hover::before{background:var(--t-muted)}
+html[data-set="broadsheet"] .pg-dots button.on::before{width:28px;height:2px;background:var(--accent-ui)}
+html[data-set="broadsheet"] .now-tag{border-radius:2px;background:var(--accent-ui);color:var(--on-accent);letter-spacing:.1em;padding:.08rem .4rem}
+html[data-set="broadsheet"] :is(.card time,#updated,.bar .pct,.tally-box.claims td,.tally-row strong){font-variant-numeric:tabular-nums lining-nums}
+html[data-set="broadsheet"] :is(.cm .cm-still,.cm){border-radius:var(--r-media)!important}
+html[data-set="broadsheet"] :is(.cm-dur,.cm-play){color:#fff!important}
+html[data-set="broadsheet"] .cm-play svg{fill:#fff}
+html[data-set="broadsheet"] body{font-family:var(--f-body)}
+html[data-set="broadsheet"] :is(h1,.rail h2,.situation h2,.fronts-wrap h2,.cas-wrap h2,.timeline-wrap>h2){font-family:var(--f-head)}
+html[data-set="broadsheet"] .card .headline{font-family:var(--f-card)}
+html[data-set="broadsheet"] :is(.leaflet-popup-content-wrapper,.leaflet-popup-tip){background:var(--t-surface-1);color:var(--t-text);box-shadow:var(--shadow-pop)}
+html[data-set="broadsheet"] .leaflet-popup-content{color:var(--t-text)}
+/* The side swatches written into the page */
+html[data-theme="broadsheet-day"] .feed-legend > span:nth-child(1) .sw{background:#a8372a!important}
+html[data-theme="broadsheet-day"] .feed-legend > span:nth-child(2) .sw{background:#0d7680!important}
+html[data-theme="broadsheet-day"] .feed-legend > span:nth-child(3) .sw{background:#9c8f85!important}
+html[data-theme="broadsheet-night"] .feed-legend > span:nth-child(1) .sw{background:#e2694f!important}
+html[data-theme="broadsheet-night"] .feed-legend > span:nth-child(2) .sw{background:#3fb0b3!important}
+html[data-theme="broadsheet-night"] .feed-legend > span:nth-child(3) .sw{background:#766b62!important}
+
+/* ================= BROADSHEET: shared by Day and Night ================= */
+html[data-set="broadsheet"]{
+  --r-card:2px;--r-btn:2px;--r-media:2px;
+  --f-body:"Libre Franklin",system-ui,sans-serif;--f-head:"Newsreader",Georgia,serif;--f-card:"Newsreader",Georgia,serif;--f-prose:"Newsreader",Georgia,serif;
+}
+/* Day: FT paper, claret, teal and oxford blue */
+html[data-theme="broadsheet-day"]{
+  --bg:#fff1e5;--panel:#fff7ef;--line:#e6d2bf;--text:#33302e;--muted:#6f6660;
+  --houthi:#a8372a;--plc:#0d7680;--saudi:#5f86ad;--contested:#b07d1a;--mixed:#7d6b99;--accent:#b3261e;
+  --accent-ui:#990f3d;--on-accent:#fff;
+  --t-bg:#fff1e5;--t-surface-1:#fff7ef;--t-surface-2:#f8e4d2;--t-surface-3:#f0d6c0;--t-surface-4:#e5c6ab;
+  --t-line-soft:#f1dfce;--t-line:#e6d2bf;--t-line-strong:#c9ad94;
+  --t-strong:#1a1817;--t-text:#33302e;--t-text-2:#4d4845;--t-muted:#6f6660;--t-faint:#9c8f85;--t-link:#990f3d;--t-on-light:#33302e;
+  --t-glass:rgba(255,245,236,.96);--shadow-pop:0 6px 22px rgba(80,40,20,.18);
+  --ink-fight:#c9962b;--ink-strike:#b3261e;--ink-vessel:#1d6fa3;--ink-port:#d46a1f;--ink-say:#7d4e9c;--ev-edge:#fff7ef;--halo:#fff1e5;--halo-ink:#3a2f28;
+}
+/* Night: warm charcoal, salmon, light teal */
+html[data-theme="broadsheet-night"]{
+  --bg:#1b1918;--panel:#221f1d;--line:#34302c;--text:#efe6dd;--muted:#a99d93;
+  --houthi:#e2694f;--plc:#3fb0b3;--saudi:#7aa5d6;--contested:#d9aa45;--mixed:#a898c4;--accent:#ef6a5a;
+  --accent-ui:#f4a58a;--on-accent:#1b1918;
+  --t-bg:#1b1918;--t-surface-1:#211e1c;--t-surface-2:#282421;--t-surface-3:#312c29;--t-surface-4:#3d3733;
+  --t-line-soft:#2a2623;--t-line:#35302c;--t-line-strong:#4a433d;
+  --t-strong:#fff8f1;--t-text:#efe6dd;--t-text-2:#cfc3b8;--t-muted:#a99d93;--t-faint:#766b62;--t-link:#f4a58a;--t-on-light:#1b1918;
+  --t-glass:rgba(27,25,24,.95);--shadow-pop:0 10px 30px rgba(0,0,0,.55);
+  --ink-fight:#e3b64d;--ink-strike:#ef6a5a;--ink-vessel:#5fa8dc;--ink-port:#f0924a;--ink-say:#b58ad6;--ev-edge:#1b1918;--halo:#1b1918;--halo-ink:#efe6dd;
+}
+/* Masthead */
+html[data-set="broadsheet"] .top{border-bottom:1px solid var(--t-strong);box-shadow:0 3px 0 -2px var(--t-strong);padding:.85rem 1rem .8rem}
+html[data-set="broadsheet"] h1{font-size:1.75rem;font-weight:600;letter-spacing:-.012em;color:var(--t-strong)}
+html[data-set="broadsheet"] .sub{font:italic 400 .86rem/1.3 "Newsreader",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .stamp{font:500 .7rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--t-muted)}
+html[data-set="broadsheet"] .pulse{background:var(--plc)}
+/* Control shares: no boxes, rules and serif figures */
+html[data-set="broadsheet"] .bars{border-bottom:1px solid var(--t-line-strong);gap:1.2rem;padding:.7rem 1rem .8rem}
+html[data-set="broadsheet"] .bar{background:transparent;border:0;border-top:3px solid var(--t-strong);border-radius:0;padding:.45rem 0 0}
+html[data-set="broadsheet"] .bar h3{font:600 .66rem/1.2 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--t-text-2)}
+html[data-set="broadsheet"] .bar .pct{font:600 1.9rem/1.05 "Newsreader",Georgia,serif;letter-spacing:-.01em}
+html[data-set="broadsheet"] .track{height:2px;border-radius:0;background:var(--t-line)}
+/* Latest developments */
+html[data-set="broadsheet"] .situation{background:transparent;border-bottom:1px solid var(--t-line-strong);padding:.8rem 1rem .9rem}
+html[data-set="broadsheet"] .situation p,html[data-set="broadsheet"] .situation-window,html[data-set="broadsheet"] .front-sum,html[data-set="broadsheet"] .phase-sum,html[data-set="broadsheet"] .front-card .full,html[data-set="broadsheet"] .front-card .front-composed,html[data-set="broadsheet"] .phase-card .full p{font-family:"Newsreader",Georgia,serif;font-size:1.02rem;line-height:1.55;color:var(--t-text)}
+html[data-set="broadsheet"] .rail h2,html[data-set="broadsheet"] .situation h2,html[data-set="broadsheet"] .fronts-wrap h2,html[data-set="broadsheet"] .cas-wrap h2,html[data-set="broadsheet"] .timeline-wrap>h2{font-size:1.4rem;font-weight:600;letter-spacing:-.006em;color:var(--t-strong)}
+html[data-set="broadsheet"] .cadence{font:italic 400 .8rem/1.3 "Newsreader",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .to-fronts{background:transparent;border-color:var(--accent-ui);color:var(--accent-ui);text-transform:uppercase;letter-spacing:.08em;font-size:.64rem}
+/* Live scan: a plain ruled line */
+html[data-set="broadsheet"] .live-scan{background:transparent;border-bottom:1px solid var(--t-line-strong);padding:.2rem 1rem}
+html[data-set="broadsheet"] .live-scan details{background:transparent;border:0;border-radius:0;padding:0}
+html[data-set="broadsheet"] .live-scan summary::before{color:var(--accent-ui)}
+html[data-set="broadsheet"] .live-scan .ls-title{font:600 .68rem/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase}
+html[data-set="broadsheet"] .live-scan .ls-meta{font:italic .8rem "Newsreader",Georgia,serif}
+/* Toolbar */
+html[data-set="broadsheet"] .toolbar{border-bottom:1px solid var(--t-line-strong)}
+html[data-set="broadsheet"] .time-filter .tf-label{font:600 .64rem/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase}
+html[data-set="broadsheet"] .time-filter button,html[data-set="broadsheet"] .ghost,html[data-set="broadsheet"] .more,html[data-set="broadsheet"] .layers button{background:transparent;border:1px solid var(--t-line-strong);color:var(--t-text);font:600 .66rem/1.2 var(--f-body);letter-spacing:.07em;text-transform:uppercase;padding:.36rem .62rem}
+html[data-set="broadsheet"] .time-filter input[type="date"]{background:transparent;border-color:var(--t-line-strong);color:var(--t-text);font-family:var(--f-body)}
+html[data-set="broadsheet"] .time-filter button:hover,html[data-set="broadsheet"] .ghost:hover,html[data-set="broadsheet"] .more:hover{border-color:var(--accent-ui);color:var(--accent-ui)}
+/* Map */
+html[data-theme="broadsheet-day"] .leaflet-tile-pane{filter:sepia(.42) saturate(1.15) hue-rotate(-12deg) brightness(1.02)}
+html[data-theme="broadsheet-night"] .leaflet-tile-pane{filter:sepia(.3) brightness(.92)}
+html[data-set="broadsheet"] .leaflet-container{background:var(--t-bg)}
+html[data-set="broadsheet"] .legend,html[data-set="broadsheet"] .map-chip{background:var(--t-glass);border:1px solid var(--t-line-strong);border-radius:2px;box-shadow:var(--shadow-pop)}
+html[data-set="broadsheet"] .legend .leg-title{font:600 .64rem/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--t-strong)}
+html[data-set="broadsheet"] .legend .leg-sec{font-family:"Newsreader",Georgia,serif;font-style:italic;font-weight:500;font-size:.7rem;letter-spacing:0}
+html[data-set="broadsheet"] .map-chip{font:italic .78rem "Newsreader",Georgia,serif;color:var(--t-text-2)}
+html[data-set="broadsheet"] .gov-name span{font:600 10.5px/1.1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--halo-ink);
+  text-shadow:0 0 2px var(--halo),0 0 3px var(--halo),1px 1px 0 var(--halo),-1px -1px 0 var(--halo),1px -1px 0 var(--halo),-1px 1px 0 var(--halo)}
+html[data-set="broadsheet"] .sa-city span{font-family:"Newsreader",Georgia,serif;font-style:italic;color:var(--halo-ink);text-shadow:0 0 2px var(--halo),0 0 3px var(--halo),1px 1px 0 var(--halo),-1px -1px 0 var(--halo)}
+html[data-set="broadsheet"] .sa-city i{background:var(--halo-ink);border-color:var(--halo)}
+/* Event marks: rounded squares in the set's inks, edged in paper */
+html[data-set="broadsheet"] .ev .ev-glyph{border-radius:7px;border:2px solid var(--ev-edge);color:#fff;box-shadow:0 4px 10px rgba(40,20,10,.35),0 0 0 1px rgba(40,20,10,.35)}
+html[data-set="broadsheet"] .ev.combat,html[data-set="broadsheet"] .ev.clash,html[data-set="broadsheet"] .ev.capture,html[data-set="broadsheet"] .ev.redeploy,html[data-set="broadsheet"] .ev.military,html[data-set="broadsheet"] .ev.deployment,html[data-set="broadsheet"] .ev.position{--ev-ink:var(--ink-fight)}
+html[data-set="broadsheet"] .ev.strike,html[data-set="broadsheet"] .ev.missile{--ev-ink:var(--ink-strike)}
+html[data-set="broadsheet"] .ev.statement,html[data-set="broadsheet"] .ev.diplomacy,html[data-set="broadsheet"] .ev.intel,html[data-set="broadsheet"] .ev.humanitarian{--ev-ink:var(--ink-say)}
+html[data-set="broadsheet"] .ev.vessel{--ev-ink:var(--ink-vessel)}
+html[data-set="broadsheet"] .ev.port{--ev-ink:var(--ink-port)}
+html[data-set="broadsheet"] .leg-ico{border-radius:3px;color:#fff}
+html[data-set="broadsheet"] .leg-ico.combat{background:var(--ink-fight)}
+html[data-set="broadsheet"] .leg-ico.strike{background:var(--ink-strike)}
+html[data-set="broadsheet"] .leg-ico.vessel{background:var(--ink-vessel)}
+html[data-set="broadsheet"] .leg-ico.port{background:var(--ink-port)}
+/* Latest reports: ruled items, not boxes */
+html[data-set="broadsheet"] .rail{background:var(--t-bg)}
+html[data-set="broadsheet"] .feed-legend{font:italic .78rem "Newsreader",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .feed-legend .sw{border-radius:0;width:14px;height:3px}
+html[data-set="broadsheet"] .card{background:transparent;border:0;border-top:1px solid var(--t-line-strong);border-inline-start:0!important;border-radius:0;padding:.75rem .1rem .85rem}
+html[data-set="broadsheet"] .card.lean-houthi{border-top:3px solid var(--houthi)}
+html[data-set="broadsheet"] .card.lean-gov{border-top:3px solid var(--plc)}
+html[data-set="broadsheet"] .card .headline{font-size:1.12rem;font-weight:500;line-height:1.28;color:var(--t-strong)}
+html[data-set="broadsheet"] .card .lead,html[data-set="broadsheet"] .card .full{font-family:"Newsreader",Georgia,serif;font-size:.92rem;line-height:1.5;color:var(--t-text-2)}
+html[data-set="broadsheet"] .card time{font:600 .62rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--t-text-2)}
+html[data-set="broadsheet"] .card .src{background:transparent;padding:0;font:600 .62rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase}
+html[data-set="broadsheet"] .card .src a,html[data-set="broadsheet"] .card .src-wrap a{color:var(--accent-ui)}
+html[data-set="broadsheet"] .card .lean-tag{background:transparent;padding:0;font:italic .74rem "Newsreader",Georgia,serif}
+html[data-set="broadsheet"] .card .actions button,html[data-set="broadsheet"] .card .actions a{color:var(--accent-ui);font:600 .64rem/1 var(--f-body);letter-spacing:.07em;text-transform:uppercase}
+html[data-set="broadsheet"] .card .meta .card-map{background:transparent;border:1px solid var(--t-line-strong);color:var(--t-text-2);font:600 .6rem/1 var(--f-body);letter-spacing:.07em;text-transform:uppercase}
+html[data-set="broadsheet"] .card .also{font:italic .78rem "Newsreader",Georgia,serif}
+html[data-set="broadsheet"] .card .reply-to{border-left-color:var(--accent-ui);background:var(--t-surface-2);font-family:"Newsreader",Georgia,serif;font-style:italic;font-size:.8rem}
+/* Fronts, numbers, timeline: ruled pages, not boxes */
+html[data-set="broadsheet"] .fronts-wrap,html[data-set="broadsheet"] .cas-wrap,html[data-set="broadsheet"] .timeline-wrap{background:transparent}
+html[data-set="broadsheet"] .pager{background:transparent;border:0;border-top:1px solid var(--t-strong);border-bottom:1px solid var(--t-line-strong);border-radius:0}
+html[data-set="broadsheet"] .pager .front-card,html[data-set="broadsheet"] .pager .phase-card{padding:.9rem 2.8rem}
+html[data-set="broadsheet"] .pager .tally-box{padding:.8rem 2.8rem .9rem}
+html[data-set="broadsheet"] .front-card strong,html[data-set="broadsheet"] .phase-head strong{font:600 1.2rem/1.25 "Newsreader",Georgia,serif;color:var(--t-strong)}
+html[data-set="broadsheet"] .front-where,html[data-set="broadsheet"] .front-plain{font:italic .88rem/1.45 "Newsreader",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .toggle-front,html[data-set="broadsheet"] .toggle-phase{color:var(--accent-ui);font:600 .64rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
+html[data-set="broadsheet"] .front-map-btn{background:transparent;border:1px solid var(--t-line-strong);color:var(--t-text-2);font:600 .6rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
+html[data-set="broadsheet"] .tally-box h3{font:600 1.05rem/1.2 "Newsreader",Georgia,serif;letter-spacing:0;text-transform:none;color:var(--t-strong)}
+html[data-set="broadsheet"] .tally-box.claims table{font-size:.86rem}
+html[data-set="broadsheet"] .tally-box.claims tr:first-child th{font:600 .6rem/1.2 var(--f-body);letter-spacing:.1em;border-bottom:1px solid var(--t-strong)}
+html[data-set="broadsheet"] .tally-box.claims th[scope=row]{font-family:"Newsreader",Georgia,serif;font-size:.95rem}
+html[data-set="broadsheet"] .tally-box.claims td{font:600 .9rem var(--f-body)}
+html[data-set="broadsheet"] .tally-box.claims .h{color:var(--houthi)}
+html[data-set="broadsheet"] .tally-box.claims .g{color:var(--plc)}
+html[data-set="broadsheet"] .tally-box.claims td .q{font-family:"Newsreader",Georgia,serif;font-style:italic;font-weight:400}
+/* Notes on the map */
+html[data-set="broadsheet"] .leaflet-popup-content-wrapper{border-radius:2px;border-top:3px solid var(--accent-ui)}
+html[data-set="broadsheet"] .leaflet-popup-content{font-family:var(--f-body)}
+/* Light-page contrast fixes */
+html[data-theme="broadsheet-day"] .bar .pct{filter:none}
+html[data-theme="broadsheet-day"] .card .headline{font-weight:500}

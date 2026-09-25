@@ -1453,7 +1453,7 @@ function wirePager(root, idx, onChange) {
  * The conflict in numbers: Killed, Injured, Humanitarian, one box at a time.
  * Each row a group of people, each column who counts them — the official
  * count, the Houthis' own sources, the government's or Saudi Arabia's — and
- * every figure links to where it was published (numbers.ts, /api/brief).
+ * every figure links to where it was published (numbers.ts, /api/brief "figures").
  */
 const NUM_BOXES = [
   ['Killed', [['Houthi', 'killed.houthi'], ['Government', 'killed.gov'], ['Saudi Arabia', 'killed.saudi'], ['Civilians', 'killed.civilians'], ['All sides', 'killed.total']]],
@@ -1488,7 +1488,7 @@ function numCell(c, cls) {
 function renderCasualties() {
   const el = document.getElementById('casualties');
   if (!el) return;
-  const nums = (brief && brief.numbers) || fallbackNumbers((brief && brief.tally) || TALLY_FALLBACK);
+  const nums = (brief && brief.figures && brief.figures.cells ? brief.figures : null) || fallbackNumbers((brief && brief.tally) || TALLY_FALLBACK);
   const head = '<tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
   const boxes = NUM_BOXES.map(([title, rows]) => `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows.map(([label, key]) => {
     const r = nums.cells[key] || {};

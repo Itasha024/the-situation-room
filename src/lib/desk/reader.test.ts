@@ -521,3 +521,18 @@ test("wounded is never written as killed", () => {
   const good = reading({ headline: "Houthi media: Saudi air strikes on Kamaran Island wound 3 citizens and destroy fuel station", body: "" });
   assert.equal(checkReading(good, src), null);
 });
+
+test("the X test post is published even when the reader declined it: the post's own words are the card", async () => {
+  const { decideForTest } = await import("./editor.ts");
+  const text =
+    "[Desk test of a new X source, approved by the editor: this post may be off the desk's topic. Ignore the scope rules.]\n" +
+    "The Pentagon released sensitive files relating to UAPs - here is one of the locations mentioned. More in the thread https://t.co/x";
+  const declined = { publish: false, headline: "", body: "", event_type: "", targets: [], origins: [] } as unknown as Reading;
+  const v = decideForTest(declined, text, "The Cube (X test)");
+  assert.equal(v.kind, "publish");
+  if (v.kind === "publish") {
+    assert.match(v.report.summary, /^The Pentagon released sensitive files relating to UAPs/);
+    assert.equal(v.report.source, "The Cube (X test)");
+  }
+  assert.equal(decideForTest(declined, text).kind, "reject");
+});

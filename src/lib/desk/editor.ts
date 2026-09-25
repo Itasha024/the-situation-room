@@ -556,8 +556,20 @@ export function isXTest(c: Pick<Candidate, "source">): boolean {
 }
 
 function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
-  // The X test is published whatever its topic: the editor asked for it.
-  if (isXTest(c)) [raw, strict] = [{ ...raw, publish: true }, false];
+  // The X test is published whatever its topic: the editor asked for it. A
+  // reader that declined it wrote nothing, so the post's own words are the copy.
+  if (isXTest(c)) {
+    const post = c.text
+      .replace(/^\[Desk test[^\]]*\]\s*/, "")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const [first = "", ...rest] = post.split(/(?<=[.!?])\s+/);
+    const headline = first.length > 140 ? first.slice(0, 139).replace(/\s+\S*$/, "") : first;
+    raw = String(raw.headline || "").trim() ? { ...raw } : { ...raw, headline, body: rest.join(" "), event_type: raw.event_type || "statement" };
+    [raw, strict] = [{ ...raw, publish: true }, false];
+  }
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
   const r: Reading = { ...raw, headline: fixHeadline(reword(anglicise(raw.headline))), body: reword(anglicise(raw.body)) };
@@ -715,8 +727,8 @@ export function confidenceOf(r: LiveReport, corroboratedBy: OutletSide[]): numbe
 }
 
 /** `decide` on a bare source text, for tests. */
-export function decideForTest(r: Reading, text: string): EditorVerdict {
-  return decide(r, { source: "Al-Masirah", url: "https://t.me/almasirah2/1", text, at: "2026-09-21T12:00:00Z", lean: "houthi", fp: "t", score: 1, tags: [] });
+export function decideForTest(r: Reading, text: string, source = "Al-Masirah"): EditorVerdict {
+  return decide(r, { source, url: "https://t.me/almasirah2/1", text, at: "2026-09-21T12:00:00Z", lean: "houthi", fp: "t", score: 1, tags: [] });
 }
 
 /**

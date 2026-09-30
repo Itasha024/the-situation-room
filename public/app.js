@@ -335,8 +335,22 @@ function startYemenClock() {
   if (!el || el.dataset.on) return;
   el.dataset.on = '1';
   const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Aden', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-  const tick = () => { el.textContent = fmt.format(new Date()); };
+  // Each digit sits in a cell as wide as the font's widest digit (what tabular figures do;
+  // this font has none), so on PC the ticking seconds never move "Yemen" before the clock.
+  const tick = () => { el.innerHTML = fmt.format(new Date()).replace(/[0-9]/g, (d) => `<span class="dg">${d}</span>`); };
+  const cell = () => {
+    const cs = getComputedStyle(el);
+    const probe = document.createElement('span');
+    probe.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${cs.font};letter-spacing:${cs.letterSpacing}`;
+    document.body.appendChild(probe);
+    let w = 0;
+    for (const d of '0123456789') { probe.textContent = d.repeat(10); w = Math.max(w, probe.getBoundingClientRect().width / 10); }
+    probe.remove();
+    if (w > 0) el.style.setProperty('--dw', w.toFixed(2) + 'px');
+  };
   tick();
+  cell();
+  try { document.fonts && document.fonts.ready.then(cell); } catch (e) {}
   setInterval(tick, 1000);
 }
 
@@ -4612,7 +4626,8 @@ function openMapPop({ title, anchor, build, go, legend, wide, tools }) {
   frontFloatAnchor = anchor || null;
   frontFloatOpenedAt = Date.now();
   sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false, zoomSnap: 0.25 }).setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { animate: false });
-  L.tileLayer(TILE_URL, { maxZoom: 18 }).addTo(sheetMap);
+  L.tileLayer(TILE_URL, { maxZoom: 18, noWrap: true }).addTo(sheetMap);
+  oneEarth(sheetMap);
   build(sheetMap, el);
   setTimeout(() => { try { sheetMap && sheetMap.invalidateSize({ pan: false }); } catch (e) {} }, 60);
   el.querySelector('.pin-sheet-x').onclick = closePinSheet;
@@ -4935,14 +4950,32 @@ function fmtDay(ymd) {
   return d.toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** One earth: the map can't zoom out past the world filling its box, and the world doesn't repeat. */
+const WORLD = [[-85, -180], [85, 180]];
+function oneEarth(m) {
+  const fit = () => {
+    const sz = m.getSize();
+    if (!sz.x || !sz.y) return;
+    const snap = m.options.zoomSnap || 1;
+    const z = Math.max(0, Math.ceil(Math.log2(Math.max(sz.x, sz.y) / 256) / snap) * snap);
+    m.setMinZoom(z);
+    if (m.getZoom() < z) m.setZoom(z, { animate: false });
+  };
+  m.setMaxBounds(WORLD);
+  m.options.maxBoundsViscosity = 1;
+  fit();
+  m.on('resize', fit);
+}
 function ensureMap(d) {
   if (map) return;
   map = L.map('map', { zoomControl: true, attributionControl: true, closePopupOnClick: false }).setView([18.5, 45.5], 5.4);
+  oneEarth(map);
   try { window.__yemenMap = map; } catch (e) {}
   map.on('zoomend', syncStraitForZoom);
   baseAttr = d.basemapAttribution || '© OpenStreetMap';
   baseTiles = L.tileLayer(TILE_URL, {
     maxZoom: 18,
+    noWrap: true,
     attribution: TILE_ATTR || baseAttr,
   }).addTo(map);
   map.on('popupopen', (e) => {
@@ -6100,7 +6133,7 @@ async function setTheme(t) {
     // The new tiles load under a clear layer first, so nothing blinks in.
     let tiles = null;
     if (map && baseTiles) {
-      tiles = L.tileLayer(TILE_URL, { maxZoom: 18, attribution: TILE_ATTR || baseAttr, opacity: 0 }).addTo(map);
+      tiles = L.tileLayer(TILE_URL, { maxZoom: 18, noWrap: true, attribution: TILE_ATTR || baseAttr, opacity: 0 }).addTo(map);
       waits.push(new Promise((r) => tiles.once('load', r)));
     }
     await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, 1800))]);

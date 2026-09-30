@@ -536,3 +536,6 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
   html .map-wrap .map-chip{top:8px;right:46px;max-width:calc(100% - 100px)}
   html .map-wrap .map-chip.chip-hl{max-width:calc(100% - 100px)}
 }
+
+/* PC: the clock's digits in equal cells (set in app.js), so "Yemen" before it stays put */
+@media (min-width:721px){#ye-clock .dg{display:inline-block;width:var(--dw,auto);text-align:center}}

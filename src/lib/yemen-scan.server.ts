@@ -333,6 +333,14 @@ const RSS: RssFeed[] = [
   { id: "saudigazette", url: "https://saudigazette.com.sa/rssFeed/74", name: "Saudi Gazette", cadence: C5, whole: true, site: "saudigazette.com.sa" },
   // Oil and shipping news, read whole: triage keeps what this war does to Saudi and Yemeni energy and the Red Sea.
   { id: "oilprice", url: "https://oilprice.com/rss/main", name: "OilPrice.com", cadence: C10, whole: true, site: "oilprice.com" },
+  // Shipping trade press and Kpler's own analysis (found in the 5d research, 30 Sep).
+  { id: "maritime-executive", url: "https://maritime-executive.com/articles.rss", name: "The Maritime Executive", cadence: C10, whole: true, site: "maritime-executive.com" },
+  { id: "gcaptain", url: "https://gcaptain.com/feed/", name: "gCaptain", cadence: C15, whole: true, site: "gcaptain.com" },
+  { id: "splash247", url: "https://splash247.com/feed/", name: "Splash247", cadence: C15, whole: true, site: "splash247.com" },
+  { id: "seatrade", url: "https://www.seatrade-maritime.com/rss.xml", name: "Seatrade Maritime", cadence: C15, whole: true, site: "seatrade-maritime.com" },
+  { id: "hellenicshipping", url: "https://www.hellenicshippingnews.com/feed/", name: "Hellenic Shipping News", cadence: C15, whole: true, site: "hellenicshippingnews.com" },
+  { id: "kpler-blog", url: "https://www.kpler.com/blog/rss.xml", name: "Kpler", cadence: C30, whole: true, site: "kpler.com" },
+  { id: "thenational", url: "https://www.thenationalnews.com/arc/outboundfeeds/rss/?outputType=xml", name: "The National", cadence: C10, whole: true, site: "thenationalnews.com" },
   { id: "almashhad", lang: "ar", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5, whole: true, site: "almashhad.news" },
   // A browser's user agent is refused (403); a plain client is served.
   { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss.xml", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C5, whole: true, site: "alaraby.co.uk" },

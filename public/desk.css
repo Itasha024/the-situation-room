@@ -1012,6 +1012,7 @@ html{scroll-behavior:smooth}
 .tally-box.ledger .spark polyline{fill:none;stroke:var(--t-strong,#e6edf3);stroke-width:1.5;vector-effect:non-scaling-stroke}
 .tally-box.ledger .spark .base{stroke:var(--t-muted,#8fa3b6);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
 .tally-box.ledger table.figs{margin-top:.5rem}
+.tally-box.ledger small.claim,.num-note small.claim{display:inline-block;margin-left:.2rem;padding:0 .3rem;border:1px solid currentColor;border-radius:3px;font-size:.6rem;line-height:1.35;letter-spacing:.04em;text-transform:uppercase;color:#f59e0b;white-space:nowrap}
 .num-empty{margin:.4rem 0;font-size:.78rem;color:var(--t-muted,#8fa3b6)}
 .num-note{margin:.45rem 0 0;font-size:.68rem;line-height:1.4;color:var(--t-muted,#8fa3b6)}
 .num-note a{color:inherit}

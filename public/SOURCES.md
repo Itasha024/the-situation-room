@@ -120,6 +120,20 @@ possible gap).
 - **OilPrice.com** (RSS, read whole every 10 minutes; triage keeps this war's
   energy and shipping).
 - Reuters energy is already read through Reuters' news sitemap.
+- **Shipping press and Kpler** (RSS, read whole; triage keeps this war's
+  waters and Saudi energy): The Maritime Executive and The National every 10
+  minutes; gCaptain, Splash247, Seatrade Maritime and Hellenic Shipping News
+  every 15 minutes; Kpler's own analysis every 30 minutes. Added 30 Sep, from
+  the Maritime and Energy research.
+- **Numbers read directly, every 6 hours:** IMF PortWatch daily ship counts
+  through Bab al-Mandab, the Suez Canal and around the Cape of Good Hope, by
+  ship type (free, satellite ship signals, about 3 days behind); the daily
+  Brent price from the US Energy Information Administration through FRED
+  (free, about a week behind).
+- **The ledger's history, 3 July to 30 September**, comes from research that
+  day (`ledger-baseline.ts`): every ship attack, energy-site hit, figure and
+  notice links its report. What only the attacking side reports is marked
+  "claim".
 - The gate raises a UKMTO/JMIC warning for this war's waters, and an energy
   site hit, stopped or back in service, straight to the reader.
 

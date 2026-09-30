@@ -66,3 +66,32 @@ test("the ledger: one row per incident and site, the latest status stands, nothi
   assert.equal(again.ships.length, 1);
   assert.equal(again.ships.find((s) => s.ship === "Sea Crest")?.what, "sunk", "a later report can say more");
 });
+
+test("the research baseline sits under the stored ledger; a stored row wins; a Houthi-only report is a claim", async () => {
+  const { withBaseline, groupOf, parseFredCsv } = await import("./ledger.ts");
+  const { LEDGER_BASELINE } = await import("./ledger-baseline.ts");
+  const merged = withBaseline(LEDGER_SEED);
+  assert.equal(merged.ships.length, LEDGER_BASELINE.ships.length);
+  assert.ok(merged.sites.some((s) => s.id === "east-west-pipeline" && s.status === "reduced"));
+  // Every baseline row links its report, and no Israeli outlet.
+  const urls = [...LEDGER_BASELINE.ships.map((s) => s.src.url), ...LEDGER_BASELINE.sites.flatMap((s) => s.hits.map((h) => h.url)), ...LEDGER_BASELINE.figures.map((f) => f.src.url), ...LEDGER_BASELINE.notices.map((n) => n.src.url)];
+  assert.ok(urls.every((u) => /^https:\/\//.test(u)));
+  assert.ok(!urls.some((u) => /timesofisrael|jpost|haaretz|ynet|i24|israelhayom|kan\.org/.test(u)));
+  // A stored row of the same id wins over the baseline's.
+  const stored = { ...LEDGER_SEED, ships: [{ ...LEDGER_BASELINE.ships[0], what: "sunk" as const }] };
+  assert.equal(withBaseline(stored).ships.find((s) => s.id === LEDGER_BASELINE.ships[0].id)?.what, "sunk");
+  // A new hit reported only by the Houthis' outlets is their claim; a wire's report lifts it.
+  const docs = [doc("Al-Masirah: Houthi drones hit the Aramco refinery in Jazan.", "2026-10-01", "Al-Masirah"), doc("Reuters: a fire broke out at Aramco's Jazan refinery after a drone strike.", "2026-10-01", "Reuters")];
+  const one = applyLedger(merged, { sites: [{ doc: 0, site: "Jazan refinery", country: "Saudi Arabia", hit: true }] }, docs, now);
+  assert.equal(one.sites.find((s) => s.id === "jazan")?.hits.find((h) => h.date === "2026-10-01")?.claim, true);
+  const two = applyLedger(one, { sites: [{ doc: 1, site: "Jazan refinery", country: "Saudi Arabia", hit: true }] }, docs, now);
+  assert.ok(!two.sites.find((s) => s.id === "jazan")?.hits.find((h) => h.date === "2026-10-01")?.claim);
+  // A month's figure never overwrites another month's.
+  const f = applyLedger(LEDGER_SEED, { figures: [{ doc: 0, cat: "maritime", label: "Oil through Bab al-Mandab", value: 2.5, unit: "million barrels a day", period: "October" }] }, [doc("Oil through Bab al-Mandab fell to 2.5 million barrels a day in October.")], now);
+  assert.equal(withBaseline(f).figures.filter((x) => x.label === "Oil through Bab al-Mandab").length, 4);
+  assert.equal(f.figures[0].group, "oil");
+  assert.equal(groupOf("maritime", "War-risk insurance 3% of value"), "cost");
+  assert.equal(groupOf("maritime", "Ships crossing Bab al-Mandab"), "traffic");
+  assert.equal(groupOf("energy", "Brent crude $105 a barrel"), "prices");
+  assert.deepEqual(parseFredCsv("observation_date,DCOILBRENTEU\n2026-09-21,116.15\n2026-09-22,.\n"), [{ date: "2026-09-21", value: 116.15 }]);
+});

@@ -466,5 +466,5 @@ html[data-set="broadsheet"] .num-note{font:italic 400 .78rem/1.4 "Newsreader",Ge
 html[data-set="broadsheet"] .st{border-radius:0}
 html[data-set="broadsheet"] .tally-box.ledger .spark polyline{stroke:var(--t-strong)}
 html[data-theme="broadsheet-day"] .st-working,html[data-theme="broadsheet-day"] .tally-box.ledger small.q.up{color:#15803d}
-html[data-theme="broadsheet-day"] .st-reduced,html[data-theme="broadsheet-day"] .tally-box.ledger small.q.down{color:#b45309}
+html[data-theme="broadsheet-day"] .tally-box.ledger small.claim,html[data-theme="broadsheet-day"] .num-note small.claim,html[data-theme="broadsheet-day"] .st-reduced,html[data-theme="broadsheet-day"] .tally-box.ledger small.q.down{color:#b45309}
 html[data-theme="broadsheet-day"] .st-down{color:#b91c1c}

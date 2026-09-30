@@ -6137,17 +6137,22 @@ try { setFavicon(THEME); } catch (e) {}
  * and the theme button on the right (it applies to every desk). Variations of design D are tried
  * with ?mast=D1…D6; without it the page is as before. */
 const MASTS = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10'];
+const DESK_STYLES = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'];
+const DESK_STYLE = (() => { try { const d = (new URLSearchParams(location.search).get('desk') || '').toUpperCase(); return DESK_STYLES.includes(d) ? d : ''; } catch (e) { return ''; } })();
 const MAST = (() => { try { let m = (new URLSearchParams(location.search).get('mast') || '').toUpperCase(); if (m === 'D') m = 'D1'; return MASTS.includes(m) ? m : ''; } catch (e) { return ''; } })();
 function installMast() {
   const top = document.querySelector('header.top');
   if (!MAST || !top || document.querySelector('.mast')) return;
   document.documentElement.dataset.mast = MAST;
+  if (DESK_STYLE) document.documentElement.dataset.desk = DESK_STYLE;
+  const dq = DESK_STYLE ? `&desk=${DESK_STYLE}` : '';
   const h1 = top.querySelector('h1');
   const day = new Date().toLocaleDateString('en-GB', { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const name = MAST === 'D3' ? '<i>The</i> Situation Room' : 'The Situation Room';
   const desk = MAST === 'D4' && h1 ? `<span class="mast-desk">${escapeHtml(h1.textContent)}</span>` : ['D7', 'D8', 'D9', 'D10'].includes(MAST) ? '<span class="mast-desk">Open-source intelligence</span>' : '';
   top.insertAdjacentHTML('beforebegin', `<div class="mast"><span class="mast-date">${day}</span><div class="mast-mid"><a class="mast-name" href="/" aria-label="The Situation Room"><span class="mn">${name}</span></a>${desk}</div><span class="mast-end"></span></div>
-    <nav class="mast-try" aria-label="Masthead designs">${MASTS.map((m) => `<a href="?mast=${m}"${m === MAST ? ' class="on"' : ''}>${m}</a>`).join('')}</nav>`);
+    <nav class="mast-try" aria-label="Masthead designs">${MASTS.map((m) => `<a href="?mast=${m}${dq}"${m === MAST ? ' class="on"' : ''}>${m}</a>`).join('')}</nav>
+    <nav class="mast-try desk-try" aria-label="Desk headline styles">${DESK_STYLES.map((d) => `<a href="?mast=${MAST}&desk=${d}"${d === DESK_STYLE ? ' class="on"' : ''}>${d}</a>`).join('')}</nav>`);
   if (h1) h1.classList.add(MAST === 'D4' ? 'desk-moved' : 'desk-label');
 }
 

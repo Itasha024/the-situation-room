@@ -536,6 +536,14 @@ html[data-mast="D5"] .mast-name .mn{font-size:2rem;letter-spacing:.1em;text-tran
 /* D6: an accent band across the top instead of the short bar */
 html[data-mast="D6"] .mast{border-top:4px solid var(--accent-ui)}
 html[data-mast="D6"] .mast-name::after{display:none}
+/* The desk's headline styles, tried with &desk=H1-H6 (none = the accent capitals) */
+html[data-mast][data-desk="H1"] .top h1.desk-label{color:var(--t-strong)}
+html[data-mast][data-desk="H2"] .top h1.desk-label{font:600 1.4rem/1.15 "Newsreader",Georgia,serif;letter-spacing:-.01em;text-transform:none;color:var(--t-strong)}
+html[data-mast][data-desk="H3"] .top h1.desk-label{font:italic 500 1.35rem/1.15 "Newsreader",Georgia,serif;letter-spacing:0;text-transform:none;color:var(--t-text)}
+html[data-mast][data-desk="H4"] .top h1.desk-label{display:inline-block;padding:.28rem .55rem .24rem;background:var(--t-strong);color:var(--t-bg);font-size:.74rem}
+html[data-mast][data-desk="H5"] .top h1.desk-label{color:var(--plc)}
+html[data-mast][data-desk="H6"] .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);padding-left:.6rem;border-left:3px solid var(--t-strong)}
+.desk-try{bottom:48px}
 /* The picker for trying the designs, bottom right */
 .mast-try{position:fixed;right:12px;bottom:12px;z-index:1200;display:flex;gap:2px;padding:3px;background:var(--t-glass);border:1px solid var(--t-line-strong);box-shadow:var(--shadow-pop)}
 .mast-try a{min-width:30px;padding:5px 0;text-align:center;font:600 .75rem/1 var(--f-body);color:var(--t-text);text-decoration:none}
@@ -561,4 +569,8 @@ html[data-mast="D6"] .mast-name::after{display:none}
   html[data-mast="D5"] .mast-name .mn{font-size:1.08rem;letter-spacing:.06em}
   html[data-mast] .top h1{font-size:1.1rem}
   .mast-try{bottom:60px}
+  .desk-try{bottom:96px}
+  html[data-mast][data-desk="H2"] .top h1.desk-label{font-size:1.2rem}
+  html[data-mast][data-desk="H3"] .top h1.desk-label{font-size:1.15rem}
+  html[data-mast][data-desk="H6"] .top h1.desk-label{font-size:.95rem}
 }

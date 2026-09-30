@@ -12,6 +12,13 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 | Spokesmen, ministries and front reporters (`@Yah_Saree`, `@abdusalamsalah`, `@spokespersonyem`, `@Yem_army_media`, `@YemenMOD`, `@CJFCSpox`, `@modgovksa`, `@KSAMOFA`, `@maldhabyani`, `@taha_saleh_taiz`, `@BashaReport`, `@SaudiNews50`, `@2decnews`, `@South24_net`, `@yementvyem`) | every 10 minutes |
 | Sky News Arabia breaking — `@SkyNewsArabia_B`: **only posts where sources spoke to Sky News Arabia itself** ("مصادر لسكاي نيوز عربية", "لـ«سكاي نيوز عربية»", "خاص", "told Sky News Arabia"); the rest (other agencies' news) is dropped before the reader | every 10 minutes |
 | Leaders, parties and the slower channels (`@PresidentRashad`, `@ERYANIM`, `@AbuZar3a`, `@tarikyemen`, `@AidrosAlzubidi`, `@Moh_Alhouthi`, `@hezamalasad` and others), plus journalists Fares al-Hemyari (`@FaresALhemyari`) and Malik al-Rougui (`@alrougui`, West Coast front) | every 30 minutes |
+| Yemen's Ministry of Human Rights — `@mohr_yemen` (government side; its casualty statements count as official). Added 1 Oct | every 15 minutes |
+| **Governments, agencies and international bodies** (added 30 Sep). Only posts about this war pass: Yemen, the Houthis, the Saudi–Houthi war, the Red Sea, Bab al-Mandab, or Saudi energy under attack; their other diplomacy is dropped. Each is also where a relay of that body's words is looked up first. | |
+| Gulf agencies and the US and UN in Yemen: SPA (`@spagov`), WAM (`@wamnews`), US State Department (`@StateDept`), UN in Yemen (`@UNinYE`) | every 10 minutes |
+| Foreign ministries: Egypt (`@MfaEgypt`, `@MFAEgOfficial`), Iran (`@IRIMFA_EN`), Oman (`@FMofOman`), UAE (`@mofauae`), Iraq (`@Iraqimofa`), Kuwait (`@MOFAKuwait`), Bahrain (`@bahdiplomatic`), Qatar (`@MofaQatar_AR`), Jordan (`@ForeignMinistry`), Somalia (`@MOFASomalia`), Pakistan (`@ForeignOfficePk`), Turkey (`@MFATurkiye`, `@TC_Disisleri`) | every 15 minutes |
+| United States: Marco Rubio (`@SecRubio`), Energy Department (`@ENERGY`), Treasury (`@USTreasury`), US Embassy Yemen (`@USEmbassyYemen`) | every 15 minutes |
+| Suez and the EU and UN: Suez Canal Authority (`@SuezAuthorityEG`), European Commission (`@EU_Commission`), Ursula von der Leyen (`@vonderleyen`), EU in Yemen (`@EUinYemen`), UN OCHA (`@UNOCHA`), António Guterres (`@antonioguterres`), United Nations (`@UN`) | every 15 minutes |
+| The sea and energy: UKMTO (`@UK_MTO`, every 5 minutes), Saudi Energy Ministry (`@MoEnergy_Saudi`, every 10 minutes), Kpler, TankerTrackers, MarineTraffic, Vortexa, Javier Blas, OSINT Hexagone, Egypt OSINT (every 15 minutes). Details below, under "The sea and energy" | |
 
 ---
 

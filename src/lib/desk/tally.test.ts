@@ -22,8 +22,13 @@ test("a lower figure from a different body never pulls the count down", () => {
 });
 
 test("the body that issued a count may revise it down", () => {
-  const t = applyUpdates(TALLY_SEED, [{ field: "killed.houthi", value: 270, source: "AFP", doc: 0 }], docs, now);
-  assert.equal(t.killed.houthi, 270);
+  const t = applyUpdates(TALLY_SEED, [{ field: "injured.saudi", value: 70, source: "Coalition", doc: 0 }], docs, now);
+  assert.equal(t.injured.saudi, 70);
+});
+
+test("a count from someone who is no official body never enters the official tally", () => {
+  const t = applyUpdates(TALLY_SEED, [{ field: "killed.houthi", value: 420, source: "Fares al-Hemyari", doc: 0 }], docs, now);
+  assert.equal(t.killed.houthi, TALLY_SEED.killed.houthi);
 });
 
 test("a whole-war total (tenfold jump) is refused", () => {

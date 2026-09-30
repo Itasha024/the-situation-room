@@ -14,6 +14,7 @@
  */
 
 import type { LiveReport } from "./types.ts";
+import { isOfficialBody, viaOf } from "./numbers.ts";
 import { askChain } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 
@@ -185,6 +186,9 @@ function setField(t: Tally, f: Field, v: number) {
   }
 }
 
+/** The number is written in the text: "4,481", "4481". */
+const hasNumber = (text: string, n: number) => text.includes(n.toLocaleString("en-US")) || new RegExp(`\\b${n}\\b`).test(text);
+
 /** Apply model updates. Pure, so the rules are testable. */
 export function applyUpdates(current: Tally, updates: Update[], docs: Doc[], now: Date): Tally {
   const next: Tally = structuredClone(current);
@@ -194,16 +198,22 @@ export function applyUpdates(current: Tally, updates: Update[], docs: Doc[], now
     if (!doc) continue;
     // A count is civilian only when the document says so; an unsplit total goes to "All sides".
     if (u.field.endsWith(".civilians") && !/civilian/i.test(doc.text)) continue;
+    // Official means an official body: a journalist's or an outlet's count is not (Fares al-Hemyari, 1 Oct).
+    if (!isOfficialBody(u.source || doc.name)) continue;
     const value = Math.round(u.value);
     const prev = getField(next, u.field);
     const prevFrom = next.from[u.field];
-    // A count only moves backwards when the body that issued it revises it.
-    if (prev != null && value < prev && prevFrom?.name !== u.source) continue;
+    // A count only moves backwards when the body that issued it revises it
+    // (or when the standing one was never an official body's).
+    if (prev != null && value < prev && prevFrom?.name !== u.source && isOfficialBody(String(prevFrom?.name || ""))) continue;
     // A tenfold jump is a whole-war total or a misread, not this round.
     if (prev != null && prev > 50 && value > prev * 10) continue;
     setField(next, u.field, value);
     const q = qualifierFor(doc.text, value);
-    next.from[u.field] = { name: u.source || doc.name, url: doc.url, date: doc.date, ...(q ? { q } : {}) };
+    // Read on an aggregator: the body's own report, when a ReliefWeb one carries the figure.
+    const own = viaOf(doc.url) ? docs.find((d) => /reliefweb\.int/.test(d.url) && hasNumber(d.text, value)) : undefined;
+    const src = own ?? doc;
+    next.from[u.field] = { name: u.source || doc.name, url: src.url, date: src.date, ...(q ? { q } : {}) };
   }
   next.updatedAt = now.toISOString();
   return next;

@@ -13,7 +13,8 @@ import { outletSide } from "./credibility.ts";
 import type { Claims, Qualifier, Tally, TallySource } from "./tally.ts";
 
 export type Column = "official" | "houthi" | "gov";
-export type Cell = TallySource & { value: number; note?: string };
+/** `via`: the site an official figure was read on, when it is not the body's own. */
+export type Cell = TallySource & { value: number; note?: string; via?: string };
 export type Numbers = { cells: Record<string, Partial<Record<Column, Cell>>>; asOf: string };
 
 export const ROWS = {
@@ -21,6 +22,8 @@ export const ROWS = {
   injured: ["houthi", "gov", "saudi", "civilians", "total"],
   humanitarian: ["idp", "refugees", "food"],
 } as const;
+
+const WHO_SITREP_5 = "https://reliefweb.int/report/yemen/conflict-escalation-yemen-situation-report-5-reporting-period-19-26-september-2026-issued-27-september-2026";
 
 const c = (value: number, name: string, url: string, date: string, q?: Qualifier, note?: string): Cell => ({
   value, name, url, date, ...(q ? { q } : {}), ...(note ? { note } : {}),
@@ -35,16 +38,18 @@ const c = (value: number, name: string, url: string, date: string, q?: Qualifier
 export const BASELINE: Numbers = {
   asOf: "2026-09-25",
   cells: {
+    // The WHO-led Health Cluster's own report on ReliefWeb (4,481 casualties since 6 August, 838 of them deaths).
     "killed.total": {
-      official: c(674, "WHO", "https://www.almashhad.news/news/496321", "2026-09-24", undefined, "Killed in the escalation, all sides"),
+      official: c(838, "WHO (Health Cluster)", WHO_SITREP_5, "2026-09-27", undefined, "Killed in the escalation, all sides, since 6 August"),
     },
     "injured.total": {
-      official: c(2998, "WHO", "https://www.almashhad.news/news/496321", "2026-09-24", undefined, "Wounded in the escalation, all sides"),
+      official: c(3643, "WHO (Health Cluster)", WHO_SITREP_5, "2026-09-27", undefined, "Wounded in the escalation, all sides, since 6 August"),
     },
     "killed.houthi": {
-      // The movement's own death notices, added up by Almashhad: the Houthis' own count.
-      houthi: c(693, "Houthi death notices (Almashhad count)", "https://www.almashhad.news/news/496403", "2026-09-24", "at least", "Dead the movement's own media announced, 1 July to 22 September"),
-      gov: c(1000, "National Resistance", "https://www.2dec.net/last83440.html", "2026-09-13", "more than", "West Coast only, 9 August to 10 September"),
+      // Almashhad (government side) adds up the movement's own death notices. Its
+      // 29 Sep count starts with the war (13 July to 27 September); its 24 Sep
+      // one (693) ran from 1 July, so it counted days before the war.
+      gov: c(568, "Almashhad (count of Houthi death notices)", "https://www.almashhad.news/news/497120", "2026-09-29", "at least", "Houthi fighters whose deaths the movement announced, 13 July to 27 September"),
     },
     "killed.gov": {
       gov: c(500, "National Resistance", "https://www.2dec.net/last83440.html", "2026-09-13", "more than", "Its own dead on the West Coast, 9 August to 10 September"),
@@ -76,11 +81,31 @@ export const BASELINE: Numbers = {
   },
 };
 
+/**
+ * Official means an official body: a UN agency, the WHO, a ministry, a
+ * government, the coalition, civil defence, a health authority. A journalist,
+ * an outlet or anyone's X account is not, whatever figure they post; their
+ * numbers go in their side's column.
+ */
+const OFFICIAL_BODY =
+  /\b(?:WHO|World Health Organi[sz]ation|Health Cluster|UN|United Nations|OCHA|UNHCR|IOM|UNICEF|UNFPA|OHCHR|WFP|IPC|FAO|ICRC|Red Crescent|Red Cross|ministry|ministries|minister|government|coalition|civil defen[cs]e|health (?:office|authorit(?:y|ies)|bureau)|governorate|local authorit(?:y|ies)|Saudi officials|Saudi Press Agency|SPA|displaced camps unit|executive unit)\b|وزارة|منظمة الصحة/i;
+export function isOfficialBody(name: string): boolean {
+  return OFFICIAL_BODY.test(String(name || ""));
+}
+
+/** An official body's own site (or a wire it is not). */
+const OWN_SITE = /(?:^|\.)(?:reliefweb\.int|who\.int|un\.org|unocha\.org|iom\.int|unhcr\.org|wfp\.org|ipcinfo\.org|unicef\.org|ohchr\.org|unfpa\.org|icrc\.org|fao\.org|spa\.gov\.sa|sabanew\.net|x\.com|twitter\.com|t\.me)$|\.gov(?:\.[a-z]{2})?$|\.gov\.[a-z]{2}$|\.int$/i;
+/** The site an official figure was read on, when it is not the body's own (shown as "via"). */
+export function viaOf(url: string | undefined): string {
+  const h = host(url);
+  return h && !OWN_SITE.test(h) ? h : "";
+}
+
 /** Who an outlet speaks for, from its name alone. */
 function sideOf(name: string): "houthi" | "gov" | "" {
   const s = outletSide(name, "");
   if (s === "houthi" || s === "gov") return s;
-  if (/Erem|Sky News Arabia|Al-?Ain|Aden al-?Ghad|Yemeni army|Government|Coalition|Saudi/i.test(name)) return "gov";
+  if (/Erem|Sky News Arabia|Al-?Ain|Aden al-?Ghad|Yemeni army|Government|Coalition|Saudi|Hemyari|Rougui|National Resistance|Giants|Nation.?s Shield|Sheba|Suhail|South24|2 December|Almashhad/i.test(name)) return "gov";
   if (/Sanaa|Ansar Allah|Ein al-?Insaniyah|Eye of Humanity|Houthi/i.test(name)) return "houthi";
   return "";
 }
@@ -118,17 +143,24 @@ export function mergeNumbers(tally: Tally | null, claims: Claims | null, base: N
     const row = (cells[key] ??= {});
     row[col] = newer(row[col], cell);
   };
+  // The official tally's figure from someone who is no official body goes to
+  // that source's side, or nowhere when it has none (Fares al-Hemyari, 1 Oct).
+  const putTally = (key: string, cell: Cell) => {
+    if (isOfficialBody(cell.name)) return put(key, "official", cell);
+    const side = sideOf(cell.name);
+    if (side && !tooSmall(cell)) put(key, side, cell);
+  };
   if (tally) {
     for (const group of ["killed", "injured"] as const) {
       for (const k of ROWS[group]) {
         const v = (tally[group] as Record<string, number | null | undefined>)[k];
         const from = tally.from?.[`${group}.${k}`];
-        if (Number.isFinite(v) && from) put(`${group}.${k}`, "official", { ...from, value: v as number });
+        if (Number.isFinite(v) && from) putTally(`${group}.${k}`, { ...from, value: v as number });
       }
     }
     for (const k of ["idp", "refugees"] as const) {
       const v = tally[k];
-      if (Number.isFinite(v) && tally.from?.[k]) put(k, "official", { ...tally.from[k], value: v as number });
+      if (Number.isFinite(v) && tally.from?.[k]) putTally(k, { ...tally.from[k], value: v as number });
     }
   }
   for (const [key, bySide] of Object.entries(claims?.fields ?? {})) {
@@ -138,6 +170,13 @@ export function mergeNumbers(tally: Tally | null, claims: Claims | null, base: N
       if (Object.values(cells[key] ?? {}).some((x) => x && x.value === claim.value && host(x.url) && host(x.url) === host(claim.url))) continue;
       const side = sideOf(claim.name);
       put(key, side && side !== col ? side : col, claim);
+    }
+  }
+  for (const row of Object.values(cells)) {
+    const off = row.official;
+    if (off) {
+      const via = viaOf(off.url);
+      if (via) row.official = { ...off, via };
     }
   }
   const dates = Object.values(cells).flatMap((r) => Object.values(r).map((x) => String(x?.date || "")));

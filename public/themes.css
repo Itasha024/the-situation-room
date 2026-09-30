@@ -546,3 +546,8 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 
 /* PC: the clock's digits in equal cells (set in app.js), so "Yemen" before it stays put */
 @media (min-width:721px){#ye-clock .dg{display:inline-block;width:var(--dw,auto);text-align:center}}
+/* Numbers: "Unofficial" over the two sides' columns; an official figure read on another site says "via" */
+html .tally-box.claims tr.grp th{border-bottom:0;padding-bottom:0}
+html .tally-box.claims tr.grp th.un{font:600 .55rem/1.3 var(--f-body,inherit);letter-spacing:.12em;text-transform:uppercase;color:var(--t-muted,#8fa3b6);text-align:center;border-bottom:1px solid var(--t-line-strong,#2a3a4e);padding:0 0 .2rem}
+html[data-set="broadsheet"] .tally-box.claims tr.grp + tr th{font:600 .6rem/1.2 var(--f-body);letter-spacing:.1em;border-bottom:1px solid var(--t-strong)}
+.tally-box.claims td .via{display:block;font:400 .6rem/1.2 var(--f-body,inherit);color:var(--t-muted,#8fa3b6);margin-top:2px}

@@ -183,6 +183,8 @@ const X_ACCOUNTS: XAccount[] = [
   X("afrah_alzouba", "Afrah al-Zouba", "gov", C30),
   X("tarikyemen", "Tareq Saleh", "gov", C30),
   X("yemen_mofa", "Yemen Foreign Ministry", "gov", C30),
+  // Its casualty and abuse statements count as official (a ministry), 1 Oct.
+  X("mohr_yemen", "Yemen Human Rights Ministry", "gov", C15),
   X("nrfyemen", "National Resistance", "gov", C30),
   X("P_B_N_R", "National Resistance Political Bureau", "gov", C30),
   X("diralwatan", "Nation's Shield", "gov", C30),

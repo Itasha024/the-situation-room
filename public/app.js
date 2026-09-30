@@ -2914,9 +2914,11 @@ function numCell(c, cls) {
   const n = c.value >= 1e6 ? `${(c.value / 1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M` : Number(c.value).toLocaleString('en-US');
   const q = c.q ? `<small class="q">${escapeHtml(c.q)}</small> ` : '';
   const when = c.date ? new Date(`${c.date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-  const tip = [c.name, when].filter(Boolean).join(', ') + (c.note ? ` — ${c.note}` : '');
+  const tip = [c.name, when].filter(Boolean).join(', ') + (c.via ? ` (via ${c.via})` : '') + (c.note ? ` — ${c.note}` : '');
   const inner = c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${q}${n}</a>` : `${q}${n}`;
-  return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}</td>`;
+  // An official figure read on someone else's site says where.
+  const via = c.via ? `<small class="via">via ${escapeHtml(c.via)}</small>` : '';
+  return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}${via}</td>`;
 }
 
 /*
@@ -3262,7 +3264,8 @@ function renderCasualties() {
   else if (numCat === 'energy') slides = energyBoxes(brief && brief.ledger, brief && brief.transits);
   else {
     const nums = (brief && brief.figures && brief.figures.cells ? brief.figures : null) || fallbackNumbers((brief && brief.tally) || TALLY_FALLBACK);
-    const head = '<tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
+    // Official = official bodies only; everyone else is unofficial, by the side they speak for.
+    const head = '<tr class="grp"><th></th><th></th><th scope="colgroup" colspan="2" class="un">Unofficial</th></tr><tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
     slides = NUM_BOXES.map(([title, rows]) => [title, `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows.map(([label, key]) => {
       const r = nums.cells[key] || {};
       return `<tr><th scope="row">${label}</th>${numCell(r.official, 'off')}${numCell(r.houthi, 'h')}${numCell(r.gov, 'g')}</tr>`;

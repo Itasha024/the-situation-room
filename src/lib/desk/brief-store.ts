@@ -20,7 +20,7 @@
 import type { LiveReport } from "./types.ts";
 import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
-import { controlContext, type DevMark, writeProse } from "./prose.ts";
+import { controlContext, type DevMark, type Prose, writeProse } from "./prose.ts";
 import { WRITER_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
@@ -49,6 +49,8 @@ export async function refreshBrief(
 ): Promise<{ brief: Brief; built: boolean }> {
   const w = briefWindow(now);
   const saved = (await store.getJson<StoredBrief>(BRIEF_KEY)) ?? null;
+  // Only the clock (the tick) arms the early writing, never a page visit.
+  if (retryProse) armClock(store, w);
   if (saved?.brief?.updatedAt === w.updatedAt) {
     // Only the clock asks again (a model call is too slow for a page visit).
     if (!retryProse || !proseDue(saved.brief, now)) return { brief: saved.brief, built: false };
@@ -66,7 +68,74 @@ export async function refreshBrief(
 
 let building: Promise<{ brief: Brief; built: boolean }> | null = null;
 
+/* ------------------------------------------------------------------ *
+ * Written before the hour
+ *
+ * The prose of the window that closes at 00/06/12/18 is written a few minutes
+ * early, from the cards logged so far, so it is ready, by a strong writer, at
+ * the round time. The lead is how long the writers took last time (with room
+ * for a busy minute), between 4 and 15 minutes. At the hour the brief is built
+ * from every card of the window and takes that prose; cards of the last minutes
+ * still count in the numbers, the maps and the fronts' marks.
+ * ------------------------------------------------------------------ */
+
+const PROSE_MS_KEY = "brief-prose-ms";
+const LEAD_MIN_MS = 4 * 60_000;
+const LEAD_MAX_MS = 15 * 60_000;
+let armedFor = "";
+let pre: { updatedAt: string; job: Promise<Prose | null> } | null = null;
+
+function armClock(store: DeskStore, w: ReturnType<typeof briefWindow>): void {
+  if (armedFor === w.nextUpdateAt) return;
+  armedFor = w.nextUpdateAt;
+  const at = Date.parse(w.nextUpdateAt);
+  void (async () => {
+    const took = (await store.getJson<number>(PROSE_MS_KEY).catch(() => null)) ?? 5 * 60_000;
+    const lead = Math.min(LEAD_MAX_MS, Math.max(LEAD_MIN_MS, took * 1.3 + 90_000));
+    const wait = at - lead - Date.now();
+    if (wait < 0) return;
+    setTimeout(() => {
+      const next = briefWindow(new Date(at + 1000));
+      pre = { updatedAt: next.updatedAt, job: prewrite(store, next, at).catch(() => null) };
+    }, wait).unref?.();
+    // Published on the hour itself, not at the next tick.
+    setTimeout(() => void refreshBrief(store, new Date(), { retryProse: true }).catch(() => {}), at - Date.now() + 2000).unref?.();
+  })();
+}
+
+/** The next window's prose from the cards so far; strong writers asked again until a minute before the hour. */
+async function prewrite(store: DeskStore, w: ReturnType<typeof briefWindow>, at: number): Promise<Prose | null> {
+  const t0 = Date.now();
+  const saved = (await store.getJson<StoredBrief>(BRIEF_KEY)) ?? null;
+  const { all, inWindow } = await windowReports(store, w);
+  const extraFronts = updateExtraFronts(all, (await store.getJson<ExtraFront[]>(EXTRA_FRONTS_KEY)) ?? [], coveredByTrackedFront, new Date(at));
+  const brief = buildBrief(inWindow, new Date(at), { extraFronts });
+  let controlLines = controlContext();
+  try {
+    controlLines = controlContext(mergedControl(updateControlLive((await store.getJson<ControlLive>(CONTROL_LIVE_KEY)) ?? null, inWindow, new Date(at))));
+  } catch {}
+  let best: Prose | null = null;
+  for (;;) {
+    const p = await writeProse(
+      inWindow,
+      brief.fronts.map((f) => ({ id: f.id, name: f.name, incidents: f.strikes + f.ground + f.alerts + f.maritime, previous: saved?.brief.fronts?.find((x) => x.id === f.id)?.line || "" })),
+      saved?.brief.situation?.line || "",
+      (r) => frontIdsOf(r, extraFronts),
+      controlLines,
+    ).catch(() => null);
+    if (p?.situation && (!best || (p.model && STRONG.has(p.model)))) best = p;
+    if (best?.model && STRONG.has(best.model)) break;
+    if (Date.now() + 2 * 60_000 > at) break;
+    await new Promise((r) => setTimeout(r, 60_000));
+  }
+  const ms = Date.now() - t0;
+  console.log(`[desk] prose written early: ${best?.model || "no model"} in ${Math.round(ms / 1000)}s`);
+  if (best?.model && STRONG.has(best.model)) await store.putJson(PROSE_MS_KEY, ms).catch(() => {});
+  return best;
+}
+
 async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof briefWindow>, saved: StoredBrief | null): Promise<{ brief: Brief; built: boolean }> {
+  const early = pre?.updatedAt === w.updatedAt ? await pre.job : null;
   const { all, inWindow } = await windowReports(store, w);
 
   // The brief that was current until now becomes this one's comparison point.
@@ -110,7 +179,7 @@ async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof bri
   // The window is published once, well written: while only a fallback model (or
   // none) answered, the strong writers are asked again, a minute apart, before
   // the brief is stored. The last window stays on the page meanwhile.
-  let model = await proseInto(store, brief, inWindow, all, proseArgs);
+  let model = await proseInto(store, brief, inWindow, all, proseArgs, early);
   for (let i = 0; i < 4 && !(model && STRONG.has(model)); i++) {
     await new Promise((r) => setTimeout(r, 60_000));
     const again: Brief = { ...brief, fronts: brief.fronts.map((f) => ({ ...f })) };
@@ -250,12 +319,14 @@ async function proseInto(
   inWindow: LiveReport[],
   all: LiveReport[],
   o: { previousSituation: string; previousFront: (id: string) => string; frontsOf: (r: LiveReport) => string[]; inArea: (ll: [number, number], id: string) => boolean; controlLines: string[] },
+  /** Prose already written (before the hour): only its places and maps are done here. */
+  given: Prose | null = null,
 ): Promise<string | null> {
   let model: string | null = null;
   let devMap: DevMark[] = [];
   const frontMaps: Record<string, DevMark[]> = {};
   try {
-    const prose = await writeProse(
+    const prose = given ?? await writeProse(
       inWindow,
       brief.fronts.map((f) => ({
         id: f.id,

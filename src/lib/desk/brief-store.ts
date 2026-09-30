@@ -55,6 +55,18 @@ export async function refreshBrief(
     return { brief: await reprose(store, saved, now), built: false };
   }
 
+  // One build at a time: while it waits for a strong writer, visits get the last window.
+  if (building && saved) return { brief: saved.brief, built: false };
+  if (building) return building;
+  building = buildWindow(store, now, w, saved).finally(() => {
+    building = null;
+  });
+  return building;
+}
+
+let building: Promise<{ brief: Brief; built: boolean }> | null = null;
+
+async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof briefWindow>, saved: StoredBrief | null): Promise<{ brief: Brief; built: boolean }> {
   const { all, inWindow } = await windowReports(store, w);
 
   // The brief that was current until now becomes this one's comparison point.
@@ -88,13 +100,27 @@ export async function refreshBrief(
   } catch (err) {
     console.error("[desk] control update failed:", err instanceof Error ? err.message : err);
   }
-  await proseInto(store, brief, inWindow, all, {
+  const proseArgs = {
     previousSituation: saved?.brief.situation?.line || "",
-    previousFront: (id) => saved?.brief.fronts?.find((p) => p.id === id)?.line || "",
-    frontsOf: (r) => frontIdsOf(r, extraFronts),
-    inArea: (ll, id) => inFrontArea(ll, id, extraFronts),
+    previousFront: (id: string) => saved?.brief.fronts?.find((p) => p.id === id)?.line || "",
+    frontsOf: (r: LiveReport) => frontIdsOf(r, extraFronts),
+    inArea: (ll: [number, number], id: string) => inFrontArea(ll, id, extraFronts),
     controlLines,
-  });
+  };
+  // The window is published once, well written: while only a fallback model (or
+  // none) answered, the strong writers are asked again, a minute apart, before
+  // the brief is stored. The last window stays on the page meanwhile.
+  let model = await proseInto(store, brief, inWindow, all, proseArgs);
+  for (let i = 0; i < 4 && !(model && STRONG.has(model)); i++) {
+    await new Promise((r) => setTimeout(r, 60_000));
+    const again: Brief = { ...brief, fronts: brief.fronts.map((f) => ({ ...f })) };
+    const m = await proseInto(store, again, inWindow, all, proseArgs);
+    if (m && (STRONG.has(m) || !model)) {
+      Object.assign(brief, again);
+      model = m;
+    }
+  }
+  brief.proseTriedAt = new Date().toISOString();
   await store.putJson(BRIEF_KEY, { brief, history } satisfies StoredBrief);
   // The official numbers move on the same 6-hour clock. A failed fetch keeps
   // the last tally; it must never cost the brief.

@@ -90,8 +90,8 @@ const LABELS = {
 const CATEGORY_LABEL = {
   combat: 'Ground fighting',
   strike: 'Launch/strike/alert',
-  vessel: 'Maritime incidents',
-  port: 'Energy incidents',
+  vessel: 'Maritime incident',
+  port: 'Energy incident',
   statement: 'Statement',
 };
 
@@ -5689,8 +5689,8 @@ function renderLegend(d) {
       <div class="leg-sec">Events</div>
       ${row('combat', EVENT_COLORS.combat, 'Ground fighting', true)}
       ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
-      ${row('vessel', EVENT_COLORS.vessel, 'Maritime incidents', true)}
-      ${row('port', EVENT_COLORS.port, 'Energy incidents', true)}
+      ${row('vessel', EVENT_COLORS.vessel, 'Maritime incident', true)}
+      ${row('port', EVENT_COLORS.port, 'Energy incident', true)}
     </div>`;
   fitLegend();
   if (!legendFitWired) {

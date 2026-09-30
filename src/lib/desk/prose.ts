@@ -124,6 +124,13 @@ const BATTLE = /\b(?:fight\w*|clash\w*|attack\w*|strikes?|struck|airstrikes?|air
 /** Politics, diplomacy and the economy. */
 const OTHER = /\b(?:warn\w*|threat\w*|vow\w*|call(?:s|ed)? (?:for|on)|urg\w*|condemn\w*|denounc\w*|welcom\w*|talks|negotiat\w*|meetings?|met|envoy|diplomat\w*|summit|visit\w*|econom\w*|currency|rial|prices?|inflation|salar\w*|aid|humanitarian|sanction\w*|agreements?|truce|ceasefire|mediat\w*|mobili[sz]\w*|parliament|cabinet|appoint\w*|minister|president|ministry|statement)\b/i;
 
+/** The sea and shipping, with no fighting on land or in the air named: after the battle, before politics. */
+const SEA = /\b(?:ships?|vessels?|tankers?|shipping|naval|escorts?|Aspides|UKMTO|transits?)\b/i;
+const LAND = /\b(?:fight\w*|clash\w*|airstrikes?|shell\w*|missiles?|drones?|advanc\w*|offensive|front|forces|troops|artillery)\b/i;
+function isSea(x: string): boolean {
+  return SEA.test(x) && !LAND.test(x);
+}
+
 /** A sentence is political when its politics come before any fighting it names ("the envoy condemned the strikes"). */
 function isOther(x: string): boolean {
   const o = x.search(OTHER);
@@ -140,16 +147,19 @@ function isOther(x: string): boolean {
 export function battleFirst(text: string): string {
   const paras = String(text || "").split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   const battle: string[] = [];
+  const sea: string[] = [];
   const other: string[] = [];
   for (const p of paras) {
     const sentences = (p.match(/(?:[^.!?]|\.(?=\d))+[.!?]+/g) || [p]).map((x) => x.trim()).filter(Boolean);
-    const b = sentences.filter((x) => !isOther(x));
+    const b = sentences.filter((x) => !isOther(x) && !isSea(x));
+    const s = sentences.filter((x) => !isOther(x) && isSea(x));
     const o = sentences.filter((x) => isOther(x));
     if (b.length) battle.push(b.join(" "));
+    if (s.length) sea.push(s.join(" "));
     if (o.length) other.push(o.join(" "));
   }
-  if (!battle.length || !other.length) return paras.join("\n\n");
-  return [...battle, other.join(" ")].join("\n\n");
+  if ([battle, sea, other].filter((x) => x.length).length < 2) return paras.join("\n\n");
+  return [...battle, sea.join(" "), other.join(" ")].filter(Boolean).join("\n\n");
 }
 
 const SIDE_WORDS: Record<string, DevSide> = {
@@ -232,8 +242,13 @@ export async function writeProse(
   }
   if (!got) return null;
   const j = got.json;
-  const out: Prose = { situation: battleFirst(cleanProse(j.situation, 4, true, 700)), more: "", fronts: {}, model: got.model, devMap: [], frontMaps: {} };
-  if (out.situation) out.more = battleFirst(cleanProse(j.situation_more, 5, true, 1000));
+  const out: Prose = { situation: cleanProse(j.situation, 4, true, 700), more: "", fronts: {}, model: got.model, devMap: [], frontMaps: {} };
+  if (out.situation) {
+    // Ordered over both parts together: the fighting from the overview and "Read more" first, then the sea, then politics.
+    const [first, ...rest] = battleFirst([out.situation, cleanProse(j.situation_more, 5, true, 1000)].filter(Boolean).join("\n\n")).split("\n\n");
+    out.situation = first;
+    out.more = rest.join("\n\n");
+  }
   // Over 75 words the overview is not short: its last sentences open "Read more" instead, so nothing is lost.
   const [top, moved] = fitWords(out.situation, 75);
   if (moved) {

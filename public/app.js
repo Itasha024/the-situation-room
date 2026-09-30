@@ -2894,7 +2894,7 @@ function numCell(c, cls) {
   const q = c.q ? `<small class="q">${escapeHtml(c.q)}</small> ` : '';
   const when = c.date ? new Date(`${c.date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
   const tip = [c.name, when].filter(Boolean).join(', ') + (c.note ? ` — ${c.note}` : '');
-  const inner = c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${q}${n}</a>` : `${q}${n}`;
+  const inner = c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${q}${n}${SRC_GO_SVG}</a>` : `${q}${n}`;
   return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}</td>`;
 }
 
@@ -2908,9 +2908,12 @@ let numCat = 'cas';
 const numBoxOf = { cas: 0, sea: 0, energy: 0 };
 
 const SITE_STATUS = { working: 'Working', reduced: 'Reduced', down: 'Down', unknown: 'Not known' };
-/** The war began with the strike on Sanaa airport. */
+/** The conflict began with the strike on Sanaa airport. */
 const WAR_START = '2026-07-13';
-const SINCE_LABEL = 'Since 13 Jul';
+const SINCE_LABEL = 'Since conflict';
+const BEFORE_LABEL = 'Before conflict';
+/** The month before it, the yardstick for ships and the oil price. */
+const BASE_SPAN = '13 Jun – 12 Jul';
 
 function ledDay(d) {
   if (!d) return '';
@@ -2922,10 +2925,10 @@ function ledDay(d) {
 const yeDay = (back = 0) => new Date(Date.now() - back * 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Aden' });
 
 /*
- * Every attack stands on its best source: the official body (UKMTO, the
+ * Every figure stands on its best source: the official body (UKMTO, the
  * ministry, the state agency), then a wire (Reuters, AP, AFP, Bloomberg).
- * Anything else, and what only the attacking side says, shows as a claim.
- * The same rule as ledger.ts sourceTier.
+ * Both show as official; anything else, and what only the attacking side
+ * says, as unofficial. The same rule as ledger.ts sourceTier.
  */
 const OFFICIAL_SRC = /\b(?:UKMTO|JMIC|MARAD|Maritime Administration|CENTCOM|Aspides|EUNAVFOR|Atalanta|SPA|Saudi Press Agency|Ministry of (?:Energy|Defen[cs]e|Foreign Affairs|Interior)|(?:Energy|Defen[cs]e|Foreign|Interior) Ministry|coalition|Civil Defen[cs]e|JODI|Aramco|IMF|PortWatch|EIA|Energy Information Administration)\b/i;
 const WIRE_SRC = /\b(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Bloomberg)\b/;
@@ -2937,34 +2940,21 @@ function srcTier(s) {
   if (WIRE_SRC.test(s.name || '')) return 'wire';
   return 'claim';
 }
-const TIER = {
-  official: ['Official', 'From the official body itself'],
-  wire: ['Wire', 'Reported by a news agency'],
-  claim: ['Claim', 'Not confirmed by an official body or a news agency'],
-};
-/** The source as a tag (Official, Wire, Claim) that opens the report. */
-function srcTag(s) {
-  if (!s) return '';
-  const t = srcTier(s);
-  const tip = `${[s.name, ledDay(s.date)].filter(Boolean).join(', ')}: ${TIER[t][1]}${s.note ? `. ${s.note}` : ''}`;
-  return s.url
-    ? `<a class="tier t-${t}" href="${escapeHtml(s.url)}" target="_blank" rel="noopener" title="${escapeHtml(tip)}">${TIER[t][0]}</a>`
-    : `<span class="tier t-${t}" title="${escapeHtml(tip)}">${TIER[t][0]}</span>`;
+const isOfficial = (s) => srcTier(s) !== 'claim';
+/** A number, date or name that opens its source: white when official, amber when not. */
+function srcLink(html, s, cls) {
+  const k = `sl ${s && isOfficial(s) ? 'sl-off' : 'sl-unoff'}${cls ? ` ${cls}` : ''}`;
+  if (!s || !s.url) return `<span class="${k}">${html}</span>`;
+  return `<a class="${k}" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${html}${SRC_GO_SVG}</a>`;
 }
-const confirmed = (s) => srcTier(s) !== 'claim';
-/** A figure's tag: Official or Wire, else the tracking firm whose data it is (a figure is data, not a claim). */
-function figTag(s) {
-  if (!s || srcTier(s) !== 'claim' || s.claim) return srcTag(s);
-  const firm = (String(s.name).match(/Kpler|Vortexa|TankerTrackers|Signal Ocean|LSEG/) || [])[0] || 'Report';
-  const tip = `${[s.name, ledDay(s.date)].filter(Boolean).join(', ')}: figures from ${firm === 'Report' ? 'a report' : `${firm}'s tanker tracking`}`;
-  return s.url ? `<a class="tier t-data" href="${escapeHtml(s.url)}" target="_blank" rel="noopener" title="${escapeHtml(tip)}">${firm}</a>` : `<span class="tier t-data" title="${escapeHtml(tip)}">${firm}</span>`;
-}
+const SL_KEY = '<p class="sl-key"><span class="sl-off">Official</span><span class="sl-unoff">Unofficial</span></p>';
 
 const ledEmpty = (text) => `<p class="num-empty">${escapeHtml(text)}</p>`;
-const ledBox = (title, body) => `<div class="tally-box claims ledger"><h3>${escapeHtml(title)}</h3>${body}</div>`;
+const ledBox = (title, body, unit) => `<div class="tally-box claims ledger"><h3>${escapeHtml(title)}${unit ? ` <small class="unit">(${escapeHtml(unit)})</small>` : ''}</h3>${body}</div>`;
 const ledNum = (v, digits = 0) => Number(v).toLocaleString('en-US', { maximumFractionDigits: digits });
+const capFirst = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : '');
 
-/** Today | Last 7 days | Since 13 Jul, from a list of days. */
+/** Today | Last 7 days | Since conflict, from a list of days. */
 function spanCounts(days) {
   const today = yeDay(0);
   const week = yeDay(6);
@@ -2974,12 +2964,31 @@ function spanCounts(days) {
 function statTrio(c) {
   return `<div class="stat3">${[['Today', c.today], ['Last 7 days', c.week], [SINCE_LABEL, c.all]].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>`;
 }
-const splitNote = (n, conf) => `<p class="num-note">${conf} confirmed · ${n - conf} ${n - conf === 1 ? 'claim' : 'claims'}. Each tag opens its source.</p>`;
+
+/** The counts show; the list opens under them, like "Read more". */
+const ledOpen = new Set();
+function moreBox(id, head, detail) {
+  const open = ledOpen.has(id);
+  return `<div class="led-more${open ? ' open' : ''}" data-more="${id}"><div class="led-head">${head}</div><div class="led-detail">${detail}</div><button type="button" class="toggle-sit led-tog" aria-expanded="${open}">${open ? 'Show less' : 'More details'}</button></div>`;
+}
+function wireMore(root) {
+  root.querySelectorAll('.led-more').forEach((box) => {
+    const tog = box.querySelector('.led-tog');
+    const flip = () => {
+      const now = box.classList.toggle('open');
+      if (now) ledOpen.add(box.dataset.more);
+      else ledOpen.delete(box.dataset.more);
+      tog.textContent = now ? 'Show less' : 'More details';
+      tog.setAttribute('aria-expanded', String(now));
+    };
+    tog.onclick = flip;
+    box.querySelector('.led-head').onclick = flip;
+  });
+}
 
 /* ------------------------------------------------------------------ *
- * A line chart: days on the x axis, the war's start marked, the pre-war
- * average dashed. Values are drawn as they are (no smoothing) unless the
- * caller says it passes an average.
+ * A line chart: days on the x axis, the conflict's start marked, the
+ * pre-conflict average dashed. Values are drawn as they are.
  * ------------------------------------------------------------------ */
 function niceStep(range, n) {
   const raw = range / n;
@@ -3017,7 +3026,7 @@ function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), la
     m.setUTCMonth(m.getUTCMonth() + 1);
   }
   const war = Date.parse(`${WAR_START}T00:00:00Z`) >= t0 && Date.parse(`${WAR_START}T00:00:00Z`) <= t1
-    ? `<line class="war" x1="${x(WAR_START).toFixed(1)}" x2="${x(WAR_START).toFixed(1)}" y1="${T}" y2="${H - B}"/><text class="war" x="${(x(WAR_START) + 3).toFixed(1)}" y="${T + 8}">War</text>`
+    ? `<line class="war" x1="${x(WAR_START).toFixed(1)}" x2="${x(WAR_START).toFixed(1)}" y1="${T}" y2="${H - B}"/><text class="war" x="${(x(WAR_START) + 3).toFixed(1)}" y="${T + 8}">Conflict</text>`
     : '';
   const base = bases.map((b) => `<line class="base ${b.cls || ''}" x1="${L}" x2="${W - R}" y1="${y(b.value).toFixed(1)}" y2="${y(b.value).toFixed(1)}"/>`).join('');
   const path = lines.map((l) => {
@@ -3025,7 +3034,7 @@ function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), la
     const last = pts[pts.length - 1];
     return `<polyline class="${l.cls}" points="${pts.map((p) => `${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/><circle class="${l.cls}" cx="${x(last.date).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="2.6"/>`;
   }).join('');
-  const key = lines.map((l) => `<span><i class="${l.cls}"></i>${escapeHtml(l.name)}</span>`).concat(bases.length ? [`<span><i class="base"></i>${escapeHtml(bases[0].label || 'Before the war')}</span>`] : []).join('');
+  const key = lines.map((l) => `<span><i class="${l.cls}"></i>${escapeHtml(l.name)}</span>`).concat(bases.length ? [`<span><i class="base"></i>${escapeHtml(bases[0].label || BEFORE_LABEL)}</span>`] : []).join('');
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(label)}"><g class="grid">${g}</g>${war}${base}${path}</svg><div class="chart-key">${key}</div>`;
 }
 
@@ -3039,17 +3048,18 @@ function avg7(days, key) {
   return out;
 }
 
-/** A month at a time, as bars: the month | its bar | the figure | its source. */
-function monthBars(figs, digits, scale) {
+/** A month at a time, as bars: the month | its bar | the figure, linked to its source. */
+function monthBars(figs, digits) {
   if (!figs.length) return '';
   const rows = figs.slice().sort((a, b) => String(a.month).localeCompare(String(b.month)));
-  // Bars that are read together share one scale.
-  const hi = scale || Math.max(...rows.map((f) => f.value)) || 1;
+  const hi = Math.max(...rows.map((f) => f.value)) || 1;
   return `<div class="mbars">${rows.map((f) => {
-    const pre = /before/.test(String(f.month)) || String(f.month) < '2026-07';
-    const name = /before/.test(String(f.month)) ? 'Before the war' : new Date(`${String(f.month).slice(0, 7)}-15T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' });
-    const sub = /before/.test(String(f.month)) ? '' : pre ? 'before the war' : /early/i.test(String(f.period || '')) ? 'early count' : '';
-    return `<div class="mbar${pre ? ' pre' : ''}"><span class="k">${escapeHtml(name)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</span><span class="mb-track"><i style="width:${Math.max(2, (100 * f.value) / hi).toFixed(1)}%"></i></span><b>${ledNum(f.value, digits)}</b>${figTag(f.src)}</div>`;
+    const mo = String(f.month);
+    const pre = /before/.test(mo) || mo < WAR_START.slice(0, 7);
+    const monthName = new Date(`${mo.slice(0, 7)}-15T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' });
+    const name = pre ? BEFORE_LABEL : monthName;
+    const sub = pre ? `(${f.span || monthName})` : /early/i.test(String(f.period || '')) ? '(so far)' : '';
+    return `<div class="mbar${pre ? ' pre' : ''}"><span class="k">${escapeHtml(name)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</span><span class="mb-track"><i style="width:${Math.max(2, (100 * f.value) / hi).toFixed(1)}%"></i></span><b>${srcLink(ledNum(f.value, digits), f.src)}</b></div>`;
   }).join('')}</div>`;
 }
 const seriesFigs = (led, series) => ((led && led.figures) || []).filter((f) => f.series === series && f.month);
@@ -3059,21 +3069,22 @@ const seriesFigs = (led, series) => ((led && led.figures) || []).filter((f) => f
  * ------------------------------------------------------------------ */
 function shipsBody(led) {
   const ships = ((led && led.ships) || []).filter((s) => String(s.date) >= WAR_START).sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  if (!ships.length) return ledEmpty('No attack on a ship reported since 13 July.');
+  if (!ships.length) return ledEmpty('No incident reported since the conflict began.');
   const rows = ships.map((s) => {
-    const name = s.ship || (s.type ? s.type.charAt(0).toUpperCase() + s.type.slice(1) : 'A ship');
-    const tip = [s.what, s.crew, s.note].filter(Boolean).join('. ');
-    return `<tr title="${escapeHtml(tip)}"><td class="d">${escapeHtml(ledDay(s.date))}</td><td class="l">${escapeHtml(name)}<small>${escapeHtml(s.place || '')}</small></td><td class="t">${srcTag(s.src)}</td></tr>`;
+    const name = s.ship || capFirst(s.type) || 'A ship';
+    const flag = s.flag ? ` <small class="flag">(${escapeHtml(s.flag)})</small>` : '';
+    return `<tr><td class="d">${srcLink(escapeHtml(ledDay(s.date)), s.src)}</td><td class="l">${escapeHtml(name)}${flag}</td><td class="l">${escapeHtml(capFirst(s.place || ''))}</td></tr>`;
   }).join('');
-  return `${statTrio(spanCounts(ships.map((s) => s.date)))}${splitNote(ships.length, ships.filter((s) => confirmed(s.src)).length)}<table class="list"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship, where</th><th scope="col" class="t">Source</th></tr>${rows}</table>`;
+  return moreBox('ships', statTrio(spanCounts(ships.map((s) => s.date))), `${SL_KEY}<table class="list"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th></tr>${rows}</table>`);
 }
 
-function trafficBody(led, tr) {
+/** Each spot's own chart, shown over the page from its name. */
+const spotCharts = {};
+function trafficBody(tr) {
   const points = ((tr && tr.points) || []).filter((p) => p.id === 'bab' || p.id === 'suez');
-  const oilScale = Math.max(0, ...seriesFigs(led, 'bab-oil').concat(seriesFigs(led, 'saudi-bab-oil')).map((f) => f.value));
-  const oil = monthBars(seriesFigs(led, 'bab-oil'), 2, oilScale);
-  const saudiOil = monthBars(seriesFigs(led, 'saudi-bab-oil'), 2, oilScale);
-  if (!points.length && !oil) return ledEmpty('The daily ship counts have not come in yet.');
+  if (!points.length) return ledEmpty('The daily ship counts have not come in yet.');
+  const pw = { name: 'IMF PortWatch', url: (tr.source && tr.source.url) || 'https://portwatch.imf.org/pages/chokepoints', tier: 'official' };
+  const today = yeDay(0);
   const row = (p) => {
     const days = (p.days || []).slice().sort((a, b) => a.date.localeCompare(b.date));
     const war = days.filter((d) => d.date >= WAR_START);
@@ -3084,83 +3095,131 @@ function trafficBody(led, tr) {
     const wAvg = week.length ? sum(week) / week.length : 0;
     const pct = base ? Math.round((100 * (wAvg - base)) / base) : null;
     const pctTag = pct != null ? ` <small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}%</small>` : '';
-    return `<tr><th scope="row">${escapeHtml(p.name)}</th><td>${last ? `${last.total}<small>${escapeHtml(ledDay(last.date))}</small>` : '—'}</td><td>${ledNum(sum(week))}<small>${ledNum(wAvg, 1)} a day${pctTag}</small></td><td>${ledNum(sum(war))}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? ledNum(base, 1) : '—'}<small>a day</small></td></tr>`;
+    const chart = lineChart({ lines: [{ name: 'Ships a day, 7-day average', cls: 's1', pts: avg7(days, 'total') }], bases: base ? [{ value: base, label: `${BEFORE_LABEL} (${ledNum(base, 1)} a day)` }] : [], zero: true, label: `Ships a day through ${p.name}` });
+    spotCharts[p.id] = chart ? `<p class="chart-title">${escapeHtml(p.name)}</p>${chart}` : '';
+    const name = spotCharts[p.id] ? `<button type="button" class="spot" data-spot="${escapeHtml(p.id)}" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(p.name)}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 13.5h13M3 11l3.5-4 3 2.5L14 4"/></svg></button>` : escapeHtml(p.name);
+    const lastCell = last ? `${srcLink(ledNum(last.total), pw)}${last.date === today ? '' : `<small>${escapeHtml(ledDay(last.date))}</small>`}` : '—';
+    return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${ledNum(wAvg, 1)} a day${pctTag}</small></td><td>${srcLink(ledNum(sum(war)), pw)}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
   };
-  const table = points.length
-    ? `<table class="span5"><tr><th></th><th scope="col">Latest day</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th><th scope="col">Before the war</th></tr>${points.map(row).join('')}</table>`
-    : '';
-  const bab = points.find((p) => p.id === 'bab');
-  const suez = points.find((p) => p.id === 'suez');
-  const lines = [bab && { name: 'Bab al-Mandab', cls: 's1', pts: avg7(bab.days || [], 'total') }, suez && { name: 'Suez Canal', cls: 's2', pts: avg7(suez.days || [], 'total') }].filter((l) => l && l.pts.length > 1);
-  const chart = lines.length
-    ? `<p class="chart-title">Ships a day, 7-day average</p>${lineChart({ lines, bases: bab && bab.baseline ? [{ value: bab.baseline.total, label: `Bab al-Mandab before the war (${ledNum(bab.baseline.total, 1)})` }] : [], zero: true, label: 'Ships a day through Bab al-Mandab and the Suez Canal' })}`
-    : '';
-  const src = (tr && tr.source && tr.source.url) || 'https://portwatch.imf.org/pages/chokepoints';
-  const oilPart = oil ? `<p class="chart-title">Oil through Bab al-Mandab, million barrels a day</p>${oil}${saudiOil ? `<p class="chart-title">Of it, Saudi oil</p>${saudiOil}` : ''}` : '';
-  return `${table}${chart}${oilPart}<p class="num-note">Ships: <a href="${escapeHtml(src)}" target="_blank" rel="noopener">IMF PortWatch</a>, from satellite ship signals, 3 to 4 days behind. Before the war: 13 June to 12 July. Oil: Kpler tanker tracking.</p>`;
+  const body = points.map(row).join('');
+  return `<table class="span5"><tr><th></th><th scope="col">Today</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr>${body}</table>`;
+}
+
+function oilBody(led) {
+  const bars = monthBars(seriesFigs(led, 'bab-oil'), 2);
+  return bars ? `${bars}${SL_KEY}` : ledEmpty('No crude oil figure yet.');
 }
 
 function seaBoxes(led, tr) {
   return [
-    ['Attacks on ships', ledBox('Attacks on ships', shipsBody(led))],
-    ['Ships and oil', ledBox('Ships and oil through Bab al-Mandab and Suez', trafficBody(led, tr))],
+    ['Incidents', ledBox('Incidents', shipsBody(led))],
+    ['Ships', ledBox('Ships through Bab al-Mandab and Suez', trafficBody(tr))],
+    ['Crude oil', ledBox('Crude oil through Bab al-Mandab', oilBody(led), 'million barrels a day')],
   ];
+}
+
+/* The spot's chart: over the name on a hover, and held there by a click or a tap. */
+let spotPop = null;
+let spotPinned = false;
+let spotHide = 0;
+function hideSpot() {
+  clearTimeout(spotHide);
+  if (!spotPop || spotPop.hidden) return;
+  spotPop.hidden = true;
+  spotPinned = false;
+  document.querySelectorAll('.spot[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+}
+function showSpot(btn, pin) {
+  const html = spotCharts[btn.dataset.spot];
+  if (!html) return;
+  clearTimeout(spotHide);
+  if (!spotPop) {
+    spotPop = document.createElement('div');
+    spotPop.className = 'spot-pop';
+    spotPop.setAttribute('role', 'dialog');
+    spotPop.hidden = true;
+    document.body.appendChild(spotPop);
+    spotPop.addEventListener('mouseenter', () => clearTimeout(spotHide));
+    spotPop.addEventListener('mouseleave', () => { if (!spotPinned) spotHide = setTimeout(hideSpot, 180); });
+    document.addEventListener('click', (e) => { if (spotPinned && !e.target.closest('.spot-pop, .spot')) hideSpot(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideSpot(); });
+    window.addEventListener('resize', hideSpot);
+  }
+  document.querySelectorAll('.spot[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  spotPop.innerHTML = html;
+  spotPop.setAttribute('aria-label', btn.textContent);
+  spotPop.dataset.spot = btn.dataset.spot;
+  spotPop.hidden = false;
+  const r = btn.getBoundingClientRect();
+  const w = Math.min(360, window.innerWidth - 24);
+  spotPop.style.width = `${w}px`;
+  const left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12));
+  spotPop.style.left = `${left + window.scrollX}px`;
+  spotPop.style.top = `${r.bottom + window.scrollY + 6}px`;
+  spotPinned = !!pin;
+  btn.setAttribute('aria-expanded', 'true');
+}
+function wireSpots(root) {
+  root.querySelectorAll('.spot').forEach((b) => {
+    b.addEventListener('mouseenter', () => { if (!spotPinned) showSpot(b, false); });
+    b.addEventListener('mouseleave', () => { if (!spotPinned) spotHide = setTimeout(hideSpot, 180); });
+    b.addEventListener('focus', () => { if (!spotPinned) showSpot(b, false); });
+    b.addEventListener('blur', () => { if (!spotPinned) spotHide = setTimeout(hideSpot, 180); });
+    b.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (spotPinned && spotPop && spotPop.dataset.spot === b.dataset.spot && !spotPop.hidden) hideSpot();
+      else showSpot(b, true);
+    });
+  });
 }
 
 /* ------------------------------------------------------------------ *
  * Energy
  * ------------------------------------------------------------------ */
-const SITE_GROUPS = ['Pipelines', 'Refineries', 'Export terminals', 'Fuel depots and plants', 'Other oil sites'];
-const siteGroup = (kind) => (/pipeline|pump/i.test(kind) ? 'Pipelines' : /refiner/i.test(kind) ? 'Refineries' : /terminal|port/i.test(kind) ? 'Export terminals' : /depot|storage|bulk plant/i.test(kind) ? 'Fuel depots and plants' : 'Other oil sites');
-
 function sitesBody(led) {
-  const sites = ((led && led.sites) || []).map((s) => ({ ...s, hits: (s.hits || []).filter((h) => String(h.date) >= WAR_START) })).filter((s) => s.hits.length);
-  if (!sites.length) return ledEmpty('No attack on an energy site reported since 13 July.');
-  const hits = sites.flatMap((s) => s.hits.map((h) => ({ ...h, group: siteGroup(s.kind) })));
-  const byType = SITE_GROUPS.map((g) => [g, hits.filter((h) => h.group === g)]).filter(([, l]) => l.length);
-  const types = `<table class="span4"><tr><th></th><th scope="col">Today</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th></tr>${byType.map(([g, l]) => {
-    const c = spanCounts(l.map((h) => h.date));
-    const claims = l.filter((h) => !confirmed(h)).length;
-    return `<tr><th scope="row">${g}</th><td>${c.today}</td><td>${c.week}</td><td>${c.all}${claims ? `<small>${claims} ${claims === 1 ? 'claim' : 'claims'}</small>` : ''}</td></tr>`;
-  }).join('')}</table>`;
-  const lastOf = (s) => s.hits.reduce((m, h) => (String(h.date) > String(m.date) ? h : m), s.hits[0]);
-  const list = sites.slice().sort((a, b) => String(lastOf(b).date).localeCompare(String(lastOf(a).date))).map((s) => {
+  const sites = ((led && led.sites) || []).map((s) => ({ ...s, hits: (s.hits || []).filter((h) => String(h.date) >= WAR_START).sort((a, b) => String(a.date).localeCompare(String(b.date))) })).filter((s) => s.hits.length);
+  if (!sites.length) return ledEmpty('No attack on energy infrastructure reported since the conflict began.');
+  const hits = sites.flatMap((s) => s.hits);
+  const lastOf = (s) => String(s.hits[s.hits.length - 1].date);
+  const rows = sites.slice().sort((a, b) => lastOf(b).localeCompare(lastOf(a))).map((s) => {
     const st = s.status || 'unknown';
-    const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || st}</span>`;
-    const status = s.statusSrc && s.statusSrc.url ? `<a href="${escapeHtml(s.statusSrc.url)}" target="_blank" rel="noopener" title="${escapeHtml([s.statusSrc.name, ledDay(s.statusSrc.date)].filter(Boolean).join(', '))}">${chip}</a>` : chip;
-    const tags = s.hits.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))).map((h) => `<span class="hit">${escapeHtml(ledDay(h.date))} ${srcTag(h)}</span>`).join('');
-    return `<tr><th scope="row" class="l">${escapeHtml(s.name)}</th><td class="l hits">${tags}</td><td class="t">${status}</td></tr>`;
+    const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || escapeHtml(st)}</span>`;
+    const status = s.statusSrc && s.statusSrc.url ? srcLink(chip, s.statusSrc, 'st-link') : chip;
+    const dates = s.hits.map((h) => srcLink(escapeHtml(ledDay(h.date)), h)).join('');
+    return `<tr><td class="d dates">${dates}</td><td class="l">${escapeHtml(s.name)}</td><td class="t">${status}</td></tr>`;
   }).join('');
-  return `${statTrio(spanCounts(hits.map((h) => h.date)))}${splitNote(hits.length, hits.filter(confirmed).length)}${types}<table class="list sites"><tr><th scope="col" class="l">Site</th><th scope="col" class="l">Attacks</th><th scope="col" class="t">Now</th></tr>${list}</table>`;
+  return moreBox('sites', statTrio(spanCounts(hits.map((h) => h.date))), `${SL_KEY}<table class="list sites"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="t">Status</th></tr>${rows}</table>`);
 }
 
 function exportsBody(led) {
   const bars = monthBars(seriesFigs(led, 'saudi-exports'), 2);
-  if (!bars) return ledEmpty('No export figure yet.');
-  return `<p class="chart-title">Saudi crude exports, million barrels a day</p>${bars}<p class="num-note">The kingdom's own figures (JODI) come about two months late; newer months are Kpler's tanker tracking, reported by Reuters.</p>`;
+  return bars ? `${bars}${SL_KEY}` : ledEmpty('No export figure yet.');
 }
 
+/** Brent from the US Energy Information Administration's own daily series. */
+const EIA_BRENT = 'https://www.eia.gov/dnav/pet/hist/RBRTED.htm';
 function priceBody(tr) {
   const b = tr && tr.brent;
   const days = ((b && b.days) || []).slice().sort((a, c) => a.date.localeCompare(c.date));
-  if (days.length < 2) return ledEmpty('The daily oil price has not come in yet.');
+  if (days.length < 2) return ledEmpty('The daily crude oil price has not come in yet.');
+  const eia = { name: 'US Energy Information Administration', url: EIA_BRENT, tier: 'official' };
   const last = days[days.length - 1];
+  const isToday = last.date === yeDay(0);
   const weekAgo = days.filter((d) => Date.parse(d.date) <= Date.parse(last.date) - 7 * 864e5).pop();
-  const atWar = days.filter((d) => d.date <= WAR_START).pop();
   const base = b.baseline && b.baseline.value;
-  const usd = (v) => (v == null ? '—' : `$${Number(v).toFixed(2)}`);
+  const usd = (v) => `$${Number(v).toFixed(2)}`;
   const pct = base ? Math.round((100 * (last.value - base)) / base) : null;
-  const cell = (d) => (d ? `${usd(d.value)}<small>${escapeHtml(ledDay(d.date))}</small>` : '—');
-  const table = `<table class="span4"><tr><th scope="col">Latest</th><th scope="col">A week earlier</th><th scope="col">When the war began</th><th scope="col">Before the war</th></tr><tr><td class="big">${cell(last)}${pct != null ? `<small class="q ${pct > 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}% on before the war</small>` : ''}</td><td>${cell(weekAgo)}</td><td>${cell(atWar)}</td><td>${usd(base)}<small>average</small></td></tr></table>`;
-  const chart = lineChart({ lines: [{ name: 'Brent, dollars a barrel', cls: 's1', pts: days }], bases: base ? [{ value: base, label: `Before the war (${usd(base)})` }] : [], fmt: (v) => `$${ledNum(v)}`, label: 'Brent crude price, dollars a barrel, day by day' });
-  return `${table}<p class="chart-title">Brent crude, dollars a barrel, each trading day</p>${chart}<p class="num-note">The daily Brent price from the <a href="${escapeHtml(b.source.url)}" target="_blank" rel="noopener">US Energy Information Administration</a>, about a week behind. Before the war: 13 June to 12 July.</p>`;
+  const cell = (d) => (d ? `${srcLink(usd(d.value), eia)}<small>${escapeHtml(ledDay(d.date))}</small>` : '—');
+  const table = `<table class="span3"><tr><th scope="col">${isToday ? 'Today' : 'Latest'}</th><th scope="col">${isToday ? '7 days ago' : '7 days earlier'}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr><tr><td class="big">${cell(last)}${pct != null ? `<small class="q ${pct > 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}% compared to pre-conflict</small>` : ''}</td><td>${cell(weekAgo)}</td><td>${base ? srcLink(usd(base), eia) : '—'}<small>average</small></td></tr></table>`;
+  const chart = lineChart({ lines: [{ name: 'Brent', cls: 's1', pts: days }], bases: base ? [{ value: base, label: `${BEFORE_LABEL} (${usd(base)})` }] : [], fmt: (v) => `$${ledNum(v)}`, label: 'Brent crude oil price, dollars a barrel, day by day' });
+  return `${table}${chart}`;
 }
 
 function energyBoxes(led, tr) {
   return [
-    ['Attacks on energy sites', ledBox('Attacks on energy sites', sitesBody(led))],
-    ['Saudi oil exports', ledBox('Saudi oil exports', exportsBody(led))],
-    ['Oil price', ledBox('Oil price', priceBody(tr))],
+    ['Attacks on energy infrastructure', ledBox('Attacks on energy infrastructure', sitesBody(led))],
+    ['Saudi crude oil exports', ledBox('Saudi crude oil exports', exportsBody(led), 'million barrels a day')],
+    ['Crude oil price', ledBox('Crude oil price', priceBody(tr), 'Brent, dollars a barrel')],
   ];
 }
 
@@ -3180,10 +3239,13 @@ function renderCasualties() {
   }
   const idx = Math.min(numBoxOf[numCat] || 0, slides.length - 1);
   const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${NUM_CATS.map(([k, label]) => `<button type="button" data-cat="${k}" aria-pressed="${k === numCat}"${k === numCat ? ' class="on"' : ''}>${label}</button>`).join('')}</div>`;
+  hideSpot();
   el.innerHTML = `${sw}${cadenceStamp(true)}
     <div class="tally one">${pagerHtml('numbers', slides.map((s) => s[1]), idx, slides.map((s) => s[0]))}</div>
 `;
-  wirePager(el, idx, (i) => { numBoxOf[numCat] = i; });
+  wirePager(el, idx, (i) => { numBoxOf[numCat] = i; hideSpot(); });
+  wireMore(el);
+  wireSpots(el);
   el.querySelectorAll('.num-cat button').forEach((b) => {
     b.onclick = () => {
       if (b.dataset.cat === numCat) return;

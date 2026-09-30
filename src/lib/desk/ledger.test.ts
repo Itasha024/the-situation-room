@@ -130,3 +130,14 @@ test("sources rank official, then wire, then the rest; a claim is lowest; monthl
   const c = applyLedger(LEDGER_SEED, { sites: [{ doc: 0, site: "Yanbu", hit: true, claimed: true }] }, [doc("The Houthis said they targeted Aramco in Yanbu", "2026-09-24", "Reuters")], now);
   assert.equal(sourceTier(c.sites[0].hits[0]), "claim");
 });
+
+test("the baseline links to originals, not to reposts", async () => {
+  const { LEDGER_BASELINE } = await import("./ledger-baseline.ts");
+  const urls = [...LEDGER_BASELINE.ships.map((s) => s.src.url), ...LEDGER_BASELINE.sites.flatMap((s) => [...s.hits.map((h) => h.url), s.statusSrc?.url ?? ""]), ...LEDGER_BASELINE.figures.map((f) => f.src.url)];
+  for (const u of urls) assert.doesNotMatch(u, /boereport|marketscreener|energynewsbeat|npr\.org|dawn\.com|brecorder|kurdistan24/, u);
+  // The Houthis' own claims link to their spokesman's channel.
+  const yanbu = LEDGER_BASELINE.sites.find((s) => s.id === "yanbu")!;
+  assert.ok(yanbu.hits.filter((h) => h.claim).every((h) => h.url.startsWith("https://t.me/army21ye/")));
+  // Satellite pictures of old damage are not a new attack.
+  assert.ok(!yanbu.hits.some((h) => h.date === "2026-09-30"));
+});

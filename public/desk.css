@@ -1030,7 +1030,7 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .tally-box.claims .tier.t-official{color:#4ade80}.tally-box.claims .tier.t-wire{color:#7eb6ff}.tally-box.claims .tier.t-claim{color:#f59e0b}.tally-box.claims .tier.t-data{color:var(--t-text-2,#a8b8c9)}
 .tally-box.ledger table.list td.d,.tally-box.ledger table.list th.d{width:3.6rem;text-align:left;white-space:nowrap;color:var(--t-text-2,#a8b8c9)}
 .tally-box.ledger table.list td.t,.tally-box.ledger table.list th.t{width:4.2rem;text-align:right}
-.tally-box.ledger table.list tr[title]{cursor:help}
+
 .tally-box.ledger table.list{margin-top:.5rem}
 .tally-box.ledger td.hits{line-height:1.9}
 .tally-box.ledger .hit{display:inline-block;margin-right:.45rem;white-space:nowrap;font-size:.7rem;color:var(--t-text-2,#a8b8c9)}
@@ -1062,3 +1062,36 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
   .mbar{grid-template-columns:5.2rem minmax(0,1fr) 2.6rem 3.6rem;gap:.35rem;font-size:.7rem}
   .tally-box.ledger table.span5 th,.tally-box.ledger table.span5 td{padding-left:.2rem;padding-right:.2rem;font-size:.72rem}
 }
+
+/* Maritime and Energy (30 Sep, round 3): links in the numbers, More details, the spots' charts */
+.pager-numbers .pg-track{position:relative}
+.pager-numbers .pg-slide:not(.on){position:absolute;top:0;left:0;right:0}
+.tally-box h3 small.unit{margin-left:.25rem;font-size:.62rem;font-weight:400;letter-spacing:.02em;text-transform:none;color:var(--t-muted,#8fa3b6)}
+.tally-box.claims a.sl,.tally-box.claims .sl{border-bottom:0;text-decoration:none;white-space:nowrap}
+.sl svg,.tally-box.claims td a svg{display:inline-block;width:.68em;height:.68em;margin-left:.22em;vertical-align:.04em;opacity:.6}
+.tally-box.claims td a{border-bottom:0}
+a.sl:hover svg,.tally-box.claims td a:hover svg{opacity:1}
+.tally-box.claims .sl-off,.sl-key .sl-off{color:var(--t-strong,#f1f5f9)}
+.tally-box.claims .sl-unoff,.sl-key .sl-unoff{color:#f59e0b}
+.sl-key{display:flex;gap:.9rem;margin:.45rem 0 0;font-size:.64rem;color:var(--t-muted,#8fa3b6)}
+.sl-key span::before{content:"";display:inline-block;width:.45rem;height:.45rem;margin-right:.3rem;border-radius:50%;background:currentColor;vertical-align:.04em}
+.led-head{cursor:pointer}
+.led-detail{display:none}
+.led-more.open .led-detail{display:block}
+.led-more .led-tog{display:block}
+.tally-box.ledger td small.flag{display:inline;font-size:.64rem}
+.tally-box.ledger th small.span{display:block;margin-top:.1rem;font-size:.58rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t-muted,#8fa3b6)}
+.tally-box.ledger table.list td.d{width:4.2rem}
+.tally-box.ledger table.list td.dates{width:6.2rem;white-space:normal;line-height:1.6}
+.tally-box.ledger table.list td.dates .sl{display:inline-block;margin-right:.45rem}
+.tally-box.ledger table.list td,.tally-box.ledger table.list th{vertical-align:top}
+.tally-box.ledger table.span3{margin-top:.35rem}
+.tally-box.ledger .st-link svg{color:var(--t-muted,#8fa3b6)}
+.tally-box.ledger .spot{padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-bottom:1px dotted var(--t-muted,#8fa3b6)}
+.tally-box.ledger .spot svg{width:.8em;height:.8em;margin-left:.3em;vertical-align:-.05em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+.tally-box.ledger .spot:hover,.tally-box.ledger .spot[aria-expanded="true"]{color:var(--t-strong,#fff)}
+.mbar{grid-template-columns:7.4rem minmax(0,1fr) 3.6rem}
+.mbar b{white-space:nowrap}
+.spot-pop{position:absolute;z-index:1300;box-sizing:border-box;padding:.55rem .7rem .45rem;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:8px;background:var(--t-surface-2,#121a24);box-shadow:0 10px 30px #0008}
+.spot-pop .chart-title{margin-top:0;color:var(--t-strong,#fff)}
+@media (max-width:560px){.mbar{grid-template-columns:6rem minmax(0,1fr) 3.4rem}}

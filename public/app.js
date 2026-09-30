@@ -6136,7 +6136,7 @@ try { setFavicon(THEME); } catch (e) {}
 /* The site's masthead: "The Situation Room" above the desk's own line, with the date on the left
  * and the theme button on the right (it applies to every desk). Variations of design D are tried
  * with ?mast=D1…D6; without it the page is as before. */
-const MASTS = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'];
+const MASTS = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10'];
 const MAST = (() => { try { let m = (new URLSearchParams(location.search).get('mast') || '').toUpperCase(); if (m === 'D') m = 'D1'; return MASTS.includes(m) ? m : ''; } catch (e) { return ''; } })();
 function installMast() {
   const top = document.querySelector('header.top');
@@ -6145,7 +6145,7 @@ function installMast() {
   const h1 = top.querySelector('h1');
   const day = new Date().toLocaleDateString('en-GB', { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const name = MAST === 'D3' ? '<i>The</i> Situation Room' : 'The Situation Room';
-  const desk = MAST === 'D4' && h1 ? `<span class="mast-desk">${escapeHtml(h1.textContent)}</span>` : MAST === 'D7' ? '<span class="mast-desk">Open-source intelligence</span>' : '';
+  const desk = MAST === 'D4' && h1 ? `<span class="mast-desk">${escapeHtml(h1.textContent)}</span>` : ['D7', 'D8', 'D9', 'D10'].includes(MAST) ? '<span class="mast-desk">Open-source intelligence</span>' : '';
   top.insertAdjacentHTML('beforebegin', `<div class="mast"><span class="mast-date">${day}</span><div class="mast-mid"><a class="mast-name" href="/" aria-label="The Situation Room"><span class="mn">${name}</span></a>${desk}</div><span class="mast-end"></span></div>
     <nav class="mast-try" aria-label="Masthead designs">${MASTS.map((m) => `<a href="?mast=${m}"${m === MAST ? ' class="on"' : ''}>${m}</a>`).join('')}</nav>`);
   if (h1) h1.classList.add(MAST === 'D4' ? 'desk-moved' : 'desk-label');

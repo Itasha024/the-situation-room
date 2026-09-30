@@ -440,7 +440,9 @@ html[data-theme="broadsheet-night"] .pin-sheet .front-float-go:is(:hover,:focus-
   .dev-key .dk,.dev-key .dk.wide,.dev-key .dk.wide2{flex:none;width:24px;height:13px;margin:0;vertical-align:0}
 }
 html[data-set="broadsheet"] .ye-clock{border-inline-end-color:var(--t-line-strong,var(--line))}
-html[data-set="broadsheet"] #ye-clock{font:600 .78rem/1 var(--f-body);letter-spacing:.04em;color:var(--t-strong)}
+html[data-set="broadsheet"] #ye-clock{font:600 .78rem/1 var(--f-body);letter-spacing:.04em;color:var(--t-strong);font-variant-numeric:tabular-nums}
+/* The clock keeps one width as its digits change, so "Updated" beside it never moves */
+#ye-clock{display:inline-block;width:5.2em;white-space:nowrap;text-align:start}
 /* Interception: the drone or missile is stopped in mid-air and a burst takes its place; nothing reaches the ground */
 .dp-dive.dp-int b{animation-name:devIntFly}
 @keyframes devIntFly{0%{transform:translate(-10px,-1px) rotate(35deg);opacity:1}42%{transform:translate(-1px,5px) rotate(35deg);opacity:1}45%,100%{transform:translate(-1px,5px) rotate(35deg);opacity:0}}

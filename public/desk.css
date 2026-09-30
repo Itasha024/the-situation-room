@@ -990,3 +990,30 @@ html{scroll-behavior:smooth}
 .ye-clock{display:inline-flex;align-items:baseline;gap:.4rem;padding-inline-end:.7rem;margin-inline-end:.3rem;border-inline-end:1px solid var(--line)}
 .yc-label{font-size:.62rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
 #ye-clock{font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.02em;color:var(--text,#e6edf3)}
+
+/* The numbers' category switch (Casualties | Maritime | Energy) and the ledger's boxes */
+.num-cat{display:inline-flex;margin:.15rem 0 .45rem;border:1px solid var(--t-line-strong,#334155);border-radius:6px;overflow:hidden}
+.num-cat button{padding:.42rem .75rem;border:0;background:transparent;color:var(--t-text-2,#a8b8c9);font:600 .68rem/1 var(--f-body,inherit);letter-spacing:.04em;cursor:pointer;transition:background .15s,color .15s}
+.num-cat button+button{border-left:1px solid var(--t-line-strong,#334155)}
+.num-cat button:hover{color:var(--t-strong,#fff)}
+.num-cat button.on{background:#f8fafc;color:#0b1220}
+.num-cat button:focus-visible{outline:2px solid var(--accent-ui,#7eb6ff);outline-offset:-2px}
+.tally-box.ledger td.src,.tally-box.ledger th.src{text-align:left;font-weight:400;font-size:.7rem;color:var(--t-text-2,#a8b8c9)}
+.tally-box.ledger td.src small{color:var(--t-muted,#8fa3b6);white-space:nowrap}
+.tally-box.ledger td.src a{border-bottom:1px dotted currentColor;color:var(--t-text,#d7e2ef);text-decoration:none}
+.tally-box.ledger .l{text-align:left;font-weight:400}
+.tally-box.ledger td small,.tally-box.ledger th small{display:block;font-size:.66rem;font-weight:400;color:var(--t-muted,#8fa3b6)}
+.tally-box.ledger td small.q{display:inline}
+.tally-box.ledger small.q.down{color:#f59e0b}
+.tally-box.ledger small.q.up{color:#4ade80}
+.tally-box.ledger tr.sum th,.tally-box.ledger tr.sum td{border-top:1px solid var(--t-line-strong,#243244);font-weight:600}
+.tally-box.ledger tr.spark-row td{border-top:0;padding:0 .25rem .35rem}
+.tally-box.ledger .spark{display:block;width:100%;height:30px}
+.tally-box.ledger .spark polyline{fill:none;stroke:var(--t-strong,#e6edf3);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.tally-box.ledger .spark .base{stroke:var(--t-muted,#8fa3b6);stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+.tally-box.ledger table.figs{margin-top:.5rem}
+.num-empty{margin:.4rem 0;font-size:.78rem;color:var(--t-muted,#8fa3b6)}
+.num-note{margin:.45rem 0 0;font-size:.68rem;line-height:1.4;color:var(--t-muted,#8fa3b6)}
+.num-note a{color:inherit}
+.st{display:inline-block;padding:.12rem .4rem;border-radius:3px;font-size:.64rem;font-weight:600;letter-spacing:.03em;border:1px solid currentColor}
+.st-working{color:#4ade80}.st-reduced{color:#f59e0b}.st-down{color:#f87171}.st-unknown{color:var(--t-muted,#8fa3b6)}

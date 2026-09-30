@@ -2875,8 +2875,6 @@ const NUM_BOXES = [
   ['Injured', [['Houthi', 'injured.houthi'], ['Government', 'injured.gov'], ['Saudi Arabia', 'injured.saudi'], ['Civilians', 'injured.civilians'], ['All sides', 'injured.total']]],
   ['Humanitarian', [['Displaced in Yemen', 'idp'], ['Refugees abroad', 'refugees'], ['Facing acute hunger', 'food']]],
 ];
-/** Every load opens on Killed. */
-let casBox = 0;
 
 /** Cells from the tally alone, while /api/brief has not answered. */
 function fallbackNumbers(t) {
@@ -2900,19 +2898,144 @@ function numCell(c, cls) {
   return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}</td>`;
 }
 
+/*
+ * Three kinds of numbers under one heading: Casualties (above), Maritime and
+ * Energy (the ledger, src/lib/desk/ledger.ts, and IMF PortWatch's daily ship
+ * counts, both in /api/brief). Every load opens on Casualties, like Killed.
+ */
+const NUM_CATS = [['cas', 'Casualties'], ['sea', 'Maritime'], ['energy', 'Energy']];
+let numCat = 'cas';
+const numBoxOf = { cas: 0, sea: 0, energy: 0 };
+
+const SHIP_WHAT = [['attacked', 'Attacked'], ['hit', 'Hit'], ['seized', 'Seized'], ['sunk', 'Sunk'], ['near miss', 'Near miss'], ['suspicious approach', 'Suspicious approach']];
+const SITE_STATUS = { working: 'Working', reduced: 'Reduced', down: 'Down', unknown: 'Not known' };
+
+function ledDay(d) {
+  if (!d) return '';
+  const t = new Date(`${String(d).slice(0, 10)}T12:00:00Z`);
+  return Number.isFinite(t.getTime()) ? t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+}
+
+/** The source column: the outlet, linked, and its date. */
+function ledSrc(s) {
+  if (!s || !s.name) return '<td class="src none">—</td>';
+  const name = escapeHtml(s.name);
+  const link = s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${name}</a>` : name;
+  return `<td class="src">${link}${s.date ? ` <small>${escapeHtml(ledDay(s.date))}</small>` : ''}</td>`;
+}
+
+const ledEmpty = (text) => `<p class="num-empty">${escapeHtml(text)}</p>`;
+const ledBox = (title, body) => `<div class="tally-box claims ledger"><h3>${escapeHtml(title)}</h3>${body}</div>`;
+
+/** A day-by-day line of ship counts, with the pre-war average as a dashed line. */
+function transitSpark(days, base) {
+  const pts = days.slice(-60);
+  if (pts.length < 2) return '';
+  const max = Math.max(base || 0, ...pts.map((d) => d.total || 0)) * 1.1 || 1;
+  const x = (i) => (i / (pts.length - 1)) * 200;
+  const y = (v) => 36 - (v / max) * 34;
+  const line = pts.map((d, i) => `${x(i).toFixed(1)},${y(d.total || 0).toFixed(1)}`).join(' ');
+  const by = y(base || 0).toFixed(1);
+  return `<svg class="spark" viewBox="0 0 200 38" preserveAspectRatio="none" role="img" aria-label="Ships a day, ${escapeHtml(ledDay(pts[0].date))} to ${escapeHtml(ledDay(pts[pts.length - 1].date))}">${base ? `<line class="base" x1="0" x2="200" y1="${by}" y2="${by}"/>` : ''}<polyline points="${line}"/></svg>`;
+}
+
+function seaBoxes(led, tr) {
+  const ships = (led && led.ships) || [];
+  const counts = SHIP_WHAT.map(([k, label]) => [label, ships.filter((s) => s.what === k)]).filter(([, l]) => l.length);
+  const latestOf = (l) => l.reduce((m, s) => (String(s.date) > String(m.date) ? s : m), l[0]);
+  const attacks = counts.length
+    ? `<table><tr><th></th><th scope="col">Ships</th><th scope="col" class="src">Latest</th></tr>${counts.map(([label, l]) => `<tr><th scope="row">${label}</th><td>${l.length}</td>${ledSrc(latestOf(l).src)}</tr>`).join('')}<tr class="sum"><th scope="row">All incidents</th><td>${ships.length}</td><td class="src"></td></tr></table>`
+    : ledEmpty('No attack on a ship logged yet since 3 July.');
+
+  const points = (tr && tr.points) || [];
+  const traffic = points.length ? `<table><tr><th></th><th scope="col">Last day</th><th scope="col">7-day average</th><th scope="col">Before the war</th></tr>${points.map((p) => {
+    const days = p.days || [];
+    const last = days[days.length - 1];
+    const week = days.slice(-7);
+    const avg = week.length ? week.reduce((n, d) => n + (d.total || 0), 0) / week.length : null;
+    const base = p.baseline && p.baseline.total;
+    const pct = avg != null && base ? Math.round(100 * (avg - base) / base) : null;
+    return `<tr><th scope="row">${escapeHtml(p.name)}</th><td>${last ? `${last.total}<small>${escapeHtml(ledDay(last.date))}</small>` : '—'}</td><td>${avg != null ? avg.toFixed(1) : '—'}${pct != null ? ` <small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}%</small>` : ''}</td><td>${base != null ? base : '—'}</td></tr><tr class="spark-row"><td colspan="4">${transitSpark(days, base)}</td></tr>`;
+  }).join('')}</table>
+    <p class="num-note">Ships a day through each, from <a href="${escapeHtml((tr.source && tr.source.url) || 'https://portwatch.imf.org/pages/chokepoints')}" target="_blank" rel="noopener">IMF PortWatch</a> (satellite ship signals, about 3 days behind). Before the war: the average of 2 June to 2 July.</p>`
+    : ledEmpty('The daily ship counts have not come in yet.');
+  const figs = ((led && led.figures) || []).filter((f) => f.cat === 'maritime');
+  const other = figs.length ? `<table class="figs"><tr><th></th><th scope="col">Figure</th><th scope="col" class="src">Source</th></tr>${figs.map((f) => `<tr><th scope="row">${escapeHtml(f.label)}</th><td>${Number(f.value).toLocaleString('en-US')} <small class="q">${escapeHtml(f.unit || '')}</small></td>${ledSrc(f.src)}</tr>`).join('')}</table>` : '';
+
+  const recent = ships.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 6);
+  const incidents = recent.length
+    ? `<table><tr><th scope="col">Date</th><th scope="col" class="l">Ship and place</th><th scope="col" class="l">What</th><th scope="col" class="src">Source</th></tr>${recent.map((s) => `<tr><td>${escapeHtml(ledDay(s.date))}</td><td class="l">${escapeHtml([s.ship || (s.type ? `A ${s.type}` : 'A ship'), s.flag ? `(${s.flag})` : ''].filter(Boolean).join(' '))}<small>${escapeHtml(s.place || '')}</small></td><td class="l">${escapeHtml(s.what)}${s.attacker ? `<small>by ${escapeHtml(s.attacker)}</small>` : ''}</td>${ledSrc(s.src)}</tr>`).join('')}</table>`
+    : ledEmpty('No incident logged yet since 3 July.');
+
+  const notes = ((led && led.notices) || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 6);
+  const notices = notes.length
+    ? `<table><tr><th scope="col">Date</th><th scope="col" class="l">Notice</th><th scope="col" class="src">Source</th></tr>${notes.map((n) => `<tr><td>${escapeHtml(ledDay(n.date))}</td><td class="l">${escapeHtml(n.text)}</td>${ledSrc(n.src)}</tr>`).join('')}</table>`
+    : ledEmpty('No ban, warning or naval mission logged yet since 3 July.');
+
+  return [
+    ['Ship attacks', ledBox('Ship attacks', attacks)],
+    ['Bab al-Mandab traffic', ledBox('Bab al-Mandab and Suez traffic', traffic + other)],
+    ['Latest incidents', ledBox('Latest incidents', incidents)],
+    ['Bans and missions', ledBox('Bans, warnings and missions', notices)],
+  ];
+}
+
+function siteRows(sites) {
+  const lastHit = (s) => (s.hits || []).reduce((m, h) => (String(h.date) > m ? String(h.date) : m), '');
+  return `<table><tr><th></th><th scope="col">Times hit</th><th scope="col">Last hit</th><th scope="col" class="src">Status now</th></tr>${sites.slice().sort((a, b) => lastHit(b).localeCompare(lastHit(a))).map((s) => {
+    const last = (s.hits || []).find((h) => String(h.date) === lastHit(s));
+    const st = s.status || 'unknown';
+    const src = s.statusSrc;
+    const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || st}</span>`;
+    const status = src && src.url ? `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener" title="${escapeHtml([src.name, ledDay(src.date)].filter(Boolean).join(', '))}">${chip}</a>` : chip;
+    const hitCell = last && last.url ? `<a href="${escapeHtml(last.url)}" target="_blank" rel="noopener" title="${escapeHtml(last.name || '')}">${escapeHtml(ledDay(last.date))}</a>` : escapeHtml(ledDay(last && last.date));
+    return `<tr><th scope="row">${escapeHtml(s.name)}<small>${escapeHtml([s.kind, s.country].filter(Boolean).join(', '))}</small></th><td>${(s.hits || []).length}</td><td>${hitCell || '—'}</td><td class="src">${status}</td></tr>`;
+  }).join('')}</table>`;
+}
+
+function energyBoxes(led) {
+  const sites = (led && led.sites) || [];
+  const pipes = sites.filter((s) => s.kind === 'pipeline');
+  const figs = ((led && led.figures) || []).filter((f) => f.cat === 'energy');
+  const hit = sites.filter((s) => (s.hits || []).length);
+  return [
+    ['Facilities hit', ledBox('Facilities hit', hit.length ? siteRows(hit) : ledEmpty('No hit on an energy site logged yet since 3 July.'))],
+    ['Pipelines', ledBox('Pipelines', pipes.length ? siteRows(pipes) : ledEmpty('Nothing logged yet on the pipelines since 3 July.'))],
+    ['Exports', ledBox('Exports', figs.length
+      ? `<table class="figs"><tr><th></th><th scope="col">Figure</th><th scope="col" class="src">Source</th></tr>${figs.map((f) => `<tr><th scope="row">${escapeHtml(f.label)}</th><td>${Number(f.value).toLocaleString('en-US')} <small class="q">${escapeHtml(f.unit || '')}</small></td>${ledSrc(f.src)}</tr>`).join('')}</table>`
+      : ledEmpty('No export figure logged yet since 3 July.'))],
+  ];
+}
+
 function renderCasualties() {
   const el = document.getElementById('casualties');
   if (!el) return;
-  const nums = (brief && brief.figures && brief.figures.cells ? brief.figures : null) || fallbackNumbers((brief && brief.tally) || TALLY_FALLBACK);
-  const head = '<tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
-  const boxes = NUM_BOXES.map(([title, rows]) => `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows.map(([label, key]) => {
-    const r = nums.cells[key] || {};
-    return `<tr><th scope="row">${label}</th>${numCell(r.official, 'off')}${numCell(r.houthi, 'h')}${numCell(r.gov, 'g')}</tr>`;
-  }).join('')}</table></div>`);
-  el.innerHTML = `${cadenceStamp(true)}
-    <div class="tally one">${pagerHtml('numbers', boxes, casBox, NUM_BOXES.map((b) => b[0]))}</div>
+  let slides;
+  if (numCat === 'sea') slides = seaBoxes(brief && brief.ledger, brief && brief.transits);
+  else if (numCat === 'energy') slides = energyBoxes(brief && brief.ledger);
+  else {
+    const nums = (brief && brief.figures && brief.figures.cells ? brief.figures : null) || fallbackNumbers((brief && brief.tally) || TALLY_FALLBACK);
+    const head = '<tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
+    slides = NUM_BOXES.map(([title, rows]) => [title, `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows.map(([label, key]) => {
+      const r = nums.cells[key] || {};
+      return `<tr><th scope="row">${label}</th>${numCell(r.official, 'off')}${numCell(r.houthi, 'h')}${numCell(r.gov, 'g')}</tr>`;
+    }).join('')}</table></div>`]);
+  }
+  const idx = Math.min(numBoxOf[numCat] || 0, slides.length - 1);
+  const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${NUM_CATS.map(([k, label]) => `<button type="button" data-cat="${k}" aria-pressed="${k === numCat}"${k === numCat ? ' class="on"' : ''}>${label}</button>`).join('')}</div>`;
+  el.innerHTML = `${sw}${cadenceStamp(true)}
+    <div class="tally one">${pagerHtml('numbers', slides.map((s) => s[1]), idx, slides.map((s) => s[0]))}</div>
 `;
-  wirePager(el, casBox, (i) => { casBox = i; });
+  wirePager(el, idx, (i) => { numBoxOf[numCat] = i; });
+  el.querySelectorAll('.num-cat button').forEach((b) => {
+    b.onclick = () => {
+      if (b.dataset.cat === numCat) return;
+      numCat = b.dataset.cat;
+      renderCasualties();
+      const again = el.querySelector(`.num-cat button[data-cat="${numCat}"]`);
+      if (again) again.focus();
+    };
+  });
 }
 
 function computeControlShares(d) {

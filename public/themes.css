@@ -452,3 +452,19 @@ html[data-set="broadsheet"] #ye-clock{font:600 .78rem/1 var(--f-body);letter-spa
 @media (prefers-reduced-motion:reduce){.dp-int em{opacity:1!important}}
 /* On a phone the pager has no side arrows, so its boxes need no room for them: even padding, the table centred */
 @media (max-width:720px),(hover:none){html[data-set="broadsheet"] .pager .tally-box{padding:.8rem 1rem .9rem}html[data-set="broadsheet"] .pager .front-card,html[data-set="broadsheet"] .pager .phase-card{padding:.9rem 1.1rem}}
+
+/* The numbers' category switch in the Broadsheet looks: square, the accent under the one shown */
+html[data-set="broadsheet"] .num-cat{border-radius:2px;border-color:var(--t-line-strong)}
+html[data-set="broadsheet"] .num-cat button{font:600 .64rem/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--t-muted);padding:.5rem .8rem}
+html[data-set="broadsheet"] .num-cat button+button{border-left-color:var(--t-line-strong)}
+html[data-set="broadsheet"] .num-cat button.on{background:var(--t-strong);color:var(--t-bg,var(--bg,#fff));box-shadow:inset 0 -3px 0 var(--accent-ui)}
+html[data-set="broadsheet"] .tally-box.ledger td.src{font:400 .78rem/1.3 var(--f-body)}
+html[data-set="broadsheet"] .tally-box.ledger th small,html[data-set="broadsheet"] .tally-box.ledger td small{font-family:var(--f-body);font-size:.7rem}
+html[data-set="broadsheet"] .tally-box.ledger .l{font:400 .84rem/1.35 "Newsreader",Georgia,serif}
+html[data-set="broadsheet"] .num-empty{font:italic 400 .9rem/1.4 "Newsreader",Georgia,serif}
+html[data-set="broadsheet"] .num-note{font:italic 400 .78rem/1.4 "Newsreader",Georgia,serif}
+html[data-set="broadsheet"] .st{border-radius:0}
+html[data-set="broadsheet"] .tally-box.ledger .spark polyline{stroke:var(--t-strong)}
+html[data-theme="broadsheet-day"] .st-working,html[data-theme="broadsheet-day"] .tally-box.ledger small.q.up{color:#15803d}
+html[data-theme="broadsheet-day"] .st-reduced,html[data-theme="broadsheet-day"] .tally-box.ledger small.q.down{color:#b45309}
+html[data-theme="broadsheet-day"] .st-down{color:#b91c1c}

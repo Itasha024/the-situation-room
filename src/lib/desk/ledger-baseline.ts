@@ -47,7 +47,8 @@ export const LEDGER_BASELINE: Ledger = {
       country: "Saudi Arabia",
       hits: [
         SAREE(3602, "2026-07-27"),
-        MOE("2098478368081502260", "2026-09-10", { note: "Drones from Iraq, the Saudi foreign ministry says. Pump stations hit; the pipeline was shut." }),
+        // 11 Sep (a Friday): the ministry's post is from that evening, and Reuters dates the attack to Friday.
+        MOE("2098478368081502260", "2026-09-11", { note: "Drones from Iraq, the Saudi foreign ministry says. Three pump stations hit (Reuters, 17 Sep); the pipeline was shut." }),
       ],
       status: "reduced",
       statusSrc: S("Reuters", "https://www.reuters.com/business/energy/saudi-resumes-yanbu-oil-loading-after-pipeline-restart-2026-09-29/", "2026-09-29"),

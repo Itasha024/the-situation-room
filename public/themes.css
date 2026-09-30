@@ -2,7 +2,7 @@
    applies only to Broadsheet Day and Broadsheet Night (html[data-set="broadsheet"]). */
 
 /* The theme button, top right: the next look's icon in a turning arrow, three pips for where you are */
-.theme-step{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none;padding:3px 6px 4px;margin-inline-end:.5rem;background:transparent;border:1px solid var(--t-line-strong,#334155);border-radius:12px;color:var(--t-muted,#8fa0b4);cursor:pointer;transition:color .2s,border-color .2s,background .2s}
+.theme-step{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none;padding:3px 6px 4px;margin-inline-start:.5rem;background:transparent;border:1px solid var(--t-line-strong,#334155);border-radius:12px;color:var(--t-muted,#8fa0b4);cursor:pointer;transition:color .2s,border-color .2s,background .2s}
 .theme-step:hover,.theme-step:focus-visible{color:var(--t-strong,#fff);border-color:var(--t-muted,#8fa0b4);outline:none}
 .ts-ring{position:relative;display:grid;place-items:center;width:24px;height:24px}
 .ts-ring>svg{position:absolute;inset:0;width:24px;height:24px;opacity:.75;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
@@ -19,7 +19,8 @@
 html[data-set="broadsheet"] .theme-step{border-radius:2px}
 html[data-set="broadsheet"] .ts-pips i{border-radius:0}
 html[data-set="broadsheet"] .ts-pips i.on{background:var(--accent-ui)}
-@media (max-width:720px){.top{position:relative}.top .brand{padding-inline-end:5.5rem}.theme-step{position:absolute;top:.75rem;right:1rem;margin:0}}
+/* Phone: the button ends the clock line, on its right; the headline keeps the full width. */
+@media (max-width:720px){.top .stamp{align-self:stretch;flex-wrap:nowrap}.theme-step{margin-inline-start:auto}}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.32s;animation-timing-function:ease}
 
 /* The section menu: a labelled tab in its own left gutter (it covers nothing), a "Sections"

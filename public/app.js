@@ -90,8 +90,8 @@ const LABELS = {
 const CATEGORY_LABEL = {
   combat: 'Ground fighting',
   strike: 'Launch/strike/alert',
-  vessel: 'Vessel attacked',
-  port: 'Port/terminal attacked',
+  vessel: 'Maritime incidents',
+  port: 'Energy incidents',
   statement: 'Statement',
 };
 
@@ -2907,7 +2907,7 @@ const NUM_CATS = [['cas', 'Casualties'], ['sea', 'Maritime'], ['energy', 'Energy
 let numCat = 'cas';
 const numBoxOf = { cas: 0, sea: 0, energy: 0 };
 
-const SITE_STATUS = { working: 'Working', reduced: 'Reduced', down: 'Down', unknown: 'Not known' };
+const SITE_STATUS = { working: 'Working', reduced: 'Reduced', down: 'Down', unknown: 'Unknown' };
 /** The conflict began with the strike on Sanaa airport. */
 const WAR_START = '2026-07-13';
 const SINCE_LABEL = 'Since conflict';
@@ -3085,7 +3085,6 @@ function trafficBody(tr) {
   if (!points.length) return ledEmpty('The daily ship counts have not come in yet.');
   /* PortWatch's own page for each spot. */
   const PW_PAGE = { bab: 'https://portwatch.imf.org/pages/chokepoint4', suez: 'https://portwatch.imf.org/pages/chokepoint1' };
-  const today = yeDay(0);
   const row = (p) => {
     const pw = { name: 'IMF PortWatch', url: PW_PAGE[p.id], tier: 'official' };
     const days = (p.days || []).slice().sort((a, b) => a.date.localeCompare(b.date));
@@ -3095,16 +3094,17 @@ function trafficBody(tr) {
     const sum = (l) => l.reduce((n, d) => n + (Number(d.total) || 0), 0);
     const base = p.baseline && p.baseline.total;
     const wAvg = week.length ? sum(week) / week.length : 0;
-    const pct = base ? Math.round((100 * (wAvg - base)) / base) : null;
-    const pctTag = pct != null ? `<small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : '−'}${Math.abs(pct)}% vs before</small>` : '';
+    /* The latest day against the average day before the conflict. */
+    const pct = base && last ? Math.round((100 * ((Number(last.total) || 0) - base)) / base) : null;
+    const pctTag = pct != null ? `<small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : '−'}${Math.abs(pct)}% vs before conflict</small>` : '';
     const chart = lineChart({ lines: [{ name: 'Ships a day, 7-day average', cls: 's1', pts: avg7(days, 'total') }], bases: base ? [{ value: base, label: `${BEFORE_LABEL} (${ledNum(base, 1)} a day)` }] : [], zero: true, label: `Ships a day through ${p.name}` });
     spotCharts[p.id] = chart ? `<p class="chart-title">${escapeHtml(p.name)}</p>${chart}` : '';
     const name = spotCharts[p.id] ? `<button type="button" class="spot" data-spot="${escapeHtml(p.id)}" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(p.name)}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 13.5h13M3 11l3.5-4 3 2.5L14 4"/></svg></button>` : escapeHtml(p.name);
-    const lastCell = last ? `${srcLink(ledNum(last.total), pw)}${last.date === today ? '' : `<small>${escapeHtml(ledDay(last.date))}</small>`}` : '—';
-    return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${ledNum(wAvg, 1)} a day</small>${pctTag}</td><td>${srcLink(ledNum(sum(war)), pw)}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
+    const lastCell = last ? `${srcLink(ledNum(last.total), pw)}<small>${escapeHtml(ledDay(last.date))}</small>${pctTag}` : '—';
+    return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${ledNum(wAvg, 1)} a day</small></td><td>${srcLink(ledNum(sum(war)), pw)}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
   };
   const body = points.map(row).join('');
-  return `<table class="span5"><tr><th></th><th scope="col">Today</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr>${body}</table>`;
+  return `<table class="span5"><tr><th></th><th scope="col">Latest</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr>${body}</table>`;
 }
 
 function oilBody(led) {
@@ -3212,7 +3212,7 @@ function priceBody(tr) {
   const usd = (v) => `$${Number(v).toFixed(2)}`;
   const pct = base ? Math.round((100 * (last.value - base)) / base) : null;
   const cell = (d) => (d ? `${srcLink(usd(d.value), eia)}<small>${escapeHtml(ledDay(d.date))}</small>` : '—');
-  const table = `<table class="span3"><tr><th scope="col">${isToday ? 'Today' : 'Latest'}</th><th scope="col">${isToday ? '7 days ago' : '7 days earlier'}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr><tr><td class="big">${cell(last)}${pct != null ? `<small class="q ${pct > 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}% compared to pre-conflict</small>` : ''}</td><td>${cell(weekAgo)}</td><td>${base ? srcLink(usd(base), eia) : '—'}<small>average</small></td></tr></table>`;
+  const table = `<table class="span3"><tr><th scope="col">${isToday ? 'Today' : 'Latest'}</th><th scope="col">${isToday ? '7 days ago' : '7 days earlier'}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr><tr><td class="big">${cell(last)}${pct != null ? `<small class="q ${pct > 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}% vs before conflict</small>` : ''}</td><td>${cell(weekAgo)}</td><td>${base ? srcLink(usd(base), eia) : '—'}<small>average</small></td></tr></table>`;
   const chart = lineChart({ lines: [{ name: 'Brent', cls: 's1', pts: days }], bases: base ? [{ value: base, label: `${BEFORE_LABEL} (${usd(base)})` }] : [], fmt: (v) => `$${ledNum(v)}`, label: 'Brent crude oil price, dollars a barrel, day by day' });
   return `${table}${chart}`;
 }
@@ -3242,7 +3242,7 @@ function renderCasualties() {
   const idx = Math.min(numBoxOf[numCat] || 0, slides.length - 1);
   const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${NUM_CATS.map(([k, label]) => `<button type="button" data-cat="${k}" aria-pressed="${k === numCat}"${k === numCat ? ' class="on"' : ''}>${label}</button>`).join('')}</div>`;
   hideSpot();
-  el.innerHTML = `${sw}${cadenceStamp(true)}
+  el.innerHTML = `${cadenceStamp(true)}${sw}
     <div class="tally one">${pagerHtml('numbers', slides.map((s) => s[1]), idx, slides.map((s) => s[0]))}</div>
 `;
   wirePager(el, idx, (i) => { numBoxOf[numCat] = i; hideSpot(); });
@@ -5689,8 +5689,8 @@ function renderLegend(d) {
       <div class="leg-sec">Events</div>
       ${row('combat', EVENT_COLORS.combat, 'Ground fighting', true)}
       ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
-      ${row('vessel', EVENT_COLORS.vessel, 'Vessel attacked', true)}
-      ${row('port', EVENT_COLORS.port, 'Port/terminal attacked', true)}
+      ${row('vessel', EVENT_COLORS.vessel, 'Maritime incidents', true)}
+      ${row('port', EVENT_COLORS.port, 'Energy incidents', true)}
     </div>`;
   fitLegend();
   if (!legendFitWired) {
@@ -6136,7 +6136,7 @@ try { setFavicon(THEME); } catch (e) {}
 function installThemeButton() {
   const stamp = document.querySelector('.stamp');
   if (!stamp || stamp.querySelector('.theme-step')) return;
-  stamp.insertAdjacentHTML('afterbegin', `<button type="button" class="theme-step">
+  stamp.insertAdjacentHTML('beforeend', `<button type="button" class="theme-step">
     <span class="ts-ring" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M27 16a11 11 0 1 1-3.2-7.8"/><path d="M24.6 3.8l-.6 4.6-4.6-.5"/></svg><span class="ts-ico"></span></span>
     <span class="ts-pips" aria-hidden="true">${THEMES.map(() => '<i></i>').join('')}</span>
   </button>`);

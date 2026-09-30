@@ -100,6 +100,19 @@ export const LEDGER_BASELINE: Ledger = {
       status: "unknown",
     },
     {
+      // The Saudi defence ministry, on SPA: drones from Iraq at oil sites, shot down (27 and 28 Jul).
+      id: "east-saudi-oil",
+      name: "Oil facilities in the Eastern Province",
+      kind: "oil facilities",
+      country: "Saudi Arabia",
+      hits: [
+        S("Saudi Defence Ministry (SPA)", "https://www.spa.gov.sa/en/N2642332", "2026-07-27", { tier: "official", note: "Drones from Iraq at oil facilities in the Eastern Province and Riyadh, shot down." }),
+        S("Saudi Defence Ministry (SPA)", "https://www.spa.gov.sa/en/N2643452", "2026-07-28", { tier: "official", note: "Drones from Iraq at oil facilities in the Eastern Province, shot down." }),
+      ],
+      status: "working",
+      statusSrc: S("Saudi Defence Ministry (SPA)", "https://www.spa.gov.sa/en/N2643452", "2026-07-28", { tier: "official" }),
+    },
+    {
       id: "riyadh-depot",
       name: "Riyadh airport fuel depot",
       kind: "fuel depot",

@@ -488,6 +488,5 @@ html[data-set="broadsheet"] .tally-box h3 small.unit{font:400 .72rem/1 var(--f-b
   html[data-set] .tally-box.ledger table.span5 th small.span{font-size:.52rem}
   html[data-set] .tally-box.ledger table.span5 td small{font-size:.58rem;line-height:1.25}
   html[data-set] .tally-box.ledger table.span5 th[scope=row]{font-size:.8rem;line-height:1.2}
-  html[data-set] .tally-box.ledger table.span5 .sl svg{margin-left:.12em}
   html[data-set] .tally-box.ledger table.list td,html[data-set] .tally-box.ledger table.list th{font-size:.8rem}
 }

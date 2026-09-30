@@ -2894,7 +2894,7 @@ function numCell(c, cls) {
   const q = c.q ? `<small class="q">${escapeHtml(c.q)}</small> ` : '';
   const when = c.date ? new Date(`${c.date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
   const tip = [c.name, when].filter(Boolean).join(', ') + (c.note ? ` — ${c.note}` : '');
-  const inner = c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${q}${n}${SRC_GO_SVG}</a>` : `${q}${n}`;
+  const inner = c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${q}${n}</a>` : `${q}${n}`;
   return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}</td>`;
 }
 
@@ -2930,7 +2930,7 @@ const yeDay = (back = 0) => new Date(Date.now() - back * 864e5).toLocaleDateStri
  * Both show as official; anything else, and what only the attacking side
  * says, as unofficial. The same rule as ledger.ts sourceTier.
  */
-const OFFICIAL_SRC = /\b(?:UKMTO|JMIC|MARAD|Maritime Administration|CENTCOM|Aspides|EUNAVFOR|Atalanta|SPA|Saudi Press Agency|Ministry of (?:Energy|Defen[cs]e|Foreign Affairs|Interior)|(?:Energy|Defen[cs]e|Foreign|Interior) Ministry|coalition|Civil Defen[cs]e|JODI|Aramco|IMF|PortWatch|EIA|Energy Information Administration)\b/i;
+const OFFICIAL_SRC = /\b(?:UKMTO|JMIC|MARAD|Maritime Administration|CENTCOM|Aspides|EUNAVFOR|Atalanta|SPA|Saudi Press Agency|Ministry of (?:Energy|Defen[cs]e|Foreign Affairs|Interior)|(?:Energy|Defen[cs]e|Foreign|Interior) Ministry|coalition|Civil Defen[cs]e|JODI|Kpler|Aramco|IMF|PortWatch|EIA|Energy Information Administration)\b/i;
 const WIRE_SRC = /\b(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Bloomberg)\b/;
 function srcTier(s) {
   if (!s) return 'claim';
@@ -2945,7 +2945,7 @@ const isOfficial = (s) => srcTier(s) !== 'claim';
 function srcLink(html, s, cls) {
   const k = `sl ${s && isOfficial(s) ? 'sl-off' : 'sl-unoff'}${cls ? ` ${cls}` : ''}`;
   if (!s || !s.url) return `<span class="${k}">${html}</span>`;
-  return `<a class="${k}" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${html}${SRC_GO_SVG}</a>`;
+  return `<a class="${k}" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${html}</a>`;
 }
 const SL_KEY = '<p class="sl-key"><span class="sl-off">Official</span><span class="sl-unoff">Unofficial</span></p>';
 
@@ -3083,9 +3083,11 @@ const spotCharts = {};
 function trafficBody(tr) {
   const points = ((tr && tr.points) || []).filter((p) => p.id === 'bab' || p.id === 'suez');
   if (!points.length) return ledEmpty('The daily ship counts have not come in yet.');
-  const pw = { name: 'IMF PortWatch', url: (tr.source && tr.source.url) || 'https://portwatch.imf.org/pages/chokepoints', tier: 'official' };
+  /* PortWatch's own page for each spot. */
+  const PW_PAGE = { bab: 'https://portwatch.imf.org/pages/chokepoint4', suez: 'https://portwatch.imf.org/pages/chokepoint1' };
   const today = yeDay(0);
   const row = (p) => {
+    const pw = { name: 'IMF PortWatch', url: PW_PAGE[p.id], tier: 'official' };
     const days = (p.days || []).slice().sort((a, b) => a.date.localeCompare(b.date));
     const war = days.filter((d) => d.date >= WAR_START);
     const last = days[days.length - 1];
@@ -3094,12 +3096,12 @@ function trafficBody(tr) {
     const base = p.baseline && p.baseline.total;
     const wAvg = week.length ? sum(week) / week.length : 0;
     const pct = base ? Math.round((100 * (wAvg - base)) / base) : null;
-    const pctTag = pct != null ? ` <small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}%</small>` : '';
+    const pctTag = pct != null ? `<small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : '−'}${Math.abs(pct)}% vs before</small>` : '';
     const chart = lineChart({ lines: [{ name: 'Ships a day, 7-day average', cls: 's1', pts: avg7(days, 'total') }], bases: base ? [{ value: base, label: `${BEFORE_LABEL} (${ledNum(base, 1)} a day)` }] : [], zero: true, label: `Ships a day through ${p.name}` });
     spotCharts[p.id] = chart ? `<p class="chart-title">${escapeHtml(p.name)}</p>${chart}` : '';
     const name = spotCharts[p.id] ? `<button type="button" class="spot" data-spot="${escapeHtml(p.id)}" aria-haspopup="dialog" aria-expanded="false">${escapeHtml(p.name)}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 13.5h13M3 11l3.5-4 3 2.5L14 4"/></svg></button>` : escapeHtml(p.name);
     const lastCell = last ? `${srcLink(ledNum(last.total), pw)}${last.date === today ? '' : `<small>${escapeHtml(ledDay(last.date))}</small>`}` : '—';
-    return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${ledNum(wAvg, 1)} a day${pctTag}</small></td><td>${srcLink(ledNum(sum(war)), pw)}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
+    return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${ledNum(wAvg, 1)} a day</small>${pctTag}</td><td>${srcLink(ledNum(sum(war)), pw)}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
   };
   const body = points.map(row).join('');
   return `<table class="span5"><tr><th></th><th scope="col">Today</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr>${body}</table>`;

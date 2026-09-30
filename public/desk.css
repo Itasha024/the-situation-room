@@ -1064,13 +1064,15 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 }
 
 /* Maritime and Energy (30 Sep, round 3): links in the numbers, More details, the spots' charts */
-.pager-numbers .pg-track{position:relative}
-.pager-numbers .pg-slide:not(.on){position:absolute;top:0;left:0;right:0}
+.pg-track{position:relative}
+/* Each box is as tall as the slide shown: no blank space under a short one. */
+.pg-slide:not(.on){position:absolute;top:0;left:0;right:0}
 .tally-box h3 small.unit{margin-left:.25rem;font-size:.62rem;font-weight:400;letter-spacing:.02em;text-transform:none;color:var(--t-muted,#8fa3b6)}
-.tally-box.claims a.sl,.tally-box.claims .sl{border-bottom:0;text-decoration:none;white-space:nowrap}
-.sl svg,.tally-box.claims td a svg{display:inline-block;width:.68em;height:.68em;margin-left:.22em;vertical-align:.04em;opacity:.6}
-.tally-box.claims td a{border-bottom:0}
-a.sl:hover svg,.tally-box.claims td a:hover svg{opacity:1}
+/* A linked number: a thin line under it, in its own colour (white official, amber not). */
+.tally-box.claims .sl{border-bottom:0;text-decoration:none;white-space:nowrap}
+.tally-box.claims a.sl,.tally-box.claims td a{text-decoration:none;border-bottom:1px dotted currentColor}
+.tally-box.claims a.sl:hover,.tally-box.claims td a:hover{border-bottom-style:solid}
+.tally-box.ledger table.span5 small.q{display:block}
 .tally-box.claims .sl-off,.sl-key .sl-off{color:var(--t-strong,#f1f5f9)}
 .tally-box.claims .sl-unoff,.sl-key .sl-unoff{color:#f59e0b}
 .sl-key{display:flex;gap:.9rem;margin:.45rem 0 0;font-size:.64rem;color:var(--t-muted,#8fa3b6)}

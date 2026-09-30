@@ -73,7 +73,7 @@ export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]
 export const WAR_START = "2026-07-13";
 export const LEDGER_SEED: Ledger = { since: WAR_START, ships: [], sites: [], figures: [], notices: [], updatedAt: "2026-07-13T00:00:00+03:00" };
 
-const OFFICIAL_SRC = /\b(?:UKMTO|JMIC|MARAD|Maritime Administration|CENTCOM|Aspides|EUNAVFOR|Atalanta|SPA|Saudi Press Agency|Ministry of (?:Energy|Defen[cs]e|Foreign Affairs|Interior)|(?:Energy|Defen[cs]e|Foreign|Interior) Ministry|coalition|Civil Defen[cs]e|JODI|Aramco|IMF|PortWatch|EIA|Energy Information Administration)\b/i;
+const OFFICIAL_SRC = /\b(?:UKMTO|JMIC|MARAD|Maritime Administration|CENTCOM|Aspides|EUNAVFOR|Atalanta|SPA|Saudi Press Agency|Ministry of (?:Energy|Defen[cs]e|Foreign Affairs|Interior)|(?:Energy|Defen[cs]e|Foreign|Interior) Ministry|coalition|Civil Defen[cs]e|JODI|Kpler|Aramco|IMF|PortWatch|EIA|Energy Information Administration)\b/i;
 const WIRE_SRC = /\b(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Bloomberg)\b/;
 export type SourceTier = "official" | "wire" | "other" | "claim";
 /** Official body, then a wire, then anyone else; a claim is the attacking side's word alone. */
@@ -493,7 +493,7 @@ export async function refreshTransits(store: DeskStore, now = new Date()): Promi
   const next: Transits = {
     v: 2,
     points,
-    source: { name: "IMF PortWatch", url: "https://portwatch.imf.org/pages/chokepoints", date: points[0]?.days.at(-1)?.date ?? "" },
+    source: { name: "IMF PortWatch", url: "https://portwatch.imf.org/pages/chokepoint4", date: points[0]?.days.at(-1)?.date ?? "" },
     updatedAt: now.toISOString(),
     ...(price ?? prev?.brent ? { brent: (price ?? prev?.brent) as PriceSeries } : {}),
   };

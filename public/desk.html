@@ -12,10 +12,17 @@
   <script>try{var t=localStorage.getItem("desk-theme");if(t!=="broadsheet-day")t="broadsheet-night";{var d=document.documentElement;d.dataset.theme=t;d.dataset.set="broadsheet";var l=document.createElement("link");l.id="desk-fonts";l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap";document.head.appendChild(l)}}catch(e){}</script>
 </head>
 <body>
+  <div class="mast">
+    <span class="mast-date"></span>
+    <div class="mast-mid">
+      <a class="mast-name" href="/" aria-label="The Situation Room"><span class="mn">The Situation Room</span></a>
+      <span class="mast-line">Open-source intelligence</span>
+    </div>
+    <span class="mast-end"></span>
+  </div>
   <header class="top">
     <div class="brand">
-      <h1>Yemen Conflict Desk</h1>
-      <p class="sub">Open-source intelligence, updated continuously</p>
+      <h1 class="desk-label">Yemen Conflict Desk</h1>
     </div>
     <div class="stamp">
       <span class="ye-clock" title="The time in Yemen (Sanaa and Aden)"><span class="yc-label">Yemen</span><time id="ye-clock">--:--:--</time></span>

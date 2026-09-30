@@ -8,10 +8,17 @@ import { useEffect } from "react";
  * drives both.
  */
 const DESK_HTML = `
+<div class="mast">
+  <span class="mast-date"></span>
+  <div class="mast-mid">
+    <a class="mast-name" href="/" aria-label="The Situation Room"><span class="mn">The Situation Room</span></a>
+    <span class="mast-line">Open-source intelligence</span>
+  </div>
+  <span class="mast-end"></span>
+</div>
 <header class="top">
   <div class="brand">
-    <h1>Yemen Conflict Desk</h1>
-    <p class="sub">Open-source intelligence, updated continuously</p>
+    <h1 class="desk-label">Yemen Conflict Desk</h1>
   </div>
   <div class="stamp">
     <span class="ye-clock" title="The time in Yemen (Sanaa and Aden)"><span class="yc-label">Yemen</span><time id="ye-clock">--:--:--</time></span>

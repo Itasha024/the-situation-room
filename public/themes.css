@@ -492,87 +492,26 @@ html[data-set="broadsheet"] .tally-box h3 small.unit{font:400 .72rem/1 var(--f-b
   html[data-set] .tally-box.ledger table.list td,html[data-set] .tally-box.ledger table.list th{font-size:.8rem}
 }
 
-/* Masthead (the whole site): the date, "The Situation Room", the theme button; the desk's own
-   line follows under its rule. Variations of design D are tried with ?mast=D1-D10. */
+/* Masthead (the whole site): the date, "The Situation Room" over "Open-source intelligence" between
+   two accent lines, the theme button; the desk's own line follows under its rule. The name grows with
+   the window and the line under it is set in em of the name, so the two keep one ratio at every width. */
 .mast{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem;padding:.9rem 1rem .75rem;border-bottom:1px solid var(--t-line-strong)}
 .mast-date{font:500 .7rem/1.2 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--t-muted)}
 .mast-end{justify-self:end;display:flex}
 .mast-end .theme-step{margin:0}
-.mast-mid{display:flex;flex-direction:column;align-items:center;gap:.5rem}
-.mast-name{display:flex;flex-direction:column;align-items:center;gap:.5rem;color:var(--t-strong);text-decoration:none;font-family:"Newsreader",Georgia,serif;white-space:nowrap}
-.mast-name::after{content:"";width:44px;height:3px;background:var(--accent-ui)}
-.mast-name .mn{font-weight:600;font-size:2.6rem;line-height:1;letter-spacing:-.018em}
-html[data-mast] .top{border-bottom:1px solid var(--t-line-strong);box-shadow:none;padding:.6rem 1rem .6rem}
-html[data-mast] .top h1.desk-label{font:700 .8rem/1.2 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ui)}
-html[data-mast] .top h1.desk-moved{display:none}
-/* D2: bolder and bigger, a longer bar, a firm rule */
-html[data-mast="D2"] .mast-name .mn{font-weight:700;font-size:3.1rem;letter-spacing:-.025em}
-html[data-mast="D2"] .mast-name::after{width:72px;height:4px}
-html[data-mast="D2"] .mast{border-bottom-color:var(--t-strong)}
-/* D3: "The" in light italic */
-html[data-mast="D3"] .mast-name .mn i{font-style:italic;font-weight:400}
-/* D4: the desk's name under the logo, between two short accent lines */
-html[data-mast="D4"] .mast-name::after,html:is([data-mast="D7"],[data-mast="D8"],[data-mast="D9"],[data-mast="D10"]) .mast-name::after{display:none}
-html[data-mast="D4"] .mast-mid,html:is([data-mast="D7"],[data-mast="D8"],[data-mast="D9"],[data-mast="D10"]) .mast-mid{gap:.45rem}
-/* D7: D4 with "Open-source intelligence" between the lines; the desk line keeps its name, loses the subtitle */
-html:is([data-mast="D7"],[data-mast="D8"],[data-mast="D9"],[data-mast="D10"]) .top .sub{display:none}
-/* D7: one size scale from phone to PC. The name grows with the window, and everything under it
-   is set in em of the name, so the line keeps the PC ratio (0.76rem to 2.6rem) at every width. */
-html[data-mast="D7"] .mast-mid{font-size:clamp(1.65rem,1.16rem + 2.1vw,2.6rem);gap:.173em}
-html[data-mast="D7"] .mast-name .mn{font-size:1em}
-html[data-mast="D7"] .mast-desk{font-size:.292em;gap:.79em}
-html[data-mast="D7"] .mast-desk::before,html[data-mast="D7"] .mast-desk::after{width:2.3em;height:max(1px,.165em)}
-/* D8-D10: the same with the line smaller each step */
-html[data-mast="D8"] .mast-desk{font-size:.68rem;letter-spacing:.15em}
-html[data-mast="D8"] .mast-desk::before,html[data-mast="D8"] .mast-desk::after{width:24px}
-html[data-mast="D9"] .mast-desk{font-size:.6rem;letter-spacing:.16em}
-html[data-mast="D9"] .mast-desk::before,html[data-mast="D9"] .mast-desk::after{width:20px;height:1.5px}
-html[data-mast="D10"] .mast-desk{font-size:.53rem;letter-spacing:.18em;gap:.5rem}
-html[data-mast="D10"] .mast-desk::before,html[data-mast="D10"] .mast-desk::after{width:16px;height:1px}
-.mast-desk{display:flex;align-items:center;gap:.6rem;font:700 .76rem/1.2 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ui);white-space:nowrap}
-.mast-desk::before,.mast-desk::after{content:"";width:28px;height:2px;background:var(--accent-ui)}
-/* D5: spaced serif capitals */
-html[data-mast="D5"] .mast-name .mn{font-size:2rem;letter-spacing:.1em;text-transform:uppercase}
-/* D6: an accent band across the top instead of the short bar */
-html[data-mast="D6"] .mast{border-top:4px solid var(--accent-ui)}
-html[data-mast="D6"] .mast-name::after{display:none}
-/* The desk's headline styles, tried with &desk=H1-H6 (none = the accent capitals) */
-html[data-mast][data-desk="H1"] .top h1.desk-label{color:var(--t-strong)}
-html[data-mast][data-desk="H2"] .top h1.desk-label{font:600 1.4rem/1.15 "Newsreader",Georgia,serif;letter-spacing:-.01em;text-transform:none;color:var(--t-strong)}
-html[data-mast][data-desk="H3"] .top h1.desk-label{font:italic 500 1.35rem/1.15 "Newsreader",Georgia,serif;letter-spacing:0;text-transform:none;color:var(--t-text)}
-html[data-mast][data-desk="H4"] .top h1.desk-label{display:inline-block;padding:.28rem .55rem .24rem;background:var(--t-strong);color:var(--t-bg);font-size:.74rem}
-html[data-mast][data-desk="H5"] .top h1.desk-label{color:var(--plc)}
-html[data-mast][data-desk="H6"] .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);padding:.14em 0 .14em .6rem;text-box:trim-both cap alphabetic;border-left:3px solid var(--t-strong)}
-/* H6: the bar is centred on the capitals (the box is trimmed to their height); older browsers get padding for the empty space under them */
-@supports not (text-box:trim-both cap alphabetic){html[data-mast][data-desk="H6"] .top h1.desk-label{padding-top:.26em;padding-bottom:0}}
-.desk-try{bottom:48px}
-/* The picker for trying the designs, bottom right */
-.mast-try{position:fixed;right:12px;bottom:12px;z-index:1200;display:flex;gap:2px;padding:3px;background:var(--t-glass);border:1px solid var(--t-line-strong);box-shadow:var(--shadow-pop)}
-.mast-try a{min-width:30px;padding:5px 0;text-align:center;font:600 .75rem/1 var(--f-body);color:var(--t-text);text-decoration:none}
-.mast-try a.on{background:var(--accent-ui);color:var(--on-accent,#fff)}
+.mast-mid{display:flex;flex-direction:column;align-items:center;font-size:clamp(1.65rem,1.16rem + 2.1vw,2.6rem);gap:.173em}
+.mast-name{display:flex;color:var(--t-strong);text-decoration:none;font-family:"Newsreader",Georgia,serif;white-space:nowrap}
+.mast-name .mn{font-weight:600;font-size:1em;line-height:1;letter-spacing:-.018em}
+.mast-line{display:flex;align-items:center;gap:.79em;font:700 .292em/1.2 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ui);white-space:nowrap}
+.mast-line::before,.mast-line::after{content:"";width:2.3em;height:max(1px,.165em);background:var(--accent-ui)}
+html[data-set] .top{border-bottom:1px solid var(--t-line-strong);box-shadow:none;padding:.6rem 1rem}
+/* The desk's name: serif capitals by a dark bar, the bar centred on the capitals (the box is trimmed
+   to their height; older browsers get padding for the empty space under them) */
+html .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);padding:.14em 0 .14em .6rem;text-box:trim-both cap alphabetic;border-left:3px solid var(--t-strong)}
+@supports not (text-box:trim-both cap alphabetic){html .top h1.desk-label{padding-top:.26em;padding-bottom:0}}
 @media (max-width:720px){
   .mast{grid-template-columns:40px 1fr 40px;gap:.4rem;padding:.7rem .9rem .6rem}
   .mast-date{visibility:hidden}
   .mast-mid{justify-self:center}
-  .mast-name{gap:.4rem}
-  .mast-name .mn{font-size:1.65rem}
-  html[data-mast="D2"] .mast-name .mn{font-size:1.8rem}
-  html[data-mast="D2"] .mast-name::after{width:56px;height:3px}
-  html[data-mast="D4"] .mast-mid,html:is([data-mast="D7"],[data-mast="D8"],[data-mast="D9"],[data-mast="D10"]) .mast-mid{gap:.35rem}
-  html[data-mast="D7"] .mast-mid{gap:.173em}
-  html[data-mast="D8"] .mast-desk{font-size:.6rem}
-  html[data-mast="D8"] .mast-desk::before,html[data-mast="D8"] .mast-desk::after{width:16px}
-  html[data-mast="D9"] .mast-desk{font-size:.55rem}
-  html[data-mast="D9"] .mast-desk::before,html[data-mast="D9"] .mast-desk::after{width:14px}
-  html[data-mast="D10"] .mast-desk{font-size:.5rem}
-  html[data-mast="D10"] .mast-desk::before,html[data-mast="D10"] .mast-desk::after{width:12px}
-  .mast-desk{font-size:.66rem;gap:.45rem}
-  .mast-desk::before,.mast-desk::after{width:18px}
-  html[data-mast="D5"] .mast-name .mn{font-size:1.08rem;letter-spacing:.06em}
-  html[data-mast] .top h1{font-size:1.1rem}
-  .mast-try{bottom:60px}
-  .desk-try{bottom:96px}
-  html[data-mast][data-desk="H2"] .top h1.desk-label{font-size:1.2rem}
-  html[data-mast][data-desk="H3"] .top h1.desk-label{font-size:1.15rem}
-  html[data-mast][data-desk="H6"] .top h1.desk-label{font-size:.95rem}
+  html .top h1.desk-label{font-size:.95rem}
 }

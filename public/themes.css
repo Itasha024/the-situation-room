@@ -493,62 +493,50 @@ html[data-set="broadsheet"] .tally-box h3 small.unit{font:400 .72rem/1 var(--f-b
 }
 
 /* Masthead (the whole site): the date, "The Situation Room", the theme button; the desk's own
-   line follows under its rule. Designs A-H are tried with ?mast=. */
-:root{--mast-tile:#0b0f14;--mast-tile-ink:#f3eee3;--mast-tile-edge:#0b0f14;--mast-sr:url(/favicon.svg?v=sr1)}
-html[data-theme="broadsheet-day"]{--mast-tile:#fff1e5;--mast-tile-ink:#990f3d;--mast-tile-edge:#990f3d;--mast-sr:url(/favicon-day.svg?v=sr1)}
-.mast{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem;padding:.9rem 1rem .75rem;border-bottom:1px solid var(--t-strong);box-shadow:0 3px 0 -2px var(--t-strong)}
+   line follows under its rule. Variations of design D are tried with ?mast=D1-D6. */
+.mast{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem;padding:.9rem 1rem .75rem;border-bottom:1px solid var(--t-line-strong)}
 .mast-date{font:500 .7rem/1.2 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--t-muted)}
 .mast-end{justify-self:end;display:flex}
 .mast-end .theme-step{margin:0}
-.mast-name{display:flex;align-items:center;gap:.6rem;color:var(--t-strong);text-decoration:none;font-family:"Newsreader",Georgia,serif;white-space:nowrap}
+.mast-mid{display:flex;flex-direction:column;align-items:center;gap:.5rem}
+.mast-name{display:flex;flex-direction:column;align-items:center;gap:.5rem;color:var(--t-strong);text-decoration:none;font-family:"Newsreader",Georgia,serif;white-space:nowrap}
+.mast-name::after{content:"";width:44px;height:3px;background:var(--accent-ui)}
 .mast-name .mn{font-weight:600;font-size:2.6rem;line-height:1;letter-spacing:-.018em}
-.mast-sr{display:none;flex:none;width:40px;height:40px;background:var(--mast-sr) center/contain no-repeat}
 html[data-mast] .top{border-bottom:1px solid var(--t-line-strong);box-shadow:none;padding:.6rem 1rem .6rem}
-html[data-mast] .top h1{font-size:1.4rem}
-/* B: spaced capitals beside the tab's tile, one rule */
-html[data-mast="B"] .mast-sr{display:block;width:34px;height:34px}
-html[data-mast="B"] .mast-name .mn{font-size:1.45rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase}
-html[data-mast="B"] .mast{box-shadow:none}
-/* C: the tile, then the name stacked, "The" small in italic */
-html[data-mast="C"] .mast-sr{display:block;width:46px;height:46px}
-html[data-mast="C"] .mast-name .mn{display:flex;flex-direction:column;font-size:2rem;line-height:.95}
-html[data-mast="C"] .mast-name .mn i{font:italic 400 .95rem/1 "Newsreader",Georgia,serif;letter-spacing:.02em;color:var(--t-muted)}
-/* D: the name over a short accent bar; the desk as a small coloured label */
-html[data-mast="D"] .mast-name{flex-direction:column;gap:.5rem}
-html[data-mast="D"] .mast-name::after{content:"";width:44px;height:3px;background:var(--accent-ui)}
-html[data-mast="D"] .mast{box-shadow:none;border-bottom-color:var(--t-line-strong)}
 html[data-mast] .top h1.desk-label{font:700 .8rem/1.2 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ui)}
-/* E-H: the tab's tile carrying the full name */
-html:is([data-mast="E"],[data-mast="F"],[data-mast="G"],[data-mast="H"]) .mast-name{background:var(--mast-tile);color:var(--mast-tile-ink);border:1.5px solid var(--mast-tile-edge);border-radius:12px}
-html[data-mast="E"] .mast-name{padding:.42rem 1rem .5rem}
-html[data-mast="E"] .mast-name .mn{font-size:2.1rem}
-html[data-mast="F"] .mast-name{padding:.55rem .8rem .6rem;border-radius:14px}
-html[data-mast="F"] .mast-name .mn{display:flex;flex-direction:column;align-items:center;font-size:1.45rem;line-height:.98}
-html[data-mast="F"] .mast-name .mn i{font:italic 400 .85rem/1.1 "Newsreader",Georgia,serif}
-html[data-mast="G"] .mast-name{padding:.4rem 1.05rem .5rem}
-html[data-mast="G"] .mast-name .mn{display:flex;flex-direction:column;align-items:center;font-size:1.9rem;line-height:1}
-html[data-mast="G"] .mast-name .mn i{font:600 .62rem/1.4 var(--f-body);font-style:normal;letter-spacing:.34em;text-transform:uppercase;padding-left:.34em}
-html[data-mast="H"] .mast-name{background:var(--mast-tile-ink);color:var(--mast-tile);border-color:var(--mast-tile-ink);padding:.42rem 1rem .5rem}
-html[data-mast="H"] .mast-name .mn{font-size:2.1rem}
-html:is([data-mast="E"],[data-mast="F"],[data-mast="G"],[data-mast="H"]) .mast{box-shadow:none;padding:.8rem 1rem}
+html[data-mast] .top h1.desk-moved{display:none}
+/* D2: bolder and bigger, a longer bar, a firm rule */
+html[data-mast="D2"] .mast-name .mn{font-weight:700;font-size:3.1rem;letter-spacing:-.025em}
+html[data-mast="D2"] .mast-name::after{width:72px;height:4px}
+html[data-mast="D2"] .mast{border-bottom-color:var(--t-strong)}
+/* D3: "The" in light italic */
+html[data-mast="D3"] .mast-name .mn i{font-style:italic;font-weight:400}
+/* D4: the desk's name under the logo, between two short accent lines */
+html[data-mast="D4"] .mast-name::after{display:none}
+html[data-mast="D4"] .mast-mid{gap:.45rem}
+.mast-desk{display:flex;align-items:center;gap:.6rem;font:700 .76rem/1.2 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ui);white-space:nowrap}
+.mast-desk::before,.mast-desk::after{content:"";width:28px;height:2px;background:var(--accent-ui)}
+/* D5: spaced serif capitals */
+html[data-mast="D5"] .mast-name .mn{font-size:2rem;letter-spacing:.1em;text-transform:uppercase}
+/* D6: an accent band across the top instead of the short bar */
+html[data-mast="D6"] .mast{border-top:4px solid var(--accent-ui)}
+html[data-mast="D6"] .mast-name::after{display:none}
 /* The picker for trying the designs, bottom right */
 .mast-try{position:fixed;right:12px;bottom:12px;z-index:1200;display:flex;gap:2px;padding:3px;background:var(--t-glass);border:1px solid var(--t-line-strong);box-shadow:var(--shadow-pop)}
-.mast-try a{min-width:26px;padding:5px 0;text-align:center;font:600 .75rem/1 var(--f-body);color:var(--t-text);text-decoration:none}
+.mast-try a{min-width:30px;padding:5px 0;text-align:center;font:600 .75rem/1 var(--f-body);color:var(--t-text);text-decoration:none}
 .mast-try a.on{background:var(--accent-ui);color:var(--on-accent,#fff)}
 @media (max-width:720px){
   .mast{grid-template-columns:40px 1fr 40px;gap:.4rem;padding:.7rem .9rem .6rem}
   .mast-date{visibility:hidden}
-  .mast-name{justify-self:center}
+  .mast-mid{justify-self:center}
+  .mast-name{gap:.4rem}
   .mast-name .mn{font-size:1.65rem}
-  html[data-mast="B"] .mast-sr{width:24px;height:24px}
-  html[data-mast="B"] .mast-name{gap:.4rem}
-  html[data-mast="B"] .mast-name .mn{font-size:.92rem;letter-spacing:.16em}
-  html[data-mast="C"] .mast-sr{width:36px;height:36px}
-  html[data-mast="C"] .mast-name .mn{font-size:1.5rem}
-  html:is([data-mast="E"],[data-mast="H"]) .mast-name .mn{font-size:1.4rem}
-  html[data-mast="E"] .mast-name,html[data-mast="H"] .mast-name{padding:.35rem .7rem .42rem;border-radius:9px}
-  html[data-mast="F"] .mast-name .mn{font-size:1.15rem}
-  html[data-mast="G"] .mast-name .mn{font-size:1.35rem}
+  html[data-mast="D2"] .mast-name .mn{font-size:1.8rem}
+  html[data-mast="D2"] .mast-name::after{width:56px;height:3px}
+  html[data-mast="D4"] .mast-mid{gap:.35rem}
+  .mast-desk{font-size:.66rem;gap:.45rem}
+  .mast-desk::before,.mast-desk::after{width:18px}
+  html[data-mast="D5"] .mast-name .mn{font-size:1.08rem;letter-spacing:.06em}
   html[data-mast] .top h1{font-size:1.1rem}
   .mast-try{bottom:60px}
 }

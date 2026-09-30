@@ -6134,27 +6134,21 @@ function setFavicon(t) {
 try { setFavicon(THEME); } catch (e) {}
 
 /* The site's masthead: "The Situation Room" above the desk's own line, with the date on the left
- * and the theme button on the right (it applies to every desk). Designs are tried with
- * ?mast=A…H; without it the page is as before. */
-const MASTS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-const MAST = (() => { try { const m = (new URLSearchParams(location.search).get('mast') || '').toUpperCase(); return MASTS.includes(m) ? m : ''; } catch (e) { return ''; } })();
-function mastName(m) {
-  const sr = '<span class="mast-sr" aria-hidden="true"></span>';
-  if (m === 'B') return sr + '<span class="mn">The Situation Room</span>';
-  if (m === 'C') return sr + '<span class="mn"><i>The</i><b>Situation Room</b></span>';
-  if (m === 'F') return '<span class="mn"><i>The</i><b>Situation</b><b>Room</b></span>';
-  if (m === 'G') return '<span class="mn"><i>The</i><b>Situation Room</b></span>';
-  return '<span class="mn">The Situation Room</span>';
-}
+ * and the theme button on the right (it applies to every desk). Variations of design D are tried
+ * with ?mast=D1…D6; without it the page is as before. */
+const MASTS = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'];
+const MAST = (() => { try { let m = (new URLSearchParams(location.search).get('mast') || '').toUpperCase(); if (m === 'D') m = 'D1'; return MASTS.includes(m) ? m : ''; } catch (e) { return ''; } })();
 function installMast() {
   const top = document.querySelector('header.top');
   if (!MAST || !top || document.querySelector('.mast')) return;
   document.documentElement.dataset.mast = MAST;
-  const day = new Date().toLocaleDateString('en-GB', { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  top.insertAdjacentHTML('beforebegin', `<div class="mast"><span class="mast-date">${day}</span><a class="mast-name" href="/" aria-label="The Situation Room">${mastName(MAST)}</a><span class="mast-end"></span></div>
-    <nav class="mast-try" aria-label="Masthead designs">${MASTS.map((m) => `<a href="?mast=${m}"${m === MAST ? ' class="on"' : ''}>${m}</a>`).join('')}</nav>`);
   const h1 = top.querySelector('h1');
-  if (MAST === 'D' && h1) h1.classList.add('desk-label');
+  const day = new Date().toLocaleDateString('en-GB', { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const name = MAST === 'D3' ? '<i>The</i> Situation Room' : 'The Situation Room';
+  const desk = MAST === 'D4' && h1 ? `<span class="mast-desk">${escapeHtml(h1.textContent)}</span>` : '';
+  top.insertAdjacentHTML('beforebegin', `<div class="mast"><span class="mast-date">${day}</span><div class="mast-mid"><a class="mast-name" href="/" aria-label="The Situation Room"><span class="mn">${name}</span></a>${desk}</div><span class="mast-end"></span></div>
+    <nav class="mast-try" aria-label="Masthead designs">${MASTS.map((m) => `<a href="?mast=${m}"${m === MAST ? ' class="on"' : ''}>${m}</a>`).join('')}</nav>`);
+  if (h1) h1.classList.add(desk ? 'desk-moved' : 'desk-label');
 }
 
 function installThemeButton() {

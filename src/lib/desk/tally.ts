@@ -1,5 +1,5 @@
 /**
- * "The conflict in numbers": cumulative figures for this round (from 3 July
+ * "The conflict in numbers": cumulative figures for this round (from 13 July
  * 2026), refreshed with the 6-hour brief. Server-only.
  *
  * Official numbers only: UN agencies (OCHA, WHO, IOM, UNHCR, UNFPA via the
@@ -52,7 +52,7 @@ export type Tally = {
 
 /** The hand-checked figures to 19 September 2026, the starting point. */
 export const TALLY_SEED: Tally = {
-  since: "2026-07-03",
+  since: "2026-07-13",
   killed: { houthi: 278, gov: 216, saudi: 1, civilians: 150 },
   injured: { houthi: null, gov: null, saudi: 73, civilians: null },
   idp: 112000,
@@ -146,8 +146,8 @@ function officialReports(reports: LiveReport[]): Doc[] {
     }));
 }
 
-const SYSTEM = `You keep the running casualty and displacement count for the current round of the Yemen war, which began on 3 July 2026 (Houthis vs the Yemeni government and the Saudi-led coalition).
-You get the CURRENT tally and NEW documents. Return ONLY figures that a document explicitly states as a cumulative total for this round (since early July 2026), from an official body: a UN agency (OCHA, WHO, IOM, UNHCR, UNFPA, UNICEF, OHCHR), a health ministry, a government, the coalition, or Saudi officials.
+const SYSTEM = `You keep the running casualty and displacement count for the current round of the Yemen war, which began on 13 July 2026 with the strike on Sanaa airport (Houthis vs the Yemeni government and the Saudi-led coalition).
+You get the CURRENT tally and NEW documents. Return ONLY figures that a document explicitly states as a cumulative total for this round (since 13 July 2026), from an official body: a UN agency (OCHA, WHO, IOM, UNHCR, UNFPA, UNICEF, OHCHR), a health ministry, a government, the coalition, or Saudi officials.
 Fields:
 - killed.houthi / injured.houthi: all people on the Houthi side, fighters AND civilians in Houthi areas
 - killed.gov / injured.gov: all people on the government side, fighters AND civilians in government areas

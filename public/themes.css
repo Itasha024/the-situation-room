@@ -485,7 +485,7 @@ html[data-set="broadsheet"] .tally-box h3 small.unit{font:400 .72rem/1 var(--f-b
 /* Phones: the ship table's five columns fit the width */
 @media (max-width:560px){
   .tally-box.ledger table.span5{table-layout:fixed}
-  .tally-box.ledger table.span5 tr > :first-child{width:24%}
+  .tally-box.ledger table.span5 tr > :first-child{width:28%} /* room for "Bab al-Mandab" and its chart icon */
   html[data-set] .tally-box.ledger table.span5 th,html[data-set] .tally-box.ledger table.span5 td{padding-left:.12rem;padding-right:.12rem;font-size:.74rem;overflow-wrap:anywhere}
   html[data-set] .tally-box.ledger table.span5 tr:first-child th{font-size:.52rem;letter-spacing:0;overflow-wrap:normal}
   html[data-set] .tally-box.ledger table.span5 th small.span{font-size:.52rem}

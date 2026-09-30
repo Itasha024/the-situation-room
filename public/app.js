@@ -266,7 +266,7 @@ let activeEpoch = null;
 let activeControlYmd = null;
 let controlOverlayLayers = [];
 const MAP_ROUND_START = '2026-07-01';
-const CONFLICT_START = '2026-07-03';
+const CONFLICT_START = '2026-07-13';
 const FRONT_HOME_VIEW = [15.35, 46.15, 6];
 const MAX_MAP_PINS = 80;
 // A range or "all" view must show the whole war, not the newest slice of it:
@@ -2766,7 +2766,7 @@ function renderSituation(d) {
  * as a dash, never an estimate.
  */
 const TALLY_FALLBACK = {
-  since: '2026-07-03',
+  since: '2026-07-13',
   killed: { houthi: 278, gov: 216, saudi: 1, civilians: 150 },
   injured: { houthi: null, gov: null, saudi: 73, civilians: null },
   idp: 112000,
@@ -3080,6 +3080,14 @@ function shipsBody(led) {
 
 /** Each spot's own chart, shown over the page from its name. */
 const spotCharts = {};
+// The name with the chart icon after it; the icon keeps to the last word, so on a narrow
+// column the name wraps but the icon never lands on a line of its own.
+function spotLabel(name) {
+  const i = String(name).lastIndexOf(" ");
+  const head = i > 0 ? `<span class="spot-name">${escapeHtml(name.slice(0, i))}</span> ` : "";
+  const last = i > 0 ? name.slice(i + 1) : name;
+  return `${head}<span class="spot-end"><span class="spot-name">${escapeHtml(last)}</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 13.5h13M3 11l3.5-4 3 2.5L14 4"/></svg></span>`;
+}
 function trafficBody(tr) {
   const points = ((tr && tr.points) || []).filter((p) => p.id === 'bab' || p.id === 'suez');
   if (!points.length) return ledEmpty('The daily ship counts have not come in yet.');
@@ -3099,7 +3107,7 @@ function trafficBody(tr) {
     const pctTag = pct != null ? `<small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : '−'}${Math.abs(pct)}% vs before conflict</small>` : '';
     const chart = lineChart({ lines: [{ name: 'Ships a day, 7-day average', cls: 's1', pts: avg7(days, 'total') }], bases: base ? [{ value: base, label: `${BEFORE_LABEL} (${ledNum(base, 1)} a day)` }] : [], zero: true, label: `Ships a day through ${p.name}` });
     spotCharts[p.id] = chart ? `<p class="chart-title">${escapeHtml(p.name)}</p>${chart}` : '';
-    const name = spotCharts[p.id] ? `<button type="button" class="spot" data-spot="${escapeHtml(p.id)}" aria-haspopup="dialog" aria-expanded="false"><span class="spot-name">${escapeHtml(p.name)}</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 13.5h13M3 11l3.5-4 3 2.5L14 4"/></svg></button>` : escapeHtml(p.name);
+    const name = spotCharts[p.id] ? `<button type="button" class="spot" data-spot="${escapeHtml(p.id)}" aria-haspopup="dialog" aria-expanded="false">${spotLabel(p.name)}</button>` : escapeHtml(p.name);
     const lastCell = last ? `${srcLink(ledNum(last.total), pw)}<small>${escapeHtml(ledDay(last.date))}</small>${pctTag}` : '—';
     return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${ledNum(wAvg, 1)} a day</small></td><td>${srcLink(ledNum(sum(war)), pw)}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
   };

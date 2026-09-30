@@ -58,7 +58,7 @@ export type DevSide = (typeof DEV_SIDES)[number];
 export type Prose = { situation: string; /** The fuller account behind "Read more". */ more: string; fronts: Record<string, string>; model?: string; devMap: DevMark[]; frontMaps: Record<string, DevMark[]> };
 
 const H = `${CADENCE_HOURS} hours`;
-const SYSTEM = `You are the editor of a live news desk on the current round of the Yemen war (from 3 July 2026: the Houthis against the Yemeni government and the Saudi-led coalition).
+const SYSTEM = `You are the editor of a live news desk on the current round of the Yemen war (from 13 July 2026, the strike on Sanaa airport: the Houthis against the Yemeni government and the Saudi-led coalition).
 You get the reports published in the last ${H} and the text that stood before. Each report line is: outlet [its alignment, if any] {the front ids it belongs to}: headline — body.
 Write in English wire style (Reuters/AP):
 - "situation": the whole conflict in these ${H} SEEN FROM ABOVE, as an editor's overview for a reader with ten seconds: 2-4 short sentences, at most 70 words, most important first within each part (see Order). Say where the war moved and which way: which fronts were active and who gained or lost ground (by front or governorate: "the Marib front", "western Taiz", "the Saudi border"), escalations (attacks on Saudi Arabia, on shipping, big strikes with their deaths), and the big political or military facts (a leader's threat, a mobilisation, talks). Always include the Saudi front when anything happened there.

@@ -40,17 +40,17 @@ const DESK_HTML = `
   <div class="time-filter" id="time-filter" title="Pick a day, or show the whole conflict">
     <span class="tf-label">Map:</span>
     <button type="button" id="btn-day-prev" class="day-nav" aria-label="Previous day"><span class="day-nav-arr" aria-hidden="true">←</span><span class="day-nav-txt">Back</span></button>
-    <input type="date" id="map-date" min="2026-07-01" />
+    <input type="date" id="map-date" min="2026-07-13" />
     <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day"><span class="day-nav-txt">Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
     <button type="button" id="btn-day-today">Today</button>
     <span class="tf-sep" aria-hidden="true"></span>
     <button type="button" id="btn-conflict-all" aria-label="Whole conflict"><span class="tf-long">Whole conflict</span><span class="tf-short">All</span></button>
   </div>
-  <button type="button" class="ghost" id="btn-focus-map">Expand map</button>
 </div>
 <main class="stage" id="stage">
   <section class="map-wrap" id="map-wrap">
     <div id="map"></div>
+      <button type="button" class="map-full" id="btn-focus-map" aria-pressed="false" aria-label="Full screen map" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="mf-open" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path class="mf-close" d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button>
     <div class="legend" id="legend"></div>
     <div class="map-chip" id="map-chip">Click a province or a mark for detail</div>
   </section>

@@ -103,8 +103,10 @@ const CATEGORY_LABEL = {
  * heart of this desk; it should read as a running wire, so it opens deep and
  * pages in large steps.
  */
-const INITIAL_REPORTS = 10;
-const MORE_STEP = 10;
+// A phone starts with 6 reports and adds 6 at a time; a PC 10 and 10.
+const PHONE_FEED = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 720px)').matches;
+const INITIAL_REPORTS = PHONE_FEED ? 6 : 10;
+const MORE_STEP = PHONE_FEED ? 6 : 10;
 
 /* ---------------------------------------------------------------- *
  * Gazetteer — canonical English place names, loaded from the file the
@@ -265,7 +267,7 @@ let mapDateTo = null;
 let activeEpoch = null;
 let activeControlYmd = null;
 let controlOverlayLayers = [];
-const MAP_ROUND_START = '2026-07-01';
+const MAP_ROUND_START = '2026-07-13';
 const CONFLICT_START = '2026-07-13';
 const FRONT_HOME_VIEW = [15.35, 46.15, 6];
 const MAX_MAP_PINS = 80;
@@ -5842,10 +5844,15 @@ function wireUi(d) {
     renderFeed(data);
   };
   setInterval(renderFreshness, 30 * 1000);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && mapFocus && !document.querySelector('.leaflet-popup')) document.getElementById('btn-focus-map').click(); });
   document.getElementById('btn-focus-map').onclick = () => {
     mapFocus = !mapFocus;
     document.body.classList.toggle('map-focus', mapFocus);
-    document.getElementById('btn-focus-map').textContent = mapFocus ? 'Shrink map' : 'Expand map';
+    const fb = document.getElementById('btn-focus-map');
+    fb.setAttribute('aria-pressed', String(mapFocus));
+    fb.setAttribute('aria-label', mapFocus ? 'Exit full screen' : 'Full screen map');
+    fb.title = mapFocus ? 'Exit full screen' : 'Full screen';
+    if (mapFocus) document.getElementById('map-wrap').scrollIntoView({ block: 'start' });
     // On a phone the expanded map is nearly all the screen there is, so the key
     // folds itself away and the reader opens it if they want it. On a desktop
     // there is room for both and the legend is left alone. Shrinking puts back

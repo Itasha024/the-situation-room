@@ -497,7 +497,6 @@ html{scroll-behavior:smooth}
     padding: .4rem .5rem;
     font-size: .78rem;
   }
-  #btn-focus-map { align-self: stretch; width: 100%; }
 
   .stage {
     grid-template-columns: 1fr;

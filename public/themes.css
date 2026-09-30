@@ -509,11 +509,30 @@ html[data-set="broadsheet"] .tally-box h3 small.unit{font:400 .72rem/1 var(--f-b
 html[data-set] .top{border-bottom:1px solid var(--t-line-strong);box-shadow:none;padding:.6rem 1rem}
 /* The desk's name: serif capitals by a dark bar, the bar centred on the capitals (the box is trimmed
    to their height; older browsers get padding for the empty space under them) */
-html .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);padding:.14em 0 .14em .6rem;text-box:trim-both cap alphabetic;border-left:3px solid var(--t-strong)}
+html .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);position:relative;padding:.14em 0 .14em calc(.6rem + 4px);text-box:trim-both cap alphabetic}
+/* The bar beside the desk name in the Yemeni flag: red, white, black (a hairline keeps the white and the black visible on either theme) */
+html .top h1.desk-label::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#ce1126 0 33.34%,#fff 0 66.67%,#000 0);box-shadow:0 0 0 1px var(--t-line-strong,#555)}
 @supports not (text-box:trim-both cap alphabetic){html .top h1.desk-label{padding-top:.26em;padding-bottom:0}}
 @media (max-width:720px){
   .mast{grid-template-columns:40px 1fr 40px;gap:.4rem;padding:.7rem .9rem .6rem}
   .mast-date{visibility:hidden}
   .mast-mid{justify-self:center}
   html .top h1.desk-label{font-size:.95rem}
+}
+
+/* The map's full-screen button, top right on the map (was "Expand map" in the bar above);
+   the events line sits to its left */
+.map-full{position:absolute;z-index:800;top:10px;right:10px;display:grid;place-items:center;width:32px;height:32px;padding:0;background:var(--t-glass,rgba(8,12,18,.9));border:1px solid var(--t-line-strong,#2a3a4e);border-radius:4px;color:var(--t-strong,#fff);cursor:pointer;box-shadow:var(--shadow-pop,0 2px 8px #0006)}
+html[data-set="broadsheet"] .map-full{border-radius:2px}
+.map-full:hover,.map-full:focus-visible{background:var(--t-surface-3,#1a2433);outline:none;border-color:var(--accent-ui,#7eb6ff)}
+.map-full svg{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.map-full .mf-close{display:none}
+.map-full[aria-pressed="true"] .mf-open{display:none}
+.map-full[aria-pressed="true"] .mf-close{display:inline}
+html .map-wrap .map-chip{top:10px;right:50px;min-height:32px;box-sizing:border-box;display:flex;align-items:center;max-width:min(280px,calc(100% - 110px))}
+html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
+@media (max-width:720px){
+  .map-full{top:8px;right:8px}
+  html .map-wrap .map-chip{top:8px;right:46px;max-width:calc(100% - 100px)}
+  html .map-wrap .map-chip.chip-hl{max-width:calc(100% - 100px)}
 }

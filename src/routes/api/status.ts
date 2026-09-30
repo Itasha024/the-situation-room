@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/status")({
             ticks: ticks ?? [],
             // Processor time per endpoint per day (calls, ms): what the Vercel bill counts.
             cpu: cpu ?? {},
-            // District control changes the 12-hour clock applied over public/control.json.
+            // District control changes the 6-hour clock applied over public/control.json.
             controlChanges: controlLive?.changes ?? [],
             // Outlets and X accounts the origin search found originals at, now read hourly.
             learned: learned ?? [],
@@ -84,6 +84,6 @@ export const Route = createFileRoute("/api/status")({
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "cdn-cache-control": "public, s-maxage=60" },
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "cdn-cache-control": "no-store" },
   });
 }

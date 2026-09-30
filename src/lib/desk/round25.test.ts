@@ -1,0 +1,88 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { cardMarks } from "./dev-marks.ts";
+import { placeProse } from "./prose-places.ts";
+import { unknownSpots } from "./editor.ts";
+import type { LiveReport } from "./types.ts";
+
+const card = (over: Partial<LiveReport>): LiveReport =>
+  ({ fp: "f", at: "2026-09-30T06:00:00Z", source: "Aden al-Ghad", url: "u", type: "combat", summary: "", text: "", ...over }) as LiveReport;
+
+test("one side's capture of a hill is drawn as its advance; a confirmed one keeps its flag (30 Sep)", () => {
+  const one = card({ summary: "Yemeni government forces recapture Jabal Qarfan in Al-Wazi'iyah from Houthi forces", lat: 13.178, lng: 43.867, place: "Jabal Qarfan" });
+  assert.equal(cardMarks([one], () => []).all[0].kind, "advance");
+  const both = card({ ...one, alsoReportedBy: [{ source: "Al-Masirah", url: "v" }] as never });
+  assert.equal(cardMarks([both], () => []).all[0].kind, "capture");
+});
+
+test("a merged card's place outside the governorate its headline names is not drawn (Al-Mansurah, Lahj)", () => {
+  const r = card({
+    summary: "Yemeni government forces recapture Al-Mansurah mountain in Al-Mudaribah, Lahj",
+    places: [
+      { name: "Al-Mudaribah", lat: 12.9, lng: 43.97 },
+      { name: "Al-Mansurah", lat: 13.28, lng: 43.45 },
+    ] as never,
+  });
+  const names = cardMarks([r], () => []).all.map((m) => m.place);
+  assert.deepEqual(names, ["Al-Mudaribah"]);
+});
+
+test("the headline's unknown spot beats the dateline's known one (Al-Bazilah, not Kahbub)", () => {
+  assert.deepEqual(unknownSpots("Southern forces capture Al-Qarnaynah mountain and repel Houthi attacks in Lahj"), ["Al-Qarnaynah"]);
+  assert.deepEqual(unknownSpots("Southern forces capture Al-Bazilah mountain in Lahj"), []); // known since 30 Sep
+  assert.deepEqual(unknownSpots("Houthi shelling hits Kahbub in Lahj"), []);
+});
+
+test("a Saudi namesake is no place for a Yemeni sentence (Jabal Jarad, 30 Sep)", async () => {
+  const cache = { "en|Jabal Jarad|": { name: "Jabal Jarad", lat: 23.1807, lng: 44.6648 } };
+  const store = { getJson: async () => cache, putJson: async () => {} } as never;
+  const out = await placeProse(store, ["Houthi shelling hit Jabal Jarad and Al-Rahma mosque."], []);
+  assert.equal(out["Jabal Jarad"], undefined);
+  const saudi = await placeProse(store, ["A drone fell on Jabal Jarad in Saudi Arabia."], []);
+  assert.deepEqual(saudi["Jabal Jarad"], [23.1807, 44.6648]);
+});
+
+test("two anti-Houthi outlets are one camp: no flag (Al-Mansurah mountain, 29 Sep)", () => {
+  const r = card({ summary: "Yemeni government forces recapture Al-Mansurah mountain in Al-Mudaribah, Lahj", lat: 13.1, lng: 43.83, place: "Al-Mansurah", alsoReportedBy: [{ source: "Almashhad", url: "v" }] as never });
+  assert.equal(cardMarks([r], () => []).all[0].kind, "advance");
+});
+
+test("piracy and the US–Iran war are not this war; the Houthis at sea are", async () => {
+  const { notThisWar } = await import("./editor.ts");
+  assert.ok(notThisWar("Egypt releases eight Egyptian sailors kidnapped off Shabwa, Yemen, and held in Somalia", "الإفراج عن البحارة المصريين المختطفين قبالة سواحل شبوة اليمنية"));
+  assert.ok(notThisWar("US officials: Trump may order a return to major combat against Iran after the midterms", ""));
+  assert.equal(notThisWar("Houthi forces seize a tanker off Hodeidah", ""), null);
+  assert.equal(notThisWar("Iran's foreign minister and Trump envoy discuss the Houthis and Bab al-Mandab", ""), null);
+});
+
+test("a launch reported alone flies to the hit reported soon after (Sanaa -> Aden, 30 Sep)", () => {
+  const launch = card({ fp: "a", at: "2026-09-30T06:25:02Z", source: "Almashhad", type: "strike", summary: "Houthi forces launch two ballistic missiles from Sanaa", lat: 15.3694, lng: 44.191, place: "Sanaa" });
+  const hit = card({ fp: "b", at: "2026-09-30T06:39:19Z", source: "Sawt al-Asima", type: "strike", summary: "Houthi forces fire ballistic missiles at Nation's Shield forces base in Aden", lat: 12.79, lng: 45.02, place: "Aden" });
+  const all = cardMarks([launch, hit], () => []).all;
+  assert.equal(all.length, 1);
+  assert.equal(all[0].place, "Aden");
+  assert.deepEqual(all[0].fromLl, [15.3694, 44.191]);
+  // No launch named: just the hit.
+  assert.equal(cardMarks([hit], () => []).all[0].fromLl, undefined);
+});
+
+test("a prose missile with no launch area takes the one the window's cards name", async () => {
+  const { launchFor } = await import("./dev-marks.ts");
+  const aden = { place: "Aden", kind: "missile", side: "houthi", ll: [12.79, 45.02] } as const;
+  const sanaa = { kind: "missile", side: "houthi", ll: [15.3694, 44.191], at: 0 } as const;
+  assert.deepEqual(launchFor({ ...aden, ll: [...aden.ll] }, [{ ...sanaa, ll: [...sanaa.ll] }]), [15.3694, 44.191]);
+  // Two launch areas: it cannot say which.
+  assert.equal(launchFor({ ...aden, ll: [...aden.ll] }, [{ ...sanaa, ll: [...sanaa.ll] }, { ...sanaa, ll: [16.94, 43.76] }]), undefined);
+});
+
+test("a drone shot down is drawn in the colour of the side that flew it (Saada, 30 Sep)", () => {
+  const houthiOutlet = card({ source: "Al-Mihwar", type: "strike", summary: "Yemeni air defences shoot down Saudi drone over Saada", lat: 16.94, lng: 43.76, place: "Saada" });
+  const m = cardMarks([houthiOutlet], () => []).all[0];
+  assert.equal(m.kind, "interception");
+  assert.equal(m.side, "saudi");
+  assert.equal(m.shot, "drone");
+  const saudiSide = card({ source: "Al Arabiya", type: "strike", summary: "Saudi air defences intercept two Houthi missiles over Jazan", lat: 16.89, lng: 42.55, place: "Jazan" });
+  const n = cardMarks([saudiSide], () => []).all[0];
+  assert.equal(n.side, "houthi");
+  assert.equal(n.shot, "missile");
+});

@@ -18,7 +18,9 @@
         "wiki",
         "majalla"
       ],
-      "note": "Mocha town and port seized 10 September."
+      "note": "Mocha town and port seized 10 September.",
+      "before": "plc",
+      "beforeNote": "Held by the government (National Resistance) before the coastal offensive."
     },
     "dhubab": {
       "side": "houthi",
@@ -28,7 +30,9 @@
         "majalla",
         "desk"
       ],
-      "note": "Seized 10-11 September with Perim; government forces fight at the Bab al-Mandab complex and on Jabal Zalat."
+      "note": "Seized 10-11 September with Perim; government forces fight at the Bab al-Mandab complex and on Jabal Zalat.",
+      "before": "plc",
+      "beforeNote": "Held by the government before the coastal offensive."
     },
     "mawza": {
       "side": "houthi",
@@ -37,7 +41,9 @@
         "majalla",
         "desk"
       ],
-      "note": "Behind the Houthi line after the coast fell; the push east runs from here into Al-Wazi'iyah."
+      "note": "Behind the Houthi line after the coast fell; the push east runs from here into Al-Wazi'iyah.",
+      "before": "plc",
+      "beforeNote": "Held by the government before the coastal offensive."
     },
     "al-wazi-yah": {
       "side": "contested",
@@ -47,7 +53,9 @@
         "wiki",
         "desk"
       ],
-      "note": "Daily fighting: Jabal al-Shuhada, Al-Ghayl, Qardad, Sharirah, Al-Alqamah change hands."
+      "note": "Daily fighting: Jabal al-Shuhada, Al-Ghayl, Qardad, Sharirah, Al-Alqamah change hands.",
+      "before": "plc",
+      "beforeNote": "Held by the government before the offensive reached it."
     },
     "maqbanah": {
       "side": "houthi",
@@ -96,7 +104,9 @@
         "aj-qarfan",
         "desk"
       ],
-      "note": "Houthi forces took the first villages and claim the Rasan heights; the government retook Jabal Numan and Jabal Qarfan (22-23 Sep)."
+      "note": "Houthi forces took the first villages and claim the Rasan heights; the government retook Jabal Numan and Jabal Qarfan (22-23 Sep).",
+      "before": "plc",
+      "beforeNote": "Held by the government before the Houthi push."
     },
     "shar-ab-as-salam": {
       "side": "houthi",
@@ -185,7 +195,9 @@
         "wiki",
         "desk"
       ],
-      "note": "Kahbub and Ras al-Arah: the Giants Brigades and Nation's Shield hold the Kahbub heights (17 Sep) against daily Houthi attacks; Houthi missiles on its villages."
+      "note": "Kahbub and Ras al-Arah: the Giants Brigades and Nation's Shield hold the Kahbub heights (17 Sep) against daily Houthi attacks; Houthi missiles on its villages.",
+      "before": "plc",
+      "beforeNote": "Held by the government (Lahj) before the Houthi push."
     },
     "al-maqatirah": {
       "side": "contested",
@@ -193,7 +205,9 @@
       "src": [
         "desk"
       ],
-      "note": "Houthi forces claim Hayjat al-Abd and the Taiz-Aden road (24 Sep); the government says the attack on Al-Ashbut was repelled."
+      "note": "Houthi forces claim Hayjat al-Abd and the Taiz-Aden road (24 Sep); the government says the attack on Al-Ashbut was repelled.",
+      "before": "plc",
+      "beforeNote": "Held by the government (Lahj) before the Houthi push."
     },
     "al-qubaytah": {
       "side": "contested",
@@ -295,7 +309,9 @@
         "wiki",
         "desk"
       ],
-      "note": "Southern Marib fronts (Al-Fulayhah, Umm Raysh): government advances since 9 September."
+      "note": "Southern Marib fronts (Al-Fulayhah, Umm Raysh): government advances since 9 September.",
+      "before": "houthi",
+      "beforeNote": "Held by the Houthis since 2021, before the government push."
     },
     "majzar": {
       "side": "houthi",
@@ -359,7 +375,9 @@
         "wiki",
         "desk"
       ],
-      "note": "The government took Al-Yatamah (8 Sep); the Houthis hold the rest."
+      "note": "The government took Al-Yatamah (8 Sep); the Houthis hold the rest.",
+      "before": "houthi",
+      "beforeNote": "Held by the Houthis before the government push."
     },
     "al-khalaq": {
       "side": "contested",
@@ -368,7 +386,9 @@
         "wiki",
         "desk"
       ],
-      "note": "The government took the Al-Labanat camp (7 Sep) and advances towards Al-Hazm."
+      "note": "The government took the Al-Labanat camp (7 Sep) and advances towards Al-Hazm.",
+      "before": "houthi",
+      "beforeNote": "Held by the Houthis before the government push."
     },
     "al-hazm": {
       "side": "houthi",
@@ -649,6 +669,26 @@
       "src": [
         "baseline"
       ]
+    },
+    "hays": {
+      "side": "houthi",
+      "since": "2026-09-10",
+      "src": [
+        "wiki"
+      ],
+      "note": "Hays seized 10 September.",
+      "before": "plc",
+      "beforeNote": "Held by the government before the coastal offensive."
+    },
+    "al-khukhah": {
+      "side": "houthi",
+      "since": "2026-09-10",
+      "src": [
+        "wiki"
+      ],
+      "note": "Al-Khokha seized 10 September.",
+      "before": "plc",
+      "beforeNote": "Held by the government before the coastal offensive."
     }
   },
   "changes": [

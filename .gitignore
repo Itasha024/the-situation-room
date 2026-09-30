@@ -29,3 +29,8 @@ public/desk-tally.json
 .vercel
 .env*
 public/desk-tick-lock.json
+
+# Local build folder and runtime counters (not source).
+.output/
+public/desk-cpu-meter.json
+public/desk-site-seen.json

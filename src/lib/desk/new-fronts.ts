@@ -3,13 +3,15 @@
  * when fighting or strikes cluster somewhere none of them covers, a new front
  * is opened for it, and it closes again after a week with nothing reported.
  *
- * A second cluster in the governorate of a front already opened joins that
- * front — one card, one list of places, a spot for each cluster — rather than
- * opening a second front beside it: two clusters in Saada are the Saada front.
+ * A front is always a governorate, named after it (30 Sep): a cluster at Brom
+ * is the Hadramawt front, and a second cluster in Saada joins the Saada front
+ * as another spot. A report belongs to it when its pin lies in that
+ * governorate and no tracked front (front-areas.ts) takes it.
  */
 
 import { governorateAt } from "./adm1.ts";
 import { kmApart } from "./copies.ts";
+import { govKey } from "./front-areas.ts";
 import type { LiveReport } from "./types.ts";
 
 export type ExtraFront = {
@@ -61,10 +63,10 @@ const GOV_WHERE: Record<string, string> = {
   "YE-MR": "Al-Mahra governorate, in the far east on the Omani border",
   "YE-MW": "Al-Mahwit governorate, west of Sanaa",
   "YE-RA": "Raymah governorate, in the western highlands",
-  "YE-SA": "The capital, Sanaa",
+  "YE-SA": "Sanaa, the capital, and the governorate around it",
   "YE-SD": "Saada governorate, the Houthis' northern heartland on the Saudi border",
   "YE-SH": "Shabwa governorate, in the south between Abyan and Hadramawt",
-  "YE-SN": "Sanaa governorate, around the capital",
+  "YE-SN": "Sanaa, the capital, and the governorate around it",
   "YE-SU": "The Socotra archipelago, in the Arabian Sea",
   "YE-TA": "Taiz governorate, in the south-west between the highlands and the Red Sea coast",
 };
@@ -93,11 +95,20 @@ export function spotsOf(f: ExtraFront): [number, number][] {
   return f.spots?.length ? f.spots : [f.spot];
 }
 
-/** Does this report belong to an opened front (by name, or near one of its spots)? */
+/** Does this report belong to an opened front: pinned in its governorate, or named as it with no pin? */
 export function inExtraFront(r: LiveReport, f: ExtraFront): boolean {
+  if (!f.gov) return false;
+  if (typeof r.lat === "number" && typeof r.lng === "number") return govKey(r.lat, r.lng) === f.gov;
   const place = String(r.place || "").toLowerCase();
-  if (place && f.places.some((p) => p.toLowerCase() === place)) return true;
-  return isField(r) && spotsOf(f).some((s) => kmApart({ lat: r.lat as number, lng: r.lng as number }, at(s)) <= NEAR_KM);
+  return !!place && place === f.name.toLowerCase();
+}
+
+/** An opened front as a governorate: its key, its name and its id. */
+function asGovernorate(f: ExtraFront): ExtraFront | null {
+  const gov = f.gov === "YE-SA" ? "YE-SN" : (f.gov ?? govKey(f.spot[0], f.spot[1]) ?? undefined);
+  const name = gov ? GOVERNORATE[gov] : undefined;
+  if (!gov || !name) return null;
+  return { ...f, gov, name, id: `x-${slug(name)}`, places: [...f.places] };
 }
 
 /** The name most reports used; ties go to the first seen. */
@@ -113,7 +124,6 @@ function merge(a: ExtraFront, b: ExtraFront): void {
   a.places = [...new Set([...a.places, ...b.places])];
   if (b.lastActiveAt > a.lastActiveAt) a.lastActiveAt = b.lastActiveAt;
   if (b.openedAt < a.openedAt) a.openedAt = b.openedAt;
-  if (a.gov && GOVERNORATE[a.gov] && a.spots.length > 1) a.name = GOVERNORATE[a.gov];
 }
 
 /**
@@ -129,9 +139,11 @@ export function updateExtraFronts(
   const t0 = now.getTime() - WINDOW_MS;
   const recent = reports.filter((r) => isField(r) && Date.parse(r.at) >= t0 && Date.parse(r.at) <= now.getTime());
   const fronts: ExtraFront[] = [];
-  // Fronts opened before merging existed: two in one governorate become one.
-  for (const f of existing.map((x) => ({ ...x, places: [...x.places], gov: x.gov ?? governorateAt(x.spot[0], x.spot[1]) ?? undefined }))) {
-    const same = f.gov ? fronts.find((o) => o.gov === f.gov) : undefined;
+  // Each opened front is its governorate: two in one become one, and one a tracked front covers goes.
+  for (const x of existing) {
+    const f = asGovernorate(x);
+    if (!f || spotsOf(f).every((s) => covered({ lat: s[0], lng: s[1], place: "", summary: "", text: "" } as unknown as LiveReport))) continue;
+    const same = fronts.find((o) => o.gov === f.gov);
     if (same) merge(same, f);
     else fronts.push(f);
   }
@@ -162,15 +174,16 @@ export function updateExtraFronts(
       Math.round((group.reduce((s, r) => s + (r.lat as number), 0) / group.length) * 1000) / 1000,
       Math.round((group.reduce((s, r) => s + (r.lng as number), 0) / group.length) * 1000) / 1000,
     ];
-    const cluster: ExtraFront = {
-      id: `x-${slug(top)}`,
+    const cluster = asGovernorate({
+      id: "",
       name: top,
       spot,
-      gov: governorateAt(spot[0], spot[1]) ?? undefined,
+      gov: govKey(spot[0], spot[1]) ?? undefined,
       places: [...new Set(names)],
       openedAt: now.toISOString(),
       lastActiveAt: group.map((r) => r.at).sort().pop() as string,
-    };
+    });
+    if (!cluster) continue;
     // A front already open in this governorate takes the cluster as its second spot.
     const same = fronts.find((f) => f.id === cluster.id || (cluster.gov && f.gov === cluster.gov));
     if (same) merge(same, cluster);

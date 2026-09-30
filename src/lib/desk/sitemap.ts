@@ -138,3 +138,32 @@ export function parseHtmlListing(html: string, base: string, article: RegExp): L
   }
   return out;
 }
+
+/**
+ * When an article page says it was published (ms), or NaN. For listings that
+ * carry no dates (Sheba's section pages list articles weeks old beside new
+ * ones): the page's own meta, its JSON-LD, a `<time datetime>`, or the date
+ * line it prints ("2026-09-16 04:28 AM UTC").
+ */
+export function pageDate(html: string): number {
+  const h = String(html || "");
+  const tries = [
+    /(?:property|name|itemprop)=["'](?:article:published_time|datePublished|pubdate|publish-date|date)["'][^>]*content=["']([^"']+)["']/i,
+    /content=["']([^"']+)["'][^>]*(?:property|name|itemprop)=["'](?:article:published_time|datePublished)["']/i,
+    /"datePublished"\s*:\s*"([^"]+)"/i,
+    /<time[^>]*datetime=["']([^"']+)["']/i,
+  ];
+  for (const re of tries) {
+    const t = Date.parse((h.match(re) || [])[1] ?? "");
+    if (Number.isFinite(t)) return t;
+  }
+  const m = h.match(/\b(20\d\d-\d\d-\d\d)\s+(\d{1,2}):(\d\d)\s*(AM|PM)?\s*(UTC|GMT)\b/i);
+  if (m) {
+    let hour = Number(m[2]) % 12;
+    if (!m[4]) hour = Number(m[2]);
+    else if (/pm/i.test(m[4])) hour += 12;
+    const t = Date.parse(`${m[1]}T${String(hour).padStart(2, "0")}:${m[3]}:00Z`);
+    if (Number.isFinite(t)) return t;
+  }
+  return NaN;
+}

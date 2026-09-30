@@ -2,7 +2,7 @@
    applies only to Broadsheet Day and Broadsheet Night (html[data-set="broadsheet"]). */
 
 /* The theme button, top right: the next look's icon in a turning arrow, three pips for where you are */
-.theme-step{display:inline-flex;align-items:center;gap:6px;flex:none;height:30px;padding:0 9px 0 4px;margin-inline-end:.5rem;background:transparent;border:1px solid var(--t-line-strong,#334155);border-radius:999px;color:var(--t-muted,#8fa0b4);cursor:pointer;transition:color .2s,border-color .2s,background .2s}
+.theme-step{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:none;padding:3px 6px 4px;margin-inline-end:.5rem;background:transparent;border:1px solid var(--t-line-strong,#334155);border-radius:12px;color:var(--t-muted,#8fa0b4);cursor:pointer;transition:color .2s,border-color .2s,background .2s}
 .theme-step:hover,.theme-step:focus-visible{color:var(--t-strong,#fff);border-color:var(--t-muted,#8fa0b4);outline:none}
 .ts-ring{position:relative;display:grid;place-items:center;width:24px;height:24px}
 .ts-ring>svg{position:absolute;inset:0;width:24px;height:24px;opacity:.75;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
@@ -22,10 +22,13 @@ html[data-set="broadsheet"] .ts-pips i.on{background:var(--accent-ui)}
 @media (max-width:720px){.top{position:relative}.top .brand{padding-inline-end:5.5rem}.theme-step{position:absolute;top:.75rem;right:1rem;margin:0}}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.32s;animation-timing-function:ease}
 
-/* The section menu: a slim tab on the left edge; on a phone a round button at the foot */
+/* The section menu: a labelled tab in its own left gutter (it covers nothing), a "Sections"
+   small labelled pill at the bottom left that stays with the reader */
 .sec-nav{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:1100;display:flex;align-items:center}
-.sec-tab{display:grid;place-items:center;width:20px;padding:13px 0;background:var(--t-surface-3,#1a2433);border:1px solid var(--t-line-strong,#2a3a4e);border-left:0;border-radius:0 8px 8px 0;color:var(--t-muted,#8fa0b4);cursor:pointer;box-shadow:0 4px 14px #0005;transition:width .2s,color .2s}
-.sec-tab:hover,.sec-tab:focus-visible,.sec-nav.open .sec-tab{color:var(--t-strong,#fff);outline:none}
+.sec-tab{display:flex;flex-direction:column;align-items:center;gap:9px;width:28px;padding:10px 0 12px;background:var(--t-surface-3,#1a2433);border:1px solid var(--t-line-strong,#2a3a4e);border-left:3px solid var(--accent-ui,var(--t-link,#7eb6ff));border-radius:0 8px 8px 0;color:var(--t-text,#d7e2ef);cursor:pointer;box-shadow:0 4px 14px #0005;transition:color .2s,background .2s}
+.sec-tab:hover,.sec-tab:focus-visible,.sec-nav.open .sec-tab{color:var(--t-strong,#fff);background:var(--t-surface-2,var(--t-surface-3,#1a2433));outline:none}
+.sec-word{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;line-height:1}
+@media (min-width:721px){html.has-sec-nav body{padding-left:30px}}
 .sec-ticks{display:flex;flex-direction:column;gap:5px}
 .sec-ticks i{display:block;width:7px;height:2px;border-radius:1px;background:currentColor;opacity:.7;transition:width .2s,opacity .2s}
 .sec-ticks i.on{width:9px;opacity:1;background:var(--accent-ui,var(--t-link,#7eb6ff))}
@@ -38,10 +41,14 @@ html[data-set="broadsheet"] .sec-tab{border-radius:0 2px 2px 0}
 html[data-set="broadsheet"] .sec-list{border-radius:2px}
 html[data-set="broadsheet"] .sec-list a{border-radius:0;font-family:var(--f-body)}
 @media (max-width:720px){
-  .sec-nav{top:auto;bottom:16px;left:12px;transform:none;flex-direction:column-reverse;align-items:flex-start}
-  .sec-tab{width:40px;height:40px;padding:0;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:50%}
-  .sec-ticks{gap:4px}.sec-ticks i{width:14px}.sec-ticks i.on{width:14px}
+  .sec-nav{top:auto;bottom:16px;left:12px;transform:none;flex-direction:column-reverse;align-items:flex-start;transition:transform .22s,opacity .22s}
+  .sec-tab{flex-direction:row;width:auto;height:34px;padding:0 12px;gap:8px;border:1.5px solid var(--accent-ui,var(--t-link,#7eb6ff));border-radius:17px;background:var(--t-glass,rgba(8,12,18,.94));box-shadow:0 3px 12px #0006}
+  .sec-word{writing-mode:horizontal-tb;transform:none;font-size:.68rem}
+  .sec-ticks{flex-direction:row;align-items:center;gap:3px}
+  .sec-ticks i{width:2px;height:7px}.sec-ticks i.on{width:2px;height:10px}
+  html[data-set="broadsheet"] .sec-tab{border-radius:2px}
   .sec-list{margin:0 0 8px;transform:translateY(8px)}
+  .stamp{flex-wrap:wrap}
 }
 @media (prefers-reduced-motion:reduce){.ts-ring>svg,.ts-ico,.sec-list{transition:none!important;animation:none!important}}
 
@@ -69,12 +76,12 @@ html[data-set="broadsheet"] .card .headline{font-family:var(--f-card)}
 html[data-set="broadsheet"] :is(.leaflet-popup-content-wrapper,.leaflet-popup-tip){background:var(--t-surface-1);color:var(--t-text);box-shadow:var(--shadow-pop)}
 html[data-set="broadsheet"] .leaflet-popup-content{color:var(--t-text)}
 /* The side swatches written into the page */
-html[data-theme="broadsheet-day"] .feed-legend > span:nth-child(1) .sw{background:#a8372a!important}
-html[data-theme="broadsheet-day"] .feed-legend > span:nth-child(2) .sw{background:#0d7680!important}
-html[data-theme="broadsheet-day"] .feed-legend > span:nth-child(3) .sw{background:#9c8f85!important}
-html[data-theme="broadsheet-night"] .feed-legend > span:nth-child(1) .sw{background:#e2694f!important}
-html[data-theme="broadsheet-night"] .feed-legend > span:nth-child(2) .sw{background:#3fb0b3!important}
-html[data-theme="broadsheet-night"] .feed-legend > span:nth-child(3) .sw{background:#766b62!important}
+html[data-theme="broadsheet-day"] .feed-legend > :nth-child(1) .sw{background:#a8372a!important}
+html[data-theme="broadsheet-day"] .feed-legend > :nth-child(2) .sw{background:#0d7680!important}
+html[data-theme="broadsheet-day"] .feed-legend > :nth-child(3) .sw{background:#9c8f85!important}
+html[data-theme="broadsheet-night"] .feed-legend > :nth-child(1) .sw{background:#e2694f!important}
+html[data-theme="broadsheet-night"] .feed-legend > :nth-child(2) .sw{background:#3fb0b3!important}
+html[data-theme="broadsheet-night"] .feed-legend > :nth-child(3) .sw{background:#766b62!important}
 
 /* ================= BROADSHEET: shared by Day and Night ================= */
 html[data-set="broadsheet"]{
@@ -182,7 +189,7 @@ html[data-set="broadsheet"] .pager .front-card,html[data-set="broadsheet"] .page
 html[data-set="broadsheet"] .pager .tally-box{padding:.8rem 2.8rem .9rem}
 html[data-set="broadsheet"] .front-card strong,html[data-set="broadsheet"] .phase-head strong{font:600 1.2rem/1.25 "Newsreader",Georgia,serif;color:var(--t-strong)}
 html[data-set="broadsheet"] .front-where,html[data-set="broadsheet"] .front-plain{font:italic .88rem/1.45 "Newsreader",Georgia,serif;color:var(--t-muted)}
-html[data-set="broadsheet"] .toggle-front,html[data-set="broadsheet"] .toggle-phase{color:var(--accent-ui);font:600 .64rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
+html[data-set="broadsheet"] .toggle-front,html[data-set="broadsheet"] .toggle-phase,html[data-set="broadsheet"] .toggle-sit{color:var(--accent-ui);font:600 .64rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
 html[data-set="broadsheet"] .front-map-btn{background:transparent;border:1px solid var(--t-line-strong);color:var(--t-text-2);font:600 .6rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
 html[data-set="broadsheet"] .tally-box h3{font:600 1.05rem/1.2 "Newsreader",Georgia,serif;letter-spacing:0;text-transform:none;color:var(--t-strong)}
 html[data-set="broadsheet"] .tally-box.claims table{font-size:.86rem}
@@ -225,3 +232,223 @@ html[data-set="broadsheet"] .phase-head .now-tag{padding:.24rem .4rem .2rem calc
 .phase-card.expandable{cursor:pointer}
 /* Night: the map button's words a touch stronger on the salmon. */
 html[data-theme="broadsheet-night"] .pin-sheet .front-float-go{color:#0d0b0a;font-weight:600;letter-spacing:.01em}
+/* Phone: the headline often takes two lines; the Now tag sits on its first line, on the same baseline as the words, not between the lines. */
+@media (max-width:720px){
+  .phase-head strong{align-items:baseline}
+  .phase-head .now-tag{align-self:baseline}
+}
+
+/* Main developments: "Show on map" at the top right of the box. */
+.sit-head{align-items:center}
+.sit-map-btn{flex:none;margin-left:auto;padding:.38rem .6rem;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:var(--r-btn,4px);background:transparent;color:var(--t-text-2,#cbd5e1);font:600 .6rem/1 var(--f-body,inherit);letter-spacing:.07em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.sit-map-btn:hover,.sit-map-btn:focus-visible{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
+.pin-sheet.wide .pin-sheet-box{max-width:720px}
+.pin-sheet.wide #pin-sheet-map{height:min(70vh,500px)}
+.pin-sheet.as-pop.wide #pin-sheet-map{height:min(62vh,470px)}
+
+/* A place lit on the map: its outline breathing, or a pulse at its spot (no pin). */
+path.place-hl{animation:placeHl 1.8s ease-in-out infinite}
+@keyframes placeHl{50%{fill-opacity:.4;stroke-width:3.4}}
+.place-halo-wrap,.dev-wrap{background:none;border:0}
+.place-halo{position:relative;display:block;width:60px;height:60px;pointer-events:none}
+.place-halo.big{width:90px;height:90px}
+.place-halo b{position:absolute;left:50%;top:50%;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:#fbbf24;box-shadow:0 0 0 2.5px #fffc,0 0 14px 5px #fbbf2488}
+.place-halo i{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #fbbf24;opacity:0;animation:placeRing 2s ease-out infinite}
+.place-halo i+i{animation-delay:1s}
+.place-halo.big i{border-width:2.5px}
+@keyframes placeRing{0%{transform:scale(.6);opacity:.95}100%{transform:scale(4.2);opacity:0}}
+
+/* The developments' pictures (app.js drawDevMarks): each fixed on its exact
+   spot (the small white dot, drawn on top) at every zoom, scaled round it by
+   --dvs as the map zooms out; in the colour of the side that acted. No notes:
+   the key names each kind. District fills and flight paths are moved by the page
+   on the same 4.2 s loop. */
+.dv{overflow:visible}
+.dv .dv-dot{position:absolute;left:-3.5px;top:-3.5px;width:7px;height:7px;border-radius:50%;background:#f8fafc;box-shadow:0 0 0 1.5px #0b1220;pointer-events:none}
+.dv .dv-pic{position:absolute;left:0;top:0;pointer-events:none;transform:scale(var(--dvs,1));transform-origin:0 0}
+.dv .dv-one{position:absolute;left:0;top:0;width:0;height:0}
+.dv .dv-flip{transform:scaleX(-1)}
+.dp{position:absolute;display:block;pointer-events:none}
+.dp svg{display:block;width:100%;height:100%;overflow:visible}
+.dp b,.dp em,.dp i{position:absolute;display:block}
+.dp b,.dp-duel{filter:drop-shadow(0 0 1.2px #000) drop-shadow(0 1px 2px #0009)}
+/* Air strike: a jet passes, drops a bomb, the spot bursts. */
+.dp-air{left:-22px;top:-28px;width:44px;height:34px}
+.dp-air b{left:7px;top:0;width:30px;height:19px;animation:devJet 2.4s linear infinite}
+@keyframes devJet{0%{transform:translateX(-14px);opacity:0}10%,80%{opacity:1}100%{transform:translateX(14px);opacity:0}}
+.dp-air em{left:19.5px;top:10px;width:5px;height:10px;opacity:0;animation:devBomb 2.4s ease-in infinite}
+@keyframes devBomb{0%,40%{opacity:0;transform:translateY(0)}42%{opacity:1}66%{opacity:1;transform:translateY(12px)}68%,100%{opacity:0;transform:translateY(12px)}}
+.dp-air i,.dp-dive i,.dp-hit i{width:10px;height:10px;border-radius:50%;border:2.5px solid #ef4444;opacity:0;animation:devBoom 2.4s ease-out infinite}
+.dp-air i{left:17px;top:23px}
+.dp-air i+i,.dp-dive i+i,.dp-hit i+i{border-color:#fbbf24;animation-delay:.12s}
+@keyframes devBoom{0%,67%{transform:scale(.4);opacity:0}70%{opacity:1}100%{transform:scale(3.2);opacity:0}}
+/* Shelling: a howitzer fires, the shell arcs over, bursts land. */
+.dp-art{left:-42px;top:-22px;width:50px;height:30px}
+.dp-art b{left:0;top:12px;width:26px;height:15px}
+.dp-art .fl{animation:devMuzzle 2.1s steps(1,end) infinite}
+@keyframes devMuzzle{0%{opacity:1}10%,100%{opacity:0}}
+.dp-art em{left:21px;top:12px;width:5px;height:5px;border-radius:50%;background:#fde047;box-shadow:0 0 4px #f97316;opacity:0;animation:devShell 2.1s linear infinite}
+@keyframes devShell{0%{opacity:1;transform:translate(0,0)}35%{transform:translate(8px,-8px)}70%{transform:translate(15px,-2px)}82%{opacity:1;transform:translate(18.5px,7.5px)}84%,100%{opacity:0;transform:translate(18.5px,7.5px)}}
+.dp-art i{width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:radial-gradient(circle,#fff 0 25%,#f97316 55%,#dc262600 100%);opacity:0;animation:devPop 2.1s ease-out infinite}
+.dp-art i:nth-of-type(1){left:42px;top:22px;animation-delay:1.72s}
+.dp-art i:nth-of-type(2){left:45px;top:20px;animation-delay:1.85s}
+.dp-art i:nth-of-type(3){left:39px;top:24px;animation-delay:1.98s}
+@keyframes devPop{0%{transform:scale(.3);opacity:0}8%{transform:scale(1.7);opacity:1}30%,100%{transform:scale(2.2);opacity:0}}
+/* Ground fighting: two riflemen trading fire. */
+.dp-duel{left:-23px;top:-9px;width:46px;height:18px}
+.dp-duel .fa,.dp-duel .fb{animation:devFlash .6s steps(1,end) infinite}
+.dp-duel .fb{animation-delay:.3s}
+@keyframes devFlash{0%{opacity:1}35%,100%{opacity:0}}
+.dp-duel .ta{animation:devTrA .6s linear infinite}
+.dp-duel .tb{animation:devTrB .6s linear infinite;animation-delay:.3s}
+@keyframes devTrA{0%{transform:translateX(0);opacity:1}100%{transform:translateX(6px);opacity:0}}
+@keyframes devTrB{0%{transform:translateX(0);opacity:1}100%{transform:translateX(-6px);opacity:0}}
+/* Attack repelled: the side that held keeps its shield on the spot (its colour);
+   the attacker (his colour) runs into it, sparks fly, he falls back. */
+.dp-shield{left:-32px;top:-13px;width:43px;height:26px}
+.dp-shield b{left:21px;top:0;width:22px;height:26px;animation:devShield 2.1s ease-in-out infinite}
+@keyframes devShield{0%,40%{transform:scale(1)}48%{transform:scale(1.14)}62%,100%{transform:scale(1)}}
+.dp-shield em{left:-2px;top:7px;width:23px;height:12px;filter:drop-shadow(0 0 1.2px #000) drop-shadow(0 1px 2px #0009);animation:devRecoil 2.1s ease-in-out infinite}
+@keyframes devRecoil{0%{transform:translateX(-4px)}40%{transform:translateX(3px)}48%{transform:translateX(0) rotate(-10deg)}70%,100%{transform:translateX(-5px) rotate(0)}}
+.dp-shield i{left:19px;top:9px;width:6px;height:6px;border-radius:50%;background:#fde047;box-shadow:0 0 4px #f97316;opacity:0;animation:devSparkHit 2.1s ease-out infinite}
+.dp-shield i+i{top:15px;left:18px;animation-delay:.08s}
+@keyframes devSparkHit{0%,38%{opacity:0;transform:scale(.3)}44%{opacity:1;transform:scale(1.4)}62%,100%{opacity:0;transform:translate(-4px,0) scale(2)}}
+/* Ground taken: the taker's flag is planted as the district changes colour. */
+.dp-flag{left:-2px;top:-40px;width:44px;height:40px;opacity:0;animation:devPlant 4.2s ease-out infinite}
+@keyframes devPlant{0%,26%{opacity:0;transform:translateY(-12px)}38%{opacity:1;transform:translateY(0)}92%{opacity:1}100%{opacity:0}}
+.dp-flag>i{left:1px;bottom:0;width:2px;height:40px;background:#e5e7eb;box-shadow:0 0 2px #000a}
+.dp-flag>span{position:absolute;left:3px;top:0;display:block;width:40px;height:27px;box-shadow:0 1px 3px #000a;animation:devWave 1.4s ease-in-out infinite;transform-origin:left center}
+@keyframes devWave{50%{transform:skewY(-3deg) scaleX(.96)}}
+/* Advance: an arrow in the advancing side's colour, its tip on the spot, turned
+   towards the other side's nearest lines (--rot), pushing on; the district's edge pulses. */
+.dp-adv{left:-34px;top:-8px;width:34px;height:16px;transform-origin:34px 8px;transform:rotate(var(--rot,0deg))}
+.dp-adv b{left:0;top:0;width:32px;height:16px;animation:devPush 1.6s ease-in-out infinite}
+@keyframes devPush{0%{transform:translateX(-7px);opacity:.25}55%{transform:translateX(0);opacity:1}85%{transform:translateX(0);opacity:1}100%{transform:translateX(-7px);opacity:.25}}
+/* At sea: a ship, its wake in the colour of the side that acted. */
+.dp-ship{left:-15px;top:-15px;width:30px;height:30px}
+.dp-ship b{left:0;top:8px;width:30px;height:14px;animation:devBob 2.1s ease-in-out infinite}
+.dp-ship i{left:0;top:12px;width:30px;height:12px;border-radius:50%;border:2.5px solid var(--dev,#06b6d4);opacity:0;animation:placeRing 2.1s ease-out infinite}
+.dp-ship i+i{animation-delay:1.05s}
+@keyframes devBob{50%{transform:translateY(-2px) rotate(-2deg)}}
+/* A missile or drone diving onto its spot, or (its launch area known) the burst where its path ends. */
+.dp-dive{left:-28px;top:-22px;width:36px;height:28px}
+.dp-dive b{left:0;top:0;width:22px;height:9px;opacity:0;animation:devDive 2.4s ease-in infinite}
+.dp-dive.is-drone b{left:1px;top:-3px;width:20px;height:15px}
+/* In sight most of the loop: it dives, hits, and is back at the top a moment later. */
+@keyframes devDive{0%{transform:translate(-10px,-1px) rotate(35deg);opacity:1}55%{transform:translate(8px,11.5px) rotate(35deg);opacity:1}59%{transform:translate(8px,11.5px) rotate(35deg);opacity:0}60%{transform:translate(-10px,-1px) rotate(35deg);opacity:0}70%,100%{transform:translate(-10px,-1px) rotate(35deg);opacity:1}}
+.dp-dive i{left:23px;top:17px;animation-name:devBoomDive}
+@keyframes devBoomDive{0%,53%{transform:scale(.4);opacity:0}57%{opacity:1}88%,100%{transform:scale(3.2);opacity:0}}
+.dp-dive.dp-int i{border-color:#fde047}
+.dp-hit{left:0;top:0;width:0;height:0}
+.dp-hit i{left:-5px;top:-5px;animation:devHit 4.2s ease-out infinite}
+.dp-hit.dp-int i{border-color:#fde047}
+@keyframes devHit{0%,58%{transform:scale(.4);opacity:0}61%{opacity:1}85%,100%{transform:scale(3.2);opacity:0}}
+.dp .pr,.dev-shot .pr{animation:devProp .14s linear infinite}
+@keyframes devProp{50%{opacity:.2}}
+/* A missile or drone in flight along its path, turned by the page. */
+.dev-shot{position:relative;display:block;width:100%;height:100%;pointer-events:none}
+.dev-shot i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.dev-shot svg{width:32px;height:14px;filter:drop-shadow(0 0 1.5px #000)}
+.dev-shot.is-drone svg{width:30px;height:22px}
+/* Day: the pictures stand on light, side-coloured ground, so each gets a white
+   outline. */
+html[data-theme="broadsheet-day"] .dp b,html[data-theme="broadsheet-day"] .dp-duel,html[data-theme="broadsheet-day"] .dp-shield em{filter:drop-shadow(0 0 .8px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 2px #0006)}
+html[data-theme="broadsheet-day"] .dev-shot svg{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 2px #0006)}
+html[data-theme="broadsheet-day"] .dv .dv-dot{background:#fff;box-shadow:0 0 0 2px #1c1917,0 0 0 3.5px #fff}
+/* Yemen or Saudi Arabia, at the top right of the latest developments' map. */
+.pin-sheet-mapbox{position:relative}
+.dev-switch{position:absolute;top:10px;right:10px;z-index:800;display:flex;border-radius:6px;overflow:hidden;box-shadow:0 1px 5px #000a}
+.dev-switch button{padding:.45rem .7rem;border:0;background:#0f172aeb;color:#cbd5e1;font:600 .66rem/1 var(--f-body,inherit);letter-spacing:.04em;cursor:pointer}
+.dev-switch button+button{border-left:1px solid #334155}
+.dev-switch button.on{background:#f8fafc;color:#0b1220}
+.dev-none{position:absolute;top:46px;right:10px;z-index:800;max-width:min(300px,70%);margin:0;padding:.45rem .6rem;border-radius:6px;background:#0f172aeb;color:#e2e8f0;font:500 .7rem/1.4 var(--f-body,inherit);box-shadow:0 1px 5px #000a}
+.dev-none[hidden]{display:none}
+.dev-key{margin-top:4px;opacity:.95}
+.dev-key .dk{display:inline-block;width:26px;height:17px;margin-right:5px;vertical-align:-3px;color:var(--t-text-2,#cbd5e1)}
+.dev-key .dk.wide{width:40px}
+.dev-key .dk svg{width:100%;height:100%}
+.dev-key .dk :is(.fl,.fa,.fb,.ta,.tb){display:none}
+.dev-key .dk.wide2{width:30px}
+/* The fronts' button is the same "Show on map" as the developments' one. */
+.front-head .sit-map-btn.front-map-btn{padding:.38rem .6rem;border-radius:var(--r-btn,4px);background:transparent;color:var(--t-text-2,#cbd5e1);font:600 .6rem/1 var(--f-body,inherit);letter-spacing:.07em;text-transform:uppercase}
+.front-head .sit-map-btn.front-map-btn:hover,.front-head .sit-map-btn.front-map-btn[aria-expanded="true"]{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
+@media (prefers-reduced-motion:reduce){
+  path.place-hl,.place-halo i,.dp,.dp *,.dev-shot .pr{animation:none!important}
+  .place-halo i,.dp-air i,.dp-ship i,.dp-hit i{opacity:.6;transform:scale(2)}
+  .dp-art i,.dp-flag,.dp-dive b{opacity:.9}
+}
+
+/* Latest developments: short paragraphs with a line between them; the fuller
+   account behind "Read more". On a phone only the first paragraph shows first. */
+.situation .sit-body .situation-window{margin:0}
+.situation .sit-body .situation-window+.situation-window,.situation .sit-body .sit-more{margin-top:.9em}
+.situation .sit-more .situation-window:first-child{margin-top:0}
+.situation:not(.sit-open) .sit-more{display:none}
+.situation .toggle-sit{display:block}
+.situation:not(.sit-open) .sit-rest{display:none}
+/* Clicking the text opens and closes it, as a Timeline box does (app.js renderSituation). */
+.situation .sit-click{cursor:pointer}
+/* A long report in short paragraphs; a closed card shows the first one's three lines. */
+.card .lead.lead-multi{display:block;overflow:visible;-webkit-line-clamp:unset}
+.card .lead.lead-multi p{margin:0}
+.card .lead.lead-multi p+p{margin-top:.9em}
+.card:not(.open) .lead.lead-multi p:first-child{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card:not(.open) .lead.lead-multi p+p{display:none}
+
+/* Search and the alignment filters in the broadsheet themes. */
+html[data-set="broadsheet"] .feed-search-btn{border-radius:0;color:var(--t-text-2)}
+html[data-set="broadsheet"] .feed-search-btn:hover,html[data-set="broadsheet"] .feed-search-btn[aria-expanded="true"]{background:var(--t-surface-2);color:var(--t-strong)}
+html[data-set="broadsheet"] .feed-search input{border-radius:0;background:var(--t-surface-1);color:var(--t-strong);font-family:"Newsreader",Georgia,serif;font-size:1rem}
+html[data-set="broadsheet"] .feed-search input:focus{outline-color:var(--accent-ui)}
+html[data-set="broadsheet"] .feed-search .fs-go{border-radius:0;background:var(--accent-ui);color:var(--on-accent);font:600 .62rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
+html[data-set="broadsheet"] .feed-legend .lean-f{border-radius:0;padding:.26rem .55rem}
+html[data-set="broadsheet"] .feed-legend .lean-f:hover,html[data-set="broadsheet"] .feed-legend .lean-f[aria-pressed="true"]{background:var(--t-surface-2);color:var(--t-strong)}
+html[data-set="broadsheet"] .feed-note{font-family:"Newsreader",Georgia,serif;font-size:.9rem;color:var(--t-text-2)}
+html[data-set="broadsheet"] .feed-note button{color:var(--accent-ui);font:600 .62rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+html[data-set="broadsheet"] .fs-empty{font-family:"Newsreader",Georgia,serif;font-size:.95rem}
+/* Every "Show on map" lights up on hover as Latest developments' one does, in every theme. */
+html .card .meta .card-map:is(:hover,:focus-visible),html[data-set] .card .meta .card-map:is(:hover,:focus-visible),
+html .front-head .sit-map-btn.front-map-btn:is(:hover,:focus-visible),html[data-set] .front-head .sit-map-btn.front-map-btn:is(:hover,:focus-visible),
+html .front-float-go:is(:hover,:focus-visible),html[data-set] .front-float-go:is(:hover,:focus-visible){background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
+html .pin-sheet .front-float-go:is(:hover,:focus-visible),html[data-set] .pin-sheet .front-float-go:is(:hover,:focus-visible){filter:brightness(1.18);background:var(--accent-ui,#1d4ed8);color:var(--on-accent,#fff)}
+html[data-theme="broadsheet-night"] .pin-sheet .front-float-go:is(:hover,:focus-visible){color:#0d0b0a}
+/* The pop-up key on a phone: two even columns, each picture in a fixed-width slot so the names line up. */
+@media (max-width:720px){
+  .pin-sheet .pop-legend{display:grid!important;grid-template-columns:1fr 1fr;gap:5px 10px;align-items:center}
+  .pin-sheet .pop-legend span{white-space:normal;line-height:1.2;min-width:0}
+  .dev-key .dk,.dev-key .dk.wide{flex:none;width:34px;height:17px;margin-right:4px}
+}
+/* Sirens: a red siren on the dot, its sound rings spreading out. */
+.dp-alert{left:-11px;top:-10px;width:22px;height:20px}
+.dp-alert b{left:1px;top:0;width:20px;height:18px;animation:devSiren 1.4s ease-in-out infinite}
+.dp-alert b .sw1{animation:devSirenWave .7s steps(2) infinite}
+.dp-alert i{left:1px;top:0;width:20px;height:20px;border-radius:50%;border:2px solid #ef4444;opacity:0;animation:placeRing 2.1s ease-out infinite}
+.dp-alert i+i{animation-delay:1.05s}
+@keyframes devSiren{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes devSirenWave{0%{opacity:1}100%{opacity:.15}}
+.dev-key .dk .sw1{display:inline}
+@media (prefers-reduced-motion:reduce){.dp-alert i{opacity:.6;transform:scale(1.6)}}
+/* The pop-up key on a phone: light and tidy. Sides in one short row of small
+   swatches; the pictures below in two even columns, small and muted, a thin
+   line between the two. */
+@media (max-width:720px){
+  .pin-sheet .pop-legend{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 8px;font-size:.62rem;font-weight:400;color:var(--t-text-3,#94a3b8);margin:6px 2px 0}
+  .pin-sheet .pop-legend span{display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25;min-width:0}
+  .pin-sheet .pop-legend .sw{width:.6rem;height:.6rem}
+  .pin-sheet .pop-legend.dev-key{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:6px;padding-top:6px;border-top:1px solid var(--t-line,#ffffff1f);opacity:1}
+  .dev-key .dk,.dev-key .dk.wide,.dev-key .dk.wide2{flex:none;width:24px;height:13px;margin:0;vertical-align:0}
+}
+html[data-set="broadsheet"] .ye-clock{border-inline-end-color:var(--t-line-strong,var(--line))}
+html[data-set="broadsheet"] #ye-clock{font:600 .78rem/1 var(--f-body);letter-spacing:.04em;color:var(--t-strong)}
+/* Interception: the drone or missile is stopped in mid-air and a burst takes its place; nothing reaches the ground */
+.dp-dive.dp-int b{animation-name:devIntFly}
+@keyframes devIntFly{0%{transform:translate(-10px,-1px) rotate(35deg);opacity:1}42%{transform:translate(-1px,5px) rotate(35deg);opacity:1}45%,100%{transform:translate(-1px,5px) rotate(35deg);opacity:0}}
+.dp-dive.dp-int em{left:4px;top:3px;width:14px;height:14px;opacity:0;animation:devIntBurst 2.4s ease-out infinite}
+@keyframes devIntBurst{0%,42%{transform:scale(.3) rotate(0);opacity:0}47%{transform:scale(1.3) rotate(20deg);opacity:1}75%{transform:scale(1) rotate(35deg);opacity:1}90%,100%{transform:scale(.8) rotate(40deg);opacity:0}}
+.dp-dive.dp-int i{left:6px;top:5px;animation-name:devIntRing}
+@keyframes devIntRing{0%,43%{transform:scale(.4);opacity:0}47%{opacity:1}80%,100%{transform:scale(2.6);opacity:0}}
+.dp-hit.dp-int em{left:-7px;top:-7px;width:14px;height:14px;opacity:0;animation:devIntHit 4.2s ease-out infinite}
+@keyframes devIntHit{0%,57%{transform:scale(.3);opacity:0}62%{transform:scale(1.3) rotate(20deg);opacity:1}85%{transform:scale(1) rotate(35deg);opacity:1}95%,100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.dp-int em{opacity:1!important}}
+/* On a phone the pager has no side arrows, so its boxes need no room for them: even padding, the table centred */
+@media (max-width:720px),(hover:none){html[data-set="broadsheet"] .pager .tally-box{padding:.8rem 1rem .9rem}html[data-set="broadsheet"] .pager .front-card,html[data-set="broadsheet"] .pager .phase-card{padding:.9rem 1.1rem}}

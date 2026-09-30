@@ -144,6 +144,79 @@ export function sameGround(a: Grounded, b: Grounded): boolean {
   return kmApart(a as Spot, b as Spot) <= GROUND_KM;
 }
 
+const ROLE_WORDS = /^(?:STC|Houthi|Houthis|Saudi|Yemen|Yemen's|Yemeni|UN|US|UAE|Iran|Iranian|Official|Minister|Spokesman|Spokesperson|Leader|President|Council|Presidential|Member|Head|Chief|Deputy|Foreign|Defence|Defense|Armed|Forces|Government)$/;
+
+/** The speaker before the colon: "STC official Amr al-Bidh" → ["al-Bidh", "Amr"]. */
+function speakerNames(summary: string): { lead: string; names: string[] } | null {
+  const m = /^([^:]{2,70}):\s+/.exec(String(summary || ""));
+  if (!m) return null;
+  const names = m[1].split(/\s+/).filter((w) => /^(?:al-|Al-)?[A-Z][\w'-]+$/.test(w) && !ROLE_WORDS.test(w));
+  return { lead: m[1].toLowerCase(), names };
+}
+
+const PARTNERS: [RegExp, string][] = [
+  [/\bQatar(?:i)?\b/i, "qatar"], [/\b(?:UAE|Emirat(?:i|es))\b/i, "uae"], [/\bOman(?:i)?\b/i, "oman"], [/\bKuwait(?:i)?\b/i, "kuwait"],
+  [/\bBahrain(?:i)?\b/i, "bahrain"], [/\bEgypt(?:ian)?\b/i, "egypt"], [/\bJordan(?:ian)?\b/i, "jordan"], [/\bIran(?:ian)?\b/i, "iran"],
+  [/\bTurk(?:ey|ish|iye)\b/i, "turkey"], [/\bPakistan(?:i)?\b/i, "pakistan"], [/\b(?:US|U\.S\.|American|Washington|Trump|Rubio)\b/, "us"],
+  [/\b(?:Russia|Russian|Putin)\b/i, "russia"], [/\b(?:China|Chinese)\b/i, "china"], [/\b(?:UK|British|Britain)\b/, "uk"],
+  [/\b(?:France|French|Macron)\b/i, "france"], [/\b(?:UN|United Nations|Grundberg|Guterres)\b/, "un"], [/\bIraq(?:i)?\b/i, "iraq"],
+];
+
+/**
+ * Two diplomatic reports with different counterparts: the Crown Prince's call
+ * with Qatar's emir was folded into the UAE vice president's visit.
+ */
+export function otherPartners(home: { summary: string; text?: string }, r: { summary: string }): boolean {
+  const h = `${home.summary} ${home.text ?? ""}`;
+  return PARTNERS.some(([re]) => re.test(r.summary) && !re.test(h));
+}
+
+/**
+ * Two statements whose speakers differ ("STC official Amr al-Bidh" and "Yemeni
+ * armed forces spokesperson"): never one event, whatever the reader said.
+ */
+export function differentSpeakers(a: { summary: string }, b: { summary: string }): boolean {
+  const x = speakerNames(a.summary);
+  const y = speakerNames(b.summary);
+  if (!x || !y) return false;
+  if (x.names.length && y.names.length) return !y.names.some((n) => x.names.includes(n));
+  return x.lead !== y.lead;
+}
+
+/**
+ * Another outlet's card of words a card on the desk already carries, from the
+ * same speaker: South24 English posted one line of the STC official's
+ * interview after South24's card held all nine.
+ */
+export function retellsSpeaker(home: { summary: string; text?: string }, r: { summary: string }): boolean {
+  const a = speakerNames(home.summary);
+  const b = speakerNames(r.summary);
+  if (!a || !b) return false;
+  const same = a.names.length && b.names.length ? b.names.some((n) => a.names.includes(n)) : a.lead === b.lead;
+  if (!same) return false;
+  const have = `${home.summary} ${home.text ?? ""}`.toLowerCase();
+  const said = (r.summary.slice(r.summary.indexOf(":") + 1).toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? []).filter(
+    (w) => !/^(?:that|this|with|from|have|been|will|were|said|says|their|they|them|also|into|over|about|after|would|could|should)$/.test(w),
+  );
+  if (said.length < 3) return false;
+  const found = said.filter((w) => have.includes(w.replace(/(?:es|s|ed|ing)$/, ""))).length;
+  return found / said.length >= 0.7;
+}
+
+type Filmed =Grounded & { type?: string; media?: { kind?: string; duration?: number } | null };
+
+/**
+ * One clip reposted by another account: the same length to the second, of
+ * the same kind of event on the same spot. The warplanes' strike south of
+ * Marib went out twice, 90 minutes apart, from two accounts carrying one
+ * 26-second video.
+ */
+export function sameFootage(a: Filmed, b: Filmed): boolean {
+  const da = a.media?.kind === "video" ? Number(a.media.duration) : NaN;
+  const db = b.media?.kind === "video" ? Number(b.media.duration) : NaN;
+  return da >= 8 && Math.abs(da - db) <= 1 && a.type === b.type && sameGround(a, b);
+}
+
 /**
  * A siren or an alert, however it is worded: "Air raid sirens sound in
  * Jeddah", "Saudi Arabia activates siren mode", "Warning alerts issued for
@@ -227,4 +300,22 @@ const NAMED_OBJECT = /\b(?:Wing Loong(?: II)?|MQ-\d+|F-\d+[A-Z]?|Shahed(?:-\d+)?
 
 export function countedOrNamed(s: string): boolean {
   return numbersIn(s).length > 0 || NAMED_OBJECT.test(String(s || ""));
+}
+
+/**
+ * A card already on the desk keeps the time it went out with. A site whose
+ * pages carry no dates sent its old articles again each scan stamped "now",
+ * and they rose to the top of the feed as new. Only ever moves a time back.
+ * `first` maps fp → the time it was published. Returns how many were set back.
+ */
+export function keepFirstTimes(reports: { fp: string; at: string }[], first: Map<string, string>): number {
+  let n = 0;
+  for (const r of reports) {
+    const f = first.get(r.fp);
+    if (f && Date.parse(f) < Date.parse(r.at)) {
+      r.at = f;
+      n += 1;
+    }
+  }
+  return n;
 }

@@ -50,6 +50,19 @@ export const GATE_FIXTURES: GateFixture[] = [
     label: "exclude",
   },
   {
+    // User, 28 Sep: a warring party's official religious leadership calling to fight is news.
+    name: "the Saudi Grand Mufti calling to fight the Houthis goes on to the reader",
+    source: "Alhurra",
+    text: "مفتي عام المملكة العربية السعودية يدعو إلى قتال الحوثيين والنفير لمواجهتهم دفاعاً عن المملكة",
+    label: "feed",
+  },
+  {
+    name: "Yemen's religious ministry ordering prayers for the army's victory goes on to the reader",
+    source: "Saudi News",
+    text: "توجيهات هامة من وزارة الأوقاف اليمنية: • إقامة قنوت النوازل في الصلوات المكتوبة باليمن. •الدعاء للقوات المسلحة والمقاومة الشعبية بالنصر والثبات. •الدعاء بأن يخمد الله فتنة الحوثيين",
+    label: "feed",
+  },
+  {
     name: "a tribal sheikh killed on the front is not a cleric, and stays",
     source: "Almashhad",
     text: "مقتل الشيخ القبلي البارز عبدالله صادق قعبان في مواجهات مع مليشيا الحوثي بجبهة جرداد في تعز",

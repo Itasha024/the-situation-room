@@ -59,8 +59,9 @@ h1{margin:0;font-size:1.15rem}
 .legend .leg-item:hover{background:var(--t-surface-3,#1a2433)}
 .legend .leg-item:not(.on){color:var(--t-faint,#6b7c8e)}
 .legend .sw{width:.85rem;height:.85rem;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:inset 0 0 0 1px #0005}
-.legend .sw .tick{font-size:.58rem;font-weight:800;line-height:1;color:var(--t-strong,#fff);text-shadow:0 0 2px #000,0 1px 1px #000a}
-.legend .sw.ink-dark .tick{color:var(--t-on-light,#111);text-shadow:0 0 2px #fff,0 1px 0 #fff}
+/* Fixed white or near-black, never a theme colour: Day's "strong" text is dark and vanished on dark swatches. */
+.legend .sw .tick{font-size:.64rem;font-weight:900;line-height:1;color:#fff;text-shadow:0 0 1px #000,0 0 2px #000,0 0 3px #000c}
+.legend .sw.ink-dark .tick{color:#111;text-shadow:0 0 1px #fff,0 0 2px #fff,0 0 3px #fffc}
 .legend .leg-item:not(.on) .sw{opacity:.32}
 .legend .leg-item:not(.on) .tick{visibility:hidden}
 /* The two fallbacks for a map too short for the full key, `.tight` and `.cols`,
@@ -149,7 +150,7 @@ footer{padding:.55rem 1rem .9rem;color:var(--muted);font-size:.65rem;line-height
 .front-dir{margin:.3rem 0 0;color:var(--contested);font-size:.72rem}
 .front-card .full{display:none;margin-top:.4rem;font-size:.75rem;line-height:1.45;color:var(--t-text,#c9d4e0)}
 .front-card.open .full{display:block}
-.toggle-front,.toggle-phase{background:transparent;border:0;color:var(--t-link,#7eb6ff);font:inherit;font-size:.72rem;cursor:pointer;padding:0;margin-top:.35rem}
+.toggle-front,.toggle-phase,.toggle-sit{background:transparent;border:0;color:var(--t-link,#7eb6ff);font:inherit;font-size:.72rem;cursor:pointer;padding:0;margin-top:.35rem}
 .cas-box #casualties .cas-sum{margin:0 0 .35rem;font-size:.78rem;line-height:1.4;color:var(--text)}
 .cas-box #casualties ul{margin:.2rem 0 0;padding-inline-start:1.1rem}
 .cas-box #casualties li{margin:.2rem 0;font-size:.72rem;line-height:1.4}
@@ -958,3 +959,34 @@ html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){.pg-slide{transform:none!important}.pg-dots button::before{transition:none}}
 .prose-pin{color:inherit;text-decoration:underline dotted rgba(126,182,255,.7);text-underline-offset:3px;text-decoration-thickness:1px;cursor:pointer}
 .prose-pin:hover,.prose-pin:focus-visible{color:var(--t-link,#7eb6ff);text-decoration-style:solid}
+
+/* ---- Search and the alignment filters, in the reports column ------------ */
+.rail-head:has(.feed-search-btn){align-items:center}
+.feed-search-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:var(--r-btn,6px);background:transparent;color:var(--t-text-2,#b8c4d2);cursor:pointer}
+.feed-search-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.feed-search-btn:hover,.feed-search-btn[aria-expanded="true"]{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
+.feed-search{display:flex;gap:6px;margin:0 0 .6rem}
+.feed-search[hidden]{display:none}
+.feed-search input{flex:1;min-width:0;height:36px;padding:0 .7rem;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:var(--r-btn,6px);background:var(--t-surface-2,#101a25);color:var(--t-strong,#fff);font:inherit;font-size:.82rem}
+.feed-search input::placeholder{color:var(--t-muted,#7d8ea0)}
+.feed-search input:focus{outline:2px solid var(--t-link,#7eb6ff);outline-offset:1px}
+.feed-search .fs-go{flex:none;height:36px;padding:0 .85rem;border:0;border-radius:var(--r-btn,6px);background:#1d4ed8;color:#fff;font:600 .72rem/1 var(--f-body,inherit);cursor:pointer}
+.feed-search .fs-go:hover{filter:brightness(1.12)}
+.feed-legend .lean-f{display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap;padding:.3rem .6rem;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.feed-legend .lean-f:hover{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
+.feed-legend .lean-f[aria-pressed="true"]{background:var(--t-surface-3,#17273a);border-color:currentColor;color:var(--t-strong,#fff);font-weight:600}
+.feed-legend.filtering .lean-f[aria-pressed="false"]{opacity:.5}
+.feed-note{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .6rem;margin:0 0 .6rem;font-size:.74rem;line-height:1.4;color:var(--t-text-2,#b8c4d2)}
+.feed-note[hidden]{display:none}
+.feed-note b{color:var(--t-strong,#fff)}
+.feed-note button{padding:0;border:0;background:none;color:var(--t-link,#7eb6ff);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.feed-note .fs-spin{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:fsSpin .8s linear infinite}
+@keyframes fsSpin{to{transform:rotate(360deg)}}
+.fs-empty{margin:.4rem 0;font-size:.8rem;line-height:1.45;color:var(--t-text-2,#b8c4d2)}
+@media (max-width:720px){.feed-legend .lean-f{padding:.42rem .7rem}.feed-search input,.feed-search .fs-go{height:40px;font-size:16px}.feed-search .fs-go{font-size:.78rem}}
+@media (prefers-reduced-motion:reduce){.feed-note .fs-spin{animation:none}}
+
+/* The Yemen clock at the head of the top line: a small label, then the time to the second */
+.ye-clock{display:inline-flex;align-items:baseline;gap:.4rem;padding-inline-end:.7rem;margin-inline-end:.3rem;border-inline-end:1px solid var(--line)}
+.yc-label{font-size:.62rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+#ye-clock{font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.02em;color:var(--text,#e6edf3)}

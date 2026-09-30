@@ -104,6 +104,25 @@ across the English ones, for an article a listing dropped.
 the desk, picked, and `rolled` when every article in the window was new (a
 possible gap).
 
+## The sea and energy (30 Sep)
+
+- **UKMTO** (X @UK_MTO, every 5 minutes). Each warning and JMIC advisory is
+  posted as a picture; a vision model (Gemini flash-lite, Gemma as backup)
+  copies its words out. Only this war's waters go on: the Red Sea, Bab
+  al-Mandab, the Gulf of Aden, Yemeni and Saudi waters. A Hormuz or Gulf
+  warning stays out unless it names the Houthis. A picture left unread is
+  read again next tick.
+- **Saudi Energy Ministry** (X @MoEnergy_Saudi, every 10 minutes; its X
+  articles read by title and opening).
+- **Kpler, TankerTrackers, MarineTraffic, Vortexa, Javier Blas, OSINT
+  Hexagone, Egypt OSINT** (X, every 15 minutes): only posts about this war's
+  waters, Suez traffic, or Saudi exports moving between the Gulf and the Red Sea.
+- **OilPrice.com** (RSS, read whole every 10 minutes; triage keeps this war's
+  energy and shipping).
+- Reuters energy is already read through Reuters' news sitemap.
+- The gate raises a UKMTO/JMIC warning for this war's waters, and an energy
+  site hit, stopped or back in service, straight to the reader.
+
 ## Relays are traced to the original
 
 A post that relays an outlet or an official ("the WSJ reports", "British media:",

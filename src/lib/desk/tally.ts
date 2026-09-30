@@ -1,6 +1,6 @@
 /**
  * "The conflict in numbers": cumulative figures for this round (from 3 July
- * 2026), refreshed with the 12-hour brief. Server-only.
+ * 2026), refreshed with the 6-hour brief. Server-only.
  *
  * Official numbers only: UN agencies (OCHA, WHO, IOM, UNHCR, UNFPA via the
  * ReliefWeb feed) and official statements the desk logged (health ministries,

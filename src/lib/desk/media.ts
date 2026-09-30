@@ -122,14 +122,29 @@ const NOT_FOOTAGE = /يستقبل|استقبل|يلتقي|التقى|لقاء|ا
 const MAP = /خريطة|map of|frontline map|control map|situation map/i;
 /** Footage is the moment itself: a longer video is a TV package or a talk. */
 export const MAX_VIDEO_SECONDS = 90;
+/** A card written about the footage itself may show a longer clip. */
+const MAX_FOOTAGE_SECONDS = 240;
+
+/**
+ * A card whose news IS the picture: "Footage shows a failed Houthi Asif
+ * launch", "Video: smoke over Jazan port", "Satellite images show …". Such a
+ * card goes out with its footage or not at all — without it the reader is
+ * told about a video he cannot see.
+ */
+const ABOUT_FOOTAGE =
+  /^(?:(?:new |purported |unverified )?(?:footage|video|videos|images|photos|pictures|satellite (?:images?|imagery))\b)|\b(?:footage|video|videos|images|photos|pictures|satellite (?:images?|imagery)) (?:shows?|showing|appears? to show|purports? to show|of the|captures?|reveals?)\b|\bon (?:camera|video)\b|\bfilmed\b/i;
+export function aboutFootage(r: Pick<LiveReport, "summary">): boolean {
+  return ABOUT_FOOTAGE.test(String(r.summary || ""));
+}
 
 /** Too long to be the moment itself. */
-export function tooLong(m: Pick<Media, "kind" | "duration">): boolean {
-  return m.kind === "video" && (m.duration ?? 0) > MAX_VIDEO_SECONDS;
+export function tooLong(m: Pick<Media, "kind" | "duration">, footage = false): boolean {
+  return m.kind === "video" && (m.duration ?? 0) > (footage ? MAX_FOOTAGE_SECONDS : MAX_VIDEO_SECONDS);
 }
 
 /** Could this card show its post's media? The still is looked at after. */
 export function mediaCandidate(r: Pick<LiveReport, "type" | "summary" | "text">, postText: string): boolean {
+  if (aboutFootage(r)) return true;
   const t = `${r.summary}\n${r.text ?? ""}\n${postText}`;
   if (NOT_FOOTAGE.test(t)) return false;
   if (r.type === "strike" || r.type === "combat" || r.type === "vessel" || r.type === "port") return true;
@@ -144,9 +159,13 @@ export function mediaCandidate(r: Pick<LiveReport, "type" | "summary" | "text">,
  * ------------------------------------------------------------------ */
 
 export const VISION_KEY = "media-vision";
-/** Looks a day, and a tick: the free quota is shared with the reader. */
-const VISION_DAY = 40;
-const VISION_TICK = 4;
+/**
+ * Looks a day, and a tick. Groq's Qwen, the first to look, allows about a
+ * thousand calls a day on the free tier; the reader leans on it only when
+ * Google's models are out, so a quarter of that is safe.
+ */
+const VISION_DAY = 250;
+const VISION_TICK = 8;
 /** Groq's Qwen sees pictures and has room to spare; Gemini's free flash is 20 a day, the reader's. */
 const VISION_MODELS: { provider: "groq" | "gemini"; id: string }[] = [
   { provider: "groq", id: "qwen/qwen3.8-27b" },
@@ -160,7 +179,7 @@ async function askGroq(model: string, prompt: string, mime: string, bytes: strin
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(12_000),
     body: JSON.stringify({
       model,
       temperature: 0,
@@ -181,7 +200,7 @@ async function askGemini(model: string, prompt: string, mime: string, bytes: str
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": key },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(12_000),
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: bytes } }] }],
       generationConfig: { temperature: 0 },
@@ -239,9 +258,18 @@ The post says: ${caption.slice(0, 400)}`;
   return null;
 }
 
-/** Does the look keep it? The in-classes, never graphic. */
-export function keeps(look: { cls: string; graphic: boolean }, _r?: Pick<LiveReport, "type" | "summary">): boolean {
-  return !look.graphic && KEEP.has(look.cls);
+/** A still that is only a card, a studio or a headshot: never shown, whatever the text says. */
+const NEVER = new Set(["logo", "studio", "portrait"]);
+
+/**
+ * Does the look keep it? The in-classes, never graphic. A card written about
+ * the footage keeps any still that is not a text card, a studio or a
+ * headshot: the man with the rifle in front of a failed launch is the story.
+ */
+export function keeps(look: { cls: string; graphic: boolean }, r?: Pick<LiveReport, "type" | "summary">): boolean {
+  if (look.graphic) return false;
+  if (r && aboutFootage(r)) return !NEVER.has(look.cls);
+  return KEEP.has(look.cls);
 }
 
 /**
@@ -260,17 +288,77 @@ export async function attachMedia(
   if (log.day !== day) Object.assign(log, { day, n: 0 });
   let looked = 0;
   let given = 0;
-  for (const c of cards) {
-    if (c.r.media || usedThumbs.has(c.media.thumb) || tooLong(c.media) || !mediaCandidate(c.r, c.postText)) continue;
+  // The cards written about their footage are looked at first: without it they do not go out.
+  const order = [...cards].sort((a, b) => Number(aboutFootage(b.r)) - Number(aboutFootage(a.r)));
+  // The looks this tick, chosen first; then looked at four at a time (one by
+  // one they took over a minute of a five-minute scan).
+  const picked: typeof cards = [];
+  const thumbs = new Set<string>();
+  for (const c of order) {
+    if (c.r.media || usedThumbs.has(c.media.thumb) || thumbs.has(c.media.thumb) || tooLong(c.media, aboutFootage(c.r)) || !mediaCandidate(c.r, c.postText)) continue;
     if (looked >= VISION_TICK || log.n >= VISION_DAY) break;
     looked += 1;
     log.n += 1;
-    const look = await lookAt(c.media.thumb, c.postText);
-    if (!look || !keeps(look, c.r)) continue;
-    c.r.media = c.media;
-    usedThumbs.add(c.media.thumb);
-    given += 1;
+    thumbs.add(c.media.thumb);
+    picked.push(c);
+  }
+  for (let i = 0; i < picked.length; i += 4) {
+    const batch = picked.slice(i, i + 4);
+    const looks = await Promise.all(batch.map((c) => lookAt(c.media.thumb, c.postText)));
+    batch.forEach((c, k) => {
+      const look = looks[k];
+      if (!look || !keeps(look, c.r) || usedThumbs.has(c.media.thumb)) return;
+      c.r.media = c.media;
+      usedThumbs.add(c.media.thumb);
+      given += 1;
+    });
   }
   if (looked) await store.putJson(VISION_KEY, log);
   return given;
+}
+
+/* ------------------------------------------------------------------ *
+ * A warning that is a picture (UKMTO, JMIC)
+ * ------------------------------------------------------------------ */
+
+/** Gemini's lite model reads a warning card in seconds; Gemma, slower, when it is out. */
+const NOTICE_MODELS: { provider: "groq" | "gemini"; id: string }[] = [
+  { provider: "gemini", id: "gemini-3.1-flash-lite" },
+  { provider: "gemini", id: "gemma-4-26b-a4b-it" },
+];
+
+const NOTICE_PROMPT = `This picture is a maritime security warning or advisory (UKMTO or JMIC). Copy out its text exactly, in plain lines, top to bottom: the title, number, dates, the whole message, and any position or place written on its map. Leave out the contact lines (email, phone numbers, website) and the logo.`;
+
+/**
+ * The words of a warning posted as a picture: UKMTO's X account posts each
+ * warning as a card whose text is only in the image ("Click here to view the
+ * full warning" is all the post says, and its site is behind Cloudflare). Null
+ * when no model read it.
+ */
+export async function readNotice(imageUrl: string): Promise<string | null> {
+  if (!readerKey()) return null;
+  let bytes: string;
+  let mime = "image/png";
+  try {
+    const res = await fetch(imageUrl.replace(/\?name=orig$/, "?name=medium"), { signal: AbortSignal.timeout(8000), headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)" } });
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return null;
+    }
+    mime = res.headers.get("content-type")?.split(";")[0] || mime;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.length > 4_000_000) return null;
+    bytes = Buffer.from(buf).toString("base64");
+  } catch {
+    return null;
+  }
+  for (const model of NOTICE_MODELS) {
+    try {
+      const text = (await askGemini(model.id, NOTICE_PROMPT, mime, bytes)).trim();
+      if (text.length > 40) return text.replace(/\n{2,}/g, "\n");
+    } catch {
+      // The next model.
+    }
+  }
+  return null;
 }

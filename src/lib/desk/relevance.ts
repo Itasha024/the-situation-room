@@ -95,6 +95,12 @@ export function normaliseArabic(s: string): string {
     .replace(/ة/g, "ه") // ة -> ه
     .replace(/ؤ/g, "و") // ؤ -> و
     .replace(/ئ/g, "ي") // ئ -> ي
+    // Persian letters for the Arabic ones, and the half-space between a word's parts:
+    // "یمن" is "يمن", "باب‌المندب" is "باب المندب".
+    .replace(/[یۍې]/g, "ي")
+    .replace(/ک/g, "ك")
+    .replace(/ۀ/g, "ه")
+    .replace(/‌/g, " ")
     .toLowerCase();
 }
 
@@ -108,18 +114,19 @@ export function normaliseArabic(s: string): string {
 // "reinforcements" is not Taiz, معادن is not Aden, بحجة "on the pretext" is not
 // Hajjah, مآرب "aims" is not Marib.
 const CONFLICT_CORE = new RegExp(
-  "يمن|حوث|انصار ?الله|صنعا|الحديده|حديده|صعده|الجوف|الضالع|باب ?المندب|شبوه|حضرموت|البيضا|المهره|المحويت|يمني|" +
+  // Not inside ايمن (the name Ayman; Persian "safe"), مهيمن, يمنع, يمنح.
+  "(?<![اه])يمن(?![عحى])|حوث|انصار ?الله|صنعا|الحديده|حديده|صعده|الجوف|الضالع|باب ?المندب|شبوه|حضرموت|البيضا|المهره|المحويت|يمني|" +
     "(?:^|[^\\u0621-\\u064A])(?:و|ف|ب|ل)?(?:ال)?(?:مارب|تعز|عدن|لحج|مخا|ميون|ابين|ريمه|ريما|ذمار|حجه)(?=$|[^\\u0621-\\u064A])|" +
     "yemen|houthi|sanaa|sana'a|marib|taiz|hodeidah|hudaydah|aden|saada|al-?jawf|al-?dhale|lahj|mocha|mayun|bab ?al-?mandab|bab ?el-?mandeb|ansar ?allah",
 );
 
 /** Saudi Arabia: a party to this war, and its home front. */
 const SAUDI =
-  /السعودي|السعوديه|الرياض|جده|مكه|الطايف|الطائف|ينبع|جازان|جيزان|نجران|خميس ?مشيط|ابها|العلا|الخرج|فرسان|شروره|المدينه ?المنوره|ارامكو|التحالف|saudi|riyadh|jeddah|jizan|jazan|najran|abha|khamis|yanbu|aramco|al-?ula|al-?kharj|sharurah|farasan|coalition/;
+  /السعودي|السعوديه|عربستان|سعودي|الرياض|جده|مكه|الطايف|الطائف|ينبع|جازان|جيزان|نجران|خميس ?مشيط|ابها|العلا|الخرج|فرسان|شروره|المدينه ?المنوره|ارامكو|التحالف|saudi|riyadh|jeddah|jizan|jazan|najran|abha|khamis|yanbu|aramco|al-?ula|al-?kharj|sharurah|farasan|coalition/;
 
 /** The maritime and energy dimension. */
 const MARITIME =
-  /البحر ?الاحمر|باب ?المندب|الملاحه|ناقله|ناقلات|سفينه|سفن|ميناء|موانئ|خليج ?عدن|قناه ?السويس|انبوب|نفط|خام|red ?sea|gulf ?of ?aden|shipping|tanker|vessel|merchant ?ship|ukmto|suez|pipeline|crude|port|terminal/;
+  /البحر ?الاحمر|درياي ?سرخ|كشتي|نفتكش|باب ?المندب|الملاحه|ناقله|ناقلات|سفينه|سفن|ميناء|موانئ|خليج ?عدن|قناه ?السويس|انبوب|نفط|خام|red ?sea|gulf ?of ?aden|shipping|tanker|vessel|merchant ?ship|ukmto|suez|pipeline|crude|port|terminal/;
 
 /**
  * Parties to this conflict, and the governments that act on it.
@@ -145,7 +152,7 @@ const ACTOR_GROUPS: { id: string; re: RegExp }[] = [
   },
   {
     id: "iran",
-    re: /ايران|طهران|خامنئي|بزشكيان|عراقجي|الحرس ?الثوري|فيلق ?القدس|قااني|iran|tehran|khamenei|pezeshkian|araghchi|irgc|revolutionary ?guard/,
+    re: /ايران|طهران|تهران|سپاه|پاسداران|خامنئي|بزشكيان|عراقجي|الحرس ?الثوري|فيلق ?القدس|قااني|iran|tehran|khamenei|pezeshkian|araghchi|irgc|revolutionary ?guard/,
   },
   {
     id: "turkey",
@@ -205,7 +212,7 @@ const SIREN =
   /صفارات|صافرات|صفاره|صافره|دوي ?صفار|انذار ?جوي|air[- ]?raid ?(?:siren|alert)|\bsirens?\b|all-?clear/;
 
 const KINETIC =
-  /صاروخ|صواريخ|باليست|مسير|مسيره|درون|قصف|غاره|غارات|استهدف|اشتباك|اشتباكات|معارك|مواجهات|اسقط|اسقاط|سيطر|استعاد|تفجير|انفجار|هجوم|مدفعيه|هاون|راجمات|كمين|تقدم ?ميداني|جبهه|جبهات|missile|drone|\buav\b|air ?strike|airstrike|shell(?:ed|ing)|clash|seiz(?:e|ed)|retook|retake|intercept|shot ?down|attack|artillery|mortar|front ?line|offensive/;
+  /صاروخ|صواريخ|موشك|پهپاد|حمله|شليك|رهگيري|باليست|مسير|مسيره|درون|قصف|غاره|غارات|استهدف|اشتباك|اشتباكات|معارك|مواجهات|اسقط|اسقاط|سيطر|استعاد|تفجير|انفجار|هجوم|مدفعيه|هاون|راجمات|كمين|تقدم ?ميداني|جبهه|جبهات|missile|drone|\buav\b|air ?strike|airstrike|shell(?:ed|ing)|clash|seiz(?:e|ed)|retook|retake|intercept|shot ?down|attack|artillery|mortar|front ?line|offensive/;
 
 const WEAPON =
   /باليست|مجنح|فرط ?صوتي|مسير|مسيره|درون|صاروخ|مدفعيه|هاون|لغم|الغام|راجمات|ballistic|cruise|hypersonic|drone|\buav\b|missile|artillery|mortar|mine|f-?15|f-?16|f-?35|typhoon/;
@@ -242,10 +249,20 @@ const CLERIC_AR =
 const CLERIC_EN = /\b(?:grand |chief )?mufti\b|\bcleric|\bpreacher|\bulema\b|\bscholars\b|\bimam of\b|al-azhar/i;
 const CLERIC_EVENT = /قتل|مقتل|اغتيال|اختطاف|اختطف|اعتقال|اعتقل|استشهاد|وزير|killed|assassinat|abduct|arrest|detain|kidnap|minister/i;
 
+/**
+ * The exception the reader weighs (user, 28 Sep): a warring party's official
+ * religious leadership calling to fight — the Saudi Grand Mufti urging war on
+ * the Houthis. Such an item goes on to the reader instead of being dropped here.
+ */
+const PARTY_RELIGIOUS = /السعودي|المملكه|اليمن|صنعاء|عدن|الحوثي|كبار ?العلماء|الاوقاف|الشؤون ?الاسلاميه|saudi|kingdom|yemen|houthi|senior scholars|religious affairs|endowments/i;
+const CALL_TO_FIGHT = /الجهاد|جهاد|القتال|قتال|النفير|التعبئه|الحشد|مواجهه|الدفاع عن|قنوت النوازل|للقوات المسلحه|للجيش|بالنصر|jihad|fight|mobili[sz]|take up arms|confront|pray(?:ers?)? for (?:the )?(?:army|armed forces|troops)/i;
+
 function clericHead(raw: string): boolean {
   const head = raw.slice(0, 200);
   if (!CLERIC_AR.test(normaliseArabic(head)) && !CLERIC_EN.test(head)) return false;
-  return !CLERIC_EVENT.test(normaliseArabic(raw.slice(0, 400)));
+  const lead = normaliseArabic(raw.slice(0, 400));
+  if (PARTY_RELIGIOUS.test(lead) && CALL_TO_FIGHT.test(lead)) return false;
+  return !CLERIC_EVENT.test(lead);
 }
 
 /**
@@ -404,7 +421,10 @@ const FOCUSED_SRC =
 
 /** Broad regional outlets: much of their output is other files. */
 const MIXED_SRC =
-  /jazeera|جزيره|al-?araby|العربي|hadath|الحدث|arabiya|العربيه|aawsat|asharq|الشرق|akhbar|الاخبار|erem|ارم|alhurra|الحره|arab ?news/i;
+  /jazeera|جزيره|al-?araby|العربي|hadath|الحدث|arabiya|العربيه|aawsat|asharq|الشرق|akhbar|الاخبار|erem|ارم|alhurra|الحره|arab ?news|mayadeen|mubasher|tasnim|fars news|mehr news|irib|irna|\bsnn\b|nour news|press ?tv/i;
+
+/** Iran's state and IRGC-affiliated channels. */
+const IRAN_SRC = /Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV/i;
 
 export function breadthOf(source: string): Breadth {
   if (FOCUSED_SRC.test(source)) return "focused";
@@ -516,6 +536,11 @@ export type GateInput = {
   officialDown?: boolean;
 };
 
+/** Saudi and Yemeni energy sites this war has hit, by name. */
+const ENERGY_SITE = /\b(?:East[- ]West pipeline|Petroline|pump(?:ing)? station|Yanbu|Ras Tanura|Abqaiq|Jazan refinery|Jizan refinery|Aramco|SASREF|SAMREF|Safer|Ras Isa|Balhaf|Aden refinery)\b|خط (?:أنابيب )?شرق.?غرب|محطة (?:ضخ|الضخ)|أرامكو|ينبع|رأس تنورة|بقيق|صافر|رأس عيسى/i;
+/** A site stopped, reduced or back in service. */
+const ENERGY_STATUS = /\b(?:restor\w*|resum\w*|back (?:in|to) (?:service|operation)|repair\w*|halt\w*|shut\w*|suspend\w*|offline|reduc\w*|outage)\b|استئناف|توقف|إصلاح|إعادة تشغيل/i;
+
 export function gate(input: GateInput): Verdict {
   const raw = String(input.text || "");
   const n = normaliseArabic(neutralise(raw));
@@ -578,7 +603,9 @@ export function gate(input: GateInput): Verdict {
   const hasCore = CONFLICT_CORE.test(n);
   const hasSaudi = SAUDI.test(n);
   const hasMaritime = MARITIME.test(n);
-  const groups = actorGroupsIn(n);
+  // Iran's own channels are about Iran: naming it is no tie to this war.
+  const iranSrc = IRAN_SRC.test(input.source);
+  const groups = actorGroupsIn(n).filter((g) => !(iranSrc && g === "iran"));
   const hasActor = groups.length > 0;
   const hasAgreement = AGREEMENT.test(n);
   const hasCompeting = COMPETING_THEATRE.test(n);
@@ -598,6 +625,10 @@ export function gate(input: GateInput): Verdict {
   // Contact between parties is the development; one party merely mentioned is not.
   if (groups.length > 1) topicality += Math.min(16, (groups.length - 1) * 8);
   if (kinetic || isSiren) topicality += 8;
+  // The sea and energy are never missed: a UKMTO or JMIC warning for this
+  // war's waters, and an energy site hit, stopped or back in service.
+  if (/\b(?:UKMTO|JMIC)\b/i.test(input.source) && (hasMaritime || yemeniPlace || saudiPlace)) topicality += 40;
+  if (ENERGY_SITE.test(raw) && (kinetic || ENERGY_STATUS.test(raw))) topicality += 30;
 
   /**
    * Frame awareness. Another theatre is a penalty only when nothing ties the
@@ -679,7 +710,9 @@ export function gate(input: GateInput): Verdict {
     );
   }
 
-  if (topicality >= bar.tray) {
+  // Iran's channels post hundreds of items a day on other things: only what
+  // clears the feed bar is read, nothing is held on a maybe.
+  if (topicality >= bar.tray && !iranSrc) {
     return out(
       "tray",
       "tray",

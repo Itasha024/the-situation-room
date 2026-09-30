@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { updateExtraFronts, whereOf, type ExtraFront } from "./new-fronts.ts";
 import { cleanProse } from "./prose.ts";
+import { repelAttacker } from "./dev-marks.ts";
 
 const now = new Date("2026-09-22T00:00:00Z");
 const r = (i: number, source: string, place = "Al-Bayda", lat = 13.99, lng = 45.57, hoursAgo = 3) =>
@@ -69,4 +70,62 @@ test("an opened front says where it is, as the hand-written fronts do", () => {
   const f: ExtraFront = { id: "x-al-dhaher", name: "Saada", spot: [16.95, 43.6], gov: "YE-SD", places: ["Al-Dhaher", "Razih", "Saada"], openedAt: "", lastActiveAt: "" };
   assert.equal(whereOf(f), "Saada governorate, the Houthis' northern heartland on the Saudi border: around Al-Dhaher and Razih");
   assert.equal(whereOf({ ...f, gov: "YE-XX", places: ["Brom"] }), "Around Brom");
+});
+
+import { cleanDevMap } from "./prose.ts";
+import { placeFinder, proseDue } from "./brief-store.ts";
+
+test("the developments map keeps only places the text names, with known kinds and sides", () => {
+  const text = "Houthi forces captured Jabal al-Bazilah in Taiz. A Houthi drone struck Jazan airport.";
+  const out = cleanDevMap(
+    [
+      { place: "Jabal al-Bazilah", kind: "capture", side: "Houthi" },
+      { place: "Jazan", kind: "drone", side: "houthi", from: "Saada" },
+      { place: "Marib", kind: "fighting", side: "government" },
+      { place: "Taiz", kind: "parade", side: "houthi" },
+      { place: "Taiz", kind: "shelling", side: "aliens" },
+    ],
+    text,
+  );
+  assert.deepEqual(out.map((m) => `${m.place}/${m.kind}/${m.side}/${m.from ?? ""}`), ["Jabal al-Bazilah/capture/houthi/", "Jazan/drone/houthi/Saada"]);
+});
+
+test("vague main-development lines drop, a front's paragraph keeps its words", () => {
+  const t = cleanProse("Intense fighting spans multiple fronts. Houthi forces captured Kahbub in Lahj.", 5, true);
+  assert.equal(t, "Houthi forces captured Kahbub in Lahj.");
+});
+
+test("a map place finds its spot by name, or by the longest name inside it", () => {
+  const find = placeFinder({ Marib: [15.4, 45.3], "Jabal al-Qarnaynah": [13.2, 43.7] });
+  assert.deepEqual(find("Marib city"), [15.4, 45.3]);
+  assert.deepEqual(find("Jabal Al-Qarnaynah"), [13.2, 43.7]);
+  assert.equal(find("Nowhere"), null);
+});
+
+test("prose by a fallback model is asked again every 10 minutes for an hour", () => {
+  const b = { updatedAt: "2026-09-29T09:00:00.000Z", situation: { line: "x", quiet: false, model: "openai/gpt-oss-20b" } } as never;
+  assert.equal(proseDue(b, new Date("2026-09-29T09:05:00Z")), true);
+  assert.equal(proseDue({ ...(b as object), proseTriedAt: "2026-09-29T09:05:00Z" } as never, new Date("2026-09-29T09:10:00Z")), false);
+  assert.equal(proseDue(b, new Date("2026-09-29T10:05:00Z")), false);
+  assert.equal(proseDue({ ...(b as object), situation: { line: "x", quiet: false, model: "gemini-3.8-flash" } } as never, new Date("2026-09-29T09:05:00Z")), false);
+});
+
+test("a repelled attack is drawn from the attacker's side", () => {
+  const text = "Government forces repelled Houthi infiltration attempts in Al-Aghbara. Houthi forces repelled an attack on Harib.";
+  const out = cleanDevMap([{ place: "Al-Aghbara", kind: "repelled", side: "government" }, { place: "Harib", kind: "repelled", side: "houthi" }], text);
+  assert.deepEqual(out.map((m) => m.side), ["houthi", "government"]);
+});
+
+test("the writer's paragraphs are kept, and the sentence cap runs across them", () => {
+  const t = "Houthi forces captured Jabal al-Bazilah in Taiz. Government forces shelled Al-Wazi'iyah.\n\nA Houthi drone struck Jazan airport.";
+  assert.equal(cleanProse(t, 5), "Houthi forces captured Jabal al-Bazilah in Taiz. Government forces shelled Al-Wazi'iyah.\n\nA Houthi drone struck Jazan airport.");
+  assert.equal(cleanProse(t, 2), "Houthi forces captured Jabal al-Bazilah in Taiz. Government forces shelled Al-Wazi'iyah.");
+});
+
+test("a repelled attack is drawn from the attacker's side", () => {
+  assert.equal(repelAttacker("Giants Brigades repel Houthi infiltration in Kahbub"), "houthi");
+  assert.equal(repelAttacker("Houthi attack on Al-Aghbara repelled"), "houthi");
+  assert.equal(repelAttacker("Southern forces repel attack in Al-Mudaribah"), "houthi");
+  assert.equal(repelAttacker("Houthi forces repel government advance in Rasin"), "government");
+  assert.equal(repelAttacker("Clashes in Taiz"), null);
 });

@@ -120,3 +120,41 @@ test("the wide radar: an official of any side speaking, and alerts in Saudi Arab
   assert.ok(!onRadar("وزير الرياضة يفتتح بطولة كرة القدم"));
   assert.ok(!onRadar("Sirens sound in Tel Aviv after a launch from Lebanon"));
 });
+
+test("Persian is read: Iran's channels on Yemen reach the reader, Iran's other news does not", () => {
+  assert.equal(normaliseArabic("یمن"), "يمن");
+  assert.equal(normaliseArabic("باب‌المندب"), "باب المندب");
+  const on = gate({ source: "Fars News", url: "https://t.me/farsna/1", agency: false, text: "حمله موشکی انصارالله یمن به تأسیسات آرامکو در ینبع عربستان سعودی" });
+  assert.equal(on.outcome, "feed");
+  const off = gate({ source: "Fars News", url: "https://t.me/farsna/2", agency: false, text: "بازدید رئیس جمهور از نمایشگاه بین المللی کتاب تهران و دیدار با ناشران" });
+  assert.notEqual(off.outcome, "feed");
+});
+
+test("Iran's channels: Iran alone is no tie, ایمن is not Yemen, and nothing is held on a maybe", () => {
+  const flag = gate({ source: "SNN", url: "u", agency: false, text: "اهتزاز پرچم مقدس جمهوری اسلامی ایران در دانشگاه فردوسی مشهد" });
+  assert.equal(flag.outcome, "exclude");
+  const safety = gate({ source: "Mehr News", url: "u", agency: false, text: "مدیرعامل سازمان آتش‌نشانی تهران: پیشرفت سی تا چهل درصدی ایمن‌سازی بازار بزرگ تهران در زمینه کابل‌کشی‌ها" });
+  assert.equal(safety.outcome, "exclude");
+  const drone = gate({ source: "Mehr News", url: "u", agency: false, text: "یمن یک پهپاد شناسایی سعودی را ساقط کرد سخنگوی نیروهای مسلح یمن: یک پهپاد شناسایی کاریال متعلق به دشمن سعودی" });
+  assert.equal(drone.outcome, "feed");
+  assert.equal(gate({ source: "Saba", url: "u", agency: false, text: "قال أيمن محمد إن الاجتماع ناقش خطة التعليم" }).outcome === "feed", false);
+});
+
+test("the war's effects on daily life reach the reader: schools online, airports shut, emergency measures", async () => {
+  const { digest } = await import("./digest.ts");
+  for (const t of [
+    "عاجل | تحول الدراسة في مدارس الرياض إلى التعليم عن بعد عبر منصة مدرستي لمدة أسبوع",
+    "Schools in Riyadh to switch to remote learning for one week amid Houthi attacks",
+    "تعليق الرحلات في مطار الملك خالد الدولي بالرياض",
+  ]) {
+    assert.notEqual(digest("Al-Mihwar", t, "houthi").outcome, "exclude", t);
+  }
+});
+
+test("the sea and energy reach the reader: UKMTO warnings for this war's waters, energy sites stopped or back", () => {
+  const read = (text: string, source: string) => gate({ text, source, lean: "intl" } as never).outcome;
+  assert.equal(read("UKMTO WARNING\n148-26 - SUSPICIOUS ACTIVITY\nUKMTO has received a report of an incident 25NM south-west of Mokha. A small craft approached the vessel.", "UKMTO"), "feed");
+  assert.equal(read("Pumping on the East-West pipeline restored after the attack\nThe Ministry of Energy said", "Saudi Energy Ministry"), "feed");
+  // A Hormuz warning names none of this war's places: not raised.
+  assert.notEqual(read("UKMTO WARNING\n146-26 - ATTACK\nAn incident within the Strait of Hormuz. A tanker has been struck by an unknown projectile.", "UKMTO"), "feed");
+});

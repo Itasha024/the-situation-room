@@ -53,6 +53,8 @@ const defaultSqlProvider: SqlProvider = async () => {
 const MEM_MAX = 2_000_000;
 /** Rows per multi-row upsert. */
 const PUT_CHUNK = 400;
+/** Cards saved side by side in `mergeIntoDesk` (the pool in db.ts holds 10). */
+const MERGE_PARALLEL = 10;
 
 export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): DeskStore {
   /**
@@ -291,16 +293,29 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       };
     },
 
+    async timesOf(fps: string[]): Promise<Record<string, string>> {
+      if (!fps.length) return {};
+      const sql = await sqlProvider();
+      const rows = await sql<{ fp: string; at: unknown }>`
+        select fp, at from desk_report where fp = any(${fps}::text[])
+      `;
+      dbMeter.queries += 1;
+      dbMeter.read += JSON.stringify(rows).length;
+      const out: Record<string, string> = {};
+      for (const r of rows) out[r.fp] = r.at instanceof Date ? r.at.toISOString() : String(r.at);
+      return out;
+    },
+
     async mergeIntoDesk(reports: LiveReport[]): Promise<MergeResult> {
       const out: MergeResult = { reportsAdded: 0, eventsAdded: 0, unplaced: [] };
       try {
         const sql = await sqlProvider();
 
-        for (const r of reports) {
+        const saveOne = async (r: LiveReport): Promise<void> => {
           // One card that fails to save (a clash on its link) must not stop
           // the cards after it: a tick once lost every older card this way.
           try {
-            if (!r.url || !hasArticlePath(r.url)) continue;
+            if (!r.url || !hasArticlePath(r.url)) return;
 
             // `returning fp` tells us whether this row was genuinely new, so the
             // tick reports real numbers rather than assuming every insert landed.
@@ -362,6 +377,14 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                    where fp = ${r.fp} and (summary is distinct from ${r.summary} or url is distinct from ${r.url})
                 `;
               }
+              // A later outlet added a figure or a place, and the card was written
+              // again from every account: the new copy replaces the old.
+              if (r.tags?.includes("merged") && !r.tags?.includes("original")) {
+                await sql`
+                  update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)}
+                   where fp = ${r.fp} and (summary is distinct from ${pgSafe(r.summary)} or body is distinct from ${r.text == null ? null : pgSafe(r.text)})
+                `;
+              }
               // A picture or a label found after the card was stored (a later
               // account of it carried the video; the original was an exclusive).
               if (r.media || r.flags?.length) {
@@ -390,13 +413,13 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               }
               // Stored earlier without a place (the geocoder had not found it
               // yet): take the place now, and let its pin be added below.
-              if (r.lat == null || r.lng == null) continue;
+              if (r.lat == null || r.lng == null) return;
               const placed = await sql<{ fp: string }>`
                 update desk_report set place = ${r.place ?? null}, lat = ${r.lat}, lng = ${r.lng}
                  where fp = ${r.fp} and lat is null
                 returning fp
               `;
-              if (!placed.length) continue;
+              if (!placed.length) return;
             } else out.reportsAdded += 1;
 
             const { events, unplaced } = deriveEvents(r);
@@ -417,6 +440,12 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           } catch (err) {
             out.error ??= `${r.fp}: ${err instanceof Error ? err.message : "desk write failed"}`;
           }
+        };
+        // Each card is a few round trips; one after another, the ~300 cards a
+        // tick carries took over two minutes from a server far from the
+        // database. Ten at a time, in the payload's order.
+        for (let i = 0; i < reports.length; i += MERGE_PARALLEL) {
+          await Promise.all(reports.slice(i, i + MERGE_PARALLEL).map(saveOne));
         }
       } catch (err) {
         out.error = err instanceof Error ? err.message : "desk write failed";

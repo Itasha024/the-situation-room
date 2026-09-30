@@ -121,7 +121,8 @@ const KIND_PREFIX = /^(?:مديرية|مديريه|محافظة|محافظه|م�
 /** Words the model sometimes returns as a "target" that name no place. */
 const GENERIC = /^(?:مواقع|موقع|تحصينات|مناطق|منطقة|تجمعات|أهداف|هدف|مدنيين|منازل|منزل|مزارع|مزرعة|أحياء|قرى|مدرسة|مدرسه|مسجد|جامع|سوق|مستشفى|مركز|محطة|محطه|مخيم|مخيمات|مصنع|جامعة)(?:\s|$)/;
 
-export type NeedsPlace = { targets: string[]; sourceText: string; apply: (hit: GeoHit) => void };
+/** `named`: English spots the desk's headline names ("Al-Bazilah mountain"), tried after the source's own targets. */
+export type NeedsPlace = { targets: string[]; named?: string[]; sourceText: string; apply: (hit: GeoHit) => void };
 
 /** Look up the first groundable target of each job, within the tick's budget. */
 export async function geocodeJobs(store: DeskStore, jobs: NeedsPlace[]): Promise<number> {
@@ -132,9 +133,11 @@ export async function geocodeJobs(store: DeskStore, jobs: NeedsPlace[]): Promise
   let dirty = false;
   for (const job of jobs) {
     const near = placesIn(job.sourceText).find((p) => p.kind === "governorate");
-    for (const raw of job.targets) {
+    const home = near ? governorateAt(near.lat, near.lng) : null;
+    const named = new Set(job.named ?? []);
+    for (const raw of [...job.targets, ...named]) {
       const target = String(raw || "").trim();
-      if (target.length < 2 || !job.sourceText.includes(target)) continue;
+      if (target.length < 2 || (!named.has(target) && !job.sourceText.includes(target))) continue;
       const bare = target.replace(KIND_PREFIX, "");
       // A place the gazetteer knows was left unpinned for a reason (unclear
       // roles, not in the text); and "positions", "areas" are not places.
@@ -155,6 +158,9 @@ export async function geocodeJobs(store: DeskStore, jobs: NeedsPlace[]): Promise
         dirty = true;
       }
       if ("miss" in hit) continue;
+      // A headline's spot found outside the governorate the source names is a namesake.
+      const gov = governorateAt(hit.lat, hit.lng);
+      if (named.has(target) && (!gov || (home && gov !== home))) continue;
       job.apply(hit);
       placed += 1;
       break;

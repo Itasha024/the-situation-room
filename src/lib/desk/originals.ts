@@ -76,19 +76,27 @@ type FxStatus = { url?: string; id?: string; text?: string; raw_text?: { text?: 
 
 /** The speaker's own post on X that carries the words, through FxTwitter. */
 async function ownPost(sp: Speaker, keys: string[], reportAt: number): Promise<Hit | null> {
-  if (!sp.x) return null;
+  return sp.x ? accountPost(sp.x, sp.name, keys, reportAt) : null;
+}
+
+/**
+ * An account's own post on X, from the two days before the relay, that carries
+ * the story's words (`min` of them) and, when the relay gives figures, one of them.
+ */
+export async function accountPost(handle: string, name: string, keys: string[], reportAt: number, min = 2, figures: string[] = []): Promise<Hit | null> {
   try {
-    const res = await fetch(`https://api.fxtwitter.com/2/profile/${sp.x}/statuses`, { signal: AbortSignal.timeout(8000), headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)" } });
+    const res = await fetch(`https://api.fxtwitter.com/2/profile/${handle}/statuses`, { signal: AbortSignal.timeout(8000), headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)" } });
     if (!res.ok) {
       await res.body?.cancel().catch(() => {});
       return null;
     }
     const list = ((await res.json()) as { results?: FxStatus[] })?.results ?? [];
-    const own = sp.x.toLowerCase();
+    const sp = { x: handle, name };
+    const own = handle.toLowerCase();
     const posts = list
       .filter((s) => !s.reposted_by && String(s.author?.screen_name ?? own).toLowerCase() === own)
       .map((s) => ({ s, at: Number(s.created_timestamp) * 1000, text: String(s.raw_text?.text ?? s.text ?? "") }))
-      .filter((p) => p.at >= reportAt - 48 * 3600_000 && p.at <= reportAt + 3600_000 && shared(p.text, keys) >= 2)
+      .filter((p) => p.at >= reportAt - 48 * 3600_000 && p.at <= reportAt + 3600_000 && shared(p.text, keys) >= min && (!figures.length || figures.some((n) => p.text.includes(n))))
       .sort((a, b) => shared(b.text, keys) - shared(a.text, keys) || a.at - b.at);
     const best = posts[0];
     if (!best) return null;

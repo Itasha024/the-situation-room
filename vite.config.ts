@@ -13,6 +13,7 @@ import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 // @ts-expect-error JS plugin alongside the TS vite config
 import { deskTickPlugin } from "./scripts/desk-tick-plugin.mjs";
 import { isMigrationFile } from "./scripts/migration-plan.mjs";
+const NITRO_PRESET = process.env.NITRO_PRESET || "node-server";
 
 /** The files `src/lib/db.ts` globs — same directory, same non-recursive scope. */
 function hasGlobbedMigrations(root: string): boolean {
@@ -187,15 +188,25 @@ export default defineConfig(({ command, isPreview }) => ({
     ...(command === "build" || isPreview
       ? [
           nitro({
-            preset: "vercel",
+            // The desk runs as a plain Node server (`.output/server/index.mjs`)
+            // behind a Cloudflare Tunnel since Vercel's free plan ran out of
+            // compute. `NITRO_PRESET=vercel` still builds the old deploy.
+            preset: NITRO_PRESET,
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
             serverDir: "./server",
-            // A tick cycle (scan + model reads) outlives the default limit;
-            // 300s is the Hobby ceiling. It runs in the background (see
+            // Local development keeps the desk's working state next to the
+            // page in public/ (reader cache, scan state, queues, quota, tick
+            // lock, meters). None of it is fetched by the page, so it must
+            // never be published.
+            ignore: ["**/desk-*.json", "**/*.tmp-*", "**/*.he.json", "**/SOURCES.md"],
+            // On Vercel a tick cycle (scan + model reads) outlives the default
+            // limit; 300s is the Hobby ceiling. It runs in the background (see
             // src/routes/api/tick.ts), so the scheduler never waits for it.
-            vercel: { functions: { maxDuration: 300 } },
+            ...(NITRO_PRESET === "vercel"
+              ? { vercel: { functions: { maxDuration: 300 } } }
+              : {}),
           }),
         ]
       : []),

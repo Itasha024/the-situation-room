@@ -39,14 +39,18 @@ Pick every headline that could be about:
 - the Houthis, the Yemeni government, the STC, the coalition, Saudi or Emirati
   forces, or Iran's or anyone's support for a party;
 - the Red Sea, Bab al-Mandab, the Gulf of Aden, and shipping or oil exports
-  hit or rerouted by the war (Yanbu, the East-West pipeline, Aramco);
+  hit or rerouted by the war (Yanbu, the East-West pipeline, Aramco), ship
+  traffic through Bab al-Mandab and Suez, Saudi exports moving between the Gulf
+  and the Red Sea, and energy sites hit, repaired or back in service;
 - Saudi Arabia's defence, security or diplomacy (talks with the US, Iran,
   Pakistan, the UN), and decisions or debate abroad about Yemen, the Houthis or
   helping Saudi Arabia;
 - UN, aid or humanitarian news about Yemen.
 
-Skip: other wars (Gaza, Lebanon, Syria, Iraq, Ukraine, Sudan) unless Yemen,
-the Houthis or Saudi Arabia are named; sport, culture, celebrities, markets and
+Skip: other wars (Gaza, Lebanon, Syria, Iraq, Ukraine, Sudan, and the US–Iran
+war and US–Iran talks, and Hormuz or Gulf shipping) unless Yemen, the Houthis,
+Bab al-Mandab or Saudi exports are named;
+piracy and ship hijackings by Somali or unknown gunmen; sport, culture, celebrities, markets and
 business with no tie to the war; domestic politics of any country; opinion.
 When a headline might be ours, pick it: the full article is read afterwards.
 

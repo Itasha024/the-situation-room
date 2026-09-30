@@ -297,3 +297,71 @@ export async function combineGroups(
   });
   return { groups: out, written, asked, tried: jobs.length };
 }
+
+/* ------------------------------------------------------------------ *
+ * A later account that adds something, written into the card it folds into
+ * ------------------------------------------------------------------ */
+
+/** Cards rewritten a tick from a later account's new facts. */
+export const ENRICH_CALLS = 4;
+
+/**
+ * Does a later account of the same event say something the card does not: a
+ * figure it lacks, or a place it does not name? Only then is the card written
+ * again; an account that adds nothing only joins "Also".
+ */
+export function addsFacts(home: LiveReport, r: LiveReport): boolean {
+  const h = `${home.summary} ${home.text ?? ""}`;
+  const have = new Set(figures(h));
+  if (figures(`${r.summary} ${r.text ?? ""}`).some((n) => !have.has(n))) return true;
+  const lower = h.toLowerCase();
+  // A statement's other point: "civilians must stay away from military
+  // sites" folded under "all Houthi activities are monitored" was lost.
+  if (r.type === "statement" || r.type === "diplomacy") {
+    const said = r.summary.replace(/^[^:]{2,70}:\s+/, "");
+    const FILLER = /^(?:that|this|with|from|have|been|will|were|said|says|their|they|them|also|into|over|about|after|would|could|should)$/;
+    const fresh = (said.toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? []).filter((w) => !FILLER.test(w) && !lower.includes(w.replace(/(?:es|s|ed|ing)$/, "")));
+    if (new Set(fresh).size >= 3) return true;
+  }
+  const homePlaces = new Set([home.place, ...(home.places ?? []).map((p) => p.name)].filter(Boolean));
+  return [r.place, ...(r.places ?? []).map((p) => p.name)].some(
+    (n) => !!n && !homePlaces.has(n) && !lower.includes(n.replace(/^the /i, "").toLowerCase()) && !!PLACE_BY_NAME[n],
+  );
+}
+
+/**
+ * Writes each card again from its own copy and the later accounts that add to
+ * it (`pairs` from the fold), at most `ENRICH_CALLS` model calls. The card keeps
+ * its identity, source and link; its headline and body now carry every fact.
+ * Returns the cards rewritten, tagged "merged" so the store saves the copy.
+ */
+export async function enrichCards(pairs: [LiveReport, LiveReport][], ask: Ask, store?: DeskStore): Promise<LiveReport[]> {
+  const byHome = new Map<LiveReport, LiveReport[]>();
+  for (const [home, r] of pairs) byHome.set(home, [...(byHome.get(home) ?? []), r]);
+  const jobs = [...byHome].slice(0, ENRICH_CALLS).map(([home, adds]) => {
+    const all = [home, ...adds];
+    return { home, adds, all, places: placesOf(all), key: `enr-${keyOf(all)}` };
+  });
+  if (!jobs.length) return [];
+  const cached = store ? await store.getMany<Written | null>(PREFIX, jobs.map((j) => j.key)).catch(() => ({})) : {};
+  const fresh: Record<string, Written | null> = {};
+  const out: LiveReport[] = [];
+  await Promise.all(
+    jobs.map(async (j) => {
+      let w: Written | null;
+      if (j.key in cached) w = (cached as Record<string, Written | null>)[j.key];
+      else {
+        const deadline = new Promise<null>((res) => setTimeout(() => res(null), COMBINE_MS));
+        const json = await Promise.race([ask(SYSTEM, accountsText(j.all)).catch(() => null), deadline]);
+        w = toWritten(json, j.all, j.places);
+        fresh[j.key] = w;
+      }
+      if (!w) return;
+      applyWritten({ lead: j.home, others: j.adds }, w, j.places);
+      j.home.tags = [...new Set([...(j.home.tags ?? []), "merged"])];
+      out.push(j.home);
+    }),
+  );
+  if (store && Object.keys(fresh).length) await store.putMany(PREFIX, fresh).catch(() => {});
+  return out;
+}

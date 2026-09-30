@@ -20,6 +20,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { calendarHints, findCalendarDates } from "./calendars.ts";
 import { SPELLING_RULES, spellingHints } from "./spelling.ts";
 
 export type ReaderItem = {
@@ -94,7 +95,7 @@ export const READER_MODELS = [
   "gemini-3.1-flash-lite",
   "gemini-3.5-flash-lite",
   "gemini-flash-latest",
-  // Each has its own free daily quota. The newest is last: the 12-hour prose
+  // Each has its own free daily quota. The newest is last: the 6-hour prose
   // leads with it (models.ts), so the reader leaves it for that when it can.
   "gemini-3.5-flash",
   "gemini-3.7-flash",
@@ -106,14 +107,17 @@ export const READER_MODELS = [
  * second look stopped happening at all — silently, for the rest of the day — and
  * the desk lost exactly the reports this pass exists to catch.
  */
+// The three newest Flash models come last: they write the 6-hour update, and
+// a second look that led with them spent their small daily quota by evening,
+// so the update was always written by a lite model (29 Sep).
 export const SECOND_LOOK_MODELS = [
   "gemini-flash-latest",
-  "gemini-3.8-flash",
-  "gemini-3.7-flash",
-  "gemini-3.5-flash",
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
   "gemini-flash-lite-latest",
+  "gemini-3.5-flash",
+  "gemini-3.7-flash",
+  "gemini-3.8-flash",
 ];
 /** Items per model call — large, because calls are what the quota counts. */
 export const READER_BATCH = 30;
@@ -182,7 +186,8 @@ Arabia and its coalition, including Houthi fire on Saudi Arabia and on shipping
 in the Red Sea, Bab al-Mandab and the Gulf of Aden.
 
 You receive several raw items (Telegram posts and article teasers, mostly
-Arabic) and return one verdict per item. You decide whether each item is
+Arabic, some Persian or English; a video's speech written out follows
+"[Said in the video]") and return one verdict per item. You decide whether each item is
 published, and you write it. Being wrong is worse than being silent: when in
 doubt, publish=false.
 
@@ -190,7 +195,20 @@ PUBLISH ONLY IF ALL OF THESE HOLD
 1. IN SCOPE. The item is about THIS war. Our sources cover many other stories;
    an item is not ours because it sounds military. Out of scope, whoever posts
    it: Iran or the IRGC acting against the US or Israel (e.g. a drone shot down
-   over Hormuz) unless the item itself ties it to Yemen or the Houthis; Gaza,
+   over Hormuz) unless the item itself ties it to Yemen or the Houthis;
+   Iranian commanders, officials and media threatening, warning or boasting
+   in general ("Iran's chief of staff: our forces will respond destructively
+   to any threat") unless the item names Yemen, the Houthis, Saudi Arabia or
+   the coalition in this war, or the Red Sea or Bab al-Mandab — Iran on Yemen,
+   Iranian arms, advisers or support for the Houthis, and Iran's talks with
+   Saudi Arabia about Yemen ARE ours; the separate US–Iran war — US strikes
+   on or combat with Iran, US–Iran talks or mediation, Trump or US officials on
+   Iran ("Trump may order a return to major combat operations", about Iran) —
+   unless the item itself names Yemen, the Houthis, the Saudi–Houthi war, the
+   Red Sea or Bab al-Mandab; piracy, hijackings and kidnappings of ships or crews
+   by unidentified or Somali gunmen (a tanker hijacked off Shabwa and taken to
+   Somalia, its crew later freed) unless the Houthis or a warring party did it;
+   Gaza,
    Lebanon, Iraq, Syria, Ukraine, Pakistan, Sudan as the subject; domestic
    politics of any country; crime, courts, prices, markets, business and
    social news with no link to the fighting (fish prices in Aden, a court
@@ -212,12 +230,45 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    Oman, off Musandam or in the Gulf is OUT of scope unless that item itself
    says the Houthis or Yemen did it — a Houthi-aligned channel reporting or
    cheering an IRGC attack does not make it a Houthi attack;
+   two exceptions: Saudi energy through Hormuz IS ours — Saudi crude exports
+   moving between the Gulf (Ras Tanura, Ju'aymah) and the Red Sea (Yanbu), Saudi
+   tankers, and Aramco's export routes ("Saudi Arabia shifts exports from Ras
+   Tanura to Yanbu"); and Iran speaking about the Houthis or Bab al-Mandab, or
+   the Houthis speaking about Iran or Hormuz, IS ours; other Hormuz and Gulf
+   shipping stays out;
    outside powers deciding or debating whether to strike, arm or back a party
    (e.g. Trump weighing strikes on the Houthis after a Saudi request), and
    requests for help between the parties and their allies; foreign media
    reports about this war, including ones relayed by other outlets ("according
    to the New York Times ..."). These are in scope, not "internal politics".
-2. CURRENT. It reports something that happened or was said now. NOT a
+   Also in scope, event_type "economy": ship traffic through this war's waters
+   (how many ships crossed Bab al-Mandab, the Red Sea, the Gulf of Aden or
+   Suez, carriers and shipping lines rerouting or returning, insurance and
+   freight costs for these waters), and the oil, gas, fuel, power, water and
+   port infrastructure of Saudi Arabia or Yemen as the war touches it —
+   exports, output, terminals, pipelines, refineries, desalination plants and
+   airports stopped, hit, reopened, resumed or protected (Yanbu, Jeddah, Ras
+   Tanura, Jazan, Aramco, Ras Isa, Hodeidah, Marib, Safer, Aden refinery,
+   Balhaf) — "Saudi Arabia resumes oil exports from Yanbu after the drone
+   attacks", "Aramco raises Red Sea exports from Yanbu" and "the pump station
+   hit last week is back in service" are ours; UKMTO and JMIC warnings and
+   advisories for these waters are ours, whoever the attacker. The
+   war's effects on daily life in Saudi Arabia and Yemen are also "economy"
+   and in scope: schools moved online or closed, flights and airports
+   suspended, emergency measures, evacuations, shelters, curfews, shortages
+   and prices driven by the war — "Schools in Riyadh switch to remote
+   learning for a week" and "Air traffic suspended at Riyadh airport" are
+   ours, even when the authorities give no reason. Leaders,
+   commanders and officials of a party meeting each other or a foreign
+   government, envoy or commander about the war or its sides, and commanders
+   appointed or replaced, are in scope ("the new coalition commander meets
+   Tareq Saleh", "Iran's foreign minister receives the Houthi negotiator",
+   "al-Alimi meets the US ambassador").
+2. CURRENT. It reports something that happened or was said now — which
+   includes something newly FOUND about an earlier event: an investigation's
+   finding, a new admission, a leak, a first figure ("Iraqi investigators
+   find the Houthis behind the 10 September attack on Saudi Arabia's
+   East-West pipeline" is current). NOT a
    programme title, a video segment, a battle map, a documentary, an analysis,
    an anniversary, a recap. "Marib and Taiz: the map of the battles #ThisDay"
    is a programme clip, not a report of clashes — publish=false.
@@ -234,12 +285,27 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    teasers ("a map is coming") and bare opinions stay publish=false.
    Religious figures are not news: a mufti, cleric, preacher, imam, "scholars"
    or a body of Ulema condemning, praising or preaching — anywhere, in any
-   country — is publish=false, reject_reason "cleric". The exception is a
+   country — is publish=false, reject_reason "cleric". The exceptions: a
    religious figure who holds an official role in this war (a minister, a
-   commander, a party's named official). A TRIBAL sheikh is not a cleric: a
-   tribal leader killed, abducted or mobilising fighters is news.
+   commander, a party's named official); and the OFFICIAL religious leadership
+   of a party to this war — Saudi Arabia, the Yemeni government, the Houthis
+   (a grand mufti, a council of senior scholars, a ministry of religious
+   affairs) — calling to fight, to mobilise, declaring jihad, ordering
+   mosques to pray for its forces' victory in this war, or issuing a ruling on
+   this war: "Saudi Grand Mufti calls for fighting the Houthis" and "Yemen's
+   religious affairs ministry orders prayers for the army's victory over the
+   Houthis" are news. Condemning, praising or preaching stays a cleric, and a mufti of any
+   other country is a cleric whatever he says. A TRIBAL sheikh
+   is not a cleric: a tribal leader killed, abducted or mobilising fighters is
+   news.
 3. SUBSTANTIVE. A reader learns what happened or what was said about what.
-   "A spokesman said something" with no content is not a report.
+   "A spokesman said something" with no content is not a report. Protocol
+   is not a report either: an official visiting or inspecting the wounded,
+   touring a site, receiving a delegation or attending a ceremony, opening
+   or inaugurating a building, college, school, road or project, laying a
+   foundation stone is
+   publish=false, unless the item carries a new fact (a figure, a decision,
+   words with content).
    A news outlet's HEADLINE alone is substantive when it states a fact or a
    development about this war ("Trump caught in dilemma over Saudi plea for
    military help", "Houthis warn against joining Saudi Arabia", "Arab League
@@ -272,10 +338,20 @@ ${SPELLING_RULES}
   a body just to add a little: a place name or a detail belongs in the
   headline. The one exception is casualties the headline cannot hold.
 - A longer item, as a wire story: the headline carries the most important
-  facts; the body (1-3 sentences) adds the next ones — detail, figures,
-  context from the text — never a rephrasing of the headline. A body earns its
-  place with at least two new facts (figures, named people, places, units, a
-  quote) or casualties; if it would add only one small detail, body is "".
+  facts; the body adds the next ones — detail, figures, context from the
+  text — never a rephrasing of the headline. A body earns its place with at
+  least two new facts (figures, named people, places, units, a quote) or
+  casualties; if it would add only one small detail, body is "".
+- NEVER shorten an interesting item to fit. A statement, interview or report
+  that makes several newsworthy points keeps EVERY one of them: the strongest
+  in the headline, all the others in the body, one sentence each, as long as
+  the body needs (an official's nine points to a newspaper are nine points,
+  not one). Write it as a wire story, not a list: vary the attribution
+  ("warned", "accused", "urged", "argued", "he added", or none where the
+  sentence is plainly his) and join related points. Never open sentence
+  after sentence with "He said".
+- The headline keeps what makes the item news, not only its first words:
+  prisoners "released from Saudi prisons", not "released prisoners".
 - A long item is a full article: read ALL of it. The headline carries its
   most important new development wherever in the text it appears — a
   decision, a commitment, a reversal, casualties — not only the opening
@@ -369,6 +445,13 @@ STATEMENTS (event_type statement or diplomacy)
   Rashad al-Alimi is "Yemen's president", al-Mashat "the Houthi political
   council head", al-Zubaidi "the STC leader", in the headline and wherever a
   reader would not know the name.
+  Read the Arabic title, never guess it from the outlet: "رئيس مجلس القيادة"
+  and "رئيس مجلس القيادة الرئاسي" (and "فخامة الرئيس" on a government channel)
+  are Rashad al-Alimi, "Yemen's president", government side; "رئيس المجلس
+  السياسي الأعلى" is al-Mashat. Only السيد القائد, قائد الثورة, قائد أنصار
+  الله or Abdul Malik al-Houthi by name is the "Houthi leader". A text on
+  "safe return", "the militia" or "the Houthi coup" is the government
+  speaking, never the Houthi leader.
 - Other titles: Abu Zaraa al-Mahrami (أبو زرعة المحرمي) "Presidential Council
   member and Giants Brigades commander"; Tareq Saleh "Presidential Council
   member and National Resistance commander"; Abdullah al-Alimi Bawazir
@@ -388,6 +471,24 @@ STATEMENTS (event_type statement or diplomacy)
   military analyst"). Never an unfamiliar personal name, in headline or body.
 - Say what was said, specifically. If the speaker denies an accusation, state
   the accusation and the denial.
+
+DATES
+Iran's channels date in the Iranian solar calendar (مهر, آبان, "1405/07/07")
+and Houthi outlets add the Hijri date ("17-04-1447هـ"). Never copy those
+numbers as a date: write the Gregorian day the item's "dates" note gives, or
+leave the date out.
+
+WORDS SAID IN A VIDEO
+Text after "[Said in the video]" is a machine transcript of the post's video.
+It is what was spoken, and may carry the news the caption lacks: read it as
+the item's text, under every rule above. The speaker is who the caption or
+the words themselves name ("I, the commander of the Fifth Brigade …"); never
+guess one from the outlet — "A Houthi field commander: …" only when the
+caption or the words say so; with no one named, say what was said and who
+was filmed as the video shows it, nothing more. A transcript garbles
+names and numbers: keep only the names and figures that are clear, and prefer
+the caption's spelling. Songs, chants, poems, prayers, sermons and a
+presenter reading other news are not reports: publish=false.
 
 SPEECH LINES
 Channels post a live speech one sentence at a time ("السيد القائد: ...").
@@ -475,7 +576,7 @@ export function fixHeadline(headline: string): string {
   // "Name: <the same role> calls for …" — the speaker twice. "UN
   // Secretary-General Antonio Guterres: UN chief calls for de-escalation",
   // "STC leadership: STC urges …": the second, shorter form stands.
-  const twice = /^([^:]{2,70}):\s+((?:[\w'.-]+ ){0,5}?)((?:calls|urges|warns|condemns|rejects|announces|welcomes|demands|stresses|affirms|accuses|denies|vows|pledges|discusses|meets|receives)\b.*)$/.exec(h);
+  const twice = /^([^:]{2,70}):\s+((?:[\w'.-]+ ){0,5}?)((?:calls|urges|warns|condemns|rejects|announces|welcomes|demands|stresses|affirms|accuses|denies|vows|pledges|discusses|meets|receives|inspects|visits|tours|checks|inaugurates|opens|attends|honou?rs|chairs|reviews|praises|thanks|congratulates|directs|launches)\b.*)$/.exec(h);
   if (twice && twice[2]) {
     const ROLE_WORD = /\b(?:chief|minister|spokes\w+|official|leader(?:ship)?|president|council|secretary(?:-general)?|envoy|STC|governor|commander)\b/i;
     const roles = (s: string) => new Set((s.toLowerCase().match(new RegExp(ROLE_WORD.source, "gi")) || []));
@@ -584,7 +685,7 @@ export function dropInventedRole(headline: string, sourceText: string): string {
   return headline.replace(/\s+aid chief\b/i, "");
 }
 
-/** Running prose (the 12-hour brief): the same people by role, "Houthi leader" included. */
+/** Running prose (the 6-hour brief): the same people by role, "Houthi leader" included. */
 export function roleNamesInProse(text: string): string {
   let t = String(text || "").replace(/\b(?:the )?Houthi leader,? (?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi\b|\b(?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi\b/gi, "the Houthi leader");
   for (const [name, role] of ROLE_NAMES) t = t.replace(name, role);
@@ -717,10 +818,17 @@ export function newNames(body: string, headlineLower: string): string[] {
 export function sourceSentences(text: string): number {
   return String(text || "")
     .replace(/https?:\/\/\S+/g, " ")
-    .split(/[.!?؟\n]+|\s[-–—]\s/)
+    .split(SENTENCE_BREAK)
     .map((s) => s.trim())
     .filter((s) => s.split(/\s+/).length >= 4).length;
 }
+/**
+ * Where a sentence ends: its mark, a line break, a dash, or a channel's
+ * bullet. The scan's text arrives with its line breaks gone, so a post of
+ * nine "🔴" lines and no full stops read as one sentence, and its body was
+ * cut as a short item's (the STC official's interview, 29 Sep).
+ */
+const SENTENCE_BREAK = /[.!?؟\n]+|\s[-–—]\s|\s(?=[🔴🔵🟢🟡🟠⚪⚫•▪◾◽🔸🔹📌✅🔻🔺⭕])/u;
 const REPORTED_VERB =
   /^(?:did|does|do|has|had|have|is|was|were|held|spoke|met|made|took|gave|sent|told|won|in|to|not|will|would|could|may|might|plans|seeks|asks|urges|calls|weighs|mulls|meets|holds|speaks|rejects|refuses|agrees|orders|visits|receives|discusses|considers|decides|approves|signs)$/;
 
@@ -777,21 +885,51 @@ export function figuresIn(text: string, scaled = false): Set<string> {
     const n = m[0].replace(/,/g, "");
     out.add(n);
     if (!scaled) continue;
+    // "04" in a date is the 4 the copy writes.
+    if (/^0\d+$/.test(n)) out.add(String(Number(n)));
     const after = western.slice((m.index ?? 0) + m[0].length).replace(/^\s+/, "");
     const scale = SCALE.find(([re]) => re.test(after))?.[1];
     if (scale) out.add(String(Math.round(Number(n) * scale)));
   }
+  // In a source, a number written as a word counts: "استشهاد ثلاث نساء" is the
+  // 3 the copy writes ("three women killed" failed the check on 28 September).
+  if (scaled) {
+    // An Iranian or Hijri date is the Gregorian day the copy writes.
+    for (const f of findCalendarDates(western)) {
+      out.add(String(f.date.getUTCDate()));
+      out.add(String(f.date.getUTCFullYear()));
+    }
+    const plain = western.replace(/[ً-ْٰـ]/g, "").replace(/[یۍې]/g, "ي").replace(/[أإآ]/g, "ا");
+    for (const [re, n] of NUMBER_WORDS) if (re.test(plain)) out.add(String(n));
+  }
   return out;
 }
+
+/** Number words, Arabic, Persian and English, as whole words (Arabic with its و/ب/ل prefix). */
+const W = (words: string) => new RegExp(`(?:^|[^\\p{L}])(?:و|ب|ل|ف)?(?:${words})(?=$|[^\\p{L}])`, "iu");
+const NUMBER_WORDS: [RegExp, number][] = [
+  [W("اثنان|اثنين|اثنتان|اثنتين|two|دو"), 2],
+  [W("ثلاث|ثلاثة|ثلاثه|three|سه"), 3],
+  [W("اربع|اربعة|اربعه|four|چهار"), 4],
+  [W("خمس|خمسة|خمسه|five|پنج"), 5],
+  [W("ست|ستة|سته|six|شش"), 6],
+  [W("سبع|سبعة|سبعه|seven|هفت"), 7],
+  [W("ثمان|ثماني|ثمانية|ثمانيه|eight|هشت"), 8],
+  [W("تسع|تسعة|تسعه|nine"), 9],
+  [W("عشر|عشرة|عشره|ten|ده"), 10],
+  [W("احد عشر|eleven|يازده"), 11],
+  [W("اثنا عشر|اثني عشر|twelve|دوازده"), 12],
+  [W("عشرين|عشرون|twenty|بيست"), 20],
+];
 
 /**
  * The code's check on the model. Returns why a reading must not be published,
  * or null when it may be.
  */
-const CASUALTY_SRC = /قتيل|قتلى|شهيد|شهداء|جرحى|جريح|مصابين|\bkilled\b|\bwounded\b|\binjured\b|casualties/i;
+const CASUALTY_SRC = /قتيل|قتلى|شهيد|شهداء|جرحى|جريح|مصابين|كشته|مجروح|زخمي|\bkilled\b|\bwounded\b|\binjured\b|casualties/i;
 const CASUALTY_COPY = /kill|dead|death|died|wound|injur|casualt|lives|bodies/i;
 /** Words that say someone died; the wounded-only words are not among them. */
-const KILLED_SRC = /قتل|قتيل|قتلى|مقتل|استشهد|استشهاد|شهيد|شهداء|وفاة|توفي|مصرع|جثث|جثة|\bkill|\bdead\b|\bdied\b|\bdeaths?\b|\bbodies\b|\bmartyr/i;
+const KILLED_SRC = /قتل|قتيل|قتلى|مقتل|استشهد|استشهاد|شهيد|شهداء|كشته|جان باخت|وفاة|توفي|مصرع|جثث|جثة|\bkill|\bdead\b|\bdied\b|\bdeaths?\b|\bbodies\b|\bmartyr/i;
 
 /** Words an English sentence of four or more words almost never goes without. */
 const FUNCTION_WORDS = new Set(
@@ -819,7 +957,50 @@ export function transliterated(headline: string): boolean {
 
 /** Failures a second writing can fix; anything else is a judgement, and stands. */
 export function repairable(problem: string): boolean {
-  return /headline length|empty body|casualties dropped|killed not in source|does not lead with its speaker|leads with outlet|written as|banned phrase|source-language/i.test(problem);
+  return /headline length|empty body|points dropped|unfamiliar name|casualties dropped|killed not in source|figure not in source|does not lead with its speaker|leads with outlet|written as|banned phrase|source-language|wrong speaker/i.test(problem);
+}
+
+const PLC_HEAD = /رئيس\s+مجلس\s+القيادة|العليمي|فخامة\s+(?:الأخ\s+)?الرئيس|Presidential (?:Leadership )?Council (?:head|chairman|president)|al-Alimi/i;
+const HOUTHI_HEAD = /السيد\s+القائد|قائد\s+الثورة|قائد\s+(?:حركة\s+)?أنصار\s+الله|عبد\s?الملك\s+(?:بدر\s+الدين\s+)?الحوثي|Abdul[- ]?Malik/i;
+const MASHAT = /المشاط|المجلس\s+السياسي\s+الأعلى|al-Mashat|Supreme Political Council/i;
+
+/**
+ * The one who spoke, against the title in the text. "رئيس مجلس القيادة" (the
+ * government's president) came out "Houthi leader" on 28 September; a code
+ * check stands behind the prompt's rule.
+ */
+export function wrongSpeaker(copy: string, sourceText: string): string | null {
+  if (/\bHouthi leader\b/i.test(copy) && PLC_HEAD.test(sourceText) && !HOUTHI_HEAD.test(sourceText)) {
+    return "wrong speaker: the text's رئيس مجلس القيادة is Yemen's president (al-Alimi), not the Houthi leader";
+  }
+  if (/\bHouthi political council head\b/i.test(copy) && PLC_HEAD.test(sourceText) && !MASHAT.test(sourceText)) {
+    return "wrong speaker: the text's رئيس مجلس القيادة is Yemen's president (al-Alimi), not al-Mashat";
+  }
+  if (/\bYemen's president\b/i.test(copy) && !PLC_HEAD.test(sourceText) && (HOUTHI_HEAD.test(sourceText) || MASHAT.test(sourceText))) {
+    return "wrong speaker: the text names a Houthi leader, not Yemen's president";
+  }
+  return null;
+}
+
+/*
+ * Protocol is no report: "Presidential Council member opens IT college
+ * building in Marib" went out on 29 September. An opening, a foundation stone,
+ * a tour, a visit, a delegation received or a ceremony attended is dropped
+ * when nothing in the card touches the war: no fighting, no casualties, no
+ * decision or figure of its own. The reader's rule 3 says so; this stands
+ * behind it.
+ */
+const PROTOCOL_ACT = /\b(?:opens|opened|inaugurat\w*|lays? (?:the )?foundation|launch(?:es|ed)? (?:the |a )?(?:project|course|programme|program|exhibition|campaign to (?:plant|clean|pave))|tours?|toured|visits?|visited|inspects?|inspected|receives?|received|attends?|attended|honou?rs?|honou?red|chairs?|chaired|graduat\w*|celebrat\w*|commemorat\w*|marks? (?:the )?anniversary)\b/i;
+const PROTOCOL_OBJECT = /\b(?:building|college|university|school|institute|hospital|clinic|centre|center|project|road|bridge|office|headquarters|exhibition|workshop|seminar|course|ceremony|celebration|festival|anniversary|graduation|delegation|ambassador|envoy|guests?|station|plant|factory|market|mosque|stadium|library)\b/i;
+const WAR_NEWS = /\b(?:kill\w*|dead|deaths?|died|wound\w*|injur\w*|casualt\w*|attack\w*|strik\w*|struck|missiles?|drones?|UAVs?|shell\w*|clash\w*|fight\w*|battle\w*|front\w*|captur\w*|seiz\w*|advanc\w*|repel\w*|offensive|troops|soldiers|fighters|weapons?|arms|mobili[sz]\w*|recruit\w*|evacuat\w*|displac\w*|explosion|blast|bomb\w*|mines?|ceasefire|truce|talks|negotiat\w*|prisoners?|detain\w*|arrest\w*|hostages?|siege|blockade|shipping|Red Sea|Bab al-Mandab|sanctions?|aid|relief|famine|cholera|war|military|army|brigades?|defen[cs]e|security forces|reinforce\w*|frontline|threat\w*|warn\w*|vow\w*|accus\w*|condemn\w*|escalat\w*|damage\w*|destroy\w*|rebuil\w*|reconstruct\w*)\b/i;
+export function protocolOnly(headline: string, body = ""): boolean {
+  const h = String(headline || "");
+  if (!PROTOCOL_ACT.test(h) || !PROTOCOL_OBJECT.test(`${h} ${body}`)) return false;
+  // Someone's own words ("Minister: Haifan road in Taiz is open") are judged as a statement.
+  if (/^[^:]{2,80}:\s/.test(h)) return false;
+  // A figure of its own (money, a count) is a fact a reader may want.
+  if (/\d/.test(h)) return false;
+  return !WAR_NEWS.test(`${h} ${body}`);
 }
 
 /**
@@ -830,6 +1011,7 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   if (!r.publish) return r.reject_reason || "not publishable";
   const h = String(r.headline || "").trim();
   const b = String(r.body || "").trim();
+  if (protocolOnly(h, b)) return "protocol: an opening, visit or ceremony with no news of the war";
   if (h.length < 12 || h.length > 140) return "headline length";
   if (b && b.length < 20) return "empty body";
   if (/[؀-ۿ֐-׿]/.test(h + b)) return "source-language text in copy";
@@ -850,15 +1032,42 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
     if (lead && !h.toLowerCase().startsWith(lead.toLowerCase())) return "statement does not lead with its speaker";
   }
   if (OUTLET_LEAD.test(h)) return "headline leads with outlet";
+  // Never let pass: a card that puts the other side's leader's words in his mouth.
+  const who = wrongSpeaker(`${h} ${b}`, sourceText);
+  if (who) return who;
   // Casualties in the source are never dropped from the copy.
   if (!strict) return null;
-  if (CASUALTY_SRC.test(sourceText) && !CASUALTY_COPY.test(`${h} ${b}`)) return "casualties dropped";
+  // Persian letters as the Arabic ones: "شهید", "کشته".
+  const srcN = sourceText.replace(/[یۍې]/g, "ي").replace(/ک/g, "ك");
+  if (CASUALTY_SRC.test(srcN) && !CASUALTY_COPY.test(`${h} ${b}`)) return "casualties dropped";
   // Wounded is not killed: "Saudi air strikes on Kamaran Island kill 3
   // citizens" over a text that says three were wounded.
-  if (/\bkill(?:s|ed|ing)?\b|\bdead\b|\bdeaths?\b|\bdied\b/i.test(h) && !KILLED_SRC.test(sourceText)) return "killed not in source";
+  if (/\bkill(?:s|ed|ing)?\b|\bdead\b|\bdeaths?\b|\bdied\b/i.test(h) && !KILLED_SRC.test(srcN)) return "killed not in source";
   // A Houthi actor is never "Yemeni forces", nor a government one "Houthi".
   if (r.actor_side === "houthi" && /\bYemeni (?:armed )?forces\b|\bYemen's (?:army|armed forces)\b/i.test(`${h} ${b}`)) return "Houthi actor written as Yemeni forces";
+  // "Amin al-Warafi receives released prisoners in Ibb": nobody knows him.
+  const name = UNKNOWN_NAME_LEAD.exec(h);
+  if (name && !KNOWN_NAMES.test(name[0])) return `unfamiliar name in headline: "${name[0].trim()}" — write their role or affiliation, never the name`;
+  // A statement of many points kept to one line: the STC official's nine
+  // points to an Italian paper went out as one of them and no body.
+  const points = pointsIn(sourceText);
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && points >= 4 && b.length < 120) {
+    return `points dropped: the text makes ${points} points; the body carries every newsworthy one, as long as it needs`;
+  }
   return null;
+}
+
+/** A headline opening on a personal name ("Amin al-Warafi receives …", "Amin al-Warafi: …"). */
+const UNKNOWN_NAME_LEAD = /^(?:(?:Dr|Sheikh|Brig|Gen|Maj|Col)\.? )?[A-Z][a-z]+(?: [A-Z][a-z]+)? (?:al|Al|el|El)-[A-Z][\w'-]+(?=:| [a-z])/;
+/** Names a general reader knows, or that the desk turns into roles itself. */
+const KNOWN_NAMES = /\b(?:al-(?:Houthi|Alimi|Zubaidi|Mashat|Maliki|Eryani|Mahrami|Sisi|Assad|Sharaa|Sudani|Thani|Nahyan|Busaidi|Bidh))\b|^Abdul Malik/i;
+
+/** The separate claims of a statement: its lines of some length, bullets and hashtags aside. */
+export function pointsIn(text: string): number {
+  return String(text || "")
+    .split(/\n+|\s(?=[🔴🔵🟢🟡🟠⚪⚫•▪◾◽🔸🔹📌✅🔻🔺⭕])/u)
+    .map((l) => l.replace(/#\S+/g, "").replace(/^[\s🔴🔵🟢🟡🟠⚪⚫•▪◾◽🔸🔹📌✅🔻🔺⭕️*-]+/u, "").trim())
+    .filter((l) => l.length >= 40).length;
 }
 
 type CallResult = { readings: Reading[]; model: string } | { error: string };
@@ -869,12 +1078,13 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string, rec
     source: i.source,
     source_alignment: i.alignment,
     posted_at: i.postedAt,
-    text: i.text.slice(0, i.full ? FULL_TEXT_MAX : 2400),
+    text: i.text.slice(0, i.full ? FULL_TEXT_MAX : i.text.includes("[Said in the video]") ? 5000 : 2400),
     ...(spellingHints(i.text) ? { spelling: spellingHints(i.text) } : {}),
+    ...(calendarHints(i.text) ? { dates: calendarHints(i.text) } : {}),
     ...(i.fix ? { fix_previous: i.fix } : {}),
   }));
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 60_000);
+  const timer = setTimeout(() => ctrl.abort(), READER_TIMEOUT_MS);
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: "POST",
@@ -910,6 +1120,17 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string, rec
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * How long one reader call may take. A healthy call answers in 10-30s; one
+ * that hangs is not waited on for a minute, and never three times in a row.
+ */
+const READER_TIMEOUT_MS = 35_000;
+
+/** One line per call, so a slow or failing model shows in the server log. */
+function logCall(model: string, n: number, started: number, error?: string) {
+  console.log(`[reader] ${model} ${n} items ${Math.round((Date.now() - started) / 1000)}s${error ? ` | ${error}` : ""}`);
+}
+
+/**
  * Read a batch, walking the model chain. Busy (503): back off and retry. Out
  * of quota (429): note the model in `exhausted` so the caller skips it for a
  * while, and move to the next. Returns what was read; anything missing simply
@@ -921,45 +1142,69 @@ export async function readBatch(
   skip: ReadonlySet<string> = new Set(),
   recent: RecentReport[] = [],
   models: readonly string[] = READER_MODELS,
-): Promise<{ readings: Map<string, Reading>; model?: string; error?: string; exhausted: string[]; minute: string[] }> {
+): Promise<{ readings: Map<string, Reading>; model?: string; error?: string; exhausted: string[]; minute: string[]; slow: string[] }> {
   let lastError = "";
   // Out for the day, and out for this minute only.
   const exhausted: string[] = [];
   const minute: string[] = [];
+  // Hung past the timeout: the caller rests it for a while, across scans.
+  const slow: string[] = [];
   for (const model of models) {
-    if (!apiKey || skip.has(model)) continue;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (!apiKey || skip.has(model) || exhausted.includes(model) || minute.includes(model)) continue;
+    // Busy (503): one short retry. A timeout is not retried: the model that
+    // hung once this minute will hang again, and the next one is waiting.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const started = Date.now();
       const r = await callModel(items, apiKey, model, recent);
       if ("readings" in r) {
+        logCall(model, items.length, started);
         const byId = new Map<string, Reading>();
         for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
-        return { readings: byId, model: r.model, exhausted, minute };
+        return { readings: byId, model: r.model, exhausted, minute, slow };
       }
+      logCall(model, items.length, started, r.error);
       lastError = `${model}: ${r.error}`;
       // Quota exhausted: the next model has its own quota — move on now.
       if (r.error.startsWith("HTTP 429")) {
         (r.error.endsWith("daily") ? exhausted : minute).push(model);
         break;
       }
-      if (r.error !== "HTTP 503" && !/abort/i.test(r.error)) break;
-      await sleep(1500 * 2 ** attempt);
+      // Timed out: skipped for the rest of this scan.
+      if (/abort/i.test(r.error)) {
+        minute.push(model);
+        slow.push(model);
+        break;
+      }
+      if (r.error !== "HTTP 503") break;
+      // Still busy after the retry: the other batches of this scan skip it.
+      if (attempt === 1) minute.push(model);
+      else await sleep(1500);
     }
   }
-  // Every Gemini model out (or no Gemini key): the free Groq fallback reads
-  // what it can. Its free tier counts tokens per minute, so it takes a few
-  // items per call; what it does not reach stays queued for the next cycle.
-  const groq = groqKey();
-  if (groq && !skip.has(GROQ_MODEL)) {
-    const r = await callGroq(items.slice(0, GROQ_BATCH), groq, recent.slice(0, 15));
-    if ("readings" in r) {
-      const byId = new Map<string, Reading>();
-      for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
-      return { readings: byId, model: r.model, exhausted, minute };
+  // Every Gemini model out (or no Gemini key): the other free services read
+  // what they can, each model with its own allowance. What they do not reach
+  // stays queued for the next cycle.
+  for (const p of FALLBACKS) {
+    const pk = p.key();
+    if (!pk) continue;
+    for (const gm of p.models) {
+      if (skip.has(gm) || exhausted.includes(gm) || minute.includes(gm)) continue;
+      const started = Date.now();
+      const n = Math.min(items.length, p.batch);
+      const r = await callOpenAI(items.slice(0, p.batch), pk, recent.slice(0, 15), p, gm);
+      if ("readings" in r) {
+        logCall(gm, n, started);
+        const byId = new Map<string, Reading>();
+        for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
+        return { readings: byId, model: r.model, exhausted, minute, slow };
+      }
+      logCall(gm, n, started, r.error);
+      lastError = `${gm}: ${r.error}`;
+      if (r.daily) exhausted.push(gm);
+      else if (/429|503|abort/i.test(r.error)) minute.push(gm);
     }
-    lastError = `${GROQ_MODEL}: ${r.error}`;
-    if (r.daily) exhausted.push(GROQ_MODEL);
   }
-  return { readings: new Map(), error: lastError || "every model skipped (quota)", exhausted, minute };
+  return { readings: new Map(), error: lastError || "every model skipped (quota)", exhausted, minute, slow };
 }
 
 /**
@@ -968,33 +1213,70 @@ export async function readBatch(
  * less, never something wrong.
  */
 export const GROQ_MODEL = "openai/gpt-oss-120b";
-const GROQ_BATCH = 4;
+/** Groq's free models, strongest first; each has its own allowance. */
+export const GROQ_MODELS = [GROQ_MODEL, "qwen/qwen3.8-27b", "openai/gpt-oss-20b"];
 
-async function callGroq(
+const env = (name: string) => (typeof process !== "undefined" && process.env[name]?.trim()) || "";
+
+/**
+ * The free services tried after Gemini, all speaking the OpenAI chat format.
+ * A service without its key in the settings is skipped, so adding one is only
+ * a matter of its key (and, if its model names change, `<NAME>_MODELS`).
+ * Groq's free tier counts tokens per minute, so it takes a few items a call;
+ * Cerebras and Mistral allow far more.
+ */
+type Fallback = { name: string; url: string; key: () => string; models: string[]; batch: number };
+const FALLBACKS: Fallback[] = [
+  {
+    name: "cerebras",
+    url: "https://api.cerebras.ai/v1/chat/completions",
+    key: () => env("CEREBRAS_API_KEY"),
+    models: (env("CEREBRAS_MODELS") || "gpt-oss-120b").split(",").map((s) => s.trim()).filter(Boolean),
+    batch: 15,
+  },
+  {
+    name: "mistral",
+    url: "https://api.mistral.ai/v1/chat/completions",
+    key: () => env("MISTRAL_API_KEY"),
+    models: (env("MISTRAL_MODELS") || "mistral-small-latest").split(",").map((s) => s.trim()).filter(Boolean),
+    batch: 15,
+  },
+  { name: "groq", url: "https://api.groq.com/openai/v1/chat/completions", key: () => groqKey(), models: GROQ_MODELS, batch: 4 },
+];
+
+/** Is any fallback service set up? */
+export function fallbackKey(): boolean {
+  return FALLBACKS.some((p) => !!p.key());
+}
+
+async function callOpenAI(
   items: ReaderItem[],
   apiKey: string,
   recent: RecentReport[],
+  provider: Fallback,
+  model: string,
 ): Promise<{ readings: Reading[]; model: string } | { error: string; daily: boolean }> {
   const payload = items.map((i) => ({
     id: i.id,
     source: i.source,
     source_alignment: i.alignment,
     posted_at: i.postedAt,
-    text: i.text.slice(0, i.full ? 6000 : 1600),
+    text: i.text.slice(0, i.full ? 6000 : i.text.includes("[Said in the video]") ? 4000 : 1600),
     ...(spellingHints(i.text) ? { spelling: spellingHints(i.text) } : {}),
+    ...(calendarHints(i.text) ? { dates: calendarHints(i.text) } : {}),
     ...(i.fix ? { fix_previous: i.fix } : {}),
   }));
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 45_000);
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const res = await fetch(provider.url, {
       method: "POST",
       signal: ctrl.signal,
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model,
         temperature: 0,
-        reasoning_effort: "low",
+        ...(/gpt-oss/.test(model) ? { reasoning_effort: "low" } : {}),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -1011,7 +1293,7 @@ async function callGroq(
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const parsed = JSON.parse(json?.choices?.[0]?.message?.content ?? "") as { items?: Reading[] };
     if (!Array.isArray(parsed.items)) return { error: "no items in response", daily: false };
-    return { readings: parsed.items, model: GROQ_MODEL };
+    return { readings: parsed.items, model };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "call failed", daily: false };
   } finally {

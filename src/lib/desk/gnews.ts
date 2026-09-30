@@ -117,6 +117,8 @@ function decode(s: string): string {
 
 /** A Google News RSS search. `lang` picks the edition the query is run in. */
 export async function searchGoogleNews(query: string, lang: Edition = "en"): Promise<GnewsItem[]> {
+  // Google asked for a rest: its search waits it out with the link resolver.
+  if (resolverResting()) return [];
   searches += 1;
   const ed = EDITIONS[lang] ?? EDITIONS.en;
   try {

@@ -250,8 +250,8 @@ const YEMEN: Place[] = [
   },
   {
     name: "Kahbub",
-    lat: 12.85,
-    lng: 43.55,
+    lat: 12.94,
+    lng: 43.645,
     kind: "hill",
     country: "Yemen",
     region: "in Lahj governorate, overlooking the Bab al-Mandab strait",
@@ -286,8 +286,8 @@ const YEMEN: Place[] = [
   },
   {
     name: "Hays",
-    lat: 13.98,
-    lng: 43.33,
+    lat: 13.932,
+    lng: 43.483,
     kind: "town",
     country: "Yemen",
     region: "on the Red Sea coast south of Hodeidah",
@@ -356,8 +356,8 @@ const YEMEN: Place[] = [
   },
   {
     name: "Al-Wazi'iyah",
-    lat: 13.35,
-    lng: 43.55,
+    lat: 13.174,
+    lng: 43.73,
     kind: "district",
     country: "Yemen",
     region: "in western Taiz governorate, towards the Red Sea coast",
@@ -392,12 +392,12 @@ const YEMEN: Place[] = [
   },
   {
     name: "Al-Aghbara",
-    lat: 13.4,
-    lng: 43.48,
+    lat: 13.05,
+    lng: 43.78,
     kind: "site",
     country: "Yemen",
-    region: "at the edge of Al-Wazi'iyah district in western Taiz",
-    where: "western Taiz",
+    region: "on the front line between Lahj and Taiz, north of Al-Mudaribah",
+    where: "the Lahj–Taiz line",
     aliases: [
       "الأغبرة",
       "الاغبره",
@@ -411,8 +411,8 @@ const YEMEN: Place[] = [
   },
   {
     name: "Al-Mudaribah",
-    lat: 13.15,
-    lng: 43.9,
+    lat: 12.86,
+    lng: 43.98,
     kind: "area",
     country: "Yemen",
     region: "in Lahj governorate",
@@ -493,8 +493,8 @@ const YEMEN: Place[] = [
   },
   {
     name: "Al-Alqamah",
-    lat: 13.36,
-    lng: 43.5,
+    lat: 13.118,
+    lng: 43.922,
     kind: "area",
     country: "Yemen",
     region: "in western Taiz",
@@ -502,26 +502,46 @@ const YEMEN: Place[] = [
   },
   {
     name: "Sharirah",
-    lat: 13.38,
-    lng: 43.52,
+    lat: 13.153,
+    lng: 43.864,
     kind: "site",
     country: "Yemen",
     region: "in western Taiz",
     aliases: ["شريرة", "شريره", "Sharirah", "שַ?רִ?ירַ?ה", "שרירה"],
   },
   {
+    // The front the reports name is Al-Subayhah's, at the northern entrances of
+    // Al-Mudaribah district in north-west Lahj (Yemen Monitor, 16 Sep; South24,
+    // Aden al-Ghad). The old spot, 13.28 43.45 on the Mocha coast, matched no
+    // Al-Mansurah on OpenStreetMap. Estimated inside the district, between
+    // Al-Bukrah and Al-Aghbara, 30 Sep.
     name: "Al-Mansurah",
-    lat: 13.28,
-    lng: 43.45,
+    lat: 13.1,
+    lng: 43.83,
     kind: "area",
     country: "Yemen",
-    region: "in western Taiz",
+    region: "a front at the northern entrances of Al-Mudaribah district in north-west Lahj",
+    where: "north-west Lahj",
     aliases: ["المنصورة", "al-?Mansurah", "אלמנצורה"],
   },
   {
+    // A mountain of the Al-Aghbara front, between Al-Wazi'iyah (Taiz) and
+    // Al-Mudaribah (Lahj): "Al-Bazala mountain in Al-Wazi'iyah and Al-Mudaribah"
+    // (Al Arabiya), "Al-Bazilah mountain in the Al-Aghbara front" (Almashhad).
+    // Not on OpenStreetMap; placed on that front, 30 Sep.
+    name: "Jabal al-Bazilah",
+    lat: 13.07,
+    lng: 43.79,
+    kind: "hill",
+    country: "Yemen",
+    region: "a mountain on the Al-Aghbara front between Al-Wazi'iyah and Al-Mudaribah",
+    where: "on the Taiz-Lahj border",
+    aliases: ["جبل البازل[ةه]", "البازل[ةه]", "(?:Jabal |Mount )?al-?Baz(?:i|a)?la[h]?(?: mountain)?"],
+  },
+  {
     name: "Al-Bukrah",
-    lat: 13.3,
-    lng: 43.47,
+    lat: 13.17,
+    lng: 43.798,
     kind: "area",
     country: "Yemen",
     region: "in western Taiz",
@@ -589,6 +609,19 @@ const YEMEN: Place[] = [
     country: "Yemen",
     region: "on the Red Sea coast",
     aliases: ["الحيمة", "al-?Haymah", "אלחיימה"],
+  },
+  {
+    // Al-Haymah of Al-Mudaribah district, Lahj (OpenStreetMap: its hospital at
+    // 13.050 43.903): "Al-Haymah market in Al-Mudaribah" was pinned on the
+    // Hodeidah coast's Al-Haymah. A text naming Lahj takes this one (pinPlace).
+    name: "Al-Haymah (Lahj)",
+    lat: 13.05,
+    lng: 43.903,
+    kind: "area",
+    country: "Yemen",
+    region: "a village in Al-Mudaribah district of Lahj",
+    where: "north-west Lahj",
+    aliases: ["الحيمة", "al-?Haymah"],
   },
   {
     name: "Al-Wadiah",
@@ -668,8 +701,8 @@ const YEMEN: Place[] = [
   },
   {
     name: "Al-Ruwayk",
-    lat: 15.55,
-    lng: 45.85,
+    lat: 15.862,
+    lng: 46.174,
     kind: "area",
     country: "Yemen",
     region: "in Marib governorate",
@@ -723,8 +756,8 @@ const YEMEN: Place[] = [
   },
   {
     name: "Khalid camp",
-    lat: 13.35,
-    lng: 43.28,
+    lat: 13.364,
+    lng: 43.585,
     kind: "camp",
     country: "Yemen",
     region: "a government military base on the Red Sea coast",
@@ -732,8 +765,8 @@ const YEMEN: Place[] = [
   },
   {
     name: "Al-Barh",
-    lat: 13.48,
-    lng: 43.72,
+    lat: 13.731,
+    lng: 43.714,
     kind: "area",
     country: "Yemen",
     region: "in Taiz governorate",

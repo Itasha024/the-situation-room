@@ -97,7 +97,7 @@ const AGENCY_RE =
 
 /** A belligerent's own media, or a named official of one side. */
 const PARTISAN_RE =
-  /Saba|Al-?Masirah|Ansarollah|Yahya Saree|Abdulsalam|al-?Houthi|Al-?Mihwar|Sabereen|Ali Bk|Naya|Shin Persian|Shajab|Al-?Aqsa|Hazam|Murtada|Al-?Mayadeen|Al-?Akhbar|Baghdad Today|YPA|Al-?Thawrah|SPA|Saudi MoD|Saudi Civil Defense|Okaz|Al-?Watan|Arab News|Asharq|Al Arabiya|Al Hadath|Bin Saeed|Saudi Gazette|Giants Brigades|Nation Shield/i;
+  /Saba|Al-?Masirah|Ansarollah|Yemen Press Agency|Sawt al-Asima|Mareb Press|Al-Masdar Online|Aden al-Ghad|Yahya Saree|Abdulsalam|al-?Houthi|Al-?Mihwar|Sabereen|Ali Bk|Naya|Shin Persian|Shajab|Al-?Aqsa|Hazam|Murtada|Al-?Mayadeen|Al-?Akhbar|Baghdad Today|YPA|Al-?Thawrah|SPA|Saudi MoD|Saudi Civil Defense|Okaz|Al-?Watan|Arab News|Asharq|Al Arabiya|Al Hadath|Bin Saeed|Saudi Gazette|Giants Brigades|Nation Shield|Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV|Yemen Shabab|Al-Yemen Now/i;
 
 export function tierOf(source: string, extraSources = 0): Tier {
   const primary = String(source || "")
@@ -114,12 +114,14 @@ export function tierOf(source: string, extraSources = 0): Tier {
 export function claimantOf(source: string, text: string): string {
   const s = `${source} ${text}`;
   if (/Yahya Saree|يحيى السريع|يحيى سريع|العميد سريع/i.test(s)) return "the Houthi military spokesman";
+  if (/Saba \(government\)/i.test(s)) return "Yemeni government media";
   if (/Saba|Al-?Masirah|Ansarollah|almasirah|السبتمبر|أنصار الله/i.test(s)) return "Houthi media";
   if (/Abdulsalam|عبدالسلام/i.test(s)) return "the Houthi negotiating team";
   if (/al-?Houthi|الحوثي\b/i.test(s)) return "a Houthi official";
   if (/SPA|Saudi MoD|Saudi Civil Defense|Saudi Gazette|واس/i.test(s)) return "Saudi state media";
   if (/Okaz|Al-?Watan|Arab News|Asharq|Al Arabiya|Al Hadath|Saudi/i.test(s)) return "Saudi-aligned media";
   if (/Giants Brigades|Nation Shield|العمالقة|درع الوطن/i.test(s)) return "Yemeni government forces";
+  if (/Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV/i.test(s)) return "Iranian state media";
   if (/Al-?Akhbar|Al-?Mayadeen|Baghdad Today/i.test(s)) return "Houthi-aligned media";
   return "one side";
 }

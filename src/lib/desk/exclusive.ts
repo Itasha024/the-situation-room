@@ -85,6 +85,9 @@ export function isExclusive(text: string, source: string): boolean {
     if (new RegExp(String.raw`\b(?:told|tells)\s+(?:the\s+)?(?:al-?\s?)?${name}`, "i").test(t)) return true;
     if (new RegExp(String.raw`(?:al-?\s?)?${name}\b[^.\n]{0,30}\b(?:has|have)\s+learned`, "i").test(t)) return true;
     if (new RegExp(String.raw`علمت\s*[«"]?\s*(?:ال)?${name}|مصادر[^.\n]{0,20}لـ?\s*[«"]?\s*(?:ال)?${name}|قالت?\s+مصادر[^.\n]{0,30}لـ?\s*[«"]?${name}`).test(t)) return true;
+    // "أفادت مصادر استخباراتية في صنعاء، «الأخبار»، بأن": the verb takes the
+    // outlet with no "لـ". The quote marks keep الأخبار "the news" out.
+    if (new RegExp(String.raw`(?:أفاد|أفادت|أبلغ|أبلغت|أخبر|أخبرت)\s+(?:مصادر|مصدر|مسؤول|مسؤولون|قيادي|ضابط)[^.\n]{0,60}[«"“]\s*${name}\s*[»"”]`).test(t)) return true;
   }
   return false;
 }

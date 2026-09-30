@@ -36,3 +36,14 @@ test("a ship is pinned at sea or in port, never inland", () => {
   assert.equal(seaPlace([p("Najran"), p("the Red Sea")].filter(Boolean))?.name, "the Red Sea");
   assert.equal(seaPlace([p("the Red Sea"), p("Hodeidah")].filter(Boolean))?.name, "Hodeidah");
 });
+
+test("a ship some way off a port is pinned at sea, not on the town", async () => {
+  const { offsetFromText } = await import("./offshore.ts");
+  const west = offsetFromText("Tanker Amzan hit about 63 nautical miles west of Yanbu", "Yanbu", 24.0231, 38.1899, true);
+  assert.ok(west && west[1] < 37.1 && Math.abs(west[0] - 24.0231) < 0.01);
+  const off = offsetFromText("Saree claims missile attack on tanker NCC Wafa off Yanbu", "Yanbu", 24.0231, 38.1899, true);
+  assert.ok(off && off[1] < 38);
+  // A land event a few km away stays on its place; without a direction it is not moved.
+  assert.equal(offsetFromText("Houthis advance 5 km north of Hays", "Hays", 13.93, 43.48, false), null);
+  assert.equal(offsetFromText("drone shot down 30 km from Al-Wadiah", "Al-Wadiah", 17.05, 47.12, false), null);
+});

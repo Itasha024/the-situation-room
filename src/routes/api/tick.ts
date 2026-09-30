@@ -17,6 +17,12 @@ import { getStore } from "@/lib/desk/store";
  *   set   → callers must send `Authorization: Bearer <secret>`.
  *   unset → localhost only, so local development needs no setup while a
  *           deployed desk can never be left publicly tickable by accident.
+ *   The live desk must set it: behind the Cloudflare Tunnel every request
+ *   reaches the server over 127.0.0.1 and "local" is judged from the Host
+ *   header, which proves nothing there.
+ *
+ * The live scheduler is a Windows scheduled task on the host
+ * (scripts/host/tick.ps1) that calls this every 5 minutes on 127.0.0.1.
  */
 export const Route = createFileRoute("/api/tick")({
   server: {
@@ -58,6 +64,8 @@ function authorize(request: Request): string | null {
  * Vercel's hook for work that outlives the response. The free schedulers cut
  * a request off after ~30 seconds and a cycle takes longer, so on Vercel the
  * tick answers 202 at once and the cycle finishes in the background.
+ * The plain Node server offers the same hook; the host's scheduler asks with
+ * `?wait=1` so its log records how each cycle went.
  */
 function backgroundRunner(request: Request): ((p: Promise<unknown>) => void) | null {
   const fromRequest = (request as Request & { waitUntil?: (p: Promise<unknown>) => void }).waitUntil;
@@ -69,18 +77,44 @@ function backgroundRunner(request: Request): ((p: Promise<unknown>) => void) | n
 }
 
 const LOCK_KEY = "tick-lock";
-/** Just under Vercel's 300-second function limit: a crashed cycle frees the lock by then. */
+/** A crashed cycle frees the lock by then (just under Vercel's old 300-second limit). */
 const LOCK_TTL_MS = 290_000;
+
+/**
+ * The cycle running in this process, if any. On a long-lived server nothing
+ * cuts a slow cycle off at 300 seconds the way Vercel did, so the stored
+ * lock's TTL can lapse mid-cycle; this is what stops a second one starting
+ * beside it.
+ */
+let running: Promise<Record<string, unknown>> | null = null;
 
 /** A scheduler with no concurrency control must never stack two cycles. */
 async function runLocked(): Promise<Record<string, unknown>> {
-  const store = await getStore();
-  const held = await store.getJson<{ at: number }>(LOCK_KEY);
-  if (held && Date.now() - held.at < LOCK_TTL_MS) {
-    return { ok: true, skipped: "a cycle is already running" };
+  if (running) return { ok: true, skipped: "a cycle is already running" };
+  running = runStoreLocked();
+  try {
+    return await running;
+  } finally {
+    running = null;
   }
-  await store.putJson(LOCK_KEY, { at: Date.now() });
+}
+
+async function runStoreLocked(): Promise<Record<string, unknown>> {
   const startedAt = Date.now();
+  let store: Awaited<ReturnType<typeof getStore>>;
+  // The lock is read and taken inside the guard: with the internet down the
+  // database cannot even be found, and that is a failed cycle to report, not
+  // an unhandled error.
+  try {
+    store = await getStore();
+    const held = await store.getJson<{ at: number }>(LOCK_KEY);
+    if (held && Date.now() - held.at < LOCK_TTL_MS) {
+      return { ok: true, skipped: "a cycle is already running" };
+    }
+    await store.putJson(LOCK_KEY, { at: Date.now() });
+  } catch (err) {
+    return { ok: false, error: `database unreachable: ${err instanceof Error ? err.message : String(err)}`, tookMs: Date.now() - startedAt };
+  }
   try {
     const result = await runScanCycle();
     return { ...result, tookMs: Date.now() - startedAt };

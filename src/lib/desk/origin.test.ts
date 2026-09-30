@@ -190,3 +190,18 @@ test("a relay of Sheba Intelligence is traced to the desk's own Sheba, however i
   assert.equal(findCitation("Shaba Intelligence reports the sudden two-to-three-day ban on fishing near Bab al-Mandab", "Khabar")?.site, "shebaintelligence.uk");
   assert.equal(findCitation("Sheba Intelligence: Houthis order fishermen out of the Red Sea", "Khabar")?.name, "Sheba Intelligence");
 });
+
+test("a data firm's figures are traced to the firm, its X account first (Kpler, 29 Sep)", async () => {
+  const { searchPlan } = await import("./origin.ts");
+  const c = findCitation("Kpler estimates Middle East September oil exports at 12.8 million barrels per day", "Shin Persian", "https://t.me/shinpersian/1");
+  assert.equal(c?.name, "Kpler");
+  assert.equal(c?.x, "Kpler");
+  assert.ok(c?.data);
+  assert.equal(findCitation("كبلر: صادرات النفط من الشرق الأوسط ترتفع إلى 12.8 مليون برميل", "Shin Persian")?.name, "Kpler");
+  // Not published by the firm itself: the earliest major outlet carrying its figures.
+  const plan = searchPlan(c!, ["Middle", "East", "September", "exports"]);
+  const early = plan.find((t) => t.earliest);
+  assert.ok(early);
+  assert.equal(early!.credit({ title: "", link: "", at: 0, outlet: "Reuters", site: "https://www.reuters.com" }), "Reuters");
+  assert.equal(early!.credit({ title: "", link: "", at: 0, outlet: "CryptoRank", site: "https://cryptorank.io" }), null);
+});

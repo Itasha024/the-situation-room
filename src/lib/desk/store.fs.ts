@@ -61,7 +61,7 @@ type DeskSnapshot = {
 
 function jerusalemIso(d = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Jerusalem",
+    timeZone: "Asia/Aden",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

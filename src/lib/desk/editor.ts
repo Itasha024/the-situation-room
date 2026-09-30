@@ -15,7 +15,10 @@ import { anglicise } from "./anglicise.ts";
 import { respell } from "./spelling.ts";
 import { type NeedsPlace, geocodeJobs } from "./geocode.ts";
 import { maritimeType, seaPlace } from "./maritime.ts";
+import { offsetFromText } from "./offshore.ts";
+import { governorateAt } from "./adm1.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
+import { placeNamesIn } from "./prose-places.ts";
 import { type OutletSide, credibility, outletSide } from "./credibility.ts";
 import {
   type EventType,
@@ -36,7 +39,7 @@ import {
   spokespersonLabel,
   stripOwnOutlet,
   contentHash,
-  groqKey,
+  fallbackKey,
   readBatch,
   readerKey,
 } from "./reader.ts";
@@ -69,6 +72,7 @@ const CACHE_KEY = "reader-cache";
 const CACHE_PREFIX = "read";
 const QUEUE_KEY = "reader-queue";
 const QUOTA_KEY = "reader-quota";
+const SLOW_REST_MS = 20 * 60_000;
 /** Model calls per model on the quota's (Pacific) day: the status page's count. */
 export const USAGE_KEY = "reader-usage";
 export type Usage = { day: string; calls: Record<string, number> };
@@ -93,6 +97,11 @@ const RECENT_MS = 24 * 3600 * 1000;
 const RECENT_MAX = 40;
 /** Model calls per cycle, so one busy cycle cannot spend the day's quota. */
 const MAX_CALLS_PER_CYCLE = 5;
+/** While a backlog waits (a replay, an outage caught up), a cycle may make more. */
+const BACKLOG_CALLS_PER_CYCLE = 9;
+const BACKLOG_ITEMS = 150;
+/** Reader calls in flight at once: a cycle waits on the slowest of three, not on the sum. */
+const PARALLEL_CALLS = 3;
 
 /**
  * `loose`: failed a strict check twice and went out anyway (see the repair).
@@ -161,9 +170,21 @@ const SCOPE_REASON = /scope|theatre|theater|unrelated|another war|different war/
  */
 const OSINT_RULE_AT = Date.parse("2026-09-25T03:55:00+03:00");
 const OSINT_REASON = /commentary|analy|opinion/i;
+/**
+ * Rejections made before the wider scope (user, 28 Sep): ship traffic through
+ * this war's waters, oil exports hit or resumed, commanders meeting on the
+ * fighting, a warring party's official clerics calling to fight. Only those
+ * are read again.
+ */
+const WIDE_SCOPE_AT = Date.parse("2026-09-28T19:00:00+03:00");
+const WIDE_SCOPE_REASON = /econom|scope|cleric|not publishable|business|market|price|shipping|unrelated/i;
+/** Wartime prayers ordered by a warring party's religious ministry became news (28 Sep 19:30). */
+const PRAYER_RULE_AT = Date.parse("2026-09-28T19:30:00+03:00");
 function stale(e: CacheEntry, c: Pick<Candidate, "url">): boolean {
   if (e.reading.publish) return false;
   const why = String(e.reading.reject_reason || "");
+  if (e.at < WIDE_SCOPE_AT && WIDE_SCOPE_REASON.test(why)) return true;
+  if (e.at < PRAYER_RULE_AT && /cleric/i.test(why)) return true;
   if (e.at < THIN_RULE_AT && THIN_REASON.test(why)) return true;
   if (e.at < OSINT_RULE_AT && isXPost(c) && OSINT_REASON.test(why)) return true;
   return e.at < SCOPE_RULE_AT && SCOPE_REASON.test(why);
@@ -203,7 +224,7 @@ const TYPE_OF: Record<EventType, DeskType> = {
 
 /** Is the reader switched on? Without a key the desk publishes nothing new. */
 export function readerAvailable(): boolean {
-  return !!readerKey() || !!groqKey();
+  return !!readerKey() || fallbackKey();
 }
 
 /**
@@ -257,7 +278,7 @@ export async function editCandidates(
 
   // Read what is new, newest first, within this cycle's budget.
   const key = readerKey();
-  const anyReader = !!key || !!groqKey();
+  const anyReader = !!key || fallbackKey();
   let modelNote = anyReader ? "" : "reader off: GEMINI_API_KEY not set";
   unread.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   // A post forwarded by several channels is read once; the copies take its reading.
@@ -298,13 +319,11 @@ export async function editCandidates(
       // Without the recent list nothing is marked a follow-up; nothing else changes.
     }
   }
-  for (let i = 0; i < toRead.length; i += READER_BATCH) {
-    const batch = toRead.slice(i, i + READER_BATCH);
-    if (!anyReader || calls >= MAX_CALLS_PER_CYCLE) {
-      stillQueued.push(...batch);
-      continue;
-    }
-    calls += 1;
+  // A backlog (a replay, an outage caught up) gets a few more calls a cycle.
+  const maxCalls = toRead.length > BACKLOG_ITEMS ? BACKLOG_CALLS_PER_CYCLE : MAX_CALLS_PER_CYCLE;
+  const batches: Queued[][] = [];
+  for (let i = 0; i < toRead.length; i += READER_BATCH) batches.push(toRead.slice(i, i + READER_BATCH));
+  const readOne = async (batch: Queued[]) => {
     const items: ReaderItem[] = batch.map((c, n) => ({
       id: String(n),
       source: c.source,
@@ -313,13 +332,16 @@ export async function editCandidates(
       text: c.text,
       full: c.tags.includes("original"),
     }));
-    const { readings, model, error, exhausted, minute } = await readBatch(items, key, skip, recent);
+    const { readings, model, error, exhausted, minute, slow } = await readBatch(items, key, skip, recent);
     count(model);
     for (const m of exhausted) {
       quota[m] = nextPacificMidnight(now);
       skip.add(m);
     }
     for (const m of minute) skip.add(m);
+    // A model that hung (Google's "high demand" nights) rests 20 minutes: each
+    // scan waited 35 seconds on it before moving on.
+    for (const m of slow) quota[m] = Math.max(quota[m] ?? 0, now + SLOW_REST_MS);
     if (error) modelNote = error;
     else if (model) modelNote = `read by ${model}`;
     batch.forEach((c, n) => {
@@ -335,6 +357,18 @@ export async function editCandidates(
       readingOf.set(c.url, r);
       if (v.kind === "reject" && v.reason === "reader-check" && repairable(v.note)) fixes.push({ c, note: v.note });
     });
+  };
+  // Up to three calls at once; newest batches first, as before.
+  for (let i = 0; i < batches.length; i += PARALLEL_CALLS) {
+    const round: Queued[][] = [];
+    for (const batch of batches.slice(i, i + PARALLEL_CALLS)) {
+      if (!anyReader || calls >= maxCalls) stillQueued.push(...batch);
+      else {
+        calls += 1;
+        round.push(batch);
+      }
+    }
+    await Promise.all(round.map(readOne));
   }
   for (const [c, first] of copyOf) {
     const r = readingOf.get(first.url);
@@ -477,6 +511,7 @@ export async function editCandidates(
     const report = v.report;
     jobs.push({
       targets: r.targets || [],
+      named: unknownSpots(r.headline || ""),
       sourceText: c.text,
       apply: (hit) => {
         report.place = hit.name;
@@ -567,7 +602,32 @@ export function reword(s: string): string {
 /** A channel's line of the Houthi leader's speech: his title, then a colon. */
 const HOUTHI_LEADER_LINE = /^\s*(?:السيد القائد|قائد الثورة|السيد عبد ?الملك(?: بدر الدين)? الحوثي)[^:\n]{0,30}:/;
 
+/**
+ * Stories the reader keeps letting through that are not this war (user, 30 Sep):
+ * piracy by Somali or unknown gunmen (the M/T Eureka's Egyptian crew), and the
+ * separate US–Iran war. Out unless the copy or source names a party of this war.
+ */
+const OUR_WAR = /Yemen|اليمن|يمني|Sanaa|صنعاء|Aden|عدن|Houthis?|Ansar ?Allah|حوثي|انصار ?الله|Saree|سريع|Red Sea|البحر الأحمر|Bab al-?Mandab|باب المندب|Saudi|السعودي|coalition|التحالف/i;
+const PARTY = /Houthis?|Ansar ?Allah|حوثي|انصار ?الله|coalition|التحالف|Saudi|السعودي|STC|الانتقالي|government forces|القوات الحكومية/i;
+const PIRACY = /pira(?:cy|tes?)|hijack\w*|kidnap\w*|abduct\w*|قرصن|اختطاف|خطف|مختطف/i;
+const CREW = /sailors?|crew|tanker|vessel|ship|بحار|طاقم|ناقلة|سفينة/i;
+const SOMALI_OR_UNKNOWN = /Somali\w*|الصومال|unidentified|unknown gunmen|مجهول/i;
+const IRAN_WAR = /\bIran\w*\b|إيران|ايران/i;
+const US_SIDE = /\b(?:Trump|US|U\.S\.|United States|Washington|Pentagon|White House|American)\b|ترامب|واشنطن|الأمريكي|الامريكي/i;
+export function notThisWar(copy: string, source: string): string | null {
+  const t = `${copy}
+${source}`;
+  // Off Yemen's coast is still piracy unless a warring party did it.
+  if (PIRACY.test(t) && CREW.test(t) && SOMALI_OR_UNKNOWN.test(t) && !PARTY.test(t)) return "piracy, not this war";
+  if (OUR_WAR.test(t)) return null;
+  if (IRAN_WAR.test(t) && US_SIDE.test(t)) return "the US–Iran war, not this one";
+  return null;
+}
+
 function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
+  const away = raw.publish ? notThisWar(`${raw.headline}
+${raw.body}`, c.text) : null;
+  if (away) return { kind: "reject", reason: "other-theatre", note: sentence(away) };
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
   const r: Reading = { ...raw, headline: fixHeadline(reword(respell(anglicise(raw.headline)))), body: reword(respell(anglicise(raw.body))) };
@@ -659,10 +719,28 @@ function groundedPlaces(names: string[], sourceText: string): Place[] {
  */
 function placesFor(r: Reading, sourceText: string): Place[] {
   const fromTargets = groundedPlaces(r.targets || [], sourceText);
+  // The headline names the spot ("Southern forces capture Al-Bazilah mountain"),
+  // the gazetteer does not know it, and the target it does know is not in the
+  // headline: that target is the story's dateline or region ("Kahbub"), not
+  // where this happened. No pin from it; the headline's spot is looked up.
+  if (unknownSpots(r.headline || "").length && !fromTargets.some((p) => namedIn(r.headline || "", p))) return [];
   if (fromTargets.length) return fromTargets;
   const origins = new Set((r.origins || []).flatMap((o) => placesIn(o)).map((p) => p.name));
   return groundedPlaces([r.headline || ""], sourceText).filter((p) => !origins.has(p.name));
 }
+
+/** Spots the headline names that the gazetteer does not know: "Al-Bazilah mountain", "Jabal Qarfan". */
+export function unknownSpots(headline: string): string[] {
+  const low = headline.toLowerCase();
+  return placeNamesIn(headline).filter((n) => {
+    if (placesIn(n).length) return false;
+    if (/^(?:Jabal|Jebel|Mount|Wadi)\b/i.test(n)) return true;
+    const i = low.indexOf(n.toLowerCase());
+    return i >= 0 && /^\s+(?:mountain|mount|hill|hills|heights|village|area)\b/i.test(headline.slice(i + n.length));
+  });
+}
+
+const namedIn = (headline: string, p: Place) => headline.toLowerCase().includes(p.name.toLowerCase());
 
 export function toReport(r: Reading, c: Candidate): LiveReport {
   // A "maritime_attack" that names no ship is typed by what its copy says.
@@ -707,13 +785,49 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
   else if (r.follows_up && r.follows_up !== c.fp) row.replyTo = r.follows_up;
   row.confidence = confidenceOf(row, []);
   // A ship is pinned at sea or in port, never on an inland town.
-  const place = type === "vessel" ? seaPlace(places) : places.find((p) => p.country !== "sea") || places[0];
+  const place = type === "vessel" ? seaPlace(places) : pinPlace(places);
   if (place) {
     row.place = place.name;
     row.lat = place.lat;
     row.lng = place.lng;
+    // "63 nautical miles west of Yanbu" is at sea, not on the town.
+    const moved = offsetFromText(`${row.summary}. ${c.text}`, place.name, place.lat, place.lng, type === "vessel");
+    if (moved) [row.lat, row.lng] = moved;
   }
   return row;
+}
+
+/**
+ * The spot a card is pinned on: the exact place it names (a village, a hill, a
+ * district) before the governorate around it. When the text names governorates,
+ * a Yemeni spot must lie inside one of them — "Al-Aghbara in Lahj" was pinned in
+ * Taiz — and a spot that does not is no pin at all, never the governorate's
+ * centre passed off as the place.
+ */
+export function pinPlace(places: Place[]): Place | undefined {
+  const land = places.filter((p) => p.country !== "sea");
+  const city = (p: Place) => /city$/.test(p.kind);
+  // "Taiz" names the city and its governorate alike.
+  const homes = new Set(
+    land.filter((p) => p.kind === "governorate" || city(p)).map((g) => governorateAt(g.lat, g.lng)).filter(Boolean),
+  );
+  const fits = (p: Place) => {
+    const at = governorateAt(p.lat, p.lng);
+    return !homes.size || !at || homes.has(at);
+  };
+  const fine = land.filter((p) => p.kind !== "governorate" && p.kind !== "country");
+  if (fine.length) {
+    const first = fine.find(fits);
+    if (!first) return undefined;
+    // "Al-Wazi'iyah in Taiz": the district, not the city named after it.
+    if (city(first)) {
+      const home = governorateAt(first.lat, first.lng);
+      const inside = fine.find((p) => !city(p) && home && governorateAt(p.lat, p.lng) === home);
+      if (inside) return inside;
+    }
+    return first;
+  }
+  return land[0] || places[0];
 }
 
 /** The card's trust figure, given the sides of any outlets that also carried it. */

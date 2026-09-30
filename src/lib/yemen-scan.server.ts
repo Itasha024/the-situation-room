@@ -20,17 +20,18 @@ import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading 
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
-import { alertCities, citiesOverlap, countedOrNamed, numbersClash, sameCount, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
+import { alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
-import { type Listed, fetchListing, parseHtmlListing, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
+import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { type Learned, loadLearned } from "./desk/originals.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
-import { attachMedia, tgMedia, xMedia } from "./desk/media.ts";
+import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
+import { listenToVideos } from "./desk/listen.ts";
 import { triage } from "./desk/triage.ts";
-import { askChain } from "./desk/models.ts";
-import { combineGroups, members, pickLead, planWaves } from "./desk/combine.ts";
+import { askChain, COMBINE_MODELS } from "./desk/models.ts";
+import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves } from "./desk/combine.ts";
 import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
 import { TRIAGE_MODELS } from "./desk/triage.ts";
 
@@ -87,15 +88,31 @@ const TG: ChannelScan[] = [
   { id: "AjaNews", name: "Al Jazeera", lean: "intl", cadence: C5 },
   { id: "alhadath_brk", name: "Al Hadath", lean: "gov", cadence: C5 },
   { id: "alarabiyaBr", name: "Al Arabiya", lean: "gov", cadence: C5 },
-  { id: "SabaNewsyeMedia", name: "Saba", lean: "houthi", cadence: C5 },
+  // Two agencies share the name: this is the Houthi-run one in Sanaa.
+  { id: "SabaNewsyeMedia", name: "Saba (Houthi-run)", lean: "houthi", cadence: C5 },
   { id: "army21ye", name: "Yahya Saree", lean: "houthi", cadence: C5 },
   { id: "abdulsalamsalah", name: "Mohammed Abdulsalam", lean: "houthi", cadence: C5 },
   { id: "almasirah2", name: "Al-Masirah", lean: "houthi", cadence: C5 },
   { id: "alagsa3agel", name: "Al-Aqsa TV", lean: "houthi", cadence: C5 },
   // Their sites refuse automated readers (403); their channels post each
   // story's headline and first line, minutes after publication.
-  { id: "Alakhbar_News", name: "Al-Akhbar", lean: "houthi", cadence: C15 },
+  { id: "Alakhbar_News", name: "Al-Akhbar", lean: "houthi", cadence: C5 },
   { id: "eremnews", name: "Erem News", lean: "gov", cadence: C15 },
+  { id: "ajMubasher", name: "Al Jazeera Mubasher", lean: "intl", cadence: C5 },
+  { id: "asharqnews", name: "Asharq News", lean: "gov", cadence: C5 },
+  { id: "almayadeen", name: "Al Mayadeen", lean: "houthi", cadence: C5 },
+  // Iran's state and IRGC-affiliated media, the Houthis' sponsor: mostly Iran's
+  // own news, in Persian (Press TV in English). Every 15 minutes; the gate and
+  // the reader keep only what is about this war. Tasnim (t.me/Tasnimnews) is
+  // not here: its channel shows no posts to a reader who is not signed in, its
+  // site does not answer from outside Iran, and Google News does not list it.
+  { id: "farsna", name: "Fars News", lean: "houthi", cadence: C15 },
+  { id: "mehrnews", name: "Mehr News", lean: "houthi", cadence: C15 },
+  { id: "iribnews", name: "IRIB News", lean: "houthi", cadence: C15 },
+  { id: "irna_1313", name: "IRNA", lean: "houthi", cadence: C15 },
+  { id: "snntv", name: "SNN", lean: "houthi", cadence: C15 },
+  { id: "Nournews_ir", name: "Nour News", lean: "houthi", cadence: C15 },
+  { id: "presstv", name: "Press TV", lean: "houthi", cadence: C15 },
 ];
 
 /**
@@ -105,9 +122,10 @@ const TG: ChannelScan[] = [
  * down or behind bot checks, and Twitter's syndication endpoint answers 429 —
  * all tried on 24 September. Public posts only, read at a polite interval.
  */
-type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence; only?: RegExp };
+/** `picture`: the account posts its words as a picture (UKMTO's warning cards), read by a vision model before `only` is tried. */
+type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence; only?: RegExp; picture?: boolean };
 const C10: Cadence = { everyMin: 10 };
-const X = (handle: string, name: string, lean: Channel["lean"], cadence: Cadence, only?: RegExp): XAccount => ({ handle, name, lean, cadence, ...(only ? { only } : {}) });
+const X = (handle: string, name: string, lean: Channel["lean"], cadence: Cadence, only?: RegExp, picture?: boolean): XAccount => ({ handle, name, lean, cadence, ...(only ? { only } : {}), ...(picture ? { picture } : {}) });
 /**
  * Sky News Arabia's breaking account posts about 150 times a day, most of it
  * other agencies' news. Only what its own sources told it goes on: "مصادر
@@ -119,8 +137,22 @@ export const SKY_OWN = /لـ?\s*[«"“]?\s*سكاي\s*نيوز\s*عربية|ع�
  * that break news every 10 minutes, the officials and the slower channels
  * every half hour. Only posts newer than the last one read go on.
  */
+/**
+ * A government's or a body's post about this war: Yemen, the Houthis, the
+ * Saudi–Houthi fighting, the Red Sea, Bab al-Mandab, the Gulf of Aden, or Saudi
+ * energy under attack. In English, Arabic, Turkish and Persian.
+ */
+export const WAR_ONLY = /\b(?:Yemen\w*|Houthis?|Ansar ?Allah|Sanaa|Sana'a|Aden|Hodeidah|Marib|Taiz|Red Sea|Bab (?:al|el)[- ]Mandeb|Bab (?:al|el)[- ]Mandab|Gulf of Aden|Aramco|Yanbu|Jazan|Jizan|Najran|East[- ]West pipeline|Yemen'?s|Husi\w*|Kızıldeniz|Babülmendep)\b|اليمن|يمني|الحوثي|أنصار الله|صنعاء|عدن|الحديدة|مأرب|تعز|البحر الأحمر|باب المندب|خليج عدن|أرامكو|ينبع|جازان|نجران|یمن|حوثی|انصارالله|دریای سرخ|باب‌المندب/i;
+/**
+ * The sea and energy accounts' posts about this war: WAR_ONLY, plus Suez
+ * traffic and Saudi exports moving between the Gulf and the Red Sea.
+ */
+export const SEA_WAR = new RegExp(`${WAR_ONLY.source}|\\b(?:Suez|Ras Tanura|Ju'?aymah|Saudi (?:crude|oil|exports?|tankers?))\\b|قناة السويس|رأس تنورة`, "i");
 const X_ACCOUNTS: XAccount[] = [
   X("war_cube", "The Cube", "intl", C5),
+  X("marebpress", "Mareb Press", "gov", C5),
+  X("almasdaronline", "Al-Masdar Online", "gov", C5),
+  X("sabanew_", "Saba (government)", "gov", C5),
   // Every 10 minutes: the military spokesmen, the ministries, the reporters on the fronts.
   X("Yah_Saree", "Yahya Saree", "houthi", C10),
   X("abdusalamsalah", "Mohammed Abdulsalam", "houthi", C10),
@@ -138,6 +170,10 @@ const X_ACCOUNTS: XAccount[] = [
   X("South24_net", "South24", "gov", C10),
   X("yementvyem", "Yemen TV", "gov", C10),
   X("SkyNewsArabia_B", "Sky News Arabia", "intl", C10, SKY_OWN),
+  X("ALyemennow", "Al-Yemen Now", "gov", C10),
+  X("TVyemenshabab", "Yemen Shabab TV", "gov", C10),
+  X("defenseliney", "Defense Line", "intl", C10),
+  X("Himma0099", "Himmah", "gov", C10),
   // Every 30 minutes: the leaders, the ministries' other voices, the parties.
   X("PresidentRashad", "Rashad al-Alimi", "gov", C30),
   X("ERYANIM", "Muammar al-Eryani", "gov", C30),
@@ -157,10 +193,58 @@ const X_ACCOUNTS: XAccount[] = [
   X("GCCSG", "GCC Secretariat", "gov", C30),
   X("FaresALhemyari", "Fares al-Hemyari", "gov", C30),
   X("alrougui", "Malik al-Rougui", "gov", C30),
+  X("fathibnlazrq", "Fathi bin Lazraq", "south", C30),
+  X("20AhmedAlrbizy", "Ahmed al-Rbizy", "south", C30),
+  X("IbrahimAsqin", "Ibrahim Asqin", "intl", C30),
+  X("yaseenaklani", "Yaseen al-Aqlani", "intl", C30),
   X("yemenmofa2025", "Sanaa Foreign Ministry", "houthi", C30),
   X("hezamalasad", "Hezam al-Asad", "houthi", C30),
   X("hussinalezzi5", "Hussein al-Ezzi", "houthi", C30),
   X("Moh_Alhouthi", "Mohammed Ali al-Houthi", "houthi", C30),
+  // Governments, agencies and international bodies (the user's list, 30 Sep):
+  // mostly their own diplomacy, so only posts about this war go on. Each is
+  // also where a relay of that body's words is looked up first (officials.ts).
+  X("spagov", "SPA", "gov", C10, WAR_ONLY),
+  X("wamnews", "WAM", "gov", C10, WAR_ONLY),
+  X("StateDept", "State Department", "intl", C10, WAR_ONLY),
+  X("UNinYE", "UN in Yemen", "intl", C10, WAR_ONLY),
+  X("MfaEgypt", "Egypt Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("MFAEgOfficial", "Egypt Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("IRIMFA_EN", "Iran Foreign Ministry", "houthi", C15, WAR_ONLY),
+  X("FMofOman", "Oman Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("mofauae", "UAE Foreign Ministry", "gov", C15, WAR_ONLY),
+  X("Iraqimofa", "Iraq Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("MOFAKuwait", "Kuwait Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("bahdiplomatic", "Bahrain Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("MofaQatar_AR", "Qatar Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("ForeignMinistry", "Jordan Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("MOFASomalia", "Somalia Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("ForeignOfficePk", "Pakistan Foreign Office", "intl", C15, WAR_ONLY),
+  X("MFATurkiye", "Turkish Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("TC_Disisleri", "Turkish Foreign Ministry", "intl", C15, WAR_ONLY),
+  X("SecRubio", "Marco Rubio", "intl", C15, WAR_ONLY),
+  X("ENERGY", "US Energy Department", "intl", C15, WAR_ONLY),
+  X("USTreasury", "US Treasury", "intl", C15, WAR_ONLY),
+  X("USEmbassyYemen", "US Embassy Yemen", "intl", C15, WAR_ONLY),
+  X("SuezAuthorityEG", "Suez Canal Authority", "intl", C15, WAR_ONLY),
+  X("EU_Commission", "European Commission", "intl", C15, WAR_ONLY),
+  X("vonderleyen", "Ursula von der Leyen", "intl", C15, WAR_ONLY),
+  X("EUinYemen", "EU in Yemen", "intl", C15, WAR_ONLY),
+  X("UNOCHA", "UN OCHA", "intl", C15, WAR_ONLY),
+  X("antonioguterres", "António Guterres", "intl", C15, WAR_ONLY),
+  X("UN", "United Nations", "intl", C15, WAR_ONLY),
+  // The sea and energy (Stage 5, 30 Sep). UKMTO posts each warning as a
+  // picture; its words are read off it, and only this war's waters go on
+  // (a Hormuz or Gulf warning stays out unless it names the Houthis).
+  X("UK_MTO", "UKMTO", "intl", C5, SEA_WAR, true),
+  X("MoEnergy_Saudi", "Saudi Energy Ministry", "gov", C10, SEA_WAR),
+  X("Kpler", "Kpler", "intl", C15, SEA_WAR),
+  X("TankerTrackers", "TankerTrackers", "intl", C15, SEA_WAR),
+  X("MarineTraffic", "MarineTraffic", "intl", C15, SEA_WAR),
+  X("vortexa", "Vortexa", "intl", C15, SEA_WAR),
+  X("JavierBlas", "Javier Blas", "intl", C15, SEA_WAR),
+  X("osinthexagone", "OSINT Hexagone", "intl", C15, SEA_WAR),
+  X("EGYOSINT", "Egypt OSINT", "intl", C15, SEA_WAR),
 ];
 
 /** Newer than the last post read: X ids grow with time. A pinned post is old and falls out here. */
@@ -180,6 +264,7 @@ type FxStatus = {
   reposted_by?: unknown;
   author?: { screen_name?: string };
   media?: Parameters<typeof xMedia>[0];
+  article?: { title?: string; preview_text?: string };
 };
 
 /** One account's own posts as raw items: reposts and replies to others left out. */
@@ -193,10 +278,13 @@ export function parseFxStatuses(json: unknown, acct: XAccount): RawHit[] {
     // A reply to someone else is a conversation; a reply to itself is a thread.
     const to = s.replying_to?.screen_name?.toLowerCase();
     if (to && to !== own) continue;
-    const text = decodeEntities(String(s.raw_text?.text ?? s.text ?? "")).trim();
+    // An X article's post is a bare link: its title and opening stand for it.
+    const art = s.article?.title ? `${s.article.title}
+${s.article.preview_text ?? ""}` : "";
+    const text = decodeEntities(art || String(s.raw_text?.text ?? s.text ?? "")).trim();
     const url = s.url || (s.id ? `https://x.com/${acct.handle}/status/${s.id}` : "");
     if (!url || text.length < 12) continue;
-    if (acct.only && !acct.only.test(text)) continue;
+    if (acct.only && !acct.picture && !acct.only.test(text)) continue;
     const media = xMedia(s.media, url);
     const ms = Number(s.created_timestamp) * 1000;
     out.push({
@@ -237,44 +325,50 @@ const YE_EN = "(Yemen OR Houthi OR Houthis OR \"Red Sea\" OR \"Bab el-Mandeb\" O
  * `site` is the domain an outlet hint (a channel citing it) reads early.
  */
 const RSS: RssFeed[] = [
+  { id: "sawt-alasima", lang: "ar", url: "https://sawt-alasima.net/feed", name: "Sawt al-Asima", cadence: C5, whole: true, site: "sawt-alasima.net" },
+  { id: "yemenat", lang: "ar", url: "https://yemenat.net/feed", name: "Yemenat", cadence: C5, whole: true, site: "yemenat.net" },
+  { id: "adngad", lang: "ar", url: "https://adngad.net/feed", name: "Aden al-Ghad", cadence: C5, whole: true, site: "adngad.net" },
+  { id: "ypagency", url: "https://en.ypagency.net/feed", name: "Yemen Press Agency", cadence: C5, whole: true, site: "ypagency.net" },
+  { id: "althawra", url: "https://en.althawranews.net/feed", name: "Al-Thawrah", cadence: C5, whole: true, site: "althawranews.net" },
+  { id: "saudigazette", url: "https://saudigazette.com.sa/rssFeed/74", name: "Saudi Gazette", cadence: C5, whole: true, site: "saudigazette.com.sa" },
+  // Oil and shipping news, read whole: triage keeps what this war does to Saudi and Yemeni energy and the Red Sea.
+  { id: "oilprice", url: "https://oilprice.com/rss/main", name: "OilPrice.com", cadence: C10, whole: true, site: "oilprice.com" },
   { id: "almashhad", lang: "ar", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5, whole: true, site: "almashhad.news" },
   // A browser's user agent is refused (403); a plain client is served.
-  { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss.xml", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C30, whole: true, site: "alaraby.co.uk" },
-  { id: "aawsat", lang: "ar", url: gnews("site:aawsat.com when:1h", "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C30, whole: true, site: "aawsat.com" },
+  { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss.xml", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C5, whole: true, site: "alaraby.co.uk" },
+  { id: "aawsat", lang: "ar", url: gnews("site:aawsat.com when:1h", "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C10, whole: true, site: "aawsat.com" },
   // Once a day, when the morning paper is out, a day wide: the site is behind
   // Cloudflare, and its channel (every 15 minutes) carries each story's
   // headline as it is published.
   { id: "akhbar", lang: "ar", url: gnews("site:al-akhbar.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: AKHBAR_DAILY, whole: true, site: "al-akhbar.com" },
-  { id: "erem", lang: "ar", url: gnews("site:eremnews.com when:2h", "ar", "AE", "AE:ar"), name: "Erem News", cadence: C30, whole: true, site: "eremnews.com" },
-  { id: "alhurra", lang: "ar", url: "https://www.alhurra.com/rss", name: "Alhurra", cadence: C30, whole: true, site: "alhurra.com" },
-  { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C30, whole: true, site: "arabnews.com" },
-  { id: "reuters", url: "https://www.reuters.com/arc/outboundfeeds/news-sitemap/?outputType=xml", name: "Reuters", cadence: C30, whole: true, site: "reuters.com" },
-  { id: "wsj", url: gnews("site:wsj.com when:1h"), name: "WSJ", cadence: C30, whole: true, site: "wsj.com" },
-  { id: "wapo", url: "https://feeds.washingtonpost.com/rss/world", name: "Washington Post", cadence: C30, whole: true, site: "washingtonpost.com" },
-  { id: "wapo-nat", url: "https://feeds.washingtonpost.com/rss/national", name: "Washington Post", cadence: C30, whole: true },
-  { id: "wapo-pol", url: "https://feeds.washingtonpost.com/rss/politics", name: "Washington Post", cadence: C30, whole: true },
-  { id: "nyt", url: "https://www.nytimes.com/sitemaps/new/news.xml.gz", name: "NYT", cadence: C30, whole: true, site: "nytimes.com" },
-  { id: "nypost", url: "https://nypost.com/feed/", name: "NY Post", cadence: C30, whole: true, site: "nypost.com" },
-  { id: "axios", url: "https://api.axios.com/feed/", name: "Axios", cadence: C30, whole: true, site: "axios.com" },
-  { id: "cnn", url: "https://edition.cnn.com/sitemap/news.xml", name: "CNN", cadence: C30, whole: true, site: "cnn.com" },
-  { id: "abc", url: "https://abcnews.go.com/abcnews/internationalheadlines", name: "ABC", cadence: C30, whole: true, site: "abcnews.go.com" },
-  { id: "cbs", url: "https://www.cbsnews.com/latest/rss/world", name: "CBS", cadence: C30, whole: true, site: "cbsnews.com" },
-  { id: "fox", url: "https://moxie.foxnews.com/google-publisher/world.xml", name: "Fox News", cadence: C30, whole: true, site: "foxnews.com" },
-  { id: "fox-pol", url: "https://moxie.foxnews.com/google-publisher/politics.xml", name: "Fox News", cadence: C30, whole: true },
-  { id: "spa", lang: "ar", url: gnews("site:spa.gov.sa when:1h", "ar", "SA", "SA:ar"), name: "SPA", cadence: C5, whole: true, site: "spa.gov.sa" },
+  { id: "erem", lang: "ar", url: gnews("site:eremnews.com when:2h", "ar", "AE", "AE:ar"), name: "Erem News", cadence: C10, whole: true, site: "eremnews.com" },
+  { id: "alhurra", lang: "ar", url: "https://www.alhurra.com/rss", name: "Alhurra", cadence: C5, whole: true, site: "alhurra.com" },
+  { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C5, whole: true, site: "arabnews.com" },
+  { id: "reuters", url: "https://www.reuters.com/arc/outboundfeeds/news-sitemap/?outputType=xml", name: "Reuters", cadence: C10, whole: true, site: "reuters.com" },
+  { id: "wsj", url: gnews("site:wsj.com when:1h"), name: "WSJ", cadence: C10, whole: true, site: "wsj.com" },
+  { id: "wapo", url: "https://feeds.washingtonpost.com/rss/world", name: "Washington Post", cadence: C10, whole: true, site: "washingtonpost.com" },
+  { id: "wapo-nat", url: "https://feeds.washingtonpost.com/rss/national", name: "Washington Post", cadence: C10, whole: true },
+  { id: "wapo-pol", url: "https://feeds.washingtonpost.com/rss/politics", name: "Washington Post", cadence: C10, whole: true },
+  { id: "nyt", url: "https://www.nytimes.com/sitemaps/new/news.xml.gz", name: "NYT", cadence: C10, whole: true, site: "nytimes.com" },
+  { id: "nypost", url: "https://nypost.com/feed/", name: "NY Post", cadence: C10, whole: true, site: "nypost.com" },
+  { id: "axios", url: "https://api.axios.com/feed/", name: "Axios", cadence: C10, whole: true, site: "axios.com" },
+  { id: "cnn", url: "https://edition.cnn.com/sitemap/news.xml", name: "CNN", cadence: C10, whole: true, site: "cnn.com" },
+  { id: "abc", url: "https://abcnews.go.com/abcnews/internationalheadlines", name: "ABC", cadence: C10, whole: true, site: "abcnews.go.com" },
+  { id: "cbs", url: "https://www.cbsnews.com/latest/rss/world", name: "CBS", cadence: C10, whole: true, site: "cbsnews.com" },
+  { id: "fox", url: "https://moxie.foxnews.com/google-publisher/world.xml", name: "Fox News", cadence: C10, whole: true, site: "foxnews.com" },
+  { id: "fox-pol", url: "https://moxie.foxnews.com/google-publisher/politics.xml", name: "Fox News", cadence: C10, whole: true },
+  { id: "spa", lang: "ar", url: gnews("site:spa.gov.sa when:1h", "ar", "SA", "SA:ar"), name: "SPA", cadence: C10, whole: true, site: "spa.gov.sa" },
   // Sheba Intelligence: exclusives on the Houthis, the Red Sea and the Horn,
   // from its section pages (no feed; its sitemap re-dates old articles).
   ...["news", "reports", "investigations", "politics", "daily-news-brief"].map((sec): RssFeed => ({
     id: `sheba-${sec}`,
     url: `https://shebaintelligence.uk/${sec}`,
     name: "Sheba Intelligence",
-    cadence: C1H,
+    cadence: C10,
     whole: true,
     site: "shebaintelligence.uk",
     html: /^https:\/\/shebaintelligence\.uk\/[a-z0-9-]{25,}$/,
   })),
-  // Suhail: the government-aligned channel's site, every item it publishes.
-  { id: "suhail", lang: "ar", url: "https://suhail.net/news_rss.php?lang=arabic&top=0", name: "Suhail", cadence: C30, whole: true, site: "suhail.net" },
   // Al-Akhbar's English edition carries the paper's pieces in full (the
   // Arabic site, and its PDF edition, refuse every reader). Once a day at
   // 07:00, the whole edition: the front page and every section that carries
@@ -295,13 +389,13 @@ const RSS: RssFeed[] = [
     id: "net-ar",
     url: gnews(`(site:aawsat.com OR site:alaraby.co.uk OR site:al-akhbar.com OR site:eremnews.com OR site:alhurra.com) ${YE_AR} when:1d`, "ar", "SA", "SA:ar"),
     name: "Arabic press",
-    cadence: C1H,
+    cadence: C30,
   },
   {
     id: "us-talk",
     url: gnews(`(site:reuters.com OR site:wsj.com OR site:washingtonpost.com OR site:nytimes.com OR site:nypost.com OR site:axios.com OR site:cnn.com OR site:abcnews.go.com OR site:cbsnews.com OR site:foxnews.com OR site:arabnews.com) ${YE_EN} when:1d`),
     name: "US media",
-    cadence: C1H,
+    cadence: C30,
   },
 ];
 
@@ -324,7 +418,7 @@ function learnedFeeds(learned: Learned[]): RssFeed[] {
   for (const [ed, sites] of byEd) {
     for (let i = 0; i < sites.length; i += 8) {
       const q = `(${sites.slice(i, i + 8).map((x) => `site:${x}`).join(" OR ")}) when:2h`;
-      out.push({ id: `learned-${ed}-${i / 8}`, url: gnews(q, ...eds[ed]), name: LEARNED_NAME, cadence: C1H, whole: true, ...(ed === "ar" ? { lang: "ar" as const } : {}) });
+      out.push({ id: `learned-${ed}-${i / 8}`, url: gnews(q, ...eds[ed]), name: LEARNED_NAME, cadence: C30, whole: true, ...(ed === "ar" ? { lang: "ar" as const } : {}) });
     }
   }
   return out;
@@ -373,7 +467,7 @@ function cadenceLabel(c: Cadence): string {
 
 function jerusalemClock(d = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Jerusalem",
+    timeZone: "Asia/Aden",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -395,16 +489,14 @@ function cadenceDue(state: ScanState, id: string, cadence: Cadence, now: number)
   const age = now - last;
   if ("everyMin" in cadence) return age >= cadence.everyMin * 60_000 - 20_000;
   if ("everyHours" in cadence) return age >= cadence.everyHours * 3_600_000 - 90_000;
-  const { hour } = jerusalemClock(new Date(now));
-  if ("atHours" in cadence) {
-    if (!cadence.atHours.includes(hour)) return false;
-    return age >= 45 * 60_000;
-  }
-  if ("atHour" in cadence) {
-    if (hour !== cadence.atHour) return false;
-    return age >= 45 * 60_000;
-  }
-  return true;
+  // A fixed time of day: due once its latest time has passed and it has not
+  // been read since. A read missed while the desk was down (07:00 on 27 and 28
+  // September) is made up at the first scan after, not skipped for the day.
+  const { hour, minute } = jerusalemClock(new Date(now));
+  const hours = "atHours" in cadence ? cadence.atHours : "atHour" in cadence ? [cadence.atHour] : null;
+  if (!hours) return true;
+  const sinceLatest = Math.min(...hours.map((h) => ((hour - h + 24) % 24) * 3_600_000 + minute * 60_000));
+  return last < now - sinceLatest - 60_000;
 }
 
 /* ------------------------------------------------------------------ *
@@ -413,7 +505,7 @@ function cadenceDue(state: ScanState, id: string, cadence: Cadence, now: number)
 
 function jerusalemIso(d = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Jerusalem",
+    timeZone: "Asia/Aden",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -679,19 +771,78 @@ export function sourceList(): { key: string; name: string }[] {
 /** Extra `?before=` pages read from one channel to reach the last post seen. */
 const TG_BACKFILL_PAGES = 4;
 /**
- * One-time replay: posts from the 21 September speech (from 15:00) folded or
- * dropped before the speech and grouping fixes, and the missed Haifan strikes;
- * earlier: posts from 21 September that were rejected before the
- * Arabic-place-name and scope fixes had already scrolled past the pages a
- * tick reads. Each listed channel pages back to the start of that day once;
- * already-published posts dedupe on insert. Inert after `until`.
+ * X pages back the same way: FxTwitter gives 20 posts a page, and a busy
+ * account (or any account after the laptop lost its internet for an hour)
+ * posts more than that between two reads.
  */
-const REPLAY = {
-  since: Date.parse("2026-09-21T15:00:00+03:00"),
-  until: Date.parse("2026-09-23T00:00:00+03:00"),
-  channels: new Set(["almasirah2", "alagsa3agel", "Alomhoar"]),
-  pages: 10,
+const X_BACKFILL_PAGES = 5;
+/** A Google News query is widened when its last read is this much later than its clock allows. */
+const GAP_MS = 15 * 60_000;
+const cadenceMs = (c: Cadence) => ("everyMin" in c ? c.everyMin * 60_000 : "everyHours" in c ? c.everyHours * 3600_000 : 24 * 3600_000);
+/** After a gap (the laptop offline or asleep), an hour's Google News query reaches back over it. */
+export function widenForGap(url: string, cadence: Cadence, lastRead: number, now: number): string {
+  if (!lastRead || !/news\.google\.com/.test(url) || !/when%3A1h/.test(url)) return url;
+  const gap = now - lastRead;
+  if (gap <= cadenceMs(cadence) + GAP_MS) return url;
+  return url.replace(/when%3A1h/, `when%3A${Math.min(24, Math.ceil(gap / 3600_000) + 1)}h`);
+}
+/**
+ * One-time replay: the desk was down from the last Vercel tick (26 Sept,
+ * 21:15 UTC) until it came back on its own server (28 Sept, 16:40), and a busy
+ * channel posted more in those 40 hours than the backfill pages reach. Each
+ * channel (`channels: null` = every Telegram channel) pages back to `since`
+ * once; already-published posts dedupe on insert, and what the reader cannot
+ * reach in one tick waits in its queue. Inert after `until`. `key` names the
+ * run: a new replay takes a new key, or channels that ran an earlier one skip.
+ * Earlier runs: the 21 September speech and Haifan strikes (replay5); the
+ * 26-28 September move to the laptop (replay7). replay8: the laptop lost its
+ * internet on 29 September 13:45-14:45 and slept on a flat battery 15:04-16:05.
+ */
+const REPLAY: { since: number; until: number; channels: Set<string> | null; pages: number; key: string } = {
+  since: Date.parse("2026-09-29T13:40:00+03:00"),
+  until: Date.parse("2026-09-30T03:00:00+03:00"),
+  channels: null,
+  pages: 15,
+  key: "replay8",
 };
+const inReplay = (id: string) => !REPLAY.channels || REPLAY.channels.has(id);
+/** X accounts page back this far on a replay (FxTwitter's cursor, ~20 posts a page). */
+const REPLAY_X_PAGES = 10;
+/** Replay pages fetched at once across all channels, so Telegram is never hammered. */
+const REPLAY_PARALLEL = 6;
+let replaySlots = REPLAY_PARALLEL;
+const replayWaiters: (() => void)[] = [];
+async function replayFetch(url: string): Promise<string | null> {
+  if (replaySlots > 0) replaySlots -= 1;
+  else await new Promise<void>((r) => replayWaiters.push(r));
+  try {
+    return await fetchText(url);
+  } finally {
+    const next = replayWaiters.shift();
+    if (next) next();
+    else replaySlots += 1;
+  }
+}
+const replaying = (state: ScanState, id: string, now: number) => now < REPLAY.until && !state.lastScanAt[`${REPLAY.key}:${id}`];
+
+/** One page of an X account through FxTwitter; a 404 or timeout is tried once more (it answers unevenly). */
+async function fxPage(handle: string, cursor?: string): Promise<{ results?: unknown[]; cursor?: { bottom?: string | null } } | null> {
+  const url = `https://api.fxtwitter.com/2/profile/${handle}/statuses${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const res = await fetch(url, {
+        headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)", accept: "application/json" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) return (await res.json()) as { results?: unknown[]; cursor?: { bottom?: string | null } };
+      await res.body?.cancel().catch(() => {});
+    } catch {
+      // Tried again below.
+    }
+    if (attempt === 0) await new Promise((r) => setTimeout(r, 2000));
+  }
+  return null;
+}
 /** Nothing older than this is news for a live desk, however a feed lists it. */
 const MAX_ITEM_AGE_MS = 72 * 3600 * 1000;
 /** Article pages fetched per cycle to fill thin teasers. Cached by URL. */
@@ -721,7 +872,8 @@ const LEAD_PREFIX = "lead";
 /** Well past the oldest item a listing is read for (MAX_ITEM_AGE_MS): never looked up again. */
 const LEAD_KEEP_MS = 7 * 24 * 3600 * 1000;
 /** url → the lead paragraph pulled from it ("" when the page had none). */
-type LeadCache = Record<string, { lead: string; at: number; real?: string; tries?: number }>;
+/** `pub`: when the article page says it was published (ms), for listings with no dates. */
+type LeadCache = Record<string, { lead: string; at: number; real?: string; tries?: number; pub?: number }>;
 /** Google News links resolved to their article per cycle (two requests each). */
 const GNEWS_RESOLVES = 30;
 /** A Google News item waits this many cycles for its article's address. */
@@ -747,6 +899,8 @@ type RawHit = {
   title?: string;
   /** From a whole site's listing, picked by triage. */
   picked?: boolean;
+  /** Listed with no date (a section page): its time is when first seen, until its page gives one. */
+  undated?: boolean;
   /** The post's picture or video (X, Telegram): a candidate for the card, looked at before it is shown. */
   media?: Media;
 };
@@ -762,8 +916,19 @@ const SEEN_WINDOW_MS = 30 * 3600_000;
 const FIRST_SIGHT_MS = 4 * 3600_000;
 /** Judged articles remembered per site: more than any listing holds in the window. */
 const SEEN_MAX = 1500;
-/** feed id → article key → 1 picked by triage, 0 not ours. */
-type Seen = Record<string, Record<string, 0 | 1>>;
+/**
+ * feed id → article key → 0 not ours, -1 picked and done, 1 picked by triage (before first-seen
+ * times were kept), or the time (ms) it was first seen and picked. An undated
+ * article (a section page) carries that time on every later read: Sheba's
+ * articles went out again each scan stamped with the scan's time.
+ */
+type Seen = Record<string, Record<string, number>>;
+/** A seen entry that was picked. */
+const wasPicked = (v: number | undefined) => v !== undefined && v >= 1;
+/** A picked article whose card had its chance: never sent again. */
+const DONE = -1;
+/** How long a picked article is sent again, in case its card failed. */
+const PICKED_RETRY_MS = 3600_000;
 
 async function loadSeen(): Promise<Seen> {
   try {
@@ -786,15 +951,15 @@ async function saveSeen(seen: Seen): Promise<void> {
 }
 
 /** One listed article as a raw item. Google News titles carry " - Outlet". */
-function listedHit(it: Listed, feed: RssFeed): RawHit | null {
+function listedHit(it: Listed, feed: RssFeed, firstSeen?: number): RawHit | null {
   let title = decodeEntities(it.title);
   let source = feed.name;
   if (isGnews(it.url)) ({ title, source } = outletFromGoogleTitle(title, feed.name));
   const url = it.url.trim();
   if (title.length < 12 || !/^https?:\/\//i.test(url) || isIsraeliSource(source, url)) return null;
   const desc = decodeEntities(it.desc);
-  const at = Number.isFinite(it.at) ? jerusalemIso(new Date(it.at)) : jerusalemIso();
-  return { source, url, text: `${title} ${desc}`.trim().slice(0, 1200), at, lean: "", fromTg: false, title };
+  const at = Number.isFinite(it.at) ? jerusalemIso(new Date(it.at)) : jerusalemIso(firstSeen ? new Date(firstSeen) : undefined);
+  return { source, url, text: `${title} ${desc}`.trim().slice(0, 1200), at, lean: "", fromTg: false, title, ...(Number.isFinite(it.at) ? {} : { undated: true }) };
 }
 
 function outletFromGoogleTitle(title: string, fallback: string): { title: string; source: string } {
@@ -1026,9 +1191,9 @@ function storyKey(r: LiveReport): string {
     const who = namedSpeaker(s);
     if (who) return `${ymd}|stmt|${who}|${Math.floor(hourOfIso(r.at) / 3)}`;
     const stem = s.replace(/[^a-zA-Z]/g, "").slice(0, 28).toLowerCase();
-    return `${ymd}|stmt|${stem || r.url.split("?")[0]}`;
+    return `${ymd}|stmt|${stem || linkKey(r.url)}`;
   }
-  return r.url.split("?")[0];
+  return linkKey(r.url);
 }
 
 /** How far back a new statement is matched against cards already published. */
@@ -1050,6 +1215,8 @@ const SAME_HEADLINE_COUNTED_MS = 8 * 3600_000;
 const CLAIM_WINDOW_MS = 30 * 60_000;
 /** The reader's "same event as": no further back than this. */
 const DUPLICATE_WINDOW_MS = 6 * 3600_000;
+/** One clip reposted by another account. */
+const FOOTAGE_WINDOW_MS = 12 * 3600_000;
 
 /**
  * A statement or diplomacy report that tells a story already on the desk, as
@@ -1058,9 +1225,30 @@ const DUPLICATE_WINDOW_MS = 6 * 3600_000;
  * one Reuters story became seven cards over half an hour. `published` are the
  * fps already on the desk; only reports not among them can fold. `stored` are
  * recent desk rows the payload no longer carries; the ones given a new "Also"
- * are returned, so the store can save it.
+ * are returned, so the store can save it. A folded account that adds facts
+ * goes into `enrich` beside its card, to be written into it.
  */
-export function foldIntoPublished(reports: LiveReport[], published: Set<string>, stored: LiveReport[] = []): LiveReport[] {
+/**
+ * A link as one article: tracking goes, its id stays. Cut at "?", every
+ * Suhail article ("news_details.php?lang=arabic&sid=33548") was one link, and
+ * all but the first of a scan were lost.
+ */
+export function linkKey(u: string): string {
+  const [base, q] = String(u || "").split("?");
+  if (!q) return base;
+  const kept = q.split("&").filter((p) => p && !/^(?:utm_[a-z]+|fbclid|gclid|ref|cmp|outputType|at_[a-z]+)=/i.test(p));
+  return kept.length ? `${base}?${kept.sort().join("&")}` : base;
+}
+
+/** Where each report a fold took went (url → its card), for the scan's own accounting. */
+export const foldTrail = new Map<string, string>();
+
+export function foldIntoPublished(
+  reports: LiveReport[],
+  published: Set<string>,
+  stored: LiveReport[] = [],
+  enrich?: [LiveReport, LiveReport][],
+): LiveReport[] {
   const talk = (r: LiveReport) => r.type === "statement" || r.type === "diplomacy";
   const byTime = [...reports].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   // Cards already on the desk that this cycle's payload no longer carries.
@@ -1071,7 +1259,18 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
   for (const r of byTime) {
     if (published.has(r.fp)) continue;
     const t = Date.parse(r.at);
-    const open = (o: LiveReport) => o !== r && !gone.has(o) && o.fp !== r.fp;
+    const same = (o: LiveReport) => o !== r && !gone.has(o) && o.fp !== r.fp;
+    // A channel's own posts are never one another's copies unless word for
+    // word: its sirens over Riyadh at 09:00 and again at 13:00 are two alerts,
+    // and a similar post from it most likely brings something new.
+    // A statement or a meeting with a counterpart the card never names is
+    // another event (a call with Qatar's emir is not the UAE's visit).
+    const open = (o: LiveReport) => same(o) && (o.source !== r.source || sameHeadline(o, r)) && !(talk(r) && otherPartners(o, r));
+    // A card already on the desk is a home whichever was posted first: a copy
+    // seen late (the channel read after an outage) carries an earlier time than
+    // the card it copies, and went out as a second card.
+    const known = (o: LiveReport) => published.has(o.fp) || !inPayload.has(o.fp);
+    const before = (o: LiveReport, ms: number) => (Date.parse(o.at) <= t || known(o)) && Math.abs(t - Date.parse(o.at)) <= ms;
     // The reader said it: this is another outlet on an event already published.
     // Held to the code's own test: within hours, and no casualty figures that
     // disagree (UNICEF's 15 children killed was folded into a card on 693
@@ -1079,22 +1278,21 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     let home = r.duplicateOf
       ? homes.find(
           (o) =>
-            open(o) && o.fp === r.duplicateOf && Math.abs(t - Date.parse(o.at)) <= DUPLICATE_WINDOW_MS &&
+            open(o) && o.fp === r.duplicateOf && Math.abs(t - Date.parse(o.at)) <= DUPLICATE_WINDOW_MS && !differentSpeakers(o, r) &&
             !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
         )
       : undefined;
     // The same post forwarded by another channel, seen in a later scan.
-    if (!home && r.copyKey) home = homes.find((o) => open(o) && o.copyKey === r.copyKey && Date.parse(o.at) <= t);
+    if (!home && r.copyKey) home = homes.find((o) => same(o) && o.copyKey === r.copyKey && (Date.parse(o.at) <= t || known(o)));
     // One event, two outlets, and the reader wrote both up in the same words.
     // The story test below runs only on statements, so a strike or a clash
     // relayed a minute later went out as a second card with an identical
     // headline. The same channel posting its own line twice folds here too.
     if (!home) {
       home = homes.find(
-        (o) => open(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= SAME_HEADLINE_WINDOW_MS && sameHeadline(o, r),
+        (o) => open(o) && before(o, SAME_HEADLINE_WINDOW_MS) && sameHeadline(o, r),
       );
     }
-    const before = (o: LiveReport, ms: number) => Date.parse(o.at) <= t && t - Date.parse(o.at) <= ms;
     // The same headline from another outlet hours later, when it carries a
     // figure or a named object: "22 vessels", "a Wing Loong II". A plain
     // "strike on Haifan" twice in a day is two strikes and never folds here.
@@ -1121,6 +1319,10 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
           sameGround(o, r) && !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
       );
     }
+    // Another account reposting the same clip hours later: one event.
+    if (!home && FIELD_TYPES.has(r.type)) {
+      home = homes.find((o) => open(o) && o.source !== r.source && before(o, FOOTAGE_WINDOW_MS) && sameFootage(o, r));
+    }
     // Another outlet's "follow-up" that only retells the card it follows.
     if (!home && r.replyTo) {
       const p = homes.find((o) => open(o) && o.fp === r.replyTo);
@@ -1128,8 +1330,12 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     }
     if (!home && talk(r)) {
       home = homes.find(
-        (o) => open(o) && o.source !== r.source && talk(o) && Date.parse(o.at) <= t && t - Date.parse(o.at) <= STORY_WINDOW_MS && sameStory(o, r),
+        (o) => open(o) && o.source !== r.source && talk(o) && before(o, STORY_WINDOW_MS) && sameStory(o, r),
       );
+    }
+    // Another outlet's line of a speaker's words the card already carries.
+    if (!home && talk(r)) {
+      home = homes.find((o) => open(o) && o.source !== r.source && talk(o) && before(o, STORY_WINDOW_MS) && retellsSpeaker(o, r));
     }
     // One claim repeated with its figure — Saree's 52 strikes, from Saree, Naya
     // and Saba — whatever type each reader gave it.
@@ -1142,6 +1348,9 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     }
     if (!home) continue;
     gone.add(r);
+    // By id too: a relay traced to its original carries the original's link.
+    foldTrail.set(r.url, `${home.source}: ${home.summary.slice(0, 90)}`);
+    foldTrail.set(r.fp, `${home.source}: ${home.summary.slice(0, 90)}`);
     // The movement's own outlet carrying a statement a sympathetic paper
     // reported first: the statement is the movement's, and the paper was
     // relaying it. The card keeps its place in the feed and its identity, and
@@ -1167,6 +1376,9 @@ export function foldIntoPublished(reports: LiveReport[], published: Set<string>,
     // A card written from the original source needs no "Also": the others
     // only relay it.
     if (isOriginal(home) || r.citing === home.source) continue;
+    // The later account says something the card does not (a figure, a place):
+    // the card is written again from both, so nothing new is lost to "Also".
+    if (enrich && addsFacts(home, r)) enrich.push([home, r]);
     const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url, summary: r.summary }];
     const seen = new Set([home.source]);
     home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);
@@ -1326,7 +1538,7 @@ function scoreReport(x: LiveReport): number {
 }
 const OWN_CHANNELS = new Set(["Yahya Saree", "Mohammed Abdulsalam"]);
 /** Official bodies' own outlets: the original of their statements. */
-const OFFICIAL_OUTLETS = new Set(["SPA", "Saba"]);
+const OFFICIAL_OUTLETS = new Set(["SPA", "Saba", "Saba (Houthi-run)", "Saba (government)"]);
 
 /**
  * Which account of an event leads its card: the speaker's own channel, then
@@ -1408,7 +1620,19 @@ async function saveLeadCache(cache: LeadCache, changed: Set<string>): Promise<vo
   }
 }
 
+/**
+ * Where a cycle's time goes, one line per stage in the server log
+ * ("[lap] sources 41s"). A cycle that runs long is otherwise one number.
+ */
+let lapAt = 0;
+function lap(stage: string): void {
+  const t = Date.now();
+  if (stage !== "start") console.log(`[lap] ${stage} ${Math.round((t - lapAt) / 1000)}s`);
+  lapAt = t;
+}
+
 async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<ScanPayload> {
+  lap("start");
   const now = Date.now();
   const cycleSeenAt = jerusalemIso(new Date(now));
   const dueTg = TG.filter((ch) => cadenceDue(state, `tg:${ch.id}`, ch.cadence, now));
@@ -1438,20 +1662,65 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         let rows: RawHit[] = [];
         let ok = false;
         try {
-          const res = await fetch(`https://api.fxtwitter.com/2/profile/${acct.handle}/statuses`, {
-            headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)", accept: "application/json" },
-            signal: AbortSignal.timeout(10_000),
-          });
-          if (res.ok) {
-            const all = parseFxStatuses(await res.json(), acct);
+          const page = await fxPage(acct.handle);
+          if (page) {
+            const all = parseFxStatuses(page, acct);
             // Only what is new since the last read; on first sight, the last few hours.
             const seenId = state.lastXPost?.[acct.handle];
             const idOf = (u: string) => /\/status\/(\d+)/.exec(u)?.[1] ?? "";
             rows = all.filter((r) => newerX(idOf(r.url), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS));
+            // A replay pages back to its start once, for what the downtime missed.
+            const replayKey = `x:${acct.handle}`;
+            if (seenId && replaying(state, replayKey, now)) {
+              let cursor = page.cursor?.bottom ?? undefined;
+              let oldestAt = Math.min(...all.map((r) => Date.parse(r.at)).filter(Number.isFinite));
+              for (let n = 0; cursor && n < REPLAY_X_PAGES && oldestAt >= REPLAY.since; n += 1) {
+                const older = await fxPage(acct.handle, cursor);
+                const more = older ? parseFxStatuses(older, acct) : [];
+                if (!more.length) break;
+                rows.push(...more.filter((r) => Date.parse(r.at) >= REPLAY.since && !rows.some((x) => x.url === r.url)));
+                oldestAt = Math.min(...more.map((r) => Date.parse(r.at)).filter(Number.isFinite));
+                cursor = older?.cursor?.bottom ?? undefined;
+              }
+              rows.push(...all.filter((r) => Date.parse(r.at) >= REPLAY.since && !rows.some((x) => x.url === r.url)));
+              state.lastScanAt[`${REPLAY.key}:${replayKey}`] = now;
+            } else if (seenId && all.length >= 5 && rows.length >= all.length - 1) {
+              // Every post on the page is new (a pinned old one aside): more
+              // fell below it since the last read. Page back to the last seen.
+              let cursor = page.cursor?.bottom ?? undefined;
+              let paged = 0;
+              for (; cursor && paged < X_BACKFILL_PAGES; paged += 1) {
+                const older = await fxPage(acct.handle, cursor);
+                const more = older ? parseFxStatuses(older, acct) : [];
+                const fresh = more.filter((r) => newerX(idOf(r.url), seenId) && !rows.some((x) => x.url === r.url));
+                rows.push(...fresh);
+                if (!more.length || fresh.length < more.length - 1) break;
+                cursor = older?.cursor?.bottom ?? undefined;
+              }
+              console.log(`[x] ${acct.handle}: paged back ${paged + 1} page(s) to the last post read`);
+            }
+            // A warning posted as a picture: its words are read off it. One
+            // left unread holds the account back, to be read again next tick.
+            let unread = false;
+            if (acct.picture) {
+              const read: RawHit[] = [];
+              for (const r of rows) {
+                const pic = r.media?.kind === "photo" ? r.media.thumb : undefined;
+                const words = pic ? await readNotice(pic) : null;
+                if (pic && !words) {
+                  unread = true;
+                  break;
+                }
+                const text = words ?? r.text;
+                if (!acct.only || acct.only.test(text)) read.push({ ...r, text });
+              }
+              if (unread) console.log(`[x] ${acct.handle}: a warning's picture went unread; again next tick`);
+              rows = unread ? [] : read;
+            }
             const newest = all.map((r) => idOf(r.url)).reduce((m, id) => (newerX(id, m || undefined) ? id : m), seenId ?? "");
-            if (newest) (state.lastXPost ??= {})[acct.handle] = newest;
+            if (newest && !unread) (state.lastXPost ??= {})[acct.handle] = newest;
             ok = true;
-          } else await res.body?.cancel().catch(() => {});
+          }
         } catch {
           // Unread this tick; the status says so.
         }
@@ -1470,8 +1739,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         const seen = state.lastTgPost?.[ch.id] ?? 0;
         // Nothing posted since the last read: the page is not parsed at all
         // (most ticks, for most channels; Vercel bills the processor time).
-        const replaying = REPLAY.channels.has(ch.id) && now < REPLAY.until && !state.lastScanAt[`replay5:${ch.id}`];
-        const quiet = ok && seen > 0 && !replaying && newestTgPost(html as string, ch.id) <= seen;
+        const inRun = inReplay(ch.id) && replaying(state, ch.id, now);
+        const quiet = ok && seen > 0 && !inRun && newestTgPost(html as string, ch.id) <= seen;
         const rows = ok && !quiet ? parseTelegram(html as string, ch) : [];
         // A busy channel can post more between two scans than its first page
         // holds. Page back until we reach the last post already read, so a
@@ -1486,18 +1755,24 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         }
         // Bumped to run once more after the geocoder landed, to pin what the
         // first pass published without a place.
-        const replayKey = `replay5:${ch.id}`;
-        if (ok && REPLAY.channels.has(ch.id) && now < REPLAY.until && !state.lastScanAt[replayKey]) {
+        const replayKey = `${REPLAY.key}:${ch.id}`;
+        if (ok && inRun) {
+          // A page that fails to load leaves the replay unfinished, to go on next tick.
+          let done = true;
           for (let page = 0; page < REPLAY.pages; page += 1) {
             const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));
             const oldestAt = Math.min(...rows.map((r) => Date.parse(r.at)).filter(Number.isFinite));
             if (!Number.isFinite(oldest) || oldestAt < REPLAY.since) break;
-            const older = await fetchText(`https://t.me/s/${ch.id}?before=${oldest}`);
-            const more = older ? parseTelegram(older, ch).filter((r) => tgPostNo(r.url) < oldest) : [];
+            const older = await replayFetch(`https://t.me/s/${ch.id}?before=${oldest}`);
+            if (!older) {
+              done = false;
+              break;
+            }
+            const more = parseTelegram(older, ch).filter((r) => tgPostNo(r.url) < oldest);
             if (!more.length) break;
             rows.push(...more);
           }
-          state.lastScanAt[replayKey] = now;
+          if (done) state.lastScanAt[replayKey] = now;
         }
         const newest = Math.max(seen, ok ? newestTgPost(html as string, ch.id) : 0, ...rows.map((r) => tgPostNo(r.url)));
         if (newest > 0) (state.lastTgPost ??= {})[ch.id] = newest;
@@ -1518,7 +1793,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         // What we had already read from this feed, before this read moves it on.
         const lastRead = state.lastScanAt[`web:${feed.id}`] ?? 0;
         if (feed.whole) {
-          let body = await fetchListing(feed.url, feed.ua);
+          // A replay reads each listing once as far back as its start; a
+          // Google News query is widened to two days for that read.
+          const replayKey = `web:${feed.id}`;
+          const inRun = replaying(state, replayKey, now);
+          const url = inRun && /news\.google\.com/.test(feed.url) ? feed.url.replace(/when%3A\w+/, "when%3A2d") : widenForGap(feed.url, feed.cadence, lastRead, now);
+          let body = await fetchListing(url, feed.ua);
           let listed = body ? (feed.html ? parseHtmlListing(body, feed.url, feed.html) : parseListing(body)) : [];
           // A site whose own listing fails today (Arab News answers some
           // readers 403) is listed through Google News for this read instead.
@@ -1532,7 +1812,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           // A listing reaches back days (a sitemap, Axios); what is older than
           // this was judged before, or is not news any more. On first sight
           // only the last few hours are read, as a channel is.
-          const window = firstSight ? FIRST_SIGHT_MS : SEEN_WINDOW_MS;
+          const window = firstSight ? FIRST_SIGHT_MS : inRun ? Math.max(SEEN_WINDOW_MS, now - REPLAY.since) : SEEN_WINDOW_MS;
+          if (ok && inRun) state.lastScanAt[`${REPLAY.key}:${replayKey}`] = now;
           const rows: RawHit[] = [];
           let fresh = 0;
           for (const it of listed) {
@@ -1548,11 +1829,20 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
               if (firstSight && now - it.at <= SEEN_WINDOW_MS) mine[`u${urlKey(it.url)}`] = 0;
               continue;
             }
-            const hit = listedHit(it, feed);
-            if (!hit) continue;
             const key = `u${urlKey(it.url)}`;
             const verdict = mine[key];
-            if (verdict === 1) rows.push({ ...hit, picked: true });
+            // A picked article goes round again only for its first hour, in case
+            // its card failed; after that it is done. Sheba lists its articles
+            // for days, and an old one sent each scan joined new Taiz cards as
+            // "Also" (the four Iranian experts, 28 Sep, under 29 Sep strikes).
+            if (verdict !== undefined && (verdict === 1 || (verdict > 1 && now - verdict > PICKED_RETRY_MS))) {
+              mine[key] = DONE;
+              continue;
+            }
+            // Undated and picked before: it is as new as when first seen, not now.
+            const hit = listedHit(it, feed, verdict !== undefined && verdict > 1 ? verdict : undefined);
+            if (!hit) continue;
+            if (wasPicked(verdict)) rows.push({ ...hit, picked: true });
             else if (verdict === undefined) {
               fresh += 1;
               unjudged.push({ feed, hit, key });
@@ -1568,7 +1858,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length, rolled, listed: listed.length, fresh });
           return;
         }
-        const body = await fetchText(feed.url, 8000);
+        const body = await fetchText(widenForGap(feed.url, feed.cadence, lastRead, now), 8000);
         let rows: RawHit[] = [];
         const ok = !!(body && /<item[\s>]/i.test(body));
         if (ok && body) rows = parseRss(body, feed.name);
@@ -1588,6 +1878,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   }
   await Promise.allSettled(jobs);
   state.scannedOnce = true;
+  lap("sources");
 
   // A model reads the new headlines and picks what could be this war's; the
   // rest are remembered as judged and never fetched. Headlines no model got to
@@ -1601,7 +1892,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       const id = String(i);
       // An exclusive on this war is always read, whatever the triage made of it.
       const forced = !picked.has(id) && isExclusive(u.hit.text, u.feed.name) && THIS_WAR.test(u.hit.text);
-      if (judged.has(id) || forced) seen[u.feed.id][u.key] = picked.has(id) || forced ? 1 : 0;
+      if (judged.has(id) || forced) seen[u.feed.id][u.key] = picked.has(id) || forced ? now : 0;
       if (!picked.has(id) && !forced) return;
       hits.push({ ...u.hit, picked: true });
       pickedBy[u.feed.id] = (pickedBy[u.feed.id] ?? 0) + 1;
@@ -1613,6 +1904,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     (state.sites ??= {})[s.id] = { at: now, ok: s.ok, listed: s.listed, fresh: s.fresh ?? 0, picked: s.picked ?? 0, rolled: !!s.rolled };
   }
   await saveSeen(seen);
+  lap("triage");
 
   // A feed that lists last week's articles is not reporting last week's news.
   const fresh = hits.filter((h) => {
@@ -1631,6 +1923,13 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   const addLead = (h: RawHit, lead: string) => {
     if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, ITEM_CHARS);
   };
+  // An undated listing's article takes the date its own page gives.
+  const datePage = (h: RawHit, pub: number | undefined) => {
+    if (h.undated && pub && Number.isFinite(pub) && pub <= now + 10 * 60_000) {
+      h.at = jerusalemIso(new Date(pub));
+      h.undated = false;
+    }
+  };
   const toFetch: RawHit[] = [];
   for (const h of hits) {
     // A Google News item is resolved to its article even with a long teaser:
@@ -1641,6 +1940,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     // own page, not the article: it is fetched again.
     if (cached && !(isGnews(h.url) && !cached.real)) {
       addLead(h, cached.lead);
+      datePage(h, cached.pub);
       // The card links the publisher's article, not Google's redirect.
       if (cached.real) h.url = cleanUrl(cached.real);
     } else toFetch.push(h);
@@ -1697,13 +1997,23 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         const full = await readOriginal({ url: page, source: h.source, title: h.title }, lang, undefined, cover);
         if (full.length > lead.length) lead = full.replace(/\s+/g, " ").trim().slice(0, ARTICLE_CHARS);
       }
-      leadCache[key] = { lead, at: now, ...(real ? { real } : {}) };
+      const pub = html ? pageDate(html) : NaN;
+      leadCache[key] = { lead, at: now, ...(real ? { real } : {}), ...(Number.isFinite(pub) ? { pub } : {}) };
       leadChanged.add(key);
       addLead(h, lead);
+      datePage(h, pub);
       if (real) h.url = cleanUrl(real);
     }),
   );
   await saveLeadCache(leadCache, leadChanged);
+  // A section page lists old articles beside new ones: one its page dates
+  // before the window is old news, not a new card.
+  {
+    const stale = hits.filter((h) => !h.fromTg && !h.undated && leadCache[h.url]?.pub && now - (leadCache[h.url].pub as number) > SEEN_WINDOW_MS && Math.abs(Date.parse(h.at) - (leadCache[h.url].pub as number)) < 1000);
+    for (const h of stale) hits.splice(hits.indexOf(h), 1);
+    if (stale.length) console.log(`[scan] ${stale.length} listed article(s) dated by their page as old, left out`);
+  }
+  lap("article leads");
   // One article under two addresses — Google's redirect and the outlet's own
   // link, from two listings — is one item: the WSJ's China story went out as
   // two cards. An unresolved Google item takes the address its outlet's own
@@ -1741,6 +2051,14 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // A post stamped in the future (a wrong clock or a misread date) is dated to
   // this scan instead of floating above the whole feed.
   for (const h of hits) if (Date.parse(h.at) > now + 10 * 60_000) h.at = cycleSeenAt;
+  // A video's spoken words join its post before the gate and the reader see it (listen.ts).
+  try {
+    const heard = await listenToVideos(await getStore(), hits, now);
+    if (heard) console.log(`[listen] ${heard} post(s) given their video's words`);
+  } catch (err) {
+    console.error("[listen] failed:", err instanceof Error ? err.message : err);
+  }
+  lap("listen");
   const pre = new Map<string, Composed>();
   const candidates: Candidate[] = [];
   for (const h of hits) {
@@ -1766,6 +2084,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   }
   const { verdicts, modelNote } = await editCandidates(await getStore(), candidates, now);
   const floor = process.env.DESK_READER_REQUIRED === "0";
+  lap(`reader (${candidates.length} candidates)`);
 
   const reports: LiveReport[] = [];
   const rawHits: RawScanHit[] = [];
@@ -1807,6 +2126,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   }
   // Items read from the queue — seen in an earlier cycle, read only now.
   for (const [url, v] of verdicts) if (v.kind === "publish" && !pre.has(url)) reports.push(v.report);
+  // Every report the reader approved, to account for at the end: each becomes
+  // a card, joins one, or waits for its original. One that did none of these
+  // is named in the log (the Riyadh schools report vanished with no trace).
+  const approved = reports.map((r) => ({ fp: r.fp, url: r.url, source: r.source, summary: r.summary }));
+  const heldFps = new Set<string>();
+  foldTrail.clear();
 
   // A relayed report is traced to its original, which then replaces it as the
   // source; `late` are stored reports whose original turned up only now.
@@ -1821,13 +2146,16 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     });
     // A relay whose original is still being looked for is not published yet.
     for (let i = reports.length - 1; i >= 0; i -= 1) if (held.has(reports[i].fp)) reports.splice(i, 1);
+    for (const fp of held) heldFps.add(fp);
     if (held.size) console.log(`[origin] ${held.size} relay(s) held while their original is looked for`);
     // Originals read in full go to the reader next cycle; the card is then
     // rewritten from the original's text under the same fp.
     await queueForReading(await getStore(), reread, now);
-  } catch {
+  } catch (err) {
     // Untraced reports keep their relay as source; nothing else changes.
+    console.error("[origin] trace failed:", err instanceof Error ? err.stack || err.message : err);
   }
+  lap("origins");
   hintOutlets(state, hits, now);
   // An outlet does not open a headline, nor close it ("…, WSJ says"): the
   // source line says who reported it. Only after tracing, which reads the name.
@@ -1835,7 +2163,10 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // A card written from its original replaces the relay's version of it.
   const fromOriginal = new Set(reports.filter((r) => r.tags?.includes("original")).map((r) => r.fp));
   for (let i = reports.length - 1; i >= 0; i -= 1) {
-    if (fromOriginal.has(reports[i].fp) && !reports[i].tags?.includes("original")) reports.splice(i, 1);
+    if (fromOriginal.has(reports[i].fp) && !reports[i].tags?.includes("original")) {
+      foldTrail.set(reports[i].url, "its original's card");
+      reports.splice(i, 1);
+    }
   }
 
   /**
@@ -1852,8 +2183,11 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   reports
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || scoreReport(b) - scoreReport(a))
     .forEach((r) => {
-      const u = r.url.split("?")[0];
-      if (seenUrl.has(u) || seenUrl.has(r.fp)) return;
+      const u = linkKey(r.url);
+      if (seenUrl.has(u) || seenUrl.has(r.fp)) {
+        foldTrail.set(r.url, `another report with its ${seenUrl.has(u) ? "link" : "id"} this scan`);
+        return;
+      }
       seenUrl.add(u);
       seenUrl.add(r.fp);
       // Field events group only as copies of one post: outlets relaying the
@@ -1869,14 +2203,16 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         const apart = (g: { lead: LiveReport }) => Math.abs(Date.parse(g.lead.at) - t);
         // Same words; or, for a field event, another outlet on the same spot
         // within minutes with no clashing figures; an alert, within its burst.
-        const fits = (g: { lead: LiveReport }) =>
-          alertRule
+        // A channel's own posts group only when word for word the same.
+        const fits = (g: { lead: LiveReport; others: LiveReport[] }) =>
+          [g.lead, ...g.others].every((o) => o.source !== r.source || sameHeadline(o, r)) &&
+          (alertRule
             ? apart(g) <= ALERT_BURST_MS
             : copyRule
               ? (apart(g) <= COPY_WINDOW_MS && sameWords(g.lead.summary, r.summary)) ||
                 (apart(g) <= GROUND_WINDOW_MS && g.lead.source !== r.source && sameGround(g.lead, r) &&
                   !numbersClash(`${g.lead.summary} ${g.lead.text ?? ""}`, `${r.summary} ${r.text ?? ""}`))
-              : sameWords(g.lead.summary, r.summary);
+              : sameWords(g.lead.summary, r.summary));
         let n = 0;
         while (byStory.has(`${sk}#${n}`) && !fits(byStory.get(`${sk}#${n}`)!)) n += 1;
         sk = `${sk}#${n}`;
@@ -1902,11 +2238,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       [...byStory.values()].map((g) => pickLead(members(g), leadRank)),
       isNew,
     ),
-    async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000 }))?.json ?? null,
+    async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000, models: COMBINE_MODELS }))?.json ?? null,
     leadRank,
     await getStore(),
     isNew,
   );
+  lap("combine");
   for (const { lead, others } of groups) {
     if (!others.length) continue;
     // Distinct outlets only: three posts from one channel is one account.
@@ -1927,7 +2264,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
 
   // Carry forward what earlier cycles found, so a quiet cycle does not empty the desk.
   if (prev && Array.isArray(prev.reports)) {
-    const have = new Set(uniqReports.map((r) => r.url.split("?")[0]));
+    const have = new Set(uniqReports.map((r) => linkKey(r.url)));
     // By fp too: a report traced to its original has a new url, and its stale
     // relay copy must not ride along beside it.
     const haveFp = new Set(uniqReports.map((r) => r.fp));
@@ -1935,7 +2272,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       // Only reports the reader wrote are carried forward; the keyword
       // composer's output is not re-published.
       if (!r.side && !floor) continue;
-      const u = String(r.url || "").split("?")[0];
+      const u = linkKey(String(r.url || ""));
       if (!u || have.has(u) || haveFp.has(r.fp)) continue;
       uniqReports.push(r);
       have.add(u);
@@ -1952,6 +2289,32 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   }
   const published = new Set((prev?.reports ?? []).map((r) => r.fp));
   const stored = await storedCards();
+  // A card already on the desk is not new again: it keeps the time it went
+  // out with, and is no new card (an undated site article seen again).
+  {
+    const first = new Map<string, string>();
+    for (const r of [...stored, ...(prev?.reports ?? [])]) {
+      const f = first.get(r.fp);
+      // Stored rows read back in UTC; the payload writes Jerusalem time.
+      if (Number.isFinite(Date.parse(r.at)) && (!f || Date.parse(r.at) < Date.parse(f))) first.set(r.fp, jerusalemIso(new Date(r.at)));
+    }
+    try {
+      const ask = uniqReports.filter((r) => !first.has(r.fp)).map((r) => r.fp);
+      const store = await getStore();
+      const db = ask.length && store.timesOf ? await store.timesOf(ask) : {};
+      for (const [fp, at] of Object.entries(db)) {
+        first.set(fp, jerusalemIso(new Date(at)));
+        published.add(fp);
+      }
+    } catch (err) {
+      console.error("[scan] stored times:", err instanceof Error ? err.message : err);
+    }
+    const back = keepFirstTimes(uniqReports, first);
+    if (back) {
+      console.log(`[scan] ${back} card(s) already on the desk kept their first time`);
+      uniqReports.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    }
+  }
   // A Telegram reply to a card on the desk is the same thread: it follows that card.
   const byUrl = new Map([...stored, ...uniqReports].map((r) => [r.url, r]));
   for (const h of hits) {
@@ -1976,8 +2339,42 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   } catch (err) {
     console.error("[media] failed:", err instanceof Error ? err.message : err);
   }
+  // "Footage shows …" with no footage to show tells the reader of a video he
+  // cannot see: such a new card goes out with its media or not at all.
+  for (const r of newCards.filter((x) => aboutFootage(x) && !x.media)) {
+    console.log(`[media] dropped, footage not shown: ${r.summary}`);
+    uniqReports.splice(uniqReports.indexOf(r), 1);
+    newCards.splice(newCards.indexOf(r), 1);
+  }
+  lap("media");
   linkFollowUps(newCards, [...stored, ...uniqReports]);
-  const touched = [...foldIntoPublished(uniqReports, published, stored), ...threadSpeeches(uniqReports, published, stored)];
+  const enrich: [LiveReport, LiveReport][] = [];
+  const touched = [...foldIntoPublished(uniqReports, published, stored, enrich), ...threadSpeeches(uniqReports, published, stored)];
+  // A later outlet on a published event added a figure or a place: the card
+  // is written again with it, rather than the new fact sitting under "Also".
+  if (enrich.length) {
+    try {
+      const rewritten = await enrichCards(
+        enrich,
+        async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000, models: COMBINE_MODELS }))?.json ?? null,
+        await getStore(),
+      );
+      for (const h of rewritten) if (!touched.includes(h) && !uniqReports.includes(h)) touched.push(h);
+      if (rewritten.length) console.log(`[fold] ${rewritten.length} card(s) written again with a later account's facts`);
+    } catch (err) {
+      console.error("[fold] enrich failed:", err instanceof Error ? err.message : err);
+    }
+  }
+  {
+    const placed = new Set(uniqReports.flatMap((r) => [r.fp, r.url]));
+    const also = new Set([...uniqReports, ...touched].flatMap((r) => (r.alsoReportedBy ?? []).map((a) => a.url)));
+    for (const g of groups) for (const o of g.others) also.add(o.url);
+    for (const a of approved) {
+      if (placed.has(a.fp) || placed.has(a.url) || heldFps.has(a.fp) || also.has(a.url) || published.has(a.fp)) continue;
+      const into = foldTrail.get(a.url) ?? foldTrail.get(a.fp);
+      console.log(`[scan] approved but no card: ${a.source} ${a.url} — ${a.summary}${into ? ` (folded into ${into})` : ""}`);
+    }
+  }
   // Every link, whatever made it, passes the rules of links.ts; then one
   // model call picks, among the cards the rules allow, the one each new card
   // develops — or none — which also finds the links nobody made.
@@ -1992,10 +2389,11 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   } catch (err) {
     console.error("[links] judge failed:", err instanceof Error ? err.message : err);
   }
+  lap("links");
   if (prev && Array.isArray(prev.rawHits)) {
-    const haveH = new Set(rawHits.map((h) => h.url.split("?")[0]));
+    const haveH = new Set(rawHits.map((h) => linkKey(h.url)));
     for (const h of prev.rawHits) {
-      const u = String(h.url || "").split("?")[0];
+      const u = linkKey(String(h.url || ""));
       if (u && !haveH.has(u)) {
         rawHits.push({ ...h, seenAt: h.seenAt || h.at });
         haveH.add(u);
@@ -2025,7 +2423,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
 
   return {
     ok: true,
-    scannedAt: jerusalemIso(),
+    // The scan's start, on the round five minutes the clock runs it at: what
+    // the sources said as of then. The reader's work after that is not "newer".
+    scannedAt: jerusalemIso(new Date(now)),
     reports: uniqReports.slice(0, PAYLOAD_REPORTS),
     ...(touched.length ? { touched } : {}),
     sourcesTried: tried,
@@ -2087,7 +2487,7 @@ export type TickResult = {
   unplaced: { fp: string; summary: string; place?: string }[];
   store: string;
   cycleNote?: string;
-  /** True when this tick closed a 12-hour window and composed its brief. */
+  /** True when this tick closed a 6-hour window and composed its brief. */
   briefBuilt?: boolean;
   usage?: TickUsage;
   error?: string;
@@ -2140,6 +2540,7 @@ export async function runScanCycle(): Promise<TickResult> {
   // host looked healthy while saving nothing.
   const merge = await store.mergeIntoDesk([...payload.reports, ...(payload.touched ?? [])]);
   delete payload.touched;
+  lap("save cards");
   // Carry the gazetteer misses into the payload so the scan box can show them.
   if (merge.unplaced.length) payload.unplaced = merge.unplaced.slice(0, 20);
   state.lastTickAt = Date.now();
@@ -2152,15 +2553,16 @@ export async function runScanCycle(): Promise<TickResult> {
     error = err instanceof Error ? err.message : "payload write failed";
   }
 
-  // The brief moves on the clock, not on page views: a no-op until a 12-hour
+  // The brief moves on the clock, not on page views: a no-op until a 6-hour
   // window closes, then composed from everything the desk logged in it.
   let briefBuilt = false;
   try {
-    briefBuilt = (await refreshBrief(store)).built;
+    briefBuilt = (await refreshBrief(store, new Date(), { retryProse: true })).built;
   } catch (err) {
     error ??= `brief: ${err instanceof Error ? err.message : "failed"}`;
   }
 
+  lap("save + brief");
   // The first tick of each day snapshots the live tables; a failed backup
   // must not fail the scan, so it is logged, not surfaced.
   if (store.kind === "pg") {
@@ -2171,6 +2573,7 @@ export async function runScanCycle(): Promise<TickResult> {
     }
   }
 
+  lap("backup");
   // What this tick cost: Supabase bills egress, Vercel bills CPU.
   const cpu = cpu0 ? process.cpuUsage(cpu0) : null;
   const usage: TickUsage = {

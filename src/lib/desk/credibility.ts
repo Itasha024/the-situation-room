@@ -73,7 +73,7 @@ function clamp(n: number): number {
  * the movement's, and the paper is relaying it.
  */
 export function homeOutlet(source: string): boolean {
-  return /^(?:Al-?Masirah|Saba|Yahya Saree|Mohammed Abdulsalam|Al-?Thawrah|SPA)\b/i.test(String(source || "").trim());
+  return /^(?:Al-?Masirah|Saba(?! \(government\))|Yahya Saree|Mohammed Abdulsalam|Al-?Thawrah|SPA)\b/i.test(String(source || "").trim());
 }
 /** Which side an outlet is on, from its catalogue lean and name. */
 export function outletSide(source: string, lean: string): OutletSide {
@@ -86,7 +86,7 @@ export function outletSide(source: string, lean: string): OutletSide {
   }
   if (lean === "houthi") return "houthi";
   if (lean === "gov" || lean === "south") return "gov";
-  if (/Saba|Masirah|Saree|Abdulsalam|Al-?Thawrah|Mayadeen|Akhbar/i.test(source)) return "houthi";
-  if (/SPA|Arab News|Asharq|Okaz|Hadath|Arabiya|Almashhad|Bin Saeed/i.test(source)) return "gov";
+  if (/Saba(?! \(government\))|Masirah|Saree|Abdulsalam|Al-?Thawrah|Mayadeen|Akhbar|Yemen Press Agency/i.test(source)) return "houthi";
+  if (/SPA|Arab News|Asharq|Okaz|Hadath|Arabiya|Almashhad|Bin Saeed|Saba \(government\)|Sawt al-Asima|Mareb Press|Al-Masdar Online|Aden al-Ghad|Saudi Gazette/i.test(source)) return "gov";
   return "neutral";
 }

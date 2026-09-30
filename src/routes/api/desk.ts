@@ -26,11 +26,44 @@ import { getStore } from "@/lib/desk/store";
  */
 /**
  * The edge asks each region's copy anew; one instance serves several regions.
- * The same answer is kept a minute here, so those misses cost no database read
- * and no link check.
+ * The same answer is kept here: a minute fresh, and after that still served at
+ * once while a new one is read behind it, so a visitor never waits on the
+ * database (a miss took over two seconds).
  */
 const MEMO_MS = 60_000;
+const STALE_MS = 30 * 60_000;
 const memo = new Map<string, { at: number; body: string }>();
+const reading = new Map<string, Promise<{ at: number; body: string }>>();
+
+async function readDesk(limit: number, before: string | undefined) {
+  const store = await getStore();
+  const slice = await store.recentDesk(limit, before);
+  // Cards stored before the link rules keep their row; a link that
+  // breaks the rules is just not shown (links.ts).
+  checkLinks(slice.reports as never[], slice.reports as never[]);
+  // A word a model glued to a name is shown split, and a name in the
+  // desk's one spelling; the row is left as it is.
+  for (const r of slice.reports) {
+    r.summary = respell(unglue(String(r.summary ?? "")));
+    if (r.text) r.text = respell(String(r.text));
+  }
+  return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
+}
+
+function renew(key: string, limit: number, before: string | undefined) {
+  let p = reading.get(key);
+  if (!p) {
+    p = readDesk(limit, before)
+      .then((hit) => {
+        if (memo.size > 20) memo.clear();
+        memo.set(key, hit);
+        return hit;
+      })
+      .finally(() => reading.delete(key));
+    reading.set(key, p);
+  }
+  return p;
+}
 
 export const Route = createFileRoute("/api/desk")({
   server: {
@@ -48,22 +81,9 @@ export const Route = createFileRoute("/api/desk")({
 
           const key = `${limit}|${before ?? ""}`;
           let hit = memo.get(key);
-          if (!hit || Date.now() - hit.at > MEMO_MS) {
-            const store = await getStore();
-            const slice = await store.recentDesk(limit, before);
-            // Cards stored before the link rules keep their row; a link that
-            // breaks the rules is just not shown (links.ts).
-            checkLinks(slice.reports as never[], slice.reports as never[]);
-            // A word a model glued to a name is shown split, and a name in the
-            // desk's one spelling; the row is left as it is.
-            for (const r of slice.reports) {
-              r.summary = respell(unglue(String(r.summary ?? "")));
-              if (r.text) r.text = respell(String(r.text));
-            }
-            hit = { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
-            if (memo.size > 20) memo.clear();
-            memo.set(key, hit);
-          }
+          const age = hit ? Date.now() - hit.at : Infinity;
+          if (!hit || age > STALE_MS) hit = await renew(key, limit, before);
+          else if (age > MEMO_MS) renew(key, limit, before).catch(() => {});
 
           return raw(
             hit.body,
@@ -71,7 +91,7 @@ export const Route = createFileRoute("/api/desk")({
             // is the archive behind them, so the edge keeps it five minutes.
             {
               "cache-control": "public, max-age=30",
-              "cdn-cache-control": "public, s-maxage=300, stale-while-revalidate=900",
+              "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=600",
             },
           );
         } catch (err) {

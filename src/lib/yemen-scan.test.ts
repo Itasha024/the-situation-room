@@ -667,6 +667,28 @@ test("Sky News Arabia's account: only what its own sources told it", async () =>
   assert.deepEqual(rows.map((r: { url: string }) => r.url.split("/").pop()), ["1", "2", "3", "6"]);
 });
 
+test("the sea and energy accounts: this war's waters and Saudi exports only; a picture account waits for its words", async () => {
+  const { parseFxStatuses, SEA_WAR } = await import("./yemen-scan.server.ts");
+  // UKMTO's 30 Sep warnings, as read off their pictures.
+  const hormuz = "UKMTO WARNING\n146-26 - ATTACK\nUKMTO has received a time-late report of an incident within the Strait of Hormuz.\nA verified source has reported that a Tanker has been struck by an unknown projectile.";
+  const redSea = "UKMTO WARNING\n147-26 - ATTACK\nUKMTO has received a report of an incident 40NM west of Hodeidah, Yemen.\nThe master reports an explosion in the water close to the vessel.";
+  assert.equal(SEA_WAR.test(hormuz), false);
+  assert.equal(SEA_WAR.test(redSea), true);
+  assert.equal(SEA_WAR.test("Saudi Arabia moves crude exports from Ras Tanura to Yanbu"), true);
+  assert.equal(SEA_WAR.test("Suez Canal transits fell to 31 ships a day this week"), true);
+  assert.equal(SEA_WAR.test("Russia extends diesel export ban through Oct. 31"), false);
+  // A picture account's post passes the parser on its bare text; its words are tried later.
+  const ukmto = { handle: "UK_MTO", name: "UKMTO", lean: "intl", cadence: { everyMin: 5 }, only: SEA_WAR, picture: true } as never;
+  const card = { id: "9", url: "https://x.com/UK_MTO/status/9", text: "UKMTO WARNING 146 Click here to view the full warning.", created_timestamp: 1790244000, author: { screen_name: "UK_MTO" }, media: { all: [{ type: "photo", url: "https://pbs.twimg.com/media/x.png?name=orig" }] } };
+  assert.equal(parseFxStatuses({ results: [card] }, ukmto).length, 1);
+  // An X article's bare link reads as its title and opening.
+  const energy = { handle: "MoEnergy_Saudi", name: "Saudi Energy Ministry", lean: "gov", cadence: { everyMin: 10 }, only: SEA_WAR } as never;
+  const art = (id: string, title: string) => ({ id, url: `https://x.com/MoEnergy_Saudi/status/${id}`, text: "https://t.co/rJfZueCw5S", created_timestamp: 1790244000, author: { screen_name: "MoEnergy_Saudi" }, article: { title, preview_text: "The Ministry of Energy said ..." } });
+  const rows = parseFxStatuses({ results: [art("1", "Global Energy Leaders Gather in Riyadh"), art("2", "Pumping on the East-West pipeline restored after the attack")] }, energy);
+  assert.deepEqual(rows.map((r: { url: string }) => r.url.split("/").pop()), ["2"]);
+  assert.match((rows[0] as { text: string }).text, /^Pumping on the East-West pipeline restored/);
+});
+
 test("an X post is new only when its id is past the last one read; a pinned old post is not", async () => {
   const { newerX } = await import("./yemen-scan.server.ts");
   assert.equal(newerX("2103415802196001183", undefined), true);
@@ -676,4 +698,153 @@ test("an X post is new only when its id is past the last one read; a pinned old 
   assert.equal(newerX("2011000000000000000", "2103415802196001183"), false);
   assert.equal(newerX("999", "1000"), false);
   assert.equal(newerX("1000", "999"), true);
+});
+
+test("a copy seen late, with an earlier time than the card on the desk, folds into it", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const headline = "Air traffic suspended at Riyadh airport";
+  // Sabereen's post was published at 22:53; Al-Mihwar's 22:51 post was only read an hour later.
+  const onDesk = { ...base, fp: "a", url: "https://t.me/SabrenNewss/226897", source: "Sabereen News", at: "2026-09-28T22:53:59Z", type: "strike", summary: headline, place: "Riyadh", lat: 24.71, lng: 46.68 };
+  const late = { ...base, fp: "b", url: "https://t.me/Alomhoar/113105", source: "Al-Mihwar", at: "2026-09-28T22:51:39Z", type: "strike", summary: headline, place: "Riyadh", lat: 24.71, lng: 46.68 };
+  const reports = [onDesk, late] as never[];
+  foldIntoPublished(reports, new Set(["a"]));
+  assert.deepEqual((reports as { fp: string }[]).map((r) => r.fp), ["a"]);
+  assert.deepEqual((onDesk as { alsoReportedBy?: { source: string }[] }).alsoReportedBy?.map((x) => x.source), ["Al-Mihwar"]);
+});
+
+test("a later outlet that adds a figure is kept to write into the card", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const home = { ...base, fp: "a", url: "https://t.me/ajanews/1", source: "Al Jazeera", at: "2026-09-28T19:58:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran in Saudi Arabia", place: "Najran", lat: 17.49, lng: 44.13 };
+  const more = { ...base, fp: "b", url: "https://t.me/alomhoar/2", source: "Al-Mihwar", at: "2026-09-28T20:05:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran; 2 wounded by debris", place: "Najran", lat: 17.49, lng: 44.13 };
+  const same = { ...base, fp: "c", url: "https://t.me/sabrenNewss/3", source: "Sabereen News", at: "2026-09-28T20:06:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran in Saudi Arabia", place: "Najran", lat: 17.49, lng: 44.13 };
+  const reports = [home, more, same] as never[];
+  const enrich: unknown[] = [];
+  foldIntoPublished(reports, new Set(["a"]), [], enrich as never);
+  assert.equal(reports.length, 1);
+  assert.equal(enrich.length, 1, "only the account with the new figure is written in");
+  assert.equal(((enrich[0] as { fp: string }[])[1]).fp, "b");
+});
+
+test("two different posts from one channel stay two cards", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const a = { ...base, fp: "a", url: "https://t.me/asharqnews/1", source: "Asharq News", at: "2026-09-28T17:37:00Z", type: "strike", summary: "Yemeni armed forces announce 356 targeting operations in 24 hours" };
+  const b = { ...base, fp: "b", url: "https://t.me/asharqnews/2", source: "Asharq News", at: "2026-09-28T17:47:00Z", type: "strike", summary: "Yemeni armed forces: 356 operations in 24 hours neutralize 476 Houthi fighters" };
+  const reports = [a, b] as never[];
+  foldIntoPublished(reports, new Set(["a"]));
+  assert.equal(reports.length, 2);
+});
+
+test("a card already on the desk keeps its first time", async () => {
+  const { keepFirstTimes } = await import("./desk/copies.ts");
+  const again = [{ fp: "sheba-1", at: "2026-09-29T16:11:00+03:00" }, { fp: "new", at: "2026-09-29T16:11:00+03:00" }];
+  const n = keepFirstTimes(again, new Map([["sheba-1", "2026-09-28T13:36:00+03:00"]]));
+  assert.equal(n, 1);
+  assert.equal(again[0].at, "2026-09-28T13:36:00+03:00");
+  assert.equal(again[1].at, "2026-09-29T16:11:00+03:00");
+  // Never moved forward.
+  const early = [{ fp: "x", at: "2026-09-28T10:00:00+03:00" }];
+  assert.equal(keepFirstTimes(early, new Map([["x", "2026-09-28T12:00:00+03:00"]])), 0);
+});
+
+test("after the laptop was offline, an hour's Google News query reaches back over the gap", async () => {
+  const { widenForGap } = await import("./yemen-scan.server.ts");
+  const url = "https://news.google.com/rss/search?q=site%3Aspa.gov.sa%20when%3A1h&hl=ar";
+  const now = Date.parse("2026-09-29T16:05:00+03:00");
+  assert.equal(widenForGap(url, { everyMin: 10 }, now - 10 * 60_000, now), url);
+  assert.equal(widenForGap(url, { everyMin: 30 }, now - 35 * 60_000, now), url);
+  assert.match(widenForGap(url, { everyMin: 10 }, now - 61 * 60_000, now), /when%3A3h/);
+});
+
+test("one channel's sirens hours apart stay two alerts; the reader's duplicate_of does not merge one channel's posts", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const a = { ...base, fp: "a", url: "https://t.me/x/1", source: "Al Arabiya", at: "2026-09-29T09:00:00+03:00", type: "air_raid_alert", summary: "Sirens sound in Riyadh" };
+  const b = { ...base, fp: "b", url: "https://t.me/x/2", source: "Al Arabiya", at: "2026-09-29T09:05:00+03:00", type: "air_raid_alert", summary: "Air raid sirens heard across Riyadh again", duplicateOf: "a" };
+  const reports = [a, b] as never[];
+  foldIntoPublished(reports, new Set(["a"]));
+  assert.equal(reports.length, 2);
+  // Word for word the same from one channel still folds.
+  const c = { ...b, fp: "c", url: "https://t.me/x/3", summary: "Sirens sound in Riyadh" };
+  const again = [a, c] as never[];
+  foldIntoPublished(again, new Set(["a"]));
+  assert.equal(again.length, 1);
+});
+
+test("one clip reposted by another account hours later folds into the first card", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [], place: "Marib", lat: 15.47, lng: 45.32 } as const;
+  const clip = (d: number) => ({ kind: "video", duration: d, thumb: `t${d}`, src: "v", from: "x", post: "p" });
+  const a = { ...base, fp: "a", url: "https://x.com/a/1", source: "Ali al-Sakani", at: "2026-09-29T15:51:00+03:00", type: "strike", summary: "Airstrikes hit Houthi targets south of Marib", media: clip(26) };
+  const b = { ...base, fp: "b", url: "https://x.com/b/2", source: "Mohammed al-Dhabyani", at: "2026-09-29T17:25:00+03:00", type: "strike", summary: "Yemeni warplanes strike Houthi sniper positions south of Marib", media: clip(26) };
+  const reports = [a, b] as never[];
+  foldIntoPublished(reports, new Set(["a"]));
+  assert.equal(reports.length, 1);
+  // A clip of another length is another event.
+  const c = { ...b, fp: "c", media: clip(41) };
+  const two = [a, c] as never[];
+  foldIntoPublished(two, new Set(["a"]));
+  assert.equal(two.length, 2);
+});
+
+test("a spokesman's other point, folded under his first, is written into the card", async () => {
+  const { addsFacts } = await import("./desk/combine.ts");
+  const base = { live: true, text: "", score: 1, tags: [], type: "statement" } as const;
+  const home = { ...base, fp: "h", url: "u1", source: "Al-Yemen Now", at: "2026-09-29T18:50:00+03:00", summary: "Yemeni armed forces spokesperson states all Houthi military activities are monitored and sites used for military purposes are legitimate targets" };
+  const other = { ...base, fp: "o", url: "u2", source: "Al Arabiya", at: "2026-09-29T18:52:00+03:00", summary: "Yemeni armed forces spokesperson: civilians must stay away from military sites used by Houthi militias" };
+  const same = { ...base, fp: "s", url: "u3", source: "Al Arabiya", at: "2026-09-29T18:52:00+03:00", summary: "Yemeni armed forces spokesperson: all Houthi military activities are monitored" };
+  assert.equal(addsFacts(home as never, other as never), true);
+  assert.equal(addsFacts(home as never, same as never), false);
+});
+
+test("another outlet's line of an interview the card already carries folds into it", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, score: 1, tags: [], type: "statement" } as const;
+  const home = { ...base, fp: "h", url: "https://x.com/South24_net/1", source: "South24", at: "2026-09-29T17:44:00+03:00", summary: "STC official Amr al-Bidh: Houthis seek to establish another Iran in the Horn of Africa", text: "In an interview with Italy's Linkiesta, al-Bidh warned that Houthi control of Bab al-Mandab would let the group close the strait at will, without firing a missile or a drone." };
+  const line = { ...base, fp: "l", url: "https://x.com/South24E/2", source: "South24 English", at: "2026-09-29T17:49:00+03:00", text: "", summary: "STC official Amr al-Bidh: Houthi control over Bab al-Mandab grants them ability to close it without missiles or drones" };
+  const reports = [home, line] as never[];
+  foldIntoPublished(reports, new Set(["h"]));
+  assert.equal(reports.length, 1);
+  // Something he had not said on the card stays its own card.
+  const other = { ...line, fp: "o", summary: "STC official Amr al-Bidh: southern forces will retake Mukalla port within weeks" };
+  const two = [home, other] as never[];
+  foldIntoPublished(two, new Set(["h"]));
+  assert.equal(two.length, 2);
+});
+
+test("the two Sabas never mix: the government agency is not the Houthi outlet", async () => {
+  const { outletSide, homeOutlet } = await import("./desk/credibility.ts");
+  assert.equal(outletSide("Saba (government)", ""), "gov");
+  assert.equal(homeOutlet("Saba (government)"), false);
+  assert.equal(outletSide("Saba (Houthi-run)", ""), "houthi");
+  assert.equal(homeOutlet("Saba (Houthi-run)"), true);
+  assert.equal(outletSide("Saba", ""), "houthi");
+});
+
+test("the reader's duplicate link between two different speakers is refused", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, score: 1, tags: [], type: "statement", text: "" } as const;
+  const home = { ...base, fp: "h", url: "u1", source: "South24", at: "2026-09-29T17:44:00+03:00", summary: "STC official Amr al-Bidh: Houthis seek to establish another Iran in the Horn of Africa" };
+  const r = { ...base, fp: "r", url: "u2", source: "Almashhad", at: "2026-09-29T19:15:00+03:00", summary: "Yemeni armed forces spokesperson: we monitor all Houthi military activities across all fronts", duplicateOf: "h" };
+  const reports = [home, r] as never[];
+  foldIntoPublished(reports, new Set(["h"]));
+  assert.equal(reports.length, 2);
+});
+
+test("two Suhail articles are two links; tracking is not part of a link", async () => {
+  const { linkKey } = await import("./yemen-scan.server.ts");
+  assert.notEqual(linkKey("https://suhail.net/news_details.php?lang=arabic&sid=33548"), linkKey("https://suhail.net/news_details.php?lang=arabic&sid=33545"));
+  assert.equal(linkKey("https://x.com/a/status/1?utm_source=x"), "https://x.com/a/status/1");
+});
+
+test("a call with Qatar's emir does not fold into the UAE vice president's visit", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, score: 1, tags: [], type: "diplomacy", text: "" } as const;
+  const home = { ...base, fp: "h", url: "u1", source: "South24", at: "2026-09-29T18:40:00+03:00", summary: "UAE Vice President Mansour bin Zayed arrives in Riyadh and meets Saudi Crown Prince Mohammed bin Salman" };
+  const r = { ...base, fp: "r", url: "u2", source: "Saudi Gazette", at: "2026-09-29T19:20:00+03:00", summary: "Saudi Crown Prince discusses regional developments with Qatari Emir", duplicateOf: "h" };
+  const reports = [home, r] as never[];
+  foldIntoPublished(reports, new Set(["h"]));
+  assert.equal(reports.length, 2);
 });

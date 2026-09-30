@@ -10,10 +10,11 @@ import { useEffect } from "react";
 const DESK_HTML = `
 <header class="top">
   <div class="brand">
-    <h1>Yemen War Desk</h1>
+    <h1>Yemen Conflict Desk</h1>
     <p class="sub">Open-source intelligence, updated continuously</p>
   </div>
   <div class="stamp">
+    <span class="ye-clock" title="The time in Yemen (Sanaa and Aden)"><span class="yc-label">Yemen</span><time id="ye-clock">--:--:--</time></span>
     <span class="pulse" aria-hidden="true"></span>
     <span id="updated">Connecting…</span>
   </div>
@@ -48,13 +49,15 @@ const DESK_HTML = `
   </section>
   <div class="rail-splitter" id="rail-splitter" role="separator" aria-orientation="vertical" aria-label="Resize the report column" title="Drag to widen the report column"></div>
   <aside class="rail" id="rail">
-    <div class="rail-head"><h2>Latest reports</h2></div>
+    <div class="rail-head"><h2>Latest reports</h2><button type="button" class="feed-search-btn" id="btn-feed-search" aria-label="Search all reports" aria-expanded="false" aria-controls="feed-search" title="Search all reports"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.6"/><path d="M12.8 12.8l4.6 4.6"/></svg></button></div>
+    <form class="feed-search" id="feed-search" role="search" hidden><input type="search" id="feed-q" placeholder="Search all reports: a place, a person, a weapon" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search all reports" maxlength="120"/><button type="submit" class="fs-go">Search</button></form>
     <div class="feed-fresh" id="feed-fresh" aria-live="polite"></div>
-    <div class="feed-legend" id="feed-legend" aria-label="What the card colours mean">
-      <span><span class="sw" style="background:#c45c26"></span>Houthi-aligned outlet</span>
-      <span><span class="sw" style="background:#22c55e"></span>Government or Saudi-aligned</span>
-      <span><span class="sw" style="background:#94a3b8"></span>No declared alignment</span>
+    <div class="feed-legend" id="feed-legend" role="group" aria-label="Show only reports from">
+      <button type="button" class="lean-f" data-lean="houthi" aria-pressed="false" title="Show only Houthi-aligned outlets"><span class="sw" style="background:#c45c26"></span>Houthi-aligned outlet</button>
+      <button type="button" class="lean-f" data-lean="gov" aria-pressed="false" title="Show only government or Saudi-aligned outlets"><span class="sw" style="background:#22c55e"></span>Government or Saudi-aligned</button>
+      <button type="button" class="lean-f" data-lean="indep" aria-pressed="false" title="Show only outlets with no declared alignment"><span class="sw" style="background:#94a3b8"></span>No declared alignment</button>
     </div>
+    <div class="feed-note" id="feed-note" aria-live="polite" hidden></div>
     <div id="feed" class="feed"></div>
     <button type="button" class="more" id="btn-more-reports" hidden>Show earlier reports</button>
   </aside>

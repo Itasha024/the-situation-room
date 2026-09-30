@@ -10,9 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as YemenRouteImport } from './routes/yemen'
+import { Route as YemenConflictDeskRouteImport } from './routes/yemen-conflict-desk'
 import { Route as ApiBriefRouteImport } from './routes/api/brief'
 import { Route as ApiDeskRouteImport } from './routes/api/desk'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiStatusRouteImport } from './routes/api/status'
 import { Route as ApiTgmediaRouteImport } from './routes/api/tgmedia'
 import { Route as ApiTickRouteImport } from './routes/api/tick'
@@ -20,6 +23,16 @@ import { Route as ApiTickRouteImport } from './routes/api/tick'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YemenRoute = YemenRouteImport.update({
+  id: '/yemen',
+  path: '/yemen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YemenConflictDeskRoute = YemenConflictDeskRouteImport.update({
+  id: '/yemen-conflict-desk',
+  path: '/yemen-conflict-desk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBriefRoute = ApiBriefRouteImport.update({
@@ -35,6 +48,11 @@ const ApiDeskRoute = ApiDeskRouteImport.update({
 const ApiScanRoute = ApiScanRouteImport.update({
   id: '/api/scan',
   path: '/api/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStatusRoute = ApiStatusRouteImport.update({
@@ -55,18 +73,24 @@ const ApiTickRoute = ApiTickRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/yemen': typeof YemenRoute
+  '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
+  '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/yemen': typeof YemenRoute
+  '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
+  '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
@@ -74,9 +98,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/yemen': typeof YemenRoute
+  '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/scan': typeof ApiScanRoute
+  '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
@@ -85,27 +112,36 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/yemen'
+    | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
     | '/api/scan'
+    | '/api/search'
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/yemen'
+    | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
     | '/api/scan'
+    | '/api/search'
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
   id:
     | '__root__'
     | '/'
+    | '/yemen'
+    | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
     | '/api/scan'
+    | '/api/search'
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
@@ -113,9 +149,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  YemenRoute: typeof YemenRoute
+  YemenConflictDeskRoute: typeof YemenConflictDeskRoute
   ApiBriefRoute: typeof ApiBriefRoute
   ApiDeskRoute: typeof ApiDeskRoute
   ApiScanRoute: typeof ApiScanRoute
+  ApiSearchRoute: typeof ApiSearchRoute
   ApiStatusRoute: typeof ApiStatusRoute
   ApiTgmediaRoute: typeof ApiTgmediaRoute
   ApiTickRoute: typeof ApiTickRoute
@@ -128,6 +167,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/yemen': {
+      id: '/yemen'
+      path: '/yemen'
+      fullPath: '/yemen'
+      preLoaderRoute: typeof YemenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/yemen-conflict-desk': {
+      id: '/yemen-conflict-desk'
+      path: '/yemen-conflict-desk'
+      fullPath: '/yemen-conflict-desk'
+      preLoaderRoute: typeof YemenConflictDeskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/brief': {
@@ -149,6 +202,13 @@ declare module '@tanstack/react-router' {
       path: '/api/scan'
       fullPath: '/api/scan'
       preLoaderRoute: typeof ApiScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/status': {
@@ -177,9 +237,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  YemenRoute: YemenRoute,
+  YemenConflictDeskRoute: YemenConflictDeskRoute,
   ApiBriefRoute: ApiBriefRoute,
   ApiDeskRoute: ApiDeskRoute,
   ApiScanRoute: ApiScanRoute,
+  ApiSearchRoute: ApiSearchRoute,
   ApiStatusRoute: ApiStatusRoute,
   ApiTgmediaRoute: ApiTgmediaRoute,
   ApiTickRoute: ApiTickRoute,

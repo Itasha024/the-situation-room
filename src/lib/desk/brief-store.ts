@@ -1,5 +1,5 @@
 /**
- * The stored 12-hour brief. Server-only.
+ * The stored 6-hour brief. Server-only.
  *
  * WHY THIS EXISTS: the brief used to be built inside the `/api/brief` route,
  * on the first page view after a window closed. Two things followed from that:
@@ -18,19 +18,24 @@
  */
 
 import type { LiveReport } from "./types.ts";
-import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf } from "./brief.ts";
+import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
-import { controlContext, writeProse } from "./prose.ts";
+import { controlContext, type DevMark, writeProse } from "./prose.ts";
+import { WRITER_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
+import { refreshLedger } from "./ledger.ts";
 import { CONTROL_LIVE_KEY, type ControlLive, mergedControl, updateControlLive } from "./control-live.ts";
 import { refreshTimelineNow } from "./timeline-now.ts";
+import { placeKey, placeProse } from "./prose-places.ts";
+import { placesIn } from "./gazetteer.ts";
+import { addMark, cardMarks, type Launch, launchFor, nearAny } from "./dev-marks.ts";
 
 export const BRIEF_KEY = "brief";
 
 export type StoredBrief = { brief: Brief; history: BriefHistory };
 
-/** Enough rows to cover a busy 12-hour window with the caps raised. */
+/** Enough rows to cover a busy 6-hour window with the caps raised. */
 const WINDOW_ROWS = 3000;
 
 /**
@@ -40,22 +45,17 @@ const WINDOW_ROWS = 3000;
 export async function refreshBrief(
   store: DeskStore,
   now = new Date(),
+  { retryProse = false }: { retryProse?: boolean } = {},
 ): Promise<{ brief: Brief; built: boolean }> {
   const w = briefWindow(now);
   const saved = (await store.getJson<StoredBrief>(BRIEF_KEY)) ?? null;
-  if (saved?.brief?.updatedAt === w.updatedAt) return { brief: saved.brief, built: false };
+  if (saved?.brief?.updatedAt === w.updatedAt) {
+    // Only the clock asks again (a model call is too slow for a page visit).
+    if (!retryProse || !proseDue(saved.brief, now)) return { brief: saved.brief, built: false };
+    return { brief: await reprose(store, saved, now), built: false };
+  }
 
-  // The window that just closed: [startedAt, updatedAt). Anything later belongs
-  // to the next brief, even when this one is built late.
-  const start = Date.parse(w.startedAt);
-  const end = Date.parse(w.updatedAt);
-  const { reports } = await store.recentDesk(WINDOW_ROWS, undefined, { events: false });
-  const inWindow = reports
-    .map((r) => r as unknown as LiveReport)
-    .filter((r) => {
-      const t = Date.parse(String(r.at || ""));
-      return Number.isFinite(t) && t >= start && t < end;
-    });
+  const { all, inWindow } = await windowReports(store, w);
 
   // The brief that was current until now becomes this one's comparison point.
   const history: BriefHistory = saved
@@ -69,7 +69,6 @@ export async function refreshBrief(
     : {};
 
   // Fronts opened for new clusters of fighting over the last 48 hours.
-  const all = reports.map((r) => r as unknown as LiveReport);
   const extraFronts = updateExtraFronts(
     all,
     (await store.getJson<ExtraFront[]>(EXTRA_FRONTS_KEY)) ?? [],
@@ -89,28 +88,15 @@ export async function refreshBrief(
   } catch (err) {
     console.error("[desk] control update failed:", err instanceof Error ? err.message : err);
   }
-  // The prose is written from the cards; the composed lines stay where the
-  // model gave nothing usable.
-  try {
-    const prose = await writeProse(
-      inWindow,
-      brief.fronts.map((f) => ({
-        id: f.id,
-        name: f.name,
-        incidents: f.strikes + f.ground + f.alerts + f.maritime,
-        previous: saved?.brief.fronts?.find((p) => p.id === f.id)?.line || "",
-      })),
-      saved?.brief.situation?.line || "",
-      (r) => frontIdsOf(r, extraFronts),
-      controlLines,
-    );
-    if (prose?.situation) brief.situation = { ...brief.situation, line: prose.situation, model: prose.model };
-    for (const f of brief.fronts) if (prose?.fronts[f.id]) f.line = prose.fronts[f.id];
-  } catch (err) {
-    console.error("[desk] prose failed:", err instanceof Error ? err.message : err);
-  }
+  await proseInto(store, brief, inWindow, all, {
+    previousSituation: saved?.brief.situation?.line || "",
+    previousFront: (id) => saved?.brief.fronts?.find((p) => p.id === id)?.line || "",
+    frontsOf: (r) => frontIdsOf(r, extraFronts),
+    inArea: (ll, id) => inFrontArea(ll, id, extraFronts),
+    controlLines,
+  });
   await store.putJson(BRIEF_KEY, { brief, history } satisfies StoredBrief);
-  // The official numbers move on the same 12-hour clock. A failed fetch keeps
+  // The official numbers move on the same 6-hour clock. A failed fetch keeps
   // the last tally; it must never cost the brief.
   try {
     await refreshTally(store, inWindow, now);
@@ -122,6 +108,12 @@ export async function refreshBrief(
     await refreshClaims(store, inWindow, now);
   } catch (err) {
     console.error("[desk] claims refresh failed:", err instanceof Error ? err.message : err);
+  }
+  // The Maritime and Energy ledger, and PortWatch's ship traffic, on the same clock.
+  try {
+    await refreshLedger(store, inWindow, now);
+  } catch (err) {
+    console.error("[desk] ledger refresh failed:", err instanceof Error ? err.message : err);
   }
   // The Timeline's "Now" box, rewritten every three days from the cards.
   try {
@@ -141,4 +133,216 @@ function bumpStreaks(saved: StoredBrief): BriefHistory["streaks"] {
     out[f.id] = active ? prior + 1 : 0;
   }
   return out as BriefHistory["streaks"];
+}
+
+/** The cards of the window that just closed, [startedAt, updatedAt), and the last rows overall. */
+async function windowReports(store: DeskStore, w: { startedAt: string; updatedAt: string }): Promise<{ all: LiveReport[]; inWindow: LiveReport[] }> {
+  const start = Date.parse(w.startedAt);
+  const end = Date.parse(w.updatedAt);
+  const { reports } = await store.recentDesk(WINDOW_ROWS, undefined, { events: false });
+  const all = reports.map((r) => r as unknown as LiveReport);
+  const inWindow = all.filter((r) => {
+    const t = Date.parse(String(r.at || ""));
+    return Number.isFinite(t) && t >= start && t < end;
+  });
+  return { all, inWindow };
+}
+
+/** The strong writers: the first Gemini Flash models of the chain. */
+const STRONG = new Set(WRITER_MODELS.slice(0, 3).map((m) => m.id));
+const RETRY_FOR_MS = 60 * 60_000;
+const RETRY_EVERY_MS = 10 * 60_000;
+
+/**
+ * Prose written by a fallback model (the strong ones busy) or by no model is
+ * asked for again every 10 minutes for the window's first hour.
+ */
+export function proseDue(brief: Brief, now: Date): boolean {
+  if (brief.situation?.model && STRONG.has(brief.situation.model)) return false;
+  const since = now.getTime() - Date.parse(brief.updatedAt);
+  if (!(since >= 0 && since < RETRY_FOR_MS)) return false;
+  const tried = Date.parse(brief.proseTriedAt || "");
+  return !Number.isFinite(tried) || now.getTime() - tried >= RETRY_EVERY_MS;
+}
+
+/**
+ * Ask for the prose again, for the current brief only: its paragraphs, places
+ * and maps. Control, numbers and the timeline stay as they are. Kept only when
+ * a strong model wrote it (or `force`, from a script).
+ */
+export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, force = false): Promise<Brief> {
+  const brief: Brief = { ...saved.brief, proseTriedAt: now.toISOString() };
+  const { all, inWindow } = await windowReports(store, { startedAt: brief.windowStart, updatedAt: brief.updatedAt });
+  const extraFronts = saved.history?.extraFronts ?? [];
+  let controlLines = controlContext();
+  try {
+    const live = await store.getJson<ControlLive>(CONTROL_LIVE_KEY);
+    if (live) controlLines = controlContext(mergedControl(live));
+  } catch {}
+  const next: Brief = { ...brief, fronts: brief.fronts.map((f) => ({ ...f })) };
+  const model = await proseInto(store, next, inWindow, all, {
+    previousSituation: brief.situation?.line || "",
+    previousFront: (id) => (saved.history?.prevFronts as Record<string, { line?: string }> | undefined)?.[id]?.line || "",
+    frontsOf: (r) => frontIdsOf(r, extraFronts),
+    inArea: (ll, id) => inFrontArea(ll, id, extraFronts),
+    controlLines,
+  });
+  const keep = force ? !!model : !!model && STRONG.has(model);
+  const out = keep ? next : brief;
+  console.log(`[desk] prose asked again: ${model || "no model"}${keep ? ", kept" : ", not kept"}`);
+  await store.putJson(BRIEF_KEY, { brief: out, history: saved.history } satisfies StoredBrief);
+  return out;
+}
+
+/**
+ * The current window's fronts again, after the fronts themselves changed (30
+ * Sep: governorates and the three areas): the opened fronts become
+ * governorates, each front's counts come from its own area, a front kept keeps
+ * its paragraph, and the prose is then asked again. LIVE DATABASE WRITE.
+ */
+export async function refront(store: DeskStore, saved: StoredBrief, now: Date): Promise<Brief> {
+  const { all, inWindow } = await windowReports(store, { startedAt: saved.brief.windowStart, updatedAt: saved.brief.updatedAt });
+  const extraFronts = updateExtraFronts(all, saved.history?.extraFronts ?? [], coveredByTrackedFront, new Date(saved.brief.updatedAt));
+  await store.putJson(EXTRA_FRONTS_KEY, extraFronts);
+  const history: BriefHistory = { ...saved.history, extraFronts };
+  const fresh = buildBrief(inWindow, new Date(saved.brief.updatedAt), history);
+  const old = new Map(saved.brief.fronts.map((x) => [x.id, x]));
+  const brief: Brief = { ...saved.brief, fronts: fresh.fronts.map((x) => ({ ...x, ...(old.get(x.id)?.line ? { line: old.get(x.id)!.line } : {}) })) };
+  const next: StoredBrief = { brief, history };
+  await store.putJson(BRIEF_KEY, next);
+  return reprose(store, next, now, true);
+}
+
+/**
+ * Write the prose into the brief, then find every place it and its maps name.
+ * The composed lines stay where the model gave nothing usable. Returns the
+ * model that wrote it, or null.
+ */
+async function proseInto(
+  store: DeskStore,
+  brief: Brief,
+  inWindow: LiveReport[],
+  all: LiveReport[],
+  o: { previousSituation: string; previousFront: (id: string) => string; frontsOf: (r: LiveReport) => string[]; inArea: (ll: [number, number], id: string) => boolean; controlLines: string[] },
+): Promise<string | null> {
+  let model: string | null = null;
+  let devMap: DevMark[] = [];
+  const frontMaps: Record<string, DevMark[]> = {};
+  try {
+    const prose = await writeProse(
+      inWindow,
+      brief.fronts.map((f) => ({
+        id: f.id,
+        name: f.name,
+        incidents: f.strikes + f.ground + f.alerts + f.maritime,
+        previous: o.previousFront(f.id),
+      })),
+      o.previousSituation,
+      o.frontsOf,
+      o.controlLines,
+    );
+    if (prose) model = prose.model || null;
+    if (prose?.situation) {
+      brief.situation = { ...brief.situation, line: prose.situation, more: prose.more || undefined, model: prose.model };
+      devMap = prose.devMap;
+    }
+    for (const f of brief.fronts) {
+      if (prose?.fronts[f.id]) {
+        f.line = prose.fronts[f.id];
+        if (prose.frontMaps[f.id]) frontMaps[f.id] = prose.frontMaps[f.id];
+      }
+    }
+  } catch (err) {
+    console.error("[desk] prose failed:", err instanceof Error ? err.message : err);
+  }
+  // Every place the prose and its maps name, found once, so the page can light each one.
+  try {
+    const marks = [...devMap, ...Object.values(frontMaps).flat()];
+    const extra = marks.flatMap((m) => [`in ${m.place}.`, ...(m.from ? [`from ${m.from}.`] : [])]);
+    brief.places = await placeProse(store, [brief.situation?.line || "", ...brief.fronts.map((f) => f.line || ""), ...extra], all);
+    const found = placeFinder(brief.places);
+    const located = (list: DevMark[]) =>
+      list.flatMap((m): DevMark[] => {
+        const ll = found(m.place);
+        const fromLl = m.from ? found(m.from) : null;
+        return ll ? [{ ...m, ll, ...(fromLl ? { fromLl } : {}) }] : [];
+      });
+    // The prose's marks first (captures, launch areas), then every other event the cards recorded.
+    const cards = cardMarks(inWindow, o.frontsOf);
+    const main: DevMark[] = [];
+    // A prose mark far from every report of the window is a misplaced name (a Saudi
+    // "Jabal Jarad" for Taiz's): the same 40 km rule as the fronts.
+    for (const m of merged(located(devMap).filter((m) => nearAny(m, sameKind(m, cards.all))), cards.all, cards.launches)) addMark(main, m);
+    brief.devMap = main;
+    for (const f of brief.fronts) {
+      const own = cards.byFront[f.id] ?? [];
+      const list: DevMark[] = [];
+      // Only what happened inside the front's own area: a Kahbub card that names Taiz stays off the Marib map.
+      for (const m of merged((frontMaps[f.id] ? located(frontMaps[f.id]) : []).filter((m) => nearAny(m, sameKind(m, own))), own, cards.launches)) if (m.ll && o.inArea(m.ll, f.id)) addMark(list, m);
+      if (list.length) f.map = list;
+      else delete f.map;
+    }
+  } catch (err) {
+    console.error("[desk] prose places failed:", err instanceof Error ? err.message : err);
+  }
+  return model;
+}
+
+/**
+ * The prose's marks laid over the cards': one event drawn once. A prose mark
+ * names the spot ("Jabal Qarfan"), so it replaces the card's mark of the same
+ * kind and side within 20 km (the card pinned on the district). A prose capture
+ * stays a capture only where a card's capture was confirmed; otherwise it is the
+ * side's advance, as the cards' own are.
+ */
+const FIRED = new Set(["missile", "drone", "interception"]);
+/** A ship is drawn only near a card about a ship: "Kahbub" is a hill, not a port. */
+const sameKind = (m: DevMark, cards: DevMark[]) => (m.kind === "naval" ? cards.filter((c) => c.kind === "naval") : cards);
+function merged(prose: DevMark[], cards: DevMark[], launches: Launch[] = []): DevMark[] {
+  const rest = [...cards];
+  const out: DevMark[] = [];
+  for (const m0 of prose) {
+    const confirmed = cards.some((c) => c.kind === "capture" && c.side === m0.side && nearAny(m0, [c], 3));
+    const m: DevMark = m0.kind === "capture" && !confirmed ? { ...m0, kind: "advance" } : { ...m0 };
+    // Whose missile or drone was shot down, the cards say: the prose's "side" is not sure of it.
+    const card = m.kind === "interception" ? cards.find((c) => c.kind === "interception" && nearAny(m, [c], 20)) : undefined;
+    if (card) Object.assign(m, { side: card.side, ...(card.shot ? { shot: card.shot } : {}) });
+    for (let i = rest.length - 1; i >= 0; i--) {
+      const c = rest[i];
+      if ((c.kind === m.kind || (m.kind === "advance" && c.kind === "capture")) && c.side === m.side && nearAny(m, [c], 20)) {
+        // The card knew where it was fired from: the prose's mark keeps that path.
+        if (!m.fromLl && c.fromLl) m.fromLl = c.fromLl;
+        rest.splice(i, 1);
+      }
+    }
+    if (!m.fromLl) {
+      const from = launchFor(m, launches);
+      if (from) m.fromLl = from;
+    }
+    out.push(m);
+  }
+  // A missile or drone mark on the very spot another one was fired from is its
+  // launch area, not a target ("launched two ballistic missiles from Sanaa").
+  const all = [...out, ...rest];
+  const launched = all.filter((x) => x.fromLl).map((x) => ({ side: x.side, ll: x.fromLl as [number, number] }));
+  return all.filter((x) => !(FIRED.has(x.kind) && !x.fromLl && launched.some((l) => l.side === x.side && nearAny(x, [{ ...x, ll: l.ll }], 10))));
+}
+
+
+/**
+ * A place of a map entry: the gazetteer's own spot for that very name (checked
+ * against OpenStreetMap), else among the ones the prose found, by the same
+ * name or the longest found name inside it ("Marib city" -> "Marib").
+ */
+export function placeFinder(places: Record<string, [number, number]> = {}): (name: string) => [number, number] | null {
+  const keyed = Object.entries(places).map(([n, ll]) => [placeKey(n), ll] as const).filter(([k]) => k.length >= 3);
+  return (name) => {
+    const k = placeKey(name);
+    const gaz = placesIn(name).find((p) => p.kind !== "governorate" && placeKey(p.name) === k);
+    if (gaz) return [gaz.lat, gaz.lng];
+    const same = keyed.find(([x]) => x === k);
+    if (same) return same[1];
+    const inside = keyed.filter(([x]) => k.includes(x)).sort((a, b) => b[0].length - a[0].length)[0];
+    return inside ? inside[1] : null;
+  };
 }

@@ -120,3 +120,17 @@ test("a video over a minute and a half is a TV package, not the moment", () => {
   assert.equal(tooLong({ kind: "video", duration: 40 }), false);
   assert.equal(tooLong({ kind: "photo" }), false);
 });
+
+test("a card written about its footage goes out with it, and any still that is not a card or a studio keeps", async () => {
+  const { aboutFootage, keeps, mediaCandidate, tooLong } = await import("./media.ts");
+  const r = { type: "strike" as const, summary: "Footage shows failed Houthi Asif anti-ship missile launch", text: "" };
+  assert.equal(aboutFootage(r), true);
+  assert.equal(aboutFootage({ summary: "Video: smoke rises over Jazan port" }), true);
+  assert.equal(aboutFootage({ summary: "Houthi forces fire missiles at Jazan" }), false);
+  assert.equal(mediaCandidate({ ...r, type: "statement" }, "In this video, a Houthi loyalist claims"), true);
+  assert.equal(keeps({ cls: "interview", graphic: false }, r), true);
+  assert.equal(keeps({ cls: "logo", graphic: false }, r), false);
+  assert.equal(keeps({ cls: "interview", graphic: false }, { type: "strike" as const, summary: "Houthi forces fire missiles" }), false);
+  assert.equal(tooLong({ kind: "video", duration: 150 }), true);
+  assert.equal(tooLong({ kind: "video", duration: 150 }, true), false);
+});

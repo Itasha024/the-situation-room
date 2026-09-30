@@ -61,3 +61,9 @@ test("the writers get the baseline with the live layer over it", () => {
   assert.equal(rows.find((r) => r.id === "al-hazm")?.side, "plc");
   assert.equal(rows.find((r) => r.id === "al-makha")?.side, "houthi");
 });
+
+test("a building seized is no ground taken, and a governorate's name is not its capital's district", () => {
+  const card = { fp: "h", at: "2026-09-28T16:10:55Z", source: "Al-Yemen Now", url: "https://x.com/a/status/1", type: "combat", summary: "Houthi forces seize Al-Juba hospital in Marib for military use", place: "Marib", lat: 15.46, lng: 45.32 } as never;
+  const live = updateControlLive(null, [card], new Date("2026-09-29T00:00:00+03:00"));
+  assert.equal(live.changes.length, 0);
+});

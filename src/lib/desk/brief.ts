@@ -1,9 +1,9 @@
 /**
- * The 12-hour brief.
+ * The 6-hour brief.
  *
  * The general situation, the front lines and the conflict-in-numbers are the three
- * panels a reader uses to orient. They are rebuilt on a fixed 12-hour cadence —
- * 00:00 and 12:00 Asia/Jerusalem — so the page can state, plainly, when it last
+ * panels a reader uses to orient. They are rebuilt on a fixed 6-hour cadence —
+ * 00:00, 06:00, 12:00 and 18:00 in Yemen (UTC+3) — so the page can state, plainly, when it last
  * refreshed and when it next will. No panel is ever silently stale.
  *
  * What is derived here comes only from what the desk itself logged in the window:
@@ -12,6 +12,7 @@
  * data.json — the desk does not invent an authority it does not have.
  */
 
+import type { DevMark } from "./prose.ts";
 import type { LiveReport } from "../yemen-scan.server.ts";
 import { alertCities } from "./copies.ts";
 import {
@@ -23,16 +24,20 @@ import {
 } from "./synthesis.ts";
 import { num } from "./wire-style.ts";
 import { type ExtraFront, inExtraFront, spotsOf, whereOf } from "./new-fronts.ts";
+import { govKey, type TrackedId, trackedAt, trackedOf } from "./front-areas.ts";
 
-export const CADENCE_HOURS = 12;
+export const CADENCE_HOURS = 6;
 
 /* ------------------------------------------------------------------ *
  * Window boundaries
  * ------------------------------------------------------------------ */
 
-function jerusalemParts(d: Date) {
+/** The desk's clock: Israel's, summer time included (it ends on 25 Oct 2026). */
+export const DESK_TZ = "Asia/Jerusalem";
+
+function deskParts(d: Date) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Jerusalem",
+    timeZone: DESK_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -50,58 +55,72 @@ function jerusalemParts(d: Date) {
   };
 }
 
-function isoAtJerusalemHour(base: Date, hour: number, dayOffset = 0): string {
-  const p = jerusalemParts(base);
-  const d = new Date(Date.UTC(p.year, p.month - 1, p.day + dayOffset));
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}T${String(hour).padStart(2, "0")}:00:00+03:00`;
+/** Minutes Israel's clock is ahead of UTC at instant `t` (180 in summer, 120 in winter). */
+function deskOffset(t: number): number {
+  const { year, month, day, hour, minute } = deskParts(new Date(t));
+  return Math.round((Date.UTC(year, month - 1, day, hour % 24, minute) - Math.floor(t / 60_000) * 60_000) / 60_000);
 }
 
-/** The 12-hour boundary that has just passed, and the next one. */
+/** The instant Israel's clock shows `hour`:00 on that day (hour may run past 23 or below 0). */
+function deskInstant(year: number, month: number, day: number, hour: number): number {
+  const wall = Date.UTC(year, month - 1, day, hour);
+  let t = wall - deskOffset(wall - 3 * 3600_000) * 60_000;
+  t = wall - deskOffset(t) * 60_000;
+  return t;
+}
+
+function deskIso(t: number): string {
+  const { year, month, day, hour, minute } = deskParts(new Date(t));
+  const off = deskOffset(t);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${year}-${p(month)}-${p(day)}T${p(hour % 24)}:${p(minute)}:00+${p(Math.floor(off / 60))}:${p(off % 60)}`;
+}
+
+/**
+ * The boundary that has just passed, and the next one: 00, 06, 12 and 18 on
+ * Israel's clock, which moves with it when summer time ends (25 Oct).
+ */
 export function briefWindow(now = new Date()): { updatedAt: string; nextUpdateAt: string; startedAt: string } {
-  const { hour } = jerusalemParts(now);
-  const slot = hour < 12 ? 0 : 12;
-  const updatedAt = isoAtJerusalemHour(now, slot);
-  const nextUpdateAt = slot === 0 ? isoAtJerusalemHour(now, 12) : isoAtJerusalemHour(now, 0, 1);
-  const startedAt = slot === 0 ? isoAtJerusalemHour(now, 12, -1) : isoAtJerusalemHour(now, 0);
-  return { updatedAt, nextUpdateAt, startedAt };
+  const { year, month, day, hour } = deskParts(now);
+  const slot = Math.floor((hour % 24) / CADENCE_HOURS) * CADENCE_HOURS;
+  const at = deskInstant(year, month, day, slot);
+  const next = deskInstant(year, month, day, slot + CADENCE_HOURS);
+  const start = deskInstant(year, month, day, slot - CADENCE_HOURS);
+  return { updatedAt: deskIso(at), nextUpdateAt: deskIso(next), startedAt: deskIso(start) };
 }
 
 /* ------------------------------------------------------------------ *
  * Fronts the desk tracks
  * ------------------------------------------------------------------ */
 
-export type FrontId = "bab" | "red-sea-coast" | "west-taiz" | "marib" | "dhale" | "jawf" | "saudi-home" | "energy";
+export type FrontId = TrackedId;
 
-/** What each front is and why it matters. Opens the front's paragraph. */
 const FRONT_STANDING: Record<FrontId, string> = {
   bab: "The strait and the high ground above it carry the shipping lane between the Red Sea and the Gulf of Aden.",
-  "red-sea-coast": "The Red Sea coast controls access to Hodeidah, the main import route for the north.",
-  "west-taiz": "Western Taiz is the hinge between the coast and the highlands, and the approach to Taiz city.",
+  "red-sea-coast": "The Red Sea coast, from Mocha north to Hodeidah, controls the main import route for the north.",
+  "west-taiz": "Taiz is the hinge between the coast and the highlands, and its city has been besieged for a decade.",
   marib: "Marib holds Yemen's main oil and gas infrastructure and the government's northern stronghold.",
-  dhale: "Al-Dhale and Lahj sit astride the roads north from Aden.",
+  dhale: "Al-Dhale sits astride the road north from Aden to the highlands.",
+  lahj: "Lahj covers the approaches to Aden from the north and west.",
   jawf: "Al-Jawf is the northern desert flank, linking Marib to the Saudi border.",
-  "saudi-home": "The Saudi home front is where long-range fire and air defence alerts register inside the kingdom.",
-  energy: "Energy and shipping is where the fighting reaches oil exports and the Red Sea corridor.",
+  "saudi-home": "Saudi Arabia is where Houthi missiles and drones, air-defence alerts, fighting on the border and the war's effects at home register inside the kingdom.",
 };
 
-const FRONT_MATCH: { id: FrontId; name: string; re: RegExp }[] = [
-  { id: "bab", name: "Bab al-Mandab and the south-west coast", re: /Bab al-Mandab|Kahbub|Mayun|Dhubab|Jahannam|Al-Aqrab|\bRum\b/i },
-  { id: "red-sea-coast", name: "Red Sea coast", re: /Mocha|Al-Khokha|Hays|Hodeidah|Kamaran|Al-Haymah|Midi/i },
-  { id: "west-taiz", name: "Western Taiz and Al-Wazi'iyah", re: /Al-Wazi'iyah|Al-Dharifah|Sharirah|Al-Alqamah|Al-Aghbara|Maqbanah|Al-Barh|\bTaiz\b/i },
-  { id: "marib", name: "Marib", re: /\bMarib\b|Wadi Dhanah|East Balaq|\bBalaq\b|Sirwah|Al-Hazmah|Al-Wadi district|Harib/i },
-  { id: "dhale", name: "Al-Dhale and Lahj", re: /Al-Dhale|Murays|\bLahj\b|Al-Mudaribah|Jabal al-Aswad|Qahaza|Al-Musaymir|Al-Subayhah/i },
-  { id: "jawf", name: "Al-Jawf", re: /Al-Jawf|Al-Hazm\b|Yatmah/i },
-  { id: "saudi-home", name: "The Saudi home front", re: /Riyadh|Al-Kharj|Jeddah|Mecca|Taif|Abha|Khamis Mushait|Jazan|Najran|Al-Ula|Farasan|Sharurah|Olaya/i },
-  { id: "energy", name: "Energy and shipping", re: /Yanbu|Aramco|Abqaiq|Ras Tanura|crude|pipeline|tanker|shipping|Suez|Red Sea corridor/i },
+/** The fixed fronts, in order: each a governorate, or one of the three areas (front-areas.ts). */
+const TRACKED: { id: FrontId; name: string }[] = [
+  { id: "bab", name: "Bab al-Mandab" },
+  { id: "red-sea-coast", name: "Red Sea coast" },
+  { id: "west-taiz", name: "Taiz" },
+  { id: "marib", name: "Marib" },
+  { id: "dhale", name: "Al-Dhale" },
+  { id: "lahj", name: "Lahj" },
+  { id: "jawf", name: "Al-Jawf" },
+  { id: "saudi-home", name: "Saudi Arabia" },
 ];
 
 /** Does a tracked front already cover this report? */
 export function coveredByTrackedFront(r: LiveReport): boolean {
-  const blob = `${r.place || ""} ${r.summary} ${r.text}`;
-  return FRONT_MATCH.some(({ re }) => re.test(blob));
+  return trackedOf(r) !== null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -126,18 +145,26 @@ export type FrontActivity = {
   spot?: [number, number];
   /** A front opened in one governorate from several clusters: a spot for each. */
   spots?: [number, number][];
+  /** What happened where on this front, for its animated map (prose.ts DevMark). */
+  map?: DevMark[];
 };
 
 export type Brief = {
   ok: true;
   cadenceHours: number;
-  /** The 12-hour boundary this brief represents. */
+  /** The 6-hour boundary this brief represents. */
   updatedAt: string;
   nextUpdateAt: string;
   /** Start of the window the counts cover. */
   windowStart: string;
   windowLabel: string;
-  situation: { line: string; quiet: boolean; /** The model that wrote the prose, when one did. */ model?: string };
+  situation: { line: string; /** The fuller account behind "Read more". */ more?: string; quiet: boolean; /** The model that wrote the prose, when one did. */ model?: string };
+  /** Where each place the prose names lies, for the page to light it: name -> [lat, lng] (prose-places.ts). */
+  places?: Record<string, [number, number]>;
+  /** The main developments that happened at a place, for the animated map; only those found. */
+  devMap?: DevMark[];
+  /** When the prose was last asked for again because a fallback model wrote it (brief-store.ts). */
+  proseTriedAt?: string;
   fronts: FrontActivity[];
   numbers: {
     line: string;
@@ -194,7 +221,7 @@ function joinClauses(parts: string[]): string {
 
 /**
  * Carried between windows so the status can say which way the war is moving.
- * Without it every brief reads as if the conflict began twelve hours ago.
+ * Without it every brief reads as if the conflict began six hours ago.
  */
 export type BriefHistory = {
   /** Theatre-wide counts from the previous window. */
@@ -232,7 +259,7 @@ export function buildBrief(
   };
   const cas = tally(inWindow);
 
-  const tracked = FRONT_MATCH.map(({ id, name, re }) => ({ id, name, spot: undefined as [number, number] | undefined, spots: undefined as [number, number][] | undefined, has: (r: LiveReport) => re.test(`${r.place || ""} ${r.summary} ${r.text}`) }));
+  const tracked = TRACKED.map(({ id, name }) => ({ id, name, spot: undefined as [number, number] | undefined, spots: undefined as [number, number][] | undefined, has: (r: LiveReport) => trackedOf(r) === id }));
   const opened = extraFronts.map((x) => ({ id: x.id, name: x.name, spot: x.spot, spots: spotsOf(x), where: whereOf(x), has: (r: LiveReport) => inExtraFront(r, x) }));
   const fronts: FrontActivity[] = [...tracked, ...opened].map(({ id, name, spot, spots, has, ...rest }) => {
     const rows = inWindow.filter(has);
@@ -312,12 +339,12 @@ function fmtWindow(iso: string): string {
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return iso;
   const day = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Jerusalem",
+    timeZone: DESK_TZ,
     day: "numeric",
     month: "short",
   }).format(d);
   const time = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Jerusalem",
+    timeZone: DESK_TZ,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -325,11 +352,18 @@ function fmtWindow(iso: string): string {
   return `${time} on ${day}`;
 }
 
-/** The ids of every front (tracked or opened) a report belongs to. */
+/** The front a report belongs to (one at most): a tracked one, else an opened one of its governorate. */
 export function frontIdsOf(r: LiveReport, extraFronts: ExtraFront[] = []): string[] {
-  const blob = `${r.place || ""} ${r.summary} ${r.text}`;
-  return [
-    ...FRONT_MATCH.filter(({ re }) => re.test(blob)).map(({ id }) => id as string),
-    ...extraFronts.filter((x) => inExtraFront(r, x)).map((x) => x.id),
-  ];
+  const t = trackedOf(r);
+  if (t) return [t];
+  const x = extraFronts.find((f) => inExtraFront(r, f));
+  return x ? [x.id] : [];
+}
+
+/** Is a point inside a front's own area? Marks outside it are left off that front's map. */
+export function inFrontArea(ll: [number, number], id: string, extraFronts: ExtraFront[] = []): boolean {
+  const t = trackedAt(ll[0], ll[1]);
+  if (t) return t === id;
+  const x = extraFronts.find((f) => f.id === id);
+  return !!x && govKey(ll[0], ll[1]) === x.gov;
 }

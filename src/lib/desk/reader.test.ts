@@ -9,7 +9,7 @@ import test from "node:test";
 
 import { credibility } from "./credibility.ts";
 import { type Candidate, toReport } from "./editor.ts";
-import { type Reading, checkReading, nextPacificMidnight, pacificDay, repairable, stripSpellingNotes } from "./reader.ts";
+import { type Reading, PROMPT_VERSION, SYSTEM_PROMPT, checkReading, protocolOnly, figuresIn, nextPacificMidnight, pacificDay, repairable, stripSpellingNotes, wrongSpeaker } from "./reader.ts";
 
 function reading(over: Partial<Reading>): Reading {
   return {
@@ -239,7 +239,19 @@ test("casualties in the source are never dropped; a card failing that twice stil
 test("a Houthi actor written as Yemeni forces fails, and can be repaired", () => {
   const r = reading({ actor_side: "houthi", headline: "Yemeni forces fire drones at Jizan", body: "Yemeni forces said they fired drones at Jizan." });
   assert.match(String(checkReading(r, "القوات المسلحة اليمنية تستهدف جيزان")), /written as Yemeni forces/);
-  assert.equal(repairable("figure not in source: 30"), false);
+  // A figure the source does not give is written again without it (the Hayfan
+  // front report, 28 Sep, was lost to this check); the rewrite is checked again.
+  assert.equal(repairable("figure not in source: 30"), true);
+  assert.equal(repairable("commentary"), false);
+});
+
+test("the wider scope is in the reader's instructions", () => {
+  assert.match(SYSTEM_PROMPT, /how many ships crossed Bab al-Mandab/);
+  assert.match(SYSTEM_PROMPT, /Yanbu/);
+  assert.match(SYSTEM_PROMPT, /new coalition commander meets\s+Tareq Saleh/);
+  assert.match(SYSTEM_PROMPT, /Saudi Grand Mufti calls for fighting the Houthis/);
+  assert.match(SYSTEM_PROMPT, /a mufti of any\s+other country is a cleric/);
+  assert.equal(PROMPT_VERSION, 3);
 });
 
 test("a daily 429 rests the model until midnight in California", () => {
@@ -562,4 +574,93 @@ test("notes on how a name is spelled are cut", () => {
   assert.equal(stripSpellingNotes("Omanis and Iranians meet in Muscat"), "Omanis and Iranians meet in Muscat");
   assert.equal(stripSpellingNotes("Houthi shelling hit Hays. Hays is also written Hais. Two were wounded."), "Houthi shelling hit Hays. Two were wounded.");
   assert.equal(stripSpellingNotes("A group called the Southern Giants attacked."), "A group called the Southern Giants attacked.");
+});
+
+test("the government's president is never the Houthi leader: رئيس مجلس القيادة is al-Alimi", () => {
+  const src = "رئيس مجلس القيادة يشيد بكفاءة القوات المسلحة ويوجه بتسريع تنفيذ قراري العودة الآمنة والتعبئة العامة";
+  assert.match(String(wrongSpeaker("Houthi leader: Praise forces and urge rapid implementation of safe return decision", src)), /wrong speaker/);
+  assert.equal(wrongSpeaker("Yemen's president praises armed forces and orders faster safe return and mobilisation", src), null);
+  assert.match(String(wrongSpeaker("Yemen's president: Saudi Arabia will pay", "السيد القائد: السعودية ستدفع الثمن")), /wrong speaker/);
+  assert.equal(wrongSpeaker("Houthi leader: Saudi Arabia will pay", "السيد القائد عبدالملك الحوثي: السعودية ستدفع الثمن"), null);
+  assert.equal(repairable("wrong speaker: x"), true);
+  const r = { publish: true, event_type: "statement", speaker_lead: "Houthi leader", headline: "Houthi leader: Praise forces and urge rapid safe return", body: "", actor_side: "houthi" } as unknown as Reading;
+  assert.match(String(checkReading(r, src, false)), /wrong speaker/);
+});
+
+test("the prompt keeps general Iranian threats out, and hears videos", () => {
+  assert.match(SYSTEM_PROMPT, /Iranian commanders, officials and media threatening/);
+  assert.match(SYSTEM_PROMPT, /\[Said in the video\]/);
+  assert.match(SYSTEM_PROMPT, /رئيس مجلس القيادة/);
+});
+
+test("numbers written as words, dates' leading zeros and Persian casualty words count in the source", () => {
+  const f = figuresIn("استشهادُ ثلاثِ نساءٍ وإصابة أربعة أطفال – الاثنين 17-04-1447هـ", true);
+  assert.ok(f.has("3") && f.has("4"));
+  assert.ok(figuresIn("two people were killed", true).has("2"));
+  const r = { publish: true, event_type: "air_strike", headline: "Saudi air strikes on Taiz kill and wound 70", body: "", actor_side: "saudi", speaker_lead: "" } as unknown as Reading;
+  assert.equal(checkReading(r, "۷۰ شهید و مجروح در حملات هوایی عربستان به تعز یمن"), null);
+});
+
+test("a name before a colon that says nothing goes; an unknown name never opens a headline", async () => {
+  const { fixHeadline } = await import("./reader.ts");
+  assert.equal(
+    fixHeadline("Ahmed al-Musawa: Houthi official inspects wounded in Saudi strike on central Taiz market"),
+    "Houthi official inspects wounded in Saudi strike on central Taiz market",
+  );
+  const src = "وكيل محافظة إب يستقبل الأسرى المحررين من السجون السعودية";
+  const r = reading({ event_type: "statement", headline: "Amin al-Warafi receives released prisoners in Ibb", body: "" });
+  const why = String(checkReading(r, src));
+  assert.match(why, /unfamiliar name/);
+  assert.ok(repairable(why));
+  assert.equal(checkReading(reading({ event_type: "statement", headline: "Ibb official receives prisoners released from Saudi prisons", body: "" }), src), null);
+});
+
+test("a statement of many points keeps them: a one-line card is sent back", () => {
+  const src = [
+    "🔴 عمرو البيض لصحيفة «لينكيستا» الإيطالية: الجنوب ليس أرضا سهلة أمام الحوثيين والقوات الخاضعة للسيطرة السعودية غير قادرة",
+    "🔴 البيض: الحوثيون يسعون لإنشاء \"إيران أخرى\" في القرن الأفريقي وتعزيز حضورهم الإقليمي",
+    "🔴 البيض: سيطرة الحوثيين على باب المندب تمنحهم قدرة على إغلاقه متى شاؤوا دون الحاجة إلى صواريخ",
+    "🔴 البيض: السعودية أضعفت الجبهة المناهضة للحوثيين وعلى الولايات المتحدة عدم تركها تدير الأزمة",
+    "#south24",
+  ].join("\n\n");
+  const r = reading({ event_type: "statement", speaker_lead: "STC official Amr al-Bidh", headline: "STC official Amr al-Bidh: Houthis seek to establish another Iran in the Horn of Africa", body: "" });
+  const why = String(checkReading(r, src));
+  assert.match(why, /points dropped/);
+  assert.ok(repairable(why));
+});
+
+test("protocol visits are not reports; nothing interesting is shortened", () => {
+  assert.match(SYSTEM_PROMPT, /visiting or inspecting the wounded/);
+  assert.match(SYSTEM_PROMPT, /NEVER shorten an interesting item/);
+});
+
+test("a post of bullet lines keeps its body after the scan removed its line breaks", async () => {
+  const { redundantBody, pointsIn } = await import("./reader.ts");
+  const src = [
+    "#عاجل | 🔴 عمرو البيض لصحيفة «لينكيستا» الإيطالية: الجنوب ليس أرضا سهلة أمام الحوثيين والقوات الخاضعة للسيطرة السعودية غير قادرة على تقديم حل عسكري",
+    "🔴 البيض: الحوثيون يسعون لإنشاء \"إيران أخرى\" في القرن الأفريقي وتعزيز حضورهم الإقليمي",
+    "🔴 البيض: سيطرة الحوثيين على باب المندب تمنحهم قدرة على إغلاقه متى شاؤوا دون الحاجة إلى صواريخ أو مسيّرات",
+    "🔴 البيض: السعودية أضعفت الجبهة المناهضة للحوثيين وعلى الولايات المتحدة عدم تركها تدير الأزمة في اليمن وحدها",
+    "🔴 البيض: الجنوب مهم لأمن اليمن واحتواء الحوثيين وقادر على منع تمددهم نحو مناطق استراتيجية #south24",
+  ].join(" ");
+  assert.equal(pointsIn(src), 5);
+  assert.equal(
+    redundantBody(
+      "STC official Amr al-Bidh: Houthis seek to establish another Iran in the Horn of Africa",
+      "Amr al-Bidh told Italian newspaper Linkiesta that Houthi control of Bab al-Mandab grants them the ability to close it at will, adding that Saudi Arabia has weakened the anti-Houthi front.",
+      src,
+    ),
+    false,
+  );
+});
+
+test("protocol with no news of the war is not a report", () => {
+  assert.equal(protocolOnly("Yemeni Presidential Council member Sultan al-Arada opens IT college building in Marib"), true);
+  assert.equal(protocolOnly("Houthi-appointed governor inaugurates road project in Ibb"), true);
+  assert.equal(protocolOnly("Houthi ballistic missiles hit maternity hospital building under construction in Al-Turbah"), false);
+  assert.equal(protocolOnly("Governor visits wounded of Saudi strike on Taiz market"), false);
+  assert.equal(protocolOnly("Saudi envoy opens $500 million power plant in Aden"), false);
+  assert.equal(protocolOnly("Al-Alimi receives US envoy to discuss Houthi attacks on shipping"), false);
+  const card = checkReading({ ...reading({}), headline: "Yemeni Presidential Council member Sultan al-Arada opens IT college building in Marib", body: "" } as Reading, "افتتح عضو مجلس القيادة الرئاسي سلطان العرادة مبنى كلية تقنية المعلومات في مأرب");
+  assert.match(String(card), /protocol/);
 });

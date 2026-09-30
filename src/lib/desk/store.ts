@@ -46,7 +46,7 @@ export interface DeskStore {
 
   /**
    * Arbitrary durable state, keyed. Used for things that must survive a cold
-   * start but are not the scan itself — the 12-hour brief and its history.
+   * start but are not the scan itself — the 6-hour brief and its history.
    */
   getJson<T>(key: string): Promise<T | null>;
   putJson(key: string, value: unknown): Promise<void>;
@@ -69,6 +69,9 @@ export interface DeskStore {
    * instead of claiming success it did not achieve.
    */
   mergeIntoDesk(reports: LiveReport[]): Promise<MergeResult>;
+
+  /** When each of these cards was first published (fp → ISO), for those stored. */
+  timesOf?(fps: string[]): Promise<Record<string, string>>;
 
   /**
    * Read the accumulated feed back out, newest first.

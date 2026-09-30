@@ -12,6 +12,7 @@ import type { DeskStore } from "./store.ts";
 import { askChain } from "./models.ts";
 import { outletSide } from "./digest.ts";
 import { cleanProse, controlContext } from "./prose.ts";
+import { briefWindow } from "./brief.ts";
 import { CONTROL_AS_OF } from "./control-data.ts";
 
 export const TIMELINE_NOW_KEY = "timeline-now";
@@ -53,10 +54,22 @@ export function birdsEye(s: string): boolean {
   return !s.split(/(?<=[.!?])\s+/).some((x) => (x.match(/;/g) || []).length > 2 || (x.match(/,/g) || []).length > 7);
 }
 
+/**
+ * The rewrite runs with the 00:00 and 12:00 brief, a minute or two after the
+ * hour. Without slack, one written at 00:02 was not "due" at 00:01 three days
+ * later and slipped to 12:00: an hour of slack keeps it on its day.
+ */
+const NOW_SLACK_MS = 3600_000;
+
 export function nowDue(saved: TimelineNow | null, now: Date): boolean {
   if (!saved?.asOf) return true;
   const t = Date.parse(saved.asOf);
-  return !Number.isFinite(t) || now.getTime() - t >= NOW_EVERY_MS;
+  return !Number.isFinite(t) || now.getTime() - t >= NOW_EVERY_MS - NOW_SLACK_MS;
+}
+
+/** The last update boundary (00, 06, 12 or 18 on the desk's clock) at or before `now`: what a rewrite is stamped with. */
+export function halfDayStart(now: Date): Date {
+  return new Date(Date.parse(briefWindow(now).updatedAt));
 }
 
 /** Rewrite the Now box when three days have passed. Returns what is stored. */
@@ -75,7 +88,7 @@ export async function refreshTimelineNow(
   if (recent.length < 10) return saved;
   const base = saved?.summary ? saved : NOW_BASE;
   let got: { json: Record<string, unknown>; model: string } | null = null;
-  for (const cap of [500, 160]) {
+  for (const cap of [500, 160, 60]) {
     const user = [
       `ENTRY SUMMARY: ${base.summary}`,
       `ENTRY DETAIL: ${base.detail}`,
@@ -97,7 +110,7 @@ export async function refreshTimelineNow(
     console.error("[timeline-now] answer failed the checks; the entry stays as it was");
     return saved;
   }
-  const out: TimelineNow = { summary, detail, asOf: now.toISOString(), model: got.model };
+  const out: TimelineNow = { summary, detail, asOf: halfDayStart(now).toISOString(), model: got.model };
   await store.putJson(TIMELINE_NOW_KEY, out);
   return out;
 }

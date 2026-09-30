@@ -63,3 +63,14 @@ test("with no model, keywords decide and nothing counts as judged", async () => 
   assert.equal(r.judged.size, 0);
   assert.equal(keywordPick({ id: "x", title: "اليمن: قتلى في غارات على تعز", source: "Al-Araby" }), true);
 });
+
+test("an article page's own date is read from its meta or its date line", async () => {
+  const { pageDate } = await import("./sitemap.ts");
+  assert.equal(pageDate(`<meta property="article:published_time" content="2026-09-28T10:36:00+03:00">`), Date.parse("2026-09-28T07:36:00Z"));
+  assert.equal(pageDate(`<script type="application/ld+json">{"datePublished":"2026-09-27T20:00:00Z"}</script>`), Date.parse("2026-09-27T20:00:00Z"));
+  // Sheba prints it under the headline.
+  assert.equal(pageDate(`<a href="x">News Agencies</a> |\n   2026-09-16 04:28 AM UTC`), Date.parse("2026-09-16T04:28:00Z"));
+  assert.equal(pageDate(`2026-09-16 04:28 PM UTC`), Date.parse("2026-09-16T16:28:00Z"));
+  assert.equal(pageDate(`2026-09-16 12:10 AM UTC`), Date.parse("2026-09-16T00:10:00Z"));
+  assert.ok(Number.isNaN(pageDate(`<p>No date here</p>`)));
+});

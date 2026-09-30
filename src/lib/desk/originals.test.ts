@@ -58,7 +58,7 @@ test("an outlet an original was found at is learned once; one the desk reads is 
   assert.deepEqual(learned.map((l) => [l.site, l.kind]), [["liberation.fr", "site"], ["emmanuelmacron", "x"]]);
 });
 
-test("a relay is held while its original is looked for, and published from the relay after three hours; a second relay of the same words waits with it", async () => {
+test("a relay is held while its original is looked for, and published from the relay after three scans (15 minutes); a second relay of the same words waits with it", async () => {
   const saved = new Map<string, unknown>();
   const store = { getJson: async (k: string) => saved.get(k) ?? null, putJson: async (k: string, v: unknown) => void saved.set(k, JSON.parse(JSON.stringify(v))) } as never;
   const realFetch = globalThis.fetch;
@@ -82,9 +82,9 @@ test("a relay is held while its original is looked for, and published from the r
     // A third that does not name him, telling the same thing: it waits with the first.
     const c = card("mihwar", "Al-Mihwar", "https://t.me/Alomhoar/1", "France will send soldiers and defense systems to Saudi Arabia to protect the Yanbu facility");
     const held3 = new Set<string>();
-    await traceOrigins(store, [c], new Map([[c.url, "فرنسا سترسل جنودا إلى السعودية لحماية ينبع"]]), t0 + 15 * 60_000, [], { held: held3 });
+    await traceOrigins(store, [c], new Map([[c.url, "فرنسا سترسل جنودا إلى السعودية لحماية ينبع"]]), t0 + 12 * 60_000, [], { held: held3 });
     assert.deepEqual([...held3], ["mihwar"]);
-    // Three hours on, nothing found: the first goes out from its relay, the third with it.
+    // Three scans on, nothing found: the first goes out from its relay, the third with it.
     late = await traceOrigins(store, [], new Map(), t0 + HOLD_MS + 60_000, [], { held: new Set() });
     assert.deepEqual(late.map((r) => r.fp).sort(), ["aqsa", "mihwar"]);
     late = await traceOrigins(store, [], new Map(), t0 + 10 * 60_000 + HOLD_MS + 60_000, [], { held: new Set() });

@@ -3,10 +3,11 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Yemen War Desk";
-const ASSET_V = "desk-en-4";
-// The reader's theme on <html> before first paint; the broadsheet pair also loads its two fonts.
-const THEME_BOOT = `try{var t=localStorage.getItem("desk-theme");if(t==="broadsheet-day"||t==="broadsheet-night"){var d=document.documentElement;d.dataset.theme=t;d.dataset.set="broadsheet";var l=document.createElement("link");l.id="desk-fonts";l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap";document.head.appendChild(l)}}catch(e){}`;
+const APP_NAME = "Yemen Conflict Desk";
+const ASSET_V = "desk-en-33";
+// The reader's theme on <html> before first paint — Night unless they chose Day — and the
+// broadsheet pair's two fonts.
+const THEME_BOOT = `try{var t=localStorage.getItem("desk-theme");if(t!=="broadsheet-day")t="broadsheet-night";{var d=document.documentElement;d.dataset.theme=t;d.dataset.set="broadsheet";var l=document.createElement("link");l.id="desk-fonts";l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap";document.head.appendChild(l)}}catch(e){}`;
 
 export const Route = createRootRoute({
   head: () => ({
@@ -22,7 +23,7 @@ export const Route = createRootRoute({
       },
     ],
     links: [
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg?v=sr1" },
       { rel: "stylesheet", href: appCss },
       {
         rel: "stylesheet",
@@ -33,10 +34,10 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: `/themes.css?v=${ASSET_V}` },
       { rel: "preload", href: "/vendor/leaflet/leaflet.js", as: "script" },
       { rel: "preload", href: `/app.js?v=${ASSET_V}`, as: "script" },
-      { rel: "preload", href: "/data.json", as: "fetch", crossOrigin: "anonymous" },
+      { rel: "preload", href: `/data.json?v=${ASSET_V}`, as: "fetch", crossOrigin: "anonymous" },
       { rel: "preload", href: "/gazetteer.json", as: "fetch", crossOrigin: "anonymous" },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png?v=sr1" },
     ],
   }),
   component: RootDocument,

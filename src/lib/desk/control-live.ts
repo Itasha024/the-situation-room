@@ -1,8 +1,8 @@
 /**
- * District control, moved on the 12-hour clock by the capture reports.
+ * District control, moved on the 6-hour clock by the capture reports.
  * Server-only.
  *
- * public/control.json stays the hand baseline. Every 12 hours the window's
+ * public/control.json stays the hand baseline. Every 6 hours the window's
  * combat cards are read against the districts they fall in, and a live layer
  * (`control-live`) records what changed; /api/brief serves it and the page
  * lays it over the baseline, so the shading, the district notes and the
@@ -59,6 +59,13 @@ const VAGUE = new Set(["taiz", "lahj", "dhale", "dali", "marib", "jawf", "bayda"
 /** Captured people or kit, not ground. */
 const NOT_GROUND = /^\s*(?:an?\s+|two\s+|three\s+|\d+\s+|several\s+|dozens\s+of\s+)?(?:houthi\s+|government\s+)?(?:fighters?|commanders?|members?|prisoners?|militants?|soldiers?|cells?|weapons?|arms|ammunition|boats?|vessels?|drones?|ships?|tankers?|men|leaders?|officers?|people|group|spy|spies)\b/i;
 
+/**
+ * A building, not ground: "Houthi forces seize Al-Juba hospital in Marib for
+ * military use" turned Ma'rib district contested on 29 September. Taking over
+ * a hospital, a school or a house where a side already stands moves no line.
+ */
+const BUILDING = /\b(?:hospitals?|schools?|clinics?|mosques?|house|houses|homes?|buildings?|complex|compound|university|college|warehouses?|farms?|residential|offices?|headquarters|hotel|stadium|factory|market)\b/i;
+
 function inRing(x: number, y: number, ring: [number, number][]): boolean {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -82,7 +89,8 @@ export function districtOf(r: LiveReport): (typeof ADM2)[number] | null {
     if (at) return at;
   }
   const words = ` ${norm(String(r.summary || ""))} `;
-  for (const [n, d] of BY_NORM) if (words.includes(` ${n} `)) return d;
+  // A governorate's name ("in Marib", "in Taiz") is not its capital's district.
+  for (const [n, d] of BY_NORM) if (!VAGUE.has(n) && words.includes(` ${n} `)) return d;
   return null;
 }
 
@@ -103,6 +111,20 @@ function confirmed(claims: Claim[]): boolean {
   return (new Set(tellers).size >= 2 && sides.size >= 2) || wire;
 }
 
+/**
+ * One card's capture told the way control needs it before it moves: two outlets
+ * from different sides, or a wire. The developments' maps draw anything less as
+ * an advance, not a flag (user, 30 Sep: one side's claim of a hill is no capture).
+ */
+export function captureConfirmed(r: LiveReport): boolean {
+  const tellers = [r.source, ...(r.alsoReportedBy ?? []).map((a) => a.source)].filter(Boolean);
+  if (r.side === "agency" || tellers.some((o) => WIRES.test(o))) return true;
+  // Both camps tell it: the side that lost the ground admits it. Two anti-Houthi
+  // outlets (Aden al-Ghad and Almashhad) are one camp, not two.
+  const camps = new Set(tellers.map((o) => outletSide(o)).filter(Boolean));
+  return camps.size >= 2;
+}
+
 /** Apply one window's capture reports to the live layer. Returns the new layer. */
 export function updateControlLive(prev: ControlLive | null, reports: LiveReport[], now = new Date()): ControlLive {
   const out: ControlLive = { districts: { ...(prev?.districts ?? {}) }, changes: [...(prev?.changes ?? [])], asOf: now.toISOString() };
@@ -113,7 +135,7 @@ export function updateControlLive(prev: ControlLive | null, reports: LiveReport[
     const to = captor(summary);
     if (!to) continue;
     const took = TOOK.exec(summary);
-    if (took && NOT_GROUND.test(took[1])) continue;
+    if (took && (NOT_GROUND.test(took[1]) || BUILDING.test(` ${took[1]} `.split(STOP_AT)[0]))) continue;
     const d = districtOf(r);
     if (!d) continue;
     const g = byDistrict.get(d.id) ?? { d, claims: [] };

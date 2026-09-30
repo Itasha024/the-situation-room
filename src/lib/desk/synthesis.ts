@@ -216,7 +216,7 @@ function thirdLine(input: StatusInput): string {
     )} at sea or against port infrastructure.`;
   }
   if (now.alerts >= 2) {
-    return `The Saudi home front was under alert ${plural(now.alerts, "time")} in the window.`;
+    return `Saudi Arabia was under alert ${plural(now.alerts, "time")} in the window.`;
   }
   return "";
 }

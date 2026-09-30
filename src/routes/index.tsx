@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
   // a deploy clears it.
   headers: () => ({
     "cache-control": "public, max-age=0, must-revalidate",
-    "cdn-cache-control": "public, s-maxage=3600, stale-while-revalidate=86400",
+    "cdn-cache-control": "public, s-maxage=30, stale-while-revalidate=30",
   }),
 });
 

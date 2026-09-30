@@ -35,6 +35,7 @@ import {
   LEARNED_KEY,
   SPEAKER_PRESS,
   WIRE_SITES,
+  accountPost,
   learnSource,
   loadLearned,
   ownCandidates,
@@ -43,6 +44,7 @@ import {
   translateKeys,
   whichCarries,
 } from "./originals.ts";
+import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
 
 export type Cited = {
   name: string;
@@ -62,6 +64,12 @@ export type Cited = {
   speaker?: string;
   /** The outlets he gave the words to ("told CNN"): his interview there is first-hand too. */
   spokeTo?: string[];
+  /** Its own X account: a firm's figures or a body's words are often posted there first. */
+  x?: string;
+  /** A data or analysis firm (Kpler, TankerTrackers): when it publishes nothing itself, the first major outlet carrying its figures is the original. */
+  data?: boolean;
+  /** Matched by its kind ("Egypt's foreign ministry"), not its name: a named speaker in the same words goes first. */
+  generic?: boolean;
 };
 
 /** Each country's main outlets: where "British media" or "a US official" is looked for. */
@@ -73,6 +81,7 @@ export const COUNTRY_SITES: Record<string, string[]> = {
   FR: ["lemonde.fr", "lefigaro.fr", "france24.com", "liberation.fr", "lesechos.fr"],
   DE: ["spiegel.de", "faz.net", "sueddeutsche.de", "dw.com", "zeit.de"],
 };
+for (const [code, sites] of Object.entries(OFFICIAL_PRESS)) COUNTRY_SITES[code] ??= sites;
 COUNTRY_SITES.West = [...COUNTRY_SITES.US.slice(0, 8), ...COUNTRY_SITES.UK.slice(0, 5), "lemonde.fr", "spiegel.de"];
 const COUNTRY_EDITION: Record<string, Edition> = { US: "en", UK: "gb", IR: "en", IT: "it", FR: "fr", DE: "de", West: "en" };
 
@@ -86,6 +95,8 @@ const B = (name: string, site: string, country = "", extra: Partial<Cited> = {})
  * and the coalition publish through SPA.
  */
 const CITABLE: [RegExp, Cited][] = [
+  // The bodies with their own accounts first ("Aspides, the EU's naval mission" is Aspides).
+  ...BODIES,
   [/نيويورك تايمز|New York Times|\bNYT\b/i, O("NYT", "nytimes.com", "US")],
   [/وول ستريت جورنال|Wall Street Journal|\bWSJ\b/i, O("WSJ", "wsj.com", "US")],
   [/واشنطن بوست|Washington Post/i, O("Washington Post", "washingtonpost.com", "US")],
@@ -137,13 +148,9 @@ const CITABLE: [RegExp, Cited][] = [
   [/المتحدث (?:الرسمي )?باسم (?:قوات )?التحالف|تحالف دعم الشرعية|coalition spokesman/i, B("Coalition (SPA)", "spa.gov.sa", "SA")],
   [/الخارجية السعودية|Saudi (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Saudi Foreign Ministry", "spa.gov.sa", "SA")],
   [/وكالة الأنباء السعودية|\(واس\)|\bواس\b|Saudi Press Agency/i, B("SPA", "spa.gov.sa", "SA")],
-  [/الخارجية الإماراتية|UAE (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("UAE Foreign Ministry", "wam.ae", "AE")],
-  [/الخارجية العمانية|Omani? (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Oman Foreign Ministry", "omannews.gov.om", "OM")],
-  [/الخارجية الإيرانية|Iranian? (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Iran Foreign Ministry", "irna.ir", "IR")],
-  [/الخارجية الباكستانية|Pakistani? (?:Foreign Office|Foreign Ministry)/i, B("Pakistan Foreign Office", "mofa.gov.pk", "PK")],
   [/سنتكوم|القيادة المركزية الأمريكية|CENTCOM|Central Command/i, B("CENTCOM", "centcom.mil", "US")],
   [/الخارجية الأمريكية|الخارجية الأميركية|State Department/i, B("State Department", "state.gov", "US")],
-  [/المبعوث الأممي|غروندبرغ|UN envoy|Grundberg/i, B("UN envoy's office", "osesgy.unmissions.org")],
+  [/المبعوث الأممي|غروندبرغ|UN envoy|Grundberg/i, B("UN envoy's office", "osesgy.unmissions.org", "UN", { x: "OSE_Yemen" })],
   [/مجلس الأمن الدولي|Security Council/i, B("UN Security Council", "press.un.org")],
   [/عمليات التجارة البحرية البريطانية|\bUKMTO\b/i, B("UKMTO", "ukmto.org", "UK")],
   [/وزارة الدفاع البريطانية|\bUK (?:Defen[cs]e Ministry|Ministry of Defen[cs]e)\b|\bMoD\b/, B("UK Ministry of Defence", "gov.uk", "UK")],
@@ -169,6 +176,24 @@ const CITABLE: [RegExp, Cited][] = [
   [/الخارجية البريطانية|وزارة الخارجية البريطانية|Foreign(?:,| and) Commonwealth|\bFCDO\b|British Foreign Office/i, B("UK Foreign Office", "gov.uk", "UK")],
   [/البنتاغون|وزارة الدفاع الأمريكية|Pentagon|\bDoD\b/i, B("Pentagon", "defense.gov", "US")],
   [/البيت الأبيض|White House/i, B("White House", "whitehouse.gov", "US")],
+  // Shipping, oil and conflict data: their figures travel through everyone
+  // ("Kpler estimates…"), so the desk goes to the firm itself, or to the first
+  // major outlet that published its numbers.
+  [/كبلر|كيبلر|Kpler/i, O("Kpler", "kpler.com", "", { x: "Kpler", data: true })],
+  [/فورتكسا|Vortexa/i, O("Vortexa", "vortexa.com", "UK", { data: true })],
+  [/تانكر ?تراكرز|TankerTrackers/i, O("TankerTrackers", "tankertrackers.com", "", { x: "TankerTrackers", data: true })],
+  [/ويندوارد|Windward/i, O("Windward", "windward.ai", "", { x: "WindwardAI", data: true })],
+  [/مارين ?ترافيك|MarineTraffic/i, O("MarineTraffic", "marinetraffic.com", "", { x: "MarineTraffic", data: true })],
+  [/أمبري|امبري|Ambrey/i, O("Ambrey", "ambrey.com", "UK", { data: true })],
+  [/أرغوس ميديا|Argus Media/i, O("Argus", "argusmedia.com", "UK", { x: "ArgusMedia", data: true })],
+  [/ستاندرد آند بورز|S&P Global|\bPlatts\b/i, O("S&P Global", "spglobal.com", "US", { data: true })],
+  [/وكالة الطاقة الدولية|International Energy Agency|\bIEA\b/, B("IEA", "iea.org", "", { x: "IEA", data: true })],
+  [/أوبك|\bOPEC\b/, B("OPEC", "opec.org", "", { data: true })],
+  [/أكليد|\bACLED\b/i, O("ACLED", "acleddata.com", "US", { data: true })],
+  [/إنتليجنس أونلاين|انتليجنس اونلاين|Intelligence Online/i, O("Intelligence Online", "intelligenceonline.com", "FR")],
+  // Any other country's ministry, government, president or army, by its kind (officials.ts); the UN last.
+  ...OFFICIAL_BODIES,
+  UN_BODY,
 ];
 
 /**
@@ -178,7 +203,10 @@ const CITABLE: [RegExp, Cited][] = [
 const ISRAELI = /إسرائيل|عبرية|يديعوت|هآرتس|معاريف|القناة (?:12|13|14|الثانية عشرة)|Israel|Hebrew|Haaretz|Yedioth|Ynet|Maariv|Jerusalem Post|Times of Israel|i24|Channel (?:12|13|14)\b|\bKan\b/i;
 
 /** A citation marker: the name must be what the post is relaying, not a subject. */
-const RELAY = /(?:نقلا عن|نقلاً عن|وفقا ل|وفقاً ل|بحسب|حسب|عن|قالت|ذكرت|أفادت|أعلنت|كشفت|أكدت|:|according to|citing|told|tells?|said|reported|reports)/i;
+const RELAY = /(?:نقلا عن|نقلاً عن|وفقا ل|وفقاً ل|بحسب|حسب|عن|قالت|ذكرت|أفادت|أعلنت|كشفت|أكدت|:|according to|citing|told|tells?|said|reported|reports|estimat\w*|data|figures|show(?:s|ed)?|analysis|track\w*|تقديرات|بيانات|أظهرت|تظهر|تقدر)/i;
+
+/** What a body does in its own statement: condemns, calls for, warns, welcomes, holds talks. */
+const STATEMENT = /\b(?:condemn\w*|call(?:s|ed)? (?:for|on)|urg\w*|warn\w*|welcom\w*|announc\w*|stat(?:es|ed)|express\w*|den(?:y|ies|ied)|demand\w*|hold(?:s|ing)? talks|held talks|met|meets|discuss\w*|reject\w*|affirm\w*|stress\w*)\b|دعا|دعت|تدعو|أدان|أدانت|تدين|يدين|حذر|حذرت|رحب|رحبت|طالب|طالبت|بحث|التقى|استنكر|استنكرت|أكد|أكدت/i;
 
 /**
  * How much of a website article a citation may come from. A post is its own
@@ -219,11 +247,14 @@ export function findCitation(text: string, carrier: string, carrierUrl = ""): Ci
   for (const [re, cited] of CITABLE) {
     const m = re.exec(t);
     if (!m) continue;
-    if (carrierUrl.includes(cited.site) || carrier.toLowerCase() === cited.name.toLowerCase()) continue;
+    if ((cited.site && carrierUrl.includes(cited.site)) || carrier.toLowerCase() === cited.name.toLowerCase()) continue;
+    if (cited.x && carrierUrl.toLowerCase().includes(`/${cited.x.toLowerCase()}/`)) continue;
     // Within a few words of a relay word, before or after ("رويترز عن",
     // "قالت صحيفة نيويورك تايمز", "Reuters reported", "NYT:").
     const around = t.slice(Math.max(0, m.index - 30), m.index + m[0].length + 12);
-    if (!RELAY.test(around)) continue;
+    // A body's own act is its statement too ("Aspides calls for", "the British government condemns").
+    const acts = t.slice(m.index, m.index + m[0].length + 45);
+    if (!RELAY.test(around) && !(cited.kind === "official" && STATEMENT.test(acts))) continue;
     const told = /(?:told|tells?|interview with|speaking to|لـ|ل\s*$)/i.test(t.slice(Math.max(0, m.index - 20), m.index));
     return told ? { ...cited, told } : cited;
   }
@@ -253,7 +284,7 @@ const NAMED_STRONG = new RegExp(String.raw`\b(?:newspaper|paper|daily|weekly|out
 /** "told NBC News", "Bloomberg reports", "…, Wall Street Journal says": an outlet if Google knows it as one. */
 const NAMED_WEAK = [
   new RegExp(String.raw`\b(?:told|tells?|telling|according to|citing|quoted by|in an interview with|interview with|speaking to|spoke to)\s+(?:the\s+)?${P}`, "g"),
-  new RegExp(String.raw`(?:^|[.;:]\s+|—\s+|\n)(?:the\s+)?${P}\s+(?:reports?|reported|revealed|reveals|wrote|writes|published|quoted)\b`, "g"),
+  new RegExp(String.raw`(?:^|[.;:]\s+|—\s+|\n)(?:the\s+)?${P}\s+(?:reports?|reported|revealed|reveals|wrote|writes|published|quoted|estimates?|estimated|finds|found|tracked|tracks)\b`, "g"),
   new RegExp(String.raw`^(?:the\s+)?${P}:\s`, "g"),
   new RegExp(String.raw`,\s+(?:the\s+)?${P}\s+(?:says|say|reports?|reported)\.?$`, "g"),
 ];
@@ -556,12 +587,19 @@ type Waiting = {
   released?: boolean;
   follows?: string;
 };
-type Entry = { found: Found; at: number; cited?: Cited; keys?: string[]; report?: LiveReport; held?: boolean } | Waiting;
+/** `orig`: a card published from a carrier, kept for a day while its body's own words are looked for. */
+type Entry = { found: Found; at: number; cited?: Cited; keys?: string[]; report?: LiveReport; held?: boolean; orig?: LiveReport; triedAt?: number } | Waiting;
 
-/** How long a relay is held back while its original is looked for. */
-export const HOLD_MS = 3 * 3600_000;
-/** A held report is searched again this often: often at first, then less. */
-const holdEvery = (age: number) => (age < 3600_000 ? 10 * 60_000 : 20 * 60_000);
+/**
+ * How long a relay is held back while its original is looked for: three scans
+ * (the user, 30 Sep: "if after a few scans you can't find it, then from the
+ * relay"). The search goes on for a day after, and the original replaces it.
+ */
+export const HOLD_MS = 15 * 60_000;
+/** A held report is searched again on every scan. */
+const holdEvery = (_age: number) => 4 * 60_000;
+/** Two relays of the same words this close in time wait for one original. */
+const SAME_WORDS_MS = 3 * 3600_000;
 /** Held reports searched per tick, before any other retry. */
 const HOLD_BUDGET = 6;
 
@@ -589,13 +627,23 @@ function articlePath(url: string): boolean {
 /** The rare names among the keys: what an Italian headline shares with an English summary ("Taif", "Eurofighter"). */
 const rareNames = (keys: string[]) => keys.filter((w) => /^[A-Z]/.test(w) && !COMMON.has(stem(w)) && !/^(?:Italian|French|German|British|Iranian|Italy|France|Germany|Britain)$/.test(w));
 
-type Try = { q: string; ed: Edition; min: number; keys: string[]; credit: (i: GnewsItem) => string | null; anywhere?: boolean };
+type Try = { q: string; ed: Edition; min: number; keys: string[]; credit: (i: GnewsItem) => string | null; anywhere?: boolean; earliest?: boolean };
+
+/** The wires and the main papers: the first of them to carry a data firm's figures is their original. */
+const MAJOR_SITES = new Set([...WIRE_SITES, ...COUNTRY_SITES.US, ...COUNTRY_SITES.UK, "aawsat.com", "arabnews.com", "thenationalnews.com", "aljazeera.com", "lloydslist.com", "tradewindsnews.com"]);
 
 /**
  * Where to look, in order: the outlet's own site in its own language; then the
  * outlet's story wherever it ran under its name (a wire's copies); then, for an
  * official's words or an interview, the outlets of his country.
  */
+/** A carrier the desk will publish a statement from when the body's own words cannot be found. */
+export function majorCarrier(host: string, country = ""): boolean {
+  const h = host.replace(/^www\./, "");
+  const under = (s: string) => h === s || h.endsWith(`.${s}`);
+  return [...MAJOR_SITES].some(under) || (OFFICIAL_PRESS[country] ?? []).some(under) || (SPEAKER_PRESS[country] ?? []).some(under);
+}
+
 export function searchPlan(cited: Cited, keys: string[], arKeys: string[] = []): Try[] {
   const plan: Try[] = [];
   const k = (ks: string[], n = 4) => ks.slice(0, n).join(" ");
@@ -641,13 +689,26 @@ export function searchPlan(cited: Cited, keys: string[], arKeys: string[] = []):
       credit: (i) => (fromOutlet(i, cited.name) || cited.wire ? cited.name : null),
     });
   }
+  if (cited.data && nameWords(cited.name).length) {
+    // A firm's figures it published nowhere itself: the first major outlet that
+    // carried them ("Reuters, citing Kpler data") is where they came out.
+    push({
+      q: `"${cited.name}" ${k(keys)} when:3d`,
+      ed: "en",
+      min: MIN_SHARED,
+      keys,
+      credit: (i) => (MAJOR_SITES.has(domainOf(i.site)) ? i.outlet || null : null),
+      earliest: true,
+    });
+  }
   if ((cited.kind === "official" || cited.told) && cited.country && COUNTRY_SITES[cited.country] && !sites.length) {
     const or = COUNTRY_SITES[cited.country].map((s) => `site:${s}`).join(" OR ");
     push({ q: `(${or}) ${k(keys)} when:2d`, ed: COUNTRY_EDITION[cited.country] ?? "en", min: MIN_SHARED, keys, credit: (i) => i.outlet || null });
   }
   if (cited.kind === "official" || cited.told) {
     // Last, anywhere: the words carried by any outlet, on a close match.
-    push({ q: `${k(keys)} when:2d`, ed: "en", min: 3, keys, credit: (i) => i.outlet || null, anywhere: true });
+    // A major outlet or the country's own press only, never an aggregator (UA.NEWS, yemenonline.info).
+    push({ q: `${k(keys)} when:2d`, ed: "en", min: 3, keys, credit: (i) => (majorCarrier(domainOf(i.site), cited.country) ? i.outlet || null : null), anywhere: true });
   }
   return plan;
 }
@@ -659,8 +720,16 @@ export function searchPlan(cited: Cited, keys: string[], arKeys: string[] = []):
  * UNICEF event. Such a find counts only when a model reads its page and finds
  * the claim there.
  */
-async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: number, claim = ""): Promise<Found | null> {
+async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: number, claim = "", firstHand = false): Promise<Found | null> {
+  // Its own X account first: a firm or a body often posts its figures there before anyone carries them.
+  if (cited.x) {
+    // A firm posts about oil and ships all day: three of the story's words, and its figure when it gives one.
+    const figures = [...new Set(claim.match(/\d+(?:[.,]\d+)?/g) ?? [])].filter((n) => n.length >= 2 || n.includes("."));
+    const post = await accountPost(cited.x, cited.name, keys, reportAt, 3, figures);
+    if (post) return post;
+  }
   for (const t of searchPlan(cited, keys, arKeys)) {
+    if (firstHand && (t.anywhere || t.earliest)) continue;
     const items = await searchGoogleNews(t.q, t.ed);
     // Enough shared words to count, then the best fit: a word ranked early (the
     // post's leading names, "Trump") weighs more than one from deep in the body.
@@ -669,7 +738,9 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
       // The headline sharing most of the story's own words first; then more
       // words in all; then the fit with its leading names.
       .sort((a, b) =>
-        t.min
+        t.earliest
+          ? a.at - b.at
+          : t.min
           ? distinctive(b.title, t.keys) - distinctive(a.title, t.keys) ||
             overlap(b.title, t.keys, b.at, reportAt) - overlap(a.title, t.keys, a.at, reportAt) ||
             weight(b.title, t.keys) - weight(a.title, t.keys)
@@ -693,7 +764,8 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
         if (!body || (await whichCarries(claim, [`${hit.title}\n${body}`])) !== 0) continue;
         return { url, source: t.credit(hit) ?? cited.name, title: hit.title, carrier: true };
       }
-      return { url, source: t.credit(hit) ?? cited.name, title: hit.title };
+      // An outlet that carried a firm's figures is the original of this report, not a source to learn.
+      return { url, source: t.credit(hit) ?? cited.name, title: hit.title, ...(t.earliest ? { carrier: true } : {}) };
     }
   }
   return null;
@@ -911,7 +983,7 @@ export async function traceOrigins(
   // Google's link resolver is shared with the scan: a tick spends a few, and none while Google asks for a rest.
   const resolved0 = resolveCount();
   const searched0 = searchCount();
-  const canWork = () => inTime() && !resolverResting() && resolveCount() - resolved0 < RESOLVE_BUDGET && searchCount() - searched0 < SEARCH_BUDGET;
+  const canWork = () => inTime() && resolveCount() - resolved0 < RESOLVE_BUDGET && searchCount() - searched0 < SEARCH_BUDGET;
   const cache = (await store.getJson<Record<string, Entry>>(CACHE_KEY)) ?? {};
   const registry = (await store.getJson<Registry>(REGISTRY_KEY)) ?? {};
   const regBefore = JSON.stringify(registry);
@@ -982,7 +1054,9 @@ ${text}`.trim(),
     // speaker's own, not the body's: the minister's own ministry posting them
     // is the original.
     const spokeAt = (c: Cited) => c.told && c.kind === "official";
-    const cited = findCitation(text, r.source, r.url) ?? findCitation(lead, r.source, r.url);
+    const found = findCitation(text, r.source, r.url) ?? findCitation(lead, r.source, r.url);
+    // "Egypt's foreign minister Badr Abdelatty said": his own words, looked for as a speaker's.
+    const cited = found?.generic && speakerOf(r.summary, isPost(r.url) ? text : "") ? null : found;
     if (cited) return spokeAt(cited) ? null : cited;
     for (const n of namedOutlets(lead)) {
       if (nameWords(n.name).some((w) => r.source.toLowerCase().includes(w) || r.url.toLowerCase().includes(w))) continue;
@@ -1004,7 +1078,7 @@ ${text}`.trim(),
    * outlet's site, its name elsewhere, its country's press; last, the outlet's
    * own recent articles, read and matched by a model.
    */
-  const find = async (e: Waiting): Promise<Found | null> => {
+  const find = async (e: Waiting, firstHand = false): Promise<Found | null> => {
     const at = Date.parse(e.report.at);
     const sp = e.cited.speaker ? speakerNamed(e.cited.speaker) : null;
     if (sp) {
@@ -1029,7 +1103,7 @@ ${text}`.trim(),
       const hit = await own();
       if (hit) return hit;
     }
-    const found = await search(e.cited, e.keys, e.arKeys ?? [], at, claim);
+    const found = await search(e.cited, e.keys, e.arKeys ?? [], at, claim, firstHand);
     if (found || ours) return found;
     return own();
   };
@@ -1046,6 +1120,14 @@ ${text}`.trim(),
       dirtyLearned = true;
     }
   };
+
+  /**
+   * While Google asks for a rest, only a report with a route of its own (an X
+   * account, a speaker's channel, a site the desk reads) is searched; the rest
+   * wait without losing their turn (30 Sep: the rest stopped every retry for
+   * hours).
+   */
+  const googleOnly = (c: Cited) => resolverResting() && !c.x && !c.speaker && !(c.site && opts.knownHost?.(c.site));
 
   /** Held speaker reports still waiting: a second channel's account of the same words waits with them. */
   const heldSpeakers = () =>
@@ -1074,7 +1156,7 @@ ${text}`.trim(),
         ? heldSpeakers().find(([, e]) => {
             const same = e.keys.filter((k) => copy.toLowerCase().includes(k.toLowerCase()));
             // Three of its words, a name among them, within the hold.
-            return same.length >= 3 && same.some((k) => /^[A-Z]/.test(k)) && Math.abs(Date.parse(r.at) - Date.parse(e.report.at)) < HOLD_MS;
+            return same.length >= 3 && same.some((k) => /^[A-Z]/.test(k)) && Math.abs(Date.parse(r.at) - Date.parse(e.report.at)) < SAME_WORDS_MS;
           })
         : undefined;
       if (leader) {
@@ -1097,7 +1179,7 @@ ${text}`.trim(),
       entry.lastAt = now;
       const found = await find(entry);
       if (found) {
-        const e = (cache[r.fp] = { found, at: now, cited, keys });
+        const e = (cache[r.fp] = { found, at: now, cited, keys, ...(found.carrier && !cited.data ? { orig: { ...r } } : {}) });
         apply(r, found);
         await readFrom(r, e);
         await learn(found, e, r.fp);
@@ -1134,14 +1216,14 @@ ${text}`.trim(),
       console.log(`[origin] no original for ${fp} in ${HOLD_MS / 3600_000} h: published from the relay`);
       continue;
     }
-    if (holds <= 0 || !canWork() || now - e.lastAt < holdEvery(now - e.firstAt)) continue;
+    if (holds <= 0 || !canWork() || googleOnly(e.cited) || now - e.lastAt < holdEvery(now - e.firstAt)) continue;
     holds -= 1;
     e.lastAt = now;
     dirty = true;
     const found = await find(e);
     if (!found) continue;
     const r = { ...e.report };
-    const fe = (cache[fp] = { found, at: now, cited: e.cited, keys: e.keys, held: true });
+    const fe = (cache[fp] = { found, at: now, cited: e.cited, keys: e.keys, held: true, ...(found.carrier && !e.cited.data ? { orig: { ...e.report } } : {}) });
     apply(r, found);
     await readFrom(r, fe);
     await learn(found, fe, fp);
@@ -1150,22 +1232,50 @@ ${text}`.trim(),
   }
 
   // Released reports: hourly, for a day after the report, the published relay
-  // is swapped for its original if it turns up. Then originals found but not
-  // yet read, when their next try is due.
-  for (const [fp, e] of Object.entries(cache)) {
+  // is swapped for its original if it turns up, the longest untried first (30
+  // Sep: re-queued reports sat behind the rest and were never reached). Then
+  // originals found but not yet read, when their next try is due.
+  const due = Object.entries(cache)
+    .filter((x): x is [string, Waiting] => {
+      const e = x[1];
+      return !("found" in e) && !e.follows && !(e.holdUntil && !e.released) && now - e.firstAt <= GIVE_UP_MS && now - e.lastAt >= RETRY_MS;
+    })
+    .sort((a, b) => a[1].lastAt - b[1].lastAt);
+  if (due.length && (budget <= 0 || !canWork())) {
+    console.log(`[origin] ${due.length} released report(s) due, none retried: ${budget <= 0 ? "budget spent" : !inTime() ? "out of time" : "search budget spent"}`);
+  }
+  for (const [fp, e] of due) {
     if (budget <= 0 || !canWork()) break;
-    if ("found" in e || e.follows || (e.holdUntil && !e.released) || now - e.firstAt > GIVE_UP_MS || now - e.lastAt < RETRY_MS) continue;
+    if (googleOnly(e.cited)) continue;
     budget -= 1;
     e.lastAt = now;
     dirty = true;
     const found = await find(e);
     if (!found) continue;
     const r = { ...e.report };
+    const fe = (cache[fp] = { found, at: now, cited: e.cited, keys: e.keys, ...(found.carrier && !e.cited.data ? { orig: { ...e.report } } : {}) });
+    apply(r, found);
+    await readFrom(r, fe);
+    await learn(found, fe, fp);
+    late.push(r);
+  }
+  // Published from a major outlet carrying a body's words: hourly for a day, the
+  // body's own post or page is looked for, and replaces the carrier's when found.
+  for (const [fp, e] of Object.entries(cache)) {
+    if (budget <= 0 || !canWork()) break;
+    if (!("found" in e) || !e.orig || !e.cited || !e.keys || googleOnly(e.cited) || now - e.at > GIVE_UP_MS || now - (e.triedAt ?? e.at) < RETRY_MS) continue;
+    budget -= 1;
+    e.triedAt = now;
+    dirty = true;
+    const found = await find({ cited: e.cited, keys: e.keys, firstAt: e.at, lastAt: now, report: e.orig }, true);
+    if (!found || found.carrier || found.url === e.found.url) continue;
+    const r = { ...e.orig };
     const fe = (cache[fp] = { found, at: now, cited: e.cited, keys: e.keys });
     apply(r, found);
     await readFrom(r, fe);
     await learn(found, fe, fp);
     late.push(r);
+    console.log(`[origin] ${fp}: the carrier's copy replaced by ${found.source}`);
   }
   for (const e of Object.values(cache)) {
     if (reads <= 0 || !canWork()) break;

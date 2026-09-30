@@ -18,3 +18,12 @@ test("the Now box stays a bird's-eye view", () => {
   assert.equal(birdsEye("Strikes hit Saada, Hajjah, Marib, Al-Jawf, Amran, Sanaa, Hodeidah, Mocha and Hays, Taiz and Lahj."), false);
   assert.ok(birdsEye("The Houthis hold Mocha and press on Bab al-Mandab, while the government holds Taiz city."));
 });
+
+test("the three-day rewrite lands on its day: an hour of slack, stamped at the half-day", async () => {
+  const { halfDayStart } = await import("./timeline-now.ts");
+  // Written at 00:02 on 29 Sep (Jerusalem); the 00:00 run on 2 Oct is due.
+  assert.equal(nowDue({ summary: "x", detail: "y", asOf: "2026-09-28T21:02:53Z" }, new Date("2026-10-01T21:00:40Z")), true);
+  assert.equal(nowDue({ summary: "x", detail: "y", asOf: "2026-09-28T21:02:53Z" }, new Date("2026-10-01T09:01:00Z")), false);
+  assert.equal(halfDayStart(new Date("2026-10-01T21:02:10Z")).toISOString(), "2026-10-01T21:00:00.000Z");
+  assert.equal(halfDayStart(new Date("2026-10-01T09:04:59Z")).toISOString(), "2026-10-01T09:00:00.000Z");
+});

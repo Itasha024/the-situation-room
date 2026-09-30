@@ -1,5 +1,5 @@
 /* =============================================================================
- *  Yemen War Desk — browser client
+ *  Yemen Conflict Desk — browser client
  * =============================================================================
  *
  *  All copy on this page is English, written to the desk style book in
@@ -24,10 +24,12 @@
  * Palette and category marks
  * ---------------------------------------------------------------- */
 
-// Reader's theme: Original (as built), Broadsheet Day or Broadsheet Night. The broadsheet
-// pair recolours the sides, the district edges and the map tiles; Original is untouched.
-const THEMES = ['original', 'broadsheet-day', 'broadsheet-night'];
-let THEME = (() => { try { const t = localStorage.getItem('desk-theme'); return THEMES.includes(t) ? t : 'original'; } catch (e) { return 'original'; } })();
+// Reader's theme: Night (the default) or Day — the broadsheet pair, which recolours the
+// sides, the district edges and the map tiles. The Original look (as first built) is set
+// aside, not deleted: every 'original' branch below still works, and adding it back to
+// THEMES offers it again.
+const THEMES = ['broadsheet-night', 'broadsheet-day'];
+let THEME = (() => { try { const t = localStorage.getItem('desk-theme'); return THEMES.includes(t) ? t : THEMES[0]; } catch (e) { return THEMES[0]; } })();
 const THEME_SIDES = {
   'broadsheet-day': { houthi: '#a8372a', plc: '#0d7680', saudi: '#5f86ad', contested: '#b07d1a', mixed: '#7d6b99' },
   'broadsheet-night': { houthi: '#e2694f', plc: '#3fb0b3', saudi: '#7aa5d6', contested: '#d9aa45', mixed: '#a898c4' },
@@ -203,6 +205,13 @@ let islandLayers = [];
 let islandGeoCache = null;
 let data = null;
 let geoCache = null;
+let geoInflight = null;
+/** The governorate shapes, downloaded once however many parts ask at the same time. */
+function loadAdm1() {
+  if (geoCache) return Promise.resolve(geoCache);
+  if (!geoInflight) geoInflight = fetch('/yemen-adm1.geojson').then((r) => r.json()).then((g) => { geoCache = geoCache || g; return geoCache; }).finally(() => { geoInflight = null; });
+  return geoInflight;
+}
 let saudiGeoCache = null;
 let brief = null;
 
@@ -245,7 +254,11 @@ const GOV_WEIGHT = {
 let reportsShown = INITIAL_REPORTS;
 const openFeedFps = new Set(); // keep expanded cards open across auto-refresh
 let mapFocus = false;
-let mapDate = null; // YYYY-MM-DD in Asia/Jerusalem; null = today
+/** The desk's day and update clock: Israel's, summer time included. */
+const DESK_TZ = 'Asia/Jerusalem';
+/** Times are shown on the reader's own clock (undefined = their browser's time zone). */
+const VIEW_TZ = undefined;
+let mapDate = null; // YYYY-MM-DD on the desk's clock; null = today
 let mapMode = 'day'; // day | range | all | control
 let mapDateFrom = null;
 let mapDateTo = null;
@@ -302,31 +315,56 @@ function fmtStamp(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   if (!Number.isFinite(d.getTime())) return '';
-  const date = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: 'short' });
-  const time = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false });
+  const date = d.toLocaleDateString('en-GB', { timeZone: VIEW_TZ, day: '2-digit', month: 'short' });
+  const time = d.toLocaleTimeString('en-GB', { timeZone: VIEW_TZ, hour: '2-digit', minute: '2-digit', hour12: false });
   return `${time} · ${date}`;
 }
 
 function fmtClock(ts) {
   if (!ts) return '';
   return new Date(ts).toLocaleTimeString('en-GB', {
-    timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false,
+    timeZone: VIEW_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
   });
 }
 
-/** "09:00 on 20 Sep" — used by the 12-hour brief stamps. */
+/** The clock in the top line: Yemen's time, to the second. */
+function startYemenClock() {
+  const el = document.getElementById('ye-clock');
+  if (!el || el.dataset.on) return;
+  el.dataset.on = '1';
+  const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Aden', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const tick = () => { el.textContent = fmt.format(new Date()); };
+  tick();
+  setInterval(tick, 1000);
+}
+
+/** The server writes an update's hours on the desk's clock ("18:00 on 30 Sep"): put them on the reader's. */
+function readerClock(text) {
+  if (!text || !brief) return text;
+  let out = text;
+  [brief.updatedAt, brief.windowStart].forEach((iso) => {
+    if (!iso) return;
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return;
+    const desk = `${d.toLocaleTimeString('en-GB', { timeZone: DESK_TZ, hour: '2-digit', minute: '2-digit', hour12: false })} on ${d.toLocaleDateString('en-GB', { timeZone: DESK_TZ, day: 'numeric', month: 'short' })}`;
+    out = out.split(desk).join(fmtWhen(iso));
+  });
+  return out;
+}
+
+/** "09:00 on 20 Sep" — used by the update stamps. */
 function fmtWhen(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   if (!Number.isFinite(d.getTime())) return '';
-  const day = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'short' });
+  const day = d.toLocaleDateString('en-GB', { timeZone: VIEW_TZ, day: 'numeric', month: 'short' });
   return `${fmtClock(ts)} on ${day}`;
 }
 
 function jerusalemYmd(ts) {
   if (!ts) return '';
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: DESK_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
   }).formatToParts(new Date(ts));
   const y = parts.find((p) => p.type === 'year').value;
   const m = parts.find((p) => p.type === 'month').value;
@@ -373,7 +411,7 @@ function mediaBlock(items, compact) {
   return `<div class="media-block${compact ? ' compact' : ''}">` + list.map((m) => {
     const cap = escapeHtml(m.caption || '');
     const credit = m.credit ? ` <span class="media-credit">${escapeHtml(m.credit)}</span>` : '';
-    return `<figure class="media-fig"><button type="button" class="media-open" data-src="${escapeHtml(m.src)}"><img src="${escapeHtml(m.src)}" alt="${cap}"></button><figcaption>${cap}${credit}</figcaption></figure>`;
+    return `<figure class="media-fig"><button type="button" class="media-open" data-src="${escapeHtml(m.src)}"><img src="${escapeHtml(m.src)}" alt="${cap}" loading="lazy"></button><figcaption>${cap}${credit}</figcaption></figure>`;
   }).join('') + '</div>';
 }
 
@@ -762,10 +800,12 @@ function sourceOf(r) {
 
 /** Outlet alignment, used only for the coloured edge on a feed card. */
 const SOURCE_LEAN = {
-  YPA: 'houthi', Saba: 'houthi', 'Al-Masirah': 'houthi', 'Al Masirah': 'houthi',
+  YPA: 'houthi', Saba: 'houthi', 'Saba (Houthi-run)': 'houthi', 'Saba (government)': 'gov',
+  'Yemen Press Agency': 'houthi', 'Sawt al-Asima': 'gov', 'Mareb Press': 'gov', 'Al-Masdar Online': 'gov', 'Aden al-Ghad': 'south', 'Al-Masirah': 'houthi', 'Al Masirah': 'houthi',
   'Al Manar': 'houthi', 'Al-Mayadeen': 'houthi', 'Al Mayadeen': 'houthi',
   'Al-Akhbar': 'houthi', 'Al Akhbar': 'houthi', IRNA: 'houthi',
-  'Al-Alam': 'houthi', 'Press TV': 'houthi',
+  'Al-Alam': 'houthi', 'Press TV': 'houthi', Tasnim: 'houthi', 'Fars News': 'houthi',
+  'Mehr News': 'houthi', 'IRIB News': 'houthi', SNN: 'houthi', 'Nour News': 'houthi',
   'Ali Bk': 'houthi', 'Sabereen News': 'houthi', Sabereen: 'houthi', Naya: 'houthi',
   'Al-Mihwar': 'houthi', 'Shin Persian': 'houthi', 'Shajab News': 'houthi',
   'Al-Aqsa Breaking': 'houthi', 'Al-Aqsa TV': 'houthi', 'Yahya Saree': 'houthi', Saree: 'houthi',
@@ -776,6 +816,9 @@ const SOURCE_LEAN = {
   'Al Hadath': 'gov', 'AlArabiya al-Hadath': 'gov', SPA: 'gov', Okaz: 'gov',
   'Al-Watan': 'gov', 'Al Watan': 'gov', 'Arab News': 'gov',
   'Asharq Al-Awsat': 'gov', 'Asharq News': 'gov', 'The National': 'gov',
+  'Al-Yemen Now': 'gov', 'Yemen Shabab TV': 'gov', Himmah: 'gov',
+  'Fathi bin Lazraq': 'south', 'Ahmed al-Rbizy': 'south',
+  'Defense Line': 'indep', 'Ibrahim Asqin': 'indep', 'Yaseen al-Aqlani': 'indep',
   'September Net': 'gov', '26 September': 'gov', 'Ali Al-Sakani': 'gov',
   'Saudi Gazette': 'gov', 'Giants Brigades': 'gov', 'Nation Shield': 'gov',
   South24: 'south', 'Aden Observer': 'south', 'Aden Gad': 'south', 'Crater Sky': 'south',
@@ -784,7 +827,7 @@ const SOURCE_LEAN = {
   'Al-Khabar al-Yemeni': 'indep',
   Reuters: 'intl', AFP: 'intl', AP: 'intl', BBC: 'intl', 'BBC Verify': 'intl',
   Anadolu: 'intl', Xinhua: 'intl', DPA: 'intl', Guardian: 'intl', 'The Guardian': 'intl',
-  'Al Jazeera': 'intl', 'Al Jazeera Net': 'intl', 'Al-Araby Al-Jadeed': 'intl',
+  'Al Jazeera': 'intl', 'Al Jazeera Net': 'intl', 'Al Jazeera Mubasher': 'intl', 'Al-Araby Al-Jadeed': 'intl',
   'Al-Araby Television': 'intl', 'Al-Araby TV': 'intl', IOM: 'intl', UNHCR: 'intl', OCHA: 'intl',
   OHCHR: 'intl', WHO: 'intl', WFP: 'intl', UKMTO: 'intl',
   Axios: 'intl', ABC: 'intl', CBS: 'intl', CNN: 'intl', NYT: 'intl', 'NY Post': 'intl',
@@ -1015,7 +1058,8 @@ function reportLead(r) {
   if (!body) return '';
 
   const head = String(reportTeaser(r) || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
-  const sentences = body.split(/(?<=[.!?])\s+/).filter(Boolean);
+  // Each sentence keeps the space or line break before it, so the writer's paragraphs survive.
+  const sentences = body.split(/(?<=[.!?])(?=\s)/).filter((x) => x.trim());
   const out = [];
   for (const s of sentences) {
     const bare = s.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
@@ -1023,9 +1067,39 @@ function reportLead(r) {
     if (!out.length && head && (bare.startsWith(head.slice(0, 40)) || head.startsWith(bare.slice(0, 40)))) continue;
     out.push(s);
   }
-  const lead = out.join(' ').trim();
+  const lead = out.join('').trim();
   if (lead.length < 25) return '';
   return lead;
+}
+
+/*
+ * Short paragraphs, so a long text is light on the eye: the writer's own (a
+ * blank line or a line break between them), else about two sentences each.
+ * Every word stays; only the breaks are added.
+ */
+const ABBR_END = /(?:\b(?:Mr|Mrs|Ms|Dr|Gen|Brig|Col|Lt|Maj|Capt|Sgt|Adm|Gov|Sen|St|No|Jr|Sr|vs|approx|Inc|Co|Corp|Ltd|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|U\.S|U\.N|U\.K|e\.g|i\.e)\.|\b[A-Z]\.)$/;
+function paragraphsOf(text, opts) {
+  const t = String(text || '').trim();
+  if (!t) return [];
+  const own = t.split(/\n+/).map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  if (own.length > 1) return own;
+  const flat = own[0] || '';
+  const min = (opts && opts.min) || 300;
+  if (flat.length < min) return [flat];
+  const sentences = [];
+  for (const piece of flat.split(/(?<=[.!?][”"’)]?)\s+(?=[“"‘(]?[A-Z0-9])/)) {
+    if (sentences.length && ABBR_END.test(sentences[sentences.length - 1])) sentences[sentences.length - 1] += ' ' + piece;
+    else sentences.push(piece);
+  }
+  const target = (opts && opts.target) || 190;
+  const out = [];
+  let cur = '';
+  for (const x of sentences) {
+    if (cur && (cur.length >= target || cur.length + x.length > target * 1.7)) { out.push(cur); cur = x; }
+    else cur = cur ? `${cur} ${x}` : x;
+  }
+  if (cur) { if (out.length && cur.length < 60) out[out.length - 1] += ' ' + cur; else out.push(cur); }
+  return out;
 }
 
 /** A pin whose report the reader wrote — its text is already glossed. */
@@ -1086,6 +1160,52 @@ function allowCoordsForCategory(cat, placeName, lat, lng) {
   }
   if (isOpenSeaNearBab(lat, lng)) return false;
   return true;
+}
+
+/**
+ * Which way the open sea lies from a coastal town (degrees, 0 = north, 90 =
+ * east). "A tanker hit off Yanbu" is at sea west of it, never on the town.
+ */
+const SEAWARD = {
+  yanbu: 250, jeddah: 270, jidda: 270, jazan: 255, jizan: 255, 'al-shuqaiq': 250, shuqaiq: 250, farasan: 250, 'al-lith': 250, 'al-qunfudhah': 250,
+  hodeidah: 270, hudaydah: 270, 'ras isa': 280, salif: 280, 'al-salif': 280, 'as-salif': 280, mocha: 270, mokha: 270, 'al-mokha': 270, 'al-khokha': 270, khokha: 270,
+  midi: 270, dhubab: 250, aden: 180, mukalla: 170, 'al-mukalla': 170, nishtun: 150, 'ash-shihr': 160, shihr: 160, socotra: 0, 'ras al-ara': 190,
+};
+const COMPASS = { north: 0, 'north-east': 45, northeast: 45, east: 90, 'south-east': 135, southeast: 135, south: 180, 'south-west': 225, southwest: 225, west: 270, 'north-west': 315, northwest: 315 };
+const DIST_RE = /(\d+(?:[.,]\d+)?)\s*(km|kilomet(?:er|re)s?|nautical miles?|nm|miles?)\s+(?:to the\s+)?((?:north|south)(?:-?(?:east|west))?|east|west)?\s*(?:off|of|from)\s+(?:the\s+)?(?:(?:coast|port|city|town) of\s+)?([A-Z][\w'’-]*(?:\s[A-Z][\w'’-]*)?)/g;
+const OFF_RE = /\boff(?: the coast of)?\s+(?:the\s+)?(?:port of\s+)?([A-Z][\w'’-]*(?:\s[A-Z][\w'’-]*)?)/;
+function moveBy(lat, lng, km, deg) {
+  const r = (deg * Math.PI) / 180;
+  return [lat + (km * Math.cos(r)) / 111, lng + (km * Math.sin(r)) / (111 * Math.cos((lat * Math.PI) / 180))];
+}
+/**
+ * A pin the text puts some way from its named place ("63 nautical miles west
+ * of Yanbu", "off Hodeidah"): moved there. A ship with no direction goes out
+ * to sea from its port; a land event moves only when the text gives a
+ * direction. Returns [lat, lng] or null to leave the pin as it is.
+ */
+function offsetFromText(text, place, lat, lng, cat) {
+  const t = String(text || '');
+  const base = String(place || '').toLowerCase().replace(/^(?:the )?(?:red sea |gulf of aden )?off /, '').trim();
+  if (!base || lat == null || lng == null) return null;
+  const same = (name) => { const n = String(name || '').toLowerCase(); return n === base || base.startsWith(n) || n.startsWith(base); };
+  for (const m of t.matchAll(DIST_RE)) {
+    if (!same(m[4])) continue;
+    const n = parseFloat(m[1].replace(',', '.'));
+    if (!(n > 0) || n > 400) continue;
+    const km = /naut|nm/i.test(m[2]) ? n * 1.852 : /mile/i.test(m[2]) ? n * 1.609 : n;
+    const dir = m[3] ? COMPASS[m[3].toLowerCase().replace(/^(north|south)(east|west)$/, '$1-$2')] : undefined;
+    const deg = dir != null ? dir : cat === 'vessel' ? SEAWARD[base] : undefined;
+    // A land event a few km from its place stays on it.
+    if (deg == null || (cat !== 'vessel' && km <= 10)) return null;
+    return moveBy(lat, lng, km, deg);
+  }
+  // "A tanker attacked off Yanbu": at sea beside the port, not on it.
+  if (cat === 'vessel' && SEAWARD[base] != null) {
+    const off = t.match(OFF_RE);
+    if (off && same(off[1])) return moveBy(lat, lng, 25, SEAWARD[base]);
+  }
+  return null;
 }
 
 function guessCoords(text) {
@@ -1207,7 +1327,11 @@ function jitter(lat, lng, i) {
  * ---------------------------------------------------------------- */
 
 async function fetchData() {
-  const res = await fetch('/data.json?ts=' + Date.now());
+  // The same address the page preloads (with this release's version, so a
+  // browser never keeps an old copy), so the file downloads once.
+  const s = document.querySelector('script[src*="/app.js?v="]');
+  const v = s && /[?&]v=([^&]+)/.exec(s.src);
+  const res = await fetch(v ? `/data.json?v=${v[1]}` : '/data.json');
   return res.json();
 }
 
@@ -1378,7 +1502,7 @@ let deskArchive = { reports: [], events: [], updatedAt: null };
 
 async function pullDesk() {
   try {
-    const res = await fetch('/api/desk?limit=400');
+    const res = await fetch('/api/desk?limit=400', { cache: 'no-cache' });
     if (!res.ok) return;
     const body = await res.json();
     if (!body || body.ok === false) return;
@@ -1581,7 +1705,7 @@ async function pullLive(opts) {
   if (!liveInflight) {
     liveInflight = (async () => {
       try {
-        const res = await fetch('/api/scan');
+        const res = await fetch('/api/scan', { cache: 'no-cache' });
         if (!res.ok) throw new Error('scan ' + res.status);
         ingestLivePayload(await res.json());
       } catch (e) {
@@ -1609,12 +1733,24 @@ function paintLive() {
 }
 
 /* ---------------------------------------------------------------- *
- * The 12-hour brief
+ * The 6-hour brief
  * ---------------------------------------------------------------- */
+
+/**
+ * Is a new brief due? Past its next update time (plus two minutes for the
+ * writing), for up to an hour; after that the page waits for the next boundary
+ * rather than asking all day.
+ */
+function briefDue() {
+  const next = Date.parse((brief && brief.nextUpdateAt) || '');
+  if (!Number.isFinite(next)) return true;
+  const past = Date.now() - next;
+  return past > 2 * 60 * 1000 && past < 60 * 60 * 1000;
+}
 
 async function pullBrief() {
   try {
-    const res = await fetch('/api/brief');
+    const res = await fetch('/api/brief', { cache: 'no-cache' });
     if (!res.ok) return;
     const b = await res.json();
     if (b && b.ok) brief = b;
@@ -1624,15 +1760,16 @@ async function pullBrief() {
 let briefTried = false;
 
 /**
- * The stamp under every 12-hourly panel. Says plainly when the panel last
+ * The stamp under every panel that moves on the update clock (every 6 hours). Says plainly when the panel last
  * refreshed and when it next will, and flags it when the refresh is overdue.
  */
 /** `top`: the stamp sits under a column's heading rather than at its foot. */
 function cadenceStamp(top = false) {
   const cls = top ? 'cadence at-head' : 'cadence';
-  if (!brief) return `<p class="${cls}">Refreshes every 12 hours.</p>`;
+  const hours = (brief && +brief.cadenceHours) || 6;
+  if (!brief) return `<p class="${cls}">Refreshes every ${hours} hours.</p>`;
   const overdue = Date.now() > Date.parse(brief.nextUpdateAt);
-  return `<p class="${cls}${overdue ? ' late' : ''}">Updates every 12 hours · Next ${escapeHtml(fmtWhen(brief.nextUpdateAt))}${overdue ? ' · refresh due' : ''}</p>`;
+  return `<p class="${cls}${overdue ? ' late' : ''}">Updates every ${hours} hours · Next ${escapeHtml(fmtWhen(brief.nextUpdateAt))}${overdue ? ' · refresh due' : ''}</p>`;
 }
 
 function frontActivity(id) {
@@ -1839,6 +1976,741 @@ function wireProsePins(root) {
   });
 }
 
+/* ---------------------------------------------------------------- *
+ * Every place in the prose, lit on the map
+ *
+ * Each place "Latest developments" and the fronts name links to its own spot,
+ * however small: a governorate or a Saudi province lights its outline, a
+ * district its own boundary, a village, a mountain or a road its spot, with a
+ * soft pulse and no pin. The names come from the governorates and districts
+ * the map is drawn from, the gazetteer, the desk's pins, and the places the
+ * server found for this brief's prose (`brief.places`, prose-places.ts).
+ * ---------------------------------------------------------------- */
+
+/** A name as a key: the server's placeKey (prose-places.ts), kept in step. */
+function placeKeyC(name) {
+  return String(name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/^(?:al|el|as|ash|ad|adh|ar|at|ath|az|an)[- ]/, '')
+    .replace(/[^a-z]/g, '').replace(/(.)\1+/g, '$1')
+    .replace(/iy/g, 'y').replace(/ou/g, 'u').replace(/ee/g, 'i').replace(/h$/, '');
+}
+
+const PLACE_PHRASE = /(?:\b(?:Jabal|Jebel|Mount|Wadi|Ras|Bab|Bani|Beit|Bayt|Bir|Dar|Khor|Hisn)\s+)?(?:\b(?:[Aa]l|[Ee]l|[Aa][dsrtzn]h?)-)?\b[A-Z][A-Za-z'’]+(?:[- ](?:(?:al|el|ad|as|ash|ar|at|az|an|wa|bin|bani)[- ])?(?:[Aa]l-)?[A-Z][A-Za-z'’]+)*/g;
+const PLACE_BEFORE = /(?:\b(?:in|on|at|near|around|outside|inside|towards?|into|from|across|over|of|between|and|off|via|through|to|past|overlooking)|,)\s*$/i;
+const PLACE_AFTER = /^\s*(?:front|fronts|district|governorate|province|region|mountains?|heights|area|city|town|port|island|islands|valley|axis|border|coast|strait|airport|base|camp|junction|road)\b/i;
+
+let placeIndex = null;
+let placeIndexSig = '';
+let placeRegistry = new Map();
+
+function buildPlaceIndex() {
+  const sig = [districtGeo ? 1 : 0, saudiGeoCache ? 1 : 0, geoCache ? 1 : 0, mappableByFp.size, Object.keys((brief && brief.places) || {}).length, (GAZ.places || []).length, (data && data.governorates || []).length].join('|');
+  if (placeIndex && sig === placeIndexSig) return placeIndex;
+  const idx = new Map();
+  const put = (name, e) => {
+    const k = placeKeyC(name);
+    if (k.length < 3) return;
+    const had = idx.get(k);
+    if (!had || e.rank > had.rank) idx.set(k, { ...e, key: k });
+  };
+  // Governorates, under every spelling the prose uses.
+  const govs = ((data && data.governorates) || []).filter((g) => !String(g.id).startsWith('SA-'));
+  for (const g of govs) {
+    const nm = String(g.name || '').replace(/\s+(?:city|governorate)$/i, '');
+    if (g.id === 'YE-SN') continue; // "Sanaa" is the capital, YE-SA
+    put(nm, { kind: 'gov', ref: g.id, name: nm, rank: 4 });
+  }
+  for (const group of PROSE_REGIONS) {
+    const g = govs.find((x) => group.includes(placeKeyC(x.name.replace(/\s+(?:city|governorate)$/i, ''))) || group.some((a) => placeKeyC(a) === placeKeyC(x.name.replace(/\s+(?:city|governorate)$/i, ''))));
+    if (g) group.forEach((a) => put(a, { kind: 'gov', ref: g.id, name: g.name.replace(/\s+(?:city|governorate)$/i, ''), rank: 4 }));
+  }
+  // The Saudi provinces on the border, which the war's news names as provinces.
+  for (const f of (saudiGeoCache && saudiGeoCache.features) || []) {
+    const nm = String(f.properties.shapeName || '').replace(/\s+Region$/i, '').replace(/^'/, '');
+    if (!/^(?:Jazan|Najran|Asir)$/i.test(nm)) continue;
+    put(nm, { kind: 'area', ref: f, name: nm, rank: 3, saudi: true });
+    if (/jazan/i.test(nm)) put('Jizan', { kind: 'area', ref: f, name: nm, rank: 3, saudi: true });
+  }
+  // Districts, by their boundary.
+  for (const f of (districtGeo && districtGeo.features) || []) {
+    const nm = String(f.properties.name || '');
+    if (/Outskirts|Old City/i.test(nm)) continue;
+    put(nm.replace(/\s+City$/i, ''), { kind: 'area', ref: f, name: nm, rank: 2, district: true, ctx: true });
+  }
+  // Spots: the gazetteer, this brief's own places, and every pin's place.
+  for (const p of GAZ.places || []) {
+    if (/^(?:governorate|country)$/.test(p.kind)) continue;
+    const e = { kind: 'point', ll: [p.lat, p.lng], name: p.name, rank: 1, big: /^(?:sea|strait|islands?)$/.test(p.kind), saudi: p.country === 'Saudi Arabia' };
+    put(p.name, e);
+    (p.aliases || []).filter((a) => /^[A-Za-z][A-Za-z' -]+$/.test(a)).forEach((a) => put(a, e));
+  }
+  for (const [name, ll] of Object.entries((brief && brief.places) || {})) {
+    if (Array.isArray(ll) && ll.length === 2) put(name, { kind: 'point', ll, name, rank: 1, ctx: true });
+  }
+  for (const p of mappableByFp.values()) {
+    for (const seg of String(p.place || '').split(',')) {
+      const name = seg.trim();
+      if (!name || NOT_A_PIN_NAME.test(name)) continue;
+      put(name, { kind: 'point', ll: [p.lat, p.lng], name, rank: 0, ctx: true });
+    }
+  }
+  placeIndex = idx;
+  placeIndexSig = sig;
+  return idx;
+}
+
+/** The places a text names, as [start, end, entry], longest names first. */
+function placeSpans(text) {
+  const t = String(text || '');
+  const idx = buildPlaceIndex();
+  const spans = [];
+  for (const m of t.matchAll(PLACE_PHRASE)) {
+    const phrase = m[0];
+    const words = [...phrase.matchAll(/[^\s]+/g)].map((w) => ({ s: m.index + w.index, e: m.index + w.index + w[0].length }));
+    const used = new Array(words.length).fill(false);
+    for (let len = words.length; len >= 1; len--) {
+      for (let i = 0; i + len <= words.length; i++) {
+        if (used.slice(i, i + len).some(Boolean)) continue;
+        let s = words[i].s;
+        let e = words[i + len - 1].e;
+        while (e > s && /[’'.,;:]$/.test(t.slice(s, e))) e--;
+        const name = t.slice(s, e).replace(/[’]/g, "'");
+        const entry = idx.get(placeKeyC(name));
+        if (!entry) continue;
+        // A district or a spot, as against a governorate, needs the words of a
+        // place round it: "in Hamdan", "the Hayfan front", not a man named Hamdan.
+        if (entry.ctx && !PLACE_BEFORE.test(t.slice(Math.max(0, s - 16), s)) && !PLACE_AFTER.test(t.slice(e, e + 14))
+          && !/^(?:Jabal|Jebel|Mount|Wadi)\b/.test(name)) continue;
+        if (NAME_OF_A_THING.test(t.slice(e))) continue;
+        for (let k = i; k < i + len; k++) used[k] = true;
+        spans.push([s, e, entry]);
+      }
+    }
+  }
+  return spans.sort((a, b) => a[0] - b[0]);
+}
+
+/** The prose with every place a link to its own spot. */
+function linkPlacesAll(text) {
+  const t = String(text || '');
+  let out = '';
+  let at = 0;
+  for (const [s, e, entry] of placeSpans(t)) {
+    placeRegistry.set(entry.key, entry);
+    out += `${escapeHtml(t.slice(at, s))}<a href="#map" class="prose-pin prose-place" data-pk="${escapeHtml(entry.key)}" title="Show ${escapeHtml(entry.name)} on the map">${escapeHtml(t.slice(s, e))}</a>`;
+    at = e;
+  }
+  return out + escapeHtml(t.slice(at));
+}
+
+function wirePlaceLinks(root) {
+  if (!root) return;
+  root.querySelectorAll('.prose-place').forEach((a) => {
+    a.onclick = (ev) => {
+      ev.preventDefault();
+      const entry = placeRegistry.get(a.dataset.pk);
+      if (entry) highlightPlace(entry);
+    };
+  });
+}
+
+/** The prose waits for the districts and Saudi provinces once, then links again. */
+let placeDataAsked = false;
+function ensurePlaceData() {
+  if (placeDataAsked) return;
+  placeDataAsked = true;
+  const jobs = [loadDistricts()];
+  if (!saudiGeoCache) jobs.push(fetch('/saudi-adm1.geojson').then((r) => (r.ok ? r.json() : null)).then((g) => { if (g && !saudiGeoCache) saudiGeoCache = g; }).catch(() => {}));
+  if (!geoCache) jobs.push(loadAdm1().catch(() => {}));
+  Promise.all(jobs).then(() => { if (data) { try { renderSituation(data); renderFronts(data); } catch (e) { console.error(e); } } });
+}
+
+let placeHlLayer = null;
+function clearPlaceHl() {
+  if (placeHlLayer && map) { try { map.removeLayer(placeHlLayer); } catch (e) {} }
+  placeHlLayer = null;
+}
+
+/** The layer that lights one place: its outline, or a pulse at its spot. */
+function placeLayer(entry, opts) {
+  const o = opts || {};
+  if (entry.kind === 'gov') {
+    const f = geoCache && geoCache.features.find((x) => x.properties.shapeISO === entry.ref);
+    if (!f) return null;
+    // Beside smaller places (the developments' map) a governorate is only the frame.
+    if (o.subtle) return L.geoJSON(f, { interactive: false, style: { color: '#f8fafc', weight: 1.4, opacity: 0.8, dashArray: '5 5', fillOpacity: 0 } });
+    return L.geoJSON(f, { interactive: false, style: { color: '#f8fafc', weight: 2.6, fillColor: '#f8fafc', fillOpacity: 0.12, className: 'place-hl' } });
+  }
+  if (entry.kind === 'area') {
+    return L.geoJSON(entry.ref, { interactive: false, style: { color: '#f8fafc', weight: 2.4, fillColor: o.fill || '#fbbf24', fillOpacity: 0.24, className: 'place-hl' } });
+  }
+  const size = entry.big ? 90 : 60;
+  const icon = L.divIcon({ className: 'place-halo-wrap', html: `<span class="place-halo${entry.big ? ' big' : ''}"><i></i><i></i><b></b></span>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
+  return L.marker(entry.ll, { icon, interactive: false, keyboard: false, zIndexOffset: 3000 });
+}
+
+function placeBounds(entry, layer) {
+  if (entry.kind === 'point') return L.latLngBounds(entry.ll, entry.ll);
+  try { return layer.getBounds(); } catch (e) { return null; }
+}
+
+function highlightPlace(entry) {
+  if (!map || !window.L) return;
+  clearMapHighlight({});
+  scrollToMap();
+  setTimeout(() => {
+    try { map.invalidateSize(); } catch (e) {}
+    const layer = placeLayer(entry);
+    if (!layer) return;
+    placeHlLayer = layer.addTo(map);
+    setHighlightChip({ name: entry.name });
+    const b = placeBounds(entry, layer);
+    const maxZoom = entry.kind === 'gov' ? 8 : entry.kind === 'area' ? (entry.saudi ? 7 : 10) : entry.big ? 7 : 10;
+    try { if (b) map.flyToBounds(b, { ...legendPadding(), maxZoom, duration: 0.8 }); } catch (e) {}
+  }, 380);
+}
+
+/* ---------------------------------------------------------------- *
+ * "Show on map" for Latest developments and the fronts: what happened where,
+ * drawn as it happened. The brief carries the list (brief.devMap, a front's
+ * map); a brief from before it is read from its text.
+ * ---------------------------------------------------------------- */
+
+const DEV_CAPTURE = /captur|seiz|took|taken|retook|recaptur|advanc|gain(?:ed|s)? ground|overr[au]n|push(?:ed|es)? into|control of|storm(?:ed)?/i;
+const DEV_FIGHT = /clash|fight|battl|attack|assault|repel|repuls|infiltrat|offensive|confront|skirmish|ambush|combat/i;
+const DEV_STRIKE = /air ?strike|strike|raid|bomb|drone|missile|shell/i;
+const DEV_GOV = /government|Giants|Nation'?s Shield|Southern|National Resistance|coalition|Saudi-backed|pro-government|army/i;
+
+/** What a clause says happened at a place, and by which side. */
+function devAction(clause) {
+  const verb = (re) => { const m = re.exec(clause); return m ? m.index : -1; };
+  const at = verb(DEV_CAPTURE);
+  if (at >= 0 && !/repel|repuls|fail/i.test(clause.slice(0, at))) {
+    const subject = clause.slice(0, at);
+    const side = /Houthi/i.test(subject) && !/against Houthi|on Houthi/i.test(subject) ? 'houthi' : DEV_GOV.test(subject) ? 'plc' : '';
+    return { act: 'capture', side };
+  }
+  if (DEV_FIGHT.test(clause)) return { act: 'fight' };
+  if (DEV_STRIKE.test(clause)) return { act: 'strike' };
+  return { act: 'place' };
+}
+
+let devAnim = null;
+function stopDevAnim() { if (devAnim) { cancelAnimationFrame(devAnim.raf); devAnim = null; } }
+
+/** Is a point inside a Saudi province? */
+function inSaudi(ll) {
+  const feats = (saudiGeoCache && saudiGeoCache.features) || [];
+  return feats.some((f) => {
+    const g = f.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+    return polys.some((p) => pointInRing(ll[1], ll[0], p[0]));
+  });
+}
+
+function entryCenter(entry) {
+  if (entry.kind === 'point') return entry.ll;
+  if (entry.district && entry.ref.properties && Array.isArray(entry.ref.properties.c)) return entry.ref.properties.c;
+  try { const c = L.geoJSON(entry.kind === 'gov' ? geoCache.features.find((x) => x.properties.shapeISO === entry.ref) : entry.ref).getBounds().getCenter(); return [c.lat, c.lng]; } catch (e) { return null; }
+}
+
+/** The developments' items: each place the prose names, with its clause and what happened. */
+function developmentItems() {
+  const line = (brief && brief.situation && brief.situation.line) || '';
+  const items = [];
+  for (const m of line.matchAll(/[^.!?]+[.!?]*/g)) {
+    const sent = m[0];
+    for (const [s, e, entry] of placeSpans(sent)) {
+      if (items.some((x) => x.entry.key === entry.key)) continue;
+      // The clause: from the last clause break before the name to the next after it.
+      const before = sent.slice(0, s);
+      const cut = Math.max(before.lastIndexOf(', while'), before.lastIndexOf('; '), before.lastIndexOf(', and '), before.lastIndexOf(' while '));
+      const clause = sent.slice(cut > 0 ? cut : 0, Math.min(sent.length, e + 60));
+      items.push({ entry, clause, ...devAction(clause) });
+    }
+  }
+  return items;
+}
+
+/*
+ * The developments' maps are a picture of what happened, not a second copy of
+ * the text: no report pins. Each event sits exactly on its place (a small
+ * white dot marks the spot) and stays there at every zoom; a hover or a tap
+ * names the place. All play together, in the colour of the
+ * side that acted:
+ *   capture        the district turns from the old holder's colour to the
+ *                  taker's, and the taker's flag is planted
+ *   advance        the district's edge in the advancing side's colour, and an
+ *                  arrow on the spot pushing towards the other side's nearest lines
+ *   fighting       two riflemen trading fire (ground fighting)
+ *   repelled       the defender's shield, the attacker's fire breaking on it
+ *   airstrike      a jet passes, drops a bomb, the spot bursts
+ *   shelling       a gun fires, the shell arcs over, bursts land
+ *   missile/drone  flies in along its path from the launch area when the
+ *                  reports name it, else dives onto the spot; an interception
+ *                  bursts in mid-air
+ *   naval          an attack on or by a ship: a ship with a wake, at sea or in a port
+ */
+const DEV_PERIOD = 4200;
+const DEV_CTRL = { houthi: 'houthi', government: 'plc', southern: 'plc', saudi: 'saudi', us: 'us' };
+const DEV_LABEL = {
+  capture: 'Ground taken', advance: 'Advance', fighting: 'Ground fighting', repelled: 'Attack repelled', airstrike: 'Air strike',
+  shelling: 'Shelling', missile: 'Missile', drone: 'Drone', interception: 'Interception', naval: 'Attack on a ship', alert: 'Sirens',
+};
+function devColor(side) { return side === 'us' ? '#94a3b8' : COLORS[DEV_CTRL[side]] || COLORS.contested; }
+/** The other side of a clash or a repelled attack. */
+function devFoe(side) { return side === 'houthi' ? 'government' : 'houthi'; }
+
+/*
+ * The flags, drawn small: the Houthi movement's banner (its "sarkha" slogan,
+ * a green line, three red lines and a green line of script on white); the
+ * Republic of Yemen's red, white and black; the former South Yemen's flag the
+ * southern forces fly (the same stripes with a light-blue triangle and a red
+ * star); Saudi Arabia's green with the creed and a sword.
+ */
+const DEV_FLAGS = {
+  houthi: '<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#fff"/><g font-family="Arial,Tahoma,sans-serif" font-weight="700" font-size="3.4" text-anchor="middle" lengthAdjust="spacingAndGlyphs"><text x="15" y="3.7" fill="#0a7d3b" textLength="13">الله أكبر</text><text x="15" y="7.5" fill="#c8102e" textLength="21">الموت لأمريكا</text><text x="15" y="11.3" fill="#c8102e" textLength="23">الموت لإسرائيل</text><text x="15" y="15.1" fill="#c8102e" textLength="26">اللعنة على اليهود</text><text x="15" y="18.9" fill="#0a7d3b" textLength="19">النصر للإسلام</text></g></svg>',
+  government: '<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#000"/><rect width="30" height="13.34" fill="#fff"/><rect width="30" height="6.67" fill="#ce1126"/></svg>',
+  southern: '<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#000"/><rect width="30" height="13.34" fill="#fff"/><rect width="30" height="6.67" fill="#ce1126"/><path d="M0 0L12 10L0 20Z" fill="#3a75c4"/><path d="M4 7.3l.7 2h2.1l-1.7 1.2.6 2-1.7-1.2-1.7 1.2.6-2-1.7-1.2h2.1z" fill="#ce1126"/></svg>',
+  saudi: '<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#006c35"/><path d="M6 8q1.5-2.4 3 0t3 0 3 0 3 0 3 0 3 0" fill="none" stroke="#fff" stroke-width="1.2"/><path d="M7 13.6h15.5l1.6-1" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round"/></svg>',
+};
+
+/* The map's pictures, facing right, filled in the colour of the side that acted. */
+const DEV_LINE = 'stroke="#0b1220" stroke-linejoin="round"';
+/** A kneeling rifleman, aiming right; `fill` is his side's colour. */
+const devRifleman = (fill) => `<g fill="${fill}" ${DEV_LINE} stroke-width=".55"><path d="M4.1 3.7c0-1.9 1.4-3.1 3.1-3.1s3.1 1.2 3.1 3.1z"/><path d="M3.5 3.5h7.4v.9H3.5z"/><path d="M5.5 4.4h3.4v2.1c0 .7-.6 1.2-1.3 1.2h-.8c-.7 0-1.3-.5-1.3-1.2z"/><path d="M4.3 8h4.5l1.5 5H4.1z"/><path d="M7.4 12.6h2.3l2.3 1.8v3.8h-1.8v-3l-1.4-.9H7.4z"/><path d="M4.3 12.6h2.5l-1.9 4.2H.7v-1.4h3z"/><path d="M6.8 8.5h10.9v1.1h-7v1.5H9.3l-.6-1.5H6.8z"/></g>`;
+const DEV_SVG = {
+  jet: `<svg viewBox="0 0 32 20"><path d="M31 10L25 8.6 17 8.4 11 1.5H8l3.5 6.8L5 8.2 2.5 4.5H1l1 5.5-1 5.5h1.5L5 11.8l6.5-.1L8 18.5h3l6-6.9 8-.2z" fill="currentColor" ${DEV_LINE} stroke-width=".9"/></svg>`,
+  bomb: '<svg viewBox="0 0 6 12"><path d="M3 12C.5 10 .5 5 1.2 3.5L.5.5h5l-.7 3C5.5 5 5.5 10 3 12z" fill="#111827" stroke="#e5e7eb" stroke-width=".6"/></svg>',
+  // A long straight-winged drone seen from above, with its V-tail and pusher propeller.
+  drone: `<svg viewBox="0 0 32 24"><path d="M30.6 12c0-.9-.9-1.4-2.4-1.5H18.6l-.9-9.4h-2.4l-1 9.4H8.2L5.6 6.2H4l.9 4.3H3.2v3h1.7L4 17.8h1.6l2.6-4.3h6.1l1 9.4h2.4l.9-9.4h9.6c1.5-.1 2.4-.6 2.4-1.5z" fill="currentColor" ${DEV_LINE} stroke-width=".8"/><path class="pr" d="M1.9 8.2v7.6" stroke="#e5e7eb" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  missile: `<svg viewBox="0 0 32 12"><path d="M6 6L0 3.5 2 6 0 8.5z" fill="#f97316"/><path d="M6 4.5h18q6 .5 7.5 1.5-1.5 1-7.5 1.5H6z" fill="currentColor" ${DEV_LINE} stroke-width=".8"/><path d="M7 4.5L4.5 1H9l2 3.5zM7 7.5L4.5 11H9l2-3.5z" fill="currentColor" ${DEV_LINE} stroke-width=".7"/></svg>`,
+  // Two riflemen facing each other, each in his side's colour (--a, --b), tracers between.
+  duel: `<svg viewBox="0 0 46 18">${devRifleman('var(--a,currentColor)')}<g transform="translate(46 0) scale(-1 1)">${devRifleman('var(--b,currentColor)')}</g><path class="ta" d="M19 9h3" stroke="var(--a,#fde047)" stroke-width="1.3" stroke-linecap="round"/><path class="tb" d="M27 9.1h-3" stroke="var(--b,#fde047)" stroke-width="1.3" stroke-linecap="round"/><path class="fa" d="M17.8 9.1l2.3-1.2-.8 1.5 1.5.6-1.7.3.5 1.4z" fill="#fde047"/><path class="fb" d="M28.2 9.1l-2.3-1.2.8 1.5-1.5.6 1.7.3-.5 1.4z" fill="#fde047"/></svg>`,
+  // An axis-of-advance arrow, its tip on the spot, pushing towards the other side's lines.
+  advance: `<svg viewBox="0 0 32 16"><path d="M.8 5.2h18.4V1L31.4 8 19.2 15v-4.2H.8z" fill="currentColor" ${DEV_LINE} stroke-width=".9"/></svg>`,
+  // A towed howitzer: barrel raised to the right, shield, wheel and trail.
+  cannon: `<svg viewBox="0 0 32 18"><g fill="currentColor" ${DEV_LINE} stroke-width=".7"><path d="M11 10.2L27.6 3.4l.8 1.8L12.4 12.6z"/><path d="M8.6 8.4l6.2-1.4 1.3 5.5H8.3z"/><path d="M9.4 12.4L1 16.1l.6 1.3 9-3.1z"/><circle cx="12.4" cy="14.2" r="3.3"/></g><circle cx="12.4" cy="14.2" r="1" fill="#0b1220"/><path class="fl" d="M28.7 3.7l2.8-1.9-1.1 2.3 1.6 1-2.3.2z" fill="#fde047"/></svg>`,
+  ship: `<svg viewBox="0 0 30 14"><path d="M1 7h28l-4 6H4zM11 7V3h7v4z" fill="#e2e8f0" ${DEV_LINE} stroke-width=".8"/><path d="M14 3V.5" stroke="#e2e8f0" stroke-width="1.2"/></svg>`,
+  shield: '<svg viewBox="0 0 18 22"><path d="M9 0l9 4-1 10-8 8-8-8L0 4z" fill="currentColor" stroke="#0b1220" stroke-width="1"/><path d="M9 3.2l5.8 2.6-.7 7.4L9 18.3" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1"/></svg>',
+  flag: '<svg viewBox="0 0 20 16"><path d="M3 .8v15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3.8 1h12.5l-2.6 3.4 2.6 3.4H3.8z" fill="currentColor"/></svg>',
+  // A siren on its post, with sound waves either side.
+  siren: '<svg viewBox="0 0 20 18"><path d="M5 13V9a5 5 0 0 1 10 0v4z" fill="#ef4444" stroke="#0b1220" stroke-width=".8"/><path d="M3.5 13h13v2.5h-13z" fill="#e5e7eb" stroke="#0b1220" stroke-width=".7"/><path d="M8 8.5a2 2 0 0 1 2-2" stroke="#fff" stroke-width="1" fill="none" stroke-linecap="round"/><path class="sw1" d="M2.5 5.5q-1.6 3 0 6M17.5 5.5q1.6 3 0 6" stroke="#fbbf24" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>',
+  burst: '<svg viewBox="0 0 16 16"><path d="M8 0l1.8 5 5-2-2.6 4.6L16 9.5l-5 .8 1.5 5L8 12l-4.5 3.3L5 10.3 0 9.5l3.8-2L1.2 3l5 2z" fill="#f97316" stroke="#fde047" stroke-width=".8"/></svg>',
+};
+/** The key's picture for each kind. */
+const DEV_KEY_SVG = {
+  capture: DEV_SVG.flag, advance: DEV_SVG.advance, fighting: DEV_SVG.duel, repelled: DEV_SVG.shield, airstrike: DEV_SVG.jet,
+  shelling: DEV_SVG.cannon, missile: DEV_SVG.missile, drone: DEV_SVG.drone, interception: DEV_SVG.burst, naval: DEV_SVG.ship, alert: DEV_SVG.siren,
+};
+
+/*
+ * A mark must sit on the place it happened. A governorate's name is no place
+ * for a ground event ("fighting in Lahj"), and a few governorates are no place
+ * for anything; a strike on ground its own side holds is a misread report
+ * (the launch site, or the other side's attack).
+ */
+const DEV_VAGUE = /^(?:al-)?(?:lahj|jawf|abyan|shabwa|hadramawt|hadramout|hadhramaut|mahra|raymah|mahwit|socotra)(?: governorate| province)?$/i;
+const DEV_GOV_CITY = /^(?:al-)?(?:sanaa|hodeidah|saada|hajjah|ibb|dhamar|amran|bayda|dhale|aden)(?: city| governorate| province)?$/i;
+const DEV_GROUND = new Set(['capture', 'advance', 'fighting', 'repelled', 'shelling']);
+const DEV_SEA = /\b(sea|gulf|strait|bab[ -]al[ -]mand[ae]b|waters|offshore)\b|البحر|خليج|باب المندب/i;
+const DEV_PORT = /\b(?:port|harbou?r|island|coast|Hodeidah|Ras Is[ae]|Salif|Mocha|Mokha|Aden|Mukalla|Nishtun|Kamaran|Perim|Mayun|Khokha|Jizan|Jazan|Yanbu)\b|ميناء|جزيرة/i;
+const DEV_FIRE = new Set(['missile', 'drone', 'airstrike', 'shelling']);
+function devPlausible(x) {
+  const place = String(x.place || '').trim();
+  if (DEV_VAGUE.test(place)) return false;
+  if (DEV_GROUND.has(x.kind) && DEV_GOV_CITY.test(place)) return false;
+  // Ground fighting happens on land: a ground mark at sea is a misplaced report.
+  if (DEV_GROUND.has(x.kind) && DEV_SEA.test(place)) return false;
+  // A ship is at sea or in a port, never on a hill inland (Kahbub).
+  if (x.kind === 'naval' && districtGeo && districtAt(x.ll[0], x.ll[1]) && !DEV_SEA.test(place) && !DEV_PORT.test(place)) return false;
+  if (DEV_GROUND.has(x.kind) && districtGeo && !districtAt(x.ll[0], x.ll[1]) && !devInSaudi(x.ll)) return false;
+  // A coalition air strike inside Saudi Arabia is a misread report (air traffic halted), not an event.
+  if (x.kind === 'airstrike' && x.side !== 'houthi' && devInSaudi(x.ll)) return false;
+  if (DEV_FIRE.has(x.kind) && districtGeo) {
+    const d = districtAt(x.ll[0], x.ll[1]);
+    const own = DEV_CTRL[x.side];
+    if (d && (own === 'houthi' || own === 'plc') && districtSide(d, controlByIso(data || {})) === own) return false;
+  }
+  return true;
+}
+
+/** Marks with a spot, from the brief. */
+function devMarksOf(list) {
+  const ok = (ll) => Array.isArray(ll) && ll.length >= 2 && Number.isFinite(+ll[0]) && Number.isFinite(+ll[1]);
+  return (Array.isArray(list) ? list : [])
+    .filter((x) => x && DEV_LABEL[x.kind] && ok(x.ll))
+    .map((x) => ({ ...x, ll: [+x.ll[0], +x.ll[1]], fromLl: ok(x.fromLl) ? [+x.fromLl[0], +x.fromLl[1]] : null }))
+    .filter(devPlausible);
+}
+
+/** The latest developments' marks; a brief from before the map list is read from its text. */
+function mainDevMarks() {
+  if (brief && Array.isArray(brief.devMap)) return devMarksOf(brief.devMap);
+  const kind = { capture: 'capture', fight: 'fighting', strike: 'airstrike' };
+  return developmentItems().filter((it) => kind[it.act]).map((it) => {
+    const c = entryCenter(it.entry);
+    return c ? { place: it.entry.name, kind: kind[it.act], side: it.side === 'plc' ? 'government' : it.side || 'houthi', ll: c, fromLl: null } : null;
+  }).filter(Boolean);
+}
+
+function devInSaudi(ll) { return saudiGeoCache ? inSaudi(ll) : ll[0] > 16.4 && !districtAt(ll[0], ll[1]); }
+
+function devLegendHtml(marks, withSaudi) {
+  const saudi = withSaudi || marks.some((x) => devInSaudi(x.ll) || (x.fromLl && devInSaudi(x.fromLl)) || x.side === 'saudi');
+  const sides = (data && Array.isArray(data.control) ? data.control : []).filter((c) => c && c.color && c.id !== 'saudi');
+  if (saudi) sides.push({ id: 'saudi', name: 'Saudi Arabia', color: COLORS.saudi });
+  if (marks.some((x) => x.side === 'us')) sides.push({ id: 'us', name: 'United States', color: devColor('us') });
+  const own = { saudi: ['Saudi Arabia', COLORS.saudi], us: ['United States', devColor('us')] };
+  const row = (c) => `<span><i class="sw" style="background:${escapeHtml(own[c.id] ? own[c.id][1] : sideColor(c))}"></i>${escapeHtml(own[c.id] ? own[c.id][0] : controlShortName(c))}</span>`;
+  const kinds = [...new Set(marks.map((x) => x.kind))];
+  return `<div class="pop-legend">${sides.map(row).join('')}</div>
+    ${kinds.length ? `<div class="pop-legend dev-key">${kinds.map((k) => `<span><i class="dk${k === 'fighting' ? ' wide' : ''}">${DEV_KEY_SVG[k]}</i>${DEV_LABEL[k]}</span>`).join('')}</div>` : ''}`;
+}
+
+const kmBetween = (a, b) => Math.hypot((a[0] - b[0]) * 111, (a[1] - b[1]) * 111 * Math.cos(a[0] * Math.PI / 180));
+
+function devCurvePoint(a, b, s) {
+  const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const d = [b[0] - a[0], b[1] - a[1]];
+  const c = [mid[0] + d[1] * 0.22, mid[1] - d[0] * 0.22];
+  const u = 1 - s;
+  return [u * u * a[0] + 2 * u * s * c[0] + s * s * b[0], u * u * a[1] + 2 * u * s * c[1] + s * s * b[1]];
+}
+function devCurve(a, b, n) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) pts.push(devCurvePoint(a, b, i / n));
+  return pts;
+}
+function devMix(a, b, k) {
+  const hex = (c) => /^#[0-9a-f]{6}$/i.test(c) ? [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)) : null;
+  const x = hex(a), y = hex(b);
+  if (!x || !y) return k < 0.5 ? a : b;
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join('');
+}
+const devEase = (t) => t * t * (3 - 2 * t);
+const devClamp = (t) => Math.max(0, Math.min(1, t));
+
+/**
+ * Which way an advance pushes: towards the nearest district the other side
+ * holds (at least 3 km off), in screen degrees (0 = pointing right). The
+ * arrow's tip sits on the spot. Pointing right when the map does not say.
+ */
+function devAdvAngle(x) {
+  const own = DEV_CTRL[x.side];
+  const foe = own === 'houthi' ? 'plc' : own === 'plc' ? 'houthi' : null;
+  if (!districtGeo || !foe) return 0;
+  const byIso = controlByIso(data || {});
+  const cos = Math.cos(x.ll[0] * Math.PI / 180);
+  let best = null;
+  for (const f of districtGeo.features) {
+    if (!f._c) {
+      let a = 90, b = 180, c = -90, d = -180;
+      const g = f.geometry;
+      for (const p of g.type === 'Polygon' ? [g.coordinates] : g.coordinates) for (const [lng, lat] of p[0]) { a = Math.min(a, lat); c = Math.max(c, lat); b = Math.min(b, lng); d = Math.max(d, lng); }
+      f._c = [(a + c) / 2, (b + d) / 2];
+    }
+    if (districtSide(f.properties, byIso) !== foe) continue;
+    const dy = f._c[0] - x.ll[0], dx = (f._c[1] - x.ll[1]) * cos;
+    const km = Math.hypot(dx, dy) * 111;
+    if (km >= 3 && (!best || km < best.km)) best = { km, dx, dy };
+  }
+  // Screen y runs down.
+  return best ? Math.atan2(-best.dy, best.dx) * 180 / Math.PI : 0;
+}
+
+/** The picture for a mark, drawn round its spot. */
+function devPicHtml(x, col, foe) {
+  const pic = {
+    airstrike: () => `<span class="dp dp-air"><b style="color:${col}">${DEV_SVG.jet}</b><em>${DEV_SVG.bomb}</em><i></i><i></i></span>`,
+    shelling: () => `<span class="dp dp-art"><b style="color:${col}">${DEV_SVG.cannon}</b><em></em><i></i><i></i><i></i></span>`,
+    fighting: () => `<span class="dp dp-duel" style="--a:${col};--b:${foe}">${DEV_SVG.duel}</span>`,
+    // The side that held keeps its shield on the spot; the attacker's arrow breaks on it and falls back.
+    repelled: () => `<span class="dp dp-shield"><em style="color:${col}">${DEV_SVG.advance}</em><b style="color:${foe}">${DEV_SVG.shield}</b><i></i><i></i></span>`,
+    capture: () => `<span class="dp dp-flag"><i></i><span>${DEV_FLAGS[x.side === 'southern' ? 'government' : x.side] || DEV_FLAGS.government}</span></span>`,
+    advance: () => `<span class="dp dp-adv" style="color:${col};--rot:${devAdvAngle(x).toFixed(0)}deg"><b>${DEV_SVG.advance}</b></span>`,
+    alert: () => `<span class="dp dp-alert"><i></i><i></i><b>${DEV_SVG.siren}</b></span>`,
+    naval: () => `<span class="dp dp-ship" style="--dev:${col}"><i></i><i></i><b>${DEV_SVG.ship}</b></span>`,
+  }[x.kind];
+  if (pic) return pic();
+  // missile, drone, interception
+  const shape = x.kind === 'drone' || (x.kind === 'interception' && (x.shot === 'drone' || /drone|uav/i.test(x.place || ''))) ? DEV_SVG.drone : DEV_SVG.missile;
+  // An interception is brought down in the air: the shape stops short and a burst takes its place.
+  const burst = x.kind === 'interception' ? `<em>${DEV_SVG.burst}</em>` : '';
+  if (x.fromLl) return `<span class="dp dp-hit${x.kind === 'interception' ? ' dp-int' : ''}">${burst}<i></i><i></i></span>`;
+  return `<span class="dp dp-dive${x.kind === 'interception' ? ' dp-int' : ''}${shape === DEV_SVG.drone ? ' is-drone' : ''}"><b style="color:${col}">${shape}</b>${burst}<i></i><i></i></span>`;
+}
+
+/** Which picture stands on top where several meet. */
+const DEV_ORDER = ['capture', 'repelled', 'fighting', 'advance', 'airstrike', 'shelling', 'missile', 'drone', 'interception', 'naval', 'alert'];
+/** Pictures shrink as the map zooms out, round their own spot, so they never leave it. */
+function devScale(z) { return Math.max(0.72, Math.min(1.3, 0.86 + (z - 6) * 0.16)).toFixed(2); }
+/** Each picture's box round its own spot, [left, top, width, height] in px (themes.css .dp-*). */
+const DEV_BOX = {
+  airstrike: [-22, -28, 44, 34], shelling: [-42, -22, 50, 30], fighting: [-23, -9, 46, 18], repelled: [-32, -13, 43, 26],
+  capture: [-2, -40, 44, 40], advance: [-34, -34, 68, 68], naval: [-15, -15, 30, 30], alert: [-11, -10, 22, 20], dive: [-28, -22, 36, 28], hit: [-8, -8, 16, 16],
+};
+/** Pictures at one spot (within 1.5 km) take turns on it. */
+function devGroups(marks) {
+  const out = [];
+  for (const x of marks) {
+    const g = out.find((gr) => kmBetween(gr[0].ll, x.ll) <= 1.5);
+    if (g) g.push(x);
+    else out.push([x]);
+  }
+  for (const g of out) g.sort((a, b) => DEV_ORDER.indexOf(a.kind) - DEV_ORDER.indexOf(b.kind));
+  return out;
+}
+/** The drawing a mark gets: a dive or a hit for a missile, drone or interception. */
+function devPicKind(x) { return DEV_BOX[x.kind] ? x.kind : x.fromLl ? 'hit' : 'dive'; }
+/** Pictures that come in from one side: at a shared spot, every other one comes from the other side. */
+const DEV_FLIPS = new Set(['dive', 'airstrike', 'shelling', 'repelled']);
+/** Play a picture a part of its loop later, so pictures sharing a spot take turns. */
+function devLater(el, frac) {
+  if (!el || !el.getAnimations) return;
+  requestAnimationFrame(() => {
+    for (const a of el.getAnimations({ subtree: true })) {
+      const d = Number(a.effect && a.effect.getTiming().duration) || 0;
+      if (d > 0) a.currentTime = (Number(a.currentTime) || 0) + d * frac;
+    }
+  });
+}
+/** Reports of one kind by one side within 6 km are one picture. */
+function devMerge(marks) {
+  const out = [];
+  for (const x of marks) {
+    const same = out.find((y) => y.kind === x.kind && (y.side === x.side || x.kind === 'fighting') && kmBetween(y.ll, x.ll) <= 6);
+    if (!same) out.push(x);
+    else if (!same.fromLl && x.fromLl) same.fromLl = x.fromLl;
+  }
+  return out;
+}
+
+/**
+ * Draw the marks on a pop-up map and play them. Extends `bounds` with what it
+ * drew. Each picture is fixed to its own spot (the white dot) at every zoom:
+ * it only grows or shrinks with the zoom, never moves.
+ */
+function drawDevMarks(m, marks, bounds) {
+  const movers = [];
+  const box = m.getContainer();
+  const size = () => box.style.setProperty('--dvs', devScale(m.getZoom()));
+  size();
+  m.on('zoom zoomend viewreset', size);
+  const merged = devMerge(marks);
+  for (const x of merged) {
+    const col = devColor(x.side);
+    const foe = devColor(devFoe(x.side));
+    bounds.extend(x.ll);
+    if (x.kind === 'capture' || x.kind === 'advance') {
+      const d = districtAt(x.ll[0], x.ll[1]);
+      const f = d && districtGeo.features.find((g) => g.properties.id === d.id);
+      if (f) {
+        const fill = L.geoJSON(f, { interactive: false, style: { color: x.kind === 'capture' ? foe : col, weight: x.kind === 'capture' ? 1.8 : 2.6, dashArray: x.kind === 'advance' ? '6 5' : null, fillColor: foe, fillOpacity: x.kind === 'capture' ? 0.6 : 0 } }).addTo(m);
+        movers.push({ type: 'fill', x, fill, col, foe });
+      }
+    }
+    if ((x.kind === 'missile' || x.kind === 'drone' || x.kind === 'interception') && x.fromLl) {
+      bounds.extend(x.fromLl);
+      const pts = devCurve(x.fromLl, x.ll, 64);
+      L.polyline(pts, { color: col, weight: 1.5, opacity: 0.4, dashArray: '2 6', interactive: false }).addTo(m);
+      const trail = L.polyline([x.fromLl, x.fromLl], { color: col, weight: 2.6, opacity: 0.85, interactive: false }).addTo(m);
+      const shape = x.kind === 'drone' || x.shot === 'drone' ? DEV_SVG.drone : DEV_SVG.missile;
+      const head = L.marker(x.fromLl, { interactive: false, keyboard: false, zIndexOffset: 2900, icon: L.divIcon({ className: 'dev-wrap', html: `<span class="dev-shot${x.kind === 'drone' ? ' is-drone' : ''}" style="color:${col}"><i>${shape}</i></span>`, iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(m);
+      movers.push({ type: 'shot', x, trail, head, stop: 1 });
+    }
+  }
+  for (const g of devGroups(merged)) {
+    // Each picture on its own spot: its burst, its flag's foot, its shield on
+    // the white dot. Several at one spot take turns (each a beat later), and
+    // every other one comes in from the other side, so they never cover each
+    // other. Pictures only: the key says what each one means.
+    g.forEach((x, k) => {
+      const flip = k % 2 === 1 && DEV_FLIPS.has(devPicKind(x));
+      const mk = L.marker(x.ll, {
+        interactive: false, keyboard: false, zIndexOffset: 2500 + (DEV_ORDER.length - DEV_ORDER.indexOf(x.kind)) * 30 - k,
+        icon: L.divIcon({ className: 'dev-wrap dv', html: `<span class="dv-pic"><span class="dv-one${flip ? ' dv-flip' : ''}">${devPicHtml(x, devColor(x.side), devColor(devFoe(x.side)))}</span></span><i class="dv-dot"></i>`, iconSize: [0, 0], iconAnchor: [0, 0] }),
+      }).addTo(m);
+      if (k) devLater(mk.getElement(), k / g.length);
+    });
+  }
+
+  const frameAt = (t) => {
+    for (const mv of movers) {
+      if (mv.type === 'fill') {
+        const k = devClamp((t - 0.3) / 0.25);
+        if (mv.x.kind === 'capture') {
+          // The old holder's colour turns into the taker's, then stays till the loop restarts.
+          const c = devMix(mv.foe, mv.col, k);
+          mv.fill.setStyle({ fillColor: c, color: c, fillOpacity: 0.6, opacity: 1 });
+        } else {
+          const pulse = 0.5 - 0.5 * Math.cos(t * 2 * Math.PI);
+          mv.fill.setStyle({ fillColor: mv.col, fillOpacity: 0.12 + 0.2 * pulse, opacity: 0.55 + 0.45 * pulse });
+        }
+        continue;
+      }
+      const s = Math.min(mv.stop, devClamp(t / 0.6));
+      const flying = t < 0.6 * mv.stop;
+      const here = devCurvePoint(mv.x.fromLl, mv.x.ll, s);
+      const trail = [];
+      for (let i = 0; i <= 12; i++) trail.push(devCurvePoint(mv.x.fromLl, mv.x.ll, Math.max(0, s - 0.18 + (0.18 * i) / 12)));
+      mv.trail.setLatLngs(trail);
+      mv.trail.setStyle({ opacity: flying ? 0.85 : Math.max(0, 0.85 - (t - 0.6 * mv.stop) * 3) });
+      mv.head.setLatLng(here);
+      const he = mv.head.getElement();
+      if (he && he.firstElementChild) {
+        // Turned along the path's own direction, never snapping back and forth.
+        const a = m.latLngToLayerPoint(devCurvePoint(mv.x.fromLl, mv.x.ll, Math.max(0, s - 0.02)));
+        const b = m.latLngToLayerPoint(devCurvePoint(mv.x.fromLl, mv.x.ll, Math.min(1, s + 0.02)));
+        const deg = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+        he.firstElementChild.style.transform = `rotate(${deg.toFixed(1)}deg)`;
+        he.firstElementChild.style.opacity = flying ? '1' : '0';
+      }
+    }
+  };
+  stopDevAnim();
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!movers.length) return;
+  if (reduce) { setTimeout(() => frameAt(0.8), 120); return; }
+  const t0 = performance.now();
+  const step = (now) => {
+    if (!sheetMap || sheetMap !== m) { stopDevAnim(); return; }
+    frameAt(((now - t0) % DEV_PERIOD) / DEV_PERIOD);
+    devAnim.raf = requestAnimationFrame(step);
+  };
+  devAnim = { raf: requestAnimationFrame(step) };
+}
+
+/**
+ * Frame a pop-up map on what it shows, at once and for good: at least ~70 km
+ * across and never closer than zoom 9, or tighter for a front (`half` degrees
+ * round the centre: 0.18 is ~40 km).
+ */
+function devFit(m, bounds, maxZoom, half) {
+  if (!bounds.isValid()) return false;
+  // A pop-up not laid out yet (a hidden tab) is framed once it has a size.
+  const el = m.getContainer();
+  if (!el.clientWidth || !el.clientHeight) {
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => { if (el.clientWidth && el.clientHeight) { ro.disconnect(); devFit(m, bounds, maxZoom, half); } });
+      ro.observe(el);
+    }
+    return true;
+  }
+  const b = L.latLngBounds(bounds.getSouthWest(), bounds.getNorthEast());
+  const c = b.getCenter();
+  const h = half || 0.33;
+  b.extend([c.lat - h, c.lng - h]).extend([c.lat + h, c.lng + h]);
+  // Room round the edge for the pictures, which stand up to ~40 px off their spots.
+  try { m.invalidateSize(false); m.fitBounds(b, { padding: [44, 44], maxZoom: maxZoom || 9, animate: false }); } catch (e) { return false; }
+  return true;
+}
+
+function devBaseMap(m, withSaudi) {
+  const byIso = controlByIso(data);
+  if (geoCache) {
+    const mainland = splitIslandFeatures(geoCache).mainland;
+    districtLayer(m, byIso);
+    L.geoJSON(mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(m);
+    govNameLayer(m, mainland.features, byIso);
+  }
+  if (saudiGeoCache && withSaudi) {
+    L.geoJSON(saudiGeoCache, { interactive: false, style: { fillColor: COLORS.saudi, fillOpacity: 0.3, color: EDGE, weight: 0.8, opacity: 0.7 } }).addTo(m);
+  }
+  saudiCityLayer(m);
+}
+
+/** Yemen's mainland, for framing a pop-up on the country. */
+const YEMEN_VIEW = [[12.4, 42.5], [17.6, 49.2]];
+/** Saudi Arabia's south-west (Jazan, Najran, Asir) and the cities hit from Yemen. */
+const SAUDI_VIEW = [[16.3, 41.6], [19.4, 45.2]];
+
+/** The hours this update covers, on the reader's clock: "00:00–12:00, 29 Sep". */
+function briefHours() {
+  if (!brief || !brief.windowStart || !brief.updatedAt) return '';
+  const t = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: VIEW_TZ });
+  const day = new Date(brief.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: VIEW_TZ });
+  return `${t(brief.windowStart)}–${t(brief.updatedAt)}, ${day}`;
+}
+
+/**
+ * The latest developments' map: every event recorded since the last update,
+ * framed on Yemen; a switch at the top moves it to Saudi Arabia and back, and
+ * says how many events are there.
+ */
+function openDevelopmentsMap(anchor) {
+  if (!window.L || !brief) return;
+  const marks = mainDevMarks();
+  if (!marks.length) return;
+  const inKsa = (x) => devInSaudi(x.ll);
+  const nKsa = marks.filter(inKsa).length;
+  const nYem = marks.length - nKsa;
+  document.querySelectorAll('.sit-map-btn').forEach((b) => b.setAttribute('aria-expanded', 'true'));
+  openMapPop({
+    title: `Latest developments${briefHours() ? ` · ${briefHours()}` : ''}`,
+    anchor,
+    legend: devLegendHtml(marks, true),
+    wide: true,
+    tools: `<div class="dev-switch" role="group" aria-label="Show"><button type="button" data-v="yemen" class="on">Yemen · ${nYem}</button><button type="button" data-v="saudi">Saudi Arabia · ${nKsa}</button></div><p class="dev-none" hidden></p>`,
+    build: (m, box) => {
+      devBaseMap(m, true);
+      const frame = (v) => {
+        const own = marks.filter((x) => (v === 'saudi' ? inKsa(x) : !inKsa(x)));
+        const b = L.latLngBounds(own.map((x) => x.ll));
+        if (!b.isValid()) b.extend(v === 'saudi' ? SAUDI_VIEW : YEMEN_VIEW);
+        return b;
+      };
+      devFit(m, frame(nYem ? 'yemen' : 'saudi'), 9);
+      drawDevMarks(m, marks, L.latLngBounds([]));
+      const sw = box.querySelector('.dev-switch');
+      if (!sw) return;
+      // A side of the switch with nothing on it says so, and why: later reports wait for the next update.
+      const none = box.querySelector('.dev-none');
+      const say = (v) => {
+        if (!none) return;
+        const n = v === 'saudi' ? nKsa : nYem;
+        none.hidden = n > 0;
+        none.textContent = n ? '' : `Nothing recorded in ${v === 'saudi' ? 'Saudi Arabia' : 'Yemen'} in this update (${briefHours()}). Reports since then are on the main map and go into the next update.`;
+      };
+      say(nYem ? 'yemen' : 'saudi');
+      if (!nYem) sw.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === 'saudi'));
+      sw.querySelectorAll('button').forEach((btn) => {
+        btn.onclick = (ev) => {
+          if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+          sw.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
+          say(btn.dataset.v);
+          const b = frame(btn.dataset.v);
+          const c = b.getCenter();
+          const half = 0.33;
+          b.extend([c.lat - half, c.lng - half]).extend([c.lat + half, c.lng + half]);
+          try { m.flyToBounds(b, { padding: [44, 44], maxZoom: 9, duration: 0.7 }); } catch (e) {}
+        };
+      });
+    },
+  });
+}
+
+/** Hover opens a map pop-up after a moment, as the report and front buttons do; a click opens it at once. */
+function wireMapHover(btn, open, hide) {
+  const canHover = () => window.matchMedia('(hover: hover)').matches && window.innerWidth >= 720;
+  btn.onmouseenter = () => {
+    if (!canHover()) return;
+    clearTimeout(pinPopTimer);
+    pinPopTimer = setTimeout(() => open(btn), 250);
+  };
+  btn.onmouseleave = () => {
+    clearTimeout(pinPopTimer);
+    const el = document.getElementById('pin-sheet');
+    if (el && el.classList.contains('as-pop')) pinPopTimer = setTimeout(hide, 300);
+  };
+  btn.onclick = (ev) => {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    clearTimeout(pinPopTimer);
+    open(canHover() ? btn : null);
+  };
+  btn.onpointerdown = (ev) => { if (ev) ev.stopPropagation(); };
+}
+
 function renderSituation(d) {
   const el = document.getElementById('situation');
   if (!el) return;
@@ -1849,14 +2721,46 @@ function renderSituation(d) {
   const fallback = String((d.situation || {}).summary || '').trim();
   const body = derived || fallback;
   if (!body) { el.innerHTML = ''; return; }
-  el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2></div>${cadenceStamp(true)}
-    <p class="situation-window">${linkPlaces(body, pinsForProse())}</p>`;
-  wireProsePins(el);
+  ensurePlaceData();
+  // The button only when the map has something to show.
+  const mapBtn = derived && window.L && mainDevMarks().length ? '<button type="button" class="sit-map-btn" aria-haspopup="dialog" aria-expanded="false">Show on map</button>' : '';
+  // The fuller account the writer gives with the short one, behind "Read more".
+  const more = derived && brief.situation.more ? String(brief.situation.more).trim() : '';
+  // Short paragraphs with a line between them. Only the first shows, on a phone and a PC,
+  // until "Read more"; the rest of the text and the fuller account follow it.
+  const lineParas = paragraphsOf(body, { min: 200, target: 160 });
+  const moreParas = more ? paragraphsOf(more, { min: 200, target: 200 }) : [];
+  const para = (x, cls) => `<p class="situation-window${cls ? ` ${cls}` : ''}">${linkPlacesAll(x)}</p>`;
+  const open = el.classList.contains('sit-open');
+  const btnNeeded = moreParas.length || lineParas.length > 1;
+  el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2>${mapBtn}</div>${cadenceStamp(true)}
+    <div class="sit-body">${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}</div>${btnNeeded ? `
+    <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}`;
+  wirePlaceLinks(el);
+  const tog = el.querySelector('.toggle-sit');
+  if (tog) {
+    tog.onclick = () => {
+      const now = el.classList.toggle('sit-open');
+      tog.textContent = now ? 'Show less' : 'Read more';
+      tog.setAttribute('aria-expanded', String(now));
+    };
+    // The text opens and closes it too, as a Timeline box does; links keep their own click.
+    const bodyEl = el.querySelector('.sit-body');
+    bodyEl.onclick = (ev) => {
+      if (ev.target.closest('a, button, .place-link, [data-place]')) return;
+      if (window.getSelection && String(window.getSelection() || '')) return;
+      if (!tog.offsetParent) return;
+      tog.onclick();
+    };
+    bodyEl.classList.add('sit-click');
+  }
+  const btn = el.querySelector('.sit-map-btn');
+  if (btn) wireMapHover(btn, (anchor) => openDevelopmentsMap(anchor), hideFrontFloat);
 }
 
 /*
  * "The conflict in numbers": three boxes from the server's official tally
- * (src/lib/desk/tally.ts), refreshed with the 12-hour brief. Each side's
+ * (src/lib/desk/tally.ts), refreshed with the 6-hour brief. Each side's
  * figure counts fighters and civilians on that side; "Civilians" is every
  * side's civilians in one number. A figure no official body has given shows
  * as a dash, never an estimate.
@@ -2085,11 +2989,19 @@ function feedCardHtml(r, i) {
       </div>
       ${replyQuote(r)}
       <p class="headline">${escapeHtml(sum)}</p>
-      ${lead ? `<p class="lead">${escapeHtml(lead)}</p>` : ''}
+      ${leadHtml(lead)}
       ${!Array.isArray(r.media) && (r.type === 'statement' || r.type === 'diplomacy') ? '' : cardMediaHtml(r.media)}
       ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
+}
+
+/** A card's text: one paragraph, or short paragraphs with a line between them when it is long. */
+function leadHtml(lead) {
+  if (!lead) return '';
+  const paras = paragraphsOf(lead);
+  if (paras.length < 2) return `<p class="lead">${escapeHtml(lead.replace(/\s+/g, ' '))}</p>`;
+  return `<div class="lead lead-multi">${paras.map((x) => `<p>${escapeHtml(x)}</p>`).join('')}</div>`;
 }
 
 /** "Follows 11:02 · <headline>": the earlier report this one develops. */
@@ -2105,6 +3017,7 @@ function replyQuote(r) {
 function leadOverflows(card) {
   const lead = card.querySelector('.lead');
   if (!lead) return false;
+  if (lead.classList.contains('lead-multi')) return true;
   if (card.classList.contains('open') || !lead.clientHeight) return lead.textContent.length > 200;
   return lead.scrollHeight > lead.clientHeight + 2;
 }
@@ -2284,8 +3197,171 @@ function mediaTestCards() {
   ].map((r, i) => feedCardHtml(r, i)).join('');
 }
 
+/*
+ * Search and the alignment filters. The magnifier opens a search of every
+ * report the desk has carried (/api/search reads the query for what the reader
+ * means: "uav" finds the drone reports); its results take the column's place
+ * until the search is cleared. The three alignment keys are filters: one
+ * click shows only that side's outlets, in the feed and in the results.
+ */
+let feedLean = null;
+let feedSearch = null;
+const SEARCH_STEP = 30;
+const LEAN_NOTE = { houthi: 'Houthi-aligned outlets', gov: 'government or Saudi-aligned outlets', indep: 'outlets with no declared alignment' };
+function cardLean(r) {
+  const raw = sourceLean(sourceOf(r));
+  return raw === 'south' || raw === 'intl' || raw === 'other' ? 'indep' : raw;
+}
+const leanOk = (r) => !feedLean || cardLean(r) === feedLean;
+
+function renderFeedNote() {
+  const note = document.getElementById('feed-note');
+  if (!note) return;
+  const only = feedLean ? ` from <b>${LEAN_NOTE[feedLean]}</b>` : '';
+  if (feedSearch) {
+    const q = `“${escapeHtml(feedSearch.q)}”`;
+    if (feedSearch.loading) note.innerHTML = `<span class="fs-spin" aria-hidden="true"></span><span>Searching all reports for ${q}…</span>`;
+    else if (feedSearch.error) note.innerHTML = `<span>${escapeHtml(feedSearch.error)}</span><button type="button" data-act="clear">Clear search</button>`;
+    else {
+      const n = feedSearch.reports.filter(leanOk).length;
+      const wider = feedSearch.refining;
+      note.innerHTML = `${wider ? '<span class="fs-spin" aria-hidden="true"></span>' : ''}<span>${n ? `<b>${n}</b> report${n === 1 ? '' : 's'}` : wider ? 'Nothing yet' : 'No reports'} for ${q}${only}${wider ? ' · looking wider…' : ''}</span><button type="button" data-act="clear">Clear search</button>`;
+    }
+  } else if (feedLean) {
+    note.innerHTML = `<span>Showing only ${LEAN_NOTE[feedLean]}</span><button type="button" data-act="all">Show all</button>`;
+  }
+  note.hidden = !feedSearch && !feedLean;
+  const clear = note.querySelector('[data-act="clear"]');
+  if (clear) clear.onclick = () => clearFeedSearch(true);
+  const all = note.querySelector('[data-act="all"]');
+  if (all) all.onclick = () => setFeedLean(null);
+}
+
+function renderSearchFeed() {
+  const feed = document.getElementById('feed');
+  const more = document.getElementById('btn-more-reports');
+  renderFeedNote();
+  if (feedSearch.loading || feedSearch.error) {
+    feed.innerHTML = '';
+    more.hidden = true;
+    return;
+  }
+  const list = feedSearch.reports.filter(leanOk);
+  feed.innerHTML = list.length
+    ? list.slice(0, feedSearch.shown).map((r, i) => feedCardHtml(r, i)).join('')
+    : `<p class="fs-empty">${feedLean && feedSearch.reports.length ? 'None of the results comes from these outlets.' : 'Nothing in the reports matches this. Try other words: a place, a name, a weapon, an event.'}</p>`;
+  feed.querySelectorAll('.card').forEach(wireFeedCard);
+  wireMediaClicks(feed);
+  more.hidden = feedSearch.shown >= list.length;
+  if (!more.hidden) more.textContent = `Show more results (+${Math.min(SEARCH_STEP, list.length - feedSearch.shown)})`;
+}
+
+/**
+ * Two answers to one search: at once, the reports whose headlines carry the
+ * words the desk knows for it; a moment later, the full search that reads the
+ * query for its meaning, which replaces the first list.
+ */
+async function runFeedSearch(q) {
+  q = String(q || '').replace(/\s+/g, ' ').trim();
+  if (q.length < 2) return;
+  const token = {};
+  feedSearch = { q, token, loading: true, reports: [], shown: SEARCH_STEP };
+  renderFeed(data);
+  const rail = document.getElementById('rail');
+  if (rail && rail.scrollTop > 0) rail.scrollTop = 0;
+  const ask = async (fast) => {
+    const res = await fetch('/api/search?q=' + encodeURIComponent(q) + (fast ? '&fast=1' : ''));
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.ok) throw new Error(body.error || 'The search did not answer. Try again in a moment.');
+    return body;
+  };
+  const current = () => feedSearch && feedSearch.token === token;
+  let done = false;
+  const full = ask(false);
+  ask(true).then((body) => {
+    if (done || !current()) return;
+    const reports = Array.isArray(body.reports) ? body.reports : [];
+    if (body.full) done = true;
+    feedSearch = { ...feedSearch, loading: false, refining: !body.full, reports };
+    renderFeed(data);
+  }).catch(() => {});
+  let next;
+  try {
+    const body = await full;
+    next = { ...feedSearch, loading: false, refining: false, error: null, reports: Array.isArray(body.reports) ? body.reports : [] };
+  } catch (e) {
+    // The quick list stands if the full search failed.
+    next = feedSearch && !feedSearch.loading && feedSearch.reports.length
+      ? { ...feedSearch, refining: false }
+      : { ...feedSearch, loading: false, refining: false, error: e && e.message ? e.message : 'The search did not answer. Try again in a moment.' };
+  }
+  if (!current()) return;
+  done = true;
+  // Keep how far the reader had scrolled into the list.
+  feedSearch = { ...next, shown: Math.max(SEARCH_STEP, feedSearch.shown || 0) };
+  renderFeed(data);
+}
+
+function clearFeedSearch(closeBar) {
+  feedSearch = null;
+  const input = document.getElementById('feed-q');
+  if (input) input.value = '';
+  if (closeBar) {
+    const form = document.getElementById('feed-search');
+    const btn = document.getElementById('btn-feed-search');
+    if (form) form.hidden = true;
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+  renderFeed(data);
+}
+
+function setFeedLean(lean) {
+  feedLean = lean && lean !== feedLean ? lean : null;
+  const box = document.getElementById('feed-legend');
+  if (box) {
+    box.classList.toggle('filtering', !!feedLean);
+    box.querySelectorAll('.lean-f').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lean === feedLean)));
+  }
+  if (!feedSearch) reportsShown = Math.max(reportsShown, INITIAL_REPORTS);
+  renderFeed(data);
+}
+
+function wireFeedSearch() {
+  const btn = document.getElementById('btn-feed-search');
+  const form = document.getElementById('feed-search');
+  const input = document.getElementById('feed-q');
+  if (btn && form && !btn.dataset.wired) {
+    btn.dataset.wired = '1';
+    btn.onclick = () => {
+      const open = form.hidden;
+      form.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) {
+        input.focus();
+        // The archive is read into the server's memory before the first letter.
+        fetch('/api/search?warm=1').catch(() => {});
+      } else if (feedSearch) clearFeedSearch(false);
+    };
+    form.onsubmit = (ev) => {
+      ev.preventDefault();
+      runFeedSearch(input.value);
+    };
+    input.onkeydown = (ev) => {
+      if (ev.key === 'Escape') { ev.preventDefault(); if (feedSearch || input.value) clearFeedSearch(false); else btn.click(); }
+    };
+  }
+  document.querySelectorAll('#feed-legend .lean-f').forEach((b) => {
+    if (b.dataset.wired) return;
+    b.dataset.wired = '1';
+    b.onclick = () => setFeedLean(b.dataset.lean);
+  });
+}
+
 function renderFeed(d) {
-  const all = sortedReports(d);
+  if (!d) return;
+  if (feedSearch) { renderSearchFeed(); return; }
+  renderFeedNote();
+  const all = sortedReports(d).filter(leanOk);
   const slice = all.slice(0, reportsShown);
   const fc = document.getElementById('feed-count');
   if (fc) fc.textContent = `${Math.min(reportsShown, all.length)} / ${all.length}`;
@@ -2293,7 +3369,9 @@ function renderFeed(d) {
   // whether to offer "Show on map" from `mappableByFp`, so a stale index means
   // a report that is on the map renders without the button.
   if (data && window.L) { try { buildMapPins(data); } catch (e) {} }
-  document.getElementById('feed').innerHTML = mediaTestCards() + slice.map((r, i) => feedCardHtml(r, i)).join('');
+  document.getElementById('feed').innerHTML = feedLean && !slice.length
+    ? `<p class="fs-empty">None of the reports loaded so far comes from ${LEAN_NOTE[feedLean]}.</p>`
+    : mediaTestCards() + slice.map((r, i) => feedCardHtml(r, i)).join('');
   document.querySelectorAll('#feed .card').forEach(wireFeedCard);
   const more = document.getElementById('btn-more-reports');
   if (reportsShown < all.length) {
@@ -2312,10 +3390,12 @@ function renderFeed(d) {
 function prependFeedCards(d) {
   const feed = document.getElementById('feed');
   if (!feed) return;
+  // Search results stand until the search is cleared.
+  if (feedSearch) return;
   if (!feed.children.length) { renderFeed(d); return; }
   const cards = [...feed.querySelectorAll('.card')];
   const have = new Set(cards.map((el) => el.dataset.fp));
-  const all = sortedReports(d);
+  const all = sortedReports(d).filter(leanOk);
   // Everything the column is showing, not just what sits above the top card.
   // A report can arrive late and still belong further down: the feed is ordered
   // by each report's own timestamp and the scanner accepts posts up to 72 hours
@@ -2438,13 +3518,14 @@ function frontFeatureStyle(feature, byIso, ids) {
   const lit = ids.has(iso);
   // Districts carry the colours; the governorates outside the front are dimmed.
   if (districtGeo) {
-    return { fillColor: EDGE, fillOpacity: lit ? 0 : 0.35, color: lit ? '#fde047' : EDGE, weight: lit ? 3.5 : 1.2, opacity: 1 };
+    // No outline round the front: its events show where it is.
+    return { fillColor: EDGE, fillOpacity: lit ? 0 : 0.3, color: EDGE, weight: lit ? 1.6 : 1.2, opacity: 1 };
   }
   return {
     fillColor: c,
     fillOpacity: on ? (lit ? 0.88 : 0.55) : 0,
-    color: lit ? '#fde047' : EDGE,
-    weight: lit ? 3.5 : 1.2,
+    color: EDGE,
+    weight: lit ? 1.6 : 1.2,
     opacity: on ? 1 : 0.2,
   };
 }
@@ -2456,7 +3537,7 @@ function frontFeatureStyle(feature, byIso, ids) {
  * yellow border; the rest fade, still readable as control areas.
  */
 async function buildFrontMap(m, front, d) {
-  if (!geoCache) geoCache = await fetch('/yemen-adm1.geojson').then((r) => r.json()).catch(() => null);
+  if (!geoCache) await loadAdm1().catch(() => null);
   await loadDistricts();
   if (sheetMap !== m || !geoCache) return;
   const byIso = controlByIso(d);
@@ -2473,26 +3554,30 @@ async function buildFrontMap(m, front, d) {
   govNameLayer(m, mainland.features, byIso);
   saudiCityLayer(m);
   // A front opened from several clusters in one governorate has a spot for each.
-  for (const spot of frontSpots(front.mapFocus)) {
-    const r = (front.mapFocus.spotRadius || 15000) * 1.6;
-    L.circle(spot, { radius: r, color: '#fde047', weight: 3, fillColor: '#fde047', fillOpacity: 0.25, interactive: false }).addTo(m);
-    lit.extend(L.latLng(spot).toBounds(r * 2));
-  }
-  const frame = () => {
-    if (sheetMap !== m) return;
-    try { m.invalidateSize(); } catch (e) {}
-    if (lit.isValid()) m.fitBounds(lit, { padding: [40, 40], maxZoom: 7, animate: false });
-    else m.setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { animate: false });
-  };
-  frame();
-  setTimeout(frame, 80);
+  for (const spot of frontSpots(front.mapFocus)) lit.extend(L.latLng(spot).toBounds((front.mapFocus.spotRadius || 15000) * 3));
+  // Everything recorded on this front, played as on the developments' map.
+  const marks = devMarksOf((frontActivity(front.id) || {}).map);
+  const saudi = front.id === 'saudi-home' || marks.some((x) => devInSaudi(x.ll));
+  if (saudiGeoCache && saudi) L.geoJSON(saudiGeoCache, { interactive: false, style: { fillColor: COLORS.saudi, fillOpacity: 0.3, color: EDGE, weight: 0.8, opacity: 0.7 } }).addTo(m);
+  // Framed once, before anything is drawn, so nothing moves after it opens.
+  const seen = L.latLngBounds(marks.map((x) => x.ll));
+  // Saudi Arabia's front always shows the kingdom's south-west with its events.
+  if (front.id === 'saudi-home') seen.extend(SAUDI_VIEW);
+  // Tight on the front's own fighting (the server keeps only marks inside its area): ~40 km at least, zoom 10 at most.
+  if (seen.isValid()) devFit(m, seen, front.id === 'saudi-home' ? 9 : 10, front.id === 'saudi-home' ? 0.33 : 0.18);
+  else if (front.id === 'saudi-home') m.fitBounds(SAUDI_VIEW, { animate: false });
+  // Nothing drawn: the area itself (the strait, the Mocha–Hodeidah coast), else its governorate.
+  else if (front.mapFocus && Array.isArray(front.mapFocus.box)) m.fitBounds(front.mapFocus.box, { padding: [20, 20], maxZoom: 10, animate: false });
+  else if (lit.isValid()) m.fitBounds(lit, { padding: [30, 30], maxZoom: 10, animate: false });
+  else m.setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { animate: false });
+  if (marks.length) drawDevMarks(m, marks, L.latLngBounds([]));
 }
 
 function hideFrontFloat() {
   closePinSheet();
   frontFloatIdx = null;
   frontFloatAnchor = null;
-  document.querySelectorAll('.front-map-btn[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  document.querySelectorAll('.front-map-btn[aria-expanded="true"], .sit-map-btn[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
 }
 
 function textOverlap(a, b) {
@@ -2626,6 +3711,7 @@ function setHighlightChip(front) {
 }
 
 function clearMapHighlight(opts) {
+  clearPlaceHl();
   highlightIds = new Set();
   highlightPulse = false;
   if (highlightTimer) { clearTimeout(highlightTimer); highlightTimer = null; }
@@ -2638,6 +3724,13 @@ function clearMapHighlight(opts) {
   try { document.body.classList.remove('front-hl'); } catch (e) {}
   const chip = document.getElementById('map-chip');
   if (chip) chip.classList.remove('chip-hl');
+  if (focusFps) {
+    focusFps = null;
+    enterDayMode(todayYmd());
+    const t = document.getElementById('btn-day-today');
+    if (t) t.classList.add('on');
+    syncDayNav();
+  }
   applyMapFilters();
   if (opts && opts.home) resetHomeView();
 }
@@ -2649,80 +3742,96 @@ function frontSpots(loc) {
   return loc && ok(loc.spot) ? [loc.spot] : [];
 }
 
-function highlightFrontOnMap(front) {
-  const loc = front.mapFocus || {};
-  highlightIds = new Set(loc.ids || []);
-  highlightPulse = true;
-  clearStraitOverlay();
-  if (frontSpotLayer && map) {
-    try { map.removeLayer(frontSpotLayer); } catch (e) {}
-    frontSpotLayer = null;
-  }
-  clearIslandTags();
-  try { document.body.classList.add('front-hl'); } catch (e) {}
+/**
+ * A front's "Show on the main map": that front's reports in the window its text covers,
+ * as pins on the big map, framed on them. No circles or outlines.
+ */
+let focusFps = null;
+function frontPins(front) {
+  const spots = ((frontActivity(front.id) || {}).map || []).filter((x) => x && Array.isArray(x.ll)).map((x) => [+x.ll[0], +x.ll[1]]);
+  if (!spots.length || !brief) return [];
+  const from = Date.parse(brief.windowStart || '') || Date.now() - ((+brief.cadenceHours) || 6) * 3600e3;
+  const near = (p, km) => spots.some((s) => kmBetween(s, [p.lat, p.lng]) <= km);
+  const to = Date.parse(brief.updatedAt || '') || Date.now();
+  const inWindow = [...mappableByFp.values()].filter((p) => Date.parse(p.at) >= from - 3600e3 && Date.parse(p.at) <= to + 3600e3 && ['strike', 'combat', 'vessel', 'port'].includes(p.mapCat));
+  const exact = inWindow.filter((p) => near(p, 3));
+  return exact.length ? exact : inWindow.filter((p) => near(p, 25));
+}
+
+function showFrontPinsOnMainMap(front) {
+  if (!map) return;
+  const pins = frontPins(front);
+  clearMapHighlight({});
+  if (!pins.length) { showFrontAreaOnMainMap(front); return; }
+  focusFps = new Set(pins.map((p) => p.fp));
+  mapMode = 'range';
+  mapDateFrom = pins.map((p) => jerusalemYmd(p.at)).sort()[0];
+  mapDateTo = todayYmd();
+  activeEpoch = null;
+  activeControlYmd = null;
+  try { document.body.classList.remove('ctrl-mode'); } catch (e) {}
+  ['strike', 'combat', 'vessel', 'port'].forEach((k) => { layersOn[k] = true; });
+  document.querySelectorAll('#time-filter button').forEach((b) => b.classList.remove('on'));
+  syncDayNav();
   applyMapFilters();
-
-  const applyView = () => {
-    if (!map) return;
-    if (frontSpotLayer && map) {
-      try { map.removeLayer(frontSpotLayer); } catch (e) {}
-      frontSpotLayer = null;
-    }
-    const spots = frontSpots(loc);
-    if (spots.length && window.L) {
-      frontSpotLayer = L.featureGroup(spots.map((s) => L.circle([s[0], s[1]], {
-        radius: loc.spotRadius || 9000,
-        color: '#f8fafc',
-        weight: 2.4,
-        fillColor: '#fbbf24',
-        fillOpacity: 0.28,
-        className: 'front-spot',
-        interactive: false,
-      }))).addTo(map);
-    }
-    if ((highlightIds.has('YE-MY') || highlightIds.has('YE-HN')) && window.L) {
-      placeStraitOverlay();
-      placeIslandTags(data);
-    }
-  };
-
-  applyView();
-  setHighlightChip(front);
+  setHighlightChip({ name: `${front.name} · ${pins.length} report${pins.length === 1 ? '' : 's'}` });
   scrollToMap();
-  // One move, once the page has scrolled and the map has its size: straight
-  // onto the front, with the legend's side kept as padding.
   setTimeout(() => {
     if (!map) return;
     try { map.invalidateSize(); } catch (e) {}
-    const b = frontBounds();
-    try {
-      if (b) map.flyToBounds(b, { ...legendPadding(), maxZoom: 8, duration: 0.8 });
-      else map.flyTo(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { duration: 0.8 });
-    } catch (e) {}
+    const b = L.latLngBounds(pins.map((p) => [p.lat, p.lng]));
+    const c = b.getCenter();
+    b.extend([c.lat - 0.3, c.lng - 0.3]).extend([c.lat + 0.3, c.lng + 0.3]);
+    try { map.flyToBounds(b.pad(0.15), { ...legendPadding(), maxZoom: 9, duration: 0.8 }); } catch (e) {}
+    map.once('moveend', () => pins.forEach((p) => { const mk = markerByFp.get(p.fp); if (mk) pulsePin(mk.getElement()); }));
   }, 380);
-  if (highlightTimer) clearTimeout(highlightTimer);
-  highlightTimer = setTimeout(() => {
-    highlightPulse = false;
-    applyMapFilters();
-  }, 8000);
+}
+
+/** A front with no marks this update (30 Sep: Red Sea coast did nothing): fly the big map to its area instead. */
+function frontAreaBounds(front) {
+  const mf = front.mapFocus || {};
+  if (Array.isArray(mf.box)) return L.latLngBounds(mf.box);
+  const spots = frontSpots(mf);
+  if (spots.length) {
+    const b = L.latLngBounds(spots);
+    const c = b.getCenter();
+    const r = Math.max(0.25, (+mf.spotRadius || 15000) / 111000);
+    return b.extend([c.lat - r, c.lng - r]).extend([c.lat + r, c.lng + r]);
+  }
+  if (Array.isArray(mf.view)) {
+    const [lat, lng, z] = mf.view;
+    const r = 0.6 * Math.pow(2, 9 - (+z || 9));
+    return L.latLngBounds([[lat - r, lng - r], [lat + r, lng + r]]);
+  }
+  return null;
+}
+
+function showFrontAreaOnMainMap(front) {
+  const b = frontAreaBounds(front);
+  scrollToMap();
+  if (!b) return;
+  setHighlightChip({ name: `${front.name} · no reports in this update` });
+  setTimeout(() => {
+    if (!map) return;
+    try { map.invalidateSize(); } catch (e) {}
+    try { map.flyToBounds(b.pad(0.1), { ...legendPadding(), maxZoom: 9, duration: 0.8 }); } catch (e) {}
+  }, 380);
 }
 
 function showFrontFloat(idx, anchor, d) {
   const f = allFronts(d)[idx];
   if (!f) return;
   document.querySelectorAll('.front-map-btn').forEach((b, i) => b.setAttribute('aria-expanded', i === idx ? 'true' : 'false'));
+  const marks = devMarksOf((frontActivity(f.id) || {}).map);
   openMapPop({
     title: f.name,
     anchor,
+    ...(marks.length ? { legend: devLegendHtml(marks, f.id === 'saudi-home'), wide: true } : {}),
     build: (m) => buildFrontMap(m, f, d),
     go: () => {
       keepHighlightUntil = Date.now() + 2200;
       hideFrontFloat();
-      scrollToMap();
-      highlightFrontOnMap(f);
-      try { requestAnimationFrame(scrollToMap); } catch (e) {}
-      setTimeout(scrollToMap, 80);
-      setTimeout(scrollToMap, 360);
+      showFrontPinsOnMainMap(f);
     },
   });
   frontFloatIdx = idx;
@@ -2751,7 +3860,7 @@ function renderFronts(d) {
   const stamp = document.getElementById('fronts-stamp');
   if (stamp) stamp.innerHTML = cadenceStamp(true);
   if (frontIdx == null || frontIdx >= fronts.length) frontIdx = Math.max(0, fronts.findIndex((f) => f.id === 'bab' || /Bab al-Mandab/i.test(f.name || '')));
-  const pins = pinsForProse();
+  ensurePlaceData();
   const cards = fronts.map((f, i) => {
     const act = frontActivity(f.id);
     /*
@@ -2761,7 +3870,7 @@ function renderFronts(d) {
      * week while claiming to be current. They stay only as a fallback for a
      * front the brief has not covered yet.
      */
-    const composed = act && act.line ? act.line.trim() : '';
+    const composed = act && act.line ? readerClock(act.line.trim()) : '';
     const plain = composed ? '' : (f.plain || '').trim();
     const sum = composed ? '' : (f.summary || f.status || '').trim();
     const dir = composed ? '' : (f.direction || '').trim();
@@ -2772,23 +3881,23 @@ function renderFronts(d) {
     return `<article class="front-card">
       <div class="front-head">
         <strong>${escapeHtml(f.name)}</strong>
-        <button type="button" class="front-map-btn" data-i="${i}" aria-expanded="false" aria-label="Show where this is">Map</button>
+        <button type="button" class="sit-map-btn front-map-btn" data-i="${i}" aria-haspopup="dialog" aria-expanded="false">Show on map</button>
       </div>
-      ${f.where ? `<p class="front-where">${linkPlaces(f.where, pins)}</p>` : ''}
-      ${plain ? `<p class="front-plain">${linkPlaces(plain, pins)}</p>` : ''}
-      ${showSum ? `<p class="front-sum">${linkPlaces(sum, pins)}</p>` : ''}
-      ${showDir ? `<p class="front-dir">${linkPlaces(dir, pins)}</p>` : ''}
-      ${composed ? `<p class="front-composed">${linkPlaces(composed, pins)}</p>` : ''}
-      ${!composed && act ? `<p class="front-activity">${linkPlaces(act.line, pins)}</p>` : ''}
+      ${frontWhere(f, d) ? `<p class="front-where">${linkPlacesAll(frontWhere(f, d))}</p>` : ''}
+      ${plain ? `<p class="front-plain">${linkPlacesAll(plain)}</p>` : ''}
+      ${showSum ? `<p class="front-sum">${linkPlacesAll(sum)}</p>` : ''}
+      ${showDir ? `<p class="front-dir">${linkPlacesAll(dir)}</p>` : ''}
+      ${composed ? `<p class="front-composed">${linkPlacesAll(composed)}</p>` : ''}
+      ${!composed && act ? `<p class="front-activity">${linkPlacesAll(act.line)}</p>` : ''}
       ${composed ? '' : `<div class="srcs">Source: ${sourceAnchors(f.sources || [], '')}</div>`}
-      ${showDetail ? `<div class="full">${linkPlaces(detail, pins)}</div>
+      ${showDetail ? `<div class="full">${linkPlacesAll(detail)}</div>
       <button type="button" class="toggle-front">Read more</button>` : ''}
     </article>`;
   });
   const box = document.getElementById('fronts');
   box.classList.add('one-front');
   box.innerHTML = pagerHtml('fronts', cards, frontIdx, fronts.map((f) => f.name));
-  wireProsePins(box);
+  wirePlaceLinks(box);
   wirePager(box, frontIdx, (i) => {
     frontIdx = i;
     closeReadMore(box, '.front-card', '.toggle-front');
@@ -2801,26 +3910,58 @@ function renderFronts(d) {
       btn.textContent = open ? 'Hide' : 'Read more';
     };
   });
-  const canHover = () => window.matchMedia('(hover: hover)').matches && window.innerWidth >= 720;
   document.querySelectorAll('.front-map-btn').forEach((btn) => {
     const idx = parseInt(btn.dataset.i, 10);
-    btn.onmouseenter = () => {
-      if (!canHover()) return;
-      clearTimeout(pinPopTimer);
-      pinPopTimer = setTimeout(() => showFrontFloat(idx, btn, d), 250);
-    };
-    btn.onmouseleave = () => {
-      clearTimeout(pinPopTimer);
-      const el = document.getElementById('pin-sheet');
-      if (el && el.classList.contains('as-pop')) pinPopTimer = setTimeout(hideFrontFloat, 300);
-    };
-    btn.onclick = (ev) => {
-      if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-      clearTimeout(pinPopTimer);
-      showFrontFloat(idx, canHover() ? btn : null, d);
-    };
-    btn.onpointerdown = (ev) => { if (ev) ev.stopPropagation(); };
+    wireMapHover(btn, (anchor) => showFrontFloat(idx, anchor, d), hideFrontFloat);
   });
+}
+
+/** Each governorate's part of the country, for a front's top line. */
+const GOV_PART = {
+  'YE-SD': 'north-western', 'YE-HJ': 'north-western', 'YE-AM': 'northern', 'YE-JA': 'northern', 'YE-SN': 'central', 'YE-SA': 'central',
+  'YE-MA': 'central', 'YE-BA': 'central', 'YE-DH': 'central', 'YE-IB': 'central', 'YE-MW': 'western', 'YE-RA': 'western', 'YE-HU': 'western',
+  'YE-TA': 'south-western', 'YE-LA': 'southern', 'YE-DA': 'southern', 'YE-AD': 'southern', 'YE-AB': 'southern', 'YE-SH': 'southern',
+  'YE-HD': 'eastern', 'YE-MR': 'eastern', 'YE-SU': 'island',
+};
+/** Fronts named for a place of their own, not a governorate. */
+const FRONT_PLACE = { bab: 'Bab al-Mandab strait, south-western Yemen', 'red-sea-coast': 'Red Sea coast, western Yemen' };
+/** The districts of the two coastal areas (front-areas.ts), which their governorates' fronts leave out. */
+const FRONT_DISTRICTS = {
+  bab: ['dhubab', 'al-madaribah-wa-al-aarah'],
+  'red-sea-coast': ['al-makha', 'al-khukhah', 'hays', 'at-tuhayta', 'ad-durayhimi', 'al-hawak', 'al-mina', 'al-hali', 'as-salif', 'kamaran'],
+};
+const AREA_DISTRICT = new Set([...FRONT_DISTRICTS.bab, ...FRONT_DISTRICTS['red-sea-coast']]);
+
+/**
+ * A front's top line: where it is and who holds it, from the live district
+ * control of its governorates ("Saada, north-western Yemen · Houthi-held").
+ */
+function frontWhere(f, d) {
+  if (f.id === 'saudi-home') return 'North of Yemen';
+  const byIso = controlByIso(d);
+  let govs = ((f.mapFocus && f.mapFocus.ids) || []).filter((id) => GOV_PART[id] && byIso[id]);
+  let dists = [];
+  if (districtGeo) {
+    // A hand-written front is its governorates; an opened one, the districts at its spots.
+    if (FRONT_DISTRICTS[f.id]) dists = districtGeo.features.map((x) => x.properties).filter((p) => FRONT_DISTRICTS[f.id].includes(p.id));
+    else if (govs.length) dists = districtGeo.features.map((x) => x.properties).filter((p) => govs.includes(p.gov) && !AREA_DISTRICT.has(p.id));
+    else {
+      dists = frontSpots(f.mapFocus).map((s) => districtAt(s[0], s[1])).filter(Boolean);
+      govs = [...new Set(dists.map((x) => x.gov))].filter((id) => GOV_PART[id] && byIso[id]);
+    }
+  }
+  if (!govs.length) return f.where || '';
+  const g = byIso[govs[0]];
+  const part = GOV_PART[govs[0]];
+  const where = FRONT_PLACE[f.id]
+    ? FRONT_PLACE[f.id]
+    : `${govs.map((id) => byIso[id].name).join(' and ')}, ${part === 'island' ? 'an island of' : part} Yemen`;
+  if (!dists.length) return where;
+  const n = { houthi: 0, plc: 0, other: 0 };
+  for (const p of dists) { const s = districtSide(p, byIso); n[s === 'houthi' || s === 'plc' ? s : 'other'] += 1; }
+  const all = dists.length;
+  const held = n.houthi / all >= 0.85 ? 'Houthi-controlled' : n.plc / all >= 0.85 ? 'Government-controlled' : 'Contested';
+  return `${where} · ${held}`;
 }
 
 /* ---------------------------------------------------------------- *
@@ -2845,7 +3986,12 @@ let districtControl = null;
 let districtLayerMain = null;
 
 let districtsTried = false;
-async function loadDistricts() {
+let districtsInflight = null;
+function loadDistricts() {
+  if (!districtsInflight) districtsInflight = fetchDistricts().finally(() => { districtsInflight = null; });
+  return districtsInflight;
+}
+async function fetchDistricts() {
   if (districtGeo && districtControl) return true;
   try {
     const [g, c] = await Promise.all([
@@ -2858,18 +4004,46 @@ async function loadDistricts() {
   return !!(districtGeo && districtControl);
 }
 
-/**
- * A district's own control: the 12-hour clock's live layer (/api/brief
- * "controlLive", from the capture reports) over the hand baseline. A past day
- * on the control slider shows the baseline only.
- */
-function districtOwn(p) {
-  const live = !activeControlYmd && brief && brief.controlLive && brief.controlLive.districts ? brief.controlLive.districts[p.id] : null;
-  if (live) return live;
-  return (districtControl && districtControl.districts && districtControl.districts[p.id]) || null;
+/** The day the map's colours are for: a past day on the day map or the control slider; null for now. */
+function controlDay() {
+  if (activeControlYmd) return activeControlYmd < todayYmd() ? activeControlYmd : null;
+  if (mapMode === 'day') {
+    const y = effectiveMapDate();
+    return y && y < todayYmd() ? y : null;
+  }
+  return null;
 }
 
-/** The outlets behind a change the 12-hour clock made, as links. */
+/**
+ * A district's own control on the map's day: the update clock's live layer
+ * (/api/brief "controlLive", from the capture reports) over the hand baseline
+ * (control.json). Going back a day undoes every change made after it: a live
+ * change counts from its day, and a baseline district taken in this round
+ * shows who held it before ("before") until the day it fell.
+ */
+function districtOwn(p) {
+  const day = controlDay();
+  const cl = brief && brief.controlLive;
+  if (cl && cl.districts) {
+    const live = cl.districts[p.id];
+    if (!day) { if (live) return live; }
+    else {
+      const ch = (Array.isArray(cl.changes) ? cl.changes : []).filter((c) => c && c.district === p.id).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      const upto = ch.filter((c) => String(c.at).slice(0, 10) <= day);
+      if (upto.length) {
+        const last = upto[upto.length - 1];
+        return upto.length === ch.length && live ? live : { side: last.to, since: String(last.at).slice(0, 10), note: '' };
+      }
+      if (!ch.length && live && String(live.since || '') <= day) return live;
+    }
+  }
+  const base = districtControl && districtControl.districts && districtControl.districts[p.id];
+  if (!base) return null;
+  if (day && base.since && base.since > day) return base.before ? { side: base.before, note: base.beforeNote || '' } : null;
+  return base;
+}
+
+/** The outlets behind a change the update clock made, as links. */
 function liveSrcHtml(own) {
   const src = own && Array.isArray(own.src) ? own.src.filter((x) => x && typeof x === 'object' && x.outlet) : [];
   if (!src.length) return '';
@@ -3050,6 +4224,7 @@ function goToPinOnMainMap(pin, { note = false } = {}) {
 }
 
 function closePinSheet() {
+  stopDevAnim();
   const el = document.getElementById('pin-sheet');
   if (el) el.classList.remove('show');
   if (sheetMap) { try { sheetMap.remove(); } catch (e) {} sheetMap = null; }
@@ -3060,7 +4235,7 @@ function closePinSheet() {
  * the button on desktop, a sheet on a phone (no anchor). `build(m)` draws the
  * map and frames it; `go` is the blue "Show on the main map".
  */
-function openMapPop({ title, anchor, build, go }) {
+function openMapPop({ title, anchor, build, go, legend, wide, tools }) {
   let el = document.getElementById('pin-sheet');
   if (!el) {
     el = document.createElement('div');
@@ -3072,22 +4247,24 @@ function openMapPop({ title, anchor, build, go }) {
   el.innerHTML = `<div class="pin-sheet-box" role="dialog" aria-label="Map">
       <div class="pin-sheet-head"><p class="front-float-title">${escapeHtml(title || '')}</p>
       <button type="button" class="pin-sheet-x" aria-label="Close">×</button></div>
-      <div id="pin-sheet-map"></div>
-      ${popLegendHtml()}
-      <button type="button" class="front-float-go">Show on the main map</button>
+      <div class="pin-sheet-mapbox"><div id="pin-sheet-map"></div>${tools || ''}</div>
+      ${legend != null ? legend : popLegendHtml()}
+      ${go ? '<button type="button" class="front-float-go">Show on the main map</button>' : ''}
     </div>`;
   el.classList.toggle('as-pop', !!anchor);
+  el.classList.toggle('wide', !!wide);
   el.classList.add('show');
   if (anchor) placePinPop(el.firstElementChild, anchor);
   frontFloatAnchor = anchor || null;
   frontFloatOpenedAt = Date.now();
-  sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false, zoomSnap: 0.5 }).setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2]);
+  sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false, zoomSnap: 0.25 }).setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { animate: false });
   L.tileLayer(TILE_URL, { maxZoom: 18 }).addTo(sheetMap);
-  build(sheetMap);
-  setTimeout(() => { try { sheetMap && sheetMap.invalidateSize(); } catch (e) {} }, 60);
+  build(sheetMap, el);
+  setTimeout(() => { try { sheetMap && sheetMap.invalidateSize({ pan: false }); } catch (e) {} }, 60);
   el.querySelector('.pin-sheet-x').onclick = closePinSheet;
   el.onclick = (ev) => { if (ev.target === el) closePinSheet(); };
-  el.querySelector('.front-float-go').onclick = (ev) => {
+  const goBtn = el.querySelector('.front-float-go');
+  if (goBtn) goBtn.onclick = (ev) => {
     if (ev) { ev.preventDefault(); ev.stopPropagation(); }
     closePinSheet();
     go();
@@ -3126,8 +4303,9 @@ function openPinSheet(pin, anchor) {
 let pinPopTimer = null;
 function placePinPop(box, anchor) {
   const r = anchor.getBoundingClientRect();
-  const w = Math.min(420, window.innerWidth - 16);
-  const h = 400;
+  const wide = box.parentElement && box.parentElement.classList.contains('wide');
+  const w = Math.min(wide ? 720 : 420, window.innerWidth - 16);
+  const h = wide ? 640 : 400;
   let left = r.right + 8;
   if (left + w > window.innerWidth - 8) left = Math.max(8, r.left - w - 8);
   let top = r.top - 20;
@@ -3191,6 +4369,11 @@ function buildMapPins(d) {
     const cat = (fix && fix.cat) || classifyForMap(blob, r.type);
     if (!cat || cat === 'statement') return;
     if (r.live && !['strike', 'combat', 'vessel', 'port'].includes(cat)) return;
+    // "63 nautical miles west of Yanbu" is at sea, not on the town.
+    if (!(fix && typeof fix.lat === 'number')) {
+      const moved = offsetFromText(blob, place, lat, lng, cat);
+      if (moved) [lat, lng] = moved;
+    }
     if (!allowCoordsForCategory(cat, place, lat, lng)) return;
     push({
       fp: r.fp || blob.slice(0, 80),
@@ -3218,6 +4401,8 @@ function buildMapPins(d) {
       const g = guessCoords(`${ev.label || ''} ${blob}`);
       if (!g) return;
       lat = g.lat; lng = g.lng; place = g.place;
+      const moved = offsetFromText(`${ev.label || ''} ${blob}`, place, lat, lng, classifyForMap(`${ev.label || ''}\n${blob}`, ev.type));
+      if (moved) [lat, lng] = moved;
     } else if (!place) {
       const g = guessCoords(`${ev.label || ''} ${blob}`);
       if (g) place = g.place;
@@ -3271,7 +4456,7 @@ function buildMapPins(d) {
       seen.set(k, p);
     }
   }
-  return deduped.slice(0, (mapMode === 'range' || mapMode === 'all') ? MAX_MAP_PINS_RANGE : MAX_MAP_PINS);
+  return (focusFps ? deduped.filter((p) => focusFps.has(p.fp)) : deduped).slice(0, (mapMode === 'range' || mapMode === 'all') ? MAX_MAP_PINS_RANGE : MAX_MAP_PINS);
 }
 
 function popupHtml(ev) {
@@ -3363,7 +4548,8 @@ function renderEvents(d) {
   }
   const pins = buildMapPins(d);
   const chip = document.getElementById('map-chip');
-  if (chip) {
+  // A front's pins shown from its box keep their "Showing" line till cleared.
+  if (chip && !(focusFps && chip.classList.contains('chip-hl'))) {
     const today = todayYmd();
     let label;
     if (mapMode === 'all') label = `${fmtDay(CONFLICT_START)} – ${fmtDay(today)}`;
@@ -3823,7 +5009,7 @@ async function drawGeo(d) {
   islandLayers.forEach((l) => { try { map.removeLayer(l); } catch (e) {} });
   islandLayers = [];
 
-  if (!geoCache) geoCache = await fetch('/yemen-adm1.geojson').then((r) => r.json());
+  if (!geoCache) await loadAdm1();
   const split = splitIslandFeatures(geoCache);
   islandGeoCache = split.islands;
 
@@ -4126,9 +5312,12 @@ function renderLegend(d) {
   const inkFor = (hex) => {
     const h = String(hex || '').replace('#', '');
     if (h.length < 6) return '';
-    const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return lum > 0.55 ? ' ink-dark' : '';
+    // Day: a white tick on every swatch (its dark halo keeps it readable), as the user asked.
+    if (document.documentElement.dataset.theme === 'broadsheet-day') return '';
+    // The tick takes white or near-black, whichever stands out more on the swatch (WCAG contrast).
+    const lin = (i) => { const c = parseInt(h.slice(i, i + 2), 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+    const L = 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
+    return (L + 0.05) / 0.0625 > 1.05 / (L + 0.05) ? ' ink-dark' : '';
   };
   const row = (layer, color, label, ico) => {
     const on = layersOn[layer] ? ' on' : '';
@@ -4287,9 +5476,11 @@ function wireUi(d) {
   };
 
   syncDayNav();
+  wireFeedSearch();
   document.getElementById('btn-more-reports').onclick = async () => {
     const btn = document.getElementById('btn-more-reports');
-    if (reportsShown >= sortedReports(data).length) {
+    if (feedSearch) { feedSearch.shown += SEARCH_STEP; renderFeed(data); return; }
+    if (reportsShown >= sortedReports(data).filter(leanOk).length) {
       btn.disabled = true;
       btn.textContent = 'Loading…';
       await pullOlderDesk();
@@ -4418,27 +5609,54 @@ function wireRailResize() {
  * Boot
  * ---------------------------------------------------------------- */
 
+const later = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function refresh(first) {
-  if (first) await Promise.all([loadGazetteer(), loadMapFixes()]);
   const feedEl = document.getElementById('feed');
   const shown = first ? null : new Set([...(feedEl ? feedEl.querySelectorAll('.card') : [])].map((el) => el.dataset.fp));
 
+  if (!first) {
+    const baseP = fetchData();
+    const liveP = pullLive({ silent: true });
+    // The brief changes at 00:00 and 12:00 only: asked when due.
+    const briefP = !brief || briefDue() ? pullBrief() : Promise.resolve();
+    await Promise.race([Promise.all([pullDesk(), liveP, briefP]), later(1200)]);
+    data = applyLiveOverlay(applyDeskArchive(await baseP));
+    paint(false, shown, briefP);
+    return;
+  }
+
+  // First load: every request leaves at the same moment, and the page is drawn
+  // as soon as the base file and the place list are in, with whatever else has
+  // arrived by then (a short grace, not a wait per request). Anything later is
+  // drawn in when it lands.
+  const gazP = Promise.all([loadGazetteer(), loadMapFixes()]);
   const baseP = fetchData();
-  const distP = first ? loadDistricts() : null;
-  if (first) await hydrateSnapshot();
+  loadDistricts();
   const liveP = pullLive({ silent: true });
   const briefP = pullBrief();
   const deskP = pullDesk();
-  if (first && !liveOverlay.reports.length) {
-    await Promise.race([liveP, new Promise((r) => setTimeout(r, 2000))]);
-  }
-  if (first) await Promise.race([briefP, new Promise((r) => setTimeout(r, 2500))]);
-  const base = await baseP;
-  // The archive carries the bulk of the feed, so it is worth a short wait on
-  // first paint rather than letting the page render a stub and jump.
-  await Promise.race([deskP, new Promise((r) => setTimeout(r, first ? 2500 : 1200))]);
-  if (distP) await Promise.race([distP, new Promise((r) => setTimeout(r, 3000))]);
+  const inBy = { desk: false, brief: false };
+  deskP.then(() => { inBy.desk = true; });
+  briefP.then(() => { inBy.brief = true; });
+  const [, base] = await Promise.all([gazP, baseP]);
+  await Promise.race([Promise.all([deskP, liveP, briefP]), later(600)]);
+  // No scan answer yet: the last saved one stands in until it comes.
+  if (!liveOverlay.reports.length) await Promise.race([hydrateSnapshot(), later(400)]);
+  const had = { ...inBy };
   data = applyLiveOverlay(applyDeskArchive(base));
+  await paint(true, null, briefP);
+  // The archive or the brief, when it comes after first paint, is drawn in.
+  const redraw = () => {
+    data = applyLiveOverlay(applyDeskArchive(data));
+    paint(false, null, Promise.resolve()).catch((e) => console.error(e));
+  };
+  if (!had.desk) deskP.then(redraw);
+  if (!had.brief) briefP.then(redraw);
+}
+
+async function paint(first, shown, briefP) {
+  const feedEl = document.getElementById('feed');
   if (first) briefP.then(() => { try { data && renderBars(data); } catch (e) {} });
   const stamp = document.getElementById('updated');
   if (stamp) stamp.textContent = stampText();
@@ -4530,6 +5748,7 @@ async function setTheme(t) {
     const apply = () => {
       const h = document.documentElement;
       if (broad) { h.dataset.theme = t; h.dataset.set = 'broadsheet'; } else { delete h.dataset.theme; delete h.dataset.set; }
+      setFavicon(t);
       if (tiles) { tiles.setOpacity(1); try { map.removeLayer(baseTiles); } catch (e) {} baseTiles = tiles; }
       try { closePinSheet(); } catch (e) {}
       if (data) {
@@ -4561,12 +5780,21 @@ async function setTheme(t) {
   }
 }
 
+/** The tab's mark follows the theme: ink-dark for Night, claret on paper for Day. */
+function setFavicon(t) {
+  const href = t === 'broadsheet-day' ? '/favicon-day.svg?v=sr1' : '/favicon.svg?v=sr1';
+  let link = document.querySelector('link[rel~="icon"]');
+  if (!link) { link = document.createElement('link'); link.rel = 'icon'; link.type = 'image/svg+xml'; document.head.appendChild(link); }
+  if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+}
+try { setFavicon(THEME); } catch (e) {}
+
 function installThemeButton() {
   const stamp = document.querySelector('.stamp');
   if (!stamp || stamp.querySelector('.theme-step')) return;
   stamp.insertAdjacentHTML('afterbegin', `<button type="button" class="theme-step">
     <span class="ts-ring" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M27 16a11 11 0 1 1-3.2-7.8"/><path d="M24.6 3.8l-.6 4.6-4.6-.5"/></svg><span class="ts-ico"></span></span>
-    <span class="ts-pips" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="ts-pips" aria-hidden="true">${THEMES.map(() => '<i></i>').join('')}</span>
   </button>`);
   const btn = stamp.querySelector('.theme-step');
   paintThemeButton(btn);
@@ -4582,6 +5810,7 @@ function installThemeButton() {
  * phone) that opens a short list of the page's sections and marks the one in view. */
 const SECTIONS = [
   ['situation', 'Latest developments'],
+  ['map-wrap', 'Map'],
   ['rail', 'Latest reports'],
   ['fronts-wrap', 'Fronts'],
   ['cas-wrap', 'The conflict in numbers'],
@@ -4589,6 +5818,11 @@ const SECTIONS = [
 ];
 const sectionBox = (id) => {
   const el = document.getElementById(id);
+  // The map's section starts at its bar ("Map:", Back, Forward, Today, Whole conflict, Expand map).
+  if (el && id === 'map-wrap') {
+    const bar = el.closest('.stage') && el.closest('.stage').previousElementSibling;
+    return bar && bar.classList.contains('toolbar') ? bar : el;
+  }
   // On a PC the reports column sits beside the map, so the jump goes to the map's top.
   return el && id === 'rail' && window.innerWidth > 720 ? (el.closest('.stage') || el) : el;
 };
@@ -4601,10 +5835,12 @@ function installSectionNav() {
   nav.className = 'sec-nav';
   nav.setAttribute('aria-label', 'Sections');
   nav.innerHTML = `<button type="button" class="sec-tab" aria-expanded="false" aria-controls="sec-list" aria-label="Sections" title="Sections">
+      <span class="sec-word" aria-hidden="true">Sections</span>
       <span class="sec-ticks" aria-hidden="true">${items.map(() => '<i></i>').join('')}</span>
     </button>
     <ol class="sec-list" id="sec-list">${items.map(([id, name]) => `<li><a href="#${id}" data-sec="${id}">${name}</a></li>`).join('')}</ol>`;
   document.body.appendChild(nav);
+  document.documentElement.classList.add('has-sec-nav');
   const tab = nav.querySelector('.sec-tab');
   const list = nav.querySelector('.sec-list');
   const open = (on) => { nav.classList.toggle('open', on); tab.setAttribute('aria-expanded', String(on)); };
@@ -4649,11 +5885,18 @@ function installSectionNav() {
   mark();
 }
 
-async function startYemenDesk() {
+let bootInflight = null;
+function startYemenDesk() {
+  if (!bootInflight) bootInflight = bootYemenDesk().finally(() => { bootInflight = null; });
+  return bootInflight;
+}
+
+async function bootYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
   try { installThemeButton(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
+  try { startYemenClock(); } catch (e) { console.error(e); }
 
   if (window.__yemenDeskTimer) { clearInterval(window.__yemenDeskTimer); window.__yemenDeskTimer = null; }
   if (window.__yemenLiveTimer) { clearInterval(window.__yemenLiveTimer); window.__yemenLiveTimer = null; }
@@ -4663,22 +5906,42 @@ async function startYemenDesk() {
     const jsonMs = Math.max(30, Number(data?.refreshSeconds) || 60) * 1000;
     // A tab in the background asks nothing; it catches up the moment it is shown.
     window.__yemenDeskTimer = setInterval(() => { if (!document.hidden) refresh(false); }, jsonMs);
-    window.__yemenLiveTimer = setInterval(() => { if (!document.hidden) pullLive({ silent: true }); }, 5 * 60 * 1000);
+    // Each finished scan shows within a minute, with no reload.
+    window.__yemenLiveTimer = setInterval(() => { if (!document.hidden) pullLive({ silent: true }); }, 60 * 1000);
     if (!window.__yemenVisHook) {
       window.__yemenVisHook = true;
       let hiddenAt = 0;
+      // A phone puts a page to sleep in the background and can hand it back
+      // from memory hours later: the latest scan is asked for the moment it is
+      // shown again, not at the next minute's tick (a phone read "Updated 19:45"
+      // at 20:12 while the PC read 20:10).
+      const wake = () => {
+        pullLive({ silent: true });
+        if (hiddenAt && Date.now() - hiddenAt > jsonMs) refresh(false);
+        if (briefDue()) {
+          const before = brief && brief.updatedAt;
+          pullBrief().then(() => {
+            if (brief && brief.updatedAt !== before && data) { renderSituation(data); renderCasualties(data); renderFronts(data); renderTimeline(data); renderBars(data); applyMapFilters(); }
+          });
+        }
+      };
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) { hiddenAt = Date.now(); return; }
-        if (hiddenAt && Date.now() - hiddenAt > jsonMs) refresh(false);
+        wake();
       });
+      window.addEventListener('pageshow', (ev) => { if (ev.persisted) { hiddenAt = hiddenAt || 1; wake(); } });
+      window.addEventListener('online', wake);
+      window.addEventListener('focus', () => pullLive({ silent: true }));
     }
-    // The brief only changes on a 12-hour boundary; checking every 10 minutes is
-    // enough to cross it promptly without hammering the endpoint.
+    // The brief (and the district control that comes with it) only changes at
+    // 00:00 and 12:00. Nothing is asked in between; from two minutes after the
+    // boundary it is asked once a minute until the new one is written.
     window.__yemenBriefTimer = setInterval(async () => {
-      if (document.hidden) return;
+      if (document.hidden || !briefDue()) return;
+      const before = brief && brief.updatedAt;
       await pullBrief();
-      if (data) { renderSituation(data); renderCasualties(data); renderFronts(data); renderTimeline(data); renderBars(data); applyMapFilters(); }
-    }, 10 * 60 * 1000);
+      if (brief && brief.updatedAt !== before && data) { renderSituation(data); renderCasualties(data); renderFronts(data); renderTimeline(data); renderBars(data); applyMapFilters(); }
+    }, 60 * 1000);
   };
 
   if (map) {
@@ -4691,8 +5954,8 @@ async function startYemenDesk() {
       eventLayers = [];
       islandLayers = [];
     } else {
-      try { await refresh(false); } catch (e) { console.error(e); }
-      bootTimers();
+      // Already running on this page (the script's own start, then React's): nothing to redo.
+      if (!window.__yemenDeskTimer) bootTimers();
       return;
     }
   }

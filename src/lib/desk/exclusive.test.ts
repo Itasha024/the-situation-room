@@ -46,3 +46,10 @@ test("own information is read loosely: outlets word it many ways", async () => {
   assert.equal(ownInformation("ذكرت وكالة رويترز أن المحادثات توقفت", "Al-Araby Al-Jadeed"), false);
   assert.equal(ownInformation("The Saudi-led coalition said it intercepted a drone", "Arab News"), false);
 });
+
+test("Al-Akhbar's morning exclusive on Telegram, with the outlet as the verb's object, is its own", () => {
+  const post = "أفادت مصادر استخباراتية في صنعاء، «الأخبار»، بأن «أنصار الله» نفّذت، فجر أمس، عملية أخرى في منطقة الملاحيط";
+  assert.equal(isExclusive(post, "Al-Akhbar"), true);
+  // "the news" as a plain word is not the outlet.
+  assert.equal(isExclusive("أفادت مصادر محلية بأن الأخبار الواردة من صعدة تتحدث عن غارات", "Al-Akhbar"), false);
+});

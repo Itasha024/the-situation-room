@@ -2,7 +2,7 @@
  * Proposed changes to district control, from the window's capture reports.
  * Server-only; nothing here changes the map.
  *
- * public/control.json is edited by hand. What the 12-hour clock does is point
+ * public/control.json is edited by hand. What the 6-hour clock does is point
  * at the districts where the reports say ground changed hands, under the
  * desk's rule for a change: at least two outlets from different sides telling
  * the same capture, or one side's claim that the losing side acknowledges.

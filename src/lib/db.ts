@@ -94,12 +94,27 @@ function createNeonSql(): Promise<Sql> {
     types.setTypeParser(OID_INT8, Number);
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
-    // Few connections per instance: serverless instances multiply, and the
+    // The desk now runs as one long-lived server far from the database, so
+    // independent writes go out side by side (store.pg.ts saves cards ten at a
+    // time). On Vercel this was 3: serverless instances multiplied, and the
     // Supabase pooler caps the total.
-    const pool = new Pool(pgPoolConfig(databaseUrl as string, { max: 3 }));
+    const pool = new Pool(pgPoolConfig(databaseUrl as string, { max: 10 }));
+    // An idle connection dropped by the network must not bring the server down.
+    pool.on("error", (err) => console.error("[db] idle connection lost:", err.message));
+    // The laptop's internet blinks (a lookup that fails, a connection reset):
+    // a query is tried once more after a short wait before it fails.
+    const transient = (err: unknown) =>
+      /ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|ECONNREFUSED|EPIPE|Connection terminated|timeout exceeded when trying to connect/i.test(
+        `${(err as { code?: string })?.code ?? ""} ${err instanceof Error ? err.message : String(err)}`,
+      );
     return toSql(async <T>(text: string, params: unknown[]) => {
-      const res = await pool.query(text, params);
-      return res.rows as T[];
+      try {
+        return (await pool.query(text, params)).rows as T[];
+      } catch (err) {
+        if (!transient(err)) throw err;
+        await new Promise((r) => setTimeout(r, 3000));
+        return (await pool.query(text, params)).rows as T[];
+      }
     });
   })().catch((err) => {
     globalRef.__pgSqlPromise__ = undefined;

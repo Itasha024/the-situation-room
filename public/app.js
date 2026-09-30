@@ -2266,12 +2266,13 @@ function developmentItems() {
  *                  reports name it, else dives onto the spot; an interception
  *                  bursts in mid-air
  *   naval          an attack on or by a ship: a ship with a wake, at sea or in a port
+ *   energy         an oil, gas or power site hit: a storage tank on fire
  */
 const DEV_PERIOD = 4200;
 const DEV_CTRL = { houthi: 'houthi', government: 'plc', southern: 'plc', saudi: 'saudi', us: 'us' };
 const DEV_LABEL = {
   capture: 'Ground taken', advance: 'Advance', fighting: 'Ground fighting', repelled: 'Attack repelled', airstrike: 'Air strike',
-  shelling: 'Shelling', missile: 'Missile', drone: 'Drone', interception: 'Interception', naval: 'Attack on a ship', alert: 'Sirens',
+  shelling: 'Shelling', missile: 'Missile', drone: 'Drone', interception: 'Interception', naval: 'Attack on a ship', energy: 'Energy site hit', alert: 'Sirens',
 };
 function devColor(side) { return side === 'us' ? '#94a3b8' : COLORS[DEV_CTRL[side]] || COLORS.contested; }
 /** The other side of a clash or a repelled attack. */
@@ -2312,12 +2313,14 @@ const DEV_SVG = {
   flag: '<svg viewBox="0 0 20 16"><path d="M3 .8v15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M3.8 1h12.5l-2.6 3.4 2.6 3.4H3.8z" fill="currentColor"/></svg>',
   // A siren on its post, with sound waves either side.
   siren: '<svg viewBox="0 0 20 18"><path d="M5 13V9a5 5 0 0 1 10 0v4z" fill="#ef4444" stroke="#0b1220" stroke-width=".8"/><path d="M3.5 13h13v2.5h-13z" fill="#e5e7eb" stroke="#0b1220" stroke-width=".7"/><path d="M8 8.5a2 2 0 0 1 2-2" stroke="#fff" stroke-width="1" fill="none" stroke-linecap="round"/><path class="sw1" d="M2.5 5.5q-1.6 3 0 6M17.5 5.5q1.6 3 0 6" stroke="#fbbf24" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>',
+  // An oil storage tank, its roof burning.
+  energy: '<svg viewBox="0 0 22 22"><path class="fe" d="M11 1.2c1.6 1.8 3.4 3.4 3.4 5.6a3.4 3.4 0 0 1-6.8 0c0-1.2.7-2 1.3-2.7.1 1 .6 1.6 1.2 1.8-.4-1.7.1-3.3.9-4.7z" fill="#f97316" stroke="#fde047" stroke-width=".7" stroke-linejoin="round"/><path d="M3 11.2c0-1.2 3.6-2 8-2s8 .8 8 2v8.3c0 1.2-3.6 2-8 2s-8-.8-8-2z" fill="#e5e7eb" stroke="#0b1220" stroke-width=".8"/><path d="M3 11.2c0 1.2 3.6 2 8 2s8-.8 8-2M3 15.6c0 1.2 3.6 2 8 2s8-.8 8-2" fill="none" stroke="#0b1220" stroke-width=".7"/></svg>',
   burst: '<svg viewBox="0 0 16 16"><path d="M8 0l1.8 5 5-2-2.6 4.6L16 9.5l-5 .8 1.5 5L8 12l-4.5 3.3L5 10.3 0 9.5l3.8-2L1.2 3l5 2z" fill="#f97316" stroke="#fde047" stroke-width=".8"/></svg>',
 };
 /** The key's picture for each kind. */
 const DEV_KEY_SVG = {
   capture: DEV_SVG.flag, advance: DEV_SVG.advance, fighting: DEV_SVG.duel, repelled: DEV_SVG.shield, airstrike: DEV_SVG.jet,
-  shelling: DEV_SVG.cannon, missile: DEV_SVG.missile, drone: DEV_SVG.drone, interception: DEV_SVG.burst, naval: DEV_SVG.ship, alert: DEV_SVG.siren,
+  shelling: DEV_SVG.cannon, missile: DEV_SVG.missile, drone: DEV_SVG.drone, interception: DEV_SVG.burst, naval: DEV_SVG.ship, energy: DEV_SVG.energy, alert: DEV_SVG.siren,
 };
 
 /*
@@ -2331,7 +2334,7 @@ const DEV_GOV_CITY = /^(?:al-)?(?:sanaa|hodeidah|saada|hajjah|ibb|dhamar|amran|b
 const DEV_GROUND = new Set(['capture', 'advance', 'fighting', 'repelled', 'shelling']);
 const DEV_SEA = /\b(sea|gulf|strait|bab[ -]al[ -]mand[ae]b|waters|offshore)\b|البحر|خليج|باب المندب/i;
 const DEV_PORT = /\b(?:port|harbou?r|island|coast|Hodeidah|Ras Is[ae]|Salif|Mocha|Mokha|Aden|Mukalla|Nishtun|Kamaran|Perim|Mayun|Khokha|Jizan|Jazan|Yanbu)\b|ميناء|جزيرة/i;
-const DEV_FIRE = new Set(['missile', 'drone', 'airstrike', 'shelling']);
+const DEV_FIRE = new Set(['missile', 'drone', 'airstrike', 'shelling', 'energy']);
 function devPlausible(x) {
   const place = String(x.place || '').trim();
   if (DEV_VAGUE.test(place)) return false;
@@ -2447,6 +2450,8 @@ function devPicHtml(x, col, foe) {
     advance: () => `<span class="dp dp-adv" style="color:${col};--rot:${devAdvAngle(x).toFixed(0)}deg"><b>${DEV_SVG.advance}</b></span>`,
     alert: () => `<span class="dp dp-alert"><i></i><i></i><b>${DEV_SVG.siren}</b></span>`,
     naval: () => `<span class="dp dp-ship" style="--dev:${col}"><i></i><i></i><b>${DEV_SVG.ship}</b></span>`,
+    // The tank burns; the rings are in the colour of the side that hit it.
+    energy: () => `<span class="dp dp-energy" style="--dev:${col}"><i></i><i></i><b>${DEV_SVG.energy}</b></span>`,
   }[x.kind];
   if (pic) return pic();
   // missile, drone, interception
@@ -2458,13 +2463,13 @@ function devPicHtml(x, col, foe) {
 }
 
 /** Which picture stands on top where several meet. */
-const DEV_ORDER = ['capture', 'repelled', 'fighting', 'advance', 'airstrike', 'shelling', 'missile', 'drone', 'interception', 'naval', 'alert'];
+const DEV_ORDER = ['capture', 'repelled', 'fighting', 'advance', 'airstrike', 'shelling', 'missile', 'drone', 'interception', 'energy', 'naval', 'alert'];
 /** Pictures shrink as the map zooms out, round their own spot, so they never leave it. */
 function devScale(z) { return Math.max(0.72, Math.min(1.3, 0.86 + (z - 6) * 0.16)).toFixed(2); }
 /** Each picture's box round its own spot, [left, top, width, height] in px (themes.css .dp-*). */
 const DEV_BOX = {
   airstrike: [-22, -28, 44, 34], shelling: [-42, -22, 50, 30], fighting: [-23, -9, 46, 18], repelled: [-32, -13, 43, 26],
-  capture: [-2, -40, 44, 40], advance: [-34, -34, 68, 68], naval: [-15, -15, 30, 30], alert: [-11, -10, 22, 20], dive: [-28, -22, 36, 28], hit: [-8, -8, 16, 16],
+  capture: [-2, -40, 44, 40], advance: [-34, -34, 68, 68], naval: [-15, -15, 30, 30], energy: [-12, -14, 24, 26], alert: [-11, -10, 22, 20], dive: [-28, -22, 36, 28], hit: [-8, -8, 16, 16],
 };
 /** Pictures at one spot (within 1.5 km) take turns on it. */
 function devGroups(marks) {

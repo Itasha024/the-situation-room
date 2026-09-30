@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cardMarks } from "./dev-marks.ts";
+import { cardMarks, kindOf } from "./dev-marks.ts";
 import { placeProse } from "./prose-places.ts";
 import { unknownSpots } from "./editor.ts";
 import type { LiveReport } from "./types.ts";
@@ -85,4 +85,13 @@ test("a drone shot down is drawn in the colour of the side that flew it (Saada, 
   const n = cardMarks([saudiSide], () => []).all[0];
   assert.equal(n.side, "houthi");
   assert.equal(n.shot, "missile");
+});
+
+test("an energy site hit gets its own kind; a ship stays a ship (1 Oct)", () => {
+  assert.equal(kindOf(card({ type: "strike", summary: "Houthi drones hit Aramco's Yanbu refinery" })), "energy");
+  assert.equal(kindOf(card({ type: "port", summary: "Missile strike on Ras Isa oil terminal" })), "energy");
+  assert.equal(kindOf(card({ type: "strike", summary: "Saudi air strikes hit a Houthi fuel depot in Hodeidah" })), "energy");
+  assert.equal(kindOf(card({ type: "vessel", summary: "Tanker hit by a projectile off Mocha" })), "naval");
+  assert.equal(kindOf(card({ type: "strike", summary: "Houthi drone hits a tanker near Yanbu refinery" })), "naval");
+  assert.equal(kindOf(card({ type: "strike", summary: "Saudi air strikes on Saada" })), "airstrike");
 });

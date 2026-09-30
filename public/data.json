@@ -20664,6 +20664,48 @@
       ],
       "mapOnly": true,
       "backfill": true
+    },
+    {
+      "fp": "bf-2026-07-28-eastern-province-drones-oil",
+      "at": "2026-07-28T12:00:00+03:00",
+      "type": "strike",
+      "lat": 26.1,
+      "lng": 49.8,
+      "place": "Eastern Province",
+      "label": "Drones aimed at oil facilities in the Eastern Province shot down, the Saudi defence ministry says",
+      "text": "EASTERN PROVINCE — Several drones aimed at oil facilities in the Eastern Province were intercepted and destroyed, the Saudi defence ministry said; it said the drones came from Iraq.",
+      "source": "Saudi Press Agency",
+      "url": "https://www.spa.gov.sa/en/N2643452",
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-19-riyadh-airport-fuel-depot",
+      "at": "2026-09-19T12:00:00+03:00",
+      "type": "port",
+      "lat": 24.95,
+      "lng": 46.7,
+      "place": "Riyadh airport",
+      "label": "Fire on an Aramco fuel tank near Riyadh airport, put out; flights disrupted",
+      "text": "RIYADH — Smoke and flames were seen near King Khalid airport, where an Aramco fuel tank caught fire during the Houthi missile attacks; the fire was put out and flights were disrupted, AFP reported.",
+      "source": "France 24 (AFP)",
+      "url": "https://www.france24.com/en/middle-east/20260919-smoke-flames-seen-near-riyadh-airport-major-flight-disruptions-reported",
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-24-yanbu-aramco-claim",
+      "at": "2026-09-24T22:00:00+03:00",
+      "type": "port",
+      "lat": 24.0231,
+      "lng": 38.1899,
+      "place": "Yanbu",
+      "label": "Houthis say ballistic and cruise missiles and drones hit Aramco in Yanbu",
+      "text": "YANBU — The Houthi military spokesman said ballistic and cruise missiles and drones hit Aramco in Yanbu, one of two operations that evening; there was no Saudi confirmation. Satellite pictures of 25 to 27 September show storage tanks hit at the Yanbu gas plant.",
+      "source": "Yahya Saree, Houthi military spokesman",
+      "url": "https://t.me/army21ye/3768",
+      "mapOnly": true,
+      "backfill": true
     }
   ],
   "timeline": [

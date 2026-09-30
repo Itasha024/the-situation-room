@@ -12,6 +12,8 @@ import { placesIn } from "./gazetteer.ts";
 
 const MILITARY = new Set(["strike", "combat", "vessel", "port"]);
 const ALERT_RE = /\b(sirens?|air[- ]raid (?:alerts?|warnings?)|air[- ]defen[cs]e alerts?|missile alerts?|take shelter|shelters?)\b|صفارات|صافرات/i;
+/** An oil, gas or power site: a hit on one is an energy incident, not a plain strike. */
+const ENERGY_RE = /\b(refiner(?:y|ies)|pipelines?|pump(?:ing)? stations?|oil (?:fields?|facilit(?:y|ies)|terminals?|depots?|installations?|plants?|tanks?|sites?)|fuel (?:depots?|tanks?|stations?|storage)|gas (?:plants?|fields?|facilit(?:y|ies))|power (?:stations?|plants?)|Aramco|Petroline|Abqaiq|Ras Tanura|Safer|Balhaf)\b|مصفاة|أرامكو|خط أنابيب|محطة ضخ|منشأة نفطية|منشآت نفطية/i;
 const HIT_RE = /\b(intercept\w*|shot down|shoots? down|downed|hit|struck|strikes?|kill\w*|wound\w*|impact\w*|crash\w*)\b/i;
 
 /** What happened, from the headline and body; null when it is no event at a place. */
@@ -25,7 +27,11 @@ export function kindOf(r: Pick<LiveReport, "type" | "summary" | "text">): DevKin
   // Flights halted or an airport closed is no strike at that place.
   if (/\b(air traffic|flights?|air ?space|airports?)\b.{0,40}\b(suspend\w*|halt\w*|resum\w*|divert\w*|clos\w*|disrupt\w*|delay\w*)\b|\b(suspend\w*|halt\w*|clos\w*|disrupt\w*)\b.{0,30}\b(air traffic|flights?|air ?space)\b/i.test(h)) return null;
   if (test(/\b(intercept\w*|shot down|shoots? down|downed)\b/i)) return "interception";
-  if (r.type === "vessel" || r.type === "port" || /\b(ship|vessel|tanker|boat|frigate|destroyer|navy|naval)\b/i.test(h)) return "naval";
+  if (r.type === "vessel") return "naval";
+  // A port, terminal, refinery or pipeline that was itself hit.
+  if (r.type === "port") return "energy";
+  if (/\b(ship|vessel|tanker|boat|frigate|destroyer|navy|naval)\b/i.test(h)) return "naval";
+  if (ENERGY_RE.test(h) && HIT_RE.test(h)) return "energy";
   if (test(/\b(drones?|UAVs?|unmanned)\b/i)) return "drone";
   if (test(/\b(missiles?|ballistic|rockets?)\b/i)) return "missile";
   if (test(/\b(captur\w*|seiz\w*|took control|takes? control|recaptur\w*|liberat\w*|overr[au]n)\b/i)) return "capture";

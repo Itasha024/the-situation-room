@@ -375,7 +375,7 @@ html[data-theme="broadsheet-day"] .dv .dv-dot{background:#fff;box-shadow:0 0 0 2
 .front-head .sit-map-btn.front-map-btn:hover,.front-head .sit-map-btn.front-map-btn[aria-expanded="true"]{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
 @media (prefers-reduced-motion:reduce){
   path.place-hl,.place-halo i,.dp,.dp *,.dev-shot .pr{animation:none!important}
-  .place-halo i,.dp-air i,.dp-ship i,.dp-hit i{opacity:.6;transform:scale(2)}
+  .place-halo i,.dp-air i,.dp-ship i,.dp-hit i,.dp-energy i{opacity:.6;transform:scale(2)}
   .dp-art i,.dp-flag,.dp-dive b{opacity:.9}
 }
 
@@ -425,6 +425,13 @@ html[data-theme="broadsheet-night"] .pin-sheet .front-float-go:is(:hover,:focus-
 .dp-alert b .sw1{animation:devSirenWave .7s steps(2) infinite}
 .dp-alert i{left:1px;top:0;width:20px;height:20px;border-radius:50%;border:2px solid #ef4444;opacity:0;animation:placeRing 2.1s ease-out infinite}
 .dp-alert i+i{animation-delay:1.05s}
+/* Energy site hit: a storage tank, its roof burning, rings in the attacker's colour */
+.dp-energy{left:-12px;top:-14px;width:24px;height:26px}
+.dp-energy b{left:1px;top:0;width:22px;height:22px}
+.dp-energy b .fe{transform-origin:11px 8px;animation:devFlame .9s ease-in-out infinite alternate}
+.dp-energy i{left:0;top:10px;width:24px;height:16px;border-radius:50%;border:2.5px solid var(--dev,#f97316);opacity:0;animation:placeRing 2.1s ease-out infinite}
+.dp-energy i+i{animation-delay:1.05s}
+@keyframes devFlame{0%{transform:scale(.9,.85)}100%{transform:scale(1.08,1.15)}}
 @keyframes devSiren{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
 @keyframes devSirenWave{0%{opacity:1}100%{opacity:.15}}
 .dev-key .dk .sw1{display:inline}

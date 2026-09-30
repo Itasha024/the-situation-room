@@ -393,8 +393,8 @@ async function proseInto(
  * side's advance, as the cards' own are.
  */
 const FIRED = new Set(["missile", "drone", "interception"]);
-/** A ship is drawn only near a card about a ship: "Kahbub" is a hill, not a port. */
-const sameKind = (m: DevMark, cards: DevMark[]) => (m.kind === "naval" ? cards.filter((c) => c.kind === "naval") : cards);
+/** A ship is drawn only near a card about a ship ("Kahbub" is a hill, not a port), an energy site near a card about one. */
+const sameKind = (m: DevMark, cards: DevMark[]) => (m.kind === "naval" || m.kind === "energy" ? cards.filter((c) => c.kind === m.kind) : cards);
 function merged(prose: DevMark[], cards: DevMark[], launches: Launch[] = []): DevMark[] {
   const rest = [...cards];
   const out: DevMark[] = [];

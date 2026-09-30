@@ -95,3 +95,38 @@ test("the research baseline sits under the stored ledger; a stored row wins; a H
   assert.equal(groupOf("energy", "Brent crude $105 a barrel"), "prices");
   assert.deepEqual(parseFredCsv("observation_date,DCOILBRENTEU\n2026-09-21,116.15\n2026-09-22,.\n"), [{ date: "2026-09-21", value: 116.15 }]);
 });
+
+test("sources rank official, then wire, then the rest; a claim is lowest; monthly figures find their chart", async () => {
+  const { sourceTier, betterSource, seriesOf, withBaseline, WAR_START } = await import("./ledger.ts");
+  const { LEDGER_BASELINE } = await import("./ledger-baseline.ts");
+  const S = (name: string, extra = {}) => ({ name, url: "https://example.com/x", date: "2026-09-10", ...extra });
+  assert.equal(sourceTier(S("UKMTO, warning 119-26")), "official");
+  assert.equal(sourceTier(S("Saudi Energy Ministry, via AP")), "official");
+  assert.equal(sourceTier(S("Reuters")), "wire");
+  assert.equal(sourceTier(S("AFP, via France 24")), "wire");
+  assert.equal(sourceTier(S("Reuters", { claim: true })), "claim");
+  assert.equal(sourceTier(S("The Maritime Executive")), "other");
+  assert.equal(betterSource(S("UKMTO"), S("Al Jazeera")), true);
+  assert.equal(betterSource(S("Reuters"), S("UKMTO")), false);
+  assert.equal(betterSource(S("Al Jazeera"), S("Saba", { claim: true })), true);
+  assert.deepEqual(seriesOf("Saudi crude exports", "million barrels a day", "September"), { series: "saudi-exports", month: "2026-09" });
+  assert.deepEqual(seriesOf("Oil through Bab al-Mandab", "million barrels a day", "August"), { series: "bab-oil", month: "2026-08" });
+  assert.equal(seriesOf("Saudi crude exports", "million barrels a day", "22-26 Sep"), null);
+  // The baseline: the war's start, every attack on its best source, UKMTO's own warnings for the ships.
+  assert.equal(WAR_START, "2026-07-13");
+  assert.ok(LEDGER_BASELINE.ships.every((s) => s.date >= WAR_START));
+  assert.ok(LEDGER_BASELINE.ships.filter((s) => sourceTier(s.src) === "official").length >= 8);
+  // A stored row from a lesser source gives way to the baseline's official one.
+  const stored = { ...LEDGER_SEED, ships: [{ id: "2026-08-24-amzan", date: "2026-08-24", ship: "Amzan", place: "Red Sea", what: "hit" as const, src: S("Al Jazeera") }] };
+  const merged = withBaseline(stored);
+  assert.match(merged.ships.find((s) => s.ship === "Amzan")!.src.name, /UKMTO/);
+  // A model figure for a month on a chart: a wire's figure is not replaced by a lesser outlet's.
+  const docs = [doc("Saudi crude exports were 5.4 million barrels a day in September", "2026-09-28", "Reuters"), doc("Saudi crude exports were 6 million barrels a day in September", "2026-09-29", "CNBC")];
+  const l = applyLedger(LEDGER_SEED, { figures: [{ doc: 0, cat: "energy", label: "Saudi crude exports", value: 5.4, unit: "million barrels a day", period: "September" }, { doc: 1, cat: "energy", label: "Saudi crude exports", value: 6, unit: "million barrels a day", period: "September" }] }, docs, now);
+  const sep = l.figures.filter((f) => f.series === "saudi-exports" && f.month === "2026-09");
+  assert.equal(sep.length, 1);
+  assert.equal(sep[0].value, 5.4);
+  // "The Houthis said they targeted" in a wire story stays a claim.
+  const c = applyLedger(LEDGER_SEED, { sites: [{ doc: 0, site: "Yanbu", hit: true, claimed: true }] }, [doc("The Houthis said they targeted Aramco in Yanbu", "2026-09-24", "Reuters")], now);
+  assert.equal(sourceTier(c.sites[0].hits[0]), "claim");
+});

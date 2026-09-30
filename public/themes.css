@@ -468,3 +468,11 @@ html[data-set="broadsheet"] .tally-box.ledger .spark polyline{stroke:var(--t-str
 html[data-theme="broadsheet-day"] .st-working,html[data-theme="broadsheet-day"] .tally-box.ledger small.q.up{color:#15803d}
 html[data-theme="broadsheet-day"] .tally-box.ledger small.claim,html[data-theme="broadsheet-day"] .num-note small.claim,html[data-theme="broadsheet-day"] .st-reduced,html[data-theme="broadsheet-day"] .tally-box.ledger small.q.down{color:#b45309}
 html[data-theme="broadsheet-day"] .st-down{color:#b91c1c}
+html[data-theme="broadsheet-day"] .tally-box.claims .tier.t-official{color:#15803d}
+html[data-theme="broadsheet-day"] .tally-box.claims .tier.t-wire{color:#1d4ed8}
+html[data-theme="broadsheet-day"] .tally-box.claims .tier.t-claim{color:#b45309}
+html[data-theme="broadsheet-day"] .chart .s2,html[data-theme="broadsheet-day"] .chart-key i.s2{stroke:#1d4ed8;border-top-color:#1d4ed8}
+html[data-theme="broadsheet-day"] .chart circle.s2{fill:#1d4ed8}
+html[data-set="broadsheet"] .stat3 div{border-radius:2px}
+html[data-set="broadsheet"] .stat3 b{font-family:"Newsreader",Georgia,serif;font-weight:600}
+html[data-set="broadsheet"] .chart-title{font-family:var(--f-body)}

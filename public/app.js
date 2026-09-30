@@ -2907,8 +2907,10 @@ const NUM_CATS = [['cas', 'Casualties'], ['sea', 'Maritime'], ['energy', 'Energy
 let numCat = 'cas';
 const numBoxOf = { cas: 0, sea: 0, energy: 0 };
 
-const SHIP_WHAT = [['attacked', 'Attacked'], ['hit', 'Hit'], ['seized', 'Seized'], ['sunk', 'Sunk'], ['near miss', 'Near miss'], ['suspicious approach', 'Suspicious approach']];
 const SITE_STATUS = { working: 'Working', reduced: 'Reduced', down: 'Down', unknown: 'Not known' };
+/** The war began with the strike on Sanaa airport. */
+const WAR_START = '2026-07-13';
+const SINCE_LABEL = 'Since 13 Jul';
 
 function ledDay(d) {
   if (!d) return '';
@@ -2916,139 +2918,249 @@ function ledDay(d) {
   return Number.isFinite(t.getTime()) ? t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
 }
 
-/** "claim": only the side that says it did it reports this so far. */
-const CLAIM_TAG = '<small class="claim" title="Only the side that says it did it reports this so far">claim</small>';
-const claimNote = (n) => (n ? `<p class="num-note">${CLAIM_TAG} only the attacking side reports it so far (${n} of these).</p>` : '');
+/** A day in Yemen (the count turns at midnight there): today, or n days before. */
+const yeDay = (back = 0) => new Date(Date.now() - back * 864e5).toLocaleDateString('en-CA', { timeZone: 'Asia/Aden' });
 
-/** The source column: the outlet, linked, and its date. */
-function ledSrc(s) {
-  if (!s || !s.name) return '<td class="src none">—</td>';
-  const name = escapeHtml(s.name);
-  const link = s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${name}</a>` : name;
-  return `<td class="src">${link}${s.date ? ` <small>${escapeHtml(ledDay(s.date))}</small>` : ''}${s.claim ? ` ${CLAIM_TAG}` : ''}</td>`;
+/*
+ * Every attack stands on its best source: the official body (UKMTO, the
+ * ministry, the state agency), then a wire (Reuters, AP, AFP, Bloomberg).
+ * Anything else, and what only the attacking side says, shows as a claim.
+ * The same rule as ledger.ts sourceTier.
+ */
+const OFFICIAL_SRC = /\b(?:UKMTO|JMIC|MARAD|Maritime Administration|CENTCOM|Aspides|EUNAVFOR|Atalanta|SPA|Saudi Press Agency|Ministry of (?:Energy|Defen[cs]e|Foreign Affairs|Interior)|(?:Energy|Defen[cs]e|Foreign|Interior) Ministry|coalition|Civil Defen[cs]e|JODI|Aramco|IMF|PortWatch|EIA|Energy Information Administration)\b/i;
+const WIRE_SRC = /\b(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Bloomberg)\b/;
+function srcTier(s) {
+  if (!s) return 'claim';
+  if (s.claim) return 'claim';
+  if (s.tier) return s.tier;
+  if (OFFICIAL_SRC.test(s.name || '')) return 'official';
+  if (WIRE_SRC.test(s.name || '')) return 'wire';
+  return 'claim';
+}
+const TIER = {
+  official: ['Official', 'From the official body itself'],
+  wire: ['Wire', 'Reported by a news agency'],
+  claim: ['Claim', 'Not confirmed by an official body or a news agency'],
+};
+/** The source as a tag (Official, Wire, Claim) that opens the report. */
+function srcTag(s) {
+  if (!s) return '';
+  const t = srcTier(s);
+  const tip = `${[s.name, ledDay(s.date)].filter(Boolean).join(', ')}: ${TIER[t][1]}${s.note ? `. ${s.note}` : ''}`;
+  return s.url
+    ? `<a class="tier t-${t}" href="${escapeHtml(s.url)}" target="_blank" rel="noopener" title="${escapeHtml(tip)}">${TIER[t][0]}</a>`
+    : `<span class="tier t-${t}" title="${escapeHtml(tip)}">${TIER[t][0]}</span>`;
+}
+const confirmed = (s) => srcTier(s) !== 'claim';
+/** A figure's tag: Official or Wire, else the tracking firm whose data it is (a figure is data, not a claim). */
+function figTag(s) {
+  if (!s || srcTier(s) !== 'claim' || s.claim) return srcTag(s);
+  const firm = (String(s.name).match(/Kpler|Vortexa|TankerTrackers|Signal Ocean|LSEG/) || [])[0] || 'Report';
+  const tip = `${[s.name, ledDay(s.date)].filter(Boolean).join(', ')}: figures from ${firm === 'Report' ? 'a report' : `${firm}'s tanker tracking`}`;
+  return s.url ? `<a class="tier t-data" href="${escapeHtml(s.url)}" target="_blank" rel="noopener" title="${escapeHtml(tip)}">${firm}</a>` : `<span class="tier t-data" title="${escapeHtml(tip)}">${firm}</span>`;
 }
 
 const ledEmpty = (text) => `<p class="num-empty">${escapeHtml(text)}</p>`;
 const ledBox = (title, body) => `<div class="tally-box claims ledger"><h3>${escapeHtml(title)}</h3>${body}</div>`;
-const ledNum = (v) => Number(v).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const ledNum = (v, digits = 0) => Number(v).toLocaleString('en-US', { maximumFractionDigits: digits });
 
-/** A day-by-day line of one value, with the pre-war average as a dashed line. */
-function spark(days, base, key, label) {
-  const pts = days.slice(-60);
-  if (pts.length < 2) return '';
-  const vals = pts.map((d) => Number(d[key]) || 0);
-  const hi = Math.max(base || 0, ...vals) * 1.05 || 1;
-  // Prices sit far from zero: the line spans their own range; ship counts start at zero.
-  const lo = key === 'value' ? Math.min(base || Infinity, ...vals) * 0.95 : 0;
-  const x = (i) => (i / (pts.length - 1)) * 200;
-  const y = (v) => 36 - ((v - lo) / (hi - lo || 1)) * 34;
-  const line = pts.map((d, i) => `${x(i).toFixed(1)},${y(Number(d[key]) || 0).toFixed(1)}`).join(' ');
-  const by = y(base || 0).toFixed(1);
-  return `<svg class="spark" viewBox="0 0 200 38" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}, ${escapeHtml(ledDay(pts[0].date))} to ${escapeHtml(ledDay(pts[pts.length - 1].date))}">${base ? `<line class="base" x1="0" x2="200" y1="${by}" y2="${by}"/>` : ''}<polyline points="${line}"/></svg>`;
+/** Today | Last 7 days | Since 13 Jul, from a list of days. */
+function spanCounts(days) {
+  const today = yeDay(0);
+  const week = yeDay(6);
+  const d = days.map((x) => String(x).slice(0, 10)).filter((x) => x >= WAR_START);
+  return { today: d.filter((x) => x === today).length, week: d.filter((x) => x >= week).length, all: d.length };
+}
+function statTrio(c) {
+  return `<div class="stat3">${[['Today', c.today], ['Last 7 days', c.week], [SINCE_LABEL, c.all]].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>`;
+}
+const splitNote = (n, conf) => `<p class="num-note">${conf} confirmed · ${n - conf} ${n - conf === 1 ? 'claim' : 'claims'}. Each tag opens its source.</p>`;
+
+/* ------------------------------------------------------------------ *
+ * A line chart: days on the x axis, the war's start marked, the pre-war
+ * average dashed. Values are drawn as they are (no smoothing) unless the
+ * caller says it passes an average.
+ * ------------------------------------------------------------------ */
+function niceStep(range, n) {
+  const raw = range / n;
+  const p = 10 ** Math.floor(Math.log10(raw || 1));
+  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || p * 10;
+}
+function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), label }) {
+  const all = lines.flatMap((l) => l.pts);
+  if (all.length < 2) return '';
+  const W = 320;
+  const H = 150;
+  const L = 30;
+  const R = 10;
+  const T = 10;
+  const B = 20;
+  const t0 = Date.parse(`${all.reduce((m, p) => (p.date < m ? p.date : m), all[0].date)}T00:00:00Z`);
+  const t1 = Date.parse(`${all.reduce((m, p) => (p.date > m ? p.date : m), all[0].date)}T00:00:00Z`);
+  const vals = all.map((p) => p.value).concat(bases.map((b) => b.value));
+  let lo = zero ? 0 : Math.min(...vals);
+  let hi = Math.max(...vals);
+  const step = niceStep(hi - lo || 1, 4);
+  lo = Math.floor(lo / step) * step;
+  hi = Math.ceil(hi / step) * step || step;
+  const x = (d) => L + ((Date.parse(`${d}T00:00:00Z`) - t0) / (t1 - t0 || 1)) * (W - L - R);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo || 1)) * (H - T - B);
+  let g = '';
+  for (let v = lo; v <= hi + step / 2; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${L - 4}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${escapeHtml(fmt(v))}</text>`;
+  // The first of each month, named.
+  const m = new Date(t0);
+  m.setUTCDate(1);
+  m.setUTCMonth(m.getUTCMonth() + 1);
+  while (m.getTime() <= t1) {
+    const d = m.toISOString().slice(0, 10);
+    g += `<text x="${x(d).toFixed(1)}" y="${H - 5}" text-anchor="middle">${m.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })}</text><line class="tick" x1="${x(d).toFixed(1)}" x2="${x(d).toFixed(1)}" y1="${H - B}" y2="${H - B + 3}"/>`;
+    m.setUTCMonth(m.getUTCMonth() + 1);
+  }
+  const war = Date.parse(`${WAR_START}T00:00:00Z`) >= t0 && Date.parse(`${WAR_START}T00:00:00Z`) <= t1
+    ? `<line class="war" x1="${x(WAR_START).toFixed(1)}" x2="${x(WAR_START).toFixed(1)}" y1="${T}" y2="${H - B}"/><text class="war" x="${(x(WAR_START) + 3).toFixed(1)}" y="${T + 8}">War</text>`
+    : '';
+  const base = bases.map((b) => `<line class="base ${b.cls || ''}" x1="${L}" x2="${W - R}" y1="${y(b.value).toFixed(1)}" y2="${y(b.value).toFixed(1)}"/>`).join('');
+  const path = lines.map((l) => {
+    const pts = l.pts.slice().sort((a, b) => a.date.localeCompare(b.date));
+    const last = pts[pts.length - 1];
+    return `<polyline class="${l.cls}" points="${pts.map((p) => `${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}"/><circle class="${l.cls}" cx="${x(last.date).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="2.6"/>`;
+  }).join('');
+  const key = lines.map((l) => `<span><i class="${l.cls}"></i>${escapeHtml(l.name)}</span>`).concat(bases.length ? [`<span><i class="base"></i>${escapeHtml(bases[0].label || 'Before the war')}</span>`] : []).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(label)}"><g class="grid">${g}</g>${war}${base}${path}</svg><div class="chart-key">${key}</div>`;
 }
 
-/** Last day | 7-day average (and its change on before the war) | Before the war. */
-function trendRow(name, days, key, base, digits, label, worseUp) {
-  const last = days[days.length - 1];
-  const week = days.slice(-7);
-  const avg = week.length ? week.reduce((n, d) => n + (Number(d[key]) || 0), 0) / week.length : null;
-  const pct = avg != null && base ? Math.round(100 * (avg - base) / base) : null;
-  const f = (v) => Number(v).toFixed(digits);
-  return `<tr><th scope="row">${escapeHtml(name)}</th><td>${last ? `${key === "value" ? f(last[key]) : last[key]}<small>${escapeHtml(ledDay(last.date))}</small>` : '—'}</td><td>${avg != null ? f(avg) : '—'}${pct != null ? ` <small class="q ${(worseUp ? pct > 0 : pct < 0) ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}%</small>` : ''}</td><td>${base != null ? f(base) : '—'}</td></tr><tr class="spark-row"><td colspan="4">${spark(days, base, key, label)}</td></tr>`;
+/** The average of the 7 days to each day (only once 7 days are in). */
+function avg7(days, key) {
+  const out = [];
+  for (let i = 6; i < days.length; i++) {
+    const w = days.slice(i - 6, i + 1);
+    out.push({ date: days[i].date, value: w.reduce((n, d) => n + (Number(d[key]) || 0), 0) / 7 });
+  }
+  return out;
 }
-const trendHead = '<tr><th></th><th scope="col">Last day</th><th scope="col">7-day average</th><th scope="col">Before the war</th></tr>';
 
-/** The ledger's figures of one kind, newest first: what | figure | source. */
-function figsOf(led, cat, groups) {
-  const fallback = cat === 'maritime' ? 'traffic' : 'exports';
-  return ((led && led.figures) || []).filter((f) => f.cat === cat && groups.includes(f.group || fallback));
-}
-function figTable(figs) {
+/** A month at a time, as bars: the month | its bar | the figure | its source. */
+function monthBars(figs, digits, scale) {
   if (!figs.length) return '';
-  const sorted = figs.slice().sort((a, b) => String((b.src && b.src.date) || '').localeCompare(String((a.src && a.src.date) || '')));
-  return `<table class="figs"><tr><th></th><th scope="col">Figure</th><th scope="col" class="src">Source</th></tr>${sorted.map((f) => `<tr><th scope="row">${escapeHtml(f.label)}${f.period ? `<small>${escapeHtml(f.period)}</small>` : ''}</th><td>${ledNum(f.value)} <small class="q">${escapeHtml(f.unit || '')}</small></td>${ledSrc(f.src)}</tr>`).join('')}</table>`;
+  const rows = figs.slice().sort((a, b) => String(a.month).localeCompare(String(b.month)));
+  // Bars that are read together share one scale.
+  const hi = scale || Math.max(...rows.map((f) => f.value)) || 1;
+  return `<div class="mbars">${rows.map((f) => {
+    const pre = /before/.test(String(f.month)) || String(f.month) < '2026-07';
+    const name = /before/.test(String(f.month)) ? 'Before the war' : new Date(`${String(f.month).slice(0, 7)}-15T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' });
+    const sub = /before/.test(String(f.month)) ? '' : pre ? 'before the war' : /early/i.test(String(f.period || '')) ? 'early count' : '';
+    return `<div class="mbar${pre ? ' pre' : ''}"><span class="k">${escapeHtml(name)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</span><span class="mb-track"><i style="width:${Math.max(2, (100 * f.value) / hi).toFixed(1)}%"></i></span><b>${ledNum(f.value, digits)}</b>${figTag(f.src)}</div>`;
+  }).join('')}</div>`;
+}
+const seriesFigs = (led, series) => ((led && led.figures) || []).filter((f) => f.series === series && f.month);
+
+/* ------------------------------------------------------------------ *
+ * Maritime
+ * ------------------------------------------------------------------ */
+function shipsBody(led) {
+  const ships = ((led && led.ships) || []).filter((s) => String(s.date) >= WAR_START).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  if (!ships.length) return ledEmpty('No attack on a ship reported since 13 July.');
+  const rows = ships.map((s) => {
+    const name = s.ship || (s.type ? s.type.charAt(0).toUpperCase() + s.type.slice(1) : 'A ship');
+    const tip = [s.what, s.crew, s.note].filter(Boolean).join('. ');
+    return `<tr title="${escapeHtml(tip)}"><td class="d">${escapeHtml(ledDay(s.date))}</td><td class="l">${escapeHtml(name)}<small>${escapeHtml(s.place || '')}</small></td><td class="t">${srcTag(s.src)}</td></tr>`;
+  }).join('');
+  return `${statTrio(spanCounts(ships.map((s) => s.date)))}${splitNote(ships.length, ships.filter((s) => confirmed(s.src)).length)}<table class="list"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship, where</th><th scope="col" class="t">Source</th></tr>${rows}</table>`;
 }
 
-const PW_NOTE = (tr, what) => `<p class="num-note">${what}, from <a href="${escapeHtml((tr && tr.source && tr.source.url) || 'https://portwatch.imf.org/pages/chokepoints')}" target="_blank" rel="noopener">IMF PortWatch</a> (satellite ship signals, about 3 days behind; ships that switch off their signal are missed). Before the war: the average of 2 June to 2 July.</p>`;
+function trafficBody(led, tr) {
+  const points = ((tr && tr.points) || []).filter((p) => p.id === 'bab' || p.id === 'suez');
+  const oilScale = Math.max(0, ...seriesFigs(led, 'bab-oil').concat(seriesFigs(led, 'saudi-bab-oil')).map((f) => f.value));
+  const oil = monthBars(seriesFigs(led, 'bab-oil'), 2, oilScale);
+  const saudiOil = monthBars(seriesFigs(led, 'saudi-bab-oil'), 2, oilScale);
+  if (!points.length && !oil) return ledEmpty('The daily ship counts have not come in yet.');
+  const row = (p) => {
+    const days = (p.days || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const war = days.filter((d) => d.date >= WAR_START);
+    const last = days[days.length - 1];
+    const week = days.slice(-7);
+    const sum = (l) => l.reduce((n, d) => n + (Number(d.total) || 0), 0);
+    const base = p.baseline && p.baseline.total;
+    const wAvg = week.length ? sum(week) / week.length : 0;
+    const pct = base ? Math.round((100 * (wAvg - base)) / base) : null;
+    const pctTag = pct != null ? ` <small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}%</small>` : '';
+    return `<tr><th scope="row">${escapeHtml(p.name)}</th><td>${last ? `${last.total}<small>${escapeHtml(ledDay(last.date))}</small>` : '—'}</td><td>${ledNum(sum(week))}<small>${ledNum(wAvg, 1)} a day${pctTag}</small></td><td>${ledNum(sum(war))}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? ledNum(base, 1) : '—'}<small>a day</small></td></tr>`;
+  };
+  const table = points.length
+    ? `<table class="span5"><tr><th></th><th scope="col">Latest day</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th><th scope="col">Before the war</th></tr>${points.map(row).join('')}</table>`
+    : '';
+  const bab = points.find((p) => p.id === 'bab');
+  const suez = points.find((p) => p.id === 'suez');
+  const lines = [bab && { name: 'Bab al-Mandab', cls: 's1', pts: avg7(bab.days || [], 'total') }, suez && { name: 'Suez Canal', cls: 's2', pts: avg7(suez.days || [], 'total') }].filter((l) => l && l.pts.length > 1);
+  const chart = lines.length
+    ? `<p class="chart-title">Ships a day, 7-day average</p>${lineChart({ lines, bases: bab && bab.baseline ? [{ value: bab.baseline.total, label: `Bab al-Mandab before the war (${ledNum(bab.baseline.total, 1)})` }] : [], zero: true, label: 'Ships a day through Bab al-Mandab and the Suez Canal' })}`
+    : '';
+  const src = (tr && tr.source && tr.source.url) || 'https://portwatch.imf.org/pages/chokepoints';
+  const oilPart = oil ? `<p class="chart-title">Oil through Bab al-Mandab, million barrels a day</p>${oil}${saudiOil ? `<p class="chart-title">Of it, Saudi oil</p>${saudiOil}` : ''}` : '';
+  return `${table}${chart}${oilPart}<p class="num-note">Ships: <a href="${escapeHtml(src)}" target="_blank" rel="noopener">IMF PortWatch</a>, from satellite ship signals, 3 to 4 days behind. Before the war: 13 June to 12 July. Oil: Kpler tanker tracking.</p>`;
+}
 
 function seaBoxes(led, tr) {
-  const ships = (led && led.ships) || [];
-  const counts = SHIP_WHAT.map(([k, label]) => [label, ships.filter((s) => s.what === k)]).filter(([, l]) => l.length);
-  const latestOf = (l) => l.reduce((m, s) => (String(s.date) > String(m.date) ? s : m), l[0]);
-  const claimed = ships.filter((s) => s.src && s.src.claim).length;
-  const sideCounts = figTable(figsOf(led, 'maritime', ['attacks']));
-  const attacks = counts.length
-    ? `<table><tr><th></th><th scope="col">Ships</th><th scope="col" class="src">Latest</th></tr>${counts.map(([label, l]) => `<tr><th scope="row">${label}</th><td>${l.length}</td>${ledSrc(latestOf(l).src)}</tr>`).join('')}<tr class="sum"><th scope="row">All incidents</th><td>${ships.length}</td><td class="src"></td></tr></table>${claimNote(claimed)}${sideCounts ? `<p class="num-note">A side's own count:</p>${sideCounts}` : ''}`
-    : ledEmpty('No attack on a ship logged yet since 3 July.');
-
-  const points = (tr && tr.points) || [];
-  const traffic = points.length
-    ? `<table>${trendHead}${points.map((p) => trendRow(p.name, p.days || [], 'total', p.baseline && p.baseline.total, 1, 'Ships a day')).join('')}</table>${PW_NOTE(tr, 'Ships a day through each')}`
-    : ledEmpty('The daily ship counts have not come in yet.');
-  const otherTraffic = figTable(figsOf(led, 'maritime', ['traffic']));
-
-  const bab = points.find((p) => p.id === 'bab');
-  const oilFigs = figTable(figsOf(led, 'maritime', ['oil']));
-  const tankers = bab ? `<table>${trendHead}${trendRow('Tankers through Bab al-Mandab', bab.days || [], 'tanker', bab.baseline && bab.baseline.tanker, 1, 'Tankers a day')}</table>${PW_NOTE(tr, 'Tankers a day (oil, fuel, gas and chemicals)')}` : '';
-  const oil = oilFigs || tankers
-    ? `${oilFigs}${oilFigs ? '<p class="num-note">Barrels a day from tanker-tracking firms (Kpler), by month, with the source that published them.</p>' : ''}${tankers}`
-    : ledEmpty('No oil-flow figure logged yet since 3 July.');
-
-  const cost = figTable(figsOf(led, 'maritime', ['cost'])) || ledEmpty('No insurance, freight or canal figure logged yet since 3 July.');
-
-  const recent = ships.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 8);
-  const incidents = recent.length
-    ? `<table><tr><th scope="col">Date</th><th scope="col" class="l">Ship and place</th><th scope="col" class="l">What</th><th scope="col" class="src">Source</th></tr>${recent.map((s) => `<tr><td>${escapeHtml(ledDay(s.date))}</td><td class="l">${escapeHtml([s.ship || (s.type ? `A ${s.type}` : 'A ship'), s.flag ? `(${s.flag})` : ''].filter(Boolean).join(' '))}<small>${escapeHtml([s.ship && s.type ? s.type : '', s.place || ''].filter(Boolean).join(', '))}</small></td><td class="l">${escapeHtml(s.what)}${s.attacker ? `<small>by ${escapeHtml(s.attacker)}</small>` : ''}${s.crew ? `<small>${escapeHtml(s.crew)}</small>` : ''}${s.note ? `<small>${escapeHtml(s.note)}</small>` : ''}</td>${ledSrc(s.src)}</tr>`).join('')}</table>${claimNote(recent.filter((s) => s.src && s.src.claim).length)}`
-    : ledEmpty('No incident logged yet since 3 July.');
-
-  const notes = ((led && led.notices) || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 8);
-  const escorts = figTable(figsOf(led, 'maritime', ['security']));
-  const notices = notes.length || escorts
-    ? `${notes.length ? `<table><tr><th scope="col">Date</th><th scope="col" class="l">Notice</th><th scope="col" class="src">Source</th></tr>${notes.map((n) => `<tr><td>${escapeHtml(ledDay(n.date))}</td><td class="l">${escapeHtml(n.text)}</td>${ledSrc(n.src)}</tr>`).join('')}</table>` : ''}${escorts}`
-    : ledEmpty('No ban, warning or naval mission logged yet since 3 July.');
-
   return [
-    ['Ship attacks', ledBox('Ship attacks', attacks)],
-    ['Ship traffic', ledBox('Ship traffic: Bab al-Mandab, Suez, the Cape', traffic + otherTraffic)],
-    ['Oil through the strait', ledBox('Oil through Bab al-Mandab', oil)],
-    ['Cost of the route', ledBox('Cost of the route: insurance, freight, the canal', cost)],
-    ['Latest incidents', ledBox('Latest incidents', incidents)],
-    ['Bans and missions', ledBox('Bans, warnings and naval missions', notices)],
+    ['Attacks on ships', ledBox('Attacks on ships', shipsBody(led))],
+    ['Ships and oil', ledBox('Ships and oil through Bab al-Mandab and Suez', trafficBody(led, tr))],
   ];
 }
 
-function siteRows(sites) {
-  const lastHit = (s) => (s.hits || []).reduce((m, h) => (String(h.date) > m ? String(h.date) : m), '');
-  return `<table><tr><th></th><th scope="col">Times hit</th><th scope="col">Last hit</th><th scope="col" class="src">Status now</th></tr>${sites.slice().sort((a, b) => lastHit(b).localeCompare(lastHit(a))).map((s) => {
-    const hits = s.hits || [];
-    const last = hits.find((h) => String(h.date) === lastHit(s));
-    const claimed = hits.filter((h) => h.claim).length;
-    const st = s.status || 'unknown';
-    const src = s.statusSrc;
-    const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || st}</span>`;
-    const status = src && src.url ? `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener" title="${escapeHtml([src.name, ledDay(src.date)].filter(Boolean).join(', '))}">${chip}</a>` : chip;
-    const hitCell = last && last.url ? `<a href="${escapeHtml(last.url)}" target="_blank" rel="noopener" title="${escapeHtml(last.name || '')}">${escapeHtml(ledDay(last.date))}</a>${last.claim ? ` ${CLAIM_TAG}` : ''}` : escapeHtml(ledDay(last && last.date));
-    return `<tr><th scope="row">${escapeHtml(s.name)}<small>${escapeHtml([s.kind, s.country].filter(Boolean).join(', '))}</small></th><td>${hits.length}${claimed ? `<small>${claimed} only claimed</small>` : ''}</td><td>${hitCell || '—'}</td><td class="src">${status}</td></tr>`;
+/* ------------------------------------------------------------------ *
+ * Energy
+ * ------------------------------------------------------------------ */
+const SITE_GROUPS = ['Pipelines', 'Refineries', 'Export terminals', 'Fuel depots and plants', 'Other oil sites'];
+const siteGroup = (kind) => (/pipeline|pump/i.test(kind) ? 'Pipelines' : /refiner/i.test(kind) ? 'Refineries' : /terminal|port/i.test(kind) ? 'Export terminals' : /depot|storage|bulk plant/i.test(kind) ? 'Fuel depots and plants' : 'Other oil sites');
+
+function sitesBody(led) {
+  const sites = ((led && led.sites) || []).map((s) => ({ ...s, hits: (s.hits || []).filter((h) => String(h.date) >= WAR_START) })).filter((s) => s.hits.length);
+  if (!sites.length) return ledEmpty('No attack on an energy site reported since 13 July.');
+  const hits = sites.flatMap((s) => s.hits.map((h) => ({ ...h, group: siteGroup(s.kind) })));
+  const byType = SITE_GROUPS.map((g) => [g, hits.filter((h) => h.group === g)]).filter(([, l]) => l.length);
+  const types = `<table class="span4"><tr><th></th><th scope="col">Today</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th></tr>${byType.map(([g, l]) => {
+    const c = spanCounts(l.map((h) => h.date));
+    const claims = l.filter((h) => !confirmed(h)).length;
+    return `<tr><th scope="row">${g}</th><td>${c.today}</td><td>${c.week}</td><td>${c.all}${claims ? `<small>${claims} ${claims === 1 ? 'claim' : 'claims'}</small>` : ''}</td></tr>`;
   }).join('')}</table>`;
+  const lastOf = (s) => s.hits.reduce((m, h) => (String(h.date) > String(m.date) ? h : m), s.hits[0]);
+  const list = sites.slice().sort((a, b) => String(lastOf(b).date).localeCompare(String(lastOf(a).date))).map((s) => {
+    const st = s.status || 'unknown';
+    const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || st}</span>`;
+    const status = s.statusSrc && s.statusSrc.url ? `<a href="${escapeHtml(s.statusSrc.url)}" target="_blank" rel="noopener" title="${escapeHtml([s.statusSrc.name, ledDay(s.statusSrc.date)].filter(Boolean).join(', '))}">${chip}</a>` : chip;
+    const tags = s.hits.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))).map((h) => `<span class="hit">${escapeHtml(ledDay(h.date))} ${srcTag(h)}</span>`).join('');
+    return `<tr><th scope="row" class="l">${escapeHtml(s.name)}</th><td class="l hits">${tags}</td><td class="t">${status}</td></tr>`;
+  }).join('');
+  return `${statTrio(spanCounts(hits.map((h) => h.date)))}${splitNote(hits.length, hits.filter(confirmed).length)}${types}<table class="list sites"><tr><th scope="col" class="l">Site</th><th scope="col" class="l">Attacks</th><th scope="col" class="t">Now</th></tr>${list}</table>`;
+}
+
+function exportsBody(led) {
+  const bars = monthBars(seriesFigs(led, 'saudi-exports'), 2);
+  if (!bars) return ledEmpty('No export figure yet.');
+  return `<p class="chart-title">Saudi crude exports, million barrels a day</p>${bars}<p class="num-note">The kingdom's own figures (JODI) come about two months late; newer months are Kpler's tanker tracking, reported by Reuters.</p>`;
+}
+
+function priceBody(tr) {
+  const b = tr && tr.brent;
+  const days = ((b && b.days) || []).slice().sort((a, c) => a.date.localeCompare(c.date));
+  if (days.length < 2) return ledEmpty('The daily oil price has not come in yet.');
+  const last = days[days.length - 1];
+  const weekAgo = days.filter((d) => Date.parse(d.date) <= Date.parse(last.date) - 7 * 864e5).pop();
+  const atWar = days.filter((d) => d.date <= WAR_START).pop();
+  const base = b.baseline && b.baseline.value;
+  const usd = (v) => (v == null ? '—' : `$${Number(v).toFixed(2)}`);
+  const pct = base ? Math.round((100 * (last.value - base)) / base) : null;
+  const cell = (d) => (d ? `${usd(d.value)}<small>${escapeHtml(ledDay(d.date))}</small>` : '—');
+  const table = `<table class="span4"><tr><th scope="col">Latest</th><th scope="col">A week earlier</th><th scope="col">When the war began</th><th scope="col">Before the war</th></tr><tr><td class="big">${cell(last)}${pct != null ? `<small class="q ${pct > 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}% on before the war</small>` : ''}</td><td>${cell(weekAgo)}</td><td>${cell(atWar)}</td><td>${usd(base)}<small>average</small></td></tr></table>`;
+  const chart = lineChart({ lines: [{ name: 'Brent, dollars a barrel', cls: 's1', pts: days }], bases: base ? [{ value: base, label: `Before the war (${usd(base)})` }] : [], fmt: (v) => `$${ledNum(v)}`, label: 'Brent crude price, dollars a barrel, day by day' });
+  return `${table}<p class="chart-title">Brent crude, dollars a barrel, each trading day</p>${chart}<p class="num-note">The daily Brent price from the <a href="${escapeHtml(b.source.url)}" target="_blank" rel="noopener">US Energy Information Administration</a>, about a week behind. Before the war: 13 June to 12 July.</p>`;
 }
 
 function energyBoxes(led, tr) {
-  const sites = (led && led.sites) || [];
-  const pipes = sites.filter((s) => s.kind === 'pipeline');
-  const hit = sites.filter((s) => (s.hits || []).length);
-  const claimedHits = hit.reduce((n, s) => n + (s.hits || []).filter((h) => h.claim).length, 0);
-  const pipeFigs = figTable(figsOf(led, 'energy', ['pipeline']));
-  const exportsFigs = figTable(figsOf(led, 'energy', ['exports']));
-  const b = tr && tr.brent;
-  const brent = b && (b.days || []).length
-    ? `<table>${trendHead}${trendRow('Brent crude, dollars a barrel', b.days, 'value', b.baseline && b.baseline.value, 2, 'Brent, dollars a barrel', true)}</table><p class="num-note">The daily Brent spot price, from the <a href="${escapeHtml(b.source.url)}" target="_blank" rel="noopener">US Energy Information Administration via FRED</a> (about a week behind). Before the war: the average of 2 June to 2 July.</p>`
-    : '';
-  const prices = brent + figTable(figsOf(led, 'energy', ['prices']));
   return [
-    ['Facilities hit', ledBox('Facilities hit', hit.length ? siteRows(hit) + claimNote(claimedHits) : ledEmpty('No hit on an energy site logged yet since 3 July.'))],
-    ['Pipelines', ledBox('Pipelines', pipes.length || pipeFigs ? `${pipes.length ? siteRows(pipes) : ''}${pipeFigs}` : ledEmpty('Nothing logged yet on the pipelines since 3 July.'))],
-    ['Exports', ledBox('Exports', exportsFigs || ledEmpty('No export figure logged yet since 3 July.'))],
-    ['Oil price', ledBox('Oil price', prices || ledEmpty('The daily oil price has not come in yet.'))],
+    ['Attacks on energy sites', ledBox('Attacks on energy sites', sitesBody(led))],
+    ['Saudi oil exports', ledBox('Saudi oil exports', exportsBody(led))],
+    ['Oil price', ledBox('Oil price', priceBody(tr))],
   ];
 }
 

@@ -126,14 +126,24 @@ possible gap).
   every 15 minutes; Kpler's own analysis every 30 minutes. Added 30 Sep, from
   the Maritime and Energy research.
 - **Numbers read directly, every 6 hours:** IMF PortWatch daily ship counts
-  through Bab al-Mandab, the Suez Canal and around the Cape of Good Hope, by
-  ship type (free, satellite ship signals, about 3 days behind); the daily
-  Brent price from the US Energy Information Administration through FRED
-  (free, about a week behind).
-- **The ledger's history, 3 July to 30 September**, comes from research that
-  day (`ledger-baseline.ts`): every ship attack, energy-site hit, figure and
-  notice links its report. What only the attacking side reports is marked
-  "claim".
+  through Bab al-Mandab and the Suez Canal (free, satellite ship signals, 3
+  to 4 days behind); the daily Brent price from the US Energy Information
+  Administration through FRED (free, about a week behind). "Before the war"
+  is the 30 days to 12 July.
+- **Counting starts on 13 July 2026**, the strike on Sanaa airport.
+- **Source order for every attack and figure:** the official body first
+  (UKMTO's own warnings, the Saudi Energy Ministry, the Saudi press agency,
+  the coalition, JODI), then a wire (Reuters, AP, AFP, Bloomberg), then
+  anyone else. An attack with neither an official body nor a wire behind it
+  is tagged **Claim**. A figure from a tracking firm carries the firm's name
+  (Kpler).
+- **The history, 13 July to 30 September** (`ledger-baseline.ts`), from
+  research on 30 Sep: all 60 UKMTO warnings since 13 July, read from their
+  pictures (8 are in this war's waters; the rest are Hormuz or piracy); the
+  Saudi Energy Ministry's statements; JODI's Saudi export figures (June,
+  July) and Kpler's through Reuters (August, September); Kpler's oil flows
+  through Bab al-Mandab. New sources found: JODI (jodidata.org, the
+  kingdom's own monthly figures, via Reuters), France 24/AFP.
 - The gate raises a UKMTO/JMIC warning for this war's waters, and an energy
   site hit, stopped or back in service, straight to the reader.
 
@@ -173,6 +183,6 @@ A post with its own picture or video (launches, strikes, ships, battle footage, 
 
 Icons, not dots: missile = launch/strike/siren; swords = ground combat; ship = vessel; crane = port. Statements stay in the feed only.
 
-Control is shaded by district (`control.json`, the hand baseline of 24 Sep). Every 12 hours the desk changes a district only when two outlets from different sides, or a wire, report it taken; a claim by one side makes it contested. The control shares are computed from the shaded area.
+Control is shaded by district (`control.json`, the hand baseline of 24 Sep). Every 6 hours the desk changes a district only when two outlets from different sides, or a wire, report it taken; a claim by one side makes it contested. The control shares are computed from the shaded area.
 
 Map tiles: OpenStreetMap in the Original look, Esri Canvas (grey) in Day and Night; both need their credit line, shown on the map.

@@ -1018,3 +1018,47 @@ html{scroll-behavior:smooth}
 .num-note a{color:inherit}
 .st{display:inline-block;padding:.12rem .4rem;border-radius:3px;font-size:.64rem;font-weight:600;letter-spacing:.03em;border:1px solid currentColor}
 .st-working{color:#4ade80}.st-reduced{color:#f59e0b}.st-down{color:#f87171}.st-unknown{color:var(--t-muted,#8fa3b6)}
+
+/* Maritime and Energy (30 Sep, round 2): three counts, source tags, charts, month bars */
+.stat3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.4rem;margin:.3rem 0 .35rem}
+.stat3 div{border:1px solid var(--t-line,#1c2836);border-radius:6px;padding:.5rem .4rem .45rem;text-align:center}
+.stat3 b{display:block;font-size:1.5rem;line-height:1.1;font-weight:700;color:var(--t-strong,#fff);font-variant-numeric:tabular-nums}
+.stat3 span{display:block;margin-top:.15rem;font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--t-muted,#8fa3b6)}
+.tier{display:inline-block;padding:0 .32rem;border:1px solid currentColor;border-radius:3px;font-size:.6rem;font-weight:600;line-height:1.45;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
+a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
+.tally-box.claims td .tier,.tally-box.claims .tier{border:1px solid currentColor}
+.tally-box.claims .tier.t-official{color:#4ade80}.tally-box.claims .tier.t-wire{color:#7eb6ff}.tally-box.claims .tier.t-claim{color:#f59e0b}.tally-box.claims .tier.t-data{color:var(--t-text-2,#a8b8c9)}
+.tally-box.ledger table.list td.d,.tally-box.ledger table.list th.d{width:3.6rem;text-align:left;white-space:nowrap;color:var(--t-text-2,#a8b8c9)}
+.tally-box.ledger table.list td.t,.tally-box.ledger table.list th.t{width:4.2rem;text-align:right}
+.tally-box.ledger table.list tr[title]{cursor:help}
+.tally-box.ledger table.list{margin-top:.5rem}
+.tally-box.ledger td.hits{line-height:1.9}
+.tally-box.ledger .hit{display:inline-block;margin-right:.45rem;white-space:nowrap;font-size:.7rem;color:var(--t-text-2,#a8b8c9)}
+.tally-box.ledger table.span4,.tally-box.ledger table.span5{margin-top:.35rem}
+.tally-box.ledger td.big{font-size:1.05rem;font-weight:700}
+.chart-title{margin:.75rem 0 .1rem;font-size:.7rem;font-weight:600;color:var(--t-text-2,#a8b8c9)}
+.chart{display:block;width:100%;height:auto;max-height:230px;overflow:visible}
+.chart .grid line{stroke:var(--t-line,#1c2836);stroke-width:.6}
+.chart .grid line.tick{stroke:var(--t-muted,#8fa3b6)}
+.chart text{fill:var(--t-muted,#8fa3b6);font-size:8.5px;font-family:inherit}
+.chart polyline{fill:none;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.chart .s1{stroke:var(--t-strong,#e6edf3);fill:none}.chart circle.s1{fill:var(--t-strong,#e6edf3);stroke:none}
+.chart .s2{stroke:#7eb6ff;fill:none}.chart circle.s2{fill:#7eb6ff;stroke:none}
+.chart .base{stroke:var(--t-muted,#8fa3b6);stroke-width:1;stroke-dasharray:4 3}
+.chart line.war{stroke:#ef4444;stroke-width:1;stroke-dasharray:2 2}.chart text.war{fill:#ef4444}
+.chart-key{display:flex;flex-wrap:wrap;gap:.3rem .9rem;margin:.2rem 0 .1rem;font-size:.64rem;color:var(--t-muted,#8fa3b6)}
+.chart-key i{display:inline-block;width:14px;height:0;margin-right:.3rem;vertical-align:middle;border-top:2px solid var(--t-strong,#e6edf3)}
+.chart-key i.s2{border-top-color:#7eb6ff}.chart-key i.base{border-top:1px dashed var(--t-muted,#8fa3b6)}
+.mbars{margin:.2rem 0}
+.mbar{display:grid;grid-template-columns:7rem minmax(0,1fr) 2.9rem 4rem;align-items:center;gap:.5rem;padding:.3rem 0;border-top:1px solid var(--t-line,#1c2836);font-size:.74rem}
+.mbar .k{color:var(--t-text,#d7e2ef)}.mbar .k small{display:block;font-size:.62rem;color:var(--t-muted,#8fa3b6)}
+.mbar .mb-track{height:9px;background:color-mix(in srgb,var(--t-line,#1c2836) 70%,transparent);border-radius:2px;overflow:hidden}
+.mbar .mb-track i{display:block;height:100%;background:var(--t-strong,#e6edf3)}
+.mbar.pre .mb-track i{background:var(--t-muted,#8fa3b6)}
+.mbar b{text-align:right;font-variant-numeric:tabular-nums;color:var(--t-strong,#fff)}
+.mbar .tier{justify-self:end}
+@media (max-width:560px){
+  .stat3 b{font-size:1.25rem}
+  .mbar{grid-template-columns:5.2rem minmax(0,1fr) 2.6rem 3.6rem;gap:.35rem;font-size:.7rem}
+  .tally-box.ledger table.span5 th,.tally-box.ledger table.span5 td{padding-left:.2rem;padding-right:.2rem;font-size:.72rem}
+}

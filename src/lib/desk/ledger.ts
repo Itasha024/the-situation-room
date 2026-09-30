@@ -18,8 +18,13 @@ import { LEDGER_BASELINE } from "./ledger-baseline.ts";
 export const LEDGER_KEY = "ledger";
 export const TRANSITS_KEY = "ledger-transits";
 
-/** `claim`: only the side that says it did it reports it (no word from the target, a wire or a monitor). */
-export type LedgerSource = { name: string; url: string; date: string; claim?: boolean };
+/**
+ * `claim`: only the side that says it did it reports it (no word from the
+ * target, a wire or a monitor). `tier`: the source is an official body
+ * (UKMTO, a ministry, a state agency, JODI) or a wire (Reuters, AP, AFP,
+ * Bloomberg); left out, it is read from the name (`sourceTier`).
+ */
+export type LedgerSource = { name: string; url: string; date: string; claim?: boolean; tier?: "official" | "wire"; note?: string };
 export type ShipWhat = "attacked" | "hit" | "seized" | "sunk" | "near miss" | "suspicious approach";
 export type ShipIncident = {
   id: string;
@@ -54,12 +59,48 @@ export type EnergySite = {
  */
 export type FigureGroup = "traffic" | "oil" | "cost" | "security" | "attacks" | "exports" | "pipeline" | "prices";
 export const FIGURE_GROUPS: FigureGroup[] = ["traffic", "oil", "cost", "security", "attacks", "exports", "pipeline", "prices"];
-export type LedgerFigure = { id: string; cat: "maritime" | "energy"; group?: FigureGroup; label: string; value: number; unit: string; period?: string; src: LedgerSource };
+/**
+ * `series` + `month` (YYYY-MM) put a monthly figure on its chart: Saudi crude
+ * exports ("saudi-exports"), all oil through Bab al-Mandab ("bab-oil"), Saudi
+ * oil through it ("saudi-bab-oil").
+ */
+export type LedgerFigure = { id: string; cat: "maritime" | "energy"; group?: FigureGroup; label: string; value: number; unit: string; period?: string; series?: string; month?: string; src: LedgerSource };
 /** A declared ban, a warning to shipping, a naval mission's move. */
 export type LedgerNotice = { id: string; date: string; text: string; src: LedgerSource };
 export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string };
 
-export const LEDGER_SEED: Ledger = { since: "2026-07-03", ships: [], sites: [], figures: [], notices: [], updatedAt: "2026-07-03T00:00:00+03:00" };
+/** The war began with the strike on Sanaa airport, 13 July 2026. */
+export const WAR_START = "2026-07-13";
+export const LEDGER_SEED: Ledger = { since: WAR_START, ships: [], sites: [], figures: [], notices: [], updatedAt: "2026-07-13T00:00:00+03:00" };
+
+const OFFICIAL_SRC = /\b(?:UKMTO|JMIC|MARAD|Maritime Administration|CENTCOM|Aspides|EUNAVFOR|Atalanta|SPA|Saudi Press Agency|Ministry of (?:Energy|Defen[cs]e|Foreign Affairs|Interior)|(?:Energy|Defen[cs]e|Foreign|Interior) Ministry|coalition|Civil Defen[cs]e|JODI|Aramco|IMF|PortWatch|EIA|Energy Information Administration)\b/i;
+const WIRE_SRC = /\b(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Bloomberg)\b/;
+export type SourceTier = "official" | "wire" | "other" | "claim";
+/** Official body, then a wire, then anyone else; a claim is the attacking side's word alone. */
+export function sourceTier(s: LedgerSource | undefined): SourceTier {
+  if (!s) return "other";
+  if (s.claim) return "claim";
+  if (s.tier) return s.tier;
+  if (OFFICIAL_SRC.test(s.name)) return "official";
+  if (WIRE_SRC.test(s.name)) return "wire";
+  return "other";
+}
+const RANK: Record<SourceTier, number> = { claim: 0, other: 1, wire: 2, official: 3 };
+/** A report of the same event from a better source replaces the one we have. */
+export const betterSource = (a: LedgerSource, b: LedgerSource | undefined) => !b || RANK[sourceTier(a)] > RANK[sourceTier(b)];
+
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+/** The chart a model figure belongs on, and its month, from its label and period. */
+export function seriesOf(label: string, unit: string, period: string, year = 2026): { series: string; month: string } | null {
+  if (!/barrels? a day|bpd|b\/d/i.test(`${unit} ${label}`)) return null;
+  const m = MONTHS.findIndex((n) => new RegExp(`^${n}\\b`, "i").test(String(period).trim()));
+  if (m < 0) return null;
+  const month = `${year}-${String(m + 1).padStart(2, "0")}`;
+  const l = String(label);
+  if (/^Saudi (?:crude )?(?:oil )?exports?$/i.test(l.trim())) return { series: "saudi-exports", month };
+  if (/Bab (?:al|el)[- ]Mand[ae]b/i.test(l)) return { series: /Saudi/i.test(l) ? "saudi-bab-oil" : "bab-oil", month };
+  return null;
+}
 
 /* ------------------------------------------------------------------ *
  * The sites, by their names in the reports
@@ -122,8 +163,8 @@ const WHATS: ShipWhat[] = ["attacked", "hit", "seized", "sunk", "near miss", "su
 const STATUSES: SiteStatus[] = ["working", "reduced", "down", "unknown"];
 
 type Doc = { name: string; url: string; date: string; text: string };
-type ShipUpdate = { doc: number; date?: string; ship?: string; flag?: string; type?: string; place?: string; what?: string; attacker?: string; crew?: string };
-type SiteUpdate = { doc: number; site?: string; kind?: string; country?: string; hit?: boolean; status?: string };
+type ShipUpdate = { doc: number; date?: string; ship?: string; flag?: string; type?: string; place?: string; what?: string; attacker?: string; crew?: string; claimed?: boolean };
+type SiteUpdate = { doc: number; site?: string; kind?: string; country?: string; hit?: boolean; status?: string; claimed?: boolean };
 type FigureUpdate = { doc: number; cat?: string; group?: string; label?: string; value?: number; unit?: string; period?: string };
 type NoticeUpdate = { doc: number; text?: string };
 export type LedgerUpdates = { ships?: ShipUpdate[]; sites?: SiteUpdate[]; figures?: FigureUpdate[]; notices?: NoticeUpdate[] };
@@ -155,30 +196,45 @@ export function groupOf(cat: LedgerFigure["cat"], text: string): FigureGroup {
 }
 
 /**
- * The research baseline (ledger-baseline.ts: what happened from 3 July to the
+ * The research baseline (ledger-baseline.ts: what happened from 13 July to the
  * ledger's first run, each with its source) under what the 6-hour reads added.
- * A stored row wins over the baseline's row of the same id.
+ * A stored row wins over the baseline's row of the same event, unless the
+ * baseline's source is better (official, then a wire).
  */
 export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger {
   const out: Ledger = structuredClone(l);
   // A strike their own camp alone reports stays their claim, rows stored before this rule too.
   for (const x of out.ships) if (houthiOutlet(x.src.name)) x.src.claim = true;
   for (const x of out.sites) for (const h of x.hits) if (houthiOutlet(h.name)) h.claim = true;
-  for (const s of base.ships) if (!out.ships.some((x) => x.id === s.id || (x.ship && s.ship && nameInText(x.ship, s.ship) && Math.abs(dayMs(x.date) - dayMs(s.date)) <= 86_400_000))) out.ships.push(structuredClone(s));
+  for (const s of base.ships) {
+    const row = out.ships.find((x) => x.id === s.id || (x.ship && s.ship && nameInText(x.ship, s.ship) && Math.abs(dayMs(x.date) - dayMs(s.date)) <= 86_400_000));
+    if (!row) out.ships.push(structuredClone(s));
+    else if (betterSource(s.src, row.src)) Object.assign(row, structuredClone(s), { id: row.id });
+  }
   for (const s of base.sites) {
     const row = out.sites.find((x) => x.id === s.id);
     if (!row) {
       out.sites.push(structuredClone(s));
       continue;
     }
-    for (const h of s.hits) if (!row.hits.some((x) => x.date === h.date)) row.hits.push({ ...h });
+    row.name = s.name;
+    for (const h of s.hits) {
+      const i = row.hits.findIndex((x) => x.date === h.date);
+      if (i < 0) row.hits.push({ ...h });
+      else if (betterSource(h, row.hits[i])) row.hits[i] = { ...h };
+    }
     row.hits.sort((a, b) => a.date.localeCompare(b.date));
     if (s.statusSrc && (!row.statusSrc || dayMs(s.statusSrc.date) > dayMs(row.statusSrc.date))) {
       row.status = s.status;
       row.statusSrc = { ...s.statusSrc };
     }
   }
-  for (const f of base.figures) if (!out.figures.some((x) => x.id === f.id)) out.figures.push({ ...f });
+  // One figure a month on each chart: the better source, then the newer.
+  for (const f of base.figures) {
+    const i = out.figures.findIndex((x) => x.id === f.id || (f.series && x.series === f.series && x.month === f.month));
+    if (i < 0) out.figures.push({ ...f });
+    else if (betterSource(f.src, out.figures[i].src)) out.figures[i] = { ...f };
+  }
   for (const n of base.notices) if (!out.notices.some((x) => x.id === n.id)) out.notices.push({ ...n });
   out.ships.sort((a, b) => b.date.localeCompare(a.date));
   out.notices.sort((a, b) => b.date.localeCompare(a.date));
@@ -189,9 +245,10 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
 export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now: Date): Ledger {
   const next: Ledger = structuredClone(current);
   const srcOf = (d: Doc): LedgerSource => ({ name: d.name, url: d.url, date: d.date });
-  // A strike on a ship or a site that only the Houthis' own outlets report is
-  // their claim until the target, a wire or a monitor says so.
-  const hitSrc = (d: Doc): LedgerSource => (houthiOutlet(d.name) ? { ...srcOf(d), claim: true } : srcOf(d));
+  // A strike on a ship or a site that only the Houthis' own outlets report,
+  // or that the text gives only as one side's word, is a claim until the
+  // target, a wire or a monitor says so.
+  const hitSrc = (d: Doc, claimed?: boolean): LedgerSource => (claimed || houthiOutlet(d.name) ? { ...srcOf(d), claim: true } : srcOf(d));
   for (const s of u.ships ?? []) {
     const d = docs[s?.doc];
     if (!d || !WHATS.includes(s.what as ShipWhat) || !s.place) continue;
@@ -211,7 +268,8 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
       same.type ??= s.type || undefined;
       same.attacker ??= s.attacker || undefined;
       same.crew ??= s.crew || undefined;
-      if (same.src.claim && !hitSrc(d).claim) same.src = srcOf(d);
+      const src = hitSrc(d, s.claimed);
+      if (betterSource(src, same.src)) same.src = src;
       continue;
     }
     next.ships.push({
@@ -224,7 +282,7 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
       what: s.what as ShipWhat,
       ...(s.attacker ? { attacker: s.attacker } : {}),
       ...(s.crew ? { crew: s.crew } : {}),
-      src: hitSrc(d),
+      src: hitSrc(d, s.claimed),
     });
   }
   for (const s of u.sites ?? []) {
@@ -240,9 +298,10 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
       next.sites.push(row);
     }
     if (s.hit) {
-      const same = row.hits.find((h) => h.date === d.date);
-      if (!same) row.hits.push(hitSrc(d));
-      else if (same.claim && !hitSrc(d).claim) Object.assign(same, srcOf(d), { claim: undefined });
+      const src = hitSrc(d, s.claimed);
+      const i = row.hits.findIndex((h) => h.date === d.date);
+      if (i < 0) row.hits.push(src);
+      else if (betterSource(src, row.hits[i])) row.hits[i] = src;
     }
     const status = STATUSES.includes(s.status as SiteStatus) ? (s.status as SiteStatus) : null;
     // The latest word on a site stands; an older report never overrides it.
@@ -257,10 +316,13 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
     const cat = f.cat === "maritime" ? "maritime" : "energy";
     const period = String(f.period || "").trim().slice(0, 40);
     const id = slug(`${cat}-${f.label}-${period}`);
-    const prev = next.figures.find((x) => x.id === id);
-    if (prev && dayMs(prev.src.date) > dayMs(d.date)) continue;
+    const ser = seriesOf(String(f.label), String(f.unit || ""), period);
+    // A month on a chart has one figure: a better source replaces it, an equal one only when newer.
+    const prev = next.figures.find((x) => x.id === id || (ser && x.series === ser.series && x.month === ser.month));
+    const sameRankNewer = prev && RANK[sourceTier(srcOf(d))] === RANK[sourceTier(prev.src)] && dayMs(d.date) >= dayMs(prev.src.date);
+    if (prev && !betterSource(srcOf(d), prev.src) && !sameRankNewer) continue;
     const group = FIGURE_GROUPS.includes(f.group as FigureGroup) ? (f.group as FigureGroup) : groupOf(cat, `${f.label} ${f.unit}`);
-    const row: LedgerFigure = { id, cat, group, label: String(f.label).slice(0, 80), value: f.value, unit: String(f.unit || "").slice(0, 40), ...(period ? { period } : {}), src: srcOf(d) };
+    const row: LedgerFigure = { id: prev?.id ?? id, cat, group, label: String(f.label).slice(0, 80), value: f.value, unit: String(f.unit || "").slice(0, 40), ...(period ? { period } : {}), ...(ser ?? {}), src: srcOf(d) };
     if (prev) Object.assign(prev, row);
     else next.figures.push(row);
   }
@@ -300,15 +362,16 @@ function ledgerDocs(reports: LiveReport[]): Doc[] {
     }));
 }
 
-const SYSTEM = `You keep the Maritime and Energy ledger of the current round of the Yemen war (Houthis vs the Yemeni government and the Saudi-led coalition, since 3 July 2026).
+const SYSTEM = `You keep the Maritime and Energy ledger of the current round of the Yemen war (Houthis vs the Yemeni government and the Saudi-led coalition, since the strike on Sanaa airport on 13 July 2026).
 You get NEW documents (news cards). Return only what a document itself states:
-- ships: each attack on, hit on, seizure or sinking of a ship, a near miss, or a suspicious approach, in the Red Sea, Bab al-Mandab, the Gulf of Aden, the Arabian Sea off Yemen, or Saudi or Yemeni waters. Fields: date (YYYY-MM-DD, of the incident), ship (its name, only if the text names it), flag, type (tanker, bulk carrier, container ship...), place (as the text puts it, e.g. "40 nm west of Hodeidah"), what (one of: attacked, hit, seized, sunk, near miss, suspicious approach), attacker (only if the text says who), crew (hurt or missing, as the text says). Hormuz and the Gulf are out unless the text says the Houthis did it. Piracy by Somali or unknown gunmen is out.
-- sites: each Saudi or Yemeni energy site the text says was hit, or whose state it gives (pipelines and pump stations, refineries, terminals, oilfields, gas and power plants, desalination plants). Fields: site (its name as the text writes it), kind, country (Saudi Arabia or Yemen), hit (true when the text reports it hit in this document's news), status (working, reduced or down, only when the text says so; "resumed", "back in service" = working; "halted", "shut" = down; "partly", "reduced" = reduced).
+- ships: each attack on, hit on, seizure or sinking of a ship, a near miss, or a suspicious approach, in the Red Sea, Bab al-Mandab, the Gulf of Aden, the Arabian Sea off Yemen, or Saudi or Yemeni waters. Fields: date (YYYY-MM-DD, of the incident), ship (its name, only if the text names it), flag, type (tanker, bulk carrier, container ship...), place (as the text puts it, e.g. "40 nm west of Hodeidah"), what (one of: attacked, hit, seized, sunk, near miss, suspicious approach), attacker (only if the text says who), crew (hurt or missing, as the text says), claimed (true when the text gives the attack only as one side's word, e.g. "the Houthis said they targeted", with no word from the ship, its owner, UKMTO, a navy, the target country or witnesses). Hormuz and the Gulf are out unless the text says the Houthis did it. Piracy by Somali or unknown gunmen is out.
+- sites: each Saudi or Yemeni energy site the text says was hit, or whose state it gives (pipelines and pump stations, refineries, terminals, oilfields, gas and power plants, desalination plants). Fields: site (its name as the text writes it), kind, country (Saudi Arabia or Yemen), hit (true when the text reports it hit in this document's news), status (working, reduced or down, only when the text says so; "resumed", "back in service" = working; "halted", "shut" = down; "partly", "reduced" = reduced), claimed (true when the hit is only one side's word, as for ships; a hit the target country's ministry, Aramco, civil defence or witnesses report is not a claim).
 - figures: a number the text gives about shipping or energy in this war. Fields: cat (maritime or energy), group, label (short, e.g. "Saudi crude exports from Yanbu"), value (the number as written, e.g. 1.2 for "1.2 million"), unit (e.g. "million barrels a day"), period (what it covers, as the text says: "September", "22-26 Sep", "since 20 July", "Tuesday 22 Sep"; empty if it does not say). Groups:
   maritime: traffic (ships crossing Bab al-Mandab, Suez or around the Cape, escorts asked for), oil (barrels of oil through Bab al-Mandab, the Red Sea or Suez), cost (war-risk insurance, freight rates, Suez Canal revenue), security (warships, naval missions, escorts), attacks (a side's own count of ships it attacked or turned back);
   energy: exports (Saudi or Yemeni crude or fuel exports, from Yanbu, via Hormuz, in total; oil output), pipeline (East-West pipeline or other pipeline throughput and capacity), prices (Brent or other oil and gas prices).
 - notices: a Houthi-declared ban or warning to shipping, a naval mission's announcement, a UKMTO or JMIC advisory for these waters. Field: text (one plain sentence).
 Every item has doc (the document index). Never estimate, never add up, never use whole-war figures since 2014/2015. Nothing usable: empty lists.
+Saudi crude exports in total for a month: label "Saudi crude exports", period the month's name ("September"). Oil through Bab al-Mandab for a month: label "Oil through Bab al-Mandab" (all exporters) or "Saudi oil through Bab al-Mandab".
 A side's own figure (the Houthi transport ministry's ship count, the Houthis' count of tankers hit) is kept like any other; the source shows whose it is.
 Return JSON {"ships":[],"sites":[],"figures":[],"notices":[]}.`;
 
@@ -345,19 +408,18 @@ export type TransitDay = { date: string; total: number; tanker: number; containe
 export type TransitPoint = { id: "bab" | "suez" | "cape"; name: string; baseline: { total: number; tanker: number; from: string; to: string }; days: TransitDay[] };
 /** Brent's daily spot price (US EIA, through FRED), about a week behind. */
 export type PriceSeries = { name: string; unit: string; baseline: { value: number; from: string; to: string }; days: { date: string; value: number }[]; source: LedgerSource };
-export type Transits = { points: TransitPoint[]; source: LedgerSource; updatedAt: string; brent?: PriceSeries };
+/** `v` 2: days from a month before the war (13 June), Bab al-Mandab and Suez only. */
+export type Transits = { v?: number; points: TransitPoint[]; source: LedgerSource; updatedAt: string; brent?: PriceSeries };
 
 const PORTWATCH =
   "https://services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/Daily_Chokepoints_Data/FeatureServer/0/query";
 const POINTS: { id: TransitPoint["id"]; name: string; portname: string }[] = [
   { id: "bab", name: "Bab al-Mandab", portname: "Bab el-Mandeb Strait" },
   { id: "suez", name: "Suez Canal", portname: "Suez Canal" },
-  // Ships that avoid the Red Sea go round Africa.
-  { id: "cape", name: "Cape of Good Hope", portname: "Cape of Good Hope" },
 ];
-/** Before the round: the month to 2 July 2026. */
-const BASE_FROM = "2026-06-02";
-const BASE_TO = "2026-07-02";
+/** Before the war: the 30 days to 12 July 2026, the eve of the strike on Sanaa airport. */
+const BASE_FROM = "2026-06-13";
+const BASE_TO = "2026-07-12";
 
 type PwRow = { date?: string; n_total?: number; n_tanker?: number; n_container?: number; n_dry_bulk?: number };
 
@@ -381,7 +443,7 @@ async function portwatch(portname: string, where: string, count: number): Promis
     .map((a) => ({ date: String(a.date).slice(0, 10), total: a.n_total ?? 0, tanker: a.n_tanker ?? 0, container: a.n_container ?? 0, bulk: a.n_dry_bulk ?? 0 }));
 }
 
-const FRED_BRENT = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILBRENTEU&cosd=2026-06-01";
+const FRED_BRENT = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILBRENTEU&cosd=2026-06-13";
 
 /** FRED's CSV: "date,value" lines, "." on days with no price. */
 export function parseFredCsv(csv: string): { date: string; value: number }[] {
@@ -405,7 +467,7 @@ async function brent(): Promise<PriceSeries | null> {
     name: "Brent crude",
     unit: "dollars a barrel",
     baseline: { value: Math.round((base.reduce((n, d) => n + d.value, 0) / base.length) * 100) / 100, from: BASE_FROM, to: BASE_TO },
-    days: rows.filter((d) => d.date > BASE_TO),
+    days: rows.filter((d) => d.date >= BASE_FROM),
     source: { name: "US EIA via FRED", url: "https://fred.stlouisfed.org/series/DCOILBRENTEU", date: rows.at(-1)?.date ?? "" },
   };
 }
@@ -413,14 +475,14 @@ async function brent(): Promise<PriceSeries | null> {
 /** PortWatch's daily counts: read again at each 6-hour update (PortWatch itself adds days a few at a time). */
 export async function refreshTransits(store: DeskStore, now = new Date()): Promise<Transits | null> {
   const prev = await store.getJson<Transits>(TRANSITS_KEY);
-  if (prev && prev.points.length >= POINTS.length && prev.brent && now.getTime() - Date.parse(prev.updatedAt) < 5.5 * 3600_000) return prev;
+  if (prev && prev.v === 2 && prev.brent && now.getTime() - Date.parse(prev.updatedAt) < 5.5 * 3600_000) return prev;
   const points: TransitPoint[] = [];
   for (const p of POINTS) {
-    const days = await portwatch(p.portname, "date >= DATE '2026-06-02'", 200);
+    const days = await portwatch(p.portname, `date >= DATE '${BASE_FROM}'`, 200);
     if (!days.length) return prev;
     const base = days.filter((d) => d.date >= BASE_FROM && d.date <= BASE_TO);
     const avg = (k: "total" | "tanker") => (base.length ? Math.round((base.reduce((s, d) => s + d[k], 0) / base.length) * 10) / 10 : 0);
-    points.push({ id: p.id, name: p.name, baseline: { total: avg("total"), tanker: avg("tanker"), from: BASE_FROM, to: BASE_TO }, days: days.filter((d) => d.date > BASE_TO).sort((a, b) => a.date.localeCompare(b.date)) });
+    points.push({ id: p.id, name: p.name, baseline: { total: avg("total"), tanker: avg("tanker"), from: BASE_FROM, to: BASE_TO }, days: days.sort((a, b) => a.date.localeCompare(b.date)) });
   }
   let price: PriceSeries | null = null;
   try {
@@ -429,6 +491,7 @@ export async function refreshTransits(store: DeskStore, now = new Date()): Promi
     console.error("[ledger] Brent failed:", err instanceof Error ? err.message : err);
   }
   const next: Transits = {
+    v: 2,
     points,
     source: { name: "IMF PortWatch", url: "https://portwatch.imf.org/pages/chokepoints", date: points[0]?.days.at(-1)?.date ?? "" },
     updatedAt: now.toISOString(),

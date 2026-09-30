@@ -1089,8 +1089,10 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .tally-box.ledger table.list td,.tally-box.ledger table.list th{vertical-align:top}
 .tally-box.ledger table.span3{margin-top:.35rem}
 .tally-box.ledger .st-link svg{color:var(--t-muted,#8fa3b6)}
-.tally-box.ledger .spot{padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-bottom:1px dotted var(--t-muted,#8fa3b6)}
-.tally-box.ledger .spot svg{width:.8em;height:.8em;margin-left:.3em;vertical-align:-.05em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+/* The chart icon sits to the right of the name (never wrapped under it); the dotted line stays under the name */
+.tally-box.ledger .spot{display:inline-flex;align-items:center;gap:.4em;white-space:nowrap;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.tally-box.ledger .spot-name{border-bottom:1px dotted var(--t-muted,#8fa3b6)}
+.tally-box.ledger .spot svg{flex:none;width:.95em;height:.95em;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
 .tally-box.ledger .spot:hover,.tally-box.ledger .spot[aria-expanded="true"]{color:var(--t-strong,#fff)}
 .mbar{grid-template-columns:7.4rem minmax(0,1fr) 3.6rem}
 .mbar b{white-space:nowrap}

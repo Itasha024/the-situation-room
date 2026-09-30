@@ -29,7 +29,6 @@ html[data-set="broadsheet"] .ts-pips i.on{background:var(--accent-ui)}
 .sec-tab{display:flex;flex-direction:column;align-items:center;gap:9px;width:28px;padding:10px 0 12px;background:var(--t-surface-3,#1a2433);border:1px solid var(--t-line-strong,#2a3a4e);border-left:3px solid var(--accent-ui,var(--t-link,#7eb6ff));border-radius:0 8px 8px 0;color:var(--t-text,#d7e2ef);cursor:pointer;box-shadow:0 4px 14px #0005;transition:color .2s,background .2s}
 .sec-tab:hover,.sec-tab:focus-visible,.sec-nav.open .sec-tab{color:var(--t-strong,#fff);background:var(--t-surface-2,var(--t-surface-3,#1a2433));outline:none}
 .sec-word{writing-mode:vertical-rl;transform:rotate(180deg);font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;line-height:1}
-@media (min-width:721px){html.has-sec-nav body{padding-left:30px}}
 .sec-ticks{display:flex;flex-direction:column;gap:5px}
 .sec-ticks i{display:block;width:7px;height:2px;border-radius:1px;background:currentColor;opacity:.7;transition:width .2s,opacity .2s}
 .sec-ticks i.on{width:9px;opacity:1;background:var(--accent-ui,var(--t-link,#7eb6ff))}
@@ -41,7 +40,8 @@ html[data-set="broadsheet"] .ts-pips i.on{background:var(--accent-ui)}
 html[data-set="broadsheet"] .sec-tab{border-radius:0 2px 2px 0}
 html[data-set="broadsheet"] .sec-list{border-radius:2px}
 html[data-set="broadsheet"] .sec-list a{border-radius:0;font-family:var(--f-body)}
-@media (max-width:720px){
+/* The pill at the bottom left on every screen (PC too), so no left gutter is needed */
+@media all{
   .sec-nav{top:auto;bottom:16px;left:12px;transform:none;flex-direction:column-reverse;align-items:flex-start;transition:transform .22s,opacity .22s}
   .sec-tab{flex-direction:row;width:auto;height:34px;padding:0 12px;gap:8px;border:1.5px solid var(--accent-ui,var(--t-link,#7eb6ff));border-radius:17px;background:var(--t-glass,rgba(8,12,18,.94));box-shadow:0 3px 12px #0006}
   .sec-word{writing-mode:horizontal-tb;transform:none;font-size:.68rem}
@@ -49,8 +49,8 @@ html[data-set="broadsheet"] .sec-list a{border-radius:0;font-family:var(--f-body
   .sec-ticks i{width:2px;height:7px}.sec-ticks i.on{width:2px;height:10px}
   html[data-set="broadsheet"] .sec-tab{border-radius:2px}
   .sec-list{margin:0 0 8px;transform:translateY(8px)}
-  .stamp{flex-wrap:wrap}
 }
+@media (max-width:720px){.stamp{flex-wrap:wrap}}
 @media (prefers-reduced-motion:reduce){.ts-ring>svg,.ts-ico,.sec-list{transition:none!important;animation:none!important}}
 
 /* Broadsheet: section titles carry a short accent bar */

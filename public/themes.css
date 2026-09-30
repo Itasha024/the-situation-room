@@ -542,7 +542,9 @@ html[data-mast][data-desk="H2"] .top h1.desk-label{font:600 1.4rem/1.15 "Newsrea
 html[data-mast][data-desk="H3"] .top h1.desk-label{font:italic 500 1.35rem/1.15 "Newsreader",Georgia,serif;letter-spacing:0;text-transform:none;color:var(--t-text)}
 html[data-mast][data-desk="H4"] .top h1.desk-label{display:inline-block;padding:.28rem .55rem .24rem;background:var(--t-strong);color:var(--t-bg);font-size:.74rem}
 html[data-mast][data-desk="H5"] .top h1.desk-label{color:var(--plc)}
-html[data-mast][data-desk="H6"] .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);padding-left:.6rem;border-left:3px solid var(--t-strong)}
+html[data-mast][data-desk="H6"] .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);padding:.14em 0 .14em .6rem;text-box:trim-both cap alphabetic;border-left:3px solid var(--t-strong)}
+/* H6: the bar is centred on the capitals (the box is trimmed to their height); older browsers get padding for the empty space under them */
+@supports not (text-box:trim-both cap alphabetic){html[data-mast][data-desk="H6"] .top h1.desk-label{padding-top:.26em;padding-bottom:0}}
 .desk-try{bottom:48px}
 /* The picker for trying the designs, bottom right */
 .mast-try{position:fixed;right:12px;bottom:12px;z-index:1200;display:flex;gap:2px;padding:3px;background:var(--t-glass);border:1px solid var(--t-line-strong);box-shadow:var(--shadow-pop)}

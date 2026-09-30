@@ -516,6 +516,12 @@ html[data-mast="D4"] .mast-name::after,html:is([data-mast="D7"],[data-mast="D8"]
 html[data-mast="D4"] .mast-mid,html:is([data-mast="D7"],[data-mast="D8"],[data-mast="D9"],[data-mast="D10"]) .mast-mid{gap:.45rem}
 /* D7: D4 with "Open-source intelligence" between the lines; the desk line keeps its name, loses the subtitle */
 html:is([data-mast="D7"],[data-mast="D8"],[data-mast="D9"],[data-mast="D10"]) .top .sub{display:none}
+/* D7: one size scale from phone to PC. The name grows with the window, and everything under it
+   is set in em of the name, so the line keeps the PC ratio (0.76rem to 2.6rem) at every width. */
+html[data-mast="D7"] .mast-mid{font-size:clamp(1.65rem,1.16rem + 2.1vw,2.6rem);gap:.173em}
+html[data-mast="D7"] .mast-name .mn{font-size:1em}
+html[data-mast="D7"] .mast-desk{font-size:.292em;gap:.79em}
+html[data-mast="D7"] .mast-desk::before,html[data-mast="D7"] .mast-desk::after{width:2.3em;height:max(1px,.165em)}
 /* D8-D10: the same with the line smaller each step */
 html[data-mast="D8"] .mast-desk{font-size:.68rem;letter-spacing:.15em}
 html[data-mast="D8"] .mast-desk::before,html[data-mast="D8"] .mast-desk::after{width:24px}
@@ -543,6 +549,7 @@ html[data-mast="D6"] .mast-name::after{display:none}
   html[data-mast="D2"] .mast-name .mn{font-size:1.8rem}
   html[data-mast="D2"] .mast-name::after{width:56px;height:3px}
   html[data-mast="D4"] .mast-mid,html:is([data-mast="D7"],[data-mast="D8"],[data-mast="D9"],[data-mast="D10"]) .mast-mid{gap:.35rem}
+  html[data-mast="D7"] .mast-mid{gap:.173em}
   html[data-mast="D8"] .mast-desk{font-size:.6rem}
   html[data-mast="D8"] .mast-desk::before,html[data-mast="D8"] .mast-desk::after{width:16px}
   html[data-mast="D9"] .mast-desk{font-size:.55rem}

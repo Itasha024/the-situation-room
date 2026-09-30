@@ -6133,9 +6133,33 @@ function setFavicon(t) {
 }
 try { setFavicon(THEME); } catch (e) {}
 
+/* The site's masthead: "The Situation Room" above the desk's own line, with the date on the left
+ * and the theme button on the right (it applies to every desk). Designs are tried with
+ * ?mast=A…H; without it the page is as before. */
+const MASTS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+const MAST = (() => { try { const m = (new URLSearchParams(location.search).get('mast') || '').toUpperCase(); return MASTS.includes(m) ? m : ''; } catch (e) { return ''; } })();
+function mastName(m) {
+  const sr = '<span class="mast-sr" aria-hidden="true"></span>';
+  if (m === 'B') return sr + '<span class="mn">The Situation Room</span>';
+  if (m === 'C') return sr + '<span class="mn"><i>The</i><b>Situation Room</b></span>';
+  if (m === 'F') return '<span class="mn"><i>The</i><b>Situation</b><b>Room</b></span>';
+  if (m === 'G') return '<span class="mn"><i>The</i><b>Situation Room</b></span>';
+  return '<span class="mn">The Situation Room</span>';
+}
+function installMast() {
+  const top = document.querySelector('header.top');
+  if (!MAST || !top || document.querySelector('.mast')) return;
+  document.documentElement.dataset.mast = MAST;
+  const day = new Date().toLocaleDateString('en-GB', { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  top.insertAdjacentHTML('beforebegin', `<div class="mast"><span class="mast-date">${day}</span><a class="mast-name" href="/" aria-label="The Situation Room">${mastName(MAST)}</a><span class="mast-end"></span></div>
+    <nav class="mast-try" aria-label="Masthead designs">${MASTS.map((m) => `<a href="?mast=${m}"${m === MAST ? ' class="on"' : ''}>${m}</a>`).join('')}</nav>`);
+  const h1 = top.querySelector('h1');
+  if (MAST === 'D' && h1) h1.classList.add('desk-label');
+}
+
 function installThemeButton() {
-  const stamp = document.querySelector('.stamp');
-  if (!stamp || stamp.querySelector('.theme-step')) return;
+  const stamp = document.querySelector('.mast-end') || document.querySelector('.stamp');
+  if (!stamp || document.querySelector('.theme-step')) return;
   stamp.insertAdjacentHTML('beforeend', `<button type="button" class="theme-step">
     <span class="ts-ring" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M27 16a11 11 0 1 1-3.2-7.8"/><path d="M24.6 3.8l-.6 4.6-4.6-.5"/></svg><span class="ts-ico"></span></span>
     <span class="ts-pips" aria-hidden="true">${THEMES.map(() => '<i></i>').join('')}</span>
@@ -6238,6 +6262,7 @@ function startYemenDesk() {
 async function bootYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
+  try { installMast(); } catch (e) { console.error(e); }
   try { installThemeButton(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
   try { startYemenClock(); } catch (e) { console.error(e); }

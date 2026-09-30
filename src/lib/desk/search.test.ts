@@ -52,3 +52,14 @@ test("each idea must be in the headline: 'hodeidah port' is not any Hodeidah rep
   assert.equal(headlineHas(doc("a", "UN verifies 55 civilian casualties in Hodeidah"), strong, u), false);
   assert.equal(headlineHas(doc("b", "Strike hits Hodeidah port cranes"), strong, u), true);
 });
+
+test("'uav attacks on saudi oil' means drones hitting Saudi energy sites, by any of their words (1 Oct)", () => {
+  const u = understandLocally("uav attacks on saudi oil", people);
+  assert.equal(u.known, true);
+  assert.equal(u.groups.length, 4);
+  const [drone, attack, saudi, oil] = u.groups;
+  assert.ok(drone.includes("drone"));
+  assert.ok(attack.includes("hit") && attack.includes("targeted"));
+  assert.ok(saudi.includes("jazan") && saudi.includes("najran"));
+  assert.ok(oil.includes("aramco") && oil.includes("refinery"));
+});

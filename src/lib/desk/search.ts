@@ -92,7 +92,11 @@ const LOCAL: string[][] = [
   ["alimi", "al alimi", "rashad al alimi", "yemens president", "presidential leadership council head"],
   ["stc", "southern transitional council", "southern forces", "zubaidi", "al zubaidi"],
   ["giants", "giants brigades", "amaliqa"],
-  ["aramco", "oil facility", "oil facilities", "refinery", "yanbu", "ras tanura", "abqaiq", "pipeline"],
+  ["oil", "energy", "aramco", "oil facility", "oil facilities", "oil field", "oil terminal", "refinery", "fuel depot", "fuel tank", "gas plant", "pumping station", "pump station", "yanbu", "ras tanura", "abqaiq", "pipeline"],
+  // An attack by any word for it (1 Oct: "uav attacks on saudi oil" found one card of dozens).
+  ["attack", "attacks", "attacked", "hit", "hits", "struck", "strike", "strikes", "targeted", "targeting", "targets", "bombed", "shelled"],
+  // The kingdom, and the places a card names instead of it.
+  ["saudi", "saudi arabia", "kingdom", "riyadh", "jazan", "jizan", "najran", "abha", "khamis mushait", "asir", "taif", "jeddah", "mecca", "yanbu", "tabuk", "dammam", "eastern province", "abqaiq", "ras tanura", "aramco"],
   ["prisoner", "prisoner exchange", "prisoner swap", "detainee", "captive"],
   ["talks", "negotiation", "truce", "ceasefire", "peace talks", "mediation"],
   ["displaced", "displacement", "idp", "refugee"],

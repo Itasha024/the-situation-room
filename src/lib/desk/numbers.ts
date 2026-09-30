@@ -70,7 +70,7 @@ export const BASELINE: Numbers = {
       gov: c(62, "Yemeni Network for Rights and Freedoms", "https://www.almashhad.news/news/495171", "2026-09-17", "at least", "Taiz, 3 to 15 September"),
     },
     "injured.saudi": {
-      official: c(73, "Coalition", "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says", "2026-09-08", "at least", "Civilians wounded in Houthi attacks on the kingdom"),
+      official: c(73, "Coalition", "https://www.aljazeera.com/news/2026/9/8/houthi-attacks-on-saudi-arabia-have-wounded-73-civilians-official-says", "2026-09-08", "at least", "Wounded in the attacks of 7 and 8 September alone (13 more were wounded on 15 September); the coalition has given no running total"),
     },
     idp: {
       gov: c(169074, "Displaced camps unit (government)", "https://www.almashhad.news/news/496161", "2026-09-23", undefined, "25,116 families in 10 governorates, to 21 September"),

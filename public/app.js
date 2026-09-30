@@ -2732,6 +2732,11 @@ function wireMapHover(btn, open, hide) {
   btn.onpointerdown = (ev) => { if (ev) ev.stopPropagation(); };
 }
 
+/** A short line on how a part of the page is made, with a link to its part of the Methodology. */
+function credNote(text, anchor) {
+  return `<p class="cred-note">${escapeHtml(text)} <a href="/yemen-conflict-desk/methodology#${anchor}">How we know →</a></p>`;
+}
+
 function renderSituation(d) {
   const el = document.getElementById('situation');
   if (!el) return;
@@ -2756,7 +2761,8 @@ function renderSituation(d) {
   const btnNeeded = moreParas.length || lineParas.length > 1;
   el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2>${mapBtn}</div>${cadenceStamp(true)}
     <div class="sit-body">${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}</div>${btnNeeded ? `
-    <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}`;
+    <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}
+    ${credNote("Written by AI every 6 hours from this update's reports only: the fighting first, then the sea and energy, then politics.", 'developments')}`;
   wirePlaceLinks(el);
   const tog = el.querySelector('.toggle-sit');
   if (tog) {
@@ -2919,6 +2925,28 @@ function numCell(c, cls) {
   // An official figure read on someone else's site says where.
   const via = c.via ? `<small class="via">via ${escapeHtml(c.via)}</small>` : '';
   return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}${via}</td>`;
+}
+
+/**
+ * Under each box, what every figure counts: who gives it, until when, and
+ * over which days or places. Where the sides differ both stand; the desk
+ * never averages them.
+ */
+const NUM_COL = { official: 'Official', houthi: 'Houthi sources', gov: 'Gov. / Saudi sources' };
+function howCounted(rows, nums) {
+  const items = [];
+  for (const [label, key] of rows) {
+    const r = nums.cells[key] || {};
+    for (const col of ['official', 'houthi', 'gov']) {
+      const c = r[col];
+      if (!c || !Number.isFinite(c.value)) continue;
+      const when = c.date ? new Date(`${c.date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+      const who = [c.name, c.via ? `via ${c.via}` : '', when].filter(Boolean).join(', ');
+      items.push(`<li><b>${escapeHtml(label)}, ${NUM_COL[col]}:</b> ${c.q ? `${escapeHtml(c.q)} ` : ''}${Number(c.value).toLocaleString('en-US')}. ${escapeHtml(who)}.${c.note ? ` ${escapeHtml(c.note)}.` : ''}</li>`);
+    }
+  }
+  if (!items.length) return '';
+  return `<details class="how-counted"><summary>How each figure is counted</summary><ul>${items.join('')}</ul><p>Every figure is a running total for this round that its source published; a day's or one battle's toll is left out. The newest figure from each column stands. Where the sides differ, both are shown and never averaged. <a href="/yemen-conflict-desk/methodology#numbers">More on the numbers</a></p></details>`;
 }
 
 /*
@@ -3269,12 +3297,17 @@ function renderCasualties() {
     slides = NUM_BOXES.map(([title, rows]) => [title, `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows.map(([label, key]) => {
       const r = nums.cells[key] || {};
       return `<tr><th scope="row">${label}</th>${numCell(r.official, 'off')}${numCell(r.houthi, 'h')}${numCell(r.gov, 'g')}</tr>`;
-    }).join('')}</table></div>`]);
+    }).join('')}</table>${howCounted(rows, nums)}</div>`]);
   }
   const idx = Math.min(numBoxOf[numCat] || 0, slides.length - 1);
   const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${NUM_CATS.map(([k, label]) => `<button type="button" data-cat="${k}" aria-pressed="${k === numCat}"${k === numCat ? ' class="on"' : ''}>${label}</button>`).join('')}</div>`;
   hideSpot();
-  el.innerHTML = `${cadenceStamp(true)}${sw}
+  const cred = {
+    cas: ['Official means official bodies only (UN, WHO, ministries, governments, the coalition). The rest is shown by side. Running totals for this round, each linked to its source.', 'numbers'],
+    sea: ["Ship attacks from UKMTO's own warnings, official statements and the wires. Ship counts from IMF PortWatch, 3 to 4 days behind.", 'numbers'],
+    energy: ['Attacks from the Saudi Energy Ministry, the Saudi Press Agency and the wires; a hit only the Houthis report is unofficial. Brent from the US EIA.', 'numbers'],
+  }[numCat] || ['', 'numbers'];
+  el.innerHTML = `${cadenceStamp(true)}${sw}${credNote(cred[0], cred[1])}
     <div class="tally one">${pagerHtml('numbers', slides.map((s) => s[1]), idx, slides.map((s) => s[0]))}</div>
 `;
   wirePager(el, idx, (i) => { numBoxOf[numCat] = i; hideSpot(); });
@@ -3340,7 +3373,7 @@ function renderBars(d) {
       <div class="track"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
     </div>`;
   }).join('');
-  document.getElementById('bars').innerHTML = rows;
+  document.getElementById('bars').innerHTML = rows + credNote('Shaded by district: a district changes hands only when both sides or a wire agency report it taken. Shares are by area.', 'control');
 }
 
 function feedCardHtml(r, i) {
@@ -3361,6 +3394,7 @@ function feedCardHtml(r, i) {
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
         <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">, citing ${escapeHtml(r.citing)}</span>` : ''}</span>
+        ${certaintyChip(r, src)}
         ${mappableByFp.has(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
       </div>
       ${replyQuote(r)}
@@ -3370,6 +3404,42 @@ function feedCardHtml(r, i) {
       ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
+}
+
+/*
+ * How sure a card is, from who carries it (the Methodology's "Certainty"):
+ *   Statement        what someone said; the desk reports that it was said
+ *   Confirmed        a wire (Reuters, AP, AFP, Bloomberg), UKMTO or the UN,
+ *                    or outlets of both sides
+ *   Several outlets  two or more outlets of no declared side
+ *   One side's claim only outlets of one side, so far
+ *   Single source    one outlet of no declared side, so far
+ */
+const WIRE_RE = /^(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Bloomberg|UKMTO|JMIC|United Nations|UN in Yemen|UN OCHA)$/i;
+const CERTAINTY = {
+  stmt: ['Statement', 'What someone said. The desk reports that it was said, not that it is true.'],
+  conf: ['Confirmed', 'Carried by a wire agency, UKMTO or the UN, or by outlets of both sides.'],
+  multi: ['Several outlets', 'Carried by two or more outlets with no declared side; no wire or other side yet.'],
+  claim: ["One side's claim", 'Only outlets of one side report it so far.'],
+  single: ['Single source', 'One outlet with no declared side reports it so far.'],
+};
+function certaintyOf(r, src) {
+  if (r.type === 'statement' || r.type === 'diplomacy' || r.type === 'intel') return 'stmt';
+  const names = [...splitSources(src), ...(Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy.map((a) => canonicalSourceName(a.source)) : [])]
+    .map((n) => stripBreakingMarker(String(n || '').trim())).filter(Boolean);
+  const uniq = [...new Set(names)];
+  if (uniq.some((n) => WIRE_RE.test(n))) return 'conf';
+  const leans = uniq.map((n) => sourceLean(n));
+  const houthi = leans.includes('houthi');
+  const gov = leans.some((l) => l === 'gov' || l === 'south');
+  if (houthi && gov) return 'conf';
+  if (houthi || gov) return 'claim';
+  return uniq.length >= 2 ? 'multi' : 'single';
+}
+function certaintyChip(r, src) {
+  const k = certaintyOf(r, src);
+  const [label, tip] = CERTAINTY[k];
+  return `<a class="cert c-${k}" href="/yemen-conflict-desk/methodology#certainty" title="${escapeHtml(tip)}">${escapeHtml(label)}</a>`;
 }
 
 /** A card's text: one paragraph, or short paragraphs with a line between them when it is long. */
@@ -4234,7 +4304,7 @@ let frontIdx = null;
 function renderFronts(d) {
   const fronts = allFronts(d);
   const stamp = document.getElementById('fronts-stamp');
-  if (stamp) stamp.innerHTML = cadenceStamp(true);
+  if (stamp) stamp.innerHTML = cadenceStamp(true) + credNote('A front is a governorate, or Bab al-Mandab, the Red Sea coast or Saudi Arabia. A report joins the front its pin lies in.', 'front-areas');
   if (frontIdx == null || frontIdx >= fronts.length) frontIdx = Math.max(0, fronts.findIndex((f) => f.id === 'bab' || /Bab al-Mandab/i.test(f.name || '')));
   ensurePlaceData();
   const cards = fronts.map((f, i) => {
@@ -4427,6 +4497,21 @@ function liveSrcHtml(own) {
   return `<br/><small>Reported by ${links.join(', ')}</small>`;
 }
 
+/** The sources behind a district in the hand baseline (control.json), as links; its governorate's line when it has none. */
+const BASE_SRC_NAME = { wiki: 'Wikipedia (2026 Yemen offensives)', majalla: 'Majalla', national: 'The National', 'aj-qarfan': 'Al Jazeera', desk: "the desk's own reports", baseline: 'pre-September lines (Sanaa Center, ACLED, Critical Threats)' };
+function baseSrcHtml(own) {
+  const keys = own && Array.isArray(own.src) ? own.src.filter((x) => typeof x === 'string') : [];
+  if (!own) return '<br/><small>No report on this district itself: it takes its governorate\'s control.</small>';
+  if (!keys.length) return '';
+  const srcs = (districtControl && districtControl.sources) || {};
+  const links = keys.map((k) => {
+    const name = BASE_SRC_NAME[k] || k;
+    const url = String(srcs[k] || '');
+    return /^https?:/.test(url) ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>` : escapeHtml(name);
+  });
+  return `<br/><small>Sources: ${links.join(', ')}</small>`;
+}
+
 function districtSide(p, byIso) {
   const own = districtOwn(p);
   const s = (own && own.side) || (byIso[p.gov] || {}).control;
@@ -4515,7 +4600,7 @@ function bindGov(feature, layer, byIso) {
     const own = dct && districtOwn(dct);
     const side = dct && districtSide(dct, byIso);
     const dHtml = dct
-      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${escapeHtml(dct.name)} district</strong><br/>Control: ${escapeHtml(LABELS[side] || side)}${own && own.since ? ` · since ${escapeHtml(fmtDay(own.since))}` : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}${liveSrcHtml(own)}`
+      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${escapeHtml(dct.name)} district</strong><br/>Control: ${escapeHtml(LABELS[side] || side)}${own && own.since ? ` · since ${escapeHtml(fmtDay(own.since))}` : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}${liveSrcHtml(own) || baseSrcHtml(own)}<br/><small><a href="/yemen-conflict-desk/methodology#control">How control is decided</a></small>`
       : '';
     L.popup().setLatLng(e.latlng).setContent(govHtml + dHtml).openOn(layer._map || map);
   });
@@ -4836,6 +4921,23 @@ function buildMapPins(d) {
   return (focusFps ? deduped.filter((p) => focusFps.has(p.fp)) : deduped).slice(0, (mapMode === 'range' || mapMode === 'all') ? MAX_MAP_PINS_RANGE : MAX_MAP_PINS);
 }
 
+/*
+ * How exact a pin is, from the place the report names (like ACLED's
+ * geo-precision): a named village, hill or site; a district; a governorate or
+ * city; a spot at sea from a distance and bearing, or less.
+ */
+function placePrecision(ev) {
+  const place = String(ev.place || '').trim();
+  if (!place) return ['approximate', 'The report names no place the desk could find; the pin is near where it says.'];
+  if (DEV_SEA.test(place) || /^(?:off|near|east|west|north|south)\b|nautical miles|\bnm\b/i.test(place)) return ['at sea, approximate', 'At sea: placed from the distance and bearing the report gives, or the area it names.'];
+  const bare = place.replace(/\s+(?:governorate|province|district|city)$/i, '').replace(/^al-/i, '').toLowerCase();
+  const govs = ((data && data.governorates) || []).map((g) => String(g.name || '').replace(/^al-/i, '').toLowerCase());
+  if (govs.includes(bare) || DEV_VAGUE.test(place) || DEV_GOV_CITY.test(place)) return ['governorate or city', 'The report names only a governorate or a city; the pin is at its centre.'];
+  const dists = districtGeo ? districtGeo.features.map((f) => String(f.properties.name || '').replace(/^al-/i, '').toLowerCase()) : [];
+  if (/\bdistrict\b/i.test(place) || dists.includes(bare)) return ['district', 'The report names a district; the pin is in it, not on a spot.'];
+  return ['named place', 'The report names this village, hill, base or site; the pin is on it.'];
+}
+
 function popupHtml(ev) {
   let sum = (ev.label && !isWeakHeadline(ev.label)) ? ev.label : headlineFrom(ev.text || '');
   if (sum.length > 150) sum = sum.slice(0, 147).replace(/\s+\S*$/, '') + '…';
@@ -4851,9 +4953,11 @@ function popupHtml(ev) {
     ? strikeKind(`${ev.label || ''} ${ev.text || ''}`)
     : (CATEGORY_LABEL[cat] || CATEGORY_LABEL.combat);
   const needExpand = full && full.length > sum.length + 24;
+  const prec = placePrecision(ev);
   return `<p class="pop-h">${escapeHtml(sum)}</p>
     <p class="pop-meta">${escapeHtml(fmtStamp(ev.at))}${ev.place ? ' · ' + escapeHtml(ev.place) : ''} · ${escapeHtml(catLabel)}</p>
     ${srcLine}
+    <p class="pop-prec" title="${escapeHtml(prec[1])}">Pin: ${escapeHtml(prec[0])} · <a href="/yemen-conflict-desk/methodology#places">how pins are placed</a></p>
     ${mediaBlock(ev.media, true)}
     ${needExpand ? `<div class="pop-full">${escapeHtml(isReaderWritten(ev.url) ? full : annotatePlaces(full))}</div>
     <button type="button" class="pop-toggle">Read more</button>` : ''}`;
@@ -5742,6 +5846,7 @@ function renderLegend(d) {
       ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
       ${row('vessel', EVENT_COLORS.vessel, 'Maritime incident', true)}
       ${row('port', EVENT_COLORS.port, 'Energy incident', true)}
+      <a class="leg-how" href="/yemen-conflict-desk/methodology#map-icons">How the map is made</a>
     </div>`;
   fitLegend();
   if (!legendFitWired) {
@@ -6245,7 +6350,7 @@ function installSectionNav() {
       <span class="sec-word" aria-hidden="true">Sections</span>
       <span class="sec-ticks" aria-hidden="true">${items.map(() => '<i></i>').join('')}</span>
     </button>
-    <ol class="sec-list" id="sec-list">${items.map(([id, name]) => `<li><a href="#${id}" data-sec="${id}">${name}</a></li>`).join('')}</ol>`;
+    <ol class="sec-list" id="sec-list">${items.map(([id, name]) => `<li><a href="#${id}" data-sec="${id}">${name}</a></li>`).join('')}<li class="sec-page"><a href="/yemen-conflict-desk/methodology">Methodology</a></li><li class="sec-page"><a href="/yemen-conflict-desk/about">About</a></li></ol>`;
   document.body.appendChild(nav);
   document.documentElement.classList.add('has-sec-nav');
   const tab = nav.querySelector('.sec-tab');
@@ -6382,4 +6487,6 @@ async function bootYemenDesk() {
 }
 
 window.startYemenDesk = startYemenDesk;
+// The Methodology and About pages: the masthead date and the theme button, nothing else.
+window.startDeskDoc = () => { installMast(); installThemeButton(); };
 startYemenDesk();

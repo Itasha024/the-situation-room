@@ -551,3 +551,66 @@ html .tally-box.claims tr.grp th{border-bottom:0;padding-bottom:0}
 html .tally-box.claims tr.grp th.un{font:600 .55rem/1.3 var(--f-body,inherit);letter-spacing:.12em;text-transform:uppercase;color:var(--t-muted,#8fa3b6);text-align:center;border-bottom:1px solid var(--t-line-strong,#2a3a4e);padding:0 0 .2rem}
 html[data-set="broadsheet"] .tally-box.claims tr.grp + tr th{font:600 .6rem/1.2 var(--f-body);letter-spacing:.1em;border-bottom:1px solid var(--t-strong)}
 .tally-box.claims td .via{display:block;font:400 .6rem/1.2 var(--f-body,inherit);color:var(--t-muted,#8fa3b6);margin-top:2px}
+/* Certainty on every card (app.js certaintyOf): a small tag in the meta line, linked to the Methodology */
+.card .meta .cert{display:inline-block;padding:.08rem .38rem;border:1px solid currentColor;border-radius:2px;font:600 .56rem/1.35 var(--f-body,inherit);letter-spacing:.07em;text-transform:uppercase;text-decoration:none;white-space:nowrap;opacity:.9}
+.card .meta .cert:hover,.card .meta .cert:focus-visible{opacity:1;text-decoration:none}
+.cert.c-conf{color:#4ade80}
+.cert.c-claim{color:#fbbf24}
+.cert.c-multi{color:#93c5fd}
+.cert.c-single{color:var(--t-muted,#9aabbc)}
+.cert.c-stmt{color:var(--t-text-2,#cbd5e1)}
+html[data-theme="broadsheet-day"] .cert.c-conf{color:#15803d}
+html[data-theme="broadsheet-day"] .cert.c-claim{color:#b45309}
+html[data-theme="broadsheet-day"] .cert.c-multi{color:#1d4ed8}
+/* How exact a pin is, in its pop-up */
+.pop-prec{margin:.3rem 0 0;font-size:.66rem;color:var(--t-muted,#9aabbc)}
+.pop-prec a{color:inherit;text-decoration:underline dotted}
+/* Numbers: what every figure counts, folded under each box */
+.how-counted{margin:.55rem 0 0;font-size:.7rem;line-height:1.45;color:var(--t-text-2,#cbd5e1)}
+.how-counted summary{cursor:pointer;font:600 .6rem/1.4 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase;color:var(--t-muted,#9aabbc)}
+.how-counted ul{margin:.4rem 0 .3rem;padding-left:1rem}
+.how-counted li{margin:.18rem 0}
+.how-counted p{margin:.3rem 0 0;color:var(--t-muted,#9aabbc)}
+.how-counted a{color:inherit}
+/* The desk's own pages: Methodology and About */
+.doc-root{min-height:100vh;background:var(--t-bg,var(--bg));color:var(--t-text,var(--text))}
+.doc-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.doc-top .desk-label-link{text-decoration:none;color:inherit}
+.doc-nav{display:flex;gap:1rem;font:600 .66rem/1.2 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase}
+.doc-nav a{color:var(--t-muted,#9aabbc);text-decoration:none}
+.doc-nav a:hover,.doc-nav a:focus-visible{color:var(--t-strong,#fff)}
+.doc{max-width:46rem;margin:0 auto;padding:1.4rem 1rem 3rem;font-size:1rem;line-height:1.62}
+.doc-title{font:600 clamp(1.7rem,4vw,2.3rem)/1.1 "Newsreader",Georgia,serif;color:var(--t-strong,#fff);margin:.4rem 0 .6rem;letter-spacing:-.01em}
+.doc-lede{font:400 1.12rem/1.5 "Newsreader",Georgia,serif;color:var(--t-text-2,#cbd5e1);margin:0 0 1.2rem}
+.doc-toc{border-top:1px solid var(--t-line-strong,#2a3a4e);border-bottom:1px solid var(--t-line-strong,#2a3a4e);padding:.6rem 0;margin:0 0 1.2rem}
+.doc-toc ol{margin:0;padding-left:1.2rem;columns:2;column-gap:2rem;font-size:.86rem}
+.doc-toc a{color:var(--t-text,inherit)}
+.doc-sec{scroll-margin-top:1rem;margin:1.8rem 0 0}
+.doc-sec h3{font:600 1.3rem/1.25 "Newsreader",Georgia,serif;color:var(--t-strong,#fff);margin:0 0 .5rem;padding-top:.8rem;border-top:1px solid var(--t-line,#1e2a38)}
+.doc-anchor{margin-left:.4rem;font-size:.8em;color:var(--t-muted,#9aabbc);text-decoration:none;opacity:0}
+.doc-sec h3:hover .doc-anchor,.doc-anchor:focus-visible{opacity:1}
+.doc-sec p{margin:.5rem 0}
+.doc-sec ul,.doc-sec ol{margin:.5rem 0;padding-left:1.25rem}
+.doc-sec li{margin:.3rem 0}
+.doc a{color:var(--accent-ui,#7eb6ff)}
+.doc-sec:target h3{color:var(--accent-ui,#7eb6ff)}
+.doc-corr{list-style:none;padding:0!important}
+.doc-corr li{margin:.9rem 0;padding-left:.8rem;border-left:3px solid var(--t-line-strong,#2a3a4e)}
+.doc-corr time{font:600 .66rem/1.2 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase;color:var(--t-muted,#9aabbc)}
+.doc-corr p{margin:.25rem 0}
+.doc-corr .why{color:var(--t-text-2,#cbd5e1);font-size:.92rem}
+.doc-foot{max-width:46rem;margin:0 auto;padding:1rem 1rem 2rem;border-top:1px solid var(--t-line,#1e2a38);font-size:.8rem;color:var(--t-muted,#9aabbc)}
+.doc-foot a{color:inherit}
+@media (max-width:720px){.doc-toc ol{columns:1}.doc{font-size:.97rem}}
+/* The live page's footer: links to the desk's own pages */
+footer .foot-links{display:flex;gap:1rem;flex-wrap:wrap}
+footer .foot-links a{color:inherit}
+
+/* One line under a part of the page on how it is made, linked to the Methodology */
+.cred-note{margin:.45rem 0 0;font-size:.68rem;line-height:1.45;color:var(--t-muted,#9aabbc)}
+.cred-note a{color:inherit;white-space:nowrap;text-decoration:underline dotted;text-underline-offset:2px}
+.cred-note a:hover,.cred-note a:focus-visible{color:var(--t-strong,#fff)}
+#bars .cred-note{grid-column:1/-1;margin:0}
+.leg-how{display:block;margin-top:.45rem;font-size:.62rem;color:var(--t-muted,#9aabbc);text-decoration:underline dotted}
+.sec-list .sec-page{border-top:1px solid var(--t-line,#1e2a38)}
+.sec-list .sec-page + .sec-page{border-top:0}

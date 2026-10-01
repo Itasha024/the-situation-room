@@ -1,0 +1,101 @@
+/* Hebrew and Arabic: the page reads right to left. Grids and flex rows turn
+ * by themselves (the report column sits left of the map); what is placed by
+ * left/right is mirrored here. The maps, charts and clocks stay left to right:
+ * west is still on the left, and time still runs left to right on a chart. */
+
+/* Scripts with no capitals and joined letters: no small caps, no spacing, no italics. */
+html[lang="he"] body *, html[lang="ar"] body * { font-style: normal !important; }
+html[lang="ar"] body *:not(.leaflet-container *) { letter-spacing: 0 !important; }
+html[lang="ar"] body { line-height: 1.6; }
+
+/* Maps and charts keep their own direction; the words on them do not. */
+html[dir="rtl"] .map-wrap,
+html[dir="rtl"] .pin-sheet-mapbox,
+html[dir="rtl"] .leaflet-container,
+html[dir="rtl"] svg.chart { direction: ltr; }
+html[dir="rtl"] .legend,
+html[dir="rtl"] .map-chip,
+html[dir="rtl"] .dev-step,
+html[dir="rtl"] .dev-none,
+html[dir="rtl"] .dev-switch,
+html[dir="rtl"] .leaflet-popup-content { direction: rtl; text-align: right; }
+html[dir="rtl"] .legend .leg-item { text-align: right; }
+html[dir="rtl"] #ye-clock, html[dir="rtl"] input[type="date"] { direction: ltr; unicode-bidi: isolate; }
+/* A paragraph still in English (a card not yet translated) keeps its own direction and full stop. */
+html[dir="rtl"] :is(p, li, .headline, .lead, .pop-full, .front-composed, .phase-sum, .ls-sn) { unicode-bidi: plaintext; }
+
+/* The day buttons' arrows point the way the page reads. */
+html[dir="rtl"] .day-nav-arr { display: inline-block; transform: scaleX(-1); }
+
+/* Masthead flag bar and section headings' accent rule. */
+html[dir="rtl"] .top h1.desk-label { padding: .14em calc(.6rem + 4px) .14em 0; }
+html[dir="rtl"] .top h1.desk-label::before { left: auto; right: 0; }
+html[dir="rtl"][data-set="broadsheet"] :is(.rail-head h2,.sit-head>h2,.situation>h2,.fronts-wrap>h2,.cas-wrap>h2,.timeline-wrap>h2)::before { left: auto; right: 0; }
+html[dir="rtl"] .sit-map-btn { margin-left: 0; margin-right: auto; }
+
+/* Cards */
+html[dir="rtl"] .card .reply-to { border-left: 0; border-right: 2px solid var(--accent-ui, #5b7290); }
+html[dir="rtl"] .now-tag { margin-right: 0; margin-left: .3rem; }
+html[dir="rtl"] .live-scan .ls-unplaced ul { padding-left: 0; padding-right: 1rem; }
+html[dir="rtl"] .live-scan .ls-row.tray { border-left: 0; border-right: 2px solid #854d0e; }
+
+/* Pagers: "previous" on the right, arrows turned. */
+html[dir="rtl"] .pg-prev { left: auto; right: 8px; }
+html[dir="rtl"] .pg-next { right: auto; left: 8px; }
+html[dir="rtl"] .pg-arrow svg { transform: scaleX(-1); }
+
+/* Number tables: names on the right, figures on the left. */
+html[dir="rtl"] .tally-box.claims th,
+html[dir="rtl"] .tally-box.claims td { text-align: left; }
+html[dir="rtl"] .tally-box.claims th[scope=row],
+html[dir="rtl"] .tally-box.ledger td.src,
+html[dir="rtl"] .tally-box.ledger th.src,
+html[dir="rtl"] .tally-box.ledger .l,
+html[dir="rtl"] .tally-box.ledger table.list td.d,
+html[dir="rtl"] .tally-box.ledger table.list th.d,
+html[dir="rtl"] .tally-box.ledger .spot { text-align: right; }
+html[dir="rtl"] .tally-box.ledger table.list td.t,
+html[dir="rtl"] .tally-box.ledger table.list th.t,
+html[dir="rtl"] .mbar b { text-align: left; }
+html[dir="rtl"] .tally-box.ledger small.claim,
+html[dir="rtl"] .num-note small.claim,
+html[dir="rtl"] .tally-box h3 small.unit { margin-left: 0; margin-right: .25rem; }
+html[dir="rtl"] .tally-box.ledger .hit,
+html[dir="rtl"] .tally-box.ledger table.list td.dates .sl { margin-right: 0; margin-left: .45rem; }
+html[dir="rtl"] .chart-key i,
+html[dir="rtl"] .sl-key span::before { margin-right: 0; margin-left: .3rem; }
+html[dir="rtl"] .tally-box.ledger .spot svg { margin-left: 0; margin-right: .35em; }
+html[dir="rtl"] .num-cat button+button { border-left: 0; border-right: 1px solid var(--t-line-strong, #334155); }
+html[dir="rtl"] .dev-key .dk { margin-right: 0; margin-left: 5px; }
+
+/* The site menu opens from the right, where its button is. */
+html[dir="rtl"] .site-menu .sm-panel { left: auto; right: 0; border-right: 0; border-left: 1px solid var(--t-line-strong, #334155); transform: translateX(100%); }
+html[dir="rtl"] .site-menu.open .sm-panel { transform: none; }
+html[dir="rtl"] .site-menu li a { padding: .7rem .7rem .7rem 0; border-left: 0; border-right: 3px solid transparent; }
+html[dir="rtl"] .site-menu li a:hover,
+html[dir="rtl"] .site-menu li a:focus-visible { border-right-color: var(--accent-ui, #7eb6ff); }
+html[dir="rtl"] .site-menu li a[aria-current="page"] { border-right-color: var(--t-strong, #fff); }
+
+/* The section pill sits bottom right, over the map's corner rather than the report column. */
+html[dir="rtl"] .sec-nav { left: auto; right: 12px; align-items: flex-end; }
+html[dir="rtl"] .sec-list a { border-left: 0; border-right: 2px solid transparent; text-align: right; }
+html[dir="rtl"] .sec-list a.on { border-right-color: var(--accent-ui, var(--t-link, #7eb6ff)); }
+
+/* The language switch, beside the theme button. */
+.lang-sw { display: flex; align-items: center; margin-inline-end: .5rem; border: 1px solid var(--t-line-strong, #334155); border-radius: 2px; overflow: hidden; }
+.lang-sw button { min-width: 2.1rem; height: 32px; padding: 0 .45rem; border: 0; background: transparent; color: var(--t-muted, #8fa0b4); font: 600 .74rem/1 var(--f-body, system-ui); cursor: pointer; }
+.lang-sw button + button { border-inline-start: 1px solid var(--t-line-strong, #334155); }
+.lang-sw button:hover, .lang-sw button:focus-visible { color: var(--t-strong, #fff); outline: none; }
+.lang-sw button.on { color: var(--t-strong, #fff); background: var(--t-surface-2, rgba(255,255,255,.06)); }
+.mast-end { align-items: center; }
+@media (max-width: 720px) {
+  .lang-sw button { min-width: 1.8rem; height: 30px; padding: 0 .3rem; font-size: .7rem; }
+  .lang-sw { margin-inline-end: .35rem; }
+}
+.lang-sw.ls-menu { margin: .2rem 0 .9rem; width: max-content; }
+.lang-sw.ls-menu button { min-width: 0; padding: 0 .7rem; font-size: .8rem; }
+.lang-sw.ls-menu { display: none; }
+@media (max-width: 720px) {
+  .lang-sw.ls-mast { display: none; }
+  .lang-sw.ls-menu { display: flex; }
+}

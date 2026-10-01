@@ -87,7 +87,7 @@ html[data-theme="broadsheet-night"] .feed-legend > :nth-child(3) .sw{background:
 /* ================= BROADSHEET: shared by Day and Night ================= */
 html[data-set="broadsheet"]{
   --r-card:2px;--r-btn:2px;--r-media:2px;
-  --f-body:"Libre Franklin",system-ui,sans-serif;--f-head:"Newsreader",Georgia,serif;--f-card:"Newsreader",Georgia,serif;--f-prose:"Newsreader",Georgia,serif;
+  --f-body:"Libre Franklin","Heebo","Noto Sans Arabic",system-ui,sans-serif;--f-head:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;--f-card:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;--f-prose:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;
 }
 /* Day: FT paper, claret, teal and oxford blue */
 html[data-theme="broadsheet-day"]{
@@ -114,27 +114,27 @@ html[data-theme="broadsheet-night"]{
 /* Masthead */
 html[data-set="broadsheet"] .top{border-bottom:1px solid var(--t-strong);box-shadow:0 3px 0 -2px var(--t-strong);padding:.85rem 1rem .8rem}
 html[data-set="broadsheet"] h1{font-size:1.75rem;font-weight:600;letter-spacing:-.012em;color:var(--t-strong)}
-html[data-set="broadsheet"] .sub{font:italic 400 .86rem/1.3 "Newsreader",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .sub{font:italic 400 .86rem/1.3 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-muted)}
 html[data-set="broadsheet"] .stamp{font:500 .7rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--t-muted)}
 html[data-set="broadsheet"] .pulse{background:var(--plc)}
 /* Control shares: boxes like the Original, serif figures */
 html[data-set="broadsheet"] .bars{border-bottom:1px solid var(--t-line-strong);gap:1.2rem;padding:.7rem 1rem .8rem}
 html[data-set="broadsheet"] .bar{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-radius:4px;padding:.5rem .7rem .6rem}
 html[data-set="broadsheet"] .bar h3{font:600 .66rem/1.2 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--t-text-2)}
-html[data-set="broadsheet"] .bar .pct{font:600 1.9rem/1.05 "Newsreader",Georgia,serif;letter-spacing:-.01em}
+html[data-set="broadsheet"] .bar .pct{font:600 1.9rem/1.05 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;letter-spacing:-.01em}
 html[data-set="broadsheet"] .track{height:2px;border-radius:0;background:var(--t-line)}
 /* Latest developments */
 html[data-set="broadsheet"] .situation{background:var(--t-surface-1);border-bottom:1px solid var(--t-line-strong);padding:.8rem 1rem .9rem}
-html[data-set="broadsheet"] .situation p,html[data-set="broadsheet"] .situation-window,html[data-set="broadsheet"] .front-sum,html[data-set="broadsheet"] .phase-sum,html[data-set="broadsheet"] .front-card .full,html[data-set="broadsheet"] .front-card .front-composed,html[data-set="broadsheet"] .phase-card .full p{font-family:"Newsreader",Georgia,serif;font-size:1.02rem;line-height:1.55;color:var(--t-text)}
+html[data-set="broadsheet"] .situation p,html[data-set="broadsheet"] .situation-window,html[data-set="broadsheet"] .front-sum,html[data-set="broadsheet"] .phase-sum,html[data-set="broadsheet"] .front-card .full,html[data-set="broadsheet"] .front-card .front-composed,html[data-set="broadsheet"] .phase-card .full p{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:1.02rem;line-height:1.55;color:var(--t-text)}
 html[data-set="broadsheet"] .rail h2,html[data-set="broadsheet"] .situation h2,html[data-set="broadsheet"] .fronts-wrap h2,html[data-set="broadsheet"] .cas-wrap h2,html[data-set="broadsheet"] .timeline-wrap>h2{font-size:1.4rem;font-weight:600;letter-spacing:-.006em;color:var(--t-strong)}
-html[data-set="broadsheet"] .cadence{font:italic 400 .8rem/1.3 "Newsreader",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .cadence{font:italic 400 .8rem/1.3 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-muted)}
 html[data-set="broadsheet"] .to-fronts{background:transparent;border-color:var(--accent-ui);color:var(--accent-ui);text-transform:uppercase;letter-spacing:.08em;font-size:.64rem}
 /* Live scan */
 html[data-set="broadsheet"] .live-scan{background:transparent;border-bottom:1px solid var(--t-line-strong);padding:.2rem 1rem}
 html[data-set="broadsheet"] .live-scan details{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-radius:4px;padding:.15rem .65rem .2rem}
 html[data-set="broadsheet"] .live-scan summary::before{color:var(--accent-ui)}
 html[data-set="broadsheet"] .live-scan .ls-title{font:600 .68rem/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase}
-html[data-set="broadsheet"] .live-scan .ls-meta{font:italic .8rem "Newsreader",Georgia,serif}
+html[data-set="broadsheet"] .live-scan .ls-meta{font:italic .8rem "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif}
 /* Toolbar */
 html[data-set="broadsheet"] .toolbar{border-bottom:1px solid var(--t-line-strong)}
 html[data-set="broadsheet"] .time-filter .tf-label{font:600 .64rem/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase}
@@ -147,11 +147,11 @@ html[data-theme="broadsheet-night"] .leaflet-tile-pane{filter:sepia(.3) brightne
 html[data-set="broadsheet"] .leaflet-container{background:var(--t-bg)}
 html[data-set="broadsheet"] .legend,html[data-set="broadsheet"] .map-chip{background:var(--t-glass);border:1px solid var(--t-line-strong);border-radius:2px;box-shadow:var(--shadow-pop)}
 html[data-set="broadsheet"] .legend .leg-title{font:600 .64rem/1 var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--t-strong)}
-html[data-set="broadsheet"] .legend .leg-sec{font-family:"Newsreader",Georgia,serif;font-style:italic;font-weight:500;font-size:.7rem;letter-spacing:0}
-html[data-set="broadsheet"] .map-chip{font:italic .78rem "Newsreader",Georgia,serif;color:var(--t-text-2)}
+html[data-set="broadsheet"] .legend .leg-sec{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-style:italic;font-weight:500;font-size:.7rem;letter-spacing:0}
+html[data-set="broadsheet"] .map-chip{font:italic .78rem "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-text-2)}
 html[data-set="broadsheet"] .gov-name span{font:600 10.5px/1.1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--halo-ink);
   text-shadow:0 0 2px var(--halo),0 0 3px var(--halo),1px 1px 0 var(--halo),-1px -1px 0 var(--halo),1px -1px 0 var(--halo),-1px 1px 0 var(--halo)}
-html[data-set="broadsheet"] .sa-city span{font-family:"Newsreader",Georgia,serif;font-style:italic;color:var(--halo-ink);text-shadow:0 0 2px var(--halo),0 0 3px var(--halo),1px 1px 0 var(--halo),-1px -1px 0 var(--halo)}
+html[data-set="broadsheet"] .sa-city span{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-style:italic;color:var(--halo-ink);text-shadow:0 0 2px var(--halo),0 0 3px var(--halo),1px 1px 0 var(--halo),-1px -1px 0 var(--halo)}
 html[data-set="broadsheet"] .sa-city i{background:var(--halo-ink);border-color:var(--halo)}
 /* Event marks: rounded squares in the set's inks, edged in paper */
 html[data-set="broadsheet"] .ev .ev-glyph{border-radius:7px;border:2px solid var(--ev-edge);color:#fff;box-shadow:0 4px 10px rgba(40,20,10,.35),0 0 0 1px rgba(40,20,10,.35)}
@@ -167,39 +167,39 @@ html[data-set="broadsheet"] .leg-ico.vessel{background:var(--ink-vessel)}
 html[data-set="broadsheet"] .leg-ico.port{background:var(--ink-port)}
 /* Latest reports: boxed cards with the side colour on the left edge, as in the Original */
 html[data-set="broadsheet"] .rail{background:var(--t-bg)}
-html[data-set="broadsheet"] .feed-legend{font:italic .78rem "Newsreader",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .feed-legend{font:italic .78rem "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-muted)}
 html[data-set="broadsheet"] .feed-legend .sw{border-radius:0;width:3px;height:12px}
 html[data-set="broadsheet"] .card{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-inline-start:3px solid var(--t-faint);border-radius:4px;padding:.65rem .75rem .75rem}
 html[data-set="broadsheet"] :is(.card.lean-south,.card.lean-indep,.card.lean-intl,.card.lean-other){border-inline-start-color:var(--t-faint)!important}
 html[data-set="broadsheet"] .card.lean-houthi{border-inline-start-color:var(--houthi)!important}
 html[data-set="broadsheet"] .card.lean-gov{border-inline-start-color:var(--plc)!important}
 html[data-set="broadsheet"] .card .headline{font-size:1.12rem;font-weight:500;line-height:1.28;color:var(--t-strong)}
-html[data-set="broadsheet"] .card .lead,html[data-set="broadsheet"] .card .full{font-family:"Newsreader",Georgia,serif;font-size:.92rem;line-height:1.5;color:var(--t-text-2)}
+html[data-set="broadsheet"] .card .lead,html[data-set="broadsheet"] .card .full{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:.92rem;line-height:1.5;color:var(--t-text-2)}
 html[data-set="broadsheet"] .card time{font:600 .62rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--t-text-2)}
 html[data-set="broadsheet"] .card .src{background:transparent;padding:0;font:600 .62rem/1 var(--f-body);letter-spacing:.06em;text-transform:uppercase}
 html[data-set="broadsheet"] .card .src a,html[data-set="broadsheet"] .card .src-wrap a{color:var(--accent-ui)}
-html[data-set="broadsheet"] .card .lean-tag{background:transparent;padding:0;font:italic .74rem "Newsreader",Georgia,serif}
+html[data-set="broadsheet"] .card .lean-tag{background:transparent;padding:0;font:italic .74rem "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif}
 html[data-set="broadsheet"] .card .actions button,html[data-set="broadsheet"] .card .actions a{color:var(--accent-ui);font:600 .64rem/1 var(--f-body);letter-spacing:.07em;text-transform:uppercase}
 html[data-set="broadsheet"] .card .meta .card-map{background:transparent;border:1px solid var(--t-line-strong);color:var(--t-text-2);font:600 .6rem/1 var(--f-body);letter-spacing:.07em;text-transform:uppercase}
-html[data-set="broadsheet"] .card .also{font:italic .78rem "Newsreader",Georgia,serif}
-html[data-set="broadsheet"] .card .reply-to{border-left-color:var(--accent-ui);background:var(--t-surface-2);font-family:"Newsreader",Georgia,serif;font-style:italic;font-size:.8rem}
+html[data-set="broadsheet"] .card .also{font:italic .78rem "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif}
+html[data-set="broadsheet"] .card .reply-to{border-left-color:var(--accent-ui);background:var(--t-surface-2);font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-style:italic;font-size:.8rem}
 /* Fronts, numbers, timeline: boxed pagers, as in the Original */
 html[data-set="broadsheet"] .fronts-wrap,html[data-set="broadsheet"] .cas-wrap,html[data-set="broadsheet"] .timeline-wrap{background:transparent}
 html[data-set="broadsheet"] .pager{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-radius:4px}
 html[data-set="broadsheet"] .pager .front-card,html[data-set="broadsheet"] .pager .phase-card{padding:.9rem 2.8rem}
 html[data-set="broadsheet"] .pager .tally-box{padding:.8rem 2.8rem .9rem}
-html[data-set="broadsheet"] .front-card strong,html[data-set="broadsheet"] .phase-head strong{font:600 1.2rem/1.25 "Newsreader",Georgia,serif;color:var(--t-strong)}
-html[data-set="broadsheet"] .front-where,html[data-set="broadsheet"] .front-plain{font:italic .88rem/1.45 "Newsreader",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .front-card strong,html[data-set="broadsheet"] .phase-head strong{font:600 1.2rem/1.25 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-strong)}
+html[data-set="broadsheet"] .front-where,html[data-set="broadsheet"] .front-plain{font:italic .88rem/1.45 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-muted)}
 html[data-set="broadsheet"] .toggle-front,html[data-set="broadsheet"] .toggle-phase,html[data-set="broadsheet"] .toggle-sit{color:var(--accent-ui);font:600 .64rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
 html[data-set="broadsheet"] .front-map-btn{background:transparent;border:1px solid var(--t-line-strong);color:var(--t-text-2);font:600 .6rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
-html[data-set="broadsheet"] .tally-box h3{font:600 1.05rem/1.2 "Newsreader",Georgia,serif;letter-spacing:0;text-transform:none;color:var(--t-strong)}
+html[data-set="broadsheet"] .tally-box h3{font:600 1.05rem/1.2 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;letter-spacing:0;text-transform:none;color:var(--t-strong)}
 html[data-set="broadsheet"] .tally-box.claims table{font-size:.86rem}
 html[data-set="broadsheet"] .tally-box.claims tr:first-child th{font:600 .6rem/1.2 var(--f-body);letter-spacing:.1em;border-bottom:1px solid var(--t-strong)}
-html[data-set="broadsheet"] .tally-box.claims th[scope=row]{font-family:"Newsreader",Georgia,serif;font-size:.95rem}
+html[data-set="broadsheet"] .tally-box.claims th[scope=row]{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:.95rem}
 html[data-set="broadsheet"] .tally-box.claims td{font:600 .9rem var(--f-body)}
 html[data-set="broadsheet"] .tally-box.claims .h{color:var(--houthi)}
 html[data-set="broadsheet"] .tally-box.claims .g{color:var(--plc)}
-html[data-set="broadsheet"] .tally-box.claims td .q{font-family:"Newsreader",Georgia,serif;font-style:italic;font-weight:400}
+html[data-set="broadsheet"] .tally-box.claims td .q{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-style:italic;font-weight:400}
 /* Notes on the map */
 html[data-set="broadsheet"] .leaflet-popup-content-wrapper{border-radius:2px;border-top:3px solid var(--accent-ui)}
 html[data-set="broadsheet"] .leaflet-popup-content{font-family:var(--f-body)}
@@ -408,14 +408,14 @@ html[data-theme="broadsheet-day"] .dv .dv-dot{background:#fff;box-shadow:0 0 0 2
 /* Search and the alignment filters in the broadsheet themes. */
 html[data-set="broadsheet"] .feed-search-btn{border-radius:0;color:var(--t-text-2)}
 html[data-set="broadsheet"] .feed-search-btn:hover,html[data-set="broadsheet"] .feed-search-btn[aria-expanded="true"]{background:var(--t-surface-2);color:var(--t-strong)}
-html[data-set="broadsheet"] .feed-search input{border-radius:0;background:var(--t-surface-1);color:var(--t-strong);font-family:"Newsreader",Georgia,serif;font-size:1rem}
+html[data-set="broadsheet"] .feed-search input{border-radius:0;background:var(--t-surface-1);color:var(--t-strong);font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:1rem}
 html[data-set="broadsheet"] .feed-search input:focus{outline-color:var(--accent-ui)}
 html[data-set="broadsheet"] .feed-search .fs-go{border-radius:0;background:var(--accent-ui);color:var(--on-accent);font:600 .62rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
 html[data-set="broadsheet"] .feed-legend .lean-f{border-radius:0;padding:.26rem .55rem}
 html[data-set="broadsheet"] .feed-legend .lean-f:hover,html[data-set="broadsheet"] .feed-legend .lean-f[aria-pressed="true"]{background:var(--t-surface-2);color:var(--t-strong)}
-html[data-set="broadsheet"] .feed-note{font-family:"Newsreader",Georgia,serif;font-size:.9rem;color:var(--t-text-2)}
+html[data-set="broadsheet"] .feed-note{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:.9rem;color:var(--t-text-2)}
 html[data-set="broadsheet"] .feed-note button{color:var(--accent-ui);font:600 .62rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
-html[data-set="broadsheet"] .fs-empty{font-family:"Newsreader",Georgia,serif;font-size:.95rem}
+html[data-set="broadsheet"] .fs-empty{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:.95rem}
 /* Every "Show on map" lights up on hover as Latest developments' one does, in every theme. */
 html .card .meta .card-map:is(:hover,:focus-visible),html[data-set] .card .meta .card-map:is(:hover,:focus-visible),
 html .front-head .sit-map-btn.front-map-btn:is(:hover,:focus-visible),html[data-set] .front-head .sit-map-btn.front-map-btn:is(:hover,:focus-visible),
@@ -479,9 +479,9 @@ html[data-set="broadsheet"] .num-cat button+button{border-left-color:var(--t-lin
 html[data-set="broadsheet"] .num-cat button.on{background:var(--t-strong);color:var(--t-bg,var(--bg,#fff));box-shadow:inset 0 -3px 0 var(--accent-ui)}
 html[data-set="broadsheet"] .tally-box.ledger td.src{font:400 .78rem/1.3 var(--f-body)}
 html[data-set="broadsheet"] .tally-box.ledger th small,html[data-set="broadsheet"] .tally-box.ledger td small{font-family:var(--f-body);font-size:.7rem}
-html[data-set="broadsheet"] .tally-box.ledger .l{font:400 .84rem/1.35 "Newsreader",Georgia,serif}
-html[data-set="broadsheet"] .num-empty{font:italic 400 .9rem/1.4 "Newsreader",Georgia,serif}
-html[data-set="broadsheet"] .num-note{font:italic 400 .78rem/1.4 "Newsreader",Georgia,serif}
+html[data-set="broadsheet"] .tally-box.ledger .l{font:400 .84rem/1.35 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif}
+html[data-set="broadsheet"] .num-empty{font:italic 400 .9rem/1.4 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif}
+html[data-set="broadsheet"] .num-note{font:italic 400 .78rem/1.4 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif}
 html[data-set="broadsheet"] .st{border-radius:0}
 html[data-set="broadsheet"] .tally-box.ledger .spark polyline{stroke:var(--t-strong)}
 html[data-theme="broadsheet-day"] .st-working,html[data-theme="broadsheet-day"] .tally-box.ledger small.q.up{color:#15803d}
@@ -493,7 +493,7 @@ html[data-theme="broadsheet-day"] .tally-box.claims .tier.t-claim{color:#b45309}
 html[data-theme="broadsheet-day"] .chart .s2,html[data-theme="broadsheet-day"] .chart-key i.s2{stroke:#1d4ed8;border-top-color:#1d4ed8}
 html[data-theme="broadsheet-day"] .chart circle.s2{fill:#1d4ed8}
 html[data-set="broadsheet"] .stat3 div{border-radius:2px}
-html[data-set="broadsheet"] .stat3 b{font-family:"Newsreader",Georgia,serif;font-weight:600}
+html[data-set="broadsheet"] .stat3 b{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-weight:600}
 html[data-set="broadsheet"] .chart-title{font-family:var(--f-body)}
 html[data-theme="broadsheet-day"] .tally-box.claims .sl-unoff,html[data-theme="broadsheet-day"] .sl-key .sl-unoff{color:#b45309}
 html[data-set="broadsheet"] .spot-pop{background:var(--t-surface-2,var(--paper,#fff));border-radius:2px}
@@ -518,14 +518,14 @@ html[data-set="broadsheet"] .tally-box h3 small.unit{font:400 .72rem/1 var(--f-b
 .mast-end{justify-self:end;display:flex}
 .mast-end .theme-step{margin:0}
 .mast-mid{display:flex;flex-direction:column;align-items:center;font-size:clamp(1.65rem,1.16rem + 2.1vw,2.6rem);gap:.173em}
-.mast-name{display:flex;color:var(--t-strong);text-decoration:none;font-family:"Newsreader",Georgia,serif;white-space:nowrap}
+.mast-name{display:flex;color:var(--t-strong);text-decoration:none;font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;white-space:nowrap}
 .mast-name .mn{font-weight:600;font-size:1em;line-height:1;letter-spacing:-.018em}
 .mast-line{display:flex;align-items:center;gap:.79em;font:700 .292em/1.2 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:var(--accent-ui);white-space:nowrap}
 .mast-line::before,.mast-line::after{content:"";width:2.3em;height:max(1px,.165em);background:var(--accent-ui)}
 html[data-set] .top{border-bottom:1px solid var(--t-line-strong);box-shadow:none;padding:.6rem 1rem}
 /* The desk's name: serif capitals by a dark bar, the bar centred on the capitals (the box is trimmed
    to their height; older browsers get padding for the empty space under them) */
-html .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);position:relative;padding:.14em 0 .14em calc(.6rem + 4px);text-box:trim-both cap alphabetic}
+html .top h1.desk-label{font:600 1.08rem/1.2 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--t-strong);position:relative;padding:.14em 0 .14em calc(.6rem + 4px);text-box:trim-both cap alphabetic}
 /* The bar beside the desk name in the Yemeni flag: red, white, black (a hairline keeps the white and the black visible on either theme) */
 html .top h1.desk-label::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#ce1126 0 33.34%,#fff 0 66.67%,#000 0);box-shadow:0 0 0 1px var(--t-line-strong,#555)}
 @supports not (text-box:trim-both cap alphabetic){html .top h1.desk-label{padding-top:.26em;padding-bottom:0}}
@@ -576,7 +576,7 @@ html[data-set="broadsheet"] .tally-box.claims tr.grp + tr th{font:600 .6rem/1.2 
 .site-menu.open .sm-back{opacity:1}
 .site-menu.open .sm-panel{transform:none}
 .sm-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding-bottom:.6rem;border-bottom:1px solid var(--t-line-strong,#334155)}
-.sm-name{font:600 1.15rem/1.1 "Newsreader",Georgia,serif;color:var(--t-strong,#fff);letter-spacing:-.01em}
+.sm-name{font:600 1.15rem/1.1 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-strong,#fff);letter-spacing:-.01em}
 .sm-x{display:grid;place-items:center;width:30px;height:30px;padding:0;background:transparent;border:0;color:var(--t-muted,#8fa0b4);cursor:pointer}
 .sm-x:hover,.sm-x:focus-visible{color:var(--t-strong,#fff);outline:none}
 .sm-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}

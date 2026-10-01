@@ -104,8 +104,6 @@ export function YemenDesk() {
   return (
     <div
       id="yemen-desk-root"
-      dir="ltr"
-      lang="en"
       suppressHydrationWarning
       dangerouslySetInnerHTML={{ __html: DESK_HTML }}
     />

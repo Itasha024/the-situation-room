@@ -21,6 +21,29 @@
  * ========================================================================== */
 
 /* ---------------------------------------------------------------- *
+ * Language: English, or Hebrew / Arabic from public/i18n/<lang>.js (loaded
+ * before this file by the page's head). T() gives a label in the reader's
+ * language; {name} slots are filled from `v`. Plain labels set in the markup
+ * or by innerHTML are put in the language by public/i18n/dom.js.
+ * ---------------------------------------------------------------- */
+const I18N = (typeof window !== 'undefined' && window.DESK_I18N) || null;
+const LANG = I18N ? I18N.lang : 'en';
+const LOC = I18N ? I18N.loc : 'en-GB';
+const RTL = !!(I18N && I18N.dir === 'rtl');
+function T(s, v) {
+  let out = (I18N && I18N.s && I18N.s[s]) || s;
+  if (typeof out === 'function') out = out(v || {});
+  if (v) out = out.replace(/\{(\w+)\}/g, (m, k) => (k in v ? v[k] : m));
+  return out;
+}
+/** A count with its noun in the reader's language: N('report', 3) → "3 reports". */
+function N(word, n) {
+  const f = I18N && I18N.n && I18N.n[word];
+  if (f) return f(n);
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+/* ---------------------------------------------------------------- *
  * Palette and category marks
  * ---------------------------------------------------------------- */
 
@@ -317,14 +340,14 @@ function fmtStamp(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   if (!Number.isFinite(d.getTime())) return '';
-  const date = d.toLocaleDateString('en-GB', { timeZone: VIEW_TZ, day: '2-digit', month: 'short' });
-  const time = d.toLocaleTimeString('en-GB', { timeZone: VIEW_TZ, hour: '2-digit', minute: '2-digit', hour12: false });
+  const date = d.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: '2-digit', month: 'short' });
+  const time = d.toLocaleTimeString(LOC, { timeZone: VIEW_TZ, hour: '2-digit', minute: '2-digit', hour12: false });
   return `${time} · ${date}`;
 }
 
 function fmtClock(ts) {
   if (!ts) return '';
-  return new Date(ts).toLocaleTimeString('en-GB', {
+  return new Date(ts).toLocaleTimeString(LOC, {
     timeZone: VIEW_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
   });
 }
@@ -334,7 +357,7 @@ function startYemenClock() {
   const el = document.getElementById('ye-clock');
   if (!el || el.dataset.on) return;
   el.dataset.on = '1';
-  const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Aden', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const fmt = new Intl.DateTimeFormat(LOC, { timeZone: 'Asia/Aden', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   // Each digit sits in a cell as wide as the font's widest digit (what tabular figures do;
   // this font has none), so on PC the ticking seconds never move "Yemen" before the clock.
   const tick = () => { el.innerHTML = fmt.format(new Date()).replace(/[0-9]/g, (d) => `<span class="dg">${d}</span>`); };
@@ -373,8 +396,8 @@ function fmtWhen(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   if (!Number.isFinite(d.getTime())) return '';
-  const day = d.toLocaleDateString('en-GB', { timeZone: VIEW_TZ, day: 'numeric', month: 'short' });
-  return `${fmtClock(ts)} on ${day}`;
+  const day = d.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: 'numeric', month: 'short' });
+  return T('{t} on {d}', { t: fmtClock(ts), d: day });
 }
 
 function jerusalemYmd(ts) {
@@ -460,7 +483,7 @@ function cardMediaHtml(m) {
     ? pics.map((p, i) => `<img class="cm-slide${i ? '' : ' on'}" src="${escapeHtml(p.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"${i ? ' aria-hidden="true"' : ''}>`).join('')
     : `<img src="${escapeHtml(m.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">`;
   const nav = pics
-    ? `<span class="cm-dots" role="tablist">${pics.map((_, i) => `<button type="button" class="${i ? '' : 'on'}" data-i="${i}" aria-label="Picture ${i + 1} of ${pics.length}"></button>`).join('')}</span>
+    ? `<span class="cm-dots" role="tablist">${pics.map((_, i) => `<button type="button" class="${i ? '' : 'on'}" data-i="${i}" aria-label="${T('Picture {i} of {n}', { i: i + 1, n: pics.length })}"></button>`).join('')}</span>
        <button type="button" class="cm-arrow cm-prev" aria-label="Previous picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
        <button type="button" class="cm-arrow cm-next" aria-label="Next picture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>`
     : '';
@@ -471,7 +494,7 @@ function cardMediaHtml(m) {
         ${dur ? `<span class="cm-dur">${dur}</span>` : ''}
       </button>
       ${nav}
-      <a class="cm-link" href="${escapeHtml(m.post)}" target="_blank" rel="noopener">${video ? '▶ Watch' : 'View'} on ${where}</a>
+      <a class="cm-link" href="${escapeHtml(m.post)}" target="_blank" rel="noopener">${T(video ? '▶ Watch on {w}' : 'View on {w}', { w: where })}</a>
     </div>`;
 }
 
@@ -1653,7 +1676,7 @@ function applyLiveOverlay(base) {
 }
 
 function stampText() {
-  return `Updated ${fmtClock(data.updatedAt)}`;
+  return T('Updated {t}', { t: fmtClock(data.updatedAt) });
 }
 
 let liveInflight = null;
@@ -1783,9 +1806,9 @@ let briefTried = false;
 function cadenceStamp(top = false) {
   const cls = top ? 'cadence at-head' : 'cadence';
   const hours = (brief && +brief.cadenceHours) || 6;
-  if (!brief) return `<p class="${cls}">Refreshes every ${hours} hours.</p>`;
+  if (!brief) return `<p class="${cls}">${T('Refreshes every {h} hours.', { h: hours })}</p>`;
   const overdue = Date.now() > Date.parse(brief.nextUpdateAt);
-  return `<p class="${cls}${overdue ? ' late' : ''}">Updates every ${hours} hours · Next ${escapeHtml(fmtWhen(brief.nextUpdateAt))}${overdue ? ' · refresh due' : ''}</p>`;
+  return `<p class="${cls}${overdue ? ' late' : ''}">${T('Updates every {h} hours · Next {t}', { h: hours, t: escapeHtml(fmtWhen(brief.nextUpdateAt)) })}${overdue ? T(' · refresh due') : ''}</p>`;
 }
 
 function frontActivity(id) {
@@ -1823,7 +1846,7 @@ function renderLiveScan() {
   if (meta) {
     const t = liveOverlay.scannedAt ? fmtClock(liveOverlay.scannedAt) : '—';
     meta.textContent = liveOverlay.scannedAt
-      ? `Last scan ${t}`
+      ? T('Last scan {t}', { t })
       : 'Not scanned yet';
   }
   if (!details || !details.open || !list) return;
@@ -1848,7 +1871,7 @@ function renderLiveScan() {
   }).join('') || '<p class="ls-hint">Nothing read in the last scan.</p>';
   const left = rows.length - scanShown;
   list.innerHTML = html + (left > 0
-    ? `<button type="button" class="more" id="ls-more">Show more (+${Math.min(SCAN_STEP, left)})</button>`
+    ? `<button type="button" class="more" id="ls-more">${T('Show more (+{n})', { n: Math.min(SCAN_STEP, left) })}</button>`
     : '');
   const more = document.getElementById('ls-more');
   if (more) more.onclick = () => { scanShown += SCAN_STEP; renderLiveScan(); };
@@ -2113,7 +2136,7 @@ function linkPlacesAll(text) {
   let at = 0;
   for (const [s, e, entry] of placeSpans(t)) {
     placeRegistry.set(entry.key, entry);
-    out += `${escapeHtml(t.slice(at, s))}<a href="#map" class="prose-pin prose-place" data-pk="${escapeHtml(entry.key)}" title="Show ${escapeHtml(entry.name)} on the map">${escapeHtml(t.slice(s, e))}</a>`;
+    out += `${escapeHtml(t.slice(at, s))}<a href="#map" class="prose-pin prose-place" data-pk="${escapeHtml(entry.key)}" title="${T('Show {p} on the map', { p: escapeHtml(T(entry.name)) })}">${escapeHtml(t.slice(s, e))}</a>`;
     at = e;
   }
   return out + escapeHtml(t.slice(at));
@@ -2710,8 +2733,8 @@ const SAUDI_VIEW = [[16.3, 41.6], [19.4, 45.2]];
 /** The hours this update covers, on the reader's clock: "00:00–12:00, 29 Sep". */
 function briefHours() {
   if (!brief || !brief.windowStart || !brief.updatedAt) return '';
-  const t = (iso) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: VIEW_TZ });
-  const day = new Date(brief.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: VIEW_TZ });
+  const t = (iso) => new Date(iso).toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: VIEW_TZ });
+  const day = new Date(brief.updatedAt).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ });
   return `${t(brief.windowStart)}–${t(brief.updatedAt)}, ${day}`;
 }
 
@@ -2747,14 +2770,14 @@ function openDevelopmentsMap(anchor) {
   }
   for (const a of areas) {
     const feat = geoCache && geoCache.features.find((f) => f.properties.shapeISO === a.id);
-    a.name = a.id === 'SA' ? 'Saudi Arabia' : String((byIso[a.id] || {}).name || (feat && feat.properties.shapeName) || 'Yemen').replace(/ Governorate$/, '');
+    a.name = T(a.id === 'SA' ? 'Saudi Arabia' : String((byIso[a.id] || {}).name || (feat && feat.properties.shapeName) || 'Yemen').replace(/ Governorate$/, ''));
     a.feat = feat;
   }
   areas.sort((p, q) => q.marks.length - p.marks.length || p.name.localeCompare(q.name));
   const many = areas.length > 1;
   document.querySelectorAll('.sit-map-btn').forEach((b) => b.setAttribute('aria-expanded', 'true'));
   openMapPop({
-    title: `Latest developments${briefHours() ? ` · ${briefHours()}` : ''}`,
+    title: `${T('Latest developments')}${briefHours() ? ` · ${briefHours()}` : ''}`,
     anchor,
     legend: devLegendHtml(marks, true),
     wide: true,
@@ -2772,7 +2795,7 @@ function openDevelopmentsMap(anchor) {
       const say = () => {
         const a = areas[at];
         const n = a.marks.length;
-        if (label) label.innerHTML = `<b>${escapeHtml(a.name)}</b><small>${n} event${n === 1 ? '' : 's'}${many ? ` · ${at + 1} of ${areas.length}` : ''}</small>`;
+        if (label) label.innerHTML = `<b>${escapeHtml(a.name)}</b><small>${N('event', n)}${many ? ` · ${T('{i} of {n}', { i: at + 1, n: areas.length })}` : ''}</small>`;
       };
       // Zooming out stops a step past the area's own view: the arrows go to the others.
       const hold = () => m.setMinZoom(Math.max(4, m.getZoom() - 1.5));
@@ -2895,7 +2918,7 @@ const TALLY_FALLBACK = {
  */
 function pagerHtml(kind, slides, idx, labels) {
   const many = slides.length > 1;
-  const items = slides.map((s, i) => `<div class="pg-slide${i === idx ? ' on' : ''}" data-i="${i}" role="group" aria-roledescription="slide" aria-label="${escapeHtml(labels[i])} (${i + 1} of ${slides.length})"${i === idx ? '' : ' aria-hidden="true" inert'}>${s}</div>`).join('');
+  const items = slides.map((s, i) => `<div class="pg-slide${i === idx ? ' on' : ''}" data-i="${i}" role="group" aria-roledescription="slide" aria-label="${escapeHtml(T('{l} ({i} of {n})', { l: T(labels[i]), i: i + 1, n: slides.length }))}"${i === idx ? '' : ' aria-hidden="true" inert'}>${s}</div>`).join('');
   const dots = labels.map((l, i) => `<button type="button" role="tab" data-i="${i}" title="${escapeHtml(l)}" aria-label="${escapeHtml(l)}" aria-selected="${i === idx}" class="${i === idx ? 'on' : ''}"></button>`).join('');
   return `<div class="pager pager-${kind}${many ? ' many' : ''}" aria-roledescription="carousel">
       <div class="pg-track">${items}</div>
@@ -2960,8 +2983,11 @@ function wirePager(root, idx, onChange, opts) {
   dots.forEach((b) => { b.onclick = () => go(Number(b.dataset.i) || 0); });
   root.onkeydown = (e) => {
     if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
-    if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1, -1); }
-    else if (e.key === 'ArrowRight') { e.preventDefault(); go(cur + 1, 1); }
+    // Right to left, the next page is to the left.
+    const back = RTL ? 'ArrowRight' : 'ArrowLeft';
+    const fwd = RTL ? 'ArrowLeft' : 'ArrowRight';
+    if (e.key === back) { e.preventDefault(); go(cur - 1, -1); }
+    else if (e.key === fwd) { e.preventDefault(); go(cur + 1, 1); }
   };
   let x0 = null;
   let y0 = null;
@@ -2972,7 +2998,8 @@ function wirePager(root, idx, onChange, opts) {
     const dx = e.changedTouches[0].clientX - x0;
     const dy = e.changedTouches[0].clientY - y0;
     x0 = null;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) go(cur + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+    const on = (dx < 0) !== RTL ? 1 : -1;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) go(cur + on, on);
   }, { passive: true });
 }
 
@@ -3002,10 +3029,10 @@ function fallbackNumbers(t) {
 
 function numCell(c, cls) {
   if (!c || !Number.isFinite(c.value)) return `<td class="${cls} none" title="Not published: no count for this round from these sources">—</td>`;
-  const n = c.value >= 1e6 ? `${(c.value / 1e6).toLocaleString('en-US', { maximumFractionDigits: 1 })}M` : Number(c.value).toLocaleString('en-US');
+  const n = c.value >= 1e6 ? `${(c.value / 1e6).toLocaleString(LOC, { maximumFractionDigits: 1 })}M` : Number(c.value).toLocaleString(LOC);
   const q = c.q ? `<small class="q">${escapeHtml(c.q)}</small> ` : '';
-  const when = c.date ? new Date(`${c.date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-  const tip = [c.name, when].filter(Boolean).join(', ') + (c.via ? ` (via ${c.via})` : '') + (c.note ? ` — ${c.note}` : '');
+  const when = c.date ? new Date(`${c.date}T12:00:00Z`).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) : '';
+  const tip = [c.name, when].filter(Boolean).join(', ') + (c.via ? T(' (via {s})', { s: c.via }) : '') + (c.note ? ` — ${c.note}` : '');
   const inner = c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${q}${n}</a>` : `${q}${n}`;
   return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}</td>`;
 }
@@ -3030,7 +3057,7 @@ const BASE_SPAN = '13 Jun – 12 Jul';
 function ledDay(d) {
   if (!d) return '';
   const t = new Date(`${String(d).slice(0, 10)}T12:00:00Z`);
-  return Number.isFinite(t.getTime()) ? t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  return Number.isFinite(t.getTime()) ? t.toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) : '';
 }
 
 /** A day in Yemen (the count turns at midnight there): today, or n days before. */
@@ -3063,7 +3090,7 @@ const SL_KEY = '<p class="sl-key"><span class="sl-off">Official</span><span clas
 
 const ledEmpty = (text) => `<p class="num-empty">${escapeHtml(text)}</p>`;
 const ledBox = (title, body, unit) => `<div class="tally-box claims ledger"><h3>${escapeHtml(title)}${unit ? ` <small class="unit">(${escapeHtml(unit)})</small>` : ''}</h3>${body}</div>`;
-const ledNum = (v, digits = 0) => Number(v).toLocaleString('en-US', { maximumFractionDigits: digits });
+const ledNum = (v, digits = 0) => Number(v).toLocaleString(LOC, { maximumFractionDigits: digits });
 const capFirst = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : '');
 
 /** Today | Last 7 days | Since conflict, from a list of days. */
@@ -3134,7 +3161,7 @@ function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), la
   m.setUTCMonth(m.getUTCMonth() + 1);
   while (m.getTime() <= t1) {
     const d = m.toISOString().slice(0, 10);
-    g += `<text x="${x(d).toFixed(1)}" y="${H - 5}" text-anchor="middle">${m.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })}</text><line class="tick" x1="${x(d).toFixed(1)}" x2="${x(d).toFixed(1)}" y1="${H - B}" y2="${H - B + 3}"/>`;
+    g += `<text x="${x(d).toFixed(1)}" y="${H - 5}" text-anchor="middle">${m.toLocaleDateString(LOC, { month: 'short', timeZone: 'UTC' })}</text><line class="tick" x1="${x(d).toFixed(1)}" x2="${x(d).toFixed(1)}" y1="${H - B}" y2="${H - B + 3}"/>`;
     m.setUTCMonth(m.getUTCMonth() + 1);
   }
   const war = Date.parse(`${WAR_START}T00:00:00Z`) >= t0 && Date.parse(`${WAR_START}T00:00:00Z`) <= t1
@@ -3168,7 +3195,7 @@ function monthBars(figs, digits) {
   return `<div class="mbars">${rows.map((f) => {
     const mo = String(f.month);
     const pre = /before/.test(mo) || mo < WAR_START.slice(0, 7);
-    const monthName = new Date(`${mo.slice(0, 7)}-15T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' });
+    const monthName = new Date(`${mo.slice(0, 7)}-15T00:00:00Z`).toLocaleDateString(LOC, { month: 'long', timeZone: 'UTC' });
     const name = pre ? BEFORE_LABEL : monthName;
     const sub = pre ? `(${f.span || monthName})` : /early/i.test(String(f.period || '')) ? '(so far)' : '';
     return `<div class="mbar${pre ? ' pre' : ''}"><span class="k">${escapeHtml(name)}${sub ? `<small>${escapeHtml(sub)}</small>` : ''}</span><span class="mb-track"><i style="width:${Math.max(2, (100 * f.value) / hi).toFixed(1)}%"></i></span><b>${srcLink(ledNum(f.value, digits), f.src)}</b></div>`;
@@ -3216,12 +3243,13 @@ function trafficBody(tr) {
     const wAvg = week.length ? sum(week) / week.length : 0;
     /* The latest day against the average day before the conflict. */
     const pct = base && last ? Math.round((100 * ((Number(last.total) || 0) - base)) / base) : null;
-    const pctTag = pct != null ? `<small class="q ${pct < 0 ? 'down' : 'up'}">${pct > 0 ? '+' : '−'}${Math.abs(pct)}% vs before conflict</small>` : '';
-    const chart = lineChart({ lines: [{ name: 'Ships a day, 7-day average', cls: 's1', pts: avg7(days, 'total') }], bases: base ? [{ value: base, label: `${BEFORE_LABEL} (${ledNum(base, 1)} a day)` }] : [], zero: true, label: `Ships a day through ${p.name}` });
-    spotCharts[p.id] = chart ? `<p class="chart-title">${escapeHtml(p.name)}</p>${chart}` : '';
-    const name = spotCharts[p.id] ? `<button type="button" class="spot" data-spot="${escapeHtml(p.id)}" aria-haspopup="dialog" aria-expanded="false">${spotLabel(p.name)}</button>` : escapeHtml(p.name);
+    const pctTag = pct != null ? `<small class="q ${pct < 0 ? 'down' : 'up'}">${T('{p}% vs before conflict', { p: `${pct > 0 ? '+' : '−'}${Math.abs(pct)}` })}</small>` : '';
+    const pName = T(p.name);
+    const chart = lineChart({ lines: [{ name: T('Ships a day, 7-day average'), cls: 's1', pts: avg7(days, 'total') }], bases: base ? [{ value: base, label: T('{l} ({n} a day)', { l: T(BEFORE_LABEL), n: ledNum(base, 1) }) }] : [], zero: true, label: T('Ships a day through {p}', { p: pName }) });
+    spotCharts[p.id] = chart ? `<p class="chart-title">${escapeHtml(pName)}</p>${chart}` : '';
+    const name = spotCharts[p.id] ? `<button type="button" class="spot" data-spot="${escapeHtml(p.id)}" aria-haspopup="dialog" aria-expanded="false">${spotLabel(pName)}</button>` : escapeHtml(pName);
     const lastCell = last ? `${srcLink(ledNum(last.total), pw)}<small>${escapeHtml(ledDay(last.date))}</small>${pctTag}` : '—';
-    return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${ledNum(wAvg, 1)} a day</small></td><td>${srcLink(ledNum(sum(war)), pw)}<small>${war.length ? ledNum(sum(war) / war.length, 1) : '—'} a day</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
+    return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${T('{n} a day', { n: ledNum(wAvg, 1) })}</small></td><td>${srcLink(ledNum(sum(war)), pw)}<small>${T('{n} a day', { n: war.length ? ledNum(sum(war) / war.length, 1) : '—' })}</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
   };
   const body = points.map(row).join('');
   return `<table class="span5"><tr><th></th><th scope="col">Latest</th><th scope="col">Last 7 days</th><th scope="col">${SINCE_LABEL}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr>${body}</table>`;
@@ -3332,8 +3360,8 @@ function priceBody(tr) {
   const usd = (v) => `$${Number(v).toFixed(2)}`;
   const pct = base ? Math.round((100 * (last.value - base)) / base) : null;
   const cell = (d) => (d ? `${srcLink(usd(d.value), eia)}<small>${escapeHtml(ledDay(d.date))}</small>` : '—');
-  const table = `<table class="span3"><tr><th scope="col">${isToday ? 'Today' : 'Latest'}</th><th scope="col">${isToday ? '7 days ago' : '7 days earlier'}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr><tr><td class="big">${cell(last)}${pct != null ? `<small class="q ${pct > 0 ? 'down' : 'up'}">${pct > 0 ? '+' : ''}${pct}% vs before conflict</small>` : ''}</td><td>${cell(weekAgo)}</td><td>${base ? srcLink(usd(base), eia) : '—'}<small>average</small></td></tr></table>`;
-  const chart = lineChart({ lines: [{ name: 'Brent', cls: 's1', pts: days }], bases: base ? [{ value: base, label: `${BEFORE_LABEL} (${usd(base)})` }] : [], fmt: (v) => `$${ledNum(v)}`, label: 'Brent crude oil price, dollars a barrel, day by day' });
+  const table = `<table class="span3"><tr><th scope="col">${isToday ? 'Today' : 'Latest'}</th><th scope="col">${isToday ? '7 days ago' : '7 days earlier'}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr><tr><td class="big">${cell(last)}${pct != null ? `<small class="q ${pct > 0 ? 'down' : 'up'}">${T('{p}% vs before conflict', { p: `${pct > 0 ? '+' : ''}${pct}` })}</small>` : ''}</td><td>${cell(weekAgo)}</td><td>${base ? srcLink(usd(base), eia) : '—'}<small>average</small></td></tr></table>`;
+  const chart = lineChart({ lines: [{ name: T('Brent'), cls: 's1', pts: days }], bases: base ? [{ value: base, label: `${T(BEFORE_LABEL)} (${usd(base)})` }] : [], fmt: (v) => `$${ledNum(v)}`, label: T('Brent crude oil price, dollars a barrel, day by day') });
   return `${table}${chart}`;
 }
 
@@ -3455,7 +3483,7 @@ function feedCardHtml(r, i) {
   return `<article class="card lean-${lean}${isOpen ? ' open' : ''}" data-i="${i}" data-fp="${escapeHtml(fp)}" title="${escapeHtml(LEAN_LABEL[lean] || '')}">
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
-        <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">, citing ${escapeHtml(r.citing)}</span>` : ''}</span>
+        <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">${T(', citing {s}', { s: escapeHtml(r.citing) })}</span>` : ''}</span>
         ${mappableByFp.has(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
       </div>
       ${replyQuote(r)}
@@ -3481,7 +3509,7 @@ function replyQuote(r) {
   // A reply points back in time only.
   if (!parent || !(Date.parse(reportTime(parent)) < Date.parse(reportTime(r)))) return '';
   const pt = reportTime(parent);
-  return `<a class="reply-to" href="#" data-parent="${escapeHtml(String(r.replyTo))}">↩ Follows ${escapeHtml(fmtStamp(pt))} · ${escapeHtml(reportTeaser(parent))}</a>`;
+  return `<a class="reply-to" href="#" data-parent="${escapeHtml(String(r.replyTo))}">${T('↩ Follows {t} · {h}', { t: escapeHtml(fmtStamp(pt)), h: escapeHtml(reportTeaser(parent)) })}</a>`;
 }
 
 /** Does the clamped lead hide text? Measured; a length guess while hidden or open. */
@@ -3688,18 +3716,18 @@ const leanOk = (r) => !feedLean || cardLean(r) === feedLean;
 function renderFeedNote() {
   const note = document.getElementById('feed-note');
   if (!note) return;
-  const only = feedLean ? ` from <b>${LEAN_NOTE[feedLean]}</b>` : '';
+  const only = feedLean ? T(' from <b>{s}</b>', { s: T(LEAN_NOTE[feedLean]) }) : '';
   if (feedSearch) {
     const q = `“${escapeHtml(feedSearch.q)}”`;
-    if (feedSearch.loading) note.innerHTML = `<span class="fs-spin" aria-hidden="true"></span><span>Searching all reports for ${q}…</span>`;
+    if (feedSearch.loading) note.innerHTML = `<span class="fs-spin" aria-hidden="true"></span><span>${T('Searching all reports for {q}…', { q })}</span>`;
     else if (feedSearch.error) note.innerHTML = `<span>${escapeHtml(feedSearch.error)}</span><button type="button" data-act="clear">Clear search</button>`;
     else {
       const n = feedSearch.reports.filter(leanOk).length;
       const wider = feedSearch.refining;
-      note.innerHTML = `${wider ? '<span class="fs-spin" aria-hidden="true"></span>' : ''}<span>${n ? `<b>${n}</b> report${n === 1 ? '' : 's'}` : wider ? 'Nothing yet' : 'No reports'} for ${q}${only}${wider ? ' · looking wider…' : ''}</span><button type="button" data-act="clear">Clear search</button>`;
+      note.innerHTML = `${wider ? '<span class="fs-spin" aria-hidden="true"></span>' : ''}<span>${T('{n} for {q}', { n: n ? N('report', n).replace(/^(\d+)/, '<b>$1</b>') : T(wider ? 'Nothing yet' : 'No reports'), q })}${only}${wider ? T(' · looking wider…') : ''}</span><button type="button" data-act="clear">${T('Clear search')}</button>`;
     }
   } else if (feedLean) {
-    note.innerHTML = `<span>Showing only ${LEAN_NOTE[feedLean]}</span><button type="button" data-act="all">Show all</button>`;
+    note.innerHTML = `<span>${T('Showing only {s}', { s: T(LEAN_NOTE[feedLean]) })}</span><button type="button" data-act="all">${T('Show all')}</button>`;
   }
   note.hidden = !feedSearch && !feedLean;
   const clear = note.querySelector('[data-act="clear"]');
@@ -3724,7 +3752,7 @@ function renderSearchFeed() {
   feed.querySelectorAll('.card').forEach(wireFeedCard);
   wireMediaClicks(feed);
   more.hidden = feedSearch.shown >= list.length;
-  if (!more.hidden) more.textContent = `Show more results (+${Math.min(SEARCH_STEP, list.length - feedSearch.shown)})`;
+  if (!more.hidden) more.textContent = T('Show more results (+{n})', { n: Math.min(SEARCH_STEP, list.length - feedSearch.shown) });
 }
 
 /**
@@ -3841,13 +3869,13 @@ function renderFeed(d) {
   // a report that is on the map renders without the button.
   if (data && window.L) { try { buildMapPins(data); } catch (e) {} }
   document.getElementById('feed').innerHTML = feedLean && !slice.length
-    ? `<p class="fs-empty">None of the reports loaded so far comes from ${LEAN_NOTE[feedLean]}.</p>`
+    ? `<p class="fs-empty">${T('None of the reports loaded so far comes from {s}.', { s: T(LEAN_NOTE[feedLean]) })}</p>`
     : mediaTestCards() + slice.map((r, i) => feedCardHtml(r, i)).join('');
   document.querySelectorAll('#feed .card').forEach(wireFeedCard);
   const more = document.getElementById('btn-more-reports');
   if (reportsShown < all.length) {
     more.hidden = false;
-    more.textContent = `Show earlier reports (+${Math.min(MORE_STEP, all.length - reportsShown)})`;
+    more.textContent = T('Show earlier reports (+{n})', { n: Math.min(MORE_STEP, all.length - reportsShown) });
   } else if (!archiveExhausted) {
     more.hidden = false;
     more.textContent = 'Load older reports from the archive';
@@ -3904,7 +3932,7 @@ function prependFeedCards(d) {
   const more = document.getElementById('btn-more-reports');
   if (reportsShown < all.length && more) {
     more.hidden = false;
-    more.textContent = `Show earlier reports (+${Math.min(MORE_STEP, all.length - reportsShown)})`;
+    more.textContent = T('Show earlier reports (+{n})', { n: Math.min(MORE_STEP, all.length - reportsShown) });
   }
   wireMediaClicks(feed);
 }
@@ -4170,7 +4198,7 @@ function setHighlightChip(front) {
   const chip = document.getElementById('map-chip');
   if (!chip) return;
   chip.classList.add('chip-hl');
-  chip.innerHTML = `<span>Showing: ${escapeHtml(front.name || 'this front')}</span><button type="button" class="chip-clear" id="btn-clear-hl">Clear</button>`;
+  chip.innerHTML = `<span>${T('Showing: {f}', { f: escapeHtml(front.name || T('this front')) })}</span><button type="button" class="chip-clear" id="btn-clear-hl">${T('Clear')}</button>`;
   const btn = document.getElementById('btn-clear-hl');
   if (btn) {
     btn.onclick = (ev) => {
@@ -4245,7 +4273,7 @@ function showFrontPinsOnMainMap(front) {
   document.querySelectorAll('#time-filter button').forEach((b) => b.classList.remove('on'));
   syncDayNav();
   applyMapFilters();
-  setHighlightChip({ name: `${front.name} · ${pins.length} report${pins.length === 1 ? '' : 's'}` });
+  setHighlightChip({ name: `${T(front.name)} · ${N('report', pins.length)}` });
   scrollToMap();
   setTimeout(() => {
     if (!map) return;
@@ -4281,7 +4309,7 @@ function showFrontAreaOnMainMap(front) {
   const b = frontAreaBounds(front);
   scrollToMap();
   if (!b) return;
-  setHighlightChip({ name: `${front.name} · no reports in this update` });
+  setHighlightChip({ name: `${T(front.name)} · ${T('no reports in this update')}` });
   setTimeout(() => {
     if (!map) return;
     try { map.invalidateSize(); } catch (e) {}
@@ -4328,9 +4356,9 @@ function frontAsOf(act) {
   if (!act || !act.lastNewsAt || !brief || !brief.windowStart) return '';
   const at = Date.parse(act.lastNewsAt);
   if (!(at <= Date.parse(brief.windowStart))) return '';
-  const t = new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: VIEW_TZ });
-  const day = new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: VIEW_TZ });
-  return `As of ${t}, ${day}`;
+  const t = new Date(at).toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: VIEW_TZ });
+  const day = new Date(at).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ });
+  return T('As of {t}, {d}', { t, d: day });
 }
 
 /*
@@ -4422,7 +4450,7 @@ const AREA_DISTRICT = new Set([...FRONT_DISTRICTS.bab, ...FRONT_DISTRICTS['red-s
  * control of its governorates ("Saada, north-western Yemen · Houthi-held").
  */
 function frontWhere(f, d) {
-  if (f.id === 'saudi-home') return 'North of Yemen';
+  if (f.id === 'saudi-home') return T('North of Yemen');
   const byIso = controlByIso(d);
   let govs = ((f.mapFocus && f.mapFocus.ids) || []).filter((id) => GOV_PART[id] && byIso[id]);
   let dists = [];
@@ -4439,14 +4467,14 @@ function frontWhere(f, d) {
   const g = byIso[govs[0]];
   const part = GOV_PART[govs[0]];
   const where = FRONT_PLACE[f.id]
-    ? FRONT_PLACE[f.id]
-    : `${govs.map((id) => byIso[id].name).join(' and ')}, ${part === 'island' ? 'an island of' : part} Yemen`;
+    ? T(FRONT_PLACE[f.id])
+    : `${govs.map((id) => T(byIso[id].name)).join(T(' and '))}, ${T(`${part === 'island' ? 'an island of' : part} Yemen`)}`;
   if (!dists.length) return where;
   const n = { houthi: 0, plc: 0, other: 0 };
   for (const p of dists) { const s = districtSide(p, byIso); n[s === 'houthi' || s === 'plc' ? s : 'other'] += 1; }
   const all = dists.length;
   const held = n.houthi / all >= 0.85 ? 'Houthi-controlled' : n.plc / all >= 0.85 ? 'Government-controlled' : 'Contested';
-  return `${where} · ${held}`;
+  return `${where} · ${T(held)}`;
 }
 
 /* ---------------------------------------------------------------- *
@@ -4616,15 +4644,15 @@ function bindGov(feature, layer, byIso) {
     layer.bindPopup(`<strong>${escapeHtml(name)}</strong>${arLine}`);
     return;
   }
-  const govHtml = `<strong>${escapeHtml(name)}</strong>${arLine}<br/>
-    Control: ${escapeHtml(LABELS[g.control] || g.control)}<br/><small>${escapeHtml(g.note || '')}</small>`;
+  const govHtml = `<strong>${escapeHtml(LANG === 'ar' && ar ? ar : T(name))}</strong>${LANG === 'ar' ? '' : arLine}<br/>
+    ${T('Control: {c}', { c: escapeHtml(T(LABELS[g.control] || g.control)) })}<br/><small>${escapeHtml(g.note || '')}</small>`;
   // The district under the click, with its own control and why.
   layer.on('click', (e) => {
     const dct = districtAt(e.latlng.lat, e.latlng.lng);
     const own = dct && districtOwn(dct);
     const side = dct && districtSide(dct, byIso);
     const dHtml = dct
-      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${escapeHtml(dct.name)} district</strong><br/>Control: ${escapeHtml(LABELS[side] || side)}${own && own.since ? ` · since ${escapeHtml(fmtDay(own.since))}` : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}${liveSrcHtml(own)}`
+      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${T('{d} district', { d: escapeHtml(T(dct.name)) })}</strong><br/>${T('Control: {c}', { c: escapeHtml(T(LABELS[side] || side)) })}${own && own.since ? T(' · since {d}', { d: escapeHtml(fmtDay(own.since)) }) : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}${liveSrcHtml(own)}`
       : '';
     L.popup().setLatLng(e.latlng).setContent(govHtml + dHtml).openOn(layer._map || map);
   });
@@ -4963,7 +4991,7 @@ function popupHtml(ev) {
     : (CATEGORY_LABEL[cat] || CATEGORY_LABEL.combat);
   const needExpand = full && full.length > sum.length + 24;
   return `<p class="pop-h">${escapeHtml(sum)}</p>
-    <p class="pop-meta">${escapeHtml(fmtStamp(ev.at))}${ev.place ? ' · ' + escapeHtml(ev.place) : ''} · ${escapeHtml(catLabel)}</p>
+    <p class="pop-meta">${escapeHtml(fmtStamp(ev.at))}${ev.place ? ' · ' + escapeHtml(T(ev.place)) : ''} · ${escapeHtml(T(catLabel))}</p>
     ${srcLine}
     ${mediaBlock(ev.media, true)}
     ${needExpand ? `<div class="pop-full">${escapeHtml(isReaderWritten(ev.url) ? full : annotatePlaces(full))}</div>
@@ -5025,7 +5053,7 @@ function renderEvents(d) {
     const chip = document.getElementById('map-chip');
     if (chip && !chip.classList.contains('chip-hl')) {
       const ymd = activeControlYmd || (activeEpoch && String(activeEpoch.at).slice(0, 10)) || '';
-      chip.textContent = ymd ? `Control on ${fmtDay(ymd)}` : 'Control timeline — no event pins';
+      chip.textContent = ymd ? T('Control on {d}', { d: fmtDay(ymd) }) : T('Control timeline — no event pins');
     }
     return;
   }
@@ -5044,8 +5072,8 @@ function renderEvents(d) {
     else if (mapMode === 'range') label = `${fmtDay(mapDateFrom || CONFLICT_START)} – ${fmtDay(mapDateTo || today)}`;
     else label = fmtDay(effectiveMapDate());
     chip.textContent = pins.length
-      ? `${pins.length} event${pins.length === 1 ? '' : 's'} on ${label} · click a mark for detail`
-      : `No mapped events for ${label}`;
+      ? T('{n} on {d} · click a mark for detail', { n: N('event', pins.length), d: label })
+      : T('No mapped events for {d}', { d: label });
   }
   const placeCount = {};
   pins.forEach((ev) => {
@@ -5066,7 +5094,7 @@ function fmtDay(ymd) {
   const m = String(ymd || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return '';
   const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-  return d.toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(LOC, { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /** One earth: the map can't zoom out past the world filling its box, and the world doesn't repeat. */
@@ -5186,7 +5214,7 @@ function syncOpenNotes() {
     };
     wrap.appendChild(btn);
   }
-  btn.textContent = `Close all (${n})`;
+  btn.textContent = T('Close all ({n})', { n });
   btn.hidden = n < 2;
 }
 
@@ -5341,8 +5369,8 @@ function islandPopupHtml(isl) {
   const name = String(isl.name || '').trim();
   const ar = isl.nameAr ? `<br/><span dir="rtl" lang="ar">${escapeHtml(isl.nameAr)}</span>` : '';
   const note = isl.note ? `<br/><small>${escapeHtml(isl.note)}</small>` : '';
-  return `<strong>${escapeHtml(name)}</strong>${ar}<br/>
-    Control: ${escapeHtml(LABELS[isl.control] || isl.control)}${note}
+  return `<strong>${escapeHtml(LANG === 'ar' && isl.nameAr ? isl.nameAr : T(name))}</strong>${LANG === 'ar' ? '' : ar}<br/>
+    ${T('Control: {c}', { c: escapeHtml(T(LABELS[isl.control] || isl.control)) })}${note}
     ${mediaBlock(isl.media, true)}`;
 }
 
@@ -5650,7 +5678,7 @@ function drawControlOverlays(epoch) {
     const col = COLORS[ctrl] || COLORS.contested;
     const poly = L.polygon(area.ring, {
       color: EDGE, weight: 1.1, fillColor: col, fillOpacity: 0.7, pane: 'islands', interactive: true,
-    }).bindPopup(`<strong>${escapeHtml(area.name)}</strong><br/>Control: ${escapeHtml(LABELS[ctrl] || ctrl)}`);
+    }).bindPopup(`<strong>${escapeHtml(T(area.name))}</strong><br/>${T('Control: {c}', { c: escapeHtml(T(LABELS[ctrl] || ctrl)) })}`);
     poly.addTo(map);
     controlOverlayLayers.push(poly);
   });
@@ -5727,9 +5755,9 @@ let timelineIdx = null;
 function phaseDates(p, isNow) {
   const fmt = (s) => {
     const m = /^(\d{4})-(\d{2})$/.exec(String(s || ''));
-    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, 15)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : String(s || '');
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, 15)).toLocaleDateString(LOC, { month: 'long', year: 'numeric', timeZone: 'UTC' }) : String(s || '');
   };
-  if (isNow) return `${fmt(p.from)} – now`;
+  if (isNow) return T('{d} – now', { d: fmt(p.from) });
   return fmt(p.from) + (p.to && p.to !== p.from ? ` – ${fmt(p.to)}` : '');
 }
 
@@ -5744,7 +5772,7 @@ function renderTimeline(d) {
     const isNow = i === last;
     const summary = (isNow && live ? live.summary : p.summary || p.mapNote || '').trim();
     const detail = (isNow && live ? live.detail : p.detail || (p.bullets || []).join(' ')).trim();
-    const asOf = isNow && live && live.asOf ? new Date(live.asOf).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+    const asOf = isNow && live && live.asOf ? new Date(live.asOf).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) : '';
     return `<article class="phase-card${isNow ? ' now' : ''}">
       <div class="phase-head">
         <strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong>
@@ -5753,14 +5781,14 @@ function renderTimeline(d) {
       <p class="phase-sum">${escapeHtml(summary)}</p>
       ${detail ? `<div class="full">
         <p>${escapeHtml(detail)}</p>
-        ${p.mapNote && !isNow ? `<p class="muted">On the map: ${escapeHtml(p.mapNote)}</p>` : ''}
-        <div class="srcs">${asOf ? `Updated ${escapeHtml(asOf)} · ` : ''}Source: ${sourceCreditsHtml(p.sources || [], '')}</div>
+        ${p.mapNote && !isNow ? `<p class="muted">${T('On the map: {t}', { t: escapeHtml(p.mapNote) })}</p>` : ''}
+        <div class="srcs">${asOf ? `${T('Updated {t}', { t: escapeHtml(asOf) })} · ` : ''}${T('Source:')} ${sourceCreditsHtml(p.sources || [], '')}</div>
       </div>
       <button type="button" class="toggle-phase">Read more</button>` : ''}
     </article>`;
   });
   const idx = timelineIdx == null ? last : Math.min(timelineIdx, last);
-  el.innerHTML = pagerHtml('timeline', slides, idx, phases.map((p, i) => (i === last ? `Now: ${p.title}` : p.title)));
+  el.innerHTML = pagerHtml('timeline', slides, idx, phases.map((p, i) => (i === last ? T('Now: {t}', { t: T(p.title) }) : p.title)));
   // An open box left behind would keep the pager at its height: it closes.
   wirePager(el, idx, (i) => { timelineIdx = i; closeReadMore(el, '.phase-card', '.toggle-phase'); }, { wrap: false });
   // The whole box opens and closes it, as a report card does; links keep their own click.
@@ -6099,11 +6127,12 @@ function wireRailResize() {
 
   let dragging = false;
   // dir=ltr: the map is on the left and the rail on the right, so the rail's
-  // width is the distance from the pointer to the stage's right edge.
+  // width is the distance from the pointer to the stage's right edge (in
+  // Hebrew and Arabic, mirrored: from its left edge).
   const onMove = (clientX) => {
     if (!dragging) return;
     const rect = stage.getBoundingClientRect();
-    apply(rect.right - clientX);
+    apply(RTL ? clientX - rect.left : rect.right - clientX);
   };
   split.addEventListener('pointerdown', (e) => {
     dragging = true;
@@ -6229,7 +6258,7 @@ function paintThemeButton(btn) {
   const nx = nextTheme(THEME);
   btn.querySelector('.ts-ico').innerHTML = THEME_ICONS[nx][1];
   btn.querySelectorAll('.ts-pips i').forEach((p, i) => p.classList.toggle('on', THEMES[i] === THEME));
-  const say = `Theme: ${THEME_ICONS[THEME][0]} · click for ${THEME_ICONS[nx][0]}`;
+  const say = T('Theme: {a} · click for {b}', { a: T(THEME_ICONS[THEME][0]), b: T(THEME_ICONS[nx][0]) });
   btn.title = say;
   btn.setAttribute('aria-label', say);
 }
@@ -6333,7 +6362,7 @@ function installMast() {
   panel.innerHTML = `<div class="sm-back" data-close></div>
     <nav class="sm-panel" aria-label="Site">
       <div class="sm-head"><span class="sm-name">The Situation Room</span><button type="button" class="sm-x" data-close aria-label="Close menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-      <p class="sm-date">${escapeHtml(new Date().toLocaleDateString('en-GB', { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p>
+      <p class="sm-date">${escapeHtml(new Date().toLocaleDateString(LOC, { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p>
       <ul>${SITE_PAGES.map(([href, name, sub]) => `<li><a href="${href}"${href === here ? ' aria-current="page"' : ''}><b>${name}</b><small>${sub}</small></a></li>`).join('')}</ul>
     </nav>`;
   document.body.appendChild(panel);
@@ -6352,6 +6381,38 @@ function installMast() {
     else if (e.target.closest('a')) setTimeout(() => open(false), 0);
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && panel.classList.contains('open')) { open(false); btn.focus(); } });
+}
+
+/*
+ * The language switch, beside the theme button: English, Hebrew, Arabic. The
+ * choice is kept in this browser and the page loads again in it (the head's
+ * boot script reads it before anything is drawn).
+ */
+const LANGS = [['en', 'EN', 'English'], ['he', 'עב', 'עברית'], ['ar', 'ع', 'العربية']];
+function installLangSwitch() {
+  const end = document.querySelector('.mast-end');
+  if (!end || end.querySelector('.lang-sw')) return;
+  // Shown once the editions are ready; until then only with ?langs=1.
+  let open = LANG !== 'en';
+  try {
+    if (/[?&]langs=1\b/.test(location.search)) localStorage.setItem('desk-langs', '1');
+    open = open || localStorage.getItem('desk-langs') === '1';
+  } catch (e) {}
+  if (!open && !window.DESK_LANGS_OPEN) return;
+  const sw = (cls, full) => `<div class="lang-sw ${cls}" role="group" aria-label="${escapeHtml(T('Language'))}">${LANGS.map(([k, short, name]) => `<button type="button" data-lang="${k}" lang="${k}" title="${name}" aria-label="${name}" aria-pressed="${k === LANG}"${k === LANG ? ' class="on"' : ''}>${full ? name : short}</button>`).join('')}</div>`;
+  // On a PC beside the theme button; on a phone, where the masthead has no room, in the menu.
+  end.insertAdjacentHTML('afterbegin', sw('ls-mast', false));
+  const head = document.querySelector('#site-menu .sm-head');
+  if (head) head.insertAdjacentHTML('afterend', sw('ls-menu', true));
+  document.querySelectorAll('.lang-sw button').forEach((b) => {
+    b.onclick = () => {
+      if (b.dataset.lang === LANG) return;
+      try { localStorage.setItem('desk-lang', b.dataset.lang); } catch (e) {}
+      const u = new URL(location.href);
+      u.searchParams.delete('lang');
+      location.replace(u.toString());
+    };
+  });
 }
 
 function installThemeButton() {
@@ -6461,6 +6522,7 @@ async function bootYemenDesk() {
   if (!el) return;
   try { installMast(); } catch (e) { console.error(e); }
   try { installThemeButton(); } catch (e) { console.error(e); }
+  try { installLangSwitch(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
   try { startYemenClock(); } catch (e) { console.error(e); }
 
@@ -6533,8 +6595,8 @@ async function bootYemenDesk() {
   } catch (err) {
     console.error(err);
     const stamp = document.getElementById('updated');
-    if (stamp && !String(stamp.textContent || '').includes('Updated')) {
-      stamp.textContent = 'Failed to load';
+    if (stamp && !String(stamp.textContent || '').includes(T('Updated'))) {
+      stamp.textContent = T('Failed to load');
     }
   }
 }

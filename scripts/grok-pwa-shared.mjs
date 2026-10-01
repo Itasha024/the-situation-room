@@ -6,7 +6,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const DEFAULT_APP_NAME = "Grok App";
+// The site is The Situation Room, hosted on its own server (not on Grok).
+export const DEFAULT_APP_NAME = "The Situation Room";
 export const OG_SERVICE_URL_DEFAULT = "https://og.grok.me";
 export const OG_SITE_REL_PATH = "src/lib/og/site.json";
 
@@ -167,11 +168,11 @@ export function renderWebManifest(hostHeader) {
       start_url: "/",
       scope: "/",
       display: "standalone",
-      background_color: "#000000",
-      theme_color: "#000000",
+      background_color: "#070b10",
+      theme_color: "#070b10",
       icons: [
         {
-          src: "/__grok/icon-180.png",
+          src: "/apple-touch-icon.png",
           sizes: "180x180",
           type: "image/png",
         },
@@ -187,7 +188,6 @@ export function grokPwaHeadTags(appName = DEFAULT_APP_NAME) {
     // Standalone display comes from the manifest ("display": "standalone");
     // the legacy *-web-app-capable metas it replaces are deliberately absent.
     ["manifest", '<link rel="manifest" href="/__grok/manifest.webmanifest">'],
-    ["apple-touch-icon", '<link rel="apple-touch-icon" href="/__grok/icon-180.png">'],
     [
       "apple-mobile-web-app-title",
       `<meta name="apple-mobile-web-app-title" content="${escapeHtml(appName)}">`,
@@ -196,7 +196,7 @@ export function grokPwaHeadTags(appName = DEFAULT_APP_NAME) {
       "apple-mobile-web-app-status-bar-style",
       '<meta name="apple-mobile-web-app-status-bar-style" content="black">',
     ],
-    ["theme-color", '<meta name="theme-color" content="#000000">'],
+    ["theme-color", '<meta name="theme-color" content="#070b10">'],
   ];
 }
 
@@ -229,6 +229,8 @@ export function grokXCreatorHeadTags(creator = readXCreator(), creatorId = readX
 
 /** Platform "Created with Grok" banner — injected into every HTML document. */
 export function grokExtensionsHeadTags(projectId = readGrokProjectId()) {
+  // Off: the site runs on its own server, and visitors load nothing from grok.com.
+  if (typeof process === "undefined" || !process.env?.GROK_EXTENSIONS) return [];
   const id = escapeHtml(projectId);
   const tags = [];
   if (projectId) {
@@ -333,6 +335,9 @@ function applyCustomCardFromFs(site, cwd) {
   return { ...site, card: "custom", image: disk };
 }
 
+/** Bumped with each new card: the address changes, so caches (Cloudflare, the apps that unfurl links) fetch it again. */
+const OG_CARD_V = "?v=sr2";
+
 export function grokOgHeadTags({
   host = "",
   appName = DEFAULT_APP_NAME,
@@ -357,7 +362,7 @@ export function grokOgHeadTags({
     const asset = resolveOgCardAsset(site, cwd);
     const custom = Boolean(asset);
     let image = custom
-      ? `https://${publicHost}${asset.startsWith("/") ? asset : `/${asset}`}`
+      ? `https://${publicHost}${asset.startsWith("/") ? asset : `/${asset}`}${OG_CARD_V}`
       : `${ogServiceUrl()}/v1/card.png?host=${encodeURIComponent(publicHost)}&title=${encodeURIComponent(title)}`;
     const color = !custom ? placeholderCardColor(site) : "";
     if (color) image += `&color=${encodeURIComponent(color)}`;

@@ -19,7 +19,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Live open-source intelligence desk for the war in Yemen: control map, continuous reporting, strikes and the Red Sea corridor.",
+          "Live open-source reporting on the war in Yemen: who holds what, the fronts, strikes on Saudi Arabia, the Red Sea and the numbers, from every side's sources.",
       },
     ],
     links: [

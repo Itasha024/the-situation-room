@@ -95,11 +95,11 @@ export const READER_MODELS = [
   "gemini-3.1-flash-lite",
   "gemini-3.5-flash-lite",
   "gemini-flash-latest",
-  // Each has its own free daily quota. The newest is last: the 6-hour prose
-  // leads with it (models.ts), so the reader leaves it for that when it can.
+  // Each has its own free daily quota (about 20 calls). The two newest Flash
+  // models are kept for the 6-hour update alone (models.ts): when the lite
+  // models ran out by evening the reader took them, and every update after
+  // that was written by a lite model (1 Oct). Groq reads after this one.
   "gemini-3.5-flash",
-  "gemini-3.7-flash",
-  "gemini-3.8-flash",
 ];
 /**
  * The stronger reader for a second look at a rejected field report, and what to
@@ -116,8 +116,6 @@ export const SECOND_LOOK_MODELS = [
   "gemini-3.1-flash-lite",
   "gemini-flash-lite-latest",
   "gemini-3.5-flash",
-  "gemini-3.7-flash",
-  "gemini-3.8-flash",
 ];
 /** Items per model call — large, because calls are what the quota counts. */
 export const READER_BATCH = 30;

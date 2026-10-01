@@ -90,6 +90,13 @@ test("the developments map keeps only places the text names, with known kinds an
   assert.deepEqual(out.map((m) => `${m.place}/${m.kind}/${m.side}/${m.from ?? ""}`), ["Jabal al-Bazilah/capture/houthi/", "Jazan/drone/houthi/Saada"]);
 });
 
+test("a long overview is cut at a whole sentence, and a sentence about the desk drops alone", () => {
+  const long = Array.from({ length: 12 }, (_, i) => `Houthi forces shelled government positions near village number ${i + 1} in western Taiz.`).join(" ");
+  const t = cleanProse(long, 4, true, 300);
+  assert.ok(t.length > 0 && t.length <= 300 && t.endsWith("."));
+  assert.equal(cleanProse("The desk logged 12 strikes. Saudi jets struck Houthi positions in Al-Jawf, the Houthis said.", 4), "Saudi jets struck Houthi positions in Al-Jawf, the Houthis said.");
+});
+
 test("vague main-development lines drop, a front's paragraph keeps its words", () => {
   const t = cleanProse("Intense fighting spans multiple fronts. Houthi forces captured Kahbub in Lahj.", 5, true);
   assert.equal(t, "Houthi forces captured Kahbub in Lahj.");
@@ -102,11 +109,12 @@ test("a map place finds its spot by name, or by the longest name inside it", () 
   assert.equal(find("Nowhere"), null);
 });
 
-test("prose by a fallback model is asked again every 10 minutes for an hour", () => {
+test("prose by a fallback model is asked again every 10 minutes for two hours", () => {
   const b = { updatedAt: "2026-09-29T09:00:00.000Z", situation: { line: "x", quiet: false, model: "openai/gpt-oss-20b" } } as never;
   assert.equal(proseDue(b, new Date("2026-09-29T09:05:00Z")), true);
   assert.equal(proseDue({ ...(b as object), proseTriedAt: "2026-09-29T09:05:00Z" } as never, new Date("2026-09-29T09:10:00Z")), false);
-  assert.equal(proseDue(b, new Date("2026-09-29T10:05:00Z")), false);
+  assert.equal(proseDue(b, new Date("2026-09-29T10:05:00Z")), true);
+  assert.equal(proseDue(b, new Date("2026-09-29T11:05:00Z")), false);
   assert.equal(proseDue({ ...(b as object), situation: { line: "x", quiet: false, model: "gemini-3.8-flash" } } as never, new Date("2026-09-29T09:05:00Z")), false);
 });
 

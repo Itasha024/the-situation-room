@@ -246,12 +246,12 @@ async function windowReports(store: DeskStore, w: { startedAt: string; updatedAt
 
 /** The strong writers: the first Gemini Flash models of the chain. */
 const STRONG = new Set(WRITER_MODELS.slice(0, 3).map((m) => m.id));
-const RETRY_FOR_MS = 60 * 60_000;
+const RETRY_FOR_MS = 2 * 60 * 60_000;
 const RETRY_EVERY_MS = 10 * 60_000;
 
 /**
  * Prose written by a fallback model (the strong ones busy) or by no model is
- * asked for again every 10 minutes for the window's first hour.
+ * asked for again every 10 minutes for the window's first two hours.
  */
 export function proseDue(brief: Brief, now: Date): boolean {
   if (brief.situation?.model && STRONG.has(brief.situation.model)) return false;
@@ -284,7 +284,8 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
     inArea: (ll, id) => inFrontArea(ll, id, extraFronts),
     controlLines,
   });
-  const keep = force ? !!model : !!model && STRONG.has(model);
+  // A backup writer's prose replaces the counted fallback text, never a strong writer's.
+  const keep = !!model && (force || STRONG.has(model) || !brief.situation?.model);
   const out = keep ? next : brief;
   console.log(`[desk] prose asked again: ${model || "no model"}${keep ? ", kept" : ", not kept"}`);
   await store.putJson(BRIEF_KEY, { brief: out, history: saved.history } satisfies StoredBrief);
@@ -340,7 +341,8 @@ async function proseInto(
       o.frontsOf,
       o.controlLines,
     );
-    if (prose) model = prose.model || null;
+    // Only an answer with the overview counts as written: one without it is asked again.
+    if (prose?.situation) model = prose.model || null;
     if (prose?.situation) {
       brief.situation = { ...brief.situation, line: prose.situation, more: prose.more || undefined, model: prose.model };
       devMap = prose.devMap;

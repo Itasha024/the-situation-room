@@ -64,6 +64,7 @@ const DESK_HTML = `
       <button type="button" class="lean-f" data-lean="gov" aria-pressed="false" title="Show only government or Saudi-aligned outlets"><span class="sw" style="background:#22c55e"></span>Government or Saudi-aligned</button>
       <button type="button" class="lean-f" data-lean="indep" aria-pressed="false" title="Show only outlets with no declared alignment"><span class="sw" style="background:#94a3b8"></span>No declared alignment</button>
     </div>
+    <div class="feed-rel"><button type="button" class="rel-btn" id="btn-rel" aria-expanded="false" aria-controls="rel-pop" aria-haspopup="dialog">Sources reliability methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div>
     <div class="feed-note" id="feed-note" aria-live="polite" hidden></div>
     <div id="feed" class="feed"></div>
     <button type="button" class="more" id="btn-more-reports" hidden>Show earlier reports</button>

@@ -128,21 +128,30 @@ function cardLine(r: LiveReport, frontsOf: (r: LiveReport) => string[]): string 
 export function cleanProse(s: unknown, maxSentences: number, noVague = false, maxLength = 1200): string {
   // The writer's paragraphs (a blank line between them) are kept.
   const paras = String(s ?? "").split(/\n\s*\n/).map((p) => roleNamesInProse(p.replace(/\s+/g, " ").trim())).filter(Boolean);
-  const t = paras.join(" ");
-  if (t.length < 40 || t.length > maxLength || BANNED.test(t)) return "";
+  if (paras.join(" ").length < 40) return "";
   const out: string[] = [];
   let left = maxSentences;
+  let room = maxLength;
   for (const p of paras) {
-    if (left <= 0) break;
+    if (left <= 0 || room <= 0) break;
     // A dot between digits is a decimal, not a full stop: "fell 1.1 percent" came
     // back as "fell 1. 1 percent" once the sentences were joined again.
     const sentences = (p.match(/(?:[^.!?]|\.(?=\d))+[.!?]+/g) || [p]).map((x) => x.trim());
-    // A sentence about absence is dropped; the rest of the paragraph stands.
-    const kept = sentences.filter((x) => !ABSENCE.test(x) && !(noVague && VAGUE.test(x))).slice(0, left);
+    // A sentence about absence, or about the desk itself, is dropped; the rest of
+    // the paragraph stands. A long answer is cut at a whole sentence, never thrown
+    // away whole (1 Oct, 00:00: the backup writer's overview was lost that way).
+    const kept: string[] = [];
+    for (const x of sentences) {
+      if (ABSENCE.test(x) || BANNED.test(x) || (noVague && VAGUE.test(x))) continue;
+      if (kept.length >= left || x.length + 1 > room) break;
+      kept.push(x);
+      room -= x.length + 1;
+    }
     left -= kept.length;
     if (kept.length) out.push(kept.join(" "));
   }
-  return out.join("\n\n");
+  const t = out.join("\n\n");
+  return t;
 }
 
 /** Fighting, strikes, missiles and drones, at sea or on Saudi Arabia: the battle picture. */
@@ -269,9 +278,14 @@ export async function writeProse(
   if (!got) return null;
   const j = got.json;
   const out: Prose = { situation: cleanProse(j.situation, 4, true, 700), more: "", fronts: {}, model: got.model, devMap: [], frontMaps: {} };
+  const moreText = cleanProse(j.situation_more, 5, true, 1000);
+  if (!out.situation) {
+    console.warn(`[prose] ${got.model}: overview unusable (${String(j.situation ?? "").length} chars)${moreText ? ", taken from Read more" : ""}`);
+    out.situation = moreText;
+  }
   if (out.situation) {
     // Ordered over both parts together: the fighting from the overview and "Read more" first, then the sea, then politics.
-    const [first, ...rest] = battleFirst([out.situation, cleanProse(j.situation_more, 5, true, 1000)].filter(Boolean).join("\n\n")).split("\n\n");
+    const [first, ...rest] = battleFirst([out.situation, out.situation === moreText ? "" : moreText].filter(Boolean).join("\n\n")).split("\n\n");
     out.situation = first;
     out.more = rest.join("\n\n");
   }

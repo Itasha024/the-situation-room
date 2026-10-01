@@ -9,7 +9,7 @@
 
 import type { LiveReport } from "./types.ts";
 import type { DeskStore } from "./store.ts";
-import { askChain } from "./models.ts";
+import { NUMBERS_MODELS, askChain } from "./models.ts";
 import { outletSide } from "./digest.ts";
 import { cleanProse, controlContext } from "./prose.ts";
 import { briefWindow } from "./brief.ts";
@@ -100,7 +100,7 @@ export async function refreshTimelineNow(
         return `${r.at.slice(0, 10)} ${r.source}${side ? ` [${side}]` : ""}: ${r.summary}`;
       }),
     ].join("\n");
-    got = await askChain("timeline-now", SYSTEM, user);
+    got = await askChain("timeline-now", SYSTEM, user, { models: NUMBERS_MODELS });
     if (got) break;
   }
   if (!got) return saved;

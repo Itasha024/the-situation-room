@@ -15,7 +15,7 @@
 
 import type { LiveReport } from "./types.ts";
 import { isOfficialBody, viaOf } from "./numbers.ts";
-import { askChain } from "./models.ts";
+import { NUMBERS_MODELS, askChain } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 
 export const TALLY_KEY = "tally";
@@ -167,7 +167,7 @@ export async function askModel(current: Tally, docs: Doc[]): Promise<Update[] | 
     current: { killed: current.killed, injured: current.injured, idp: current.idp, refugees: current.refugees },
     documents: docs.map((d, i) => ({ index: i, title: d.name, date: d.date, text: d.text })),
   });
-  const got = await askChain("tally", SYSTEM, user, { temperature: 0 });
+  const got = await askChain("tally", SYSTEM, user, { temperature: 0, models: NUMBERS_MODELS });
   if (!got) return null;
   return (Array.isArray(got.json.updates) ? got.json.updates : []) as Update[];
 }
@@ -307,7 +307,7 @@ export async function refreshClaims(store: DeskStore, windowReports: LiveReport[
     current: current.fields,
     documents: docs.map((d, i) => ({ index: i, source: d.name, date: d.date, text: d.text })),
   });
-  const got = await askChain("tally-claims", CLAIMS_SYSTEM, user, { temperature: 0 });
+  const got = await askChain("tally-claims", CLAIMS_SYSTEM, user, { temperature: 0, models: NUMBERS_MODELS });
   if (!got) return current;
   const updates = (Array.isArray(got.json.updates) ? got.json.updates : []) as ClaimUpdate[];
   const next = applyClaims(current, updates, docs, now);

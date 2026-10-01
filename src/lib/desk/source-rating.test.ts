@@ -111,3 +111,10 @@ test("a later non-aligned paper passing on the claim does not bear it out; too-n
   assert.equal(laterCandidates([fresh, other], () => undefined, {}, NOW).length, 0);
   assert.equal(laterCandidates([early, card("Al Arabiya", [], { fp: "l", at: "2026-09-21T10:00:00Z", lat: 15.35, lng: 44.2 })], () => undefined, {}, NOW, { e: "2026-10-01T00:00:00Z" }).filter((p) => p.early.fp === "e").length, 0);
 });
+
+test("the EU, the GCC and any foreign office start as official bodies; the GCC is Government-aligned", () => {
+  assert.equal(startOf("EU", "nonaligned"), 4);
+  assert.equal(startOf("Pakistan Foreign Office", "nonaligned"), 4);
+  assert.equal(groupOf("GCC"), "gov");
+  assert.equal(groupOf("Sheba Intelligence", "gov"), "nonaligned");
+});

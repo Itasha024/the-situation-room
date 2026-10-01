@@ -29,6 +29,13 @@ export const WRITER_MODELS: ChainModel[] = [
 ];
 
 /**
+ * The numbers and the Timeline's "Now": the same chain from its third model on,
+ * so the two newest Flash models' small daily quota (about 20 calls) is left
+ * for the 6-hour update itself.
+ */
+export const NUMBERS_MODELS: ChainModel[] = WRITER_MODELS.slice(2);
+
+/**
  * The every-five-minutes job (combining reports into one card): the lite
  * models and Groq first, so the strong models' small daily quota is still
  * there when the 6-hour writing needs it.
@@ -97,7 +104,13 @@ async function callOne(m: ChainModel, system: string, user: string, temperature:
       },
     }),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 120).replace(/\s+/g, " ")}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    // A 429 names its quota: the minute's or the day's. Only the day's rests the model till Google's reset.
+    const quota = res.status === 429 ? (/"quotaId":\s*"([^"]+)"/.exec(body)?.[1] ?? "") : "";
+    const daily = res.status === 429 && /PerDay/i.test(body) ? " daily" : "";
+    throw new Error(`HTTP ${res.status}${daily} ${quota ? `${quota} ` : ""}${body.slice(0, 120).replace(/\s+/g, " ")}`);
+  }
   const j = (await res.json()) as { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[] };
   return (j.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || "").join("");
 }
@@ -123,7 +136,10 @@ export async function askChain(
       console.error(`[${tag}] ${m.id}: no JSON in the answer`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "failed";
-      if (/HTTP 429/.test(msg) && /PerDay|per day|exceeded your current quota/i.test(msg)) resting.set(m.id, nextPacificMidnight(Date.now()));
+      // Out for the day only when Google says so (its quota id names the day); a
+      // minute's limit rests two minutes. Taking every 429 for the day's kept the
+      // strong writers out of every later update after one busy minute (1 Oct).
+      if (/HTTP 429/.test(msg)) resting.set(m.id, /HTTP 429 daily/.test(msg) ? nextPacificMidnight(Date.now()) : Date.now() + 2 * 60_000);
       if (msg !== "no key") console.error(`[${tag}] ${m.id}: ${msg}`);
     }
   }

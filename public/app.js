@@ -6511,6 +6511,83 @@ function installSectionNav() {
   mark();
 }
 
+/*
+ * "Sources reliability methodology" beside the report column (user, 1 Oct): a
+ * short account of how each source's 1–5 rating is made, and the only way to the
+ * Sources list. Hover opens it on a PC, a click or tap anywhere; on a phone it
+ * rises from the bottom.
+ */
+const REL_HTML = `<h3 id="rel-h">Sources reliability methodology</h3>
+<p>Every source is rated 1–5.</p>
+<ul>
+<li><b>Start:</b> wire agencies and official bodies 4, non-aligned outlets 3.5, Government- or Houthi-aligned outlets 3.</li>
+<li><b>Then its record decides.</b> Each report it has carried since 13 July scores, once it is two days old:
+<ul>
+<li>5 if the other side, a wire agency or a non-aligned official body also reported it, or if it later proved true. A non-aligned outlet needs both sides or a wire agency;</li>
+<li>3.5 to 4.5 if only outlets on its own side, or non-aligned outlets, did. More outlets, more weight;</li>
+<li>no change if no one else did;</li>
+<li>1 if it proved false. A false report counts three times.</li>
+</ul></li>
+<li><b>The more reports, the more the record counts</b> over the start.</li>
+<li><b>Statements count only if the speaker denies saying them.</b></li>
+</ul>
+<p class="rel-foot">Ratings update every 24 hours. <a href="/yemen-conflict-desk/sources">Sources list →</a></p>`;
+
+function installRelPop() {
+  const btn = document.getElementById('btn-rel');
+  if (!btn || btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  let pop = document.getElementById('rel-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'rel-pop';
+    pop.className = 'rel-pop';
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-labelledby', 'rel-h');
+    pop.hidden = true;
+    pop.innerHTML = `<button type="button" class="rel-x" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>${REL_HTML}`;
+    document.body.appendChild(pop);
+  }
+  const phone = () => window.matchMedia('(max-width: 720px)').matches;
+  let pinned = false;
+  let shut = 0;
+  const place = () => {
+    if (phone()) { pop.style.left = pop.style.top = ''; return; }
+    const r = btn.getBoundingClientRect();
+    const w = pop.offsetWidth;
+    const left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12));
+    const below = window.innerHeight - r.bottom - 12;
+    const top = below >= pop.offsetHeight || r.top < pop.offsetHeight + 12 ? r.bottom + 6 : r.top - pop.offsetHeight - 6;
+    pop.style.left = `${left}px`;
+    pop.style.top = `${Math.max(12, top)}px`;
+  };
+  const open = (pin) => {
+    clearTimeout(shut);
+    if (pin) pinned = true;
+    if (pop.hidden) { pop.hidden = false; pop.classList.toggle('sheet', phone()); place(); }
+    btn.setAttribute('aria-expanded', 'true');
+  };
+  const close = () => {
+    clearTimeout(shut);
+    pinned = false;
+    pop.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+  };
+  const later = () => { clearTimeout(shut); if (!pinned) shut = setTimeout(close, 220); };
+  btn.addEventListener('click', (e) => { e.stopPropagation(); if (!pop.hidden && pinned) close(); else open(true); });
+  if (window.matchMedia('(hover: hover)').matches) {
+    btn.addEventListener('mouseenter', () => open(false));
+    btn.addEventListener('mouseleave', later);
+    pop.addEventListener('mouseenter', () => clearTimeout(shut));
+    pop.addEventListener('mouseleave', later);
+  }
+  pop.querySelector('.rel-x').addEventListener('click', close);
+  document.addEventListener('click', (e) => { if (!pop.hidden && !e.target.closest('#rel-pop, #btn-rel')) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) { close(); btn.focus(); } });
+  window.addEventListener('resize', () => { if (!pop.hidden) { pop.classList.toggle('sheet', phone()); place(); } });
+  window.addEventListener('scroll', () => { if (!pop.hidden && !phone()) place(); }, { passive: true });
+}
+
 let bootInflight = null;
 function startYemenDesk() {
   if (!bootInflight) bootInflight = bootYemenDesk().finally(() => { bootInflight = null; });
@@ -6524,6 +6601,7 @@ async function bootYemenDesk() {
   try { installThemeButton(); } catch (e) { console.error(e); }
   try { installLangSwitch(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
+  try { installRelPop(); } catch (e) { console.error(e); }
   try { startYemenClock(); } catch (e) { console.error(e); }
 
   if (window.__yemenDeskTimer) { clearInterval(window.__yemenDeskTimer); window.__yemenDeskTimer = null; }
@@ -6602,5 +6680,7 @@ async function bootYemenDesk() {
 }
 
 window.startYemenDesk = startYemenDesk;
+// The Sources list page: the masthead and the theme button, nothing else.
+window.startDeskDoc = () => { installMast(); installThemeButton(); };
 // The Methodology and About pages: the masthead date and the theme button, nothing else.
 startYemenDesk();

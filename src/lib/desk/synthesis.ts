@@ -250,7 +250,7 @@ export function composeFront(input: FrontInput): string {
   }
 
   sentences.push(
-    `In the ${hours} hours to ${windowEnd} there were ${activityClause(front)}${
+    `In the ${hours} hours to ${windowEnd} there ${total === 1 ? "was" : "were"} ${activityClause(front)}${
       front.killed ? `, with at least ${num(front.killed)} reported killed` : ""
     }.`,
   );

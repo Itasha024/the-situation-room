@@ -588,3 +588,56 @@ html[data-set="broadsheet"] .tally-box.claims tr.grp + tr th{font:600 .6rem/1.2 
 .site-menu li a:hover,.site-menu li a:focus-visible{outline:none;border-left-color:var(--accent-ui,#7eb6ff);background:var(--t-surface-2,transparent)}
 .site-menu li a[aria-current="page"]{border-left-color:var(--t-strong,#fff)}
 @media (prefers-reduced-motion:reduce){.site-menu .sm-panel,.site-menu .sm-back{transition:none}}
+
+/* "Sources reliability methodology": the link under the side buttons and its pop-up (1 Oct) */
+.feed-rel{margin:-.1rem 0 .55rem}
+.rel-btn{display:inline-flex;align-items:center;gap:.32rem;padding:.15rem 0;border:0;background:none;color:var(--t-muted,#a99d93);font:600 .62rem/1.2 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.rel-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;flex:none}
+.rel-btn:hover,.rel-btn:focus-visible,.rel-btn[aria-expanded="true"]{color:var(--t-strong,#fff)}
+.rel-pop{position:fixed;z-index:1200;width:min(25rem,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;padding:.95rem 1.1rem .85rem;background:var(--t-surface-1,#211e1c);color:var(--t-text,#efe6dd);border:1px solid var(--t-line-strong,#4a433d);box-shadow:var(--shadow-pop,0 10px 30px rgba(0,0,0,.5));font:400 .8rem/1.5 var(--f-body,inherit)}
+.rel-pop[hidden]{display:none}
+.rel-pop h3{margin:0 1.6rem .45rem 0;font:600 1.02rem/1.25 "Newsreader","Frank Ruhl Libre",Georgia,serif;color:var(--t-strong,#fff)}
+.rel-pop p{margin:.3rem 0}
+.rel-pop ul{margin:.3rem 0;padding-inline-start:1.05rem}
+.rel-pop ul ul{margin:.2rem 0 .1rem;padding-inline-start:1rem;list-style:"– "}
+.rel-pop li{margin:.22rem 0}
+.rel-pop b{color:var(--t-strong,#fff);font-weight:600}
+.rel-pop .rel-foot{margin-top:.6rem;padding-top:.5rem;border-top:1px solid var(--t-line,#35302c);color:var(--t-muted,#a99d93);font-size:.74rem}
+.rel-pop .rel-foot a{color:var(--t-link,#f4a58a);font-weight:600;text-decoration:none;white-space:nowrap}
+.rel-pop .rel-foot a:hover,.rel-pop .rel-foot a:focus-visible{text-decoration:underline;text-underline-offset:3px}
+.rel-x{position:absolute;top:.55rem;inset-inline-end:.55rem;width:28px;height:28px;display:grid;place-items:center;padding:0;border:0;background:none;color:var(--t-muted,#a99d93);cursor:pointer}
+.rel-x svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.rel-x:hover{color:var(--t-strong,#fff)}
+.rel-pop.sheet{left:0!important;right:0;top:auto!important;bottom:0;width:auto;max-height:82vh;border-width:1px 0 0;padding:1.05rem 1.1rem calc(1.1rem + env(safe-area-inset-bottom,0px));font-size:.86rem;animation:relUp .2s ease-out}
+@keyframes relUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.rel-pop.sheet{animation:none}}
+@media (max-width:720px){.rel-btn{padding:.4rem 0}}
+
+/* The desk's own pages (the Sources list) */
+.doc-root{min-height:100vh;background:var(--t-bg,var(--bg));color:var(--t-text,var(--text))}
+.doc-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.doc-top .desk-label-link{text-decoration:none;color:inherit}
+.doc{max-width:46rem;margin:0 auto;padding:1.4rem 1rem 3rem;font-size:1rem;line-height:1.62}
+.doc-title{font:600 clamp(1.7rem,4vw,2.3rem)/1.1 "Newsreader",Georgia,serif;color:var(--t-strong,#fff);margin:.4rem 0 .6rem;letter-spacing:-.01em}
+.doc-lede{font:400 1.12rem/1.5 "Newsreader",Georgia,serif;color:var(--t-text-2,#cbd5e1);margin:0 0 1.2rem}
+.doc a{color:var(--accent-ui,#7eb6ff)}
+.doc-foot{max-width:46rem;margin:0 auto;padding:1rem 1rem 2rem;border-top:1px solid var(--t-line,#1e2a38);font-size:.8rem;color:var(--t-muted,#9aabbc)}
+.doc-foot a{color:inherit}
+.sr-stamp{margin:0 0 1.4rem;font:500 .66rem/1.3 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase;color:var(--t-muted,#a99d93)}
+.sr-group{margin:0 0 1.9rem}
+.sr-group h3{display:flex;align-items:center;gap:.5rem;margin:0 0 .4rem;font:600 1.25rem/1.25 "Newsreader",Georgia,serif;color:var(--t-strong,#fff)}
+.sr-group h3 .sw{width:4px;height:1em;background:var(--t-faint,#766b62)}
+.sr-houthi h3 .sw{background:var(--houthi)}
+.sr-gov h3 .sw{background:var(--plc)}
+.sr-table{width:100%;border-collapse:collapse;font:400 .9rem/1.35 var(--f-body,inherit)}
+.sr-table th{padding:.35rem 0;border-bottom:1px solid var(--t-line-strong,#4a433d);font:600 .6rem/1.2 var(--f-body,inherit);letter-spacing:.1em;text-transform:uppercase;color:var(--t-muted,#a99d93);text-align:start}
+.sr-table th:last-child,.sr-table td.sr-rate{text-align:end;width:9.5rem}
+.sr-table td{padding:.5rem 0;border-bottom:1px solid var(--t-line,#35302c);vertical-align:middle}
+.doc .sr-table a{color:var(--t-text,inherit);text-decoration:none}
+.doc .sr-table a:hover,.doc .sr-table a:focus-visible{color:var(--accent-ui);text-decoration:underline;text-underline-offset:3px}
+.sr-rate{white-space:nowrap}
+.sr-rate b{display:inline-block;min-width:2.1em;font-weight:600;font-variant-numeric:tabular-nums;color:var(--t-strong,#fff)}
+.sr-dots{display:inline-flex;gap:3px;margin-inline-start:.45rem;vertical-align:-1px}
+.sr-dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(90deg,var(--t-strong,#fff) var(--f),var(--t-line-strong,#4a433d) var(--f))}
+.sr-empty{color:var(--t-muted)}
+@media (max-width:720px){.doc{font-size:.97rem}.sr-table th:last-child,.sr-table td.sr-rate{width:7.8rem}.sr-dot{width:8px;height:8px}}

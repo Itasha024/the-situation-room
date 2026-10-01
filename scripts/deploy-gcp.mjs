@@ -9,7 +9,7 @@
  *   1. builds (skip with --no-build),
  *   2. sends `.output` and migrations/ to /srv/desk/releases/<time>,
  *   3. applies migrations the server's database hasn't had yet,
- *   4. points current at the release and restarts the site,
+ *   4. waits for a scan under way, points current at the release and restarts the site,
  *   5. waits for /api/status; if it doesn't answer, goes back to the previous release,
  *   6. keeps the newest 3 releases.
  * The old PC host (scripts/deploy-host.mjs) is `npm run deploy:pc`.
@@ -57,6 +57,8 @@ for f in /srv/desk/migrations/0*.sql; do
   fi
 done
 PREV=$(readlink -f /srv/desk/current)
+# A scan under way finishes first (up to 4 minutes): a restart cut it off.
+for i in $(seq 80); do systemctl is-active --quiet desk-tick.service || break; [ $i = 1 ] && echo "[deploy] waiting for the scan to finish"; sleep 3; done
 ln -sfn $R /srv/desk/current
 sudo systemctl restart desk-server
 ok=

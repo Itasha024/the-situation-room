@@ -3439,7 +3439,13 @@ function feedCardHtml(r, i) {
   const sum = reportTeaser(r);
   const srcHtml = sourceAnchors(src, r.url || '');
   const lead = reportLead(r);
-  const also = Array.isArray(r.alsoReportedBy) && r.alsoReportedBy.length ? r.alsoReportedBy : null;
+  // Each outlet once, and never the card's own: two posts of one channel are one name.
+  const seenAlso = new Set([canonicalSourceName(r.source)]);
+  const alsoList = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []).filter((a) => {
+    const n = canonicalSourceName(a.source);
+    return !seenAlso.has(n) && (seenAlso.add(n), true);
+  });
+  const also = alsoList.length ? alsoList : null;
   const isOpen = openFeedFps.has(fp);
   const leanRaw = sourceLean(src);
   const lean = (leanRaw === 'south' || leanRaw === 'intl' || leanRaw === 'other') ? 'indep' : leanRaw;

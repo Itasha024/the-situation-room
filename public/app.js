@@ -3382,7 +3382,7 @@ function renderCasualties() {
   else {
     const nums = (brief && brief.figures && brief.figures.cells ? brief.figures : null) || fallbackNumbers((brief && brief.tally) || TALLY_FALLBACK);
     // Official = official bodies only; everyone else is unofficial, by the side they speak for.
-    const head = '<tr class="grp"><th></th><th></th><th scope="colgroup" colspan="2" class="un">Unofficial</th></tr><tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
+    const head = '<tr><th></th><th scope="col">Official</th><th scope="col" class="h">Houthi sources</th><th scope="col" class="g">Gov. / Saudi sources</th></tr>';
     slides = NUM_BOXES.map(([title, rows]) => [title, `<div class="tally-box claims"><h3>${title}</h3><table>${head}${rows.map(([label, key]) => {
       const r = nums.cells[key] || {};
       return `<tr><th scope="row">${label}</th>${numCell(r.official, 'off')}${numCell(r.houthi, 'h')}${numCell(r.gov, 'g')}</tr>`;

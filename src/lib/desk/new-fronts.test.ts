@@ -137,3 +137,24 @@ test("a repelled attack is drawn from the attacker's side", () => {
   assert.equal(repelAttacker("Houthi forces repel government advance in Rasin"), "government");
   assert.equal(repelAttacker("Clashes in Taiz"), null);
 });
+
+import { headlinesLine } from "./brief-store.ts";
+
+test("a front the writer left out reads its own headlines, not a count", () => {
+  const own = [
+    { summary: "Houthi forces attack government positions in Aden", at: "2026-10-01T20:00:00Z", score: 60 },
+    { summary: "Houthi forces attack government positions in Aden.", at: "2026-10-01T19:00:00Z", score: 50 },
+    { summary: "Clashes reported north of Aden", at: "2026-10-01T18:00:00Z", score: 40 },
+  ] as never[];
+  assert.equal(headlinesLine(own), "Houthi forces attack government positions in Aden. Clashes reported north of Aden.");
+  assert.equal(headlinesLine([]), "");
+});
+
+import { isCountedLine } from "./brief-store.ts";
+
+test("the counted line is known as such; a writer's line or a headline is not", () => {
+  assert.equal(isCountedLine("In the 6 hours to 00:00 on 2 Oct there were one ground engagement. Activity here is up on the previous window."), true);
+  assert.equal(isCountedLine("Aden, the port capital. Nothing was reported from this front in the 6 hours to 00:00."), true);
+  assert.equal(isCountedLine("Houthi forces shelled positions north of Aden."), false);
+  assert.equal(headlinesLine([{ summary: "Saudi jets strike Houthis", at: "2026-10-01T20:00:00Z" }] as never[]), "Saudi jets strike Houthis.");
+});

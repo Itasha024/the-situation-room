@@ -69,6 +69,13 @@ function deskInstant(year: number, month: number, day: number, hour: number): nu
   return t;
 }
 
+/** The desk's day ("2026-10-02") at instant `t` and the instant it began (00:00 Israel). */
+export function deskDay(t: number): { day: string; startedAt: number } {
+  const { year, month, day } = deskParts(new Date(t));
+  const p = (n: number) => String(n).padStart(2, "0");
+  return { day: `${year}-${p(month)}-${p(day)}`, startedAt: deskInstant(year, month, day, 0) };
+}
+
 function deskIso(t: number): string {
   const { year, month, day, hour, minute } = deskParts(new Date(t));
   const off = deskOffset(t);

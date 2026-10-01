@@ -243,6 +243,8 @@ export type Learned = { site: string; name: string; kind: "site" | "x"; lang: st
  * Israeli outlets, by address: never a source and never learned. A name check
  * alone let JFeed through as the "original" of a Houthi message to the EU.
  */
+/** Outlets the desk stopped using (user, 2 Oct): never a card's source or original. */
+export const DROPPED_OUTLET = /(?:^|[\s/.])(?:suhail\.net|suhail|سهيل|himma0099|himmah?)(?:$|[\s/.])/i;
 export const ISRAELI_HOST = /(?:^|\.)(?:[a-z0-9-]+\.il|jfeed\.com|jpost\.com|timesofisrael\.com|haaretz\.com|ynetnews\.com|i24news\.tv|israelnationalnews\.com|israelhayom\.com|jns\.org|allisrael\.com|debka\.com)$/i;
 
 const hostOf = (url: string) => {

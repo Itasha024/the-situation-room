@@ -30,6 +30,7 @@ import type { Listed } from "./sitemap.ts";
 import { ownCarrier, speakerOf } from "./speakers.ts";
 import {
   type Hit,
+  DROPPED_OUTLET,
   ISRAELI_HOST,
   type Learned,
   LEARNED_KEY,
@@ -754,7 +755,7 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
     // A video page or a section front is not the article: try the next fit.
     for (const hit of ranked.slice(0, 2)) {
       const url = await resolveGoogleNews(hit.link);
-      if (!url || !articlePath(url) || ISRAELI.test(hit.outlet) || ISRAELI_HOST.test(hostOf(url))) continue;
+      if (!url || !articlePath(url) || ISRAELI.test(hit.outlet) || ISRAELI_HOST.test(hostOf(url)) || DROPPED_OUTLET.test(` ${hit.outlet} ${hostOf(url)} `)) continue;
       // Three of the story's own words in the headline is the story; fewer —
       // "China Expands Drug Chemicals Control" for "China expands secret
       // procurement" — and its page must show them.

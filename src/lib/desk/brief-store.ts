@@ -286,7 +286,11 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
   });
   // A backup writer's prose replaces the counted fallback text, never a strong writer's.
   const keep = !!model && (force || STRONG.has(model) || !brief.situation?.model);
-  const out = keep ? next : brief;
+  // Not kept, a front still on the counted line takes this answer's line (or its headlines).
+  const better = new Map(next.fronts.map((f) => [f.id, f]));
+  const out = keep
+    ? next
+    : { ...brief, fronts: brief.fronts.map((f) => (isCountedLine(f.line) && better.get(f.id)?.line && !isCountedLine(better.get(f.id)!.line) ? { ...f, line: better.get(f.id)!.line, ...(better.get(f.id)!.map ? { map: better.get(f.id)!.map } : {}) } : f)) };
   console.log(`[desk] prose asked again: ${model || "no model"}${keep ? ", kept" : ", not kept"}`);
   await store.putJson(BRIEF_KEY, { brief: out, history: saved.history } satisfies StoredBrief);
   return out;
@@ -309,6 +313,29 @@ export async function refront(store: DeskStore, saved: StoredBrief, now: Date): 
   const next: StoredBrief = { brief, history };
   await store.putJson(BRIEF_KEY, next);
   return reprose(store, next, now, true);
+}
+
+/** The counted fallback line (synthesis.ts composeFront), not anyone's writing. */
+export function isCountedLine(line: string | undefined): boolean {
+  return /\bIn the \d+ hours to .+? there (?:was|were) |\bNothing was reported from this front/.test(line || "");
+}
+
+/**
+ * A front the writer left out: its own reports' headlines, newest first, in
+ * place of the counted line ("there were one ground engagement", 2 Oct).
+ */
+export function headlinesLine(own: LiveReport[], max = 3): string {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of [...own].sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || b.at.localeCompare(a.at))) {
+    const h = String(r.summary || "").trim().replace(/[.\s]+$/, "");
+    const key = h.toLowerCase();
+    if (!h || seen.has(key)) continue;
+    seen.add(key);
+    out.push(`${h}.`);
+    if (out.length >= max) break;
+  }
+  return out.join(" ");
 }
 
 /**
@@ -362,7 +389,7 @@ async function proseInto(
       if (prose?.fronts[f.id]) {
         f.line = keepReported(prose.fronts[f.id], own) || prose.fronts[f.id];
         if (prose.frontMaps[f.id]) frontMaps[f.id] = prose.frontMaps[f.id];
-      }
+      } else f.line = headlinesLine(own) || f.line;
     }
   } catch (err) {
     console.error("[desk] prose failed:", err instanceof Error ? err.message : err);

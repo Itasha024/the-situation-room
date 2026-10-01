@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { deskDay } from "./brief.ts";
 import { type RatedCard, blend, groupOf, laterCandidates, rateSources, ratingsDue, reportScore, startOf, withSeed } from "./source-rating.ts";
 
 const NOW = Date.parse("2026-10-02T06:00:00Z");
@@ -100,6 +101,10 @@ test("once a day, and the seed's errors are in", () => {
   assert.equal(ratingsDue({ day: "2026-10-02", updatedAt: "", sources: [] }, new Date(NOW)), false);
   assert.equal(ratingsDue({ day: "2026-10-01", updatedAt: "", sources: [] }, new Date(NOW)), true);
   assert.equal(withSeed(null)["live-t-me-alibk3-37482"].verdict, "false");
+  // The day turns at 00:00 Israel, not UTC: 21:10 UTC on 1 Oct is already 2 Oct there.
+  assert.equal(ratingsDue({ day: "2026-10-01", updatedAt: "", sources: [] }, new Date("2026-10-01T21:10:00Z")), true);
+  assert.equal(ratingsDue({ day: "2026-10-02", updatedAt: "", sources: [] }, new Date("2026-10-01T21:10:00Z")), false);
+  assert.equal(deskDay(Date.parse("2026-10-01T21:10:00Z")).startedAt, Date.parse("2026-10-01T21:00:00Z"));
 });
 
 test("a later non-aligned paper passing on the claim does not bear it out; too-new reports wait", () => {

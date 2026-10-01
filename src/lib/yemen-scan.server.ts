@@ -15,6 +15,7 @@ import { placesInCountry, type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
 import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
+import { deskDay } from "./desk/brief.ts";
 import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
@@ -25,7 +26,7 @@ import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
-import { type Learned, loadLearned } from "./desk/originals.ts";
+import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
@@ -173,7 +174,6 @@ const X_ACCOUNTS: XAccount[] = [
   X("ALyemennow", "Al-Yemen Now", "gov", C10),
   X("TVyemenshabab", "Yemen Shabab TV", "gov", C10),
   X("defenseliney", "Defense Line", "intl", C10),
-  X("Himma0099", "Himmah", "gov", C10),
   // Every 30 minutes: the leaders, the ministries' other voices, the parties.
   X("PresidentRashad", "Rashad al-Alimi", "gov", C30),
   X("ERYANIM", "Muammar al-Eryani", "gov", C30),
@@ -615,7 +615,7 @@ function toLiveReport(source: string, url: string, rawText: string, at: string, 
     topicality: 0,
   });
 
-  if (isIsraeliSource(source, url)) {
+  if (isIsraeliSource(source, url) || DROPPED_OUTLET.test(` ${source} ${url} `)) {
     return no("excluded-source", "Outlet excluded from this desk's catalogue.");
   }
   try {
@@ -2622,7 +2622,9 @@ export async function refreshSourceRatings(store: Awaited<ReturnType<typeof getS
     console.log(`[source-ratings] ${pairs.length} lone reports checked against later ones, ${added} borne out`);
   }
   const sources = rateSources(cards, catalogue, withSeed(own), now.getTime());
-  const made: SourceRatings = { day: now.toISOString().slice(0, 10), updatedAt: now.toISOString(), sources };
+  // Stamped with the hour it is due, 00:00 Israel, though the tick runs it a few minutes after.
+  const { day, startedAt } = deskDay(now.getTime());
+  const made: SourceRatings = { day, updatedAt: new Date(startedAt).toISOString(), sources };
   await store.putJson(RATINGS_KEY, made);
   useRatings(made, now.getTime());
   console.log(`[source-ratings] ${sources.length} sources rated`);

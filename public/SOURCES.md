@@ -32,7 +32,7 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 | SPA | every 5 minutes |
 | Al-Araby Al-Jadeed, Al-Araby TV | every 30 minutes |
 | Asharq Al-Awsat | every 30 minutes |
-| Erem News, Alhurra, Arab News, Suhail | every 30 minutes |
+| Erem News, Alhurra, Arab News | every 30 minutes |
 | Sheba Intelligence | every hour |
 | Reuters, WSJ, Washington Post, NYT, NY Post, Axios, CNN, ABC, CBS, Fox | every 30 minutes |
 | Keyword safety nets (Arabic sites, English sites) | every hour |
@@ -97,7 +97,6 @@ model got to are judged by keyword for now and asked about again next read.
 | Fox News | `moxie.foxnews.com/google-publisher/world.xml`, `/politics.xml` | 30 min |
 | SPA | Google News, `site:spa.gov.sa` alone, Arabic edition, last hour | 5 min |
 | Sheba Intelligence | its section pages: news, reports, investigations, politics, daily brief (no feed; its sitemap re-dates old articles) | hourly |
-| Suhail | `suhail.net/news_rss.php?top=0` (every item) | 30 min |
 
 Any site whose own listing fails on a read is listed through Google News (a day wide; what was judged before is skipped)
 (`site:` alone) for that read. Nothing behind Cloudflare or a paywall is

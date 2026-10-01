@@ -27,6 +27,7 @@
  */
 
 import { isOfficialBody } from "./numbers.ts";
+import { deskDay } from "./brief.ts";
 import { outletSide as digestSide } from "./digest.ts";
 import { outletSide as credSide } from "./credibility.ts";
 
@@ -236,14 +237,15 @@ export function rateSources(cards: RatedCard[], catalogue: CatalogueEntry[], ver
     const sc = scores.get(k) ?? [];
     out.push({ name, url, platform, group, start, rating: blend(start, sc), n: sc.reduce((a, s) => a + s.weight, 0) });
   };
-  for (const c of catalogue) add(c.name, c.url, c.platform, c.lean);
+  for (const c of catalogue) if (!DROPPED.has(norm(c.name))) add(c.name, c.url, c.platform, c.lean);
   // Outlets met only on cards: listed once they have a few scored reports.
   for (const [k, name] of names) if (!seen.has(k) && !DROPPED.has(k) && (scores.get(k)?.length ?? 0) >= 3) add(name, "", "");
   return out;
 }
 
-/** Sources the desk stopped reading (user, 1 Oct): their old cards stay, the list leaves them out. */
-const DROPPED = new Set(["Malik al-Rougui", "Fathi bin Lazraq", "Ahmed al-Rbizy", "Ibrahim Asqin", "Yaseen al-Aqlani", "Taha Saleh"].map((n) => norm(n)));
+/** Sources the desk stopped reading (user, 1 and 2 Oct): their old cards stay, the list leaves them out. */
+export const DROPPED_SOURCES = ["Malik al-Rougui", "Fathi bin Lazraq", "Ahmed al-Rbizy", "Ibrahim Asqin", "Yaseen al-Aqlani", "Taha Saleh", "Suhail", "Himmah"];
+const DROPPED = new Set(DROPPED_SOURCES.map((n) => norm(n)));
 
 /**
  * The day's ratings, kept in the process for the card trust figure: read from
@@ -262,9 +264,9 @@ export function recordOf(name: string): number {
   return cache?.byName.get(norm(name)) ?? 0;
 }
 
-/** Due once a day: no ratings yet, or the stored ones are from an earlier day. */
+/** Due once a day at 00:00 Israel (user, 2 Oct): no ratings yet, or the stored ones are from an earlier day. */
 export function ratingsDue(stored: SourceRatings | null, now = new Date()): boolean {
-  return !stored || stored.day !== now.toISOString().slice(0, 10);
+  return !stored || stored.day !== deskDay(now.getTime()).day;
 }
 
 /**

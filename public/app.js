@@ -2212,11 +2212,7 @@ function devAction(clause) {
 }
 
 let devAnim = null;
-let devTurnTimer = null;
-function stopDevAnim() {
-  if (devAnim) { cancelAnimationFrame(devAnim.raf); devAnim = null; }
-  if (devTurnTimer) { clearInterval(devTurnTimer); devTurnTimer = null; }
-}
+function stopDevAnim() { if (devAnim) { cancelAnimationFrame(devAnim.raf); devAnim = null; } }
 
 /** Is a point inside a Saudi province? */
 function inSaudi(ll) {
@@ -2482,7 +2478,7 @@ const DEV_BOX = {
   airstrike: [-22, -28, 44, 34], shelling: [-42, -22, 50, 30], fighting: [-23, -9, 46, 18], repelled: [-32, -13, 43, 26],
   capture: [-2, -40, 44, 40], advance: [-34, -34, 68, 68], naval: [-15, -15, 30, 30], energy: [-12, -14, 24, 26], alert: [-11, -10, 22, 20], dive: [-28, -22, 36, 28], hit: [-8, -8, 16, 16],
 };
-/** Pictures at one spot (within 1.5 km) take turns on it. */
+/** Pictures at one spot (within 1.5 km), in the order they stand. */
 function devGroups(marks) {
   const out = [];
   for (const x of marks) {
@@ -2510,8 +2506,8 @@ function devMerge(marks) {
 
 /**
  * Draw the marks on a pop-up map and play them. Extends `bounds` with what it
- * drew. Each picture is fixed to its own spot (the white dot) at every zoom:
- * it only grows or shrinks with the zoom, never moves.
+ * drew. Each picture stands on its own spot (the white dot); it grows or
+ * shrinks with the zoom, and is moved aside only to clear another.
  */
 function drawDevMarks(m, marks, bounds) {
   const movers = [];
@@ -2545,16 +2541,17 @@ function drawDevMarks(m, marks, bounds) {
   const pics = [];
   for (const g of devGroups(merged)) {
     // Each picture on its own spot: its burst, its flag's foot, its shield on
-    // the white dot. Several at one spot take turns (each a beat later), and
-    // every other one comes in from the other side, so they never cover each
-    // other. Pictures only: the key says what each one means.
+    // the white dot. At a shared spot every other one comes in from the other
+    // side; devSpread moves apart any that would still cover each other.
+    // Pictures only: the key says what each one means.
     g.forEach((x, k) => {
       const flip = k % 2 === 1 && DEV_FLIPS.has(devPicKind(x));
       const mk = L.marker(x.ll, {
         interactive: false, keyboard: false, zIndexOffset: 2500 + (DEV_ORDER.length - DEV_ORDER.indexOf(x.kind)) * 30 - k,
-        icon: L.divIcon({ className: 'dev-wrap dv', html: `<span class="dv-pic"><span class="dv-one${flip ? ' dv-flip' : ''}">${devPicHtml(x, devColor(x.side), devColor(devFoe(x.side)))}</span></span><i class="dv-dot"></i>`, iconSize: [0, 0], iconAnchor: [0, 0] }),
+        icon: L.divIcon({ className: 'dev-wrap dv', html: `<i class="dv-lead"></i><span class="dv-pic"><span class="dv-one${flip ? ' dv-flip' : ''}">${devPicHtml(x, devColor(x.side), devColor(devFoe(x.side)))}</span></span><i class="dv-dot"></i>`, iconSize: [0, 0], iconAnchor: [0, 0] }),
       }).addTo(m);
-      pics.push({ mk, ll: x.ll });
+      const [l, t, w, h] = DEV_BOX[devPicKind(x)];
+      pics.push({ mk, ll: x.ll, box: [flip ? -(l + w) : l, t, w, h] });
     });
   }
 
@@ -2592,7 +2589,7 @@ function drawDevMarks(m, marks, bounds) {
     }
   };
   stopDevAnim();
-  devTakeTurns(m, pics);
+  devSpread(m, pics);
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!movers.length) return;
   if (reduce) { setTimeout(() => frameAt(0.8), 120); return; }
@@ -2606,41 +2603,61 @@ function drawDevMarks(m, marks, bounds) {
 }
 
 /**
- * Pictures closer on screen than they are wide would cover each other. On
- * every beat (one loop of the pictures) the map shows as many as fit without
- * touching, those shown least lately first, so each one gets its turn and
- * none covers another; one turning on starts its loop afresh. Spots (the white
- * dots) stay. Zooming in parts them, so the screen is read again on every zoom.
+ * Every picture is always shown. Pictures that would cover each other on
+ * screen are moved apart just enough to stand clear, each tied to its own spot
+ * (the white dot) by a thin line; the same pictures show at every zoom, only
+ * the gaps between them change. Worked out again when the zoom changes.
  */
-function devTakeTurns(m, pics) {
-  const last = pics.map(() => -1);
-  const on = pics.map(() => true);
-  let beat = 0;
-  const elOf = (p) => p.mk.getElement() && p.mk.getElement().querySelector('.dv-pic');
-  const play = () => {
-    const near = 40 * Number(devScale(m.getZoom()));
-    const pts = pics.map((p) => m.latLngToLayerPoint(p.ll));
-    const order = pics.map((_, i) => i).sort((i, j) => last[i] - last[j] || i - j);
-    const shown = [];
-    for (const i of order) if (shown.every((j) => pts[j].distanceTo(pts[i]) >= near)) shown.push(i);
+function devSpread(m, pics) {
+  const GAP = 3;
+  const lay = () => {
+    const s = Number(devScale(m.getZoom()));
+    const home = pics.map((p) => m.latLngToLayerPoint(p.ll));
+    // Each picture's box on screen: [x, y, w, h], and how far it has been moved.
+    const r = pics.map((p, i) => ({ x: home[i].x + p.box[0] * s, y: home[i].y + p.box[1] * s, w: p.box[2] * s, h: p.box[3] * s, dx: 0, dy: 0 }));
+    for (let round = 0; round < 80; round++) {
+      let moved = false;
+      for (let i = 0; i < r.length; i++) {
+        for (let j = i + 1; j < r.length; j++) {
+          const A = r[i], B = r[j];
+          const ox = Math.min(A.x + A.dx + A.w, B.x + B.dx + B.w) - Math.max(A.x + A.dx, B.x + B.dx) + GAP;
+          const oy = Math.min(A.y + A.dy + A.h, B.y + B.dy + B.h) - Math.max(A.y + A.dy, B.y + B.dy) + GAP;
+          if (ox <= 0 || oy <= 0) continue;
+          moved = true;
+          // Apart along the shorter way out, half each.
+          const ca = [A.x + A.dx + A.w / 2, A.y + A.dy + A.h / 2], cb = [B.x + B.dx + B.w / 2, B.y + B.dy + B.h / 2];
+          if (ox < oy) {
+            const d = (ca[0] < cb[0] || (ca[0] === cb[0] && i < j) ? -1 : 1) * ox / 2;
+            A.dx += d; B.dx -= d;
+          } else {
+            const d = (ca[1] < cb[1] || (ca[1] === cb[1] && i < j) ? -1 : 1) * oy / 2;
+            A.dy += d; B.dy -= d;
+          }
+        }
+      }
+      if (!moved) break;
+    }
     pics.forEach((p, i) => {
-      const now = shown.includes(i);
-      const el = elOf(p);
-      if (now) last[i] = beat;
-      if (!el || (now === on[i] && beat)) return;
-      el.style.opacity = now ? '1' : '0';
-      if (now && el.getAnimations) for (const x of el.getAnimations({ subtree: true })) x.currentTime = 0;
-      on[i] = now;
+      const el = p.mk.getElement();
+      if (!el) return;
+      const { dx, dy } = r[i];
+      const pic = el.querySelector('.dv-pic');
+      const lead = el.querySelector('.dv-lead');
+      if (pic) pic.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) scale(var(--dvs,1))`;
+      if (!lead) return;
+      // The line runs from the spot to the nearest edge of its moved picture.
+      const bx = p.box[0] * s + dx, by = p.box[1] * s + dy;
+      const tx = Math.max(bx, Math.min(0, bx + r[i].w)), ty = Math.max(by, Math.min(0, by + r[i].h));
+      const len = Math.hypot(tx, ty);
+      if (len < 4) { lead.style.display = 'none'; return; }
+      lead.style.display = 'block';
+      lead.style.width = `${len.toFixed(1)}px`;
+      lead.style.transform = `rotate(${(Math.atan2(ty, tx) * 180 / Math.PI).toFixed(1)}deg)`;
     });
-    beat++;
   };
-  // A pop-up not laid out yet is read once it is framed.
-  m.whenReady(() => setTimeout(play, 0));
-  m.on('zoomend', play);
-  devTurnTimer = setInterval(() => {
-    if (!sheetMap || sheetMap !== m) { stopDevAnim(); return; }
-    play();
-  }, DEV_PERIOD);
+  // A pop-up not laid out yet is worked out once it is framed.
+  m.whenReady(() => setTimeout(lay, 0));
+  m.on('zoomend viewreset', lay);
 }
 
 /**

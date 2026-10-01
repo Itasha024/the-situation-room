@@ -266,7 +266,9 @@ path.place-hl{animation:placeHl 1.8s ease-in-out infinite}
    on the same 4.2 s loop. */
 .dv{overflow:visible}
 .dv .dv-dot{position:absolute;left:-3.5px;top:-3.5px;width:7px;height:7px;border-radius:50%;background:#f8fafc;box-shadow:0 0 0 1.5px #0b1220;pointer-events:none}
-.dv .dv-pic{position:absolute;left:0;top:0;pointer-events:none;transform:scale(var(--dvs,1));transform-origin:0 0;transition:opacity .4s ease}
+.dv .dv-pic{position:absolute;left:0;top:0;pointer-events:none;transform:scale(var(--dvs,1));transform-origin:0 0}
+.dv .dv-lead{display:none;position:absolute;left:0;top:0;height:0;border-top:1.5px solid rgba(248,250,252,.75);transform-origin:0 0;pointer-events:none;filter:drop-shadow(0 0 1px #0b1220)}
+html[data-theme="broadsheet-day"] .dv .dv-lead{border-top-color:rgba(28,25,23,.7);filter:none}
 .dv .dv-one{position:absolute;left:0;top:0;width:0;height:0}
 .dv .dv-flip{transform:scaleX(-1)}
 .dp{position:absolute;display:block;pointer-events:none}

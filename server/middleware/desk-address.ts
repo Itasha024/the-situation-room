@@ -1,6 +1,6 @@
 /**
  * The site's addresses. Each desk lives under its own path on the one domain —
- * thesituationroom.live/yemen now, /iran-… and others later — so:
+ * thesituationroom.live/yemen-conflict-desk now, others later — so:
  *
  * - `/` sends readers to the Yemen desk, for as long as it is the only one
  *   (a temporary redirect: `/` becomes the list of desks later).
@@ -23,11 +23,11 @@ export default function deskAddress(
   const { pathname, search } = event.url;
 
   if (host === `yemen.${HOME}`) {
-    const path = pathname === "/" ? "/yemen" : pathname;
+    const path = pathname === "/" || pathname === "/yemen" ? "/yemen-conflict-desk" : pathname;
     return Response.redirect(`https://${HOME}${path}${search}`, 301);
   }
   if (pathname === "/") {
-    return new Response(null, { status: 302, headers: { location: `/yemen${search}` } });
+    return new Response(null, { status: 302, headers: { location: `/yemen-conflict-desk${search}` } });
   }
   return next();
 }

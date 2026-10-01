@@ -587,9 +587,21 @@ export function sideWords(s: string, side: string | undefined): string {
       .replace(/\bHouthi forces forces\b/g, "Houthi forces");
   } else if (side === "government") {
     out = out
+      .replace(/\b(?:the )?Yemen(?:i|'s) armed forces\b/gi, "Yemeni government forces")
       .replace(/\b(?<!government )Yemeni (forces|army|troops)\b/g, "Yemeni government $1")
       .replace(/\bYemen's (defen[cs]e minister|chief of staff|army)\b/g, "Yemen's government $1");
   }
+  // Against "Saudi-backed forces" the other side is the Houthis, whatever the
+  // outlet calls them: "clashes between Yemeni forces and Saudi-backed forces".
+  out = out
+    .replace(/\bYemeni (?:government )?forces(?= and (?:Saudi|coalition)-backed forces\b)/g, "Houthi forces")
+    .replace(/\b((?:Saudi|coalition)-backed forces and )Yemeni (?:government )?forces\b/g, "$1Houthi forces")
+    // "Militia" is one side's word for the other; the desk says forces.
+    .replace(/\bHouthi militias? (elements|members|fighters|positions|gatherings|reinforcements|leaders|commanders)\b/g, "Houthi $1")
+    .replace(/\bHouthi militia (continues|targets|launches|attacks|fires|shells|uses|seeks|tries|keeps|pushes|deploys|claims|says|has|is|was)\b/g, (_m, v: string) =>
+      `Houthi forces ${({ has: "have", is: "are", was: "were", tries: "try" } as Record<string, string>)[v] ?? v.replace(/(?<=ch|sh|ss|x)es$|s$/, "")}`)
+    .replace(/\bHouthi militias?\b/g, "Houthi forces")
+    .replace(/\bHouthi forces forces\b/g, "Houthi forces");
   return out;
 }
 

@@ -116,3 +116,21 @@ test("a reaction, a Yemeni front or a mixed card stays apart", () => {
   assert.ok(!sameEventAbroad(mixed, h("Coalition spokesman: Houthi forces targeted Taibah electricity distribution station in Medina"), yp));
   assert.ok(!sameEventAbroad(h("Saudi air strikes hit Al-Salim directorate and Kataf wa al-Boqeia in Saada"), h("Saudi air strikes hit south of Saada, Al-Safra, and Kataf wa al-Boqeia in Saada governorate"), yp));
 });
+
+import { fixHeadline } from "./reader.ts";
+
+test("a minister warning of something keeps the verb", () => {
+  assert.equal(fixHeadline("Yemen human rights minister warns of Houthi escalation and migrant recruitment"), "Yemen human rights minister warns of Houthi escalation and migrant recruitment");
+  assert.equal(fixHeadline("UN spokesman says talks will resume"), "UN spokesman: talks will resume");
+});
+
+import { sideWords } from "./editor.ts";
+
+test("sides by their own names, whoever wrote the source", () => {
+  assert.equal(sideWords("Clashes reported between Yemeni forces and Saudi-backed forces in eastern Taiz", undefined), "Clashes reported between Houthi forces and Saudi-backed forces in eastern Taiz");
+  assert.equal(sideWords("Clashes reported between Yemeni government forces and coalition-backed forces in Taiz", undefined), "Clashes reported between Houthi forces and coalition-backed forces in Taiz");
+  assert.equal(sideWords("Yemeni armed forces strikes destroy Houthi artillery in Mocha", "government"), "Yemeni government forces strikes destroy Houthi artillery in Mocha");
+  assert.equal(sideWords("Warplanes target Houthi militia elements in Bani Omar", "government"), "Warplanes target Houthi elements in Bani Omar");
+  assert.equal(sideWords("Coalition: Houthi militia continues to provoke millions of Muslims", "saudi"), "Coalition: Houthi forces continue to provoke millions of Muslims");
+  assert.equal(sideWords("Houthi militia launches attack on Hays", undefined), "Houthi forces launch attack on Hays");
+});

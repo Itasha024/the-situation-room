@@ -692,9 +692,12 @@ export function roleNamesInProse(text: string): string {
   // A sentence opens with a capital, whatever role now leads it.
   return t.replace(/(^|[.!?]\s+)the /g, "$1The ");
 }
-/** "<role> says/warns (that) X" for a speaker whose words X are: the colon form. */
+/**
+ * "<role> says/warns (that) X" for a speaker whose words X are: the colon form.
+ * "warns of X" is no quote: "minister: of Houthi escalation" lost its verb.
+ */
 const SPEAKER_SAYS =
-  /^((?:[\w'.-]+ ){0,4}(?:spokes(?:man|person|woman)|minister|envoy|leader|secretary-general|chief|coordinator|Guterres|Grundberg|Fletcher)) (?:says|said|stated|warns|warned|stresses|stressed|affirms|affirmed|confirms|confirmed|declares|declared) (?:that )?(.+)$/i;
+  /^((?:[\w'.-]+ ){0,4}(?:spokes(?:man|person|woman)|minister|envoy|leader|secretary-general|chief|coordinator|Guterres|Grundberg|Fletcher)) (?:says|said|stated|warns|warned|stresses|stressed|affirms|affirmed|confirms|confirmed|declares|declared) (?:that )?(?!(?:of|against|about|over|on|for|to|with)\b)(.+)$/i;
 
 const BODY_FILLER = new Set(
   ("the and are was were has have had been for with from that this its their there after into over also " +

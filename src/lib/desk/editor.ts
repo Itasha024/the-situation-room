@@ -20,6 +20,7 @@ import { governorateAt } from "./adm1.ts";
 import { type Place, placesIn } from "./gazetteer.ts";
 import { placeNamesIn } from "./prose-places.ts";
 import { type OutletSide, credibility, outletSide } from "./credibility.ts";
+import { recordOf } from "./source-rating.ts";
 import {
   type EventType,
   type Reading,
@@ -852,6 +853,7 @@ export function confidenceOf(r: LiveReport, corroboratedBy: OutletSide[]): numbe
     hasFigure: /\d/.test(`${r.summary} ${r.text}`),
     hasTime: !!r.hasTime,
     corroboratedBy,
+    record: recordOf(r.source),
   });
 }
 

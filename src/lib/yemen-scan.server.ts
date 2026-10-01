@@ -26,6 +26,7 @@ import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatu
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { type Learned, loadLearned } from "./desk/originals.ts";
+import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
 import { listenToVideos } from "./desk/listen.ts";
@@ -424,6 +425,33 @@ function learnedFeeds(learned: Learned[]): RssFeed[] {
       const q = `(${sites.slice(i, i + 8).map((x) => `site:${x}`).join(" OR ")}) when:2h`;
       out.push({ id: `learned-${ed}-${i / 8}`, url: gnews(q, ...eds[ed]), name: LEARNED_NAME, cadence: C30, whole: true, ...(ed === "ar" ? { lang: "ar" as const } : {}) });
     }
+  }
+  return out;
+}
+
+/**
+ * Every source the desk reads, once each by name, for the Sources list: the
+ * Telegram channels, the X accounts, the sites and the outlets it learned.
+ * The safety-net searches ("Arabic press", "US media") are not sources.
+ */
+export function sourceCatalogue(learned: Learned[] = []): CatalogueEntry[] {
+  const out: CatalogueEntry[] = [];
+  const seen = new Set<string>();
+  const add = (e: CatalogueEntry) => {
+    const k = e.name.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(e);
+  };
+  for (const c of TG) add({ name: c.name, url: `https://t.me/${c.id}`, lean: c.lean, platform: "Telegram" });
+  for (const a of X_ACCOUNTS) add({ name: a.name, url: `https://x.com/${a.handle}`, lean: a.lean, platform: "X" });
+  for (const f of RSS) {
+    if (!f.site) continue;
+    add({ name: f.name, url: `https://${f.site}`, platform: "Website" });
+  }
+  for (const l of learned) {
+    if (!l.name) continue;
+    add(l.kind === "x" ? { name: l.name, url: `https://x.com/${l.site.replace(/^x:/, "")}`, platform: "X" } : { name: l.name, url: `https://${l.site}`, platform: "Website" });
   }
   return out;
 }
@@ -2542,6 +2570,65 @@ function guardUndici(): void {
   });
 }
 
+/** The cards as the rating reads them, from the store's rows. */
+function ratedCards(rows: Record<string, unknown>[]): RatedCard[] {
+  return rows.map((r) => ({
+    fp: String(r.fp),
+    at: String(r.at),
+    source: String(r.source ?? ""),
+    type: typeof r.type === "string" ? r.type : undefined,
+    summary: typeof r.summary === "string" ? r.summary : undefined,
+    ...(typeof r.lat === "number" && typeof r.lng === "number" ? { lat: r.lat, lng: r.lng } : {}),
+    also: Array.isArray(r.alsoReportedBy) ? (r.alsoReportedBy as { source: string; url?: string }[]) : [],
+  }));
+}
+
+/**
+ * Once a day: first the lone reports a later card may have borne out (a
+ * model says whether the two tell one event), then every source rated. Both
+ * stored; nothing about why a report counted against a source is shown.
+ */
+export async function refreshSourceRatings(store: Awaited<ReturnType<typeof getStore>>, now = new Date()): Promise<boolean> {
+  const stored = await store.getJson<SourceRatings>(RATINGS_KEY);
+  if (!ratingsDue(stored, now)) return false;
+  const slice = await store.recentDesk(8000, undefined, { events: false });
+  const cards = ratedCards(slice.reports);
+  const catalogue = sourceCatalogue(await loadLearned(store));
+  const leanOf = new Map(catalogue.map((c) => [c.name.toLowerCase(), c.lean]));
+  const own = (await store.getJson<Verdicts>(VERDICTS_KEY)) ?? {};
+  const checked = (await store.getJson<Record<string, string>>(LATER_CHECKED_KEY)) ?? {};
+  const pairs = laterCandidates(cards, (n) => leanOf.get(n.toLowerCase()), withSeed(own), now.getTime(), checked);
+  if (pairs.length) {
+    const list = pairs.map((p, i) => `${i + 1}. A (${p.early.at.slice(0, 16)}, ${p.early.source}): ${p.early.summary}\n   B (${p.later.at.slice(0, 16)}, ${tellers(p.later).join(", ")}): ${p.later.summary}`).join("\n");
+    const res = await askChain(
+      "source-ratings",
+      'Each pair is two news headlines. Say for each whether B reports the very same event as A (same place, same kind of event, same day or B following it up), not merely a similar one. Answer JSON: {"same":[true|false, ...]} in the order given.',
+      list,
+      { models: COMBINE_MODELS, temperature: 0 },
+    );
+    const same = Array.isArray(res?.json.same) ? (res.json.same as unknown[]) : [];
+    let added = 0;
+    pairs.forEach((p, i) => {
+      if (same[i] !== true) return;
+      own[p.early.fp] = { verdict: "confirmed-later", reason: "a later report from outside its side told the same event", at: now.toISOString(), by: p.later.fp };
+      added++;
+    });
+    if (added) await store.putJson(VERDICTS_KEY, own);
+    if (res) {
+      for (const p of pairs) checked[p.early.fp] = now.toISOString();
+      for (const [fp, at] of Object.entries(checked)) if (now.getTime() - Date.parse(at) > 40 * 86_400_000) delete checked[fp];
+      await store.putJson(LATER_CHECKED_KEY, checked);
+    }
+    console.log(`[source-ratings] ${pairs.length} lone reports checked against later ones, ${added} borne out`);
+  }
+  const sources = rateSources(cards, catalogue, withSeed(own), now.getTime());
+  const made: SourceRatings = { day: now.toISOString().slice(0, 10), updatedAt: now.toISOString(), sources };
+  await store.putJson(RATINGS_KEY, made);
+  useRatings(made, now.getTime());
+  console.log(`[source-ratings] ${sources.length} sources rated`);
+  return true;
+}
+
 /** The last ticks' database traffic and CPU, for the status page. */
 export const TICK_USAGE_KEY = "tick-usage";
 export type TickUsage = { at: string; tookMs: number; cpuMs: number; dbReadKB: number; dbWrittenKB: number; queries: number };
@@ -2554,6 +2641,7 @@ export async function runScanCycle(): Promise<TickResult> {
   const store = await getStore();
   const state = await store.loadScanState();
   const prev = await store.loadPayload();
+  await primeRatings(store).catch(() => {});
 
   const payload = await scanOnce(state, prev);
 
@@ -2596,6 +2684,12 @@ export async function runScanCycle(): Promise<TickResult> {
   }
 
   lap("backup");
+  // Once a day, each source's rating from its record (source-rating.ts).
+  try {
+    await refreshSourceRatings(store);
+  } catch (err) {
+    console.error("[desk] source ratings failed:", err instanceof Error ? err.message : err);
+  }
   // What this tick cost: Supabase bills egress, Vercel bills CPU.
   const cpu = cpu0 ? process.cpuUsage(cpu0) : null;
   const usage: TickUsage = {

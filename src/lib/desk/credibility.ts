@@ -32,6 +32,8 @@ export type CredibilityInput = {
   hasTime: boolean;
   /** Sides of OTHER outlets that carried the same story. */
   corroboratedBy: OutletSide[];
+  /** How far the outlet's own record has moved it from where it started (source-rating.ts). */
+  record?: number;
 };
 
 const BASE: Record<OutletSide, number> = { agency: 3.6, neutral: 3.0, gov: 2.4, houthi: 2.4 };
@@ -42,7 +44,7 @@ export function credibility(x: CredibilityInput): number {
     return clamp(s + (x.corroboratedBy.length ? 0.3 : 0));
   }
 
-  let s = BASE[x.side];
+  let s = BASE[x.side] + (x.record ?? 0);
   if (x.interest === "for") s -= 0.4;
   if (x.interest === "against") s += 0.7;
   if (x.hasPlace) s += 0.2;

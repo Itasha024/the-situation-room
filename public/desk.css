@@ -809,6 +809,7 @@ html{scroll-behavior:smooth}
 @media (hover:none){.cm-arrow{display:none}}
 @media (prefers-reduced-motion:reduce){.cm-album .cm-still img.cm-slide,.cm-dots button::before{transition:none}}
 .front-card .front-composed{margin:.35rem 0 0;font-size:.78rem;line-height:1.5;color:var(--t-text,#c9d4e0)}
+.front-card .front-asof{margin:.4rem 0 0;font:italic 500 .74rem/1.3 var(--f-body,inherit);color:var(--t-muted,#8b98a8)}
 
 /* The conflict in numbers: three plain boxes, no accent colour. */
 .tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.5rem}

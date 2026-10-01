@@ -147,6 +147,8 @@ export type FrontActivity = {
   spots?: [number, number][];
   /** What happened where on this front, for its animated map (prose.ts DevMark). */
   map?: DevMark[];
+  /** When this front last had reports: a front with none this window keeps its last text, marked with this time. */
+  lastNewsAt?: string;
 };
 
 export type Brief = {

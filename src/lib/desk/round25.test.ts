@@ -134,3 +134,13 @@ test("sides by their own names, whoever wrote the source", () => {
   assert.equal(sideWords("Coalition: Houthi militia continues to provoke millions of Muslims", "saudi"), "Coalition: Houthi forces continue to provoke millions of Muslims");
   assert.equal(sideWords("Houthi militia launches attack on Hays", undefined), "Houthi forces launch attack on Hays");
 });
+
+import { keepReported } from "./prose.ts";
+
+test("a front's 'holding' lines stay only when its reports say so", () => {
+  const sanaa = "Airstrikes were reported to have targeted a Houthi military camp on Jabal Dhaein in the Hamdan directorate, north-west of the capital. Anti-aircraft defenses in Sanaa remain on alert.";
+  assert.equal(keepReported(sanaa, [{ summary: "Air strike hits Houthi camp at Jabal Dayn in Hamdan, north-west of Sanaa" }]), "Airstrikes were reported to have targeted a Houthi military camp on Jabal Dhaein in the Hamdan directorate, north-west of the capital.");
+  assert.equal(keepReported("Government forces hold defensive lines near Al-Yatamah, while tensions persist between local tribes and Houthi authorities.", []), "");
+  const held = "Popular Resistance commander says forces are holding positions in Al-Shamayateen.";
+  assert.equal(keepReported(held, [{ summary: "Popular Resistance commander in Al-Shamayateen: forces are holding positions" }]), held);
+});

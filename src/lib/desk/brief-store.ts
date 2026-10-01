@@ -20,7 +20,7 @@
 import type { LiveReport } from "./types.ts";
 import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
-import { controlContext, type DevMark, type Prose, writeProse } from "./prose.ts";
+import { controlContext, keepReported, type DevMark, type Prose, writeProse } from "./prose.ts";
 import { WRITER_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
@@ -172,6 +172,7 @@ async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof bri
   const proseArgs = {
     previousSituation: saved?.brief.situation?.line || "",
     previousFront: (id: string) => saved?.brief.fronts?.find((p) => p.id === id)?.line || "",
+    previousNewsAt: (id: string) => saved?.brief.fronts?.find((p) => p.id === id)?.lastNewsAt || saved?.brief.updatedAt,
     frontsOf: (r: LiveReport) => frontIdsOf(r, extraFronts),
     inArea: (ll: [number, number], id: string) => inFrontArea(ll, id, extraFronts),
     controlLines,
@@ -278,6 +279,7 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
   const model = await proseInto(store, next, inWindow, all, {
     previousSituation: brief.situation?.line || "",
     previousFront: (id) => (saved.history?.prevFronts as Record<string, { line?: string }> | undefined)?.[id]?.line || "",
+    previousNewsAt: (id) => (saved.history?.prevFronts as Record<string, { lastNewsAt?: string }> | undefined)?.[id]?.lastNewsAt || brief.windowStart,
     frontsOf: (r) => frontIdsOf(r, extraFronts),
     inArea: (ll, id) => inFrontArea(ll, id, extraFronts),
     controlLines,
@@ -318,7 +320,7 @@ async function proseInto(
   brief: Brief,
   inWindow: LiveReport[],
   all: LiveReport[],
-  o: { previousSituation: string; previousFront: (id: string) => string; frontsOf: (r: LiveReport) => string[]; inArea: (ll: [number, number], id: string) => boolean; controlLines: string[] },
+  o: { previousSituation: string; previousFront: (id: string) => string; previousNewsAt: (id: string) => string | undefined; frontsOf: (r: LiveReport) => string[]; inArea: (ll: [number, number], id: string) => boolean; controlLines: string[] },
   /** Prose already written (before the hour): only its places and maps are done here. */
   given: Prose | null = null,
 ): Promise<string | null> {
@@ -344,8 +346,19 @@ async function proseInto(
       devMap = prose.devMap;
     }
     for (const f of brief.fronts) {
+      const own = inWindow.filter((r) => o.frontsOf(r).includes(f.id));
+      if (!own.length) {
+        // Nothing reported on this front in the window: its last real text
+        // stands as written, marked with when it was news. A model asked to
+        // restate it padded it ("air defences remain on alert").
+        const prev = o.previousFront(f.id);
+        f.line = prev ? keepReported(prev, []) || prev : "";
+        f.lastNewsAt = o.previousNewsAt(f.id);
+        continue;
+      }
+      f.lastNewsAt = brief.updatedAt;
       if (prose?.fronts[f.id]) {
-        f.line = prose.fronts[f.id];
+        f.line = keepReported(prose.fronts[f.id], own) || prose.fronts[f.id];
         if (prose.frontMaps[f.id]) frontMaps[f.id] = prose.frontMaps[f.id];
       }
     }

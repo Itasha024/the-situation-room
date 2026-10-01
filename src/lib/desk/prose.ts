@@ -91,6 +91,32 @@ const BANNED = /\b(?:desk|logged|log|cards?|in the window|this window)\b/i;
 const VAGUE = /\b(?:(?:multiple|several|various|many|numerous) (?:fronts|areas|locations|axes)|remain(?:s|ed)? targeted|across (?:the |several |multiple )?(?:fronts|areas|country)|intense fighting (?:continued|spans?))\b/i;
 const ABSENCE = /\b(?:no (?:new )?(?:fighting|clashes|strikes|attacks|incidents|reports?|activity|developments?)|(?:was|were) not reported|nothing (?:new )?(?:was )?reported|remain(?:ed|s)? unchanged)\b/i;
 
+/**
+ * A front "holding": units on alert, lines held, readiness kept, tension
+ * lasting. Written with no report behind it, it is a model filling space
+ * ("Anti-aircraft defences in Sanaa remain on alert"). Each such sentence
+ * stays only when the front's own reports say it: the word it rests on
+ * ("alert", "positions", "readiness", "tension") is in one of them.
+ */
+const HOLDING: [RegExp, RegExp][] = [
+  [/\b(?:remain|remains|remained|stay|stays|stayed|kept|keep|keeps|are|is|on) (?:on )?(?:high |elevated |full |heightened |maximum )?alert\b/i, /\balert\b/i],
+  [/\b(?:maintain|maintains|maintained|maintaining|hold|holds|held|holding|keep|keeps|kept) (?:their |its |defensive |high |full )*(?:positions|lines|readiness|combat readiness)\b/i, /\b(?:positions|lines|readiness)\b/i],
+  [/\b(?:high|full|combat) (?:combat )?readiness\b/i, /\breadiness\b/i],
+  [/\btensions? (?:persist|persists|remain|remains|continue|continues)\b/i, /\btension/i],
+  [/\b(?:continue|continues|continued) to face\b/i, /\bface[sd]?\b/i],
+  [/\bremain(?:s|ed)? (?:tense|calm|stable|quiet|steady)\b/i, /\b(?:tense|calm|stable|quiet|steady)\b/i],
+];
+
+/** The text without the "holding" sentences its reports do not carry; "" when none is left. */
+export function keepReported(text: string, own: { summary: string; text?: string }[]): string {
+  const said = own.map((r) => `${r.summary} ${r.text ?? ""}`).join(" ");
+  const sentences = String(text || "").match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g) ?? [];
+  return sentences
+    .filter((s) => !HOLDING.some(([pattern, word]) => pattern.test(s) && !word.test(said)))
+    .join("")
+    .trim();
+}
+
 function cardLine(r: LiveReport, frontsOf: (r: LiveReport) => string[]): string {
   const side = outletSide(String(r.source || ""));
   const ids = frontsOf(r);

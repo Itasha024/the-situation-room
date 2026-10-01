@@ -4314,6 +4314,19 @@ function allFronts(d) {
   return [...base, ...opened];
 }
 
+/**
+ * A front with no reports in this update keeps its last text: say when that
+ * was ("As of 18:00, 1 Oct", on the reader's clock), so it never reads as new.
+ */
+function frontAsOf(act) {
+  if (!act || !act.lastNewsAt || !brief || !brief.windowStart) return '';
+  const at = Date.parse(act.lastNewsAt);
+  if (!(at <= Date.parse(brief.windowStart))) return '';
+  const t = new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: VIEW_TZ });
+  const day = new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: VIEW_TZ });
+  return `As of ${t}, ${day}`;
+}
+
 /*
  * One front at a time, in the shared pager (dots under the box, arrows inside
  * it on a wide screen, a swipe on a phone). Every load opens on Bab al-Mandab.
@@ -4353,6 +4366,7 @@ function renderFronts(d) {
       ${showSum ? `<p class="front-sum">${linkPlacesAll(sum)}</p>` : ''}
       ${showDir ? `<p class="front-dir">${linkPlacesAll(dir)}</p>` : ''}
       ${composed ? `<p class="front-composed">${linkPlacesAll(composed)}</p>` : ''}
+      ${composed && frontAsOf(act) ? `<p class="front-asof">${frontAsOf(act)}</p>` : ''}
       ${!composed && act ? `<p class="front-activity">${linkPlacesAll(act.line)}</p>` : ''}
       ${composed ? '' : `<div class="srcs">Source: ${sourceAnchors(f.sources || [], '')}</div>`}
       ${showDetail ? `<div class="full">${linkPlacesAll(detail)}</div>

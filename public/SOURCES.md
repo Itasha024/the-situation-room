@@ -188,7 +188,7 @@ A post with its own picture or video (launches, strikes, ships, battle footage, 
 
 ## Map
 
-Icons, not dots: rocket = launch/strike/alert; swords = ground fighting; ship = maritime incident; energy incident = an oil, gas or port site hit. Statements stay in the feed only. The developments and fronts maps have their own pictures (energy site hit = a burning tank, sirens = a siren). The whole method, for readers: `/methodology`.
+Icons, not dots: rocket = launch/strike/alert; swords = ground fighting; ship = maritime incident; energy incident = an oil, gas or port site hit. Statements stay in the feed only. The developments and fronts maps have their own pictures (energy site hit = a burning tank, sirens = a siren).
 
 Control is shaded by district (`control.json`, the hand baseline of 24 Sep). Every 6 hours the desk changes a district only when two outlets from different sides, or a wire, report it taken; a claim by one side makes it contested. The control shares are computed from the shaded area.
 

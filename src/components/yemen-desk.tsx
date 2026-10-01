@@ -83,7 +83,6 @@ const DESK_HTML = `
   <div id="timeline"></div>
 </section>
 <footer>
-  <nav class="foot-links" aria-label="About the desk"><a href="/methodology">Methodology</a><a href="/yemen-conflict-desk/about">About</a></nav>
   <span id="attrib"></span>
 </footer>
 <div id="media-float" hidden></div>

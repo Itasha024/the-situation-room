@@ -6234,13 +6234,10 @@ try { setFavicon(THEME); } catch (e) {}
  * above the desk's own line, the reader's date on the left, the theme button on the right. */
 /*
  * The masthead's left: a menu button (three lines) opening a side panel with
- * the site's pages: the live desk, Methodology, About. The desk itself
- * carries no links into them.
+ * the site's desks.
  */
 const SITE_PAGES = [
   ['/yemen-conflict-desk', 'Yemen Conflict Desk', 'Live'],
-  ['/methodology', 'Methodology', 'How our desks work'],
-  ['/yemen-conflict-desk/about', 'About', 'What the desk is'],
 ];
 function installMast() {
   const el = document.querySelector('.mast-date');
@@ -6462,5 +6459,4 @@ async function bootYemenDesk() {
 
 window.startYemenDesk = startYemenDesk;
 // The Methodology and About pages: the masthead date and the theme button, nothing else.
-window.startDeskDoc = () => { installMast(); installThemeButton(); };
 startYemenDesk();

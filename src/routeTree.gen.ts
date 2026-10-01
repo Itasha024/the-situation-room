@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as YemenRouteImport } from './routes/yemen'
 import { Route as YemenConflictDeskRouteImport } from './routes/yemen-conflict-desk'
 import { Route as ApiBriefRouteImport } from './routes/api/brief'
@@ -20,17 +19,10 @@ import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiStatusRouteImport } from './routes/api/status'
 import { Route as ApiTgmediaRouteImport } from './routes/api/tgmedia'
 import { Route as ApiTickRouteImport } from './routes/api/tick'
-import { Route as YemenConflictDeskAboutRouteImport } from './routes/yemen-conflict-desk_.about'
-import { Route as YemenConflictDeskMethodologyRouteImport } from './routes/yemen-conflict-desk_.methodology'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MethodologyRoute = MethodologyRouteImport.update({
-  id: '/methodology',
-  path: '/methodology',
   getParentRoute: () => rootRouteImport,
 } as any)
 const YemenRoute = YemenRouteImport.update({
@@ -78,21 +70,9 @@ const ApiTickRoute = ApiTickRouteImport.update({
   path: '/api/tick',
   getParentRoute: () => rootRouteImport,
 } as any)
-const YemenConflictDeskAboutRoute = YemenConflictDeskAboutRouteImport.update({
-  id: '/yemen-conflict-desk_/about',
-  path: '/yemen-conflict-desk/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const YemenConflictDeskMethodologyRoute =
-  YemenConflictDeskMethodologyRouteImport.update({
-    id: '/yemen-conflict-desk_/methodology',
-    path: '/yemen-conflict-desk/methodology',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/methodology': typeof MethodologyRoute
   '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
@@ -102,12 +82,9 @@ export interface FileRoutesByFullPath {
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
-  '/yemen-conflict-desk/about': typeof YemenConflictDeskAboutRoute
-  '/yemen-conflict-desk/methodology': typeof YemenConflictDeskMethodologyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/methodology': typeof MethodologyRoute
   '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
@@ -117,13 +94,10 @@ export interface FileRoutesByTo {
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
-  '/yemen-conflict-desk/about': typeof YemenConflictDeskAboutRoute
-  '/yemen-conflict-desk/methodology': typeof YemenConflictDeskMethodologyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/methodology': typeof MethodologyRoute
   '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
@@ -133,14 +107,11 @@ export interface FileRoutesById {
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
-  '/yemen-conflict-desk_/about': typeof YemenConflictDeskAboutRoute
-  '/yemen-conflict-desk_/methodology': typeof YemenConflictDeskMethodologyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/methodology'
     | '/yemen'
     | '/yemen-conflict-desk'
     | '/api/brief'
@@ -150,12 +121,9 @@ export interface FileRouteTypes {
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
-    | '/yemen-conflict-desk/about'
-    | '/yemen-conflict-desk/methodology'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/methodology'
     | '/yemen'
     | '/yemen-conflict-desk'
     | '/api/brief'
@@ -165,12 +133,9 @@ export interface FileRouteTypes {
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
-    | '/yemen-conflict-desk/about'
-    | '/yemen-conflict-desk/methodology'
   id:
     | '__root__'
     | '/'
-    | '/methodology'
     | '/yemen'
     | '/yemen-conflict-desk'
     | '/api/brief'
@@ -180,13 +145,10 @@ export interface FileRouteTypes {
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
-    | '/yemen-conflict-desk_/about'
-    | '/yemen-conflict-desk_/methodology'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  MethodologyRoute: typeof MethodologyRoute
   YemenRoute: typeof YemenRoute
   YemenConflictDeskRoute: typeof YemenConflictDeskRoute
   ApiBriefRoute: typeof ApiBriefRoute
@@ -196,8 +158,6 @@ export interface RootRouteChildren {
   ApiStatusRoute: typeof ApiStatusRoute
   ApiTgmediaRoute: typeof ApiTgmediaRoute
   ApiTickRoute: typeof ApiTickRoute
-  YemenConflictDeskAboutRoute: typeof YemenConflictDeskAboutRoute
-  YemenConflictDeskMethodologyRoute: typeof YemenConflictDeskMethodologyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -207,13 +167,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/methodology': {
-      id: '/methodology'
-      path: '/methodology'
-      fullPath: '/methodology'
-      preLoaderRoute: typeof MethodologyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/yemen': {
@@ -279,26 +232,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTickRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/yemen-conflict-desk_/about': {
-      id: '/yemen-conflict-desk_/about'
-      path: '/yemen-conflict-desk/about'
-      fullPath: '/yemen-conflict-desk/about'
-      preLoaderRoute: typeof YemenConflictDeskAboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/yemen-conflict-desk_/methodology': {
-      id: '/yemen-conflict-desk_/methodology'
-      path: '/yemen-conflict-desk/methodology'
-      fullPath: '/yemen-conflict-desk/methodology'
-      preLoaderRoute: typeof YemenConflictDeskMethodologyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  MethodologyRoute: MethodologyRoute,
   YemenRoute: YemenRoute,
   YemenConflictDeskRoute: YemenConflictDeskRoute,
   ApiBriefRoute: ApiBriefRoute,
@@ -308,8 +246,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStatusRoute: ApiStatusRoute,
   ApiTgmediaRoute: ApiTgmediaRoute,
   ApiTickRoute: ApiTickRoute,
-  YemenConflictDeskAboutRoute: YemenConflictDeskAboutRoute,
-  YemenConflictDeskMethodologyRoute: YemenConflictDeskMethodologyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

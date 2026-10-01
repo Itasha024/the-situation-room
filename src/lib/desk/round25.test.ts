@@ -95,3 +95,24 @@ test("an energy site hit gets its own kind; a ship stays a ship (1 Oct)", () => 
   assert.equal(kindOf(card({ type: "strike", summary: "Houthi drone hits a tanker near Yanbu refinery" })), "naval");
   assert.equal(kindOf(card({ type: "strike", summary: "Saudi air strikes on Saada" })), "airstrike");
 });
+
+import { sameEventAbroad } from "./copies.ts";
+import { placesInCountry } from "./gazetteer.ts";
+
+const yp = (s: string) => placesInCountry(s, "Yemen").map((p) => p.name);
+const h = (summary: string) => ({ summary });
+
+test("one event in Saudi Arabia in different words is one card", () => {
+  const home = h("Coalition spokesman Turki al-Maliki and Saudi media said a Houthi drone strike hit Taibah electricity station in Medina");
+  assert.ok(sameEventAbroad(home, h("Saudi coalition admits to Houthi strike on Taibah electricity station in Medina"), yp));
+  assert.ok(sameEventAbroad(home, h("Coalition spokesman: Houthi forces targeted Taibah electricity distribution station in Medina"), yp));
+  assert.ok(sameEventAbroad(home, h("Coalition: Houthi attack on Taibah electricity station caused a transformer to go out of service"), yp));
+});
+
+test("a reaction, a Yemeni front or a mixed card stays apart", () => {
+  const attack = h("Houthi militia targets electricity station feeding the Prophet's Mosque");
+  assert.ok(!sameEventAbroad(attack, h("Gulf Cooperation Council secretary-general condemns Houthi targeting of electricity station serving Prophet's Mosque"), yp));
+  const mixed = h("Major-General Mohammed Al-Khawlani killed in clashes with Houthi forces in Taiz as a coalition spokesman says a Houthi terrorist attack targeted Taibah electricity distribution station in Medina");
+  assert.ok(!sameEventAbroad(mixed, h("Coalition spokesman: Houthi forces targeted Taibah electricity distribution station in Medina"), yp));
+  assert.ok(!sameEventAbroad(h("Saudi air strikes hit Al-Salim directorate and Kataf wa al-Boqeia in Saada"), h("Saudi air strikes hit south of Saada, Al-Safra, and Kataf wa al-Boqeia in Saada governorate"), yp));
+});

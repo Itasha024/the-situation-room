@@ -319,3 +319,62 @@ export function keepFirstTimes(reports: { fp: string; at: string }[], first: Map
   }
   return n;
 }
+
+/* ------------------------------------------------------------------ *
+ * One event abroad, told by many outlets in different words
+ * ------------------------------------------------------------------ */
+
+/** Words that tell nothing about which event it is: sides, roles, bodies, places at large. */
+const ABROAD_STOP = new Set(
+  (
+    "coalition government forces force army armed militia minister ministry spokesman spokesperson council presidential " +
+    "prime kingdom arab gulf red sea iran iranian united nations popular resistance southern brigade brigades axis command " +
+    "commander major general colonel media news agency channel local residents military security national attack attacks " +
+    "targeted targeting target terrorist drone drones strike strikes hit says said"
+  ).split(" "),
+);
+function abroadWords(s: string): Set<string> {
+  return new Set([...storyWords(s)].filter((w) => !ABROAD_STOP.has(w)));
+}
+/** Someone else's word on the event (a condemnation, a welcome) is its own card. */
+const REACTION = /\b(?:condemn|denounc|deplor|welcom|prais|express(?:es|ed)? solidarity|stands? with)\w*/i;
+
+/** How long after the first account another outlet's different words still tell the same event abroad. */
+export const ABROAD_WINDOW_MS = 75 * 60_000;
+
+/**
+ * One event in Saudi Arabia told by several outlets in their own words, within
+ * the hour: the coalition spokesman on the drone that hit Taibah electricity
+ * station in Medina went out as eight cards in five minutes (the attack, the
+ * transformer, the investigation, the Prophet's Mosque), none with a pin, so
+ * no spot or headline test joined them. Both must name the same Saudi city or
+ * site, share most of their words, and name no Yemeni place the other does
+ * not (a card on a general killed in Taiz that also mentions Medina is no
+ * home for the Medina accounts). A reaction from someone else stays its own
+ * card, and figures that disagree mean two events. The Yemeni fronts are left
+ * to the spot tests: there, one district's clashes an hour apart are two events.
+ * Sirens are left to the alert test.
+ */
+export function sameEventAbroad(a: { summary: string; text?: string }, b: { summary: string; text?: string }, yemeniPlaces: (s: string) => string[]): boolean {
+  const ta = `${a.summary} ${a.text ?? ""}`;
+  const tb = `${b.summary} ${b.text ?? ""}`;
+  const ca = SAUDI_CITIES.filter(([re]) => re.test(ta)).map(([, c]) => c);
+  const cb = SAUDI_CITIES.filter(([re]) => re.test(tb)).map(([, c]) => c);
+  const site = /\b(?:Taibah|Prophet's Mosque|Grand Mosque|Two Holy Mosques|Ras Tanura|Abqaiq|Aramco)\b/i;
+  const sa = site.exec(ta)?.[0].toLowerCase();
+  const sb = site.exec(tb)?.[0].toLowerCase();
+  if (!ca.some((c) => cb.includes(c)) && !(sa && sa === sb)) return false;
+  // Sirens have their own test (alertCities): two bursts minutes apart are two alerts.
+  if (alertCities(a) || alertCities(b)) return false;
+  if (REACTION.test(a.summary) !== REACTION.test(b.summary)) return false;
+  const ya = yemeniPlaces(a.summary);
+  const yb = yemeniPlaces(b.summary);
+  if (ya.some((p) => !yb.includes(p)) || yb.some((p) => !ya.includes(p))) return false;
+  if (numbersClash(ta, tb)) return false;
+  const x = abroadWords(a.summary);
+  const y = abroadWords(b.summary);
+  if (x.size < 2 || y.size < 2) return false;
+  let both = 0;
+  for (const w of x) if (y.has(w)) both += 1;
+  return both / Math.min(x.size, y.size) >= 0.5;
+}

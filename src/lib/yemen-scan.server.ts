@@ -11,7 +11,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { type Place } from "./desk/gazetteer.ts";
+import { placesInCountry, type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
 import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
@@ -20,7 +20,7 @@ import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading 
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
-import { alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
+import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameEventAbroad, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -1253,6 +1253,11 @@ export function linkKey(u: string): string {
 /** Where each report a fold took went (url → its card), for the scan's own accounting. */
 export const foldTrail = new Map<string, string>();
 
+/** The Yemeni places a headline names, for telling an event abroad from a front at home. */
+function yemeniPlaceNames(s: string): string[] {
+  return placesInCountry(s, "Yemen").map((p) => p.name);
+}
+
 export function foldIntoPublished(
   reports: LiveReport[],
   published: Set<string>,
@@ -1328,6 +1333,11 @@ export function foldIntoPublished(
           open(o) && o.source !== r.source && o.type === r.type && before(o, GROUND_WINDOW_MS) &&
           sameGround(o, r) && !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
       );
+    }
+    // One event in Saudi Arabia, many outlets, each in its own words: the
+    // Medina power station went out as eight cards in five minutes.
+    if (!home) {
+      home = homes.find((o) => open(o) && o.source !== r.source && before(o, ABROAD_WINDOW_MS) && sameEventAbroad(o, r, yemeniPlaceNames));
     }
     // Another account reposting the same clip hours later: one event.
     if (!home && FIELD_TYPES.has(r.type)) {

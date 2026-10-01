@@ -748,12 +748,20 @@ export function extractLead(html: string): string {
   const payload = html.includes("\\u003cp")
     ? html.replace(/\\u003c/g, "<").replace(/\\u003e/g, ">").replace(/\\u0026/g, "&").replace(/\\"/g, '"').replace(/\\n/g, " ")
     : "";
-  const paras = [...`${body} ${payload}`.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
-    .map((m) => decodeEntities(m[1]))
+  const paras = [...`${body} ${payload}`.matchAll(/<p([^>]*)>([\s\S]*?)<\/p>/gi)]
+    // A muted paragraph is another story's teaser: Sawt al-Asima's "related
+    // news" under its STC mobilisation piece became two cards on Al-Aghbara
+    // under that piece's link (1 Oct).
+    .filter((m) => !/class=["'][^"']*\btext-muted\b/i.test(m[1]))
+    .map((m) => decodeEntities(m[2]))
     .filter((p) => p.length > 50 && !/copyright|subscribe|cookie|javascript|sign in|all rights reserved/i.test(p));
   const parts: string[] = [];
   if (og) parts.push(og);
   if (ld.length > og.length) parts.push(ld);
+  // The article's own box, where a site keeps its text outside <p> tags.
+  const box = (body.match(/<(span|div)[^>]*(?:id|class)=["'][^"']*(?:lblarticalDetails|contnews)[^"']*["'][^>]*>([\s\S]*?)<\/\1>/i) || [])[2] || "";
+  const boxed = decodeEntities(box.replace(/<br\s*\/?>/gi, " "));
+  if (boxed.length > 80) parts.push(boxed);
   for (const p of paras) {
     if (parts.join(" ").length >= ARTICLE_CHARS) break;
     if (!parts.some((x) => x.includes(p.slice(0, 50)))) parts.push(p);

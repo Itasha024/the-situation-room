@@ -44,7 +44,58 @@ export type Understood = {
   model?: string;
   /** Every idea is one the desk knows (its table, a short form, a name or title, a place): no model needed. */
   known?: boolean;
+  /** Outlets the query names ("reuters"): a card from one, or carried by one, matches that idea. */
+  sources?: string[];
 };
+
+/**
+ * What the archive itself knows, for reading a query without a model: its
+ * outlets by name (a search for "Reuters" is for Reuters' cards, not for
+ * headlines with the word), and every word its cards use, so a misspelt word
+ * ("midina", "hoddeidah", "reuter") is read as the word the desk writes.
+ */
+export type Lexicon = { sources: Map<string, string>; words: Map<string, number> };
+
+const ARTICLE = /^(?:al|el|ad|ar|as|ash|at|az) /;
+
+export function learnLexicon(docs: SearchDoc[], outlets: string[]): Lexicon {
+  const sources = new Map<string, string>();
+  for (const o of outlets) {
+    const n = norm(o);
+    if (n.length < 3) continue;
+    sources.set(n, n);
+    sources.set(n.replace(/ /g, ""), n);
+    // "Al-Masirah" is also "masirah".
+    const bare = n.replace(ARTICLE, "");
+    if (bare !== n && bare.length >= 5) sources.set(bare, n);
+  }
+  const words = new Map<string, number>();
+  for (const d of docs) {
+    for (const w of norm(`${d.summary} ${d.place || ""} ${d.source}`).split(" ")) {
+      if (w.length >= 4 && !/^\d+$/.test(w)) words.set(w, (words.get(w) ?? 0) + 1);
+    }
+  }
+  return { sources, words };
+}
+
+/** The outlet a few words name, exactly or one letter off ("reuter", "al jazera"). */
+function outletOf(phrase: string, lex: Lexicon): string | null {
+  const exact = lex.sources.get(phrase) ?? lex.sources.get(phrase.replace(/ /g, ""));
+  if (exact) return exact;
+  const flat = phrase.replace(/ /g, "");
+  if (flat.length < 5) return null;
+  for (const [k, v] of lex.sources) if (k.length >= 5 && close(flat, k.replace(/ /g, ""))) return v;
+  return null;
+}
+
+/** The desk's own words a misspelt one stands for, most used first; none when the word is the desk's. */
+export function respellWord(w: string, lex: Lexicon): string[] {
+  if (w.length < 5 || /\d/.test(w) || lex.words.has(w) || ABBR[w] || LOCAL.some((g) => g.includes(w))) return [];
+  const out: [string, number][] = [];
+  for (const [v, n] of lex.words) if (Math.abs(v.length - w.length) <= 2 && v[0] === w[0] && close(w, v)) out.push([v, n]);
+  if (!out.length) for (const [v, n] of lex.words) if (Math.abs(v.length - w.length) <= 1 && close(w, v)) out.push([v, n]);
+  return out.sort((a, b) => b[1] - a[1]).slice(0, 3).map(([v]) => v);
+}
 
 /** Reading the query: Groq answers a short prompt in under a second. */
 export const SEARCH_MODELS: ChainModel[] = [
@@ -202,13 +253,37 @@ function ideaTerms(idea: string, people?: People): string[] | null {
  * commas ("saudi fm and rubio" is two), each a known phrase, name or title
  * with all its words, else each of its words an idea of its own.
  */
-export function understandLocally(q: string, people?: People, places?: Set<string>): Understood {
+export function understandLocally(q: string, people?: People, places?: Set<string>, lex?: Lexicon): Understood {
   const groups: string[][] = [];
+  const sources: string[] = [];
   let known = true;
+  let about = q;
   const ideas = q.split(/\s*(?:,|&|\+|\band\b|\bwith\b|\bvs\.?(?=\s)|\bversus\b)\s*/i).map(norm);
   for (const raw of ideas) {
-    const idea = raw.split(" ").filter((w) => w && !STOP.has(w)).join(" ");
+    let idea = raw.split(" ").filter((w) => w && !STOP.has(w)).join(" ");
     if (!idea) continue;
+    if (lex) {
+      // An outlet the query names, the longest first: "al jazeera", "reuters".
+      const ws = idea.split(" ");
+      for (let n = Math.min(3, ws.length); n >= 1; n--) {
+        for (let i = 0; i + n <= ws.length; i++) {
+          if (ws.slice(i, i + n).some((w) => !w)) continue;
+          const name = outletOf(ws.slice(i, i + n).join(" "), lex);
+          if (!name || places?.has(ws.slice(i, i + n).join(" "))) continue;
+          sources.push(name);
+          groups.push([name]);
+          for (let j = i; j < i + n; j++) ws[j] = "";
+        }
+      }
+      // A misspelt word stands for the desk's own spelling of it.
+      const fixed = ws.filter(Boolean).map((w) => {
+        const alt = respellWord(w, lex);
+        if (alt.length) about = about.replace(new RegExp(`\\b${w}\\b`, "i"), alt[0]);
+        return alt.length ? alt[0] : w;
+      });
+      idea = fixed.join(" ");
+      if (!idea) continue;
+    }
     const whole = idea.includes(" ") ? ideaTerms(idea, people) : null;
     // A phrase the desk knows as one thing ("saudi fm", "yahya saree") is one idea.
     if (whole && whole.some((t) => t !== idea && !idea.split(" ").includes(t))) {
@@ -225,7 +300,18 @@ export function understandLocally(q: string, people?: People, places?: Set<strin
       groups.push(g ?? [w]);
     }
   }
-  return { about: q, groups: groups.map((g) => [...new Set(g)].slice(0, 40)), known: known && groups.length > 0 };
+  return {
+    about,
+    groups: groups.map((g) => [...new Set(g)].slice(0, 40)),
+    known: known && groups.length > 0,
+    ...(sources.length ? { sources } : {}),
+  };
+}
+
+/** Whether a card is from, or carried by, one of the outlets the query names. */
+function fromSource(d: SearchDoc, t: string, u: Understood): boolean {
+  if (!u.sources?.includes(t)) return false;
+  return norm(d.source) === t || norm(d.source).replace(/ /g, "") === t.replace(/ /g, "") || termRe(t).test(norm(d.also || ""));
 }
 
 /** A model's reading and the desk's own, together: each of the model's ideas also takes the desk's words for it. */
@@ -235,7 +321,9 @@ export function mergeUnderstood(model: Understood, local: Understood): Understoo
     for (const lg of local.groups) if (lg.some((t) => out.has(t))) for (const t of lg) out.add(t);
     return [...out].slice(0, 50);
   });
-  return { ...model, groups };
+  // The outlets the query names stay ideas of their own, whatever the model made of them.
+  for (const src of local.sources ?? []) if (!groups.some((g) => g.includes(src))) groups.push([src]);
+  return { ...model, groups, ...(local.sources ? { sources: local.sources } : {}) };
 }
 
 /** Terms a reader can trust without a second look: the query's own words, the desk's table, who is who, and phrases. */
@@ -314,7 +402,7 @@ function termRe(term: string): RegExp {
  * one may be missing.
  */
 export function findCandidates(docs: SearchDoc[], u: Understood, max = 300): { doc: SearchDoc; score: number }[] {
-  const gs = u.groups.map((g) => g.map((t) => ({ re: termRe(t), w: 1 + Math.min(2, t.split(" ").length - 1) + (t.length >= 6 ? 0.5 : 0) })));
+  const gs = u.groups.map((g) => g.map((t) => ({ t, re: termRe(t), w: 1 + Math.min(2, t.split(" ").length - 1) + (t.length >= 6 ? 0.5 : 0) })));
   const since = u.since ? Date.parse(`${u.since}T00:00:00+03:00`) : -Infinity;
   const until = u.until ? Date.parse(`${u.until}T23:59:59+03:00`) : Infinity;
   const scored: { doc: SearchDoc; score: number; missing: number }[] = [];
@@ -327,8 +415,8 @@ export function findCandidates(docs: SearchDoc[], u: Understood, max = 300): { d
     let missing = 0;
     for (const g of gs) {
       let best = 0;
-      for (const { re, w } of g) {
-        if (re.test(head)) best = Math.max(best, 3 * w);
+      for (const { re, w, t } of g) {
+        if (re.test(head) || fromSource(d, t, u)) best = Math.max(best, 3 * w);
         else if (best < w && re.test(rest)) best = w;
       }
       if (!best) missing++;
@@ -370,5 +458,5 @@ export async function keepByModel(q: string, u: Understood, cands: SearchDoc[]):
  */
 export function headlineHas(d: SearchDoc, strong: Set<string>, u: Understood): boolean {
   const head = norm(d.summary);
-  return u.groups.every((g) => g.some((t) => strong.has(t) && head.includes(t) && termRe(t).test(head)));
+  return u.groups.every((g) => g.some((t) => fromSource(d, t, u) || (strong.has(t) && head.includes(t) && termRe(t).test(head))));
 }

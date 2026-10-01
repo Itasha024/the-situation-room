@@ -588,6 +588,3 @@ html[data-set="broadsheet"] .tally-box.claims tr.grp + tr th{font:600 .6rem/1.2 
 .site-menu li a:hover,.site-menu li a:focus-visible{outline:none;border-left-color:var(--accent-ui,#7eb6ff);background:var(--t-surface-2,transparent)}
 .site-menu li a[aria-current="page"]{border-left-color:var(--t-strong,#fff)}
 @media (prefers-reduced-motion:reduce){.site-menu .sm-panel,.site-menu .sm-back{transition:none}}
-/* Hint when the wheel or one finger scrolls the page past the map */
-.map-hint{position:absolute;inset:0;z-index:850;display:grid;place-items:center;padding:1rem;background:rgba(5,8,12,.5);color:#fff;font:600 1rem/1.3 var(--f-body,inherit);text-align:center;opacity:0;pointer-events:none;transition:opacity .25s ease}
-.map-hint.on{opacity:1}

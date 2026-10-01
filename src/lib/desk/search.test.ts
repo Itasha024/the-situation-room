@@ -63,3 +63,29 @@ test("'uav attacks on saudi oil' means drones hitting Saudi energy sites, by any
   assert.ok(saudi.includes("jazan") && saudi.includes("najran"));
   assert.ok(oil.includes("aramco") && oil.includes("refinery"));
 });
+
+test("an outlet's name finds its cards, not headlines with the word; a misspelt word reads as the desk's (1 Oct)", async () => {
+  const { learnLexicon, respellWord } = await import("./search.ts");
+  const docs = [
+    { fp: "r1", at: "2026-09-29T10:00:00Z", source: "Reuters", summary: "Saudi exports through Yanbu fall", text: "" },
+    { fp: "r2", at: "2026-09-29T11:00:00Z", source: "Almashhad", summary: "Houthi drone hits Medina power station", text: "", also: "Reuters" },
+    { fp: "r3", at: "2026-09-29T12:00:00Z", source: "Al-Jazeera", summary: "Reuters team visits Taiz camp", text: "" },
+    { fp: "r4", at: "2026-09-29T13:00:00Z", source: "Al-Masirah", summary: "Strikes on Hodeidah port", text: "" },
+  ];
+  const lex = learnLexicon(docs, ["Reuters", "Almashhad", "Al-Jazeera", "Al-Masirah"]);
+  for (const q of ["reuters", "reuter"]) {
+    const u = understandLocally(q, undefined, undefined, lex);
+    assert.deepEqual(u.sources, ["reuters"]);
+    assert.equal(u.known, true);
+    const got = findCandidates(docs, u).filter((x) => headlineHas(x.doc, strongTerms(q, u), u)).map((x) => x.doc.fp).sort();
+    assert.deepEqual(got, ["r1", "r2", "r3"], q);
+  }
+  assert.deepEqual(understandLocally("masirah hodeidah", undefined, new Set(["hodeidah"]), lex).sources, ["al masirah"]);
+  assert.deepEqual(understandLocally("al jazera", undefined, undefined, lex).sources, ["al jazeera"]);
+  assert.deepEqual(respellWord("midina", lex), ["medina"]);
+  assert.deepEqual(respellWord("hoddeidah", lex), ["hodeidah"]);
+  assert.deepEqual(respellWord("medina", lex), []);
+  const u = understandLocally("midina", undefined, undefined, lex);
+  assert.equal(u.about, "medina");
+  assert.ok(u.groups[0].includes("medina"));
+});

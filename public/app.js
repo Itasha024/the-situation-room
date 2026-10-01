@@ -5085,48 +5085,22 @@ function oneEarth(m) {
   fit();
   m.on('resize', fit);
 }
-// The page scrolls past the map, as on news sites: a plain wheel or one finger
-// moves the page; Ctrl/⌘ + wheel (a trackpad pinch too) or two fingers move the
-// map, and a short hint says so. In full screen the map takes everything.
-function calmMap(m) {
-  const el = m.getContainer();
-  const hint = L.DomUtil.create('div', 'map-hint', el);
-  const coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
-  const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-  const full = () => document.body.classList.contains('map-focus');
-  let t = 0;
-  const say = (s) => {
-    hint.textContent = s;
-    hint.classList.add('on');
-    clearTimeout(t);
-    t = setTimeout(() => hint.classList.remove('on'), 1300);
-  };
-  el.addEventListener('wheel', (e) => {
-    if (full() || e.ctrlKey || e.metaKey) return;
-    if (e.target.closest && e.target.closest('.leaflet-popup, .legend')) return;
-    e.stopImmediatePropagation();
-    say(mac ? 'Use ⌘ + scroll to zoom the map' : 'Use Ctrl + scroll to zoom the map');
-  }, { capture: true });
-  if (!coarse) return;
-  const drag = () => { if (full()) m.dragging.enable(); else m.dragging.disable(); };
-  drag();
-  new MutationObserver(drag).observe(document.body, { attributes: true, attributeFilter: ['class'] });
-  let one = false;
-  el.addEventListener('touchstart', (e) => { one = e.touches.length === 1; }, { passive: true });
-  el.addEventListener('touchmove', (e) => {
-    if (one && e.touches.length === 1 && !full() && !(e.target.closest && e.target.closest('.leaflet-popup, .legend'))) say('Use two fingers to move the map');
-  }, { passive: true });
-}
-
 function ensureMap(d) {
   if (map) return;
   const narrow = window.innerWidth <= 720;
   map = L.map('map', { zoomControl: true, attributionControl: true, closePopupOnClick: false, zoomSnap: narrow ? 0.25 : 1 });
   // A phone shows what the PC does: all of Saudi Arabia and Yemen, no more.
-  if (narrow) map.fitBounds([[12.2, 34.6], [32.2, 55.8]], { padding: [6, 6], animate: false });
-  else map.setView([18.5, 45.5], 5);
+  const START = [[12.2, 34.6], [32.2, 55.8]];
+  if (narrow) {
+    map.fitBounds(START, { padding: [6, 6], animate: false });
+    // Again once the page has its final layout, unless the reader has moved the map.
+    let touched = false;
+    map.getContainer().addEventListener('pointerdown', () => { touched = true; }, { once: true });
+    const again = () => { if (!touched && map) { map.invalidateSize(); map.fitBounds(START, { padding: [6, 6], animate: false }); } };
+    if (document.readyState === 'complete') setTimeout(again, 400);
+    else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
+  } else map.setView([18.5, 45.5], 5);
   oneEarth(map);
-  calmMap(map);
   try { window.__yemenMap = map; } catch (e) {}
   map.on('zoomend', syncStraitForZoom);
   baseAttr = d.basemapAttribution || '© OpenStreetMap';

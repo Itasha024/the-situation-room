@@ -478,7 +478,7 @@ const stems = (title: string) => new Set((title.match(/[A-Za-zء-ي][A-Za-z'ء-�
  * oil-prices piece and the Pentagon-split scoop both say "Trump" and "Saudi".
  */
 const COMMON = new Set(
-  "trump donald president houthi yemen yemeni saudi arabia iran iranian israel israeli united state states washington red sea war military force attack strike official government us u.s american".split(" ").map(stem),
+  "trump donald president houthi yemen yemeni saudi arabia iran iranian israel israeli united state states washington red sea war military force attack strike official government us u.s american discuss discusses discussed regional development developments security meet meets receive receives talk talks call calls relation relations cooperation bilateral latest situation".split(" ").map(stem),
 );
 
 /**
@@ -508,13 +508,18 @@ export function distinctive(text: string, want: string[]): number {
  * Pentagon-split scoop. The page decides: its text, or the summary its page
  * carries even behind a paywall, must share three of the story's own words.
  */
-async function confirmed(url: string, keys: string[]): Promise<boolean> {
+async function confirmed(url: string, keys: string[], claim = "", title = ""): Promise<boolean> {
   const html = await page(url);
-  const text = html
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<meta[^>]*content="([^"]*)"[^>]*>/gi, " $1 ")
-    .replace(/<[^>]+>/g, " ");
-  return distinctive(text, keys) >= 3;
+  // The article itself, not the whole page: SPA's menus and side links carried
+  // "defence", "minister" and "counterpart", so "HRH the Crown Prince Discusses
+  // Regional Developments with Qatari Amir" stood in for the Saudi defence
+  // minister's call with his US counterpart (1 Oct).
+  const meta = [...html.matchAll(/<meta[^>]*(?:name|property)="(?:description|og:description|og:title)"[^>]*content="([^"]*)"/gi)].map((m) => m[1]).join(" ");
+  const body = `${meta}\n${articleText(html)}`.trim();
+  if (!body) return false;
+  // With the relay's own account, a model reads the article for the same facts.
+  if (claim) return (await whichCarries(claim, [`${title}\n${body}`])) === 0;
+  return distinctive(body, keys) >= 3;
 }
 
 /** The war's own ground and parties: a story about it names one of them. */
@@ -754,7 +759,7 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
       // "China Expands Drug Chemicals Control" for "China expands secret
       // procurement" — and its page must show them.
       const strong = distinctive(hit.title, t.keys) >= 3;
-      if (t.min && !strong && !(await confirmed(url, t.keys))) continue;
+      if (t.min && !strong && !(await confirmed(url, t.keys, claim, hit.title))) continue;
       // The story's war must be in it: UNICEF's "2.2 million children under
       // five in Yemen" matched a UNICEF release on Jordan's schools by its
       // common words alone.

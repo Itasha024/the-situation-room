@@ -7,12 +7,14 @@ import { metered } from "@/lib/desk/cpu-meter";
 import { checkLinks } from "@/lib/desk/links";
 import { unglue } from "@/lib/desk/reader";
 import {
+  type Lexicon,
   type People,
   type SearchDoc,
   type Understood,
   findCandidates,
   headlineHas,
   keepByModel,
+  learnLexicon,
   learnPeople,
   mergeUnderstood,
   norm,
@@ -33,7 +35,7 @@ import { getStore } from "@/lib/desk/store";
 type Row = Record<string, unknown> & { fp: string; at: string; source?: string; summary?: string; text?: string };
 
 /** The archive, held for five minutes: the stored cards and the older ones in data.json. */
-type Corpus = { at: number; rows: Row[]; docs: SearchDoc[]; people: People; places: Set<string> };
+type Corpus = { at: number; rows: Row[]; docs: SearchDoc[]; people: People; places: Set<string>; lex: Lexicon };
 let corpus: Corpus | null = null;
 let loading: Promise<Corpus> | null = null;
 
@@ -78,7 +80,14 @@ async function loadCorpus(): Promise<Corpus> {
       places.add(p.replace(/^(?:al|ad|ar|as|ash|at|az) /, ""));
     }
   }
-  return { at: Date.now(), rows, docs, people, places };
+  // Its outlets and its words: a search names an outlet, or misspells a word, without a model.
+  const outlets = new Set<string>();
+  for (const r of rows) {
+    if (r.source) outlets.add(String(r.source));
+    for (const a of Array.isArray(r.alsoReportedBy) ? (r.alsoReportedBy as { source?: string }[]) : []) if (a.source) outlets.add(a.source);
+  }
+  const lex = learnLexicon(docs, [...outlets]);
+  return { at: Date.now(), rows, docs, people, places, lex };
 }
 
 async function archive(): Promise<Corpus> {
@@ -129,7 +138,7 @@ function knownSearch(q: string, docs: SearchDoc[], local: Understood): { fps: st
     .filter((x) => headlineHas(x.doc, strong, local))
     .sort((a, b) => Date.parse(b.doc.at) - Date.parse(a.doc.at))
     .map((x) => x.doc.fp);
-  const out = { at: Date.now(), fps, about: q };
+  const out = { at: Date.now(), fps, about: local.about };
   answered.set(key, out);
   if (answered.size > 500) answered.clear();
   return out;
@@ -139,8 +148,8 @@ async function quick(q: string): Promise<{ fps: string[]; about: string; full: b
   const key = norm(q);
   const hit = answered.get(key);
   if (hit && Date.now() - hit.at < 10 * 60_000) return { ...hit, full: true };
-  const { docs, people, places } = await archive();
-  const local = understandLocally(q, people, places);
+  const { docs, people, places, lex } = await archive();
+  const local = understandLocally(q, people, places, lex);
   // Every word known to the desk: this is the whole answer, no model needed.
   if (local.known) return { ...knownSearch(q, docs, local), full: true };
   const u = meant.has(key) ? mergeUnderstood(meant.get(key)!, local) : local;
@@ -163,8 +172,8 @@ async function search(q: string): Promise<{ fps: string[]; about: string }> {
   const key = norm(q);
   const hit = answered.get(key);
   if (hit && Date.now() - hit.at < 10 * 60_000) return hit;
-  const { docs, people, places } = await archive();
-  const local = understandLocally(q, people, places);
+  const { docs, people, places, lex } = await archive();
+  const local = understandLocally(q, people, places, lex);
   if (local.known) return knownSearch(q, docs, local);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Aden" });
   if (today !== day) {

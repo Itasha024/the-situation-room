@@ -267,16 +267,10 @@ path.place-hl{animation:placeHl 1.8s ease-in-out infinite}
 .dv{overflow:visible}
 .dv .dv-dot{position:absolute;left:-3.5px;top:-3.5px;width:7px;height:7px;border-radius:50%;background:#f8fafc;box-shadow:0 0 0 1.5px #0b1220;pointer-events:none}
 .dv .dv-pic{position:absolute;left:0;top:0;pointer-events:none;transform:scale(var(--dvs,1));transform-origin:0 0}
-.dv .dv-n{position:absolute;left:0;top:0;display:none;transform-origin:100% 100%;translate:-100% -100%;font:700 10px/1 'Libre Franklin',system-ui,sans-serif;color:#f8fafc;text-shadow:0 0 2px #0b1220,0 0 2px #0b1220;pointer-events:none;white-space:nowrap}
-.dv.dv-in .dv-dot{display:none}
-.dv.dv-in .dv-n:not(:empty){display:block}
-.dv.dv-hid .dv-pic{display:none}
-html[data-theme="broadsheet-day"] .dv .dv-n{color:#1c1917;text-shadow:0 0 2px #fff,0 0 2px #fff}
-.dv-panel{overflow:visible}
-.dv-panel span{position:absolute;left:0;top:0;border-radius:8px;background:rgba(11,18,32,.86);box-shadow:0 0 0 1px rgba(248,250,252,.28),0 2px 8px rgba(0,0,0,.35);pointer-events:none}
-html[data-theme="broadsheet-day"] .dv-panel span{background:rgba(255,255,255,.93);box-shadow:0 0 0 1px rgba(28,25,23,.35),0 2px 6px rgba(0,0,0,.15)}
 .dv .dv-one{position:absolute;left:0;top:0;width:0;height:0}
 .dv .dv-flip{transform:scaleX(-1)}
+.dv .dv-lead{display:none;position:absolute;left:0;top:0;height:0;border-top:1.5px solid rgba(248,250,252,.75);transform-origin:0 0;pointer-events:none;filter:drop-shadow(0 0 1px #0b1220)}
+html[data-theme="broadsheet-day"] .dv .dv-lead{border-top-color:rgba(28,25,23,.7);filter:none}
 .dp{position:absolute;display:block;pointer-events:none}
 .dp svg{display:block;width:100%;height:100%;overflow:visible}
 .dp b,.dp em,.dp i{position:absolute;display:block}
@@ -372,6 +366,13 @@ html[data-theme="broadsheet-day"] .dv .dv-dot{background:#fff;box-shadow:0 0 0 2
 .dev-switch button.on{background:#f8fafc;color:#0b1220}
 .dev-none{position:absolute;top:46px;right:10px;z-index:800;max-width:min(300px,70%);margin:0;padding:.45rem .6rem;border-radius:6px;background:#0f172aeb;color:#e2e8f0;font:500 .7rem/1.4 var(--f-body,inherit);box-shadow:0 1px 5px #000a}
 .dev-none[hidden]{display:none}
+.dev-step{position:absolute;top:10px;left:56px;right:10px;z-index:800;display:flex;align-items:stretch;justify-content:space-between;border-radius:8px;overflow:hidden;box-shadow:0 1px 6px #000b;background:#0f172af0;max-width:420px;margin:0 auto}
+.dev-step button{flex:none;width:2.4rem;border:0;background:#f8fafc;color:#0b1220;font:700 1.35rem/1 var(--f-body,inherit);cursor:pointer}
+.dev-step button:hover{background:#e2e8f0}
+.dev-step button:focus-visible{outline:2px solid #38bdf8;outline-offset:-2px}
+.dev-step-at{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;flex:1;min-width:0;padding:.4rem .5rem;color:#e2e8f0;font:500 .72rem/1.15 var(--f-body,inherit);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dev-step-at b{color:#f8fafc;font-weight:700;font-size:.8rem}
+.dev-step-at small{color:#94a3b8;font-size:.62rem;letter-spacing:.04em}
 .dev-key{margin-top:4px;opacity:.95}
 .dev-key .dk{display:inline-block;width:26px;height:17px;margin-right:5px;vertical-align:-3px;color:var(--t-text-2,#cbd5e1)}
 .dev-key .dk.wide{width:40px}

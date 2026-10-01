@@ -2507,7 +2507,7 @@ function devMerge(marks) {
 /**
  * Draw the marks on a pop-up map and play them. Extends `bounds` with what it
  * drew. Each picture stands on its own spot (the white dot); it grows or
- * shrinks with the zoom, and joins a small panel only where it would cover another.
+ * shrinks with the zoom, and is moved aside only to clear another.
  */
 function drawDevMarks(m, marks, bounds) {
   const movers = [];
@@ -2542,16 +2542,16 @@ function drawDevMarks(m, marks, bounds) {
   for (const g of devGroups(merged)) {
     // Each picture on its own spot: its burst, its flag's foot, its shield on
     // the white dot. At a shared spot every other one comes in from the other
-    // side; devSpread gathers any that would still cover each other.
+    // side; devSpread moves apart any that would still cover each other.
     // Pictures only: the key says what each one means.
     g.forEach((x, k) => {
       const flip = k % 2 === 1 && DEV_FLIPS.has(devPicKind(x));
       const mk = L.marker(x.ll, {
         interactive: false, keyboard: false, zIndexOffset: 2500 + (DEV_ORDER.length - DEV_ORDER.indexOf(x.kind)) * 30 - k,
-        icon: L.divIcon({ className: 'dev-wrap dv', html: `<span class="dv-pic"><span class="dv-one${flip ? ' dv-flip' : ''}">${devPicHtml(x, devColor(x.side), devColor(devFoe(x.side)))}</span></span><i class="dv-dot"></i><b class="dv-n"></b>`, iconSize: [0, 0], iconAnchor: [0, 0] }),
+        icon: L.divIcon({ className: 'dev-wrap dv', html: `<i class="dv-lead"></i><span class="dv-pic"><span class="dv-one${flip ? ' dv-flip' : ''}">${devPicHtml(x, devColor(x.side), devColor(devFoe(x.side)))}</span></span><i class="dv-dot"></i>`, iconSize: [0, 0], iconAnchor: [0, 0] }),
       }).addTo(m);
       const [l, t, w, h] = DEV_BOX[devPicKind(x)];
-      pics.push({ mk, ll: x.ll, key: `${devPicKind(x)}|${x.side}|${x.shot || ''}`, box: [flip ? -(l + w) : l, t, w, h] });
+      pics.push({ mk, ll: x.ll, box: [flip ? -(l + w) : l, t, w, h] });
     });
   }
 
@@ -2603,89 +2603,59 @@ function drawDevMarks(m, marks, bounds) {
 }
 
 /**
- * Every picture is always shown, at every zoom. Pictures that would cover each
- * other on screen gather into one small panel where they meet, side by side
- * and a little smaller; the same picture of the same side shows once there,
- * with how many ("×3"). Zooming in parts the panel again and each picture goes
- * back to its own spot (the white dot). Worked out on every zoom.
+ * Every picture is always shown. Pictures that would cover each other on
+ * screen are moved apart just enough to stand clear (a short way at most),
+ * each tied to its own spot (the white dot) by a thin line; the same pictures show at every zoom, only
+ * the gaps between them change. Worked out again when the zoom changes.
  */
 function devSpread(m, pics) {
-  const CELL = 34, GAP = 4;
-  const panels = L.layerGroup().addTo(m);
-  // A panel's cells: one per picture and side, in the map's reading order (north first, then west to east).
-  const cellsOf = (g, home) => {
-    const cells = [];
-    for (const i of [...g].sort((i, j) => home[i].y - home[j].y || home[i].x - home[j].x)) {
-      const c = cells.find((x) => pics[x[0]].key === pics[i].key);
-      if (c) c.push(i); else cells.push([i]);
-    }
-    return cells;
-  };
-  // A group's place on screen: one picture on its own box, several in a grid round their middle.
-  const rectOf = (g, home, s) => {
-    if (g.length === 1) {
-      const p = pics[g[0]], h = home[g[0]];
-      return { x: h.x + p.box[0] * s, y: h.y + p.box[1] * s, w: p.box[2] * s, h: p.box[3] * s };
-    }
-    const cells = cellsOf(g, home);
-    const cols = Math.min(4, Math.ceil(Math.sqrt(cells.length))), rows = Math.ceil(cells.length / cols);
-    const cx = g.reduce((t, i) => t + home[i].x, 0) / g.length, cy = g.reduce((t, i) => t + home[i].y, 0) / g.length;
-    return { x: cx - (cols * CELL) / 2, y: cy - (rows * CELL) / 2, w: cols * CELL, h: rows * CELL, cols, cells };
-  };
-  const meet = (A, B) => A.x < B.x + B.w + GAP && B.x < A.x + A.w + GAP && A.y < B.y + B.h + GAP && B.y < A.y + A.h + GAP;
+  const GAP = 3;
   const lay = () => {
     const s = Number(devScale(m.getZoom()));
+    // A picture moves at most this far from its spot; where more would be needed it may touch another.
+    const MAX = 26 * s;
+    const cap = (v) => Math.max(-MAX, Math.min(MAX, v));
     const home = pics.map((p) => m.latLngToLayerPoint(p.ll));
-    const groups = pics.map((_, i) => [i]);
-    const rects = groups.map((g) => rectOf(g, home, s));
-    for (let joined = true; joined;) {
-      joined = false;
-      outer: for (let i = 0; i < groups.length; i++) {
-        for (let j = i + 1; j < groups.length; j++) {
-          if (!meet(rects[i], rects[j])) continue;
-          groups[i] = groups[i].concat(groups[j]);
-          groups.splice(j, 1); rects.splice(j, 1);
-          rects[i] = rectOf(groups[i], home, s);
-          joined = true;
-          break outer;
+    // Each picture's box on screen: [x, y, w, h], and how far it has been moved.
+    const r = pics.map((p, i) => ({ x: home[i].x + p.box[0] * s, y: home[i].y + p.box[1] * s, w: p.box[2] * s, h: p.box[3] * s, dx: 0, dy: 0 }));
+    for (let round = 0; round < 80; round++) {
+      let moved = false;
+      for (let i = 0; i < r.length; i++) {
+        for (let j = i + 1; j < r.length; j++) {
+          const A = r[i], B = r[j];
+          const ox = Math.min(A.x + A.dx + A.w, B.x + B.dx + B.w) - Math.max(A.x + A.dx, B.x + B.dx) + GAP;
+          const oy = Math.min(A.y + A.dy + A.h, B.y + B.dy + B.h) - Math.max(A.y + A.dy, B.y + B.dy) + GAP;
+          if (ox <= 0 || oy <= 0) continue;
+          moved = true;
+          // Apart along the shorter way out, half each.
+          const ca = [A.x + A.dx + A.w / 2, A.y + A.dy + A.h / 2], cb = [B.x + B.dx + B.w / 2, B.y + B.dy + B.h / 2];
+          if (ox < oy) {
+            const d = (ca[0] < cb[0] || (ca[0] === cb[0] && i < j) ? -1 : 1) * ox / 2;
+            A.dx = cap(A.dx + d); B.dx = cap(B.dx - d);
+          } else {
+            const d = (ca[1] < cb[1] || (ca[1] === cb[1] && i < j) ? -1 : 1) * oy / 2;
+            A.dy = cap(A.dy + d); B.dy = cap(B.dy - d);
+          }
         }
       }
+      if (!moved) break;
     }
-    panels.clearLayers();
-    groups.forEach((g, gi) => {
-      const R = rects[gi];
-      if (g.length === 1) {
-        const el = pics[g[0]].mk.getElement();
-        if (!el) return;
-        el.classList.remove('dv-in', 'dv-hid');
-        el.querySelector('.dv-pic').style.transform = '';
-        el.querySelector('.dv-n').textContent = '';
-        return;
-      }
-      panels.addLayer(L.marker(m.layerPointToLatLng([R.x, R.y]), {
-        interactive: false, keyboard: false, zIndexOffset: 2000,
-        icon: L.divIcon({ className: 'dv-panel', html: `<span style="width:${R.w}px;height:${R.h}px"></span>`, iconSize: [0, 0], iconAnchor: [0, 0] }),
-      }));
-      R.cells.forEach((cell, k) => {
-        const cx = R.x + ((k % R.cols) + 0.5) * CELL, cy = R.y + (Math.floor(k / R.cols) + 0.5) * CELL;
-        cell.forEach((i, n) => {
-          const p = pics[i], el = p.mk.getElement();
-          if (!el) return;
-          el.classList.add('dv-in');
-          el.classList.toggle('dv-hid', n > 0);
-          if (n > 0) { el.querySelector('.dv-n').textContent = ''; return; }
-          // The cell's picture fills it, centred on it; its count at the corner.
-          const [l, t, w, h] = p.box;
-          const z = Math.min(1, (CELL - 4) / Math.max(w, h));
-          const dx = cx - home[i].x - (l + w / 2) * z, dy = cy - home[i].y - (t + h / 2) * z;
-          const pic = el.querySelector('.dv-pic'), num = el.querySelector('.dv-n');
-          if (pic) pic.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) scale(${z.toFixed(3)})`;
-          if (num) {
-            num.textContent = cell.length > 1 ? `×${cell.length}` : '';
-            num.style.transform = `translate(${(cx - home[i].x + CELL / 2 - 2).toFixed(1)}px,${(cy - home[i].y + CELL / 2 - 2).toFixed(1)}px)`;
-          }
-        });
-      });
+    pics.forEach((p, i) => {
+      const el = p.mk.getElement();
+      if (!el) return;
+      const { dx, dy } = r[i];
+      const pic = el.querySelector('.dv-pic');
+      const lead = el.querySelector('.dv-lead');
+      if (pic) pic.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) scale(var(--dvs,1))`;
+      if (!lead) return;
+      // The line runs from the spot to the nearest edge of its moved picture.
+      const bx = p.box[0] * s + dx, by = p.box[1] * s + dy;
+      const tx = Math.max(bx, Math.min(0, bx + r[i].w)), ty = Math.max(by, Math.min(0, by + r[i].h));
+      const len = Math.hypot(tx, ty);
+      if (len < 4) { lead.style.display = 'none'; return; }
+      lead.style.display = 'block';
+      lead.style.width = `${len.toFixed(1)}px`;
+      lead.style.transform = `rotate(${(Math.atan2(ty, tx) * 180 / Math.PI).toFixed(1)}deg)`;
     });
   };
   // A pop-up not laid out yet is worked out once it is framed.
@@ -2746,56 +2716,86 @@ function briefHours() {
 }
 
 /**
- * The latest developments' map: every event recorded since the last update,
- * framed on Yemen; a switch at the top moves it to Saudi Arabia and back, and
- * says how many events are there.
+ * The latest developments' map, one area at a time: each governorate with
+ * events in this update, and Saudi Arabia, the busiest first. It opens zoomed
+ * in on that one; the arrows at the top step through the others. Every event
+ * is drawn, so the neighbours' show at the edges. A mark at sea counts for the
+ * governorate whose coast is nearest.
  */
 function openDevelopmentsMap(anchor) {
   if (!window.L || !brief) return;
   const marks = mainDevMarks();
   if (!marks.length) return;
-  const inKsa = (x) => devInSaudi(x.ll);
-  const nKsa = marks.filter(inKsa).length;
-  const nYem = marks.length - nKsa;
+  const byIso = controlByIso(data);
+  const govOf = (ll) => {
+    if (devInSaudi(ll)) return 'SA';
+    const d = districtAt(ll[0], ll[1]);
+    if (d) return d.gov;
+    let best = null, km = Infinity;
+    for (const f of (districtGeo && districtGeo.features) || []) {
+      const c = f.properties.c;
+      const k = c ? kmBetween(c, ll) : Infinity;
+      if (k < km) { km = k; best = f.properties.gov; }
+    }
+    return best || 'YE';
+  };
+  const areas = [];
+  for (const x of marks) {
+    const id = govOf(x.ll);
+    const a = areas.find((y) => y.id === id);
+    if (a) a.marks.push(x); else areas.push({ id, marks: [x] });
+  }
+  for (const a of areas) {
+    const feat = geoCache && geoCache.features.find((f) => f.properties.shapeISO === a.id);
+    a.name = a.id === 'SA' ? 'Saudi Arabia' : String((byIso[a.id] || {}).name || (feat && feat.properties.shapeName) || 'Yemen').replace(/ Governorate$/, '');
+    a.feat = feat;
+  }
+  areas.sort((p, q) => q.marks.length - p.marks.length || p.name.localeCompare(q.name));
+  const many = areas.length > 1;
   document.querySelectorAll('.sit-map-btn').forEach((b) => b.setAttribute('aria-expanded', 'true'));
   openMapPop({
     title: `Latest developments${briefHours() ? ` · ${briefHours()}` : ''}`,
     anchor,
     legend: devLegendHtml(marks, true),
     wide: true,
-    tools: `<div class="dev-switch" role="group" aria-label="Show"><button type="button" data-v="yemen" class="on">Yemen · ${nYem}</button><button type="button" data-v="saudi">Saudi Arabia · ${nKsa}</button></div><p class="dev-none" hidden></p>`,
+    tools: `<div class="dev-step" role="group" aria-label="Areas with events">${many ? '<button type="button" data-d="-1" aria-label="Previous area">&lsaquo;</button>' : ''}<span class="dev-step-at" aria-live="polite"></span>${many ? '<button type="button" data-d="1" aria-label="Next area">&rsaquo;</button>' : ''}</div>`,
     build: (m, box) => {
       devBaseMap(m, true);
-      const frame = (v) => {
-        const own = marks.filter((x) => (v === 'saudi' ? inKsa(x) : !inKsa(x)));
-        const b = L.latLngBounds(own.map((x) => x.ll));
-        if (!b.isValid()) b.extend(v === 'saudi' ? SAUDI_VIEW : YEMEN_VIEW);
+      let at = 0;
+      // Framed on the area's events (the outline shows the rest of it), with room round them.
+      const boundsOf = (a) => {
+        const b = L.latLngBounds(a.marks.map((x) => x.ll));
+        if (!b.isValid()) b.extend(a.feat ? L.geoJSON(a.feat).getBounds() : SAUDI_VIEW);
         return b;
       };
-      devFit(m, frame(nYem ? 'yemen' : 'saudi'), 9);
-      drawDevMarks(m, marks, L.latLngBounds([]));
-      const sw = box.querySelector('.dev-switch');
-      if (!sw) return;
-      // A side of the switch with nothing on it says so, and why: later reports wait for the next update.
-      const none = box.querySelector('.dev-none');
-      const say = (v) => {
-        if (!none) return;
-        const n = v === 'saudi' ? nKsa : nYem;
-        none.hidden = n > 0;
-        none.textContent = n ? '' : `Nothing recorded in ${v === 'saudi' ? 'Saudi Arabia' : 'Yemen'} in this update (${briefHours()}). Reports since then are on the main map and go into the next update.`;
+      const label = box.querySelector('.dev-step-at');
+      const say = () => {
+        const a = areas[at];
+        const n = a.marks.length;
+        if (label) label.innerHTML = `<b>${escapeHtml(a.name)}</b><small>${n} event${n === 1 ? '' : 's'}${many ? ` · ${at + 1} of ${areas.length}` : ''}</small>`;
       };
-      say(nYem ? 'yemen' : 'saudi');
-      if (!nYem) sw.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.v === 'saudi'));
-      sw.querySelectorAll('button').forEach((btn) => {
+      // Zooming out stops a step past the area's own view: the arrows go to the others.
+      const hold = () => m.setMinZoom(Math.max(4, m.getZoom() - 1.5));
+      let edge = null;
+      const go = (fly) => {
+        const b = boundsOf(areas[at]);
+        say();
+        if (edge) m.removeLayer(edge);
+        const feat = areas[at].feat || (areas[at].id === 'SA' && saudiGeoCache);
+        edge = feat ? L.geoJSON(feat, { interactive: false, style: { color: '#f8fafc', weight: 2.4, opacity: 0.9, fill: false } }).addTo(m) : null;
+        m.setMinZoom(4);
+        m.once('moveend', hold);
+        const c = b.getCenter();
+        if (fly) { try { m.flyToBounds(L.latLngBounds(b.getSouthWest(), b.getNorthEast()).extend([c.lat - 0.22, c.lng - 0.22]).extend([c.lat + 0.22, c.lng + 0.22]), { padding: [44, 44], maxZoom: 9.5, duration: 0.6 }); } catch (e) {} }
+        else devFit(m, b, 9.5, 0.22);
+      };
+      go(false);
+      drawDevMarks(m, marks, L.latLngBounds([]));
+      box.querySelectorAll('.dev-step button').forEach((btn) => {
         btn.onclick = (ev) => {
           if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-          sw.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
-          say(btn.dataset.v);
-          const b = frame(btn.dataset.v);
-          const c = b.getCenter();
-          const half = 0.33;
-          b.extend([c.lat - half, c.lng - half]).extend([c.lat + half, c.lng + half]);
-          try { m.flyToBounds(b, { padding: [44, 44], maxZoom: 9, duration: 0.7 }); } catch (e) {}
+          at = (at + Number(btn.dataset.d) + areas.length) % areas.length;
+          go(true);
         };
       });
     },

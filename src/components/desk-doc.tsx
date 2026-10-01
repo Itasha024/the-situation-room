@@ -15,7 +15,7 @@ declare global {
 
 export type DocSection = { id: string; title: string; html: string };
 
-export function DeskDoc({ title, lede, sections, toc = true }: { title: string; lede: string; sections: DocSection[]; toc?: boolean }) {
+export function DeskDoc({ title, lede, sections, toc = true, desk = true }: { title: string; lede: string; sections: DocSection[]; toc?: boolean; desk?: boolean }) {
   useEffect(() => {
     let tries = 0;
     const boot = () => {
@@ -39,14 +39,17 @@ export function DeskDoc({ title, lede, sections, toc = true }: { title: string; 
         <span className="mast-end" />
       </div>
       <header className="top doc-top">
+        {/* A site-wide page (Methodology) belongs to no one desk. */}
         <div className="brand">
-          <a className="desk-label-link" href="/yemen-conflict-desk">
-            <h1 className="desk-label">Yemen Conflict Desk</h1>
-          </a>
+          {desk ? (
+            <a className="desk-label-link" href="/yemen-conflict-desk">
+              <h1 className="desk-label">Yemen Conflict Desk</h1>
+            </a>
+          ) : null}
         </div>
         <nav className="doc-nav" aria-label="Desk pages">
-          <a href="/yemen-conflict-desk">Live desk</a>
-          <a href="/yemen-conflict-desk/methodology">Methodology</a>
+          <a href="/yemen-conflict-desk">Yemen Conflict Desk</a>
+          <a href="/methodology">Methodology</a>
           <a href="/yemen-conflict-desk/about">About</a>
         </nav>
       </header>
@@ -55,6 +58,7 @@ export function DeskDoc({ title, lede, sections, toc = true }: { title: string; 
         <p className="doc-lede">{lede}</p>
         {toc && sections.length > 3 ? (
           <nav className="doc-toc" aria-label="On this page">
+            <p className="doc-toc-h">Contents</p>
             <ol>
               {sections.map((s) => (
                 <li key={s.id}>
@@ -77,7 +81,7 @@ export function DeskDoc({ title, lede, sections, toc = true }: { title: string; 
         ))}
       </main>
       <footer className="doc-foot">
-        <a href="/yemen-conflict-desk">Back to the live desk</a> · <a href="/yemen-conflict-desk/methodology">Methodology</a> ·{" "}
+        <a href="/yemen-conflict-desk">Back to the live desk</a> · <a href="/methodology">Methodology</a> ·{" "}
         <a href="/yemen-conflict-desk/about">About</a>
       </footer>
     </div>

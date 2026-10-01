@@ -11,7 +11,7 @@ export const Route = createFileRoute("/yemen-conflict-desk_/about")({
   component: AboutPage,
 });
 
-const M = "/yemen-conflict-desk/methodology";
+const M = "/methodology";
 
 const SECTIONS: DocSection[] = [
   {
@@ -38,13 +38,13 @@ const SECTIONS: DocSection[] = [
   {
     id: "independence",
     title: "Independence",
-    html: `<p>The desk takes no side in the war, and it does not use Israeli outlets. We use AI to keep up with a war reported in several languages around the clock, but the rules for what we publish are our own and apply the same way to every side.</p>
+    html: `<p>We use AI to keep up with a war reported in several languages around the clock, but the rules for what we publish are our own and apply the same way to every side.</p>
 <p>More on how we work: <a href="${M}">Methodology</a>.</p>`,
   },
   {
     id: "contact",
     title: "Contact",
-    html: `<p>A contact address for tips and corrections will be added here.</p>`,
+    html: `<p>Tips and corrections: <a href="mailto:itasha751@gmail.com">itasha751@gmail.com</a></p>`,
   },
 ];
 

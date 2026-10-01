@@ -266,7 +266,7 @@ path.place-hl{animation:placeHl 1.8s ease-in-out infinite}
    on the same 4.2 s loop. */
 .dv{overflow:visible}
 .dv .dv-dot{position:absolute;left:-3.5px;top:-3.5px;width:7px;height:7px;border-radius:50%;background:#f8fafc;box-shadow:0 0 0 1.5px #0b1220;pointer-events:none}
-.dv .dv-pic{position:absolute;left:0;top:0;pointer-events:none;transform:scale(var(--dvs,1));transform-origin:0 0}
+.dv .dv-pic{position:absolute;left:0;top:0;pointer-events:none;transform:scale(var(--dvs,1));transform-origin:0 0;transition:opacity .4s ease}
 .dv .dv-one{position:absolute;left:0;top:0;width:0;height:0}
 .dv .dv-flip{transform:scaleX(-1)}
 .dp{position:absolute;display:block;pointer-events:none}
@@ -560,9 +560,13 @@ html[data-set="broadsheet"] .tally-box.claims tr.grp + tr th{font:600 .6rem/1.2 
 .doc{max-width:46rem;margin:0 auto;padding:1.4rem 1rem 3rem;font-size:1rem;line-height:1.62}
 .doc-title{font:600 clamp(1.7rem,4vw,2.3rem)/1.1 "Newsreader",Georgia,serif;color:var(--t-strong,#fff);margin:.4rem 0 .6rem;letter-spacing:-.01em}
 .doc-lede{font:400 1.12rem/1.5 "Newsreader",Georgia,serif;color:var(--t-text-2,#cbd5e1);margin:0 0 1.2rem}
-.doc-toc{border-top:1px solid var(--t-line-strong,#2a3a4e);border-bottom:1px solid var(--t-line-strong,#2a3a4e);padding:.6rem 0;margin:0 0 1.2rem}
-.doc-toc ol{margin:0;padding-left:1.2rem;columns:2;column-gap:2rem;font-size:.86rem}
-.doc-toc a{color:var(--t-text,inherit)}
+.doc-toc{border-left:2px solid var(--t-line-strong,#2a3a4e);padding:.15rem 0 .15rem 1rem;margin:0 0 1.6rem}
+.doc-toc-h{margin:0 0 .45rem;font:600 .62rem/1.2 var(--f-body,inherit);letter-spacing:.12em;text-transform:uppercase;color:var(--t-muted,#9aabbc)}
+.doc-toc ol{margin:0;padding:0;list-style:none;counter-reset:toc;columns:2;column-gap:2rem;font-size:.84rem;line-height:1.35}
+.doc-toc li{counter-increment:toc;break-inside:avoid;padding:.18rem 0;display:flex;gap:.6rem;align-items:baseline}
+.doc-toc li::before{content:counter(toc,decimal-leading-zero);font-size:.68rem;font-variant-numeric:tabular-nums;color:var(--t-muted,#9aabbc);min-width:1.3em}
+.doc .doc-toc a{color:var(--t-text,inherit);text-decoration:none}
+.doc .doc-toc a:hover,.doc .doc-toc a:focus-visible{color:var(--accent-ui,#7eb6ff);text-decoration:underline;text-underline-offset:3px}
 .doc-sec{scroll-margin-top:1rem;margin:1.8rem 0 0}
 .doc-sec h3{font:600 1.3rem/1.25 "Newsreader",Georgia,serif;color:var(--t-strong,#fff);margin:0 0 .5rem;padding-top:.8rem;border-top:1px solid var(--t-line,#1e2a38)}
 .doc-anchor{margin-left:.4rem;font-size:.8em;color:var(--t-muted,#9aabbc);text-decoration:none;opacity:0}

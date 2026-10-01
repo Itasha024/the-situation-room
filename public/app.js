@@ -2212,7 +2212,11 @@ function devAction(clause) {
 }
 
 let devAnim = null;
-function stopDevAnim() { if (devAnim) { cancelAnimationFrame(devAnim.raf); devAnim = null; } }
+let devTurnTimer = null;
+function stopDevAnim() {
+  if (devAnim) { cancelAnimationFrame(devAnim.raf); devAnim = null; }
+  if (devTurnTimer) { clearInterval(devTurnTimer); devTurnTimer = null; }
+}
 
 /** Is a point inside a Saudi province? */
 function inSaudi(ll) {
@@ -2344,6 +2348,8 @@ function devPlausible(x) {
   // A ship is at sea or in a port, never on a hill inland (Kahbub).
   if (x.kind === 'naval' && districtGeo && districtAt(x.ll[0], x.ll[1]) && !DEV_SEA.test(place) && !DEV_PORT.test(place)) return false;
   if (DEV_GROUND.has(x.kind) && districtGeo && !districtAt(x.ll[0], x.ll[1]) && !devInSaudi(x.ll)) return false;
+  // Ground fighting is drawn inside Yemen only; across the border only shelling lands.
+  if (DEV_GROUND.has(x.kind) && x.kind !== 'shelling' && devInSaudi(x.ll)) return false;
   // A coalition air strike inside Saudi Arabia is a misread report (air traffic halted), not an event.
   if (x.kind === 'airstrike' && x.side !== 'houthi' && devInSaudi(x.ll)) return false;
   if (DEV_FIRE.has(x.kind) && districtGeo) {
@@ -2354,13 +2360,18 @@ function devPlausible(x) {
   return true;
 }
 
+/** A whole city or governorate, no spot of its own: "Taiz", "Marib", "Sanaa". */
+const DEV_BROAD = /^(?:al-)?(?:taiz|ta'izz|marib|ma'rib|sanaa|hodeidah|saada|hajjah|ibb|dhamar|amran|bayda|dhale|aden|lahj|jawf|abyan|shabwa)(?: city| governorate| province)?$/i;
 /** Marks with a spot, from the brief. */
 function devMarksOf(list) {
   const ok = (ll) => Array.isArray(ll) && ll.length >= 2 && Number.isFinite(+ll[0]) && Number.isFinite(+ll[1]);
-  return (Array.isArray(list) ? list : [])
+  const marks = (Array.isArray(list) ? list : [])
     .filter((x) => x && DEV_LABEL[x.kind] && ok(x.ll))
     .map((x) => ({ ...x, ll: [+x.ll[0], +x.ll[1]], fromLl: ok(x.fromLl) ? [+x.fromLl[0], +x.fromLl[1]] : null }))
     .filter(devPlausible);
+  // "Fighting in Taiz" beside "fighting at Jabal Habashi": the named spot says it, once.
+  return marks.filter((x) => !DEV_BROAD.test(String(x.place || '').trim()) || !marks.some((y) => y !== x
+    && !DEV_BROAD.test(String(y.place || '').trim()) && y.kind === x.kind && (y.side === x.side || x.kind === 'fighting') && kmBetween(y.ll, x.ll) <= 60));
 }
 
 /** The latest developments' marks; a brief from before the map list is read from its text. */
@@ -2486,16 +2497,6 @@ function devGroups(marks) {
 function devPicKind(x) { return DEV_BOX[x.kind] ? x.kind : x.fromLl ? 'hit' : 'dive'; }
 /** Pictures that come in from one side: at a shared spot, every other one comes from the other side. */
 const DEV_FLIPS = new Set(['dive', 'airstrike', 'shelling', 'repelled']);
-/** Play a picture a part of its loop later, so pictures sharing a spot take turns. */
-function devLater(el, frac) {
-  if (!el || !el.getAnimations) return;
-  requestAnimationFrame(() => {
-    for (const a of el.getAnimations({ subtree: true })) {
-      const d = Number(a.effect && a.effect.getTiming().duration) || 0;
-      if (d > 0) a.currentTime = (Number(a.currentTime) || 0) + d * frac;
-    }
-  });
-}
 /** Reports of one kind by one side within 6 km are one picture. */
 function devMerge(marks) {
   const out = [];
@@ -2541,6 +2542,7 @@ function drawDevMarks(m, marks, bounds) {
       movers.push({ type: 'shot', x, trail, head, stop: 1 });
     }
   }
+  const pics = [];
   for (const g of devGroups(merged)) {
     // Each picture on its own spot: its burst, its flag's foot, its shield on
     // the white dot. Several at one spot take turns (each a beat later), and
@@ -2552,7 +2554,7 @@ function drawDevMarks(m, marks, bounds) {
         interactive: false, keyboard: false, zIndexOffset: 2500 + (DEV_ORDER.length - DEV_ORDER.indexOf(x.kind)) * 30 - k,
         icon: L.divIcon({ className: 'dev-wrap dv', html: `<span class="dv-pic"><span class="dv-one${flip ? ' dv-flip' : ''}">${devPicHtml(x, devColor(x.side), devColor(devFoe(x.side)))}</span></span><i class="dv-dot"></i>`, iconSize: [0, 0], iconAnchor: [0, 0] }),
       }).addTo(m);
-      if (k) devLater(mk.getElement(), k / g.length);
+      pics.push({ mk, ll: x.ll });
     });
   }
 
@@ -2590,6 +2592,7 @@ function drawDevMarks(m, marks, bounds) {
     }
   };
   stopDevAnim();
+  devTakeTurns(m, pics);
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!movers.length) return;
   if (reduce) { setTimeout(() => frameAt(0.8), 120); return; }
@@ -2600,6 +2603,44 @@ function drawDevMarks(m, marks, bounds) {
     devAnim.raf = requestAnimationFrame(step);
   };
   devAnim = { raf: requestAnimationFrame(step) };
+}
+
+/**
+ * Pictures closer on screen than they are wide would cover each other. On
+ * every beat (one loop of the pictures) the map shows as many as fit without
+ * touching, those shown least lately first, so each one gets its turn and
+ * none covers another; one turning on starts its loop afresh. Spots (the white
+ * dots) stay. Zooming in parts them, so the screen is read again on every zoom.
+ */
+function devTakeTurns(m, pics) {
+  const last = pics.map(() => -1);
+  const on = pics.map(() => true);
+  let beat = 0;
+  const elOf = (p) => p.mk.getElement() && p.mk.getElement().querySelector('.dv-pic');
+  const play = () => {
+    const near = 40 * Number(devScale(m.getZoom()));
+    const pts = pics.map((p) => m.latLngToLayerPoint(p.ll));
+    const order = pics.map((_, i) => i).sort((i, j) => last[i] - last[j] || i - j);
+    const shown = [];
+    for (const i of order) if (shown.every((j) => pts[j].distanceTo(pts[i]) >= near)) shown.push(i);
+    pics.forEach((p, i) => {
+      const now = shown.includes(i);
+      const el = elOf(p);
+      if (now) last[i] = beat;
+      if (!el || (now === on[i] && beat)) return;
+      el.style.opacity = now ? '1' : '0';
+      if (now && el.getAnimations) for (const x of el.getAnimations({ subtree: true })) x.currentTime = 0;
+      on[i] = now;
+    });
+    beat++;
+  };
+  // A pop-up not laid out yet is read once it is framed.
+  m.whenReady(() => setTimeout(play, 0));
+  m.on('zoomend', play);
+  devTurnTimer = setInterval(() => {
+    if (!sheetMap || sheetMap !== m) { stopDevAnim(); return; }
+    play();
+  }, DEV_PERIOD);
 }
 
 /**
@@ -4705,8 +4746,10 @@ function buildMapPins(d) {
     if (!pin || pin.lat == null || pin.lng == null) return;
     if (isWeakHeadline(pin.label)) return;
     if (!pin.url || isHomepageOrSectionUrl(pin.url)) return;
-    const cat = pin.mapCat || classifyForMap(pin.classText || pin.text || pin.label || '', pin.type);
+    let cat = pin.mapCat || classifyForMap(pin.classText || pin.text || pin.label || '', pin.type);
     if (!cat || cat === 'statement') return;
+    // Ground fighting is inside Yemen; an "attack on Jazan" is drawn as a strike.
+    if (cat === 'combat' && devInSaudi([pin.lat, pin.lng])) cat = 'strike';
     if (COUNTRY_PLACE_RE.test(String(pin.place || '').trim())) return;
     if (!allowCoordsForCategory(cat, pin.place, pin.lat, pin.lng)) return;
     pin.mapCat = cat;
@@ -6196,7 +6239,7 @@ try { setFavicon(THEME); } catch (e) {}
  */
 const SITE_PAGES = [
   ['/yemen-conflict-desk', 'Yemen Conflict Desk', 'Live'],
-  ['/yemen-conflict-desk/methodology', 'Methodology', 'How the desk works'],
+  ['/methodology', 'Methodology', 'How our desks work'],
   ['/yemen-conflict-desk/about', 'About', 'What the desk is'],
 ];
 function installMast() {

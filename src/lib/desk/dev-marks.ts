@@ -141,6 +141,9 @@ export function addMark(list: DevMark[], m: DevMark, near = 3): void {
   if (!m.ll) return;
   // Ground fighting happens on land: a ground mark named after a sea is a misread report.
   if (GROUND.has(m.kind) && SEA_RE.test(String(m.place || ""))) return;
+  // Ground fighting is inside Yemen: north of it is Saudi Arabia or the sea
+  // ("Houthi forces launch attack on Jazan"); only shelling lands across the border.
+  if (GROUND.has(m.kind) && m.kind !== "shelling" && m.ll[0] > 16.3 && !governorateAt(m.ll[0], m.ll[1])) return;
   if (list.some((x) => x.kind === m.kind && (x.side === m.side || m.kind === "fighting") && x.ll && km(x.ll, m.ll as [number, number]) <= near)) return;
   list.push(m);
 }

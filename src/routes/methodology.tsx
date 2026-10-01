@@ -21,28 +21,28 @@ const SECTIONS: DocSection[] = [
   {
     id: "covers",
     title: "What we cover",
-    html: `<p>Each desk follows one conflict, from the day its current round began, and keeps to it: the fighting, the attacks beyond its borders, and what the parties and other governments say and decide about it.</p>
-<p>Wars and crises next door are covered only where they touch the desk's own conflict.</p>`,
+    html: `<p>Each desk follows one subject in one part of the world, from a set date, and keeps to it. Where the subject is a war, that means the fighting, attacks beyond its borders, and what the sides and other governments say and decide about it.</p>
+<p>Events elsewhere are covered only where they bear on the desk's own subject.</p>`,
   },
   {
     id: "sources",
     title: "Our sources",
-    html: `<p>We read every side: each party's own media and officials, and outlets with no stake in the conflict, from the international wire agencies to regional and specialist press. We also follow governments, ministries, the UN and other official bodies on their own channels.</p>
+    html: `<p>We read every side: each party's own media and officials, and outlets with no stake in the matter, from the international wire agencies to regional and specialist press. We also follow governments, ministries, the UN and other official bodies on their own channels.</p>
 <p>Every source is marked by the side it speaks for, so a reader always knows whose account they are reading.</p>`,
   },
   {
     id: "claims",
     title: "Claims and confirmation",
-    html: `<p>In a war each side claims more than it can prove. We keep a firm line between what a side says and what is established. One side's account is reported as that side's account. We treat an event as confirmed when an independent wire agency reports it, when both sides agree it happened, or when the side it hurt admits it. A statement is reported as having been made, not as being true.</p>`,
+    html: `<p>The sides in a dispute often claim more than they can prove. We keep a firm line between what a side says and what is established. One side's account is reported as that side's account. We treat an event as confirmed when an independent wire agency reports it, when both sides agree it happened, or when the side it hurt admits it. A statement is reported as having been made, not as being true.</p>`,
   },
   {
     id: "judgement",
     title: "Where we decide for ourselves",
     html: `<p>Some things no source settles for us, and we make the call. We decide:</p>
 <ul>
-<li>whether an item belongs to the conflict a desk follows;</li>
+<li>whether an item belongs to the subject a desk follows;</li>
 <li>which side a source speaks for;</li>
-<li>whether a claimed capture counts as ground taken, or only as an advance;</li>
+<li>where a desk follows fighting, whether a claimed capture counts as ground taken, or only as an advance;</li>
 <li>where on the map an event belongs, and how exactly we can place it;</li>
 <li>which developments matter most in each overview;</li>
 <li>which figures are official, and which are one side's.</li>
@@ -62,7 +62,7 @@ const SECTIONS: DocSection[] = [
   {
     id: "front-areas",
     title: "Fronts",
-    html: `<p>We follow a war by province, and by the places that matter on their own, such as a strait or a coast. An area becomes a front when fighting starts there, and drops off when it goes quiet.</p>`,
+    html: `<p>Where a desk follows fighting, it splits it into fronts: provinces, and places that matter on their own, such as a strait or a coast. An area becomes a front when fighting starts there, and drops off when it goes quiet.</p>`,
   },
   {
     id: "overview",
@@ -72,7 +72,7 @@ const SECTIONS: DocSection[] = [
   {
     id: "numbers",
     title: "Numbers",
-    html: `<p><b>Official</b> means official bodies only: UN agencies, the World Health Organization, ministries, governments, armed forces and civil defence. Every other figure is unofficial and shown under the side that gives it. Where the sides differ, we show both and never average them. We use only running totals for the current round, each linked to where it was published; a figure nobody has published stays empty.</p>
+    html: `<p><b>Official</b> means official bodies only: UN agencies, the World Health Organization, ministries, governments, armed forces and civil defence. Every other figure is unofficial and shown under the side that gives it. Where the sides differ, we show both and never average them. We use only running totals for the period a desk covers, each linked to where it was published; a figure nobody has published stays empty.</p>
 <p>For shipping, energy and the like, we take official warnings and statements first, then the wire agencies; an attack that only one side reports is shown as unofficial.</p>`,
   },
   {
@@ -81,7 +81,7 @@ const SECTIONS: DocSection[] = [
     html: `<ul>
 <li>We do not see the ground. We report what sources say and how far they can be trusted.</li>
 <li>Some areas are covered by one side only, with little independent press.</li>
-<li>Both sides inflate the other's losses and play down their own. Casualty counts are partial and come late.</li>
+<li>Sides in a conflict tend to inflate the other's losses and play down their own. Casualty counts are partial and come late.</li>
 <li>Some figures, such as shipping and trade, come out days or weeks after the events.</li>
 </ul>`,
   },

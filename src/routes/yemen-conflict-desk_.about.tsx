@@ -50,12 +50,12 @@ const SECTIONS: DocSection[] = [
   {
     id: "ai",
     title: "How AI is used",
-    html: `<p>AI models read the posts, write the reports, write the 6-hourly overview, read UKMTO's warnings off their pictures and look at pictures before they are shown. They do not decide control of a district or which figures are official: fixed rules in code do that, and code checks the models' work before anything is published. Models can still misread a report; mistakes are fixed when found and listed on the <a href="${M}#corrections">corrections</a> list.</p>`,
+    html: `<p>AI models read the posts, write the reports, write the 6-hourly overview, read UKMTO's warnings off their pictures and look at pictures before they are shown. They do not decide control of a district or which figures are official: fixed rules in code do that, and code checks the models' work before anything is published. Models can still misread a report; mistakes are fixed when found.</p>`,
   },
   {
     id: "contact",
-    title: "Corrections and contact",
-    html: `<p>Every removed card, moved figure and redrawn mark is listed with its reason under <a href="${M}#corrections">Corrections</a>. A contact address for corrections and tips will be added here.</p>`,
+    title: "Contact",
+    html: `<p>A contact address for tips and mistakes will be added here.</p>`,
   },
 ];
 

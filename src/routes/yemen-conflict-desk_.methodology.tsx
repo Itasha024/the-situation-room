@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DeskDoc, type DocSection } from "@/components/desk-doc";
-import { CORRECTIONS } from "@/lib/desk/corrections";
 
 /**
  * How the desk works, written from what the code does (public/SOURCES.md,
@@ -17,8 +16,6 @@ export const Route = createFileRoute("/yemen-conflict-desk_/methodology")({
   component: MethodologyPage,
 });
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 const SECTIONS: DocSection[] = [
   {
@@ -131,12 +128,6 @@ const SECTIONS: DocSection[] = [
 <p><b>Time.</b> Every time on the page is in your own time zone. The clock at the top is the time in Yemen. The 6-hour updates run on Israel time (00:00, 06:00, 12:00 and 18:00).</p>`,
   },
   {
-    id: "corrections",
-    title: "Corrections",
-    html: `<p>When the desk removes a card, moves a figure or redraws a mark, it is listed here with the day and the reason. Tell us about a mistake through the <a href="/yemen-conflict-desk/about#contact">About page</a>.</p>
-<ul class="doc-corr">${CORRECTIONS.map((c) => `<li><time>${esc(day(c.date))}</time><p>${esc(c.what)}</p><p class="why">Why: ${esc(c.why)}</p></li>`).join("")}</ul>`,
-  },
-  {
     id: "limits",
     title: "What the desk cannot know",
     html: `<ul>
@@ -144,7 +135,7 @@ const SECTIONS: DocSection[] = [
 <li>Some areas are covered by one side only. Houthi-held areas have little independent press, so much of what happens there is known only from Houthi media.</li>
 <li>Both sides inflate the other's losses and play down their own. Casualty counts are partial, differ between sources and come late.</li>
 <li>Ship counts are 3 to 4 days behind, and oil and export figures come out once a month.</li>
-<li>The AI reader can misread a report. Code checks catch many mistakes; the rest are fixed when found and listed under <a href="#corrections">Corrections</a>.</li>
+<li>The AI reader can misread a report. Code checks catch many mistakes; the rest are fixed when found.</li>
 </ul>`,
   },
 ];

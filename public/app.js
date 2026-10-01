@@ -2916,9 +2916,7 @@ function numCell(c, cls) {
   const when = c.date ? new Date(`${c.date}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
   const tip = [c.name, when].filter(Boolean).join(', ') + (c.via ? ` (via ${c.via})` : '') + (c.note ? ` — ${c.note}` : '');
   const inner = c.url ? `<a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${q}${n}</a>` : `${q}${n}`;
-  // An official figure read on someone else's site says where.
-  const via = c.via ? `<small class="via">via ${escapeHtml(c.via)}</small>` : '';
-  return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}${via}</td>`;
+  return `<td class="${cls}" title="${escapeHtml(tip)}">${inner}</td>`;
 }
 
 /*
@@ -3361,7 +3359,6 @@ function feedCardHtml(r, i) {
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
         <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">, citing ${escapeHtml(r.citing)}</span>` : ''}</span>
-        ${certaintyChip(r, src)}
         ${mappableByFp.has(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
       </div>
       ${replyQuote(r)}
@@ -3371,42 +3368,6 @@ function feedCardHtml(r, i) {
       ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
-}
-
-/*
- * How sure a card is, from who carries it (the Methodology's "Certainty"):
- *   Statement        what someone said; the desk reports that it was said
- *   Confirmed        a wire (Reuters, AP, AFP, Bloomberg), UKMTO or the UN,
- *                    or outlets of both sides
- *   Several outlets  two or more outlets of no declared side
- *   One side's claim only outlets of one side, so far
- *   Single source    one outlet of no declared side, so far
- */
-const WIRE_RE = /^(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Bloomberg|UKMTO|JMIC|United Nations|UN in Yemen|UN OCHA)$/i;
-const CERTAINTY = {
-  stmt: ['Statement', 'What someone said. The desk reports that it was said, not that it is true.'],
-  conf: ['Confirmed', 'Carried by a wire agency, UKMTO or the UN, or by outlets of both sides.'],
-  multi: ['Several outlets', 'Carried by two or more outlets with no declared side; no wire or other side yet.'],
-  claim: ["One side's claim", 'Only outlets of one side report it so far.'],
-  single: ['Single source', 'One outlet with no declared side reports it so far.'],
-};
-function certaintyOf(r, src) {
-  if (r.type === 'statement' || r.type === 'diplomacy' || r.type === 'intel') return 'stmt';
-  const names = [...splitSources(src), ...(Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy.map((a) => canonicalSourceName(a.source)) : [])]
-    .map((n) => stripBreakingMarker(String(n || '').trim())).filter(Boolean);
-  const uniq = [...new Set(names)];
-  if (uniq.some((n) => WIRE_RE.test(n))) return 'conf';
-  const leans = uniq.map((n) => sourceLean(n));
-  const houthi = leans.includes('houthi');
-  const gov = leans.some((l) => l === 'gov' || l === 'south');
-  if (houthi && gov) return 'conf';
-  if (houthi || gov) return 'claim';
-  return uniq.length >= 2 ? 'multi' : 'single';
-}
-function certaintyChip(r, src) {
-  const k = certaintyOf(r, src);
-  const [label, tip] = CERTAINTY[k];
-  return `<span class="cert c-${k}" title="${escapeHtml(tip)}">${escapeHtml(label)}</span>`;
 }
 
 /** A card's text: one paragraph, or short paragraphs with a line between them when it is long. */
@@ -4464,21 +4425,6 @@ function liveSrcHtml(own) {
   return `<br/><small>Reported by ${links.join(', ')}</small>`;
 }
 
-/** The sources behind a district in the hand baseline (control.json), as links; its governorate's line when it has none. */
-const BASE_SRC_NAME = { wiki: 'Wikipedia (2026 Yemen offensives)', majalla: 'Majalla', national: 'The National', 'aj-qarfan': 'Al Jazeera', desk: "the desk's own reports", baseline: 'pre-September lines (Sanaa Center, ACLED, Critical Threats)' };
-function baseSrcHtml(own) {
-  const keys = own && Array.isArray(own.src) ? own.src.filter((x) => typeof x === 'string') : [];
-  if (!own) return '<br/><small>No report on this district itself: it takes its governorate\'s control.</small>';
-  if (!keys.length) return '';
-  const srcs = (districtControl && districtControl.sources) || {};
-  const links = keys.map((k) => {
-    const name = BASE_SRC_NAME[k] || k;
-    const url = String(srcs[k] || '');
-    return /^https?:/.test(url) ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>` : escapeHtml(name);
-  });
-  return `<br/><small>Sources: ${links.join(', ')}</small>`;
-}
-
 function districtSide(p, byIso) {
   const own = districtOwn(p);
   const s = (own && own.side) || (byIso[p.gov] || {}).control;
@@ -4567,7 +4513,7 @@ function bindGov(feature, layer, byIso) {
     const own = dct && districtOwn(dct);
     const side = dct && districtSide(dct, byIso);
     const dHtml = dct
-      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${escapeHtml(dct.name)} district</strong><br/>Control: ${escapeHtml(LABELS[side] || side)}${own && own.since ? ` · since ${escapeHtml(fmtDay(own.since))}` : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}${liveSrcHtml(own) || baseSrcHtml(own)}`
+      ? `<hr style="margin:.35rem 0;border:0;border-top:1px solid #334155"/><strong>${escapeHtml(dct.name)} district</strong><br/>Control: ${escapeHtml(LABELS[side] || side)}${own && own.since ? ` · since ${escapeHtml(fmtDay(own.since))}` : ''}${own && own.note ? `<br/><small>${escapeHtml(own.note)}</small>` : ''}${liveSrcHtml(own)}`
       : '';
     L.popup().setLatLng(e.latlng).setContent(govHtml + dHtml).openOn(layer._map || map);
   });
@@ -6251,7 +6197,6 @@ try { setFavicon(THEME); } catch (e) {}
 const SITE_PAGES = [
   ['/yemen-conflict-desk', 'Yemen Conflict Desk', 'Live'],
   ['/yemen-conflict-desk/methodology', 'Methodology', 'How the desk works'],
-  ['/yemen-conflict-desk/methodology#corrections', 'Corrections', 'What was fixed, and why'],
   ['/yemen-conflict-desk/about', 'About', 'What the desk is'],
 ];
 function installMast() {

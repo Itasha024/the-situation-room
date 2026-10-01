@@ -550,17 +550,6 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 html .tally-box.claims tr.grp th{border-bottom:0;padding-bottom:0}
 html .tally-box.claims tr.grp th.un{font:600 .55rem/1.3 var(--f-body,inherit);letter-spacing:.12em;text-transform:uppercase;color:var(--t-muted,#8fa3b6);text-align:center;border-bottom:1px solid var(--t-line-strong,#2a3a4e);padding:0 0 .2rem}
 html[data-set="broadsheet"] .tally-box.claims tr.grp + tr th{font:600 .6rem/1.2 var(--f-body);letter-spacing:.1em;border-bottom:1px solid var(--t-strong)}
-.tally-box.claims td .via{display:block;font:400 .6rem/1.2 var(--f-body,inherit);color:var(--t-muted,#8fa3b6);margin-top:2px}
-/* Certainty on every card (app.js certaintyOf): a small tag in the meta line, linked to the Methodology */
-.card .meta .cert{display:inline-block;padding:.08rem .38rem;border:1px solid currentColor;border-radius:2px;font:600 .56rem/1.35 var(--f-body,inherit);letter-spacing:.07em;text-transform:uppercase;text-decoration:none;white-space:nowrap;opacity:.9}
-.cert.c-conf{color:#4ade80}
-.cert.c-claim{color:#fbbf24}
-.cert.c-multi{color:#93c5fd}
-.cert.c-single{color:var(--t-muted,#9aabbc)}
-.cert.c-stmt{color:var(--t-text-2,#cbd5e1)}
-html[data-theme="broadsheet-day"] .cert.c-conf{color:#15803d}
-html[data-theme="broadsheet-day"] .cert.c-claim{color:#b45309}
-html[data-theme="broadsheet-day"] .cert.c-multi{color:#1d4ed8}
 /* The desk's own pages: Methodology and About */
 .doc-root{min-height:100vh;background:var(--t-bg,var(--bg));color:var(--t-text,var(--text))}
 .doc-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
@@ -583,18 +572,14 @@ html[data-theme="broadsheet-day"] .cert.c-multi{color:#1d4ed8}
 .doc-sec li{margin:.3rem 0}
 .doc a{color:var(--accent-ui,#7eb6ff)}
 .doc-sec:target h3{color:var(--accent-ui,#7eb6ff)}
-.doc-corr{list-style:none;padding:0!important}
-.doc-corr li{margin:.9rem 0;padding-left:.8rem;border-left:3px solid var(--t-line-strong,#2a3a4e)}
-.doc-corr time{font:600 .66rem/1.2 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase;color:var(--t-muted,#9aabbc)}
-.doc-corr p{margin:.25rem 0}
-.doc-corr .why{color:var(--t-text-2,#cbd5e1);font-size:.92rem}
 .doc-foot{max-width:46rem;margin:0 auto;padding:1rem 1rem 2rem;border-top:1px solid var(--t-line,#1e2a38);font-size:.8rem;color:var(--t-muted,#9aabbc)}
 .doc-foot a{color:inherit}
 @media (max-width:720px){.doc-toc ol{columns:1}.doc{font-size:.97rem}}
 /* The live page's footer: links to the desk's own pages */
 /* The live page's footer: the site's pages and the map credit, centred, with room below so the
    Sections pill (bottom left) never sits on them */
-#yemen-desk-root footer,body>footer{align-items:center;text-align:center;padding-bottom:calc(4.5rem + env(safe-area-inset-bottom,0px))}
+#yemen-desk-root footer,body>footer{align-items:center;text-align:center}
+@media (max-width:720px){#yemen-desk-root footer,body>footer{padding-bottom:calc(3.7rem + env(safe-area-inset-bottom,0px))}}
 footer .foot-links{display:flex;justify-content:center;gap:1.2rem;flex-wrap:wrap;font-size:.72rem}
 footer .foot-links a{color:inherit}
 

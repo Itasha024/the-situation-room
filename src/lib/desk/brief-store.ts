@@ -330,6 +330,13 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
         ...(!brief.situation?.model && next.situation?.line ? { situation: next.situation } : {}),
         fronts: brief.fronts.map((f) => (isCountedLine(f.line) && better.get(f.id)?.line && !isCountedLine(better.get(f.id)!.line) ? { ...f, line: better.get(f.id)!.line, ...(better.get(f.id)!.map ? { map: better.get(f.id)!.map } : {}) } : f)),
       };
+  if (!keep) {
+    // The old maps still follow today's rules: a ship or energy mark no card of the window now draws goes (2 Oct: a round-up's Medina hit at Taiz).
+    const cards = cardMarks(inWindow, (r) => frontIdsOf(r, extraFronts));
+    const still = (list: DevMark[], own: DevMark[]) => list.filter((m) => nearAny(m, sameKind(m, own)));
+    if (out.devMap) out.devMap = still(out.devMap, cards.all);
+    out.fronts = out.fronts.map((f) => (f.map ? { ...f, map: still(f.map, cards.byFront[f.id] ?? []) } : f));
+  }
   console.log(`[desk] prose asked again: ${model || "no model"}${keep ? ", kept" : ", not kept"}`);
   await store.putJson(BRIEF_KEY, { brief: out, history: saved.history } satisfies StoredBrief);
   return out;

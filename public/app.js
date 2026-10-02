@@ -6624,11 +6624,11 @@ const REL_HTML = `<h3 id="rel-pop-h">Sources reliability methodology</h3>
 <li><b>The more reports, the more the record counts</b> over the start.</li>
 <li><b>Statements count only if the speaker denies saying them.</b></li>
 </ul>
-<p class="rel-foot">Ratings update every 24 hours. <a href="/yemen-conflict-desk/sources">Sources list →</a></p>`;
+<p class="rel-foot">Ratings update every 24h. <a href="/yemen-conflict-desk/sources">Sources list →</a></p>`;
 
 /* How the control shares under the bars are made (user, 2 Oct). */
 const SHARE_HTML = `<h3 id="share-pop-h">Control share methodology</h3>
-<p>Shares change acc. to map every 6h. <a href="#map-wrap" class="to-map-meth">Map methodology →</a></p>
+<p>Shares change acc. to map every 6h. <button type="button" class="rel-btn to-map-meth">Map methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></p>
 <ul>
 <li><b>By district.</b> Yemen is split into its 335 districts, and each district's area is measured in km².</li>
 <li><b>Each district counts whole</b> for the side the map shows holding it: Houthi forces, the government, or contested.</li>

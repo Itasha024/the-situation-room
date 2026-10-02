@@ -612,6 +612,7 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
    (user, 2 Oct): on a PC it keeps to the map's right edge however wide the report column
    is (--rail-w), and drops under the Map line, as on a phone, when they no longer fit. */
 .bars-meth{grid-column:1/-1;flex-basis:100%;width:100%;margin-top:-.2rem;line-height:1}
+.rel-pop .to-map-meth{vertical-align:baseline;padding:0;margin-inline-start:.2rem}
 .toolbar .map-meth{margin-inline-start:auto;white-space:nowrap}
 @media (min-width:701px){.toolbar{padding-inline-end:calc(var(--rail-w,360px) + 8px + .55rem)}body.map-focus .toolbar{padding-inline-end:1rem}}
 @media (max-width:700px){.toolbar .map-meth{align-self:flex-end;margin-top:-.3rem}}

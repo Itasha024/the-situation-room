@@ -5139,19 +5139,19 @@ function oneEarth(m) {
 }
 function ensureMap(d) {
   if (map) return;
-  const narrow = window.innerWidth <= 720;
-  map = L.map('map', { zoomControl: true, attributionControl: true, closePopupOnClick: false, zoomSnap: narrow ? 0.25 : 1 });
-  // A phone shows what the PC does: all of Saudi Arabia and Yemen, no more.
-  const START = [[12.2, 34.6], [32.2, 55.8]];
-  if (narrow) {
-    map.fitBounds(START, { padding: [6, 6], animate: false });
-    // Again once the page has its final layout, unless the reader has moved the map.
-    let touched = false;
-    map.getContainer().addEventListener('pointerdown', () => { touched = true; }, { once: true });
-    const again = () => { if (!touched && map) { map.invalidateSize(); map.fitBounds(START, { padding: [6, 6], animate: false }); } };
-    if (document.readyState === 'complete') setTimeout(again, 400);
-    else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
-  } else map.setView([18.5, 45.5], 5);
+  map = L.map('map', { zoomControl: true, attributionControl: true, closePopupOnClick: false, zoomSnap: 0.25 });
+  // PC and phone open where the events are: all of western Yemen and
+  // south-west Saudi Arabia up to Medina and Riyadh (user, 2 Oct).
+  const START = [[12.3, 38.0], [25.0, 48.0]];
+  // Room at the top for the events line over the map.
+  const FIT = { paddingTopLeft: [6, 44], paddingBottomRight: [6, 6], animate: false };
+  map.fitBounds(START, FIT);
+  // Again once the page has its final layout, unless the reader has moved the map.
+  let touched = false;
+  map.getContainer().addEventListener('pointerdown', () => { touched = true; }, { once: true });
+  const again = () => { if (!touched && map) { map.invalidateSize(); map.fitBounds(START, FIT); } };
+  if (document.readyState === 'complete') setTimeout(again, 400);
+  else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
   oneEarth(map);
   try { window.__yemenMap = map; } catch (e) {}
   map.on('zoomend', syncStraitForZoom);

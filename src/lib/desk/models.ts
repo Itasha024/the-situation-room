@@ -11,21 +11,25 @@
  * Groq's free tier refuses as too large.
  */
 
-import { groqKey, nextPacificMidnight, readerKey } from "./reader.ts";
+import { FALLBACKS, nextPacificMidnight, readerKey, serviceModel } from "./reader.ts";
 
-export type ChainModel = { provider: "gemini" | "groq"; id: string };
+/** `provider`: "gemini", or a free service of the reader's list (groq, mistral, nvidia...). A service without its key is passed over. */
+export type ChainModel = { provider: string; id: string };
 
 export const WRITER_MODELS: ChainModel[] = [
   { provider: "gemini", id: "gemini-3.8-flash" },
   { provider: "gemini", id: "gemini-3.7-flash" },
   { provider: "gemini", id: "gemini-3.5-flash" },
   { provider: "groq", id: "openai/gpt-oss-120b" },
+  { provider: "mistral", id: "mistral-medium-latest" },
   { provider: "gemini", id: "gemini-flash-latest" },
   { provider: "gemini", id: "gemini-3.5-flash-lite" },
   // No Gemma: it never once wrote the prose (500 or a 90-second timeout on the
   // long prompt), and each try held the tick for minutes (2 Oct).
   { provider: "gemini", id: "gemini-3.1-flash-lite" },
   { provider: "groq", id: "qwen/qwen3.8-27b" },
+  { provider: "nvidia", id: "openai/gpt-oss-120b" },
+  { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   { provider: "groq", id: "openai/gpt-oss-20b" },
 ];
 
@@ -42,12 +46,15 @@ export const NUMBERS_MODELS: ChainModel[] = WRITER_MODELS.slice(2);
  * there when the 6-hour writing needs it.
  */
 export const COMBINE_MODELS: ChainModel[] = [
+  { provider: "mistral", id: "mistral-small-latest" },
   { provider: "gemini", id: "gemini-3.5-flash-lite" },
   { provider: "gemini", id: "gemini-3.1-flash-lite" },
   { provider: "groq", id: "openai/gpt-oss-120b" },
   { provider: "groq", id: "qwen/qwen3.8-27b" },
   { provider: "gemini", id: "gemini-flash-lite-latest" },
   { provider: "groq", id: "openai/gpt-oss-20b" },
+  { provider: "nvidia", id: "openai/gpt-oss-120b" },
+  { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   { provider: "gemini", id: "gemini-flash-latest" },
 ];
 
@@ -64,8 +71,13 @@ const resting = new Map<string, number>();
 
 /** Whether any of these models can be asked now (not resting till Google's reset). */
 export function anyAwake(models: ChainModel[], now = Date.now()): boolean {
-  return models.some((m) => (resting.get(m.id) ?? 0) <= now);
+  return models.some((m) => hasKey(m) && (resting.get(restKey(m)) ?? 0) <= now);
 }
+
+/** The same model on two services rests apart. */
+const restKey = (m: ChainModel) => (m.provider === "gemini" ? m.id : serviceModel(m.provider, m.id));
+const service = (m: ChainModel) => FALLBACKS.find((p) => p.name === m.provider);
+const hasKey = (m: ChainModel) => (m.provider === "gemini" ? !!readerKey() : !!service(m)?.key());
 
 /** The first JSON object in a model answer (some models wrap it in prose or fences). */
 export function looseJson(text: string): Record<string, unknown> | null {
@@ -81,10 +93,11 @@ export function looseJson(text: string): Record<string, unknown> | null {
 }
 
 async function callOne(m: ChainModel, system: string, user: string, temperature: number, ms = 90_000, fast = false): Promise<string> {
-  if (m.provider === "groq") {
-    const key = groqKey();
-    if (!key) throw new Error("no key");
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  if (m.provider !== "gemini") {
+    const svc = service(m);
+    const key = svc?.key();
+    if (!svc || !key) throw new Error("no key");
+    const res = await fetch(svc.url, {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
       signal: AbortSignal.timeout(ms),
@@ -140,7 +153,7 @@ export async function askChain(
   { temperature = 0.2, models = WRITER_MODELS, timeoutMs = 90_000, fast = false, budget }: { temperature?: number; models?: ChainModel[]; timeoutMs?: number; fast?: boolean; budget?: Record<string, number> } = {},
 ): Promise<{ json: Record<string, unknown>; model: string } | null> {
   for (const m of models) {
-    if ((resting.get(m.id) ?? 0) > Date.now()) continue;
+    if (!hasKey(m) || (resting.get(restKey(m)) ?? 0) > Date.now()) continue;
     // Only the update's own share: no budget given (a script) asks freely.
     const share = PER_UPDATE[m.id];
     if (budget && share !== undefined && (budget[m.id] ?? 0) >= share) continue;
@@ -152,18 +165,18 @@ export async function askChain(
       const json = looseJson(await callOne(m, system, user, temperature, timeoutMs, fast));
       spent();
       if (json) {
-        console.log(`[${tag}] written by ${m.id}`);
+        console.log(`[${tag}] written by ${restKey(m)}`);
         return { json, model: m.id };
       }
-      console.error(`[${tag}] ${m.id}: no JSON in the answer`);
+      console.error(`[${tag}] ${restKey(m)}: no JSON in the answer`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "failed";
       if (!/HTTP (?:429|503)/.test(msg)) spent();
       // Out for the day only when Google says so (its quota id names the day); a
       // minute's limit rests two minutes. Taking every 429 for the day's kept the
       // strong writers out of every later update after one busy minute (1 Oct).
-      if (/HTTP 429/.test(msg)) resting.set(m.id, /HTTP 429 daily/.test(msg) ? nextPacificMidnight(Date.now()) : Date.now() + 2 * 60_000);
-      if (msg !== "no key") console.error(`[${tag}] ${m.id}: ${msg}`);
+      if (/HTTP 429/.test(msg)) resting.set(restKey(m), /HTTP 429 daily/.test(msg) ? nextPacificMidnight(Date.now()) : Date.now() + 2 * 60_000);
+      if (msg !== "no key") console.error(`[${tag}] ${restKey(m)}: ${msg}`);
     }
   }
   return null;

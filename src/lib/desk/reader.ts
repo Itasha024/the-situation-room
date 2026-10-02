@@ -1193,20 +1193,22 @@ export async function readBatch(
     const pk = p.key();
     if (!pk) continue;
     for (const gm of p.models) {
-      if (skip.has(gm) || exhausted.includes(gm) || minute.includes(gm)) continue;
+      // The same model on two services has two allowances: Groq's keep their bare names.
+      const tag = serviceModel(p.name, gm);
+      if (skip.has(tag) || exhausted.includes(tag) || minute.includes(tag)) continue;
       const started = Date.now();
       const n = Math.min(items.length, p.batch);
       const r = await callOpenAI(items.slice(0, p.batch), pk, recent.slice(0, 15), p, gm);
       if ("readings" in r) {
-        logCall(gm, n, started);
+        logCall(tag, n, started);
         const byId = new Map<string, Reading>();
         for (const x of r.readings) if (x && typeof x.id === "string") byId.set(x.id, x);
-        return { readings: byId, model: r.model, exhausted, minute, slow };
+        return { readings: byId, model: tag, exhausted, minute, slow };
       }
-      logCall(gm, n, started, r.error);
-      lastError = `${gm}: ${r.error}`;
-      if (r.daily) exhausted.push(gm);
-      else if (/429|503|abort/i.test(r.error)) minute.push(gm);
+      logCall(tag, n, started, r.error);
+      lastError = `${tag}: ${r.error}`;
+      if (r.daily) exhausted.push(tag);
+      else if (/429|503|abort/i.test(r.error)) minute.push(tag);
     }
   }
   return { readings: new Map(), error: lastError || "every model skipped (quota)", exhausted, minute, slow };
@@ -1228,26 +1230,24 @@ const env = (name: string) => (typeof process !== "undefined" && process.env[nam
  * A service without its key in the settings is skipped, so adding one is only
  * a matter of its key (and, if its model names change, `<NAME>_MODELS`).
  * Groq's free tier counts tokens per minute, so it takes a few items a call;
- * Cerebras and Mistral allow far more.
+ * the others allow more. Mistral leads: its free plan gives about a billion
+ * tokens a month, more than the reader uses (Cerebras is a paid trial since
+ * 16 Jul 2026; GitHub Models closed on 30 Jul 2026).
  */
-type Fallback = { name: string; url: string; key: () => string; models: string[]; batch: number };
-const FALLBACKS: Fallback[] = [
-  {
-    name: "cerebras",
-    url: "https://api.cerebras.ai/v1/chat/completions",
-    key: () => env("CEREBRAS_API_KEY"),
-    models: (env("CEREBRAS_MODELS") || "gpt-oss-120b").split(",").map((s) => s.trim()).filter(Boolean),
-    batch: 15,
-  },
-  {
-    name: "mistral",
-    url: "https://api.mistral.ai/v1/chat/completions",
-    key: () => env("MISTRAL_API_KEY"),
-    models: (env("MISTRAL_MODELS") || "mistral-small-latest").split(",").map((s) => s.trim()).filter(Boolean),
-    batch: 15,
-  },
+export type Fallback = { name: string; url: string; key: () => string; models: string[]; batch: number };
+const list = (name: string, dflt: string) => (env(name) || dflt).split(",").map((s) => s.trim()).filter(Boolean);
+export const FALLBACKS: Fallback[] = [
+  { name: "mistral", url: "https://api.mistral.ai/v1/chat/completions", key: () => env("MISTRAL_API_KEY"), models: list("MISTRAL_MODELS", "mistral-small-latest,mistral-medium-latest"), batch: 15 },
+  { name: "cerebras", url: "https://api.cerebras.ai/v1/chat/completions", key: () => env("CEREBRAS_API_KEY"), models: list("CEREBRAS_MODELS", "gpt-oss-120b"), batch: 15 },
+  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "openai/gpt-oss-120b"), batch: 10 },
+  { name: "openrouter", url: "https://openrouter.ai/api/v1/chat/completions", key: () => env("OPENROUTER_API_KEY"), models: list("OPENROUTER_MODELS", "openai/gpt-oss-120b:free"), batch: 10 },
   { name: "groq", url: "https://api.groq.com/openai/v1/chat/completions", key: () => groqKey(), models: GROQ_MODELS, batch: 4 },
 ];
+
+/** A model's name in the logs and rest lists: Groq's bare, any other service's prefixed. */
+export function serviceModel(service: string, model: string): string {
+  return service === "groq" ? model : `${service}/${model}`;
+}
 
 /** Is any fallback service set up? */
 export function fallbackKey(): boolean {

@@ -281,6 +281,10 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    Write what was found; say how it was seen (satellite imagery, geolocated
    footage) only when the post itself says so. Its questions to followers,
    teasers ("a map is coming") and bare opinions stay publish=false.
+   Pictures of damage already done ("satellite images show damage at
+   Yanbu") are not a new attack: unless a source reports a NEW strike, the
+   event_type is statement, and the headline says it is imagery of earlier
+   damage.
    Religious figures are not news: a mufti, cleric, preacher, imam, "scholars"
    or a body of Ulema condemning, praising or preaching — anywhere, in any
    country — is publish=false, reject_reason "cleric". The exceptions: a

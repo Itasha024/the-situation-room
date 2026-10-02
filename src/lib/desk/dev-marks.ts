@@ -3,6 +3,7 @@ import type { LiveReport } from "./types.ts";
 import { captureConfirmed } from "./control-live.ts";
 import { governorateAt } from "./adm1.ts";
 import { placesIn } from "./gazetteer.ts";
+import { notNewEvent } from "./pin-rule.ts";
 
 /*
  * Every event the desk recorded at a place, read from the cards themselves, so
@@ -22,7 +23,9 @@ export function kindOf(r: Pick<LiveReport, "type" | "summary" | "text">): DevKin
   // Sirens or an air-defence alert: a warning at that place, not yet a hit.
   if (ALERT_RE.test(h) && !HIT_RE.test(h)) return "alert";
   if (!MILITARY.has(r.type)) return null;
-  const t = `${h} ${String(r.text || "").slice(0, 300)}`;
+  // Pictures of earlier damage, build-ups, visits and the like: no mark (pin-rule.ts).
+  if (notNewEvent(h)) return null;
+  const t =`${h} ${String(r.text || "").slice(0, 300)}`;
   const test = (re: RegExp) => re.test(h) || re.test(t);
   // Flights halted or an airport closed is no strike at that place.
   if (/\b(air traffic|flights?|air ?space|airports?)\b.{0,40}\b(suspend\w*|halt\w*|resum\w*|divert\w*|clos\w*|disrupt\w*|delay\w*)\b|\b(suspend\w*|halt\w*|clos\w*|disrupt\w*)\b.{0,30}\b(air traffic|flights?|air ?space)\b/i.test(h)) return null;

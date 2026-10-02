@@ -135,9 +135,24 @@ test("the baseline links to originals, not to reposts", async () => {
   const { LEDGER_BASELINE } = await import("./ledger-baseline.ts");
   const urls = [...LEDGER_BASELINE.ships.map((s) => s.src.url), ...LEDGER_BASELINE.sites.flatMap((s) => [...s.hits.map((h) => h.url), s.statusSrc?.url ?? ""]), ...LEDGER_BASELINE.figures.map((f) => f.src.url)];
   for (const u of urls) assert.doesNotMatch(u, /boereport|marketscreener|energynewsbeat|npr\.org|dawn\.com|brecorder|kurdistan24/, u);
-  // The Houthis' own claims link to their spokesman's channel.
+  // The Houthis' own claims link to their spokesman's channel; a claim he never posted (1 Oct)
+  // links to the outlet that carried it.
   const yanbu = LEDGER_BASELINE.sites.find((s) => s.id === "yanbu")!;
-  assert.ok(yanbu.hits.filter((h) => h.claim).every((h) => h.url.startsWith("https://t.me/army21ye/")));
+  assert.ok(yanbu.hits.filter((h) => h.claim && h.date < "2026-10-01").every((h) => h.url.startsWith("https://t.me/army21ye/")));
   // Satellite pictures of old damage are not a new attack.
   assert.ok(!yanbu.hits.some((h) => h.date === "2026-09-30"));
+});
+
+test("a site stored under another name joins its row; wrong hits stay out; weapons are kept", async () => {
+  const { withBaseline, LEDGER_SEED } = await import("./ledger.ts");
+  const stored = structuredClone(LEDGER_SEED);
+  stored.sites.push(
+    { id: "taibah-power-plant", name: "Taibah power plant", kind: "power plant", country: "Saudi Arabia", hits: [{ name: "Al Arabiya", url: "https://t.me/alarabiyaBr/1", date: "2026-10-01" }], status: "unknown" },
+    { id: "abqaiq", name: "Abqaiq", kind: "processing plant", country: "Saudi Arabia", hits: [{ name: "IRNA", url: "https://t.me/irna/1", date: "2026-09-30" }], status: "unknown" },
+  );
+  const out = withBaseline(stored);
+  assert.equal(out.sites.filter((s) => /Taibah/.test(s.name)).length, 1);
+  assert.ok(!out.sites.some((s) => s.id === "abqaiq" && s.hits.some((h) => h.date === "2026-09-30")));
+  assert.equal(out.sites.find((s) => s.id === "taibah-medina")!.hits[0].weapon, "A drone");
+  assert.ok(out.ships.every((s) => s.weapon), "every researched ship attack names its weapon");
 });

@@ -1101,3 +1101,8 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .spot-pop{position:absolute;z-index:1300;box-sizing:border-box;padding:.55rem .7rem .45rem;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:8px;background:var(--t-surface-2,#121a24);box-shadow:0 10px 30px #0008}
 .spot-pop .chart-title{margin-top:0;color:var(--t-strong,#fff)}
 @media (max-width:560px){.mbar{grid-template-columns:6rem minmax(0,1fr) 3.4rem}}
+/* The weapon column (user, 2 Oct): ballistic missile, drones, explosive boat... */
+.tally-box.ledger table.list td.w{font-size:.92em;line-height:1.35;color:var(--t-text-2,#a8b8c9)}
+.tally-box.ledger table.list th.w{width:24%}
+.tally-box.ledger table.list td.w .unk{opacity:.7}
+@media (max-width:520px){.tally-box.ledger table.list td.w,.tally-box.ledger table.list th.w{font-size:.85em}}

@@ -1825,7 +1825,7 @@ function cadenceStamp(top = false) {
   const hours = (brief && +brief.cadenceHours) || 6;
   if (!brief) return `<p class="${cls}">${T('Refreshes every {h} hours.', { h: hours })}</p>`;
   const overdue = Date.now() > Date.parse(brief.nextUpdateAt);
-  return `<p class="${cls}${overdue ? ' late' : ''}">${T('Updates every {h} hours · Next {t}', { h: hours, t: escapeHtml(fmtWhen(brief.nextUpdateAt)) })}${overdue ? T(' · refresh due') : ''}</p>`;
+  return `<p class="${cls}${overdue ? ' late' : ''}">${T('Updates every {h}h based on latest reports · Next {t}', { h: hours, t: escapeHtml(fmtWhen(brief.nextUpdateAt)) })}${overdue ? T(' · refresh due') : ''}</p>`;
 }
 
 function frontActivity(id) {
@@ -3223,15 +3223,19 @@ const seriesFigs = (led, series) => ((led && led.figures) || []).filter((f) => f
 /* ------------------------------------------------------------------ *
  * Maritime
  * ------------------------------------------------------------------ */
+/** What was used in an attack, as its source says; "Unknown" when it does not. */
+function weaponCell(w) {
+  return w ? escapeHtml(capFirst(String(w))) : `<span class="unk">${T('Unknown')}</span>`;
+}
 function shipsBody(led) {
   const ships = ((led && led.ships) || []).filter((s) => String(s.date) >= WAR_START).sort((a, b) => String(b.date).localeCompare(String(a.date)));
   if (!ships.length) return ledEmpty('No incident reported since the conflict began.');
   const rows = ships.map((s) => {
     const name = s.ship || capFirst(s.type) || 'A ship';
     const flag = s.flag ? ` <small class="flag">(${escapeHtml(s.flag)})</small>` : '';
-    return `<tr><td class="d">${srcLink(escapeHtml(ledDay(s.date)), s.src)}</td><td class="l">${escapeHtml(name)}${flag}</td><td class="l">${escapeHtml(capFirst(s.place || ''))}</td></tr>`;
+    return `<tr><td class="d">${srcLink(escapeHtml(ledDay(s.date)), s.src)}</td><td class="l">${escapeHtml(name)}${flag}</td><td class="l">${escapeHtml(capFirst(s.place || ''))}</td><td class="l w">${weaponCell(s.weapon)}</td></tr>`;
   }).join('');
-  return moreBox('ships', statTrio(spanCounts(ships.map((s) => s.date))), `${SL_KEY}<table class="list"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th></tr>${rows}</table>`);
+  return moreBox('ships', statTrio(spanCounts(ships.map((s) => s.date))), `${SL_KEY}<table class="list ships"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th><th scope="col" class="l w">Weapon</th></tr>${rows}</table>`);
 }
 
 /** Each spot's own chart, shown over the page from its name. */
@@ -3348,14 +3352,16 @@ function sitesBody(led) {
   if (!sites.length) return ledEmpty('No attack on energy infrastructure reported since the conflict began.');
   const hits = sites.flatMap((s) => s.hits);
   const lastOf = (s) => String(s.hits[s.hits.length - 1].date);
-  const rows = sites.slice().sort((a, b) => lastOf(b).localeCompare(lastOf(a))).map((s) => {
-    const st = s.status || 'unknown';
-    const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || escapeHtml(st)}</span>`;
-    const status = s.statusSrc && s.statusSrc.url ? srcLink(chip, s.statusSrc, 'st-link') : chip;
-    const dates = s.hits.map((h) => srcLink(escapeHtml(ledDay(h.date)), h)).join('');
-    return `<tr><td class="d dates">${dates}</td><td class="l">${escapeHtml(s.name)}</td><td class="t">${status}</td></tr>`;
-  }).join('');
-  return moreBox('sites', statTrio(spanCounts(hits.map((h) => h.date))), `${SL_KEY}<table class="list sites"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="t">Status</th></tr>${rows}</table>`);
+  // One row per attack, newest first; a site's status stands on its latest row.
+  const rows = sites.flatMap((s) => s.hits.map((h, i) => ({ s, h, last: i === s.hits.length - 1 })))
+    .sort((a, b) => String(b.h.date).localeCompare(String(a.h.date)))
+    .map(({ s, h, last }) => {
+      const st = s.status || 'unknown';
+      const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || escapeHtml(st)}</span>`;
+      const status = !last ? '' : s.statusSrc && s.statusSrc.url ? srcLink(chip, s.statusSrc, 'st-link') : chip;
+      return `<tr><td class="d">${srcLink(escapeHtml(ledDay(h.date)), h)}</td><td class="l">${escapeHtml(s.name)}</td><td class="l w">${weaponCell(h.weapon)}</td><td class="t">${status}</td></tr>`;
+    }).join('');
+  return moreBox('sites', statTrio(spanCounts(hits.map((h) => h.date))), `${SL_KEY}<table class="list sites"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l w">Weapon</th><th scope="col" class="t">Status</th></tr>${rows}</table>`);
 }
 
 function exportsBody(led) {

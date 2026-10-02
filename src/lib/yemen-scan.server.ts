@@ -21,7 +21,7 @@ import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading 
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
-import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameEventAbroad, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
+import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameCountAt, sameEventAbroad, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -1394,6 +1394,13 @@ export function foldIntoPublished(
         (o) =>
           open(o) && o.source !== r.source && before(o, CLAIM_WINDOW_MS) && sameCount(o.summary, r.summary) &&
           sameStory(o, r) && !numbersClash(o.summary, r.summary),
+      );
+    }
+    // The same count at the same place from another outlet hours later: the
+    // spokesman's "27 airstrikes in Taiz" is on the desk already (copies.ts).
+    if (!home) {
+      home = homes.find(
+        (o) => open(o) && o.source !== r.source && before(o, DUPLICATE_WINDOW_MS) && sameCountAt(o, r) && !differentSpeakers(o, r),
       );
     }
     if (!home) continue;

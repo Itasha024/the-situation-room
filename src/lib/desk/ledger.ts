@@ -14,6 +14,7 @@ import { askChain, COMBINE_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { outletSide } from "./digest.ts";
 import { LEDGER_BASELINE } from "./ledger-baseline.ts";
+import { notNewEvent } from "./pin-rule.ts";
 
 export const LEDGER_KEY = "ledger";
 export const TRANSITS_KEY = "ledger-transits";
@@ -24,7 +25,8 @@ export const TRANSITS_KEY = "ledger-transits";
  * (UKMTO, a ministry, a state agency, JODI) or a wire (Reuters, AP, AFP,
  * Bloomberg); left out, it is read from the name (`sourceTier`).
  */
-export type LedgerSource = { name: string; url: string; date: string; claim?: boolean; tier?: "official" | "wire"; note?: string };
+/** `weapon`: what was used, as the source says ("ballistic missile", "drones", "explosive boat"). */
+export type LedgerSource = { name: string; url: string; date: string; claim?: boolean; tier?: "official" | "wire"; note?: string; weapon?: string };
 export type ShipWhat = "attacked" | "hit" | "seized" | "sunk" | "near miss" | "suspicious approach";
 export type ShipIncident = {
   id: string;
@@ -36,6 +38,8 @@ export type ShipIncident = {
   what: ShipWhat;
   attacker?: string;
   crew?: string;
+  /** What was used, as the source says: "ballistic missile", "drones", "explosive boat". */
+  weapon?: string;
   /** Where the sources disagree, in a line. */
   note?: string;
   src: LedgerSource;
@@ -67,7 +71,8 @@ export const FIGURE_GROUPS: FigureGroup[] = ["traffic", "oil", "cost", "security
 export type LedgerFigure = { id: string; cat: "maritime" | "energy"; group?: FigureGroup; label: string; value: number; unit: string; period?: string; series?: string; month?: string; span?: string; src: LedgerSource };
 /** A declared ban, a warning to shipping, a naval mission's move. */
 export type LedgerNotice = { id: string; date: string; text: string; src: LedgerSource };
-export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string };
+/** `wrong`: site hits found to be wrong (old damage shown as new), kept out for good. */
+export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string; wrong?: { site: string; date: string; why: string }[] };
 
 /** The war began with the strike on Sanaa airport, 13 July 2026. */
 export const WAR_START = "2026-07-13";
@@ -118,6 +123,9 @@ export const KNOWN_SITES: KnownSite[] = [
   { id: "riyadh-refinery", name: "Riyadh refinery", kind: "refinery", country: "Saudi Arabia", re: /Riyadh refinery|مصفاة الرياض/i },
   { id: "riyadh-depot", name: "Riyadh fuel depot (King Khalid airport)", kind: "fuel depot", country: "Saudi Arabia", re: /(?:fuel|oil|Aramco) (?:depot|tanks?|storage)[^.]{0,40}Riyadh|Riyadh[^.]{0,40}(?:fuel|oil|Aramco) (?:depot|tanks?|storage)|خزان[^.]{0,30}الرياض/i },
   { id: "najran-aramco", name: "Aramco plant, Najran", kind: "bulk plant", country: "Saudi Arabia", re: /Aramco[^.]{0,40}Najran|Najran[^.]{0,40}Aramco|أرامكو[^.]{0,30}نجران|نجران[^.]{0,30}أرامكو/i },
+  { id: "abha-aramco", name: "Aramco bulk plant, Abha", kind: "bulk plant", country: "Saudi Arabia", re: /Aramco[^.]{0,40}Abha|Abha[^.]{0,40}Aramco|أرامكو[^.]{0,30}أبها|أبها[^.]{0,30}أرامكو/i },
+  { id: "jubail-gas", name: "Gas facilities, Jubail", kind: "gas plant", country: "Saudi Arabia", re: /Jubail|الجبيل/i },
+  { id: "taibah-medina", name: "Taibah electricity station, Medina", kind: "power station", country: "Saudi Arabia", re: /Taibah|Taiba (?:power|electricity)|(?:Medina|Madinah)[^.]{0,30}(?:power|electricity) (?:station|plant)|محطة (?:كهرباء )?طيبة/i },
   { id: "safer", name: "Safer (Marib)", kind: "oilfield", country: "Yemen", re: /Safer|صافر/i },
   { id: "ras-isa", name: "Ras Isa", kind: "terminal", country: "Yemen", re: /Ras Isa|رأس عيسى/i },
   { id: "aden-refinery", name: "Aden refinery", kind: "refinery", country: "Yemen", re: /Aden refinery|مصافي عدن|مصفاة عدن/i },
@@ -162,9 +170,9 @@ export function nameInText(text: string, name: string): boolean {
 const WHATS: ShipWhat[] = ["attacked", "hit", "seized", "sunk", "near miss", "suspicious approach"];
 const STATUSES: SiteStatus[] = ["working", "reduced", "down", "unknown"];
 
-type Doc = { name: string; url: string; date: string; text: string };
-type ShipUpdate = { doc: number; date?: string; ship?: string; flag?: string; type?: string; place?: string; what?: string; attacker?: string; crew?: string; claimed?: boolean };
-type SiteUpdate = { doc: number; site?: string; kind?: string; country?: string; hit?: boolean; status?: string; claimed?: boolean };
+type Doc = { name: string; url: string; date: string; text: string; headline?: string };
+type ShipUpdate = { doc: number; date?: string; ship?: string; flag?: string; type?: string; place?: string; what?: string; attacker?: string; crew?: string; weapon?: string; claimed?: boolean };
+type SiteUpdate = { doc: number; site?: string; kind?: string; country?: string; hit?: boolean; status?: string; weapon?: string; claimed?: boolean };
 type FigureUpdate = { doc: number; cat?: string; group?: string; label?: string; value?: number; unit?: string; period?: string };
 type NoticeUpdate = { doc: number; text?: string };
 export type LedgerUpdates = { ships?: ShipUpdate[]; sites?: SiteUpdate[]; figures?: FigureUpdate[]; notices?: NoticeUpdate[] };
@@ -206,10 +214,30 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
   // A strike their own camp alone reports stays their claim, rows stored before this rule too.
   for (const x of out.ships) if (houthiOutlet(x.src.name)) x.src.claim = true;
   for (const x of out.sites) for (const h of x.hits) if (houthiOutlet(h.name)) h.claim = true;
+  // A site stored under another name before its known names were added ("Taibah power
+  // plant") joins its known row.
+  for (const x of [...out.sites]) {
+    const k = KNOWN_SITES.find((s) => s.re.test(x.name));
+    if (!k || k.id === x.id) continue;
+    const row = out.sites.find((s) => s.id === k.id);
+    if (!row) {
+      Object.assign(x, { id: k.id, name: k.name });
+      continue;
+    }
+    for (const h of x.hits) if (!row.hits.some((y) => y.date === h.date)) row.hits.push(h);
+    out.sites.splice(out.sites.indexOf(x), 1);
+  }
+  // Hits found to be wrong (pictures of old damage) stay out, whoever adds them again.
+  for (const w of base.wrong ?? []) {
+    const row = out.sites.find((s) => s.id === w.site);
+    if (row) row.hits = row.hits.filter((h) => h.date !== w.date);
+  }
+  out.sites = out.sites.filter((s) => s.hits.length || s.statusSrc);
   for (const s of base.ships) {
     const row = out.ships.find((x) => x.id === s.id || (x.ship && s.ship && nameInText(x.ship, s.ship) && Math.abs(dayMs(x.date) - dayMs(s.date)) <= 86_400_000));
     if (!row) out.ships.push(structuredClone(s));
-    else if (betterSource(s.src, row.src)) Object.assign(row, structuredClone(s), { id: row.id });
+    else if (betterSource(s.src, row.src)) Object.assign(row, structuredClone(s), { id: row.id, weapon: s.weapon ?? row.weapon });
+    else row.weapon ??= s.weapon;
   }
   for (const s of base.sites) {
     const row = out.sites.find((x) => x.id === s.id);
@@ -221,7 +249,8 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
     for (const h of s.hits) {
       const i = row.hits.findIndex((x) => x.date === h.date);
       if (i < 0) row.hits.push({ ...h });
-      else if (betterSource(h, row.hits[i])) row.hits[i] = { ...h };
+      else if (betterSource(h, row.hits[i])) row.hits[i] = { ...h, weapon: h.weapon ?? row.hits[i].weapon };
+      else row.hits[i].weapon ??= h.weapon;
     }
     row.hits.sort((a, b) => a.date.localeCompare(b.date));
     if (s.statusSrc && (!row.statusSrc || dayMs(s.statusSrc.date) > dayMs(row.statusSrc.date))) {
@@ -268,6 +297,7 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
       same.type ??= s.type || undefined;
       same.attacker ??= s.attacker || undefined;
       same.crew ??= s.crew || undefined;
+      same.weapon ??= s.weapon ? String(s.weapon).slice(0, 80) : undefined;
       const src = hitSrc(d, s.claimed);
       if (betterSource(src, same.src)) same.src = src;
       continue;
@@ -282,6 +312,7 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
       what: s.what as ShipWhat,
       ...(s.attacker ? { attacker: s.attacker } : {}),
       ...(s.crew ? { crew: s.crew } : {}),
+      ...(s.weapon ? { weapon: String(s.weapon).slice(0, 80) } : {}),
       src: hitSrc(d, s.claimed),
     });
   }
@@ -297,8 +328,9 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
       row = { ...known, hits: [], status: "unknown" };
       next.sites.push(row);
     }
-    if (s.hit) {
-      const src = hitSrc(d, s.claimed);
+    // A picture of old damage is not a new hit (pin-rule.ts), whatever the model says.
+    if (s.hit && !notNewEvent(d.headline ?? d.text.split(". ")[0])) {
+      const src = { ...hitSrc(d, s.claimed), ...(s.weapon ? { weapon: String(s.weapon).slice(0, 80) } : {}) };
       const i = row.hits.findIndex((h) => h.date === d.date);
       if (i < 0) row.hits.push(src);
       else if (betterSource(src, row.hits[i])) row.hits[i] = src;
@@ -358,14 +390,15 @@ function ledgerDocs(reports: LiveReport[]): Doc[] {
       name: String(r.source || "desk report"),
       url: String(r.url || ""),
       date: String(r.at || "").slice(0, 10),
+      headline: String(r.summary || ""),
       text: `${r.summary || ""}. ${r.text || ""}`.slice(0, 1400),
     }));
 }
 
 const SYSTEM = `You keep the Maritime and Energy ledger of the current round of the Yemen war (Houthis vs the Yemeni government and the Saudi-led coalition, since the strike on Sanaa airport on 13 July 2026).
 You get NEW documents (news cards). Return only what a document itself states:
-- ships: each attack on, hit on, seizure or sinking of a ship, a near miss, or a suspicious approach, in the Red Sea, Bab al-Mandab, the Gulf of Aden, the Arabian Sea off Yemen, or Saudi or Yemeni waters. Fields: date (YYYY-MM-DD, of the incident), ship (its name, only if the text names it), flag, type (tanker, bulk carrier, container ship...), place (as the text puts it, e.g. "40 nm west of Hodeidah"), what (one of: attacked, hit, seized, sunk, near miss, suspicious approach), attacker (only if the text says who), crew (hurt or missing, as the text says), claimed (true when the text gives the attack only as one side's word, e.g. "the Houthis said they targeted", with no word from the ship, its owner, UKMTO, a navy, the target country or witnesses). Hormuz and the Gulf are out unless the text says the Houthis did it. Piracy by Somali or unknown gunmen is out.
-- sites: each Saudi or Yemeni energy site the text says was hit, or whose state it gives (pipelines and pump stations, refineries, terminals, oilfields, gas and power plants, desalination plants). Fields: site (its name as the text writes it), kind, country (Saudi Arabia or Yemen), hit (true when the text reports it hit in this document's news), status (working, reduced or down, only when the text says so; "resumed", "back in service" = working; "halted", "shut" = down; "partly", "reduced" = reduced), claimed (true when the hit is only one side's word, as for ships; a hit the target country's ministry, Aramco, civil defence or witnesses report is not a claim). Satellite pictures of damage from an earlier attack, or smoke seen with no attack reported, are not a new hit.
+- ships: each attack on, hit on, seizure or sinking of a ship, a near miss, or a suspicious approach, in the Red Sea, Bab al-Mandab, the Gulf of Aden, the Arabian Sea off Yemen, or Saudi or Yemeni waters. Fields: date (YYYY-MM-DD, of the incident), ship (its name, only if the text names it), flag, type (tanker, bulk carrier, container ship...), place (as the text puts it, e.g. "40 nm west of Hodeidah"), what (one of: attacked, hit, seized, sunk, near miss, suspicious approach), attacker (only if the text says who), crew (hurt or missing, as the text says), weapon (what was used, as the text says, with its type when named: "ballistic missile", "two Palestine-2 ballistic missiles", "drones", "explosive boat", "cruise missiles and drones"; empty if the text does not say), claimed (true when the text gives the attack only as one side's word, e.g. "the Houthis said they targeted", with no word from the ship, its owner, UKMTO, a navy, the target country or witnesses). Hormuz and the Gulf are out unless the text says the Houthis did it. Piracy by Somali or unknown gunmen is out.
+- sites: each Saudi or Yemeni energy site the text says was hit, or whose state it gives (pipelines and pump stations, refineries, terminals, oilfields, gas and power plants, desalination plants). Fields: site (its name as the text writes it), kind, country (Saudi Arabia or Yemen), hit (true when the text reports it hit in this document's news), status (working, reduced or down, only when the text says so; "resumed", "back in service" = working; "halted", "shut" = down; "partly", "reduced" = reduced), weapon (as for ships), claimed (true when the hit is only one side's word, as for ships; a hit the target country's ministry, Aramco, civil defence or witnesses report is not a claim). Satellite pictures of damage from an earlier attack, or smoke seen with no attack reported, are not a new hit.
 - figures: a number the text gives about shipping or energy in this war. Fields: cat (maritime or energy), group, label (short, e.g. "Saudi crude exports from Yanbu"), value (the number as written, e.g. 1.2 for "1.2 million"), unit (e.g. "million barrels a day"), period (what it covers, as the text says: "September", "22-26 Sep", "since 20 July", "Tuesday 22 Sep"; empty if it does not say). Groups:
   maritime: traffic (ships crossing Bab al-Mandab, Suez or around the Cape, escorts asked for), oil (barrels of oil through Bab al-Mandab, the Red Sea or Suez), cost (war-risk insurance, freight rates, Suez Canal revenue), security (warships, naval missions, escorts), attacks (a side's own count of ships it attacked or turned back);
   energy: exports (Saudi or Yemeni crude or fuel exports, from Yanbu, via Hormuz, in total; oil output), pipeline (East-West pipeline or other pipeline throughput and capacity), prices (Brent or other oil and gas prices).

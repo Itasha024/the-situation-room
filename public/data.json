@@ -20680,6 +20680,20 @@
       "backfill": true
     },
     {
+      "fp": "bf-2026-08-09-jubail-gas",
+      "at": "2026-08-09T07:00:00+03:00",
+      "type": "strike",
+      "lat": 27.03,
+      "lng": 49.62,
+      "place": "Jubail",
+      "label": "Explosion and fire at gas facilities in Jubail Industrial City, unnamed sources say",
+      "text": "JUBAIL — A loud explosion was heard and gas facilities in Jubail Industrial City caught fire, unnamed sources told Anadolu; there was no Saudi confirmation.",
+      "source": "Anadolu",
+      "url": "https://www.aa.com.tr/en/world/explosion-heard-in-saudi-arabias-jubail-as-fires-reported-at-energy-facilities-sources/4022196",
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
       "fp": "bf-2026-09-19-riyadh-airport-fuel-depot",
       "at": "2026-09-19T12:00:00+03:00",
       "type": "port",

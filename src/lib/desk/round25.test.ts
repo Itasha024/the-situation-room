@@ -144,3 +144,11 @@ test("a front's 'holding' lines stay only when its reports say so", () => {
   const held = "Popular Resistance commander says forces are holding positions in Al-Shamayateen.";
   assert.equal(keepReported(held, [{ summary: "Popular Resistance commander in Al-Shamayateen: forces are holding positions" }]), held);
 });
+
+test("one count at one place from several outlets is one report (the spokesman's 27 airstrikes)", async () => {
+  const { sameCountAt } = await import("./copies.ts");
+  const first = { summary: "Yemeni government forces launch 27 airstrikes in Taiz" };
+  assert.ok(sameCountAt(first, { summary: "Yemeni government forces report 27 airstrikes on Houthi military sites in Taiz" }));
+  assert.ok(!sameCountAt(first, { summary: "Yemeni government forces launch 15 airstrikes in Taiz" }));
+  assert.ok(!sameCountAt(first, { summary: "Saudi warplanes launch 27 airstrikes on Saada" }));
+});

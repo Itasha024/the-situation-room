@@ -57,7 +57,7 @@
       // Update clock
       '{t} on {d}': '{t}، {d}',
       'Refreshes every {h} hours.': 'يُحدَّث كل {h} ساعات.',
-      'Updates every {h} hours · Next {t}': 'يُحدَّث كل {h} ساعات · التحديث التالي: {t}',
+      'Updates every {h}h based on latest reports · Next {t}': 'يُحدَّث كل {h} ساعات بناءً على أحدث التقارير · التحديث التالي: {t}',
       ' · refresh due': ' · التحديث متأخر',
       'Last scan {t}': 'آخر رصد: {t}',
       'Not scanned yet': 'لم يُجرَ الرصد بعد',
@@ -244,6 +244,7 @@
       'Reduced': 'بطاقة منخفضة',
       'Down': 'متوقفة',
       'Unknown': 'غير معروف',
+      'Weapon': 'السلاح',
       'Since conflict': 'منذ بدء النزاع',
       'Before conflict': 'قبل النزاع',
       '13 Jun – 12 Jul': '13 يونيو – 12 يوليو',

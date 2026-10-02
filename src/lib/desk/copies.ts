@@ -298,6 +298,32 @@ export function sameCount(a: string, b: string, min = 3): boolean {
  */
 const NAMED_OBJECT = /\b(?:Wing Loong(?: II)?|MQ-\d+|F-\d+[A-Z]?|Shahed(?:-\d+)?|Samad(?:-\d+)?|Quds(?:-\d+)?|Zulfiqar|Toufan|Burkan(?:-\d+)?|Palestine-\d|Hatem(?:-\d+)?|Patriot|THAAD|Kpler|[A-Z][a-z]+ (?:tanker|frigate|destroyer|vessel|carrier))\b/;
 
+const COUNTED = /\b(\d{1,4})\s+(?:new\s+|more\s+|Saudi\s+|Houthi\s+|government\s+|coalition\s+)?(air ?strikes?|air ?raids?|raids?|strikes?|drones?|missiles?|sorties|targets|positions|sites|killed|dead|deaths|wounded|injured|ships|vessels|tankers)\b/gi;
+const NOT_PLACE = new Set(["houthi", "houthis", "yemeni", "yemen", "saudi", "arabia", "government", "forces", "coalition", "army", "military", "spokesperson", "spokesman", "minister", "ministry", "official", "officials", "says", "report", "reports", "launch", "launched", "conduct", "against", "positions", "sites", "fronts"]);
+const countedKeys = (s: string) => {
+  const out = new Set<string>();
+  for (const m of String(s || "").matchAll(COUNTED)) {
+    if (+m[1] < 5) continue;
+    out.add(`${+m[1]} ${m[2].toLowerCase().replace(/\s+/g, "").replace(/s$/, "")}`);
+  }
+  return out;
+};
+const placeWords = (s: string) => new Set((String(s || "").match(/\b[A-Z][\w'-]{3,}/g) ?? []).map((w) => w.toLowerCase()).filter((w) => !NOT_PLACE.has(w)));
+
+/**
+ * One count told by several outlets: "forces launch 27 airstrikes in Taiz"
+ * and "27 airstrikes hit Houthi fronts in Taiz". The same figure (5 or more)
+ * of the same thing at the same named place is one report, whoever carries
+ * it; the first stays and the rest go under its "Also" (user, 2 Oct: the
+ * spokesman's 27 airstrikes came out as six cards).
+ */
+export function sameCountAt(a: { summary: string }, b: { summary: string }): boolean {
+  const x = countedKeys(a.summary);
+  if (!x.size || ![...countedKeys(b.summary)].some((k) => x.has(k))) return false;
+  const p = placeWords(a.summary);
+  return [...placeWords(b.summary)].some((w) => p.has(w));
+}
+
 export function countedOrNamed(s: string): boolean {
   return numbersIn(s).length > 0 || NAMED_OBJECT.test(String(s || ""));
 }

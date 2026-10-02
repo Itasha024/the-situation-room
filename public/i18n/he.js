@@ -46,7 +46,7 @@ window.DESK_I18N = {
     // Update clock
     '{t} on {d}': '{t}, {d}',
     'Refreshes every {h} hours.': 'מתעדכן כל {h} שעות.',
-    'Updates every {h} hours · Next {t}': 'מתעדכן כל {h} שעות · העדכון הבא: {t}',
+    'Updates every {h}h based on latest reports · Next {t}': 'מתעדכן כל {h} שעות על סמך הדיווחים האחרונים · העדכון הבא: {t}',
     ' · refresh due': ' · העדכון מתעכב',
     'Last scan {t}': 'סריקה אחרונה: {t}',
     'Not scanned yet': 'טרם נסרק',
@@ -233,6 +233,7 @@ window.DESK_I18N = {
     'Reduced': 'פעילות מופחתת',
     'Down': 'מושבת',
     'Unknown': 'לא ידוע',
+    'Weapon': 'אמצעי',
     'Since conflict': 'מאז תחילת העימות',
     'Before conflict': 'לפני העימות',
     '13 Jun – 12 Jul': '13 ביוני – 12 ביולי',

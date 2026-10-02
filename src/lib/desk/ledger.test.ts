@@ -158,3 +158,14 @@ test("a site stored under another name joins its row; wrong hits stay out; weapo
   assert.equal(out.sites.find((s) => s.id === "taibah-medina")!.hits[0].weapon, "A drone");
   assert.ok(out.ships.every((s) => s.weapon), "every researched ship attack names its weapon");
 });
+
+test("one side's word a day after a reported hit on the same site is that hit told again", async () => {
+  const { withBaseline } = await import("./ledger.ts");
+  const stored = structuredClone(LEDGER_SEED);
+  stored.sites = [{ id: "taibah-medina", name: "Taibah power plant", kind: "power", country: "Saudi Arabia", status: "working", hits: [
+    { url: "a", date: "2026-10-01", name: "Saudi-led coalition (Al Arabiya)", tier: "official" },
+    { url: "b", date: "2026-10-02", name: "Nour News", claim: true },
+  ] }] as typeof stored.sites;
+  const row = withBaseline(stored, { ...stored, sites: [] }).sites.find((s) => s.id === "taibah-medina");
+  assert.deepEqual(row?.hits.map((h) => h.url), ["a"]);
+});

@@ -214,6 +214,13 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
   // A strike their own camp alone reports stays their claim, rows stored before this rule too.
   for (const x of out.ships) if (houthiOutlet(x.src.name)) x.src.claim = true;
   for (const x of out.sites) for (const h of x.hits) if (houthiOutlet(h.name)) h.claim = true;
+  // One side's word within 36 hours of an earlier hit on the same site is that
+  // hit told again (user, 2 Oct: Nour News's round-up on Taibah a day after the
+  // coalition's report). A second official or wire report still counts.
+  for (const x of out.sites) {
+    const hits = [...x.hits].sort((a, b) => a.date.localeCompare(b.date));
+    x.hits = hits.filter((h, i) => !(h.claim && !h.tier && i > 0 && Date.parse(h.date) - Date.parse(hits[i - 1].date) <= 36 * 3600_000));
+  }
   // A site stored under another name before its known names were added ("Taibah power
   // plant") joins its known row.
   for (const x of [...out.sites]) {

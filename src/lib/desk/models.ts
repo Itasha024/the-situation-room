@@ -107,6 +107,8 @@ async function callOne(m: ChainModel, system: string, user: string, temperature:
         // A quick job (a reader waiting on a search) thinks as little as it can.
         ...(fast && m.id.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
         ...noThinking(m.id),
+        // Groq's gpt-oss often answered the overview in prose (user, 2 Oct): ask its JSON mode.
+        ...(m.provider === "groq" && m.id.startsWith("openai/gpt-oss") ? { response_format: { type: "json_object" } } : {}),
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
       }),
     });

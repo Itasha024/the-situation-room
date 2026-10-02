@@ -3489,7 +3489,8 @@ function renderBars(d) {
       <div class="track"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
     </div>`;
   }).join('');
-  document.getElementById('bars').innerHTML = rows ? `${rows}` : '';
+  document.getElementById('bars').innerHTML = rows ? `${rows}<div class="bars-meth"><button type="button" class="rel-btn" id="btn-share-meth" aria-expanded="false" aria-haspopup="dialog">Control share methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div>` : '';
+  wirePop(document.getElementById('btn-share-meth'), 'share-pop', SHARE_HTML);
 }
 
 function feedCardHtml(r, i) {
@@ -6203,6 +6204,8 @@ function wireRailResize() {
     const max = Math.min(640, Math.max(320, Math.floor(window.innerWidth * 0.55)));
     const w = Math.max(min, Math.min(max, Math.round(px)));
     stage.style.setProperty('--rail-w', w + 'px');
+    // The toolbar reads it too, so Map methodology keeps to the map's right edge.
+    document.documentElement.style.setProperty('--rail-w', w + 'px');
     try { localStorage.setItem(KEY, String(w)); } catch (e) {}
     if (map) setTimeout(() => map && map.invalidateSize(), 40);
   };
@@ -6623,6 +6626,31 @@ const REL_HTML = `<h3 id="rel-pop-h">Sources reliability methodology</h3>
 </ul>
 <p class="rel-foot">Ratings update every 24 hours. <a href="/yemen-conflict-desk/sources">Sources list →</a></p>`;
 
+/* How the control shares under the bars are made (user, 2 Oct). */
+const SHARE_HTML = `<h3 id="share-pop-h">Control share methodology</h3>
+<p>Shares change acc. to map every 6h. <a href="#map-wrap" class="to-map-meth">Map methodology →</a></p>
+<ul>
+<li><b>By district.</b> Yemen is split into its 335 districts, and each district's area is measured in km².</li>
+<li><b>Each district counts whole</b> for the side the map shows holding it: Houthi forces, the government, or contested.</li>
+<li><b>A share is that side's area</b> out of all of Yemen, rounded.</li>
+<li><b>Land, not people.</b> A large desert district counts for more than a small, crowded city.</li>
+</ul>`;
+
+/* How the map's colours are set and changed (user, 2 Oct). The rule is control-live.ts's. */
+const MAP_HTML = `<h3 id="map-pop-h">Map methodology</h3>
+<ul>
+<li><b>Start:</b> Pre-conflict colours based on available data.</li>
+<li><b>Then the reports decide.</b> Only ground taken counts.
+<ul>
+<li>A district changes side when two outlets not on the same side, or a wire agency, report the other side taking the whole district or driving the holding side out of it. A non-aligned outlet counts as a side of its own;</li>
+<li>it turns contested when only one side reports that, or when only its centre, a town, positions, hills or villages in it were taken;</li>
+<li>it stays contested until one side's full control of it is confirmed the same way.</li>
+</ul></li>
+<li><b>A side's gains inside a district it already holds</b> change nothing.</li>
+<li><b>The same rule draws the flags</b> on the Latest developments and Fronts maps. A capture reported by one side only is drawn as an advance.</li>
+</ul>
+<p class="rel-foot">Colours update every 6h.</p>`;
+
 /*
  * One pop-up per text, opened from any button that names it: hover on a PC,
  * a click or tap anywhere; on a phone it rises from the bottom.
@@ -6698,6 +6726,18 @@ function wirePop(btn, id, html) {
 
 function installRelPop() {
   wirePop(document.getElementById('btn-rel'), 'rel-pop', REL_HTML);
+  const mapBtn = document.getElementById('btn-map-meth');
+  wirePop(mapBtn, 'map-pop', MAP_HTML);
+  // "Map methodology →" in the share pop-up: to the map, with its pop-up open.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('.to-map-meth');
+    if (!a || !mapBtn) return;
+    e.preventDefault();
+    if (POPS['share-pop']) POPS['share-pop'].close();
+    const bar = document.querySelector('.toolbar') || mapBtn;
+    bar.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    setTimeout(() => POPS['map-pop'].open(mapBtn, true), 450);
+  });
 }
 
 let bootInflight = null;

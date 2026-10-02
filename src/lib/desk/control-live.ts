@@ -9,11 +9,14 @@
  * shares follow. The rule, per district:
  *
  *  - taken: two or more outlets from different sides, or a wire agency, tell
- *    the capture of the district's town or of the district itself → it goes to
- *    the captor;
- *  - contested: only one side tells it, both sides claim ground there, or what
- *    was taken is positions, heights or villages rather than the district;
- *  - a contested district goes back to one side under the "taken" rule.
+ *    the capture of the whole district (full control of it, or its holder
+ *    driven out) → it goes to the captor;
+ *  - contested: only one side tells it, or what was taken is the district's
+ *    centre, a town, positions, heights or villages in it (user, 2 Oct: in
+ *    Yemen a district falls once its rural areas are cleared too; Hays's centre
+ *    fell first, full control of the district was told later);
+ *  - a contested district stays so until one side's full control of it is
+ *    told the same way. Silence moves nothing.
  */
 
 import { ADM2 } from "./adm2-centres.ts";
@@ -39,17 +42,36 @@ function norm(s: string): string {
 /** What the verb took: the words after it, up to "near", "in", a comma and the like. */
 const TOOK = /\b(?:took|takes?|taken|seize[sd]?|seizing|captur(?:e|es|ed)|retake[sn]?|retook|recapture[sd]?|control of|enter(?:s|ed)?|liberat\w+)\s+(?:the\s+)?([^,;.]{0,60})/i;
 const STOP_AT = /\s(?:near|around|outside|in|on|at|from|east|west|north|south|after|as|and|while|towards?)\s/i;
-/** The capture of a place that stands for the district, not of ground inside it. */
-const WHOLE = /\b(?:town|city|district|centre|center|capital|port|airport)\b/i;
-const PART = /\b(?:positions?|heights?|hills?|villages?|sites?|areas?|mount|jabal|posts?|trenches|outskirts|parts?)\b/i;
+/** A town, its centre or ground inside the district: contested, not taken. */
+const PART = /\b(?:positions?|heights?|hills?|villages?|sites?|areas?|mount|jabal|posts?|trenches|outskirts|parts?|town|city|centre|center|capital|port|airport|base|camp)\b/i;
+/** The whole district: "full control of", "the whole/entire", "in full", "fully", "X district". */
+const FULL = /\b(?:full|complete|total)\s+control\s+(?:of|over)\s+(?:the\s+)?([^,;.]{0,60})/i;
+const ALL = /^\s*(?:all\s+of|the\s+whole\s+of|the\s+whole|the\s+entire|whole|entire)\s+(?:the\s+)?/i;
+const IN_FULL = /\b(?:fully|completely|entirely|in\s+full)\b/i;
+/** The holder driven out: "drove the Houthis out of X", "expelled government forces from X". */
+const OUT = /\b(?:drove|drive[sn]?|driving|push(?:ed|es)?|forced?|expel(?:s|led)?|oust(?:s|ed)?)\b[^,;.]{0,40}?\b(?:out\s+of|from)\s+(?:the\s+)?([^,;.]{0,60})/i;
 
-/** Did the card tell the capture of the district itself (its town, or it by name)? */
+/** The words name the district itself ("Hays district", "Bayhan", "the district"), not a town in it. */
+function isDistrict(obj: string, districtName: string): boolean {
+  const o = ` ${obj} `.split(STOP_AT)[0].replace(ALL, "");
+  if (PART.test(o)) return false;
+  return /\bdistrict\b/i.test(o) || norm(o).startsWith(norm(districtName));
+}
+
+/**
+ * Did the card tell the capture of the whole district: full control of it, the
+ * holder driven out of it, or "X district" taken? A bare name ("take Hays") is
+ * also the district's town, so it counts only with "the whole", "fully", "in full".
+ */
 export function tookWhole(summary: string, districtName: string): boolean {
+  const full = FULL.exec(summary);
+  if (full && isDistrict(full[1], districtName)) return true;
+  const out = OUT.exec(summary);
+  if (out && isDistrict(out[1], districtName)) return true;
   const m = TOOK.exec(summary);
   if (!m) return false;
   const obj = ` ${m[1]} `.split(STOP_AT)[0];
-  if (PART.test(obj)) return false;
-  return WHOLE.test(obj) || norm(obj).startsWith(norm(districtName));
+  return (ALL.test(obj) || IN_FULL.test(summary) || /\bdistrict\b/i.test(obj)) && isDistrict(obj, districtName);
 }
 
 const BY_NORM = new Map(ADM2.filter((d) => norm(d.name).length >= 5).map((d) => [norm(d.name), d]));
@@ -147,14 +169,16 @@ export function updateControlLive(prev: ControlLive | null, reports: LiveReport[
     const from = sideNow(d.id, d.gov, out);
     let to: Side = from;
     let used: Claim[] = [];
+    const wholeOf = (s: Side) => claims.filter((c) => c.to === s && c.whole && c.named);
     if (from === "contested") {
-      // Back to one side only under the "taken" rule, and only if the other side claims nothing there.
-      const sides = new Set(claims.map((c) => c.to));
-      if (sides.size === 1 && confirmed(claims) && claims.some((c) => c.whole && c.named)) [to, used] = [claims[0].to, claims];
+      // It stays contested until one side's full control of it is told the same way (user, 2 Oct).
+      const won = (["houthi", "plc"] as const).filter((s) => wholeOf(s).length && confirmed(wholeOf(s)));
+      if (won.length === 1) [to, used] = [won[0], wholeOf(won[0])];
     } else {
       // The holder's own gains inside its district change nothing; the other side's claims do.
       const rival = claims.filter((c) => c.to !== from && c.named);
-      if (rival.length) [to, used] = [confirmed(rival) && rival.some((c) => c.whole) ? rival[0].to : "contested", rival];
+      const whole = rival.filter((c) => c.whole);
+      if (rival.length) [to, used] = whole.length && confirmed(whole) ? [whole[0].to, whole] : ["contested", rival];
     }
     if (to === from || !used.length) continue;
     const at = used.map((c) => c.r.at).sort().pop() as string;

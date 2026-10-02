@@ -46,6 +46,7 @@ const DESK_HTML = `
     <span class="tf-sep" aria-hidden="true"></span>
     <button type="button" id="btn-conflict-all" aria-label="Whole conflict"><span class="tf-long">Whole conflict</span><span class="tf-short">All</span></button>
   </div>
+    <button type="button" class="rel-btn map-meth" id="btn-map-meth" aria-expanded="false" aria-haspopup="dialog">Map methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button>
 </div>
 <main class="stage" id="stage">
   <section class="map-wrap" id="map-wrap">

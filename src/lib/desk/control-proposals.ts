@@ -29,7 +29,7 @@ export type Proposal = {
 };
 
 /** Ground changing hands, not an attack on it. */
-const CAPTURE = /\b(?:took|takes?|taken|seize[sd]?|seizing|captur(?:e|es|ed)\s+(?:the\s+)?(?:[A-Z]|positions?|areas?|villages?|heights?|mount|jabal|hills?|camp|town|district)|retake[sn]?|retook|recapture[sd]?|(?:full\s+)?control of|clear(?:s|ed)?\s+the|liberat\w+)\b/i;
+const CAPTURE = /\b(?:took|takes?|taken|seize[sd]?|seizing|captur(?:e|es|ed)\s+(?:the\s+)?(?:[A-Z]|positions?|areas?|villages?|heights?|mount|jabal|hills?|camp|town|district)|retake[sn]?|retook|recapture[sd]?|(?:full\s+)?control of|(?<!(?:were|was|been|being|are|is)\s)(?:drove|drives|expel(?:s|led)?|oust(?:s|ed)?|push(?:es|ed)|forced?)\s[^,;.]{0,40}?\b(?:out\s+of|from)\s|clear(?:s|ed)?\s+the|liberat\w+)\b/i;
 const NOT_CAPTURE = /\b(?:attempt|tried|try|fail\w*|repel\w*|foil\w*|claims?\s+(?:that\s+)?(?:it|they)\s+would)\b/i;
 const HOUTHI = /\bhouthis?\b|\bansar allah\b/i;
 const GOV = /\bgovernment\b|\bgiants\b|\bnation's shield\b|\barmy\b|\bresistance\b|\bsubayhah\b|\bstc\b|\bsouthern forces\b|\bcoalition\b|\bjoint forces\b/i;

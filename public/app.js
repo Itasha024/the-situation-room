@@ -1826,7 +1826,7 @@ function cadenceStamp(top = false) {
   if (!brief || !brief.nextUpdateAt) return `<p class="${cls}">${T('Based on latest reports')}</p>`;
   const at = new Date(brief.nextUpdateAt);
   const day = at.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: 'numeric', month: 'short' });
-  return `<p class="${cls}">${T('Based on latest reports · Next {t}', { t: escapeHtml(`${fmtClock(brief.nextUpdateAt)}, ${day}`) })}</p>`;
+  return `<p class="${cls}">${T('Based on latest reports · Updates {t}', { t: escapeHtml(`${fmtClock(brief.nextUpdateAt)}, ${day}`) })}</p>`;
 }
 
 function frontActivity(id) {

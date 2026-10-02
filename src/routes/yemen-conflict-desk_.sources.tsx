@@ -82,7 +82,7 @@ function SourcesPage() {
   return (
     <DeskDoc title="Sources list">
       <div className="sr-top">
-        <p className="sr-stamp">Updates every 24h{when ? ` · Next update ${when}` : ""}</p>
+        <p className="sr-stamp">Updates every 24h{when ? ` · Updates ${when}` : ""}</p>
         {shown.length ? (
           <button
             type="button"

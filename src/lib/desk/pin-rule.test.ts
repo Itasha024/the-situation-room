@@ -37,3 +37,12 @@ test("the page's map uses the same patterns as the server", () => {
     assert.equal(m![1], String(re), name);
   }
 });
+
+test("oldPicture: earlier damage only, never a new hit before it", async () => {
+  const { oldPicture } = await import("./pin-rule.ts");
+  assert.equal(oldPicture("Satellite images show damage at Yanbu refinery"), true);
+  assert.equal(oldPicture("Footage shows the aftermath of strikes on Abqaiq"), true);
+  assert.equal(oldPicture("Missiles hit Al-Anad base; satellite images show an impact"), false);
+  assert.equal(oldPicture("Saudi warplanes strike Hodeidah port"), false);
+  assert.equal(oldPicture("Houthis threaten to strike Riyadh"), false);
+});

@@ -6684,24 +6684,44 @@ function popFor(id, html) {
   }
   const phone = () => window.matchMedia('(max-width: 720px)').matches;
   const s = { pop, btn: null, pinned: false, shut: 0 };
-  s.place = () => {
+  // The pop-up never covers its own link (user, 2 Oct): it goes below or above the link,
+  // and scrolls inside itself when neither side has room for all of it. On a phone the
+  // sheet starts under the link, and the page first moves the link up when it sits low.
+  s.place = (opening) => {
     const btn = s.btn;
-    if (phone() || !btn) { pop.style.left = pop.style.top = ''; return; }
+    pop.style.maxHeight = '';
+    if (!btn) { pop.style.left = pop.style.top = ''; return; }
+    if (phone()) {
+      pop.style.left = pop.style.top = '';
+      let r = btn.getBoundingClientRect();
+      if (opening && r.bottom > window.innerHeight * 0.45) {
+        window.scrollBy({ top: r.top - 64, behavior: 'instant' });
+        r = btn.getBoundingClientRect();
+      }
+      const room = window.innerHeight - r.bottom - 8;
+      if (room > 120 && room < pop.offsetHeight) pop.style.maxHeight = `${room}px`;
+      return;
+    }
     const r = btn.getBoundingClientRect();
     const w = pop.offsetWidth;
+    const h = pop.offsetHeight;
     const left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12));
-    const below = window.innerHeight - r.bottom - 12;
-    const top = below >= pop.offsetHeight || r.top < pop.offsetHeight + 12 ? r.bottom + 6 : r.top - pop.offsetHeight - 6;
+    const below = window.innerHeight - r.bottom - 18;
+    const above = r.top - 18;
+    const down = h <= below || (h > above && below >= above);
+    pop.style.maxHeight = `${Math.max(160, down ? below : above)}px`;
+    const hh = pop.offsetHeight;
     pop.style.left = `${left}px`;
-    pop.style.top = `${Math.max(12, Math.min(top, window.innerHeight - pop.offsetHeight - 12))}px`;
+    pop.style.top = `${down ? r.bottom + 6 : r.top - hh - 6}px`;
   };
   s.open = (btn, pin) => {
     clearTimeout(s.shut);
     if (s.btn && s.btn !== btn) s.btn.setAttribute('aria-expanded', 'false');
     s.btn = btn;
     if (pin) s.pinned = true;
-    if (pop.hidden) { pop.hidden = false; pop.classList.toggle('sheet', phone()); }
-    s.place();
+    const fresh = pop.hidden;
+    if (fresh) { pop.hidden = false; pop.classList.toggle('sheet', phone()); }
+    s.place(fresh);
     btn.setAttribute('aria-expanded', 'true');
   };
   s.close = () => {
@@ -6730,11 +6750,8 @@ function wirePop(btn, id, html) {
   btn.dataset.pop = id;
   btn.setAttribute('aria-controls', id);
   const s = popFor(id, html);
+  // Opens on a click or tap only: passing over it with the mouse opened it unasked (user, 2 Oct).
   btn.addEventListener('click', (e) => { e.stopPropagation(); if (!s.pop.hidden && s.pinned && s.btn === btn) s.close(); else s.open(btn, true); });
-  if (window.matchMedia('(hover: hover)').matches) {
-    btn.addEventListener('mouseenter', () => s.open(btn, false));
-    btn.addEventListener('mouseleave', s.later);
-  }
 }
 
 function installRelPop() {

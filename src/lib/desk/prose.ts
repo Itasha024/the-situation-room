@@ -59,7 +59,7 @@ export type Prose = { situation: string; /** The fuller account behind "Read mor
 
 const H = `${CADENCE_HOURS} hours`;
 const SYSTEM = `You are the editor of a live news desk on the current round of the Yemen war (from 13 July 2026, the strike on Sanaa airport: the Houthis against the Yemeni government and the Saudi-led coalition).
-You get the reports published in the last ${H} and the text that stood before. Each report line is: outlet [its alignment, if any] {the front ids it belongs to}: headline — body.
+You get the reports published in the last ${H} and the text that stood before. Each report line is: outlet [whose word it is, if only one side reports it] {the front ids it belongs to}: headline — body.
 Write in English wire style (Reuters/AP):
 - "situation": the whole conflict in these ${H} SEEN FROM ABOVE, as an editor's overview for a reader with ten seconds: 2-4 short sentences, at most 70 words, most important first within each part (see Order). Say where the war moved and which way: which fronts were active and who gained or lost ground (by front or governorate: "the Marib front", "western Taiz", "the Saudi border"), escalations (attacks on Saudi Arabia, on shipping, big strikes with their deaths), and the big political or military facts (a leader's threat, a mobilisation, talks). Always include the Saudi front when anything happened there.
   Not tactical: no villages, hills, positions or units, and no list of incidents; fold many incidents into one line about the picture they make ("Houthi forces pressed on the Marib and western Taiz fronts and took ground north of Hays"). Integrate everything important of the ${H}; leave the detail to "situation_more" and the fronts.
@@ -74,7 +74,7 @@ Write in English wire style (Reuters/AP):
 Rules:
 - Only facts in the reports. Never invent a place, number, unit or claim.
 - A front's paragraph uses ONLY reports tagged with that front's id.
-- No attribution to outlets or spokespeople. Anything from a [Houthi-aligned] or [Gov/Saudi-aligned] outlet is a party's claim and is written as reported, never as fact: "strikes were reported on...", "fighting was reported in...", "it was reported that...". This covers casualties, what a strike hit, strike counts and advances.
+- No outlets or spokespeople by name. A report marked [Houthi side only] or [Gov/Saudi side only] is that side's word, not a fact: write it as theirs, naming the side: "the Houthis say they struck...", "the Houthis said a ship was sunk...", "government forces say they repelled...", "the coalition says it intercepted...", "Saudi media say...". Never "it was reported", never as plain fact. This covers casualties, what a strike hit, strike counts and advances. When the other side, a wire agency or an official body reports the same event too, it is a fact.
 - A statement by an official body (a ministry, the UN, the coalition command, a government) is written as plain fact, with no speaker.
 - Never write about what was NOT reported or did not change ("no fighting was reported", "no new clashes", "remained unchanged", "no reports"). A front with nothing new gets its current state from the previous text, stated positively.
 - Neutral wording, no side's labels (no "aggression", "martyrs", "militia", "mercenaries").
@@ -117,11 +117,23 @@ export function keepReported(text: string, own: { summary: string; text?: string
     .trim();
 }
 
+/**
+ * Whose word a card is: "Houthi side only" or "Gov/Saudi side only" when every
+ * outlet on it (the lead and "Also") is on that one side. The writer then gives
+ * it as that side's word ("the Houthis say..."), never as fact (Stage D, user 2 Oct).
+ */
+export function wordOf(r: Pick<LiveReport, "source"> & { alsoReportedBy?: { source: string }[] }): string {
+  const sides = new Set([r.source, ...(r.alsoReportedBy ?? []).map((a) => a.source)].map((n) => outletSide(String(n || ""))));
+  if (sides.size !== 1) return "";
+  const [side] = [...sides];
+  return side === "Houthi-aligned" ? "Houthi side only" : side === "Gov/Saudi-aligned" ? "Gov/Saudi side only" : "";
+}
+
 function cardLine(r: LiveReport, frontsOf: (r: LiveReport) => string[]): string {
-  const side = outletSide(String(r.source || ""));
+  const word = wordOf(r as LiveReport & { alsoReportedBy?: { source: string }[] });
   const ids = frontsOf(r);
   const body = String(r.text || "").replace(/\s+/g, " ").slice(0, 160);
-  return `${r.source}${side ? ` [${side}]` : ""}${ids.length ? ` {${ids.join(",")}}` : ""}: ${r.summary}${body ? ` — ${body}` : ""}`;
+  return `${r.source}${word ? ` [${word}]` : ""}${ids.length ? ` {${ids.join(",")}}` : ""}: ${r.summary}${body ? ` — ${body}` : ""}`;
 }
 
 /** Drop a paragraph that breaks the rules; the composed text stands in for it. */

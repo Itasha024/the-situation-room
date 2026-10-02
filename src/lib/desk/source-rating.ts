@@ -71,6 +71,8 @@ export type Verdict = {
   /** When the desk found it. */
   at: string;
   sources?: string[];
+  /** Where the error is shown (a denial, the real picture's date). */
+  link?: string;
   /** The card that showed it (a later report's fp). */
   by?: string;
   /** The card itself, kept so a removed card still counts against its outlets. */

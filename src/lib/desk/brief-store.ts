@@ -17,6 +17,7 @@
  * the window. The route only reads.
  */
 
+import { oldPicture } from "./pin-rule.ts";
 import type { LiveReport } from "./types.ts";
 import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
@@ -236,7 +237,8 @@ async function windowReports(store: DeskStore, w: { startedAt: string; updatedAt
   const start = Date.parse(w.startedAt);
   const end = Date.parse(w.updatedAt);
   const { reports } = await store.recentDesk(WINDOW_ROWS, undefined, { events: false });
-  const all = reports.map((r) => r as unknown as LiveReport);
+  // A picture of earlier damage is no new attack: it feeds neither the text nor the numbers (Stage D, user 2 Oct).
+  const all = reports.map((r) => r as unknown as LiveReport).filter((r) => !oldPicture(String(r.summary ?? "")));
   const inWindow = all.filter((r) => {
     const t = Date.parse(String(r.at || ""));
     return Number.isFinite(t) && t >= start && t < end;

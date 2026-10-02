@@ -22,6 +22,17 @@ export const FUTURE_RE = /\b(?:threat\w*|warn\w*|vow\w*|ultimatum)\b[^.]{0,30}\b
 export const ALERT_RE = /\b(?:sirens?|alerts?|civil defen[cs]e)\b/i;
 
 /**
+ * A picture of damage already done, with no new hit before it (Stage D, user
+ * 2 Oct): it adds nothing anywhere: no pin, no numbers, no line in Latest
+ * developments or the fronts.
+ */
+export function oldPicture(headline: string): boolean {
+  const h = String(headline || "");
+  const pic = h.search(OLD_PICTURE_RE);
+  return pic >= 0 && !NEW_HIT_RE.test(h.slice(0, pic));
+}
+
+/**
  * Whether a report is not a new event of the four kinds, from its headline.
  * A picture after a new hit ("missiles hit the air base; satellite images show
  * an impact") is still the hit; the body is not read, since a card on a new

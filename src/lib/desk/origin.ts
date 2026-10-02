@@ -125,6 +125,7 @@ const CITABLE: [RegExp, Cited][] = [
   [/لويدز ليست|Lloyd'?s List/i, O("Lloyd's List", "lloydslist.com", "UK")],
   // One of the desk's own sites, spelled as the relays spell it ("Shaba Intelligence").
   [/شي?با\s*(?:إنتليجنس|انتليجنس|للاستخبارات)|Sh[ae]ba\s+Intelligence/i, O("Sheba Intelligence", "shebaintelligence.uk", "UK")],
+  [/يمن\s*فيوتشر|Yemen\s+Future/i, O("Yemen Future", "yemenfuture.net", "YE", { lang: "ar" })],
   [/تريد ?ويندز|TradeWinds/i, O("TradeWinds", "tradewindsnews.com", "UK")],
   [/لاريبوبليكا|لا ريبوبليكا|ريبوبليكا|Repubblica/i, O("La Repubblica", "repubblica.it", "IT")],
   [/كورييري ديلا سيرا|كورييري|Corriere/i, O("Corriere della Sera", "corriere.it", "IT")],

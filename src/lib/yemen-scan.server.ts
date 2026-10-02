@@ -380,6 +380,18 @@ const RSS: RssFeed[] = [
     site: "shebaintelligence.uk",
     html: /^https:\/\/shebaintelligence\.uk\/[a-z0-9-]{25,}$/,
   })),
+  // Yemen Future (يمن فيوتشر), a non-governmental Yemeni news site (user, 2 Oct): no feed
+  // and no real sitemap, so its front page is read, which lists the newest of every section.
+  {
+    id: "yemenfuture",
+    lang: "ar",
+    url: "https://yemenfuture.net/",
+    name: "Yemen Future",
+    cadence: C10,
+    whole: true,
+    site: "yemenfuture.net",
+    html: /^https:\/\/yemenfuture\.net\/(?:news|territories|gulf|world|rights|economy|researches|file)\/\d+$/,
+  },
   // Al-Akhbar's English edition carries the paper's pieces in full (the
   // Arabic site, and its PDF edition, refuse every reader). Once a day at
   // 07:00, the whole edition: the front page and every section that carries

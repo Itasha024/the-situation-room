@@ -26,6 +26,10 @@ export default function deskAddress(
     const path = pathname === "/" || pathname === "/yemen" ? "/yemen-conflict-desk" : pathname;
     return Response.redirect(`https://${HOME}${path}${search}`, 301);
   }
+  // The old /yemen address with a page after it (/yemen/methodology).
+  if (pathname.startsWith("/yemen/")) {
+    return new Response(null, { status: 301, headers: { location: `/yemen-conflict-desk${pathname.slice(6)}${search}` } });
+  }
   if (pathname === "/") {
     return new Response(null, { status: 302, headers: { location: `/yemen-conflict-desk${search}` } });
   }

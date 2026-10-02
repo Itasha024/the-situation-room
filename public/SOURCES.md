@@ -99,6 +99,7 @@ model got to are judged by keyword for now and asked about again next read.
 | Fox News | `moxie.foxnews.com/google-publisher/world.xml`, `/politics.xml` | 30 min |
 | SPA | Google News, `site:spa.gov.sa` alone, Arabic edition, last hour | 5 min |
 | Sheba Intelligence | its section pages: news, reports, investigations, politics, daily brief (no feed; its sitemap re-dates old articles) | hourly |
+| Yemen Future (يمن فيوتشر), non-governmental | its front page, the newest of every section (no feed) | 10 min |
 
 Any site whose own listing fails on a read is listed through Google News (a day wide; what was judged before is skipped)
 (`site:` alone) for that read. Nothing behind Cloudflare or a paywall is

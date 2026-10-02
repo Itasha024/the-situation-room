@@ -10,6 +10,11 @@ export const Route = createFileRoute("/yemen-conflict-desk_/methodology")({
   head: () => ({
     meta: [{ title: "Methodology · Yemen Conflict Desk" }],
   }),
+  // Never kept by the browser: an old "no page here" copy from before this page existed stayed on a PC (user, 2 Oct).
+  headers: () => ({
+    "cache-control": "no-cache",
+    "cdn-cache-control": "public, s-maxage=600, stale-while-revalidate=300",
+  }),
   component: MethodologyPage,
 });
 

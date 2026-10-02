@@ -3373,7 +3373,7 @@ function sitesBody(led) {
     .map(({ s, h, last }) => {
       const st = s.status || 'unknown';
       const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || escapeHtml(st)}</span>`;
-      const status = !last ? '' : s.statusSrc && s.statusSrc.url ? srcLink(chip, s.statusSrc, 'st-link') : chip;
+      const status = !last || st === 'unknown' ? '' : s.statusSrc && s.statusSrc.url ? srcLink(chip, s.statusSrc, 'st-link') : chip;
       return `<tr><td class="d">${srcLink(escapeHtml(ledDay(h.date)), h)}</td><td class="l">${escapeHtml(s.name)}</td><td class="l w">${weaponCell(h.weapon)}</td><td class="t">${status}</td></tr>`;
     });
   return moreBox('sites', statTrio(spanCounts(hits.map((h) => h.date))), ['list sites', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l w">Weapon</th><th scope="col" class="t">Status</th></tr>'], rows);

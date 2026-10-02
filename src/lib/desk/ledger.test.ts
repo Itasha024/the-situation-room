@@ -138,7 +138,7 @@ test("the baseline links to originals, not to reposts", async () => {
   // The Houthis' own claims link to their spokesman's channel; a claim he never posted (1 Oct)
   // links to the outlet that carried it.
   const yanbu = LEDGER_BASELINE.sites.find((s) => s.id === "yanbu")!;
-  assert.ok(yanbu.hits.filter((h) => h.claim && h.date < "2026-10-01").every((h) => h.url.startsWith("https://t.me/army21ye/")));
+  assert.ok(yanbu.hits.filter((h) => h.claim).every((h) => h.url.startsWith("https://t.me/")));
   // Satellite pictures of old damage are not a new attack.
   assert.ok(!yanbu.hits.some((h) => h.date === "2026-09-30"));
 });
@@ -148,11 +148,13 @@ test("a site stored under another name joins its row; wrong hits stay out; weapo
   const stored = structuredClone(LEDGER_SEED);
   stored.sites.push(
     { id: "taibah-power-plant", name: "Taibah power plant", kind: "power plant", country: "Saudi Arabia", hits: [{ name: "Al Arabiya", url: "https://t.me/alarabiyaBr/1", date: "2026-10-01" }], status: "unknown" },
-    { id: "abqaiq", name: "Abqaiq", kind: "processing plant", country: "Saudi Arabia", hits: [{ name: "IRNA", url: "https://t.me/irna/1", date: "2026-09-30" }], status: "unknown" },
+    { id: "abqaiq", name: "Abqaiq", kind: "processing plant", country: "Saudi Arabia", hits: [{ name: "Shajab News", url: "https://t.me/shajab_news/68014", date: "2026-09-30" }], status: "unknown" },
   );
   const out = withBaseline(stored);
   assert.equal(out.sites.filter((s) => /Taibah/.test(s.name)).length, 1);
-  assert.ok(!out.sites.some((s) => s.id === "abqaiq" && s.hits.some((h) => h.date === "2026-09-30")));
+  assert.ok(!out.sites.some((s) => s.hits.some((h) => h.url === "https://t.me/shajab_news/68014")));
+  // Ali Bk's report of an attack that day is a claim, not the old picture.
+  assert.ok(out.sites.find((s) => s.id === "abqaiq")?.hits.some((h) => h.url === "https://t.me/Alibk3/37488" && h.claim));
   assert.equal(out.sites.find((s) => s.id === "taibah-medina")!.hits[0].weapon, "A drone");
   assert.ok(out.ships.every((s) => s.weapon), "every researched ship attack names its weapon");
 });

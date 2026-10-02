@@ -4,7 +4,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Yemen Conflict Desk";
-const ASSET_V = "desk-en-102";
+const ASSET_V = "desk-en-103";
 // The reader's language before anything is drawn: ?lang= or the one they chose. Hebrew and
 // Arabic load their labels (public/i18n) ahead of app.js, read right to left, and add their fonts.
 const LANG_FONTS: Record<string, string> = {
@@ -12,7 +12,7 @@ const LANG_FONTS: Record<string, string> = {
   ar: "https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap",
 };
 const LANG_BOOT = `try{var q=/[?&]lang=(en|he|ar)\\b/.exec(location.search),g=q?q[1]:localStorage.getItem("desk-lang");if(q)localStorage.setItem("desk-lang",g);var F=${JSON.stringify(LANG_FONTS)};if(F[g]){var h=document.documentElement;h.lang=g;h.dir="rtl";var k=document.createElement("link");k.rel="stylesheet";k.href=F[g];document.head.appendChild(k);document.write('<script src="/i18n/'+g+'.js?v=${ASSET_V}"><\\/script><script src="/i18n/dom.js?v=${ASSET_V}"><\\/script>')}}catch(e){}`;
-// The reader's theme on <html> before first paint — Night unless they chose Day — and the
+// The reader's theme on <html> before first paint â€” Night unless they chose Day â€” and the
 // broadsheet pair's two fonts.
 const THEME_BOOT = `try{var t=localStorage.getItem("desk-theme");if(t!=="broadsheet-day")t="broadsheet-night";{var d=document.documentElement;d.dataset.theme=t;d.dataset.set="broadsheet";var l=document.createElement("link");l.id="desk-fonts";l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap";document.head.appendChild(l)}}catch(e){}`;
 

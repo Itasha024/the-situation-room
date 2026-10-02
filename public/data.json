@@ -9071,6 +9071,20 @@
       "backfill": true
     },
     {
+      "fp": "bf-2026-07-30-bab-al-mandab-tanker-claim",
+      "at": "2026-07-30T23:59:00+03:00",
+      "type": "vessel",
+      "lat": 12.62,
+      "lng": 43.32,
+      "place": "Bab al-Mandab",
+      "label": "Houthi anti-ship ballistic missile fired at a Saudi oil tanker in Bab al-Mandab, Houthi-aligned outlet says",
+      "text": "BAB AL-MANDAB — First reports said a ballistic missile was fired from Yemen at a Saudi oil tanker in the strait; no statement followed.",
+      "source": "Shajab News",
+      "url": "https://t.me/shajab_news/64856",
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
       "fp": "bf-2026-08-01-al-kurayfat-combat-0400",
       "at": "2026-08-01T04:00:00+03:00",
       "type": "combat",
@@ -10001,6 +10015,20 @@
       "source": "Almashhad",
       "url": "https://www.almashhad.news/news/488732",
       "also": [],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-08-09-mocha-power-drone",
+      "at": "2026-08-09T15:34:00+03:00",
+      "type": "strike",
+      "lat": 13.31,
+      "lng": 43.25,
+      "place": "Mocha power station",
+      "label": "Government air defences down a Houthi drone aimed at Mocha power station",
+      "text": "MOCHA — Government forces shot down a Houthi drone that tried to hit the Mocha power station, Al Hadath's correspondent said.",
+      "source": "Al Hadath",
+      "url": "https://t.me/alhadath_brk/129519",
       "mapOnly": true,
       "backfill": true
     },
@@ -12723,6 +12751,20 @@
         "https://t.me/Alomhoar/110725",
         "https://t.me/naya_foriraq/88600"
       ],
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-08-27-yanbu-drones",
+      "at": "2026-08-27T05:00:00+03:00",
+      "type": "port",
+      "lat": 24.0231,
+      "lng": 38.1899,
+      "place": "Yanbu",
+      "label": "Drone swarm shot down over the wider Yanbu area, home to major oil refineries",
+      "text": "YANBU — A Greek-run Patriot battery fired three missiles and, with Saudi air defences, shot down a number of drones early on Thursday, Greek security sources said.",
+      "source": "eKathimerini",
+      "url": "https://www.ekathimerini.com/politics/foreign-policy/1313536/greek-operated-patriot-battery-downs-drones-in-saudi-arabia/",
       "mapOnly": true,
       "backfill": true
     },
@@ -20666,6 +20708,20 @@
       "backfill": true
     },
     {
+      "fp": "bf-2026-09-24-ras-tanura-claim",
+      "at": "2026-09-24T15:58:00+03:00",
+      "type": "port",
+      "lat": 26.64,
+      "lng": 50.16,
+      "place": "Ras Tanura",
+      "label": "Houthi missiles fired at Ras Tanura, Houthi-aligned outlet says",
+      "text": "RAS TANURA — Sabereen said missiles were fired at Aramco, Ras Tanura and Yanbu; the Houthis' own statement that day named Riyadh and Yanbu only.",
+      "source": "Sabereen News",
+      "url": "https://t.me/SabrenNewss/226441",
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
       "fp": "bf-2026-07-28-eastern-province-drones-oil",
       "at": "2026-07-28T12:00:00+03:00",
       "type": "strike",
@@ -20718,6 +20774,20 @@
       "text": "YANBU — The Houthi military spokesman said ballistic and cruise missiles and drones hit Aramco in Yanbu, one of two operations that evening; there was no Saudi confirmation. Satellite pictures of 25 to 27 September show storage tanks hit at the Yanbu gas plant.",
       "source": "Yahya Saree, Houthi military spokesman",
       "url": "https://t.me/army21ye/3768",
+      "mapOnly": true,
+      "backfill": true
+    },
+    {
+      "fp": "bf-2026-09-27-yanbu-oil-claim",
+      "at": "2026-09-27T20:00:00+03:00",
+      "type": "port",
+      "lat": 24.0231,
+      "lng": 38.1899,
+      "place": "Yanbu",
+      "label": "Houthis hit oil facilities in Yanbu with ballistic missiles and drones, Al-Akhbar says",
+      "text": "YANBU — Many ballistic missiles and drones hit oil facilities in Yanbu, the Lebanese paper Al-Akhbar said; satellite pictures show damage to Aramco storage. Saudi Arabia said nothing.",
+      "source": "Al-Akhbar",
+      "url": "https://t.me/Alakhbar_News/96512",
       "mapOnly": true,
       "backfill": true
     }

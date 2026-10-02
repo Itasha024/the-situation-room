@@ -71,8 +71,8 @@ export const FIGURE_GROUPS: FigureGroup[] = ["traffic", "oil", "cost", "security
 export type LedgerFigure = { id: string; cat: "maritime" | "energy"; group?: FigureGroup; label: string; value: number; unit: string; period?: string; series?: string; month?: string; span?: string; src: LedgerSource };
 /** A declared ban, a warning to shipping, a naval mission's move. */
 export type LedgerNotice = { id: string; date: string; text: string; src: LedgerSource };
-/** `wrong`: site hits found to be wrong (old damage shown as new), kept out for good. */
-export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string; wrong?: { site: string; date: string; why: string }[] };
+/** `wrong`: site hits found to be wrong (old damage shown as new), kept out for good: that one link when `url` is set, else every hit of that day. */
+export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string; wrong?: { site: string; date: string; why: string; url?: string }[] };
 
 /** The war began with the strike on Sanaa airport, 13 July 2026. */
 export const WAR_START = "2026-07-13";
@@ -230,7 +230,7 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
   // Hits found to be wrong (pictures of old damage) stay out, whoever adds them again.
   for (const w of base.wrong ?? []) {
     const row = out.sites.find((s) => s.id === w.site);
-    if (row) row.hits = row.hits.filter((h) => h.date !== w.date);
+    if (row) row.hits = row.hits.filter((h) => (w.url ? h.url !== w.url : h.date !== w.date));
   }
   out.sites = out.sites.filter((s) => s.hits.length || s.statusSrc);
   for (const s of base.ships) {

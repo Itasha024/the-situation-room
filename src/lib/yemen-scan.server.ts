@@ -150,6 +150,8 @@ export const WAR_ONLY = /\b(?:Yemen\w*|Houthis?|Ansar ?Allah|Sanaa|Sana'a|Aden|H
  * The sea and energy accounts' posts about this war: WAR_ONLY, plus Suez
  * traffic and Saudi exports moving between the Gulf and the Red Sea.
  */
+/** The civil defence's attack posts: the war's places, or a drone, missile, interception, debris or siren. */
+export const SAUDI_ALERT = new RegExp(`${WAR_ONLY.source}|\\b(?:drones?|missiles?|projectiles?|intercept\\w*|debris|sirens?)\\b|مسير|صاروخ|مقذوف|اعتراض|شظايا|صافرات|الإنذار المبكر`, "i");
 export const SEA_WAR = new RegExp(`${WAR_ONLY.source}|\\b(?:Suez|Ras Tanura|Ju'?aymah|Saudi (?:crude|oil|exports?|tankers?))\\b|قناة السويس|رأس تنورة`, "i");
 const X_ACCOUNTS: XAccount[] = [
   X("war_cube", "The Cube", "intl", C5),
@@ -204,6 +206,9 @@ const X_ACCOUNTS: XAccount[] = [
   // also where a relay of that body's words is looked up first (officials.ts).
   X("spagov", "SPA", "gov", C10, WAR_ONLY),
   X("wamnews", "WAM", "gov", C10, WAR_ONLY),
+  // Saudi Civil Defence (sirens, debris, strikes on Saudi towns) and the Interior Ministry (user, 2 Oct).
+  X("SaudiDCD", "Saudi Civil Defence", "gov", C10, SAUDI_ALERT),
+  X("MOISaudiArabia", "Saudi Interior Ministry", "gov", C15, WAR_ONLY),
   X("StateDept", "State Department", "intl", C10, WAR_ONLY),
   X("UNinYE", "UN in Yemen", "intl", C10, WAR_ONLY),
   X("MfaEgypt", "Egypt Foreign Ministry", "intl", C15, WAR_ONLY),

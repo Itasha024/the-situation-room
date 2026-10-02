@@ -21,7 +21,7 @@ import { ADM2_SHAPES } from "./adm2-shapes.ts";
 import { CONTROL, GOV_CONTROL } from "./control-data.ts";
 import { captor, districtNear } from "./control-proposals.ts";
 import type { LiveReport } from "./types.ts";
-import { outletSide } from "./digest.ts";
+import { groupOf } from "./source-rating.ts";
 
 export const CONTROL_LIVE_KEY = "control-live";
 
@@ -106,23 +106,21 @@ type Claim = { r: LiveReport; to: "houthi" | "plc"; whole: boolean; named: boole
 /** Two outlets from different sides, or a wire agency. A merged card carries every outlet that told it. */
 function confirmed(claims: Claim[]): boolean {
   const tellers = claims.flatMap((c) => [c.r.source, ...(c.r.alsoReportedBy ?? []).map((a) => a.source)]).filter(Boolean);
-  const sides = new Set(tellers.map((o) => outletSide(o) || "neutral"));
+  // The Sources list's three groups: Houthi-aligned, government-aligned, non-aligned (2 Oct).
+  const sides = new Set(tellers.map((o) => groupOf(o)));
   const wire = claims.some((c) => c.r.side === "agency") || tellers.some((o) => WIRES.test(o));
   return (new Set(tellers).size >= 2 && sides.size >= 2) || wire;
 }
 
 /**
  * One card's capture told the way control needs it before it moves: two outlets
- * from different sides, or a wire. The developments' maps draw anything less as
- * an advance, not a flag (user, 30 Sep: one side's claim of a hill is no capture).
+ * not on the same side (a non-aligned outlet counts as its own), or a wire. The
+ * developments' maps draw anything less as an advance, not a flag (user, 30 Sep:
+ * one side's claim of a hill is no capture). Two anti-Houthi outlets (Aden al-Ghad
+ * and Almashhad) are one side, not two. The same rule as control's (user, 2 Oct).
  */
 export function captureConfirmed(r: LiveReport): boolean {
-  const tellers = [r.source, ...(r.alsoReportedBy ?? []).map((a) => a.source)].filter(Boolean);
-  if (r.side === "agency" || tellers.some((o) => WIRES.test(o))) return true;
-  // Both camps tell it: the side that lost the ground admits it. Two anti-Houthi
-  // outlets (Aden al-Ghad and Almashhad) are one camp, not two.
-  const camps = new Set(tellers.map((o) => outletSide(o)).filter(Boolean));
-  return camps.size >= 2;
+  return confirmed([{ r, to: "plc", whole: true, named: true }]);
 }
 
 /** Apply one window's capture reports to the live layer. Returns the new layer. */

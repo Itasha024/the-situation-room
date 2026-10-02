@@ -47,6 +47,11 @@ test("two anti-Houthi outlets are one camp: no flag (Al-Mansurah mountain, 29 Se
   assert.equal(cardMarks([r], () => []).all[0].kind, "advance");
 });
 
+test("one side's outlet and a non-aligned one make a capture (user, 2 Oct)", () => {
+  const r = card({ summary: "Yemeni government forces recapture Al-Mansurah mountain in Al-Mudaribah, Lahj", lat: 13.1, lng: 43.83, place: "Al-Mansurah", alsoReportedBy: [{ source: "The National", url: "v" }] as never });
+  assert.equal(cardMarks([r], () => []).all[0].kind, "capture");
+});
+
 test("piracy and the US–Iran war are not this war; the Houthis at sea are", async () => {
   const { notThisWar } = await import("./editor.ts");
   assert.ok(notThisWar("Egypt releases eight Egyptian sailors kidnapped off Shabwa, Yemen, and held in Somalia", "الإفراج عن البحارة المصريين المختطفين قبالة سواحل شبوة اليمنية"));

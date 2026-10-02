@@ -2897,15 +2897,14 @@ function renderSituation(d) {
       tog.textContent = now ? 'Show less' : 'Read more';
       tog.setAttribute('aria-expanded', String(now));
     };
-    // The text opens and closes it too, as a Timeline box does; links keep their own click.
-    const bodyEl = el.querySelector('.sit-body');
-    bodyEl.onclick = (ev) => {
-      if (ev.target.closest('a, button, .place-link, [data-place]')) return;
+    // A click anywhere in the box opens and closes it, as a Timeline box does; links and buttons keep their own click.
+    el.onclick = (ev) => {
+      if (ev.target.closest('a, button, .place-link, [data-place], .rel-btn')) return;
       if (window.getSelection && String(window.getSelection() || '')) return;
       if (!tog.offsetParent) return;
       tog.onclick();
     };
-    bodyEl.classList.add('sit-click');
+    el.classList.add('sit-click');
   }
   const btn = el.querySelector('.sit-map-btn');
   if (btn) wireMapHover(btn, (anchor) => openDevelopmentsMap(anchor), hideFrontFloat);
@@ -3490,7 +3489,8 @@ function renderBars(d) {
       <div class="track"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
     </div>`;
   }).join('');
-  document.getElementById('bars').innerHTML = rows;
+  document.getElementById('bars').innerHTML = rows ? `${rows}<div class="bars-meth"><button type="button" class="rel-btn" id="btn-share-meth" aria-expanded="false" aria-haspopup="dialog">Control share methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div>` : '';
+  wirePop(document.getElementById('btn-share-meth'), 'share-pop', SHARE_HTML);
 }
 
 function feedCardHtml(r, i) {
@@ -5843,7 +5843,10 @@ let timelineIdx = null;
 function phaseDates(p, isNow) {
   const fmt = (s) => {
     const m = /^(\d{4})-(\d{2})$/.exec(String(s || ''));
-    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, 15)).toLocaleDateString(LOC, { month: 'short', year: 'numeric', timeZone: 'UTC' }) : String(s || '');
+    if (!m) return String(s || '');
+    // May, June and July in full, the others in three letters (September is "Sept"; user, 2 Oct).
+    if (LOC.startsWith('en')) return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'][+m[2] - 1]} ${m[1]}`;
+    return new Date(Date.UTC(+m[1], +m[2] - 1, 15)).toLocaleDateString(LOC, { month: 'short', year: 'numeric', timeZone: 'UTC' });
   };
   if (isNow) return T('{d} – now', { d: fmt(p.from) });
   return fmt(p.from) + (p.to && p.to !== p.from ? ` – ${fmt(p.to)}` : '');
@@ -5976,12 +5979,14 @@ function renderLegend(d) {
       <div class="leg-sec">Territory</div>
       ${controlRows}
       ${row('saudi', COLORS.saudi, 'Saudi Arabia')}
+      <button type="button" class="rel-btn leg-meth" id="btn-map-meth" aria-expanded="false" aria-haspopup="dialog">Map colours methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button>
       <div class="leg-sec">Events</div>
       ${row('combat', EVENT_COLORS.combat, 'Ground fighting', true)}
       ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
       ${row('vessel', EVENT_COLORS.vessel, 'Maritime incident', true)}
       ${row('port', EVENT_COLORS.port, 'Energy incident', true)}
     </div>`;
+  wirePop(document.getElementById('btn-map-meth'), 'map-pop', MAP_HTML);
   fitLegend();
   if (!legendFitWired) {
     legendFitWired = true;
@@ -6605,7 +6610,7 @@ function installSectionNav() {
  * Sources list. Hover opens it on a PC, a click or tap anywhere; on a phone it
  * rises from the bottom.
  */
-const REL_HTML = `<h3 id="rel-h">Sources reliability methodology</h3>
+const REL_HTML = `<h3 id="rel-pop-h">Sources reliability methodology</h3>
 <p>Every source is rated 1–5.</p>
 <ul>
 <li><b>Start:</b> wire agencies and official bodies 4, non-aligned outlets 3.5, Government- or Houthi-aligned outlets 3.</li>
@@ -6621,59 +6626,107 @@ const REL_HTML = `<h3 id="rel-h">Sources reliability methodology</h3>
 </ul>
 <p class="rel-foot">Ratings update every 24 hours. <a href="/yemen-conflict-desk/sources">Sources list →</a></p>`;
 
-function installRelPop() {
-  const btn = document.getElementById('btn-rel');
-  if (!btn || btn.dataset.wired) return;
-  btn.dataset.wired = '1';
-  let pop = document.getElementById('rel-pop');
+/* How the control shares under the bars are made (user, 2 Oct). */
+const SHARE_HTML = `<h3 id="share-pop-h">Control share methodology</h3>
+<p>No source publishes these shares. The desk works them out from its own map.</p>
+<ul>
+<li><b>By district.</b> Yemen is split into its 335 districts, and each district's area is measured in square kilometres.</li>
+<li><b>Each district counts whole</b> for the side the map shows holding it: Houthi forces, the government, or contested.</li>
+<li><b>A share is that side's area</b> out of all of Yemen, rounded. Saudi Arabia is not counted.</li>
+<li><b>Land, not people.</b> A large desert district counts for more than a small, crowded city.</li>
+</ul>
+<p class="rel-foot">The shares change when the map's colours do, every 6 hours.</p>`;
+
+/* How the map's colours are set and changed (user, 2 Oct). */
+const MAP_HTML = `<h3 id="map-pop-h">Map colours methodology</h3>
+<ul>
+<li><b>Start:</b> the front lines of 24 September 2026, set by the desk from Wikipedia's page on the 2026 offensives, Al Jazeera, The National, Al Majalla and the desk's own reports. Earlier lines come from the maps of the Sanaa Center, ACLED and Critical Threats. A district with no line of its own takes its governorate's colour.</li>
+<li><b>Then the reports decide.</b> Only ground taken counts. Captured fighters, weapons or buildings do not.
+<ul>
+<li>A district changes side when two outlets not on the same side, or a wire agency, report the other side taking its town or the whole district. A non-aligned outlet counts as a side of its own;</li>
+<li>it turns contested when only one side reports it, or when only positions, hills or villages in it were taken;</li>
+<li>a contested district goes back to one side by the same rule, if the other side claims nothing there.</li>
+</ul></li>
+<li><b>A side's gains inside a district it already holds</b> change nothing.</li>
+<li><b>The same rule draws the flags</b> on the Latest developments and Fronts maps. A capture told by one side only is drawn as an advance.</li>
+</ul>
+<p class="rel-foot">Colours update every 6 hours.</p>`;
+
+/*
+ * One pop-up per text, opened from any button that names it: hover on a PC,
+ * a click or tap anywhere; on a phone it rises from the bottom.
+ */
+const POPS = {};
+function popFor(id, html) {
+  if (POPS[id]) return POPS[id];
+  let pop = document.getElementById(id);
   if (!pop) {
     pop = document.createElement('div');
-    pop.id = 'rel-pop';
+    pop.id = id;
     pop.className = 'rel-pop';
     pop.setAttribute('role', 'dialog');
-    pop.setAttribute('aria-labelledby', 'rel-h');
+    pop.setAttribute('aria-labelledby', `${id}-h`);
     pop.hidden = true;
-    pop.innerHTML = `<button type="button" class="rel-x" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>${REL_HTML}`;
+    pop.innerHTML = `<button type="button" class="rel-x" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>${html}`;
     document.body.appendChild(pop);
   }
   const phone = () => window.matchMedia('(max-width: 720px)').matches;
-  let pinned = false;
-  let shut = 0;
-  const place = () => {
-    if (phone()) { pop.style.left = pop.style.top = ''; return; }
+  const s = { pop, btn: null, pinned: false, shut: 0 };
+  s.place = () => {
+    const btn = s.btn;
+    if (phone() || !btn) { pop.style.left = pop.style.top = ''; return; }
     const r = btn.getBoundingClientRect();
     const w = pop.offsetWidth;
     const left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12));
     const below = window.innerHeight - r.bottom - 12;
     const top = below >= pop.offsetHeight || r.top < pop.offsetHeight + 12 ? r.bottom + 6 : r.top - pop.offsetHeight - 6;
     pop.style.left = `${left}px`;
-    pop.style.top = `${Math.max(12, top)}px`;
+    pop.style.top = `${Math.max(12, Math.min(top, window.innerHeight - pop.offsetHeight - 12))}px`;
   };
-  const open = (pin) => {
-    clearTimeout(shut);
-    if (pin) pinned = true;
-    if (pop.hidden) { pop.hidden = false; pop.classList.toggle('sheet', phone()); place(); }
+  s.open = (btn, pin) => {
+    clearTimeout(s.shut);
+    if (s.btn && s.btn !== btn) s.btn.setAttribute('aria-expanded', 'false');
+    s.btn = btn;
+    if (pin) s.pinned = true;
+    if (pop.hidden) { pop.hidden = false; pop.classList.toggle('sheet', phone()); }
+    s.place();
     btn.setAttribute('aria-expanded', 'true');
   };
-  const close = () => {
-    clearTimeout(shut);
-    pinned = false;
+  s.close = () => {
+    clearTimeout(s.shut);
+    s.pinned = false;
     pop.hidden = true;
-    btn.setAttribute('aria-expanded', 'false');
+    if (s.btn) s.btn.setAttribute('aria-expanded', 'false');
   };
-  const later = () => { clearTimeout(shut); if (!pinned) shut = setTimeout(close, 220); };
-  btn.addEventListener('click', (e) => { e.stopPropagation(); if (!pop.hidden && pinned) close(); else open(true); });
+  s.later = () => { clearTimeout(s.shut); if (!s.pinned) s.shut = setTimeout(s.close, 220); };
   if (window.matchMedia('(hover: hover)').matches) {
-    btn.addEventListener('mouseenter', () => open(false));
-    btn.addEventListener('mouseleave', later);
-    pop.addEventListener('mouseenter', () => clearTimeout(shut));
-    pop.addEventListener('mouseleave', later);
+    pop.addEventListener('mouseenter', () => clearTimeout(s.shut));
+    pop.addEventListener('mouseleave', s.later);
   }
-  pop.querySelector('.rel-x').addEventListener('click', close);
-  document.addEventListener('click', (e) => { if (!pop.hidden && !e.target.closest('#rel-pop, #btn-rel')) close(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) { close(); btn.focus(); } });
-  window.addEventListener('resize', () => { if (!pop.hidden) { pop.classList.toggle('sheet', phone()); place(); } });
-  window.addEventListener('scroll', () => { if (!pop.hidden && !phone()) place(); }, { passive: true });
+  pop.querySelector('.rel-x').addEventListener('click', s.close);
+  document.addEventListener('click', (e) => { if (!pop.hidden && !e.target.closest(`#${id}, [data-pop="${id}"]`)) s.close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) { s.close(); if (s.btn && s.btn.isConnected) s.btn.focus(); } });
+  window.addEventListener('resize', () => { if (!pop.hidden) { pop.classList.toggle('sheet', phone()); s.place(); } });
+  window.addEventListener('scroll', () => { if (!pop.hidden && !phone() && s.btn && s.btn.isConnected) s.place(); }, { passive: true });
+  POPS[id] = s;
+  return s;
+}
+
+function wirePop(btn, id, html) {
+  if (!btn || btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  btn.dataset.pop = id;
+  btn.setAttribute('aria-controls', id);
+  const s = popFor(id, html);
+  btn.addEventListener('click', (e) => { e.stopPropagation(); if (!s.pop.hidden && s.pinned && s.btn === btn) s.close(); else s.open(btn, true); });
+  if (window.matchMedia('(hover: hover)').matches) {
+    btn.addEventListener('mouseenter', () => s.open(btn, false));
+    btn.addEventListener('mouseleave', s.later);
+  }
+}
+
+function installRelPop() {
+  wirePop(document.getElementById('btn-rel'), 'rel-pop', REL_HTML);
 }
 
 let bootInflight = null;

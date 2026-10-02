@@ -463,6 +463,11 @@ STATEMENTS (event_type statement or diplomacy)
   foreign minister"; Turki al-Maliki "the coalition spokesman"; Majed
   al-Nuzaili "Yemeni armed forces spokesman" (the government's); Hussein
   al-Ezzi, Hezam al-Asad and Mohammed Ali al-Houthi "Houthi official".
+- An organisation, project or body a general reader would not know (Masam,
+  the Nation's Shield forces, a local council) is said once, in the body only,
+  with what it is or its full name: "Masam, the Saudi project clearing
+  landmines in Yemen, said …". Never for the ones readers know (the UN, WHO,
+  the EU, the GCC, the Red Cross, the Houthis), and never in the headline.
 - Tom Fletcher is "UN aid chief Tom Fletcher". An official's "we" is his
   organisation: a UN official's "we fear famine" is "the UN fears famine" in the
   body. One person is never "they": "Fletcher told Al Arabiya the UN fears …".

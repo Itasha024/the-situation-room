@@ -608,6 +608,9 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 @keyframes relUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.rel-pop.sheet{animation:none}}
 @media (max-width:720px){.rel-btn{padding:.4rem 0}}
+/* The two map methodology buttons (2 Oct): under the control bars, and in the legend under Territory. */
+.bars-meth{grid-column:1/-1;flex-basis:100%;width:100%;margin-top:.15rem}
+.rel-btn.leg-meth{margin:.25rem 0 .1rem;font-size:.58rem;letter-spacing:.06em}
 
 /* The report column's scroll bar: thin, in the theme's own lines (2 Oct) */
 .rail{scrollbar-width:thin;scrollbar-color:var(--t-line-strong,#4a433d) transparent}

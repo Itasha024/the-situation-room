@@ -15,6 +15,8 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 | Yemen's Ministry of Human Rights — `@mohr_yemen` (government side; its casualty statements count as official). Added 1 Oct | every 15 minutes |
 | **Governments, agencies and international bodies** (added 30 Sep). Only posts about this war pass: Yemen, the Houthis, the Saudi–Houthi war, the Red Sea, Bab al-Mandab, or Saudi energy under attack; their other diplomacy is dropped. Each is also where a relay of that body's words is looked up first. | |
 | Gulf agencies and the US and UN in Yemen: SPA (`@spagov`), WAM (`@wamnews`), US State Department (`@StateDept`), UN in Yemen (`@UNinYE`) | every 10 minutes |
+| Saudi Civil Defence (`@SaudiDCD`): only its posts on attacks, sirens and debris | every 10 minutes |
+| Saudi Interior Ministry (`@MOISaudiArabia`): only posts about this war | every 15 minutes |
 | Foreign ministries: Egypt (`@MfaEgypt`, `@MFAEgOfficial`), Iran (`@IRIMFA_EN`), Oman (`@FMofOman`), UAE (`@mofauae`), Iraq (`@Iraqimofa`), Kuwait (`@MOFAKuwait`), Bahrain (`@bahdiplomatic`), Qatar (`@MofaQatar_AR`), Jordan (`@ForeignMinistry`), Somalia (`@MOFASomalia`), Pakistan (`@ForeignOfficePk`), Turkey (`@MFATurkiye`, `@TC_Disisleri`) | every 15 minutes |
 | United States: Marco Rubio (`@SecRubio`), Energy Department (`@ENERGY`), Treasury (`@USTreasury`), US Embassy Yemen (`@USEmbassyYemen`) | every 15 minutes |
 | Suez and the EU and UN: Suez Canal Authority (`@SuezAuthorityEG`), European Commission (`@EU_Commission`), Ursula von der Leyen (`@vonderleyen`), EU in Yemen (`@EUinYemen`), UN OCHA (`@UNOCHA`), António Guterres (`@antonioguterres`), United Nations (`@UN`) | every 15 minutes |

@@ -584,6 +584,25 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 .site-menu li a:hover,.site-menu li a:focus-visible{outline:none;border-left-color:var(--accent-ui,#7eb6ff);background:var(--t-surface-2,transparent)}
 .site-menu li a[aria-current="page"]{border-left-color:var(--t-strong,#fff)}
 @media (prefers-reduced-motion:reduce){.site-menu .sm-panel,.site-menu .sm-back{transition:none}}
+/* A desk's own pages under it, and Dark | Light at the panel's foot (user, 2 Oct). */
+.site-menu .sm-panel{display:flex;flex-direction:column}
+.site-menu .sm-sub li a{padding:.5rem 0 .5rem 1.6rem;font:500 .84rem/1.2 var(--f-body,inherit);color:var(--t-text-2,var(--t-text,#e2e8f0))}
+.sm-theme{display:grid;grid-template-columns:1fr 1fr;margin-top:auto;padding-top:1.4rem;gap:0}
+.sm-theme button{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;padding:.55rem .5rem;background:transparent;border:1px solid var(--t-line-strong,#334155);color:var(--t-muted,#8fa0b4);font:600 .7rem/1 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:color .15s,background .15s}
+.sm-theme button+button{border-inline-start:0}
+.sm-theme button svg{width:15px;height:15px;flex:none}
+.sm-theme button:hover,.sm-theme button:focus-visible{color:var(--t-strong,#fff);outline:none}
+.sm-theme button[aria-pressed="true"]{background:var(--t-strong,#fff);border-color:var(--t-strong,#fff);color:var(--t-bg,#1b1918)}
+/* The Methodology page: the three texts as sections. */
+.meth-part{padding:1.1rem 0 1.2rem;border-bottom:1px solid var(--t-line,#35302c);font:400 .95rem/1.6 var(--f-body,inherit);color:var(--t-text,#efe6dd)}
+.meth-part h3{margin:0 0 .5rem;font:600 1.3rem/1.25 "Newsreader",Georgia,serif;color:var(--t-strong,#fff)}
+.meth-part ul{margin:.3rem 0;padding-inline-start:1.2rem}
+.meth-part ul ul{list-style:"– ";padding-inline-start:1.1rem}
+.meth-part li{margin:.3rem 0}
+.meth-part b{color:var(--t-strong,#fff);font-weight:600}
+.meth-part .rel-foot{margin-top:.7rem;color:var(--t-muted,#a99d93);font-size:.85rem}
+.meth-part .rel-foot a{color:var(--t-link,#f4a58a);font-weight:600;text-decoration:none}
+.meth-part .to-map-meth{vertical-align:baseline;padding:0;margin-inline-start:.2rem}
 
 /* "Sources reliability methodology": the link under the side buttons and its pop-up (1 Oct) */
 .feed-rel{margin:-.1rem 0 .55rem}
@@ -614,6 +633,12 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 .bars-meth{grid-column:1/-1;flex-basis:100%;width:100%;margin-top:-.2rem;line-height:1}
 .rel-pop .to-map-meth{vertical-align:baseline;padding:0;margin-inline-start:.2rem}
 .toolbar .map-meth{margin-inline-start:auto;white-space:nowrap}
+@media (min-width:701px){
+  .toolbar{container-type:inline-size}
+  .toolbar .time-filter{flex-wrap:nowrap}
+  @container (max-width:640px){.time-filter .tf-long{display:none}.time-filter .tf-short{display:inline}}
+  @container (max-width:430px){.time-filter .day-nav-txt{display:none}}
+}
 @media (min-width:701px){.toolbar{padding-inline-end:calc(var(--rail-w,360px) + 8px + .55rem)}body.map-focus .toolbar{padding-inline-end:1rem}}
 @media (max-width:700px){.toolbar .map-meth{align-self:flex-end;margin-top:-.3rem}}
 

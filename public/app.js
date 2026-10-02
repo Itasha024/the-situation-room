@@ -52,7 +52,10 @@ function N(word, n) {
 // aside, not deleted: every 'original' branch below still works, and adding it back to
 // THEMES offers it again.
 const THEMES = ['broadsheet-night', 'broadsheet-day'];
-let THEME = (() => { try { const t = localStorage.getItem('desk-theme'); return THEMES.includes(t) ? t : THEMES[0]; } catch (e) { return THEMES[0]; } })();
+// The reader's own choice, else the device's light or dark (user, 2 Oct).
+const deviceTheme = () => (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'broadsheet-day' : 'broadsheet-night');
+const chosenTheme = () => { try { const t = localStorage.getItem('desk-theme'); return THEMES.includes(t) ? t : null; } catch (e) { return null; } };
+let THEME = chosenTheme() || deviceTheme();
 const THEME_SIDES = {
   'broadsheet-day': { houthi: '#a8372a', plc: '#0d7680', saudi: '#5f86ad', contested: '#b07d1a', mixed: '#7d6b99' },
   'broadsheet-night': { houthi: '#e2694f', plc: '#3fb0b3', saudi: '#7aa5d6', contested: '#d9aa45', mixed: '#a898c4' },
@@ -6374,7 +6377,7 @@ function loadThemeFonts() {
 }
 
 let themeBusy = false;
-async function setTheme(t) {
+async function setTheme(t, keep = true) {
   if (!THEMES.includes(t) || t === THEME || themeBusy) return;
   themeBusy = true;
   try {
@@ -6401,8 +6404,7 @@ async function setTheme(t) {
         try { renderLegend(data); } catch (e) { console.error(e); }
         try { renderBars(data); } catch (e) { console.error(e); }
       }
-      const btn = document.querySelector('.theme-step');
-      if (btn) paintThemeButton(btn);
+      paintThemeSwitch();
     };
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     // A page that is not painting never runs the transition's callback, so it runs anyway
@@ -6419,7 +6421,7 @@ async function setTheme(t) {
     } else {
       run();
     }
-    try { localStorage.setItem('desk-theme', t); } catch (e) {}
+    if (keep) try { localStorage.setItem('desk-theme', t); } catch (e) {}
   } finally {
     themeBusy = false;
   }
@@ -6441,7 +6443,7 @@ try { setFavicon(THEME); } catch (e) {}
  * the site's desks.
  */
 const SITE_PAGES = [
-  ['/yemen-conflict-desk', 'Yemen Conflict Desk', 'Live'],
+  ['/yemen-conflict-desk', 'Yemen Conflict Desk', 'Live', [['/yemen-conflict-desk/methodology', 'Methodology']]],
 ];
 function installMast() {
   const el = document.querySelector('.mast-date');
@@ -6456,8 +6458,10 @@ function installMast() {
     <nav class="sm-panel" aria-label="Site">
       <div class="sm-head"><span class="sm-name">The Situation Room</span><button type="button" class="sm-x" data-close aria-label="Close menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <p class="sm-date">${escapeHtml(new Date().toLocaleDateString(LOC, { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p>
-      <ul>${SITE_PAGES.map(([href, name, sub]) => `<li><a href="${href}"${href === here ? ' aria-current="page"' : ''}><b>${name}</b><small>${sub}</small></a></li>`).join('')}</ul>
+      <ul>${SITE_PAGES.map(([href, name, sub, kids]) => `<li><a href="${href}"${href === here ? ' aria-current="page"' : ''}><b>${name}</b><small>${sub}</small></a>${(kids || []).length ? `<ul class="sm-sub">${kids.map(([h, n]) => `<li><a href="${h}"${h === here ? ' aria-current="page"' : ''}>${n}</a></li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>
+      <div class="sm-theme" role="group" aria-label="Theme">${[['broadsheet-night', 'Dark'], ['broadsheet-day', 'Light']].map(([t, n]) => `<button type="button" data-theme="${t}" aria-pressed="${t === THEME}">${THEME_ICONS[t][1]}<span>${n}</span></button>`).join('')}</div>
     </nav>`;
+  panel.querySelectorAll('.sm-theme button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));
   document.body.appendChild(panel);
   const btn = el.querySelector('.mast-menu');
   const open = (on) => {
@@ -6507,6 +6511,15 @@ function installLangSwitch() {
     };
   });
 }
+
+/** Dark | Light in the menu shows the look in use. */
+function paintThemeSwitch() {
+  document.querySelectorAll('.sm-theme button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === THEME)));
+}
+/* Until the reader picks one, the page follows the device turning light or dark. */
+try {
+  matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (!chosenTheme()) setTheme(deviceTheme(), false); });
+} catch (e) {}
 
 function installThemeButton() {
   const stamp = document.querySelector('.mast-end') || document.querySelector('.stamp');
@@ -6750,7 +6763,6 @@ async function bootYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
   try { installMast(); } catch (e) { console.error(e); }
-  try { installThemeButton(); } catch (e) { console.error(e); }
   try { installLangSwitch(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
   try { installRelPop(); } catch (e) { console.error(e); }
@@ -6833,6 +6845,19 @@ async function bootYemenDesk() {
 
 window.startYemenDesk = startYemenDesk;
 // The Sources list page: the masthead and the theme button, nothing else.
-window.startDeskDoc = () => { installMast(); installThemeButton(); };
+window.startDeskDoc = () => { installMast(); installMethodology(); };
+
+/*
+ * The desk's Methodology page (user, 2 Oct): the three pop-ups' texts, one
+ * after another, from the same strings, so the page and the pop-ups never differ.
+ */
+function installMethodology() {
+  const el = document.getElementById('meth-doc');
+  if (!el || el.dataset.filled) return;
+  el.dataset.filled = '1';
+  const part = (id, html) => `<section class="meth-part" id="${id}">${html.replace(/<h3 id="[^"]*">/, '<h3>')}</section>`;
+  el.innerHTML = part('meth-reliability', REL_HTML) + part('meth-shares', SHARE_HTML) + part('meth-map', MAP_HTML);
+  el.querySelectorAll('.to-map-meth').forEach((b) => b.addEventListener('click', () => document.getElementById('meth-map').scrollIntoView({ behavior: 'smooth', block: 'start' })));
+}
 // The Methodology and About pages: the masthead date and the theme button, nothing else.
 startYemenDesk();

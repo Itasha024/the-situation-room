@@ -1826,7 +1826,7 @@ function cadenceStamp(top = false) {
   if (!brief || !brief.nextUpdateAt) return `<p class="${cls}">${T('Based on latest reports')}</p>`;
   const at = new Date(brief.nextUpdateAt);
   const day = at.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: 'numeric', month: 'short' });
-  return `<p class="${cls}">${T('Based on latest reports · Next update {t}', { t: escapeHtml(`${fmtClock(brief.nextUpdateAt)}, ${day}`) })}</p>`;
+  return `<p class="${cls}">${T('Based on latest reports · Next {t}', { t: escapeHtml(`${fmtClock(brief.nextUpdateAt)}, ${day}`) })}</p>`;
 }
 
 function frontActivity(id) {
@@ -4454,7 +4454,7 @@ function renderFronts(d) {
     const card = btn.closest('.front-card');
     const toggle = () => {
       const open = card.classList.toggle('open');
-      btn.textContent = open ? 'Hide' : 'Read more';
+      btn.textContent = open ? 'Show less' : 'Read more';
     };
     btn.onclick = (ev) => { ev.stopPropagation(); toggle(); };
     card.classList.add('expandable');
@@ -5843,7 +5843,7 @@ let timelineIdx = null;
 function phaseDates(p, isNow) {
   const fmt = (s) => {
     const m = /^(\d{4})-(\d{2})$/.exec(String(s || ''));
-    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, 15)).toLocaleDateString(LOC, { month: 'long', year: 'numeric', timeZone: 'UTC' }) : String(s || '');
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, 15)).toLocaleDateString(LOC, { month: 'short', year: 'numeric', timeZone: 'UTC' }) : String(s || '');
   };
   if (isNow) return T('{d} – now', { d: fmt(p.from) });
   return fmt(p.from) + (p.to && p.to !== p.from ? ` – ${fmt(p.to)}` : '');
@@ -5884,7 +5884,7 @@ function renderTimeline(d) {
     const card = btn.closest('.phase-card');
     const toggle = () => {
       const open = card.classList.toggle('open');
-      btn.textContent = open ? 'Hide' : 'Read more';
+      btn.textContent = open ? 'Show less' : 'Read more';
     };
     btn.onclick = (ev) => { ev.stopPropagation(); toggle(); };
     card.classList.add('expandable');

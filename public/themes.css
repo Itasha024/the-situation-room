@@ -609,6 +609,14 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 @media (prefers-reduced-motion:reduce){.rel-pop.sheet{animation:none}}
 @media (max-width:720px){.rel-btn{padding:.4rem 0}}
 
+/* The report column's scroll bar: thin, in the theme's own lines (2 Oct) */
+.rail{scrollbar-width:thin;scrollbar-color:var(--t-line-strong,#4a433d) transparent}
+.rail:hover{scrollbar-color:var(--t-muted,#a99d93) transparent}
+.rail::-webkit-scrollbar{width:10px}
+.rail::-webkit-scrollbar-track{background:transparent}
+.rail::-webkit-scrollbar-thumb{background:var(--t-line-strong,#4a433d);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+.rail::-webkit-scrollbar-thumb:hover{background-color:var(--t-muted,#a99d93)}
+
 /* The desk's own pages (the Sources list) */
 .doc-root{min-height:100vh;background:var(--t-bg,var(--bg));color:var(--t-text,var(--text))}
 .doc-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}

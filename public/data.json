@@ -20956,7 +20956,11 @@
       "sources": [
         {
           "name": "Al Jazeera",
-          "url": "https://www.aljazeera.com/news/2023/4/11/a-timeline-of-yemens-slide-into-conflict-and-war"
+          "url": "https://www.aljazeera.com/news/2024/1/12/world-reacts-to-us-uk-attacks-on-houthi-targets-in-yemen"
+        },
+        {
+          "name": "UK House of Commons Library",
+          "url": "https://commonslibrary.parliament.uk/research-briefings/cbp-9930/"
         }
       ],
       "title": "The Red Sea and Bab al-Mandab",
@@ -20967,18 +20971,22 @@
     },
     {
       "id": "phase_2026_01_stc_plc",
-      "from": "2026-01",
+      "from": "2025-12",
       "to": "2026-06",
       "sources": [
         {
-          "name": "Open agency reporting, 2026",
-          "url": ""
+          "name": "Al Jazeera",
+          "url": "https://www.aljazeera.com/news/2026/1/14/mapping-who-controls-what-in-yemen-in-2026"
+        },
+        {
+          "name": "Al Jazeera",
+          "url": "https://www.aljazeera.com/news/2026/1/9/yemens-separatist-southern-transitional-council-announces-its-dissolution"
         }
       ],
-      "title": "Realignment in the south before the 2026 round",
-      "summary": "In early 2026 a political and military reshuffle in the south narrowed the split between separatist forces and the Presidential Council, in preparation for renewed fighting in the west.",
-      "detail": "Years of friction between the Southern Transitional Council and the government had weakened the ability to face the Houthis on a single front. Open-source reporting from early 2026 described separatist structures being dissolved or reintegrated and realigned under the Presidential Council in Aden, alongside reinforcements and coordination. This was not peace in the south, but an attempt to stop fighting each other before the big round on the coast. Both sides therefore entered the round that began in July 2026 better prepared.",
-      "mapNote": "The south is more aligned against the coastal front — still no decision.",
+      "title": "The south's split before the 2026 round",
+      "summary": "In December 2025 the UAE-backed Southern Transitional Council seized Hadramawt and Al-Mahra. Saudi Arabia and the government struck back, and by 9 January 2026 the council's leader had fled and a delegation in Riyadh announced its dissolution.",
+      "detail": "The Southern Transitional Council, a separatist force backed by the UAE, had sat on the Presidential Council since 2022. In early December 2025 it took the oil-rich eastern provinces of Hadramawt and Al-Mahra, on the Saudi border, which Riyadh called a red line. Saudi air strikes on its positions followed, among them a strike on two vessels at Mukalla port that Saudi Arabia and the government said carried UAE weapons for the council. The government declared a state of emergency and ordered UAE forces out, opening a rift between Riyadh and Abu Dhabi. On 7 January 2026 the Presidential Council dismissed the council's leader, Aidarous al-Zubaidi, for treason; he fled to the UAE the next day. On 9 January a council delegation in Riyadh announced its dissolution ahead of a Saudi-hosted southern dialogue, while its spokesman in Abu Dhabi rejected the announcement. The government said all anti-Houthi forces would join the army, a process not yet begun by mid-January. The anti-Houthi camp entered the July 2026 round under the Saudi-backed government, with the southern question still open.",
+      "mapNote": "The south passes from the separatists back to the government; the southern question stays open.",
       "bullets": []
     },
     {
@@ -20987,8 +20995,16 @@
       "to": "",
       "sources": [
         {
-          "name": "Desk archive, July–September 2026",
-          "url": ""
+          "name": "Al Jazeera",
+          "url": "https://www.aljazeera.com/news/2026/7/13/yemen-govt-says-its-forces-attacked-sanaa-airport"
+        },
+        {
+          "name": "NBC News",
+          "url": "https://www.nbcnews.com/world/middle-east/yemen-houthis-maritime-embargo-saudi-arabia-oil-rcna588345"
+        },
+        {
+          "name": "Al Jazeera",
+          "url": "https://www.aljazeera.com/news/2026/9/10/yemens-houthis-seize-strategic-red-sea-city-of-mocha"
         },
         {
           "name": "Al Jazeera",

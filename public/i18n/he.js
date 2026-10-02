@@ -46,7 +46,8 @@ window.DESK_I18N = {
     // Update clock
     '{t} on {d}': '{t}, {d}',
     'Refreshes every {h} hours.': 'מתעדכן כל {h} שעות.',
-    'Updates every {h}h based on latest reports · Next {t}': 'מתעדכן כל {h} שעות על סמך הדיווחים האחרונים · העדכון הבא: {t}',
+    'Based on latest reports · Next update {t}': 'על סמך הדיווחים האחרונים · העדכון הבא: {t}',
+    'Based on latest reports': 'על סמך הדיווחים האחרונים',
     ' · refresh due': ' · העדכון מתעכב',
     'Last scan {t}': 'סריקה אחרונה: {t}',
     'Not scanned yet': 'טרם נסרק',

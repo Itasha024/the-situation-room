@@ -1823,9 +1823,10 @@ let briefTried = false;
  */
 function cadenceStamp(top = false) {
   const cls = top ? 'cadence at-head' : 'cadence';
-  const hours = (brief && +brief.cadenceHours) || 6;
-  if (!brief || !brief.nextUpdateAt) return `<p class="${cls}">${T('Updates every {h}h based on latest reports', { h: hours })}</p>`;
-  return `<p class="${cls}">${T('Updates every {h}h based on latest reports · Next {t}', { h: hours, t: escapeHtml(fmtWhen(brief.nextUpdateAt)) })}</p>`;
+  if (!brief || !brief.nextUpdateAt) return `<p class="${cls}">${T('Based on latest reports')}</p>`;
+  const at = new Date(brief.nextUpdateAt);
+  const day = at.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: 'numeric', month: 'short' });
+  return `<p class="${cls}">${T('Based on latest reports · Next update {t}', { t: escapeHtml(`${fmtClock(brief.nextUpdateAt)}, ${day}`) })}</p>`;
 }
 
 function frontActivity(id) {

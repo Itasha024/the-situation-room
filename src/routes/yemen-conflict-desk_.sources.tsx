@@ -9,16 +9,18 @@ import { DeskDoc } from "@/components/desk-doc";
  * report column; not in any menu, footer or search engine.
  */
 type Row = { name: string; url: string; group: "houthi" | "gov" | "nonaligned"; rating: number };
-type Loaded = { updatedAt: string | null; sources: Row[] };
+type Loaded = { nextAt: number; sources: Row[] };
 
 const loadRatings = createServerFn({ method: "GET" }).handler(async (): Promise<Loaded> => {
   const { getStore } = await import("@/lib/desk/store");
   const { DROPPED_SOURCES, RATINGS_KEY } = await import("@/lib/desk/source-rating");
+  const { deskDay } = await import("@/lib/desk/brief");
   const store = await getStore();
   const made = await store.getJson<{ updatedAt: string; sources: Row[] }>(RATINGS_KEY);
   const dropped = new Set(DROPPED_SOURCES.map((n) => n.toLowerCase()));
   return {
-    updatedAt: made?.updatedAt ?? null,
+    // The ratings are made at 00:00 Israel: the next one is the coming midnight.
+    nextAt: deskDay(deskDay(Date.now()).startedAt + 26 * 3600_000).startedAt,
     sources: (made?.sources ?? [])
       .filter((s) => !dropped.has(s.name.toLowerCase()))
       .map((s) => ({ name: s.name, url: s.url, group: s.group, rating: s.rating })),
@@ -63,7 +65,7 @@ function Dots({ rating }: { rating: number }) {
 }
 
 function SourcesPage() {
-  const { updatedAt, sources } = Route.useLoaderData();
+  const { nextAt, sources } = Route.useLoaderData();
   // Every group starts closed (user, 2 Oct); each opens on its own, or all at once.
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const shown = GROUPS.filter(([g]) => sources.some((s) => s.group === g));
@@ -72,16 +74,15 @@ function SourcesPage() {
   // The time on the reader's own clock, once the page is in their browser.
   const [when, setWhen] = useState("");
   useEffect(() => {
-    if (!updatedAt) return;
-    const d = new Date(updatedAt);
+    const d = new Date(nextAt);
     setWhen(
-      `${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}, ${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`,
+      `${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}, ${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`,
     );
-  }, [updatedAt]);
+  }, [nextAt]);
   return (
     <DeskDoc title="Sources list">
       <div className="sr-top">
-        <p className="sr-stamp">Updates every 24 hours{when ? ` · Last updated ${when}` : ""}</p>
+        <p className="sr-stamp">Updates every 24 hours{when ? ` · Next update ${when}` : ""}</p>
         {shown.length ? (
           <button
             type="button"

@@ -57,7 +57,8 @@
       // Update clock
       '{t} on {d}': '{t}، {d}',
       'Refreshes every {h} hours.': 'يُحدَّث كل {h} ساعات.',
-      'Updates every {h}h based on latest reports · Next {t}': 'يُحدَّث كل {h} ساعات بناءً على أحدث التقارير · التحديث التالي: {t}',
+      'Based on latest reports · Next update {t}': 'بناءً على أحدث التقارير · التحديث التالي: {t}',
+      'Based on latest reports': 'بناءً على أحدث التقارير',
       ' · refresh due': ' · التحديث متأخر',
       'Last scan {t}': 'آخر رصد: {t}',
       'Not scanned yet': 'لم يُجرَ الرصد بعد',

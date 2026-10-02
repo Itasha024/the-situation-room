@@ -51,6 +51,14 @@ export const COMBINE_MODELS: ChainModel[] = [
   { provider: "gemini", id: "gemini-flash-latest" },
 ];
 
+/**
+ * Each 6-hour update's share of the two strongest writers. Google gives each
+ * about 20 calls a day and four updates fall in each of its days, so an update
+ * with all its retries asks each at most 5 times: the 00:00 and 06:00 updates,
+ * the last before Google's reset (10:00 Israel), always find their share (2 Oct).
+ */
+export const PER_UPDATE: Record<string, number> = { "gemini-3.8-flash": 5, "gemini-3.7-flash": 5 };
+
 /** A model out of its daily quota rests here until Google's reset, so no job asks it again today. */
 const resting = new Map<string, number>();
 
@@ -129,12 +137,20 @@ export async function askChain(
   tag: string,
   system: string,
   user: string,
-  { temperature = 0.2, models = WRITER_MODELS, timeoutMs = 90_000, fast = false }: { temperature?: number; models?: ChainModel[]; timeoutMs?: number; fast?: boolean } = {},
+  { temperature = 0.2, models = WRITER_MODELS, timeoutMs = 90_000, fast = false, budget }: { temperature?: number; models?: ChainModel[]; timeoutMs?: number; fast?: boolean; budget?: Record<string, number> } = {},
 ): Promise<{ json: Record<string, unknown>; model: string } | null> {
   for (const m of models) {
     if ((resting.get(m.id) ?? 0) > Date.now()) continue;
+    // Only the update's own share: no budget given (a script) asks freely.
+    const share = PER_UPDATE[m.id];
+    if (budget && share !== undefined && (budget[m.id] ?? 0) >= share) continue;
+    // A busy (503) or minute-limited (429) answer uses none of the day's calls.
+    const spent = () => {
+      if (budget && share !== undefined) budget[m.id] = (budget[m.id] ?? 0) + 1;
+    };
     try {
       const json = looseJson(await callOne(m, system, user, temperature, timeoutMs, fast));
+      spent();
       if (json) {
         console.log(`[${tag}] written by ${m.id}`);
         return { json, model: m.id };
@@ -142,6 +158,7 @@ export async function askChain(
       console.error(`[${tag}] ${m.id}: no JSON in the answer`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "failed";
+      if (!/HTTP (?:429|503)/.test(msg)) spent();
       // Out for the day only when Google says so (its quota id names the day); a
       // minute's limit rests two minutes. Taking every 429 for the day's kept the
       // strong writers out of every later update after one busy minute (1 Oct).

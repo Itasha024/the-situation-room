@@ -167,7 +167,7 @@ function isSea(x: string): boolean {
 }
 
 /** A sentence is political when its politics come before any fighting it names ("the envoy condemned the strikes"). */
-function isOther(x: string): boolean {
+export function isOther(x: string): boolean {
   const o = x.search(OTHER);
   if (o < 0) return false;
   const b = x.search(BATTLE);
@@ -252,6 +252,8 @@ export async function writeProse(
   frontsOf: (r: LiveReport) => string[] = () => [],
   control: string[] = controlContext(),
   models: ChainModel[] = WRITER_MODELS,
+  /** This update's count of strong-writer calls (models.ts PER_UPDATE). */
+  budget?: Record<string, number>,
 ): Promise<Prose | null> {
   const sorted = [...reports]
     .filter((r) => r.summary)
@@ -273,7 +275,10 @@ export async function writeProse(
       "REPORTS:",
       ...sorted.slice(-cap).map((r) => cardLine(r, frontsOf)),
     ].join("\n");
-    got = await askChain("prose", SYSTEM, user, { models });
+    // Only Groq refuses a long prompt: Gemini had the whole window once, and asking it again shorter spent its day for nothing.
+    const chain = want === 400 ? models : models.filter((m) => m.provider !== "gemini");
+    if (!chain.length) break;
+    got = await askChain("prose", SYSTEM, user, { models: chain, budget });
     if (got) break;
   }
   if (!got) return null;

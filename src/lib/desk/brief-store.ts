@@ -20,7 +20,7 @@
 import type { LiveReport } from "./types.ts";
 import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
-import { battleFirst, controlContext, keepReported, type DevMark, type Prose, writeProse } from "./prose.ts";
+import { battleFirst, controlContext, isOther, keepReported, type DevMark, type Prose, writeProse } from "./prose.ts";
 import { anyAwake, type ChainModel, WRITER_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
@@ -119,13 +119,15 @@ async function prewrite(store: DeskStore, w: ReturnType<typeof briefWindow>, at:
   } catch {}
   let best: Prose | null = null;
   for (;;) {
-    const p = await writeProse(
+    const p = await withShare(store, w.updatedAt, (budget) => writeProse(
       inWindow,
       brief.fronts.map((f) => ({ id: f.id, name: f.name, incidents: f.strikes + f.ground + f.alerts + f.maritime, previous: saved?.brief.fronts?.find((x) => x.id === f.id)?.line || "" })),
       saved?.brief.situation?.line || "",
       (r) => frontIdsOf(r, extraFronts),
       controlLines,
-    ).catch(() => null);
+      undefined,
+      budget,
+    )).catch(() => null);
     if (p?.situation && (!best || (p.model && STRONG.has(p.model)))) best = p;
     if (best?.model && STRONG.has(best.model)) break;
     if (Date.now() + 2 * 60_000 > at) break;
@@ -247,6 +249,31 @@ async function windowReports(store: DeskStore, w: { startedAt: string; updatedAt
   return { all, inWindow };
 }
 
+const SHARE_KEY = "strong-share";
+
+/**
+ * Run a writing job on this update's share of the strong writers (models.ts
+ * PER_UPDATE). The count is kept in the store, so a restart or a deploy does
+ * not hand an update a second share; the last four updates are kept.
+ */
+async function withShare<T>(store: DeskStore, update: string, job: (budget: Record<string, number>) => Promise<T>): Promise<T> {
+  const read = async () => (await store.getJson<Record<string, Record<string, number>>>(SHARE_KEY).catch(() => null)) ?? {};
+  const budget = { ...((await read())[update] ?? {}) };
+  const before = { ...budget };
+  try {
+    return await job(budget);
+  } finally {
+    if (Object.keys(budget).some((k) => budget[k] !== before[k])) {
+      const all = await read();
+      const was = all[update] ?? {};
+      // Another job of the same update may have spent meanwhile: both counts add up.
+      all[update] = Object.fromEntries([...new Set([...Object.keys(was), ...Object.keys(budget)])].map((k) => [k, (was[k] ?? 0) + (budget[k] ?? 0) - (before[k] ?? 0)]));
+      const keep = Object.keys(all).sort().slice(-4);
+      await store.putJson(SHARE_KEY, Object.fromEntries(keep.map((k) => [k, all[k]]))).catch(() => {});
+    }
+  }
+}
+
 /** The strong writers: the first Gemini Flash models of the chain. */
 const STRONG_MODELS: ChainModel[] = WRITER_MODELS.slice(0, 3);
 const STRONG = new Set(STRONG_MODELS.map((m) => m.id));
@@ -339,12 +366,17 @@ export function isCountedLine(line: string | undefined): boolean {
  * A front the writer left out: its own reports' headlines, newest first, in
  * place of the counted line ("there were one ground engagement", 2 Oct).
  */
+const NOT_EVENT = new Set<string>(["statement", "diplomacy", "economy"]);
+
 export function headlinesLine(own: LiveReport[], max = 3): string {
   return topHeadlines(own, max).join(" ");
 }
 
 /** The strongest headlines, two that say the same thing kept once. */
 function topHeadlines(reports: LiveReport[], max: number): string[] {
+  // Events only: a reaction ("Kuwait and Bahrain condemn the attack") is not the news of the update (user, 2 Oct).
+  const events = reports.filter((r) => !NOT_EVENT.has(r.type) && !isOther(String(r.summary || "")));
+  if (events.length) reports = events;
   const words = (h: string) => new Set(h.toLowerCase().match(/[a-z؀-ۿ]{4,}/g) || []);
   const kept: { h: string; w: Set<string> }[] = [];
   for (const r of [...reports].sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || b.at.localeCompare(a.at))) {
@@ -389,7 +421,7 @@ async function proseInto(
   let devMap: DevMark[] = [];
   const frontMaps: Record<string, DevMark[]> = {};
   try {
-    const prose = given ?? await writeProse(
+    const prose = given ?? await withShare(store, brief.updatedAt, (budget) => writeProse(
       inWindow,
       brief.fronts.map((f) => ({
         id: f.id,
@@ -401,7 +433,8 @@ async function proseInto(
       o.frontsOf,
       o.controlLines,
       o.models,
-    );
+      budget,
+    ));
     // Only an answer with the overview counts as written: one without it is asked again.
     if (prose?.situation) model = prose.model || null;
     if (prose?.situation) {

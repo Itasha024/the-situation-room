@@ -174,3 +174,39 @@ test("with no writer, the overview is the strongest headlines, a repeat kept onc
   assert.equal(t, "Houthi forces strike coalition headquarters and cement factory in Aden. Saudi airstrikes hit Sanaa.");
   assert.equal(headlinesSituation([]), "");
 });
+
+test("the headline overview leaves out reactions when there are events", () => {
+  const rs = [
+    { summary: "Kuwait and Bahrain condemn Houthi attack on Taibah power station in Medina", at: "2026-10-02T02:00:00Z", score: 90, type: "statement" },
+    { summary: "Saudi Arabia condemns the strikes", at: "2026-10-02T02:10:00Z", score: 85, type: "strike" },
+    { summary: "Saudi airstrikes hit Sanaa", at: "2026-10-02T01:30:00Z", score: 60, type: "strike" },
+  ] as never[];
+  assert.equal(headlinesSituation(rs), "Saudi airstrikes hit Sanaa.");
+});
+
+import { askChain } from "./models.ts";
+
+test("an update past its share of the strong writers does not ask them", async () => {
+  const real = globalThis.fetch;
+  let asked = 0;
+  globalThis.fetch = (async () => {
+    asked++;
+    throw new Error("no network in tests");
+  }) as typeof fetch;
+  const env = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test";
+  try {
+    const budget = { "gemini-3.8-flash": 5, "gemini-3.7-flash": 5 };
+    const got = await askChain("t", "s", "u", { models: [{ provider: "gemini", id: "gemini-3.8-flash" }, { provider: "gemini", id: "gemini-3.7-flash" }], budget });
+    assert.equal(got, null);
+    assert.equal(asked, 0);
+    const fresh: Record<string, number> = {};
+    await askChain("t", "s", "u", { models: [{ provider: "gemini", id: "gemini-3.8-flash" }], budget: fresh });
+    assert.equal(asked, 1);
+    assert.equal(fresh["gemini-3.8-flash"], 1);
+  } finally {
+    globalThis.fetch = real;
+    if (env === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = env;
+  }
+});

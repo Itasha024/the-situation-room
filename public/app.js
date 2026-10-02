@@ -1817,13 +1817,15 @@ let briefTried = false;
 
 /**
  * The stamp under every panel that moves on the update clock (every 6 hours).
- * No "next" time and no "due" warning: the update simply appears on the hour.
+ * It names the next update's time, and never warns that one is due (no
+ * "refresh due", no yellow): the update simply appears on the hour (user, 2 Oct).
  * `top`: the stamp sits under a column's heading rather than at its foot.
  */
 function cadenceStamp(top = false) {
   const cls = top ? 'cadence at-head' : 'cadence';
   const hours = (brief && +brief.cadenceHours) || 6;
-  return `<p class="${cls}">${T('Updates every {h}h based on latest reports', { h: hours })}</p>`;
+  if (!brief || !brief.nextUpdateAt) return `<p class="${cls}">${T('Updates every {h}h based on latest reports', { h: hours })}</p>`;
+  return `<p class="${cls}">${T('Updates every {h}h based on latest reports · Next {t}', { h: hours, t: escapeHtml(fmtWhen(brief.nextUpdateAt)) })}</p>`;
 }
 
 function frontActivity(id) {

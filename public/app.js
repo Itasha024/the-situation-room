@@ -3124,11 +3124,10 @@ function statTrio(c) {
 /** The counts show, then the newest few rows of the list; the rest open under them. */
 const ledOpen = new Set();
 const PEEK = 3;
-const allLabel = (n, noun) => T(`Show all ${n} ${noun}`);
-function moreBox(id, head, tableHead, rows, noun) {
+function moreBox(id, head, tableHead, rows) {
   const open = ledOpen.has(id);
   const body = rows.map((r, i) => (i < PEEK ? r : r.replace('<tr>', '<tr class="led-rest">'))).join('');
-  const tog = rows.length > PEEK ? `<button type="button" class="toggle-sit led-tog" data-all="${escapeHtml(allLabel(rows.length, noun))}" aria-expanded="${open}">${open ? T('Show fewer') : escapeHtml(allLabel(rows.length, noun))}</button>` : '';
+  const tog = rows.length > PEEK ? `<button type="button" class="toggle-sit led-tog" aria-expanded="${open}">${open ? T('Show less') : T('Show more')}</button>` : '';
   return `<div class="led-more${open ? ' open' : ''}" data-more="${id}"><div class="led-head">${head}</div><div class="led-detail">${SL_KEY}<table class="${tableHead[0]}">${tableHead[1]}${body}</table></div>${tog}</div>`;
 }
 function wireMore(root) {
@@ -3139,8 +3138,15 @@ function wireMore(root) {
       const now = box.classList.toggle('open');
       if (now) ledOpen.add(box.dataset.more);
       else ledOpen.delete(box.dataset.more);
-      tog.textContent = now ? T('Show fewer') : tog.dataset.all;
+      tog.textContent = now ? T('Show less') : T('Show more');
       tog.setAttribute('aria-expanded', String(now));
+    };
+    // The list opens and closes from anywhere on it too; links and buttons keep their own click.
+    box.classList.add('expandable');
+    box.onclick = (ev) => {
+      if (ev.target === tog || ev.target.closest('a, button')) return;
+      if (window.getSelection && String(window.getSelection() || '')) return;
+      tog.onclick();
     };
   });
 }
@@ -3238,7 +3244,7 @@ function shipsBody(led) {
     const flag = s.flag ? ` <small class="flag">(${escapeHtml(s.flag)})</small>` : '';
     return `<tr><td class="d">${srcLink(escapeHtml(ledDay(s.date)), s.src)}</td><td class="l">${escapeHtml(name)}${flag}</td><td class="l">${escapeHtml(capFirst(s.place || ''))}</td><td class="l w">${weaponCell(s.weapon)}</td></tr>`;
   });
-  return moreBox('ships', statTrio(spanCounts(ships.map((s) => s.date))), ['list ships', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th><th scope="col" class="l w">Weapon</th></tr>'], rows, 'incidents');
+  return moreBox('ships', statTrio(spanCounts(ships.map((s) => s.date))), ['list ships', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th><th scope="col" class="l w">Weapon</th></tr>'], rows);
 }
 
 /** Each spot's own chart, shown over the page from its name. */
@@ -3364,7 +3370,7 @@ function sitesBody(led) {
       const status = !last ? '' : s.statusSrc && s.statusSrc.url ? srcLink(chip, s.statusSrc, 'st-link') : chip;
       return `<tr><td class="d">${srcLink(escapeHtml(ledDay(h.date)), h)}</td><td class="l">${escapeHtml(s.name)}</td><td class="l w">${weaponCell(h.weapon)}</td><td class="t">${status}</td></tr>`;
     });
-  return moreBox('sites', statTrio(spanCounts(hits.map((h) => h.date))), ['list sites', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l w">Weapon</th><th scope="col" class="t">Status</th></tr>'], rows, 'attacks');
+  return moreBox('sites', statTrio(spanCounts(hits.map((h) => h.date))), ['list sites', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l w">Weapon</th><th scope="col" class="t">Status</th></tr>'], rows);
 }
 
 function exportsBody(led) {
@@ -4442,11 +4448,19 @@ function renderFronts(d) {
     closeReadMore(box, '.front-card', '.toggle-front');
   });
 
+  // The whole box opens and closes it, as a Timeline box does; links and buttons keep their own click.
   document.querySelectorAll('.toggle-front').forEach((btn) => {
-    btn.onclick = () => {
-      const card = btn.closest('.front-card');
+    const card = btn.closest('.front-card');
+    const toggle = () => {
       const open = card.classList.toggle('open');
       btn.textContent = open ? 'Hide' : 'Read more';
+    };
+    btn.onclick = (ev) => { ev.stopPropagation(); toggle(); };
+    card.classList.add('expandable');
+    card.onclick = (ev) => {
+      if (ev.target.closest('a, button, .place-link, [data-place]')) return;
+      if (window.getSelection && String(window.getSelection() || '')) return;
+      toggle();
     };
   });
   document.querySelectorAll('.front-map-btn').forEach((btn) => {

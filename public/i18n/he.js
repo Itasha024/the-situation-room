@@ -155,6 +155,7 @@ window.DESK_I18N = {
     '↩ Follows {t} · {h}': '↩ בהמשך לדיווח מ־{t} · {h}',
     'Read more': 'קראו עוד',
     'Show less': 'הצגת פחות',
+    'Show more': 'הצגת עוד',
     'Hide': 'הסתרה',
     'More details': 'פרטים נוספים',
     ' from <b>{s}</b>': ' מ<b>{s}</b>',

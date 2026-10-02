@@ -127,7 +127,7 @@ html[data-set="broadsheet"] .track{height:2px;border-radius:0;background:var(--t
 html[data-set="broadsheet"] .situation{background:var(--t-surface-1);border-bottom:1px solid var(--t-line-strong);padding:.8rem 1rem .9rem}
 html[data-set="broadsheet"] .situation p,html[data-set="broadsheet"] .situation-window,html[data-set="broadsheet"] .front-sum,html[data-set="broadsheet"] .phase-sum,html[data-set="broadsheet"] .front-card .full,html[data-set="broadsheet"] .front-card .front-composed,html[data-set="broadsheet"] .phase-card .full p{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:1.02rem;line-height:1.55;color:var(--t-text)}
 html[data-set="broadsheet"] .rail h2,html[data-set="broadsheet"] .situation h2,html[data-set="broadsheet"] .fronts-wrap h2,html[data-set="broadsheet"] .cas-wrap h2,html[data-set="broadsheet"] .timeline-wrap>h2{font-size:1.4rem;font-weight:600;letter-spacing:-.006em;color:var(--t-strong)}
-html[data-set="broadsheet"] .cadence{font:italic 400 .8rem/1.3 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-muted)}
+html[data-set="broadsheet"] .cadence,html[data-set="broadsheet"] p.cadence{font:italic 400 .8rem/1.3 "Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;color:var(--t-muted)}
 html[data-set="broadsheet"] .to-fronts{background:transparent;border-color:var(--accent-ui);color:var(--accent-ui);text-transform:uppercase;letter-spacing:.08em;font-size:.64rem}
 /* Live scan */
 html[data-set="broadsheet"] .live-scan{background:transparent;border-bottom:1px solid var(--t-line-strong);padding:.2rem 1rem}

@@ -1306,8 +1306,11 @@ const NOT_EVENT_RE = /\b(?:maps? (?:of|shows?)|front[- ]line maps?|analys[ie]s|e
 const NEW_HIT_RE = /\b(?:air ?strikes?|air ?raids?|strikes?|struck|hit|hits|kills?|killed|wounded|gunfire|clash(?:es|ed)?|fighting|intercept\w*|shot down|shell(?:s|ed|ing)?|bomb(?:s|ed|ing)|target(?:s|ed|ing)?|repel\w*|seiz\w*|captur\w*|storm(?:s|ed)?|explosions?|attack(?:s|ed)? (?:on|at|in)|launch(?:es|ed)? (?:a |an |two |three )?(?:\w+ )?(?:missiles?|drones?))\b/i;
 const FUTURE_RE = /\b(?:threat\w*|warn\w*|vow\w*|ultimatum)\b[^.]{0,30}\b(?:to|of|against)\b/i;
 const ALERT_PIN_RE = /\b(?:sirens?|alerts?|civil defen[cs]e)\b/i;
+const ROUNDUP_RE = /\s(?:as|while|amid|meanwhile)\s/i;
 function notNewEvent(headline) {
   const h = String(headline || '');
+  const ru = h.match(ROUNDUP_RE);
+  if (ru && NEW_HIT_RE.test(h.slice(0, ru.index)) && NEW_HIT_RE.test(h.slice(ru.index + ru[0].length))) return true;
   const pic = h.search(OLD_PICTURE_RE);
   if (pic >= 0) return !NEW_HIT_RE.test(h.slice(0, pic));
   if (!NOT_EVENT_RE.test(h) || ALERT_PIN_RE.test(h)) return false;
@@ -6709,13 +6712,12 @@ function popFor(id, html) {
     pop.style.maxHeight = '';
     if (!btn) { pop.style.left = pop.style.top = ''; return; }
     if (phone()) {
-      // Phone (user, 2 Oct): the page never moves; the sheet sits just above the Sections
-      // button, every methodology sheet as tall as the shortest one, scrolling inside.
+      // Phone (user, 2 Oct): the page never moves; the sheet runs down to the bottom of the
+      // screen over the Sections button, every methodology sheet as tall as the shortest
+      // one, scrolling inside.
       pop.style.left = pop.style.top = '';
-      const tab = document.querySelector('.sec-tab');
-      const lift = tab ? Math.max(0, window.innerHeight - tab.getBoundingClientRect().top + 8) : 0;
-      pop.style.bottom = `${lift}px`;
-      pop.style.height = `${Math.min(sheetHeight(), window.innerHeight - lift - 48)}px`;
+      pop.style.bottom = '0px';
+      pop.style.height = `${Math.min(sheetHeight(), window.innerHeight - 48)}px`;
       pop.style.overflowY = 'auto';
       return;
     }

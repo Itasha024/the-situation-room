@@ -114,3 +114,12 @@ test("a merged card of one-line posts is its headline, with no spelling notes (K
   );
   assert.equal(w?.body, "");
 });
+
+test("a merged write-up never names anyone the accounts do not", () => {
+  const all = [
+    { fp: "a", at: "2026-10-02T16:44:00Z", source: "Sawt al-Asima", url: "u1", type: "combat", summary: "Violent clashes erupt on Taiz's eastern front", text: "" },
+    { fp: "b", at: "2026-10-02T16:45:00Z", source: "Nour News", url: "u2", type: "combat", summary: "Yemeni army takes the Rasen mountains in Taiz", text: "" },
+  ] as unknown as LiveReport[];
+  assert.match(combineProblem({ headline: "Presidential Council chief of staff Maj Gen Mohammed al-Kholani killed in clashes in Taiz", body: "" }, all, []), /names not in the accounts/);
+  assert.equal(combineProblem({ headline: "Violent clashes in Taiz as the Yemeni army takes the Rasen mountains", body: "" }, all, []), "");
+});

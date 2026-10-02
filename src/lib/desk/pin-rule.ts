@@ -18,6 +18,17 @@ export const NOT_EVENT_RE = /\b(?:maps? (?:of|shows?)|front[- ]line maps?|analys
 export const NEW_HIT_RE = /\b(?:air ?strikes?|air ?raids?|strikes?|struck|hit|hits|kills?|killed|wounded|gunfire|clash(?:es|ed)?|fighting|intercept\w*|shot down|shell(?:s|ed|ing)?|bomb(?:s|ed|ing)|target(?:s|ed|ing)?|repel\w*|seiz\w*|captur\w*|storm(?:s|ed)?|explosions?|attack(?:s|ed)? (?:on|at|in)|launch(?:es|ed)? (?:a |an |two |three )?(?:\w+ )?(?:missiles?|drones?))\b/i;
 /** "threatens to strike", "warns of attacks": the hit is not (yet) done. */
 export const FUTURE_RE = /\b(?:threat\w*|warn\w*|vow\w*|ultimatum)\b[^.]{0,30}\b(?:to|of|against)\b/i;
+/**
+ * A round-up joining two hits ("…drone attack on Medina power station as Taiz
+ * air strikes surge", user 2 Oct): an overview of the day, not one event at
+ * one place, so it is not pinned. A single event in the same words still is.
+ */
+export const ROUNDUP_RE = /\s(?:as|while|amid|meanwhile)\s/i;
+export function roundup(headline: string): boolean {
+  const h = String(headline || "");
+  const m = h.match(ROUNDUP_RE);
+  return !!m && m.index !== undefined && NEW_HIT_RE.test(h.slice(0, m.index)) && NEW_HIT_RE.test(h.slice(m.index + m[0].length));
+}
 /** Sirens and civil-defence warnings are the legend's alerts, threat or not. */
 export const ALERT_RE = /\b(?:sirens?|alerts?|civil defen[cs]e)\b/i;
 
@@ -40,6 +51,7 @@ export function oldPicture(headline: string): boolean {
  */
 export function notNewEvent(headline: string): boolean {
   const h = String(headline || "");
+  if (roundup(h)) return true;
   const pic = h.search(OLD_PICTURE_RE);
   if (pic >= 0) return !NEW_HIT_RE.test(h.slice(0, pic));
   if (!NOT_EVENT_RE.test(h) || ALERT_RE.test(h)) return false;

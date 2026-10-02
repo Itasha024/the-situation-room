@@ -167,8 +167,8 @@ function accountsText(all: LiveReport[]): string {
  */
 export function accountsSource(all: LiveReport[]): string {
   const texts = all.map((r) => {
-    const body = String(r.text || "").replace(/^[^—]{2,30}—s*/, "").trim();
-    return `${String(r.summary || "").replace(/[.s]+$/, "")}. ${body}`.trim();
+    const body = String(r.text || "").replace(/^[^—]{2,30}—\s*/, "").trim();
+    return `${String(r.summary || "").replace(/[.\s]+$/, "")}. ${body}`.trim();
   });
   return texts.sort((a, b) => b.length - a.length)[0] ?? "";
 }
@@ -192,6 +192,11 @@ export function combineProblem(w: Written, all: LiveReport[], places: Place[]): 
   const lower = out.toLowerCase();
   const missing = places.filter((p) => !lower.includes(p.name.replace(/^the /i, "").toLowerCase()));
   if (missing.length) return `places left out: ${missing.map((p) => p.name).join(", ")}`;
+  // Every name the write-up gives must be in the accounts (user, 2 Oct: a
+  // "clashes in Taiz" group came out as an officer's death no account had).
+  const said = [...all.map((r) => `${r.summary} ${r.text ?? ""} ${r.place ?? ""}`), ...places.map((p) => p.name)].join(" ").toLowerCase();
+  const names = [...new Set(out.match(/(?<=\S\s+)[A-Z][a-z]{3,}/g) ?? [])].filter((n) => !said.includes(n.slice(0, 5).toLowerCase()) && !PLACE_WORDS.has(n.toLowerCase()));
+  if (names.length) return `names not in the accounts: ${names.join(", ")}`;
   const have = new Set(figures(out));
   const lost = [...new Set(all.flatMap((r) => figures(r.summary)))].filter((n) => !have.has(n));
   if (lost.length) return `figures left out: ${lost.join(", ")}`;
@@ -212,6 +217,9 @@ export function toWritten(json: Record<string, unknown> | null, all: LiveReport[
   const w = { headline: headline ? headline[0].toUpperCase() + headline.slice(1) : "", body };
   return combineProblem(w, all, places) ? null : w;
 }
+
+/** Words of the gazetteer's place names: a write-up may name the governorate a place is in. */
+const PLACE_WORDS = new Set(Object.keys(PLACE_BY_NAME).flatMap((n) => n.toLowerCase().split(/[\s-]+/)));
 
 function keyOf(all: LiveReport[]): string {
   const sig = all.map((r) => `${r.url}\n${r.summary}`).sort().join("\n");

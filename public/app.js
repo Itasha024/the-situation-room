@@ -864,7 +864,7 @@ const SOURCE_LEAN = {
   'September Net': 'gov', '26 September': 'gov', 'Ali Al-Sakani': 'gov',
   'Saudi Gazette': 'gov', 'Giants Brigades': 'gov', 'Nation Shield': 'gov',
   South24: 'south', 'Aden Observer': 'south', 'Aden Gad': 'south', 'Crater Sky': 'south',
-  Almashhad: 'indep', Alsahwa: 'indep', 'Barran Press': 'indep', 'Yemen Monitor': 'indep',
+  Almashhad: 'gov', Alsahwa: 'indep', 'Barran Press': 'indep', 'Yemen Monitor': 'indep',
   'Sheba Intelligence': 'indep', Yemenat: 'indep', 'Yemen Future': 'indep',
   'Al-Khabar al-Yemeni': 'indep',
   Reuters: 'intl', AFP: 'intl', AP: 'intl', BBC: 'intl', 'BBC Verify': 'intl',
@@ -6669,6 +6669,24 @@ const MAP_HTML = `<h3 id="map-pop-h">Map methodology</h3>
  * a click or tap anywhere; on a phone it rises from the bottom.
  */
 const POPS = {};
+/** The shortest methodology sheet's own height on this phone (measured once per width). */
+let SHEET_H = 0, SHEET_W = 0;
+function sheetHeight() {
+  if (SHEET_H && SHEET_W === window.innerWidth) return SHEET_H;
+  let min = Infinity;
+  for (const p of document.querySelectorAll('.rel-pop')) {
+    const was = p.hidden, st = p.style.cssText, sh = p.classList.contains('sheet');
+    p.classList.add('sheet');
+    p.style.cssText = 'visibility:hidden;height:auto;max-height:none;animation:none';
+    p.hidden = false;
+    min = Math.min(min, p.offsetHeight);
+    p.hidden = was; p.style.cssText = st; p.classList.toggle('sheet', sh);
+  }
+  SHEET_W = window.innerWidth;
+  SHEET_H = Number.isFinite(min) ? min : 320;
+  return SHEET_H;
+}
+
 function popFor(id, html) {
   if (POPS[id]) return POPS[id];
   let pop = document.getElementById(id);
@@ -6685,23 +6703,23 @@ function popFor(id, html) {
   const phone = () => window.matchMedia('(max-width: 720px)').matches;
   const s = { pop, btn: null, pinned: false, shut: 0 };
   // The pop-up never covers its own link (user, 2 Oct): it goes below or above the link,
-  // and scrolls inside itself when neither side has room for all of it. On a phone the
-  // sheet starts under the link, and the page first moves the link up when it sits low.
+  // scrolls inside itself when neither side has room for all of it; on a phone it is a sheet.
   s.place = (opening) => {
     const btn = s.btn;
     pop.style.maxHeight = '';
     if (!btn) { pop.style.left = pop.style.top = ''; return; }
     if (phone()) {
+      // Phone (user, 2 Oct): the page never moves; the sheet sits just above the Sections
+      // button, every methodology sheet as tall as the shortest one, scrolling inside.
       pop.style.left = pop.style.top = '';
-      let r = btn.getBoundingClientRect();
-      if (opening && r.bottom > window.innerHeight * 0.45) {
-        window.scrollBy({ top: r.top - 64, behavior: 'instant' });
-        r = btn.getBoundingClientRect();
-      }
-      const room = window.innerHeight - r.bottom - 8;
-      if (room > 120 && room < pop.offsetHeight) pop.style.maxHeight = `${room}px`;
+      const tab = document.querySelector('.sec-tab');
+      const lift = tab ? Math.max(0, window.innerHeight - tab.getBoundingClientRect().top + 8) : 0;
+      pop.style.bottom = `${lift}px`;
+      pop.style.height = `${Math.min(sheetHeight(), window.innerHeight - lift - 48)}px`;
+      pop.style.overflowY = 'auto';
       return;
     }
+    pop.style.bottom = pop.style.height = '';
     const r = btn.getBoundingClientRect();
     const w = pop.offsetWidth;
     const h = pop.offsetHeight;

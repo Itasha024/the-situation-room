@@ -22,7 +22,8 @@ export const WRITER_MODELS: ChainModel[] = [
   { provider: "groq", id: "openai/gpt-oss-120b" },
   { provider: "gemini", id: "gemini-flash-latest" },
   { provider: "gemini", id: "gemini-3.5-flash-lite" },
-  { provider: "gemini", id: "gemma-4-31b-it" },
+  // No Gemma: it never once wrote the prose (500 or a 90-second timeout on the
+  // long prompt), and each try held the tick for minutes (2 Oct).
   { provider: "gemini", id: "gemini-3.1-flash-lite" },
   { provider: "groq", id: "qwen/qwen3.8-27b" },
   { provider: "groq", id: "openai/gpt-oss-20b" },
@@ -52,6 +53,11 @@ export const COMBINE_MODELS: ChainModel[] = [
 
 /** A model out of its daily quota rests here until Google's reset, so no job asks it again today. */
 const resting = new Map<string, number>();
+
+/** Whether any of these models can be asked now (not resting till Google's reset). */
+export function anyAwake(models: ChainModel[], now = Date.now()): boolean {
+  return models.some((m) => (resting.get(m.id) ?? 0) <= now);
+}
 
 /** The first JSON object in a model answer (some models wrap it in prose or fences). */
 export function looseJson(text: string): Record<string, unknown> | null {

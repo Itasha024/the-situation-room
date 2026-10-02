@@ -109,12 +109,15 @@ test("a map place finds its spot by name, or by the longest name inside it", () 
   assert.equal(find("Nowhere"), null);
 });
 
-test("prose by a fallback model is asked again every 10 minutes for two hours", () => {
-  const b = { updatedAt: "2026-09-29T09:00:00.000Z", situation: { line: "x", quiet: false, model: "openai/gpt-oss-20b" } } as never;
+test("prose by a fallback model is asked again every 10 minutes for two hours, then every 20 until the next update", () => {
+  const b = { updatedAt: "2026-09-29T09:00:00.000Z", nextUpdateAt: "2026-09-29T15:00:00.000Z", situation: { line: "x", quiet: false, model: "openai/gpt-oss-20b" } } as never;
   assert.equal(proseDue(b, new Date("2026-09-29T09:05:00Z")), true);
   assert.equal(proseDue({ ...(b as object), proseTriedAt: "2026-09-29T09:05:00Z" } as never, new Date("2026-09-29T09:10:00Z")), false);
   assert.equal(proseDue(b, new Date("2026-09-29T10:05:00Z")), true);
-  assert.equal(proseDue(b, new Date("2026-09-29T11:05:00Z")), false);
+  assert.equal(proseDue(b, new Date("2026-09-29T11:05:00Z")), true);
+  assert.equal(proseDue({ ...(b as object), proseTriedAt: "2026-09-29T12:00:00Z" } as never, new Date("2026-09-29T12:15:00Z")), false);
+  assert.equal(proseDue({ ...(b as object), proseTriedAt: "2026-09-29T12:00:00Z" } as never, new Date("2026-09-29T12:21:00Z")), true);
+  assert.equal(proseDue(b, new Date("2026-09-29T14:57:00Z")), false);
   assert.equal(proseDue({ ...(b as object), situation: { line: "x", quiet: false, model: "gemini-3.8-flash" } } as never, new Date("2026-09-29T09:05:00Z")), false);
 });
 
@@ -157,4 +160,17 @@ test("the counted line is known as such; a writer's line or a headline is not", 
   assert.equal(isCountedLine("Aden, the port capital. Nothing was reported from this front in the 6 hours to 00:00."), true);
   assert.equal(isCountedLine("Houthi forces shelled positions north of Aden."), false);
   assert.equal(headlinesLine([{ summary: "Saudi jets strike Houthis", at: "2026-10-01T20:00:00Z" }] as never[]), "Saudi jets strike Houthis.");
+});
+
+import { headlinesSituation } from "./brief-store.ts";
+
+test("with no writer, the overview is the strongest headlines, a repeat kept once, never a count", () => {
+  const rs = [
+    { summary: "Houthi forces strike coalition headquarters and cement factory in Aden", at: "2026-10-02T02:00:00Z", score: 80 },
+    { summary: "Houthi drones target coalition headquarters and Star Cement factory in Buraiqa, Aden", at: "2026-10-02T01:00:00Z", score: 70 },
+    { summary: "Saudi airstrikes hit Sanaa", at: "2026-10-02T01:30:00Z", score: 60 },
+  ] as never[];
+  const t = headlinesSituation(rs);
+  assert.equal(t, "Houthi forces strike coalition headquarters and cement factory in Aden. Saudi airstrikes hit Sanaa.");
+  assert.equal(headlinesSituation([]), "");
 });

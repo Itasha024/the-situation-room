@@ -20,8 +20,8 @@
 import type { LiveReport } from "./types.ts";
 import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
-import { controlContext, keepReported, type DevMark, type Prose, writeProse } from "./prose.ts";
-import { WRITER_MODELS } from "./models.ts";
+import { battleFirst, controlContext, keepReported, type DevMark, type Prose, writeProse } from "./prose.ts";
+import { anyAwake, type ChainModel, WRITER_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
 import { refreshLedger } from "./ledger.ts";
@@ -54,7 +54,10 @@ export async function refreshBrief(
   if (saved?.brief?.updatedAt === w.updatedAt) {
     // Only the clock asks again (a model call is too slow for a page visit).
     if (!retryProse || !proseDue(saved.brief, now)) return { brief: saved.brief, built: false };
-    return { brief: await reprose(store, saved, now), built: false };
+    // After the first two hours only the strong writers are asked, and only once one is back (Google's reset).
+    const late = now.getTime() - Date.parse(saved.brief.updatedAt) >= RETRY_FOR_MS;
+    if (late && !anyAwake(STRONG_MODELS, now.getTime())) return { brief: saved.brief, built: false };
+    return { brief: await reprose(store, saved, now, false, late ? STRONG_MODELS : WRITER_MODELS), built: false };
   }
 
   // One build at a time: while it waits for a strong writer, visits get the last window.
@@ -245,20 +248,26 @@ async function windowReports(store: DeskStore, w: { startedAt: string; updatedAt
 }
 
 /** The strong writers: the first Gemini Flash models of the chain. */
-const STRONG = new Set(WRITER_MODELS.slice(0, 3).map((m) => m.id));
+const STRONG_MODELS: ChainModel[] = WRITER_MODELS.slice(0, 3);
+const STRONG = new Set(STRONG_MODELS.map((m) => m.id));
 const RETRY_FOR_MS = 2 * 60 * 60_000;
 const RETRY_EVERY_MS = 10 * 60_000;
+const LATE_EVERY_MS = 20 * 60_000;
 
 /**
  * Prose written by a fallback model (the strong ones busy) or by no model is
- * asked for again every 10 minutes for the window's first two hours.
+ * asked for again every 10 minutes for the window's first two hours, then
+ * every 20 minutes until the next update. The two hours alone ended before
+ * Google's daily reset (10:00 Israel), so the 00:00 and 06:00 updates kept
+ * the fallback text all day (2 Oct).
  */
 export function proseDue(brief: Brief, now: Date): boolean {
   if (brief.situation?.model && STRONG.has(brief.situation.model)) return false;
   const since = now.getTime() - Date.parse(brief.updatedAt);
-  if (!(since >= 0 && since < RETRY_FOR_MS)) return false;
+  const next = Date.parse(brief.nextUpdateAt || "") || Date.parse(brief.updatedAt) + 6 * 3600_000;
+  if (!(since >= 0 && now.getTime() < next - 5 * 60_000)) return false;
   const tried = Date.parse(brief.proseTriedAt || "");
-  return !Number.isFinite(tried) || now.getTime() - tried >= RETRY_EVERY_MS;
+  return !Number.isFinite(tried) || now.getTime() - tried >= (since < RETRY_FOR_MS ? RETRY_EVERY_MS : LATE_EVERY_MS);
 }
 
 /**
@@ -266,7 +275,7 @@ export function proseDue(brief: Brief, now: Date): boolean {
  * and maps. Control, numbers and the timeline stay as they are. Kept only when
  * a strong model wrote it (or `force`, from a script).
  */
-export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, force = false): Promise<Brief> {
+export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, force = false, models: ChainModel[] = WRITER_MODELS): Promise<Brief> {
   const brief: Brief = { ...saved.brief, proseTriedAt: now.toISOString() };
   const { all, inWindow } = await windowReports(store, { startedAt: brief.windowStart, updatedAt: brief.updatedAt });
   const extraFronts = saved.history?.extraFronts ?? [];
@@ -283,6 +292,7 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
     frontsOf: (r) => frontIdsOf(r, extraFronts),
     inArea: (ll, id) => inFrontArea(ll, id, extraFronts),
     controlLines,
+    models,
   });
   // A backup writer's prose replaces the counted fallback text, never a strong writer's.
   const keep = !!model && (force || STRONG.has(model) || !brief.situation?.model);
@@ -290,7 +300,12 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
   const better = new Map(next.fronts.map((f) => [f.id, f]));
   const out = keep
     ? next
-    : { ...brief, fronts: brief.fronts.map((f) => (isCountedLine(f.line) && better.get(f.id)?.line && !isCountedLine(better.get(f.id)!.line) ? { ...f, line: better.get(f.id)!.line, ...(better.get(f.id)!.map ? { map: better.get(f.id)!.map } : {}) } : f)) };
+    : {
+        ...brief,
+        // Nobody wrote the overview before: it takes this round's (the headlines when no model answered).
+        ...(!brief.situation?.model && next.situation?.line ? { situation: next.situation } : {}),
+        fronts: brief.fronts.map((f) => (isCountedLine(f.line) && better.get(f.id)?.line && !isCountedLine(better.get(f.id)!.line) ? { ...f, line: better.get(f.id)!.line, ...(better.get(f.id)!.map ? { map: better.get(f.id)!.map } : {}) } : f)),
+      };
   console.log(`[desk] prose asked again: ${model || "no model"}${keep ? ", kept" : ", not kept"}`);
   await store.putJson(BRIEF_KEY, { brief: out, history: saved.history } satisfies StoredBrief);
   return out;
@@ -325,17 +340,35 @@ export function isCountedLine(line: string | undefined): boolean {
  * place of the counted line ("there were one ground engagement", 2 Oct).
  */
 export function headlinesLine(own: LiveReport[], max = 3): string {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const r of [...own].sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || b.at.localeCompare(a.at))) {
+  return topHeadlines(own, max).join(" ");
+}
+
+/** The strongest headlines, two that say the same thing kept once. */
+function topHeadlines(reports: LiveReport[], max: number): string[] {
+  const words = (h: string) => new Set(h.toLowerCase().match(/[a-z؀-ۿ]{4,}/g) || []);
+  const kept: { h: string; w: Set<string> }[] = [];
+  for (const r of [...reports].sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || b.at.localeCompare(a.at))) {
     const h = String(r.summary || "").trim().replace(/[.\s]+$/, "");
-    const key = h.toLowerCase();
-    if (!h || seen.has(key)) continue;
-    seen.add(key);
-    out.push(`${h}.`);
-    if (out.length >= max) break;
+    if (!h) continue;
+    const w = words(h);
+    const same = kept.some((k) => {
+      const shared = [...w].filter((x) => k.w.has(x)).length;
+      return h.toLowerCase() === k.h.toLowerCase() || shared / Math.max(1, Math.min(w.size, k.w.size)) >= 0.6;
+    });
+    if (same) continue;
+    kept.push({ h, w });
+    if (kept.length >= max) break;
   }
-  return out.join(" ");
+  return kept.map((k) => `${k.h}.`);
+}
+
+/**
+ * The overview when no model wrote it: the window's strongest headlines, the
+ * fighting first. Never the counted text ("The tempo eased … 37 reported
+ * incidents"), which read as a machine's (2 Oct).
+ */
+export function headlinesSituation(reports: LiveReport[], max = 4): string {
+  return battleFirst(topHeadlines(reports, max).join(" ")).replace(/\n\n/g, " ");
 }
 
 /**
@@ -348,7 +381,7 @@ async function proseInto(
   brief: Brief,
   inWindow: LiveReport[],
   all: LiveReport[],
-  o: { previousSituation: string; previousFront: (id: string) => string; previousNewsAt: (id: string) => string | undefined; frontsOf: (r: LiveReport) => string[]; inArea: (ll: [number, number], id: string) => boolean; controlLines: string[] },
+  o: { previousSituation: string; previousFront: (id: string) => string; previousNewsAt: (id: string) => string | undefined; frontsOf: (r: LiveReport) => string[]; inArea: (ll: [number, number], id: string) => boolean; controlLines: string[]; models?: ChainModel[] },
   /** Prose already written (before the hour): only its places and maps are done here. */
   given: Prose | null = null,
 ): Promise<string | null> {
@@ -367,12 +400,16 @@ async function proseInto(
       o.previousSituation,
       o.frontsOf,
       o.controlLines,
+      o.models,
     );
     // Only an answer with the overview counts as written: one without it is asked again.
     if (prose?.situation) model = prose.model || null;
     if (prose?.situation) {
       brief.situation = { ...brief.situation, line: prose.situation, more: prose.more || undefined, model: prose.model };
       devMap = prose.devMap;
+    } else {
+      const line = headlinesSituation(inWindow);
+      if (line) brief.situation = { ...brief.situation, line, more: undefined, model: undefined };
     }
     for (const f of brief.fronts) {
       const own = inWindow.filter((r) => o.frontsOf(r).includes(f.id));

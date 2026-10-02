@@ -12,7 +12,7 @@
 
 import type { LiveReport } from "./types.ts";
 import { roleNamesInProse } from "./reader.ts";
-import { askChain } from "./models.ts";
+import { type ChainModel, askChain, WRITER_MODELS } from "./models.ts";
 import { repelAttacker } from "./dev-marks.ts";
 import { outletSide } from "./digest.ts";
 import { CONTROL, CONTROL_AS_OF } from "./control-data.ts";
@@ -251,6 +251,7 @@ export async function writeProse(
   previousSituation: string,
   frontsOf: (r: LiveReport) => string[] = () => [],
   control: string[] = controlContext(),
+  models: ChainModel[] = WRITER_MODELS,
 ): Promise<Prose | null> {
   const sorted = [...reports]
     .filter((r) => r.summary)
@@ -272,7 +273,7 @@ export async function writeProse(
       "REPORTS:",
       ...sorted.slice(-cap).map((r) => cardLine(r, frontsOf)),
     ].join("\n");
-    got = await askChain("prose", SYSTEM, user);
+    got = await askChain("prose", SYSTEM, user, { models });
     if (got) break;
   }
   if (!got) return null;

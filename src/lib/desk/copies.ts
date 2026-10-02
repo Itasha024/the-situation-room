@@ -404,3 +404,16 @@ export function sameEventAbroad(a: { summary: string; text?: string }, b: { summ
   for (const w of x) if (y.has(w)) both += 1;
   return both / Math.min(x.size, y.size) >= 0.5;
 }
+
+const GENERIC_BODY = new Set(["foreign", "ministry", "ministers", "minister", "office", "affairs", "government", "defence", "defense", "interior", "state", "department", "official", "the", "and", "for", "news", "agency", "embassy", "mission", "council", "expatriates", "kingdom", "republic"]);
+/**
+ * The body a source is, speaking in the headline: "Pakistan Foreign Ministry" is
+ * the speaker of "Pakistan's Ministry of Foreign Affairs condemns…". Its own
+ * name (not "foreign", "ministry") opens the headline, within its first three words.
+ */
+export function speakerIs(source: string, headline: string): boolean {
+  const own = String(source || "").toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 3 && !GENERIC_BODY.has(w));
+  if (!own.length) return false;
+  const lead = String(headline || "").toLowerCase().split(/[^a-z]+/).filter(Boolean).slice(0, 3);
+  return own.every((w) => lead.some((x) => x.startsWith(w.slice(0, Math.max(4, w.length - 1)))));
+}

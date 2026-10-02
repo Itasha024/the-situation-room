@@ -578,7 +578,7 @@ export function fixHeadline(headline: string): string {
   // "Name: <the same role> calls for …" — the speaker twice. "UN
   // Secretary-General Antonio Guterres: UN chief calls for de-escalation",
   // "STC leadership: STC urges …": the second, shorter form stands.
-  const twice = /^([^:]{2,70}):\s+((?:[\w'.-]+ ){0,5}?)((?:calls|urges|warns|condemns|rejects|announces|welcomes|demands|stresses|affirms|accuses|denies|vows|pledges|discusses|meets|receives|inspects|visits|tours|checks|inaugurates|opens|attends|honou?rs|chairs|reviews|praises|thanks|congratulates|directs|launches)\b.*)$/.exec(h);
+  const twice = /^([^:]{2,70}):\s+((?:[\w'.-]+ ){0,5}?)((?:calls|urges|warns|issues|says|reports|confirms|threatens|reveals|declares|explains|clarifies|condemns|rejects|announces|welcomes|demands|stresses|affirms|accuses|denies|vows|pledges|discusses|meets|receives|inspects|visits|tours|checks|inaugurates|opens|attends|honou?rs|chairs|reviews|praises|thanks|congratulates|directs|launches)\b.*)$/.exec(h);
   if (twice && twice[2]) {
     const ROLE_WORD = /\b(?:chief|minister|spokes\w+|official|leader(?:ship)?|president|council|secretary(?:-general)?|envoy|STC|governor|commander)\b/i;
     const roles = (s: string) => new Set((s.toLowerCase().match(new RegExp(ROLE_WORD.source, "gi")) || []));

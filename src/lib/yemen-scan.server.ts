@@ -21,7 +21,8 @@ import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading 
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
-import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameCountAt, sameEventAbroad, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
+import { isOfficialBody } from "./desk/numbers.ts";
+import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -1412,11 +1413,15 @@ export function foldIntoPublished(
     // reported first: the statement is the movement's, and the paper was
     // relaying it. The card keeps its place in the feed and its identity, and
     // changes hands — the relay moving to "Also" rather than being dropped.
+    // Likewise the speaker's own account after a relay's card: Pakistan's
+    // foreign ministry on X after Al Arabiya's card on its statement (user, 2 Oct).
+    const ownWords = isOfficialBody(r.source) && !isOfficialBody(home.source) && speakerIs(r.source, home.summary);
     if (
-      homeOutlet(r.source) &&
-      !homeOutlet(home.source) &&
-      sideOfSource(r.source) === sideOfSource(home.source) &&
-      scoreReport(r) >= scoreReport(home)
+      ownWords ||
+      (homeOutlet(r.source) &&
+        !homeOutlet(home.source) &&
+        sideOfSource(r.source) === sideOfSource(home.source) &&
+        scoreReport(r) >= scoreReport(home))
     ) {
       const relayed = { source: home.source, url: home.url, summary: home.summary };
       home.summary = r.summary;

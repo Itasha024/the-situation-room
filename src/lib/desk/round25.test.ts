@@ -152,3 +152,11 @@ test("one count at one place from several outlets is one report (the spokesman's
   assert.ok(!sameCountAt(first, { summary: "Yemeni government forces launch 15 airstrikes in Taiz" }));
   assert.ok(!sameCountAt(first, { summary: "Saudi warplanes launch 27 airstrikes on Saada" }));
 });
+
+test("a speaker named twice in a headline keeps the role; the speaker's own account is the speaker's", async () => {
+  const { fixHeadline: fix } = await import("./reader.ts");
+  assert.equal(fix("Col Majed Al Nazili: Yemeni government forces spokesman issues warning on Houthi-used roads in Taiz"), "Yemeni government forces spokesman issues warning on Houthi-used roads in Taiz");
+  const { speakerIs } = await import("./copies.ts");
+  assert.ok(speakerIs("Pakistan Foreign Ministry", "Pakistan's Ministry of Foreign Affairs condemns Houthi targeting of Madinah power facility"));
+  assert.ok(!speakerIs("Pakistan Foreign Ministry", "Saudi Arabia thanks Pakistan for its support"));
+});

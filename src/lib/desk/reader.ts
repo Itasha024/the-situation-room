@@ -1230,19 +1230,36 @@ const env = (name: string) => (typeof process !== "undefined" && process.env[nam
  * A service without its key in the settings is skipped, so adding one is only
  * a matter of its key (and, if its model names change, `<NAME>_MODELS`).
  * Groq's free tier counts tokens per minute, so it takes a few items a call;
- * the others allow more. Mistral leads: its free plan gives about a billion
- * tokens a month, more than the reader uses (Cerebras is a paid trial since
- * 16 Jul 2026; GitHub Models closed on 30 Jul 2026).
+ * the others allow more (Cerebras is a paid trial since 16 Jul 2026; GitHub
+ * Models closed on 30 Jul 2026).
+ *
+ * Tried on three sample reports (2 Oct): NVIDIA's Nemotron 3 Super read them
+ * right in 20 s with its thinking off (110 s with it on). Mistral's free plan
+ * opens only its small models (Ministral, Nemo), and Ministral 14B called the
+ * Houthi spokesman "government forces", so Mistral has no model by default.
+ * NVIDIA's gpt-oss-120b was retired on 3 Sep.
  */
-export type Fallback = { name: string; url: string; key: () => string; models: string[]; batch: number };
+export type Fallback = { name: string; url: string; key: () => string; models: string[]; batch: number; ms?: number };
 const list = (name: string, dflt: string) => (env(name) || dflt).split(",").map((s) => s.trim()).filter(Boolean);
 export const FALLBACKS: Fallback[] = [
-  { name: "mistral", url: "https://api.mistral.ai/v1/chat/completions", key: () => env("MISTRAL_API_KEY"), models: list("MISTRAL_MODELS", "mistral-small-latest,mistral-medium-latest"), batch: 15 },
   { name: "cerebras", url: "https://api.cerebras.ai/v1/chat/completions", key: () => env("CEREBRAS_API_KEY"), models: list("CEREBRAS_MODELS", "gpt-oss-120b"), batch: 15 },
-  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "openai/gpt-oss-120b"), batch: 10 },
+  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "nvidia/nemotron-3-super-120b-a12b"), batch: 5, ms: 90_000 },
   { name: "openrouter", url: "https://openrouter.ai/api/v1/chat/completions", key: () => env("OPENROUTER_API_KEY"), models: list("OPENROUTER_MODELS", "openai/gpt-oss-120b:free"), batch: 10 },
   { name: "groq", url: "https://api.groq.com/openai/v1/chat/completions", key: () => groqKey(), models: GROQ_MODELS, batch: 4 },
+  { name: "mistral", url: "https://api.mistral.ai/v1/chat/completions", key: () => env("MISTRAL_API_KEY"), models: list("MISTRAL_MODELS", ""), batch: 15 },
 ];
+
+/** Nemotron thinks at length unless told not to: five times slower, and no better on the reader's job. */
+export const noThinking = (model: string) => (/nemotron/.test(model) ? { chat_template_kwargs: { enable_thinking: false } } : {});
+
+/** Gemini keeps actor_side to its list; the other services may answer in words ("Houthi forces"). */
+const SIDES = ["houthi", "government", "stc", "saudi", "other", "unclear"] as const;
+function sideWord(x: Reading): Reading {
+  const s = String(x?.actor_side ?? "").toLowerCase();
+  if (!s || (SIDES as readonly string[]).includes(s)) return x;
+  const side = /houthi|ansar/.test(s) ? "houthi" : /\bstc\b|transitional/.test(s) ? "stc" : /saudi|coalition/.test(s) ? "saudi" : /gov|giant|amaliqa|legitim/.test(s) ? "government" : "unclear";
+  return { ...x, actor_side: side };
+}
 
 /** A model's name in the logs and rest lists: Groq's bare, any other service's prefixed. */
 export function serviceModel(service: string, model: string): string {
@@ -1272,7 +1289,7 @@ async function callOpenAI(
     ...(i.fix ? { fix_previous: i.fix } : {}),
   }));
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 45_000);
+  const timer = setTimeout(() => ctrl.abort(), provider.ms ?? 45_000);
   try {
     const res = await fetch(provider.url, {
       method: "POST",
@@ -1282,6 +1299,7 @@ async function callOpenAI(
         model,
         temperature: 0,
         ...(/gpt-oss/.test(model) ? { reasoning_effort: "low" } : {}),
+        ...noThinking(model),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -1296,9 +1314,11 @@ async function callOpenAI(
       return { error: `HTTP ${res.status}`, daily: res.status === 429 && wait > 600 };
     }
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const parsed = JSON.parse(json?.choices?.[0]?.message?.content ?? "") as { items?: Reading[] };
-    if (!Array.isArray(parsed.items)) return { error: "no items in response", daily: false };
-    return { readings: parsed.items, model };
+    const parsed = JSON.parse(json?.choices?.[0]?.message?.content ?? "") as { items?: Reading[] } | Reading[];
+    // Some models (Mistral's small ones) answer with the bare list, or under another name.
+    const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed.items) ? parsed.items : Object.values(parsed).find(Array.isArray);
+    if (!list) return { error: "no items in response", daily: false };
+    return { readings: (list as Reading[]).map(sideWord), model };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "call failed", daily: false };
   } finally {

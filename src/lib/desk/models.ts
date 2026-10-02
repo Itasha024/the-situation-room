@@ -11,7 +11,7 @@
  * Groq's free tier refuses as too large.
  */
 
-import { FALLBACKS, nextPacificMidnight, readerKey, serviceModel } from "./reader.ts";
+import { FALLBACKS, nextPacificMidnight, noThinking, readerKey, serviceModel } from "./reader.ts";
 
 /** `provider`: "gemini", or a free service of the reader's list (groq, mistral, nvidia...). A service without its key is passed over. */
 export type ChainModel = { provider: string; id: string };
@@ -21,14 +21,13 @@ export const WRITER_MODELS: ChainModel[] = [
   { provider: "gemini", id: "gemini-3.7-flash" },
   { provider: "gemini", id: "gemini-3.5-flash" },
   { provider: "groq", id: "openai/gpt-oss-120b" },
-  { provider: "mistral", id: "mistral-medium-latest" },
   { provider: "gemini", id: "gemini-flash-latest" },
   { provider: "gemini", id: "gemini-3.5-flash-lite" },
   // No Gemma: it never once wrote the prose (500 or a 90-second timeout on the
   // long prompt), and each try held the tick for minutes (2 Oct).
   { provider: "gemini", id: "gemini-3.1-flash-lite" },
   { provider: "groq", id: "qwen/qwen3.8-27b" },
-  { provider: "nvidia", id: "openai/gpt-oss-120b" },
+  { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
   { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   { provider: "groq", id: "openai/gpt-oss-20b" },
 ];
@@ -46,14 +45,13 @@ export const NUMBERS_MODELS: ChainModel[] = WRITER_MODELS.slice(2);
  * there when the 6-hour writing needs it.
  */
 export const COMBINE_MODELS: ChainModel[] = [
-  { provider: "mistral", id: "mistral-small-latest" },
   { provider: "gemini", id: "gemini-3.5-flash-lite" },
   { provider: "gemini", id: "gemini-3.1-flash-lite" },
   { provider: "groq", id: "openai/gpt-oss-120b" },
   { provider: "groq", id: "qwen/qwen3.8-27b" },
   { provider: "gemini", id: "gemini-flash-lite-latest" },
   { provider: "groq", id: "openai/gpt-oss-20b" },
-  { provider: "nvidia", id: "openai/gpt-oss-120b" },
+  { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
   { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   { provider: "gemini", id: "gemini-flash-latest" },
 ];
@@ -106,6 +104,7 @@ async function callOne(m: ChainModel, system: string, user: string, temperature:
         temperature,
         // A quick job (a reader waiting on a search) thinks as little as it can.
         ...(fast && m.id.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+        ...noThinking(m.id),
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
       }),
     });

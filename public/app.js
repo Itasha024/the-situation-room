@@ -1793,15 +1793,15 @@ function paintLive() {
  * ---------------------------------------------------------------- */
 
 /**
- * Is a new brief due? Past its next update time (plus two minutes for the
- * writing), for up to an hour; after that the page waits for the next boundary
- * rather than asking all day.
+ * Is a new brief due? Past its next update time, for up to an hour; after that
+ * the page waits for the next boundary rather than asking all day. The update
+ * is written before the hour and stored seconds after it.
  */
 function briefDue() {
   const next = Date.parse((brief && brief.nextUpdateAt) || '');
   if (!Number.isFinite(next)) return true;
   const past = Date.now() - next;
-  return past > 2 * 60 * 1000 && past < 60 * 60 * 1000;
+  return past > 5 * 1000 && past < 60 * 60 * 1000;
 }
 
 async function pullBrief() {
@@ -1816,16 +1816,14 @@ async function pullBrief() {
 let briefTried = false;
 
 /**
- * The stamp under every panel that moves on the update clock (every 6 hours). Says plainly when the panel last
- * refreshed and when it next will, and flags it when the refresh is overdue.
+ * The stamp under every panel that moves on the update clock (every 6 hours).
+ * No "next" time and no "due" warning: the update simply appears on the hour.
+ * `top`: the stamp sits under a column's heading rather than at its foot.
  */
-/** `top`: the stamp sits under a column's heading rather than at its foot. */
 function cadenceStamp(top = false) {
   const cls = top ? 'cadence at-head' : 'cadence';
   const hours = (brief && +brief.cadenceHours) || 6;
-  if (!brief) return `<p class="${cls}">${T('Refreshes every {h} hours.', { h: hours })}</p>`;
-  const overdue = Date.now() > Date.parse(brief.nextUpdateAt);
-  return `<p class="${cls}${overdue ? ' late' : ''}">${T('Updates every {h}h based on latest reports · Next {t}', { h: hours, t: escapeHtml(fmtWhen(brief.nextUpdateAt)) })}${overdue ? T(' · refresh due') : ''}</p>`;
+  return `<p class="${cls}">${T('Updates every {h}h based on latest reports', { h: hours })}</p>`;
 }
 
 function frontActivity(id) {
@@ -3121,24 +3119,27 @@ function statTrio(c) {
   return `<div class="stat3">${[['Today', c.today], ['Last 7 days', c.week], [SINCE_LABEL, c.all]].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>`;
 }
 
-/** The counts show; the list opens under them, like "Read more". */
+/** The counts show, then the newest few rows of the list; the rest open under them. */
 const ledOpen = new Set();
-function moreBox(id, head, detail) {
+const PEEK = 3;
+const allLabel = (n, noun) => T(`Show all ${n} ${noun}`);
+function moreBox(id, head, tableHead, rows, noun) {
   const open = ledOpen.has(id);
-  return `<div class="led-more${open ? ' open' : ''}" data-more="${id}"><div class="led-head">${head}</div><div class="led-detail">${detail}</div><button type="button" class="toggle-sit led-tog" aria-expanded="${open}">${open ? 'Show less' : 'More details'}</button></div>`;
+  const body = rows.map((r, i) => (i < PEEK ? r : r.replace('<tr>', '<tr class="led-rest">'))).join('');
+  const tog = rows.length > PEEK ? `<button type="button" class="toggle-sit led-tog" data-all="${escapeHtml(allLabel(rows.length, noun))}" aria-expanded="${open}">${open ? T('Show fewer') : escapeHtml(allLabel(rows.length, noun))}</button>` : '';
+  return `<div class="led-more${open ? ' open' : ''}" data-more="${id}"><div class="led-head">${head}</div><div class="led-detail">${SL_KEY}<table class="${tableHead[0]}">${tableHead[1]}${body}</table></div>${tog}</div>`;
 }
 function wireMore(root) {
   root.querySelectorAll('.led-more').forEach((box) => {
     const tog = box.querySelector('.led-tog');
-    const flip = () => {
+    if (!tog) return;
+    tog.onclick = () => {
       const now = box.classList.toggle('open');
       if (now) ledOpen.add(box.dataset.more);
       else ledOpen.delete(box.dataset.more);
-      tog.textContent = now ? 'Show less' : 'More details';
+      tog.textContent = now ? T('Show fewer') : tog.dataset.all;
       tog.setAttribute('aria-expanded', String(now));
     };
-    tog.onclick = flip;
-    box.querySelector('.led-head').onclick = flip;
   });
 }
 
@@ -3234,8 +3235,8 @@ function shipsBody(led) {
     const name = s.ship || capFirst(s.type) || 'A ship';
     const flag = s.flag ? ` <small class="flag">(${escapeHtml(s.flag)})</small>` : '';
     return `<tr><td class="d">${srcLink(escapeHtml(ledDay(s.date)), s.src)}</td><td class="l">${escapeHtml(name)}${flag}</td><td class="l">${escapeHtml(capFirst(s.place || ''))}</td><td class="l w">${weaponCell(s.weapon)}</td></tr>`;
-  }).join('');
-  return moreBox('ships', statTrio(spanCounts(ships.map((s) => s.date))), `${SL_KEY}<table class="list ships"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th><th scope="col" class="l w">Weapon</th></tr>${rows}</table>`);
+  });
+  return moreBox('ships', statTrio(spanCounts(ships.map((s) => s.date))), ['list ships', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th><th scope="col" class="l w">Weapon</th></tr>'], rows, 'incidents');
 }
 
 /** Each spot's own chart, shown over the page from its name. */
@@ -3360,8 +3361,8 @@ function sitesBody(led) {
       const chip = `<span class="st st-${escapeHtml(st)}">${SITE_STATUS[st] || escapeHtml(st)}</span>`;
       const status = !last ? '' : s.statusSrc && s.statusSrc.url ? srcLink(chip, s.statusSrc, 'st-link') : chip;
       return `<tr><td class="d">${srcLink(escapeHtml(ledDay(h.date)), h)}</td><td class="l">${escapeHtml(s.name)}</td><td class="l w">${weaponCell(h.weapon)}</td><td class="t">${status}</td></tr>`;
-    }).join('');
-  return moreBox('sites', statTrio(spanCounts(hits.map((h) => h.date))), `${SL_KEY}<table class="list sites"><tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l w">Weapon</th><th scope="col" class="t">Status</th></tr>${rows}</table>`);
+    });
+  return moreBox('sites', statTrio(spanCounts(hits.map((h) => h.date))), ['list sites', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l w">Weapon</th><th scope="col" class="t">Status</th></tr>'], rows, 'attacks');
 }
 
 function exportsBody(led) {
@@ -4933,9 +4934,11 @@ function buildMapPins(d) {
 
   (d.events || []).forEach((ev) => {
     if (ev.noMap) return;
-    if (MAP_FIXES[ev.fp] && MAP_FIXES[ev.fp].remove) return;
+    const evFix = MAP_FIXES[ev.fp] || null;
+    if (evFix && evFix.remove) return;
     const blob = ev.text || ev.note || ev.label || '';
     let lat = ev.lat, lng = ev.lng, place = ev.place || '';
+    if (evFix && typeof evFix.lat === 'number') { lat = evFix.lat; lng = evFix.lng; place = evFix.place || place; }
     if (lat == null || lng == null) {
       if (/^(desk-update|humanitarian|diplomacy|intel)$/i.test(ev.type || '')) return;
       const g = guessCoords(`${ev.label || ''} ${blob}`);
@@ -4996,7 +4999,51 @@ function buildMapPins(d) {
       seen.set(k, p);
     }
   }
-  return (focusFps ? deduped.filter((p) => focusFps.has(p.fp)) : deduped).slice(0, (mapMode === 'range' || mapMode === 'all') ? MAX_MAP_PINS_RANGE : MAX_MAP_PINS);
+  const single = oneEventOnePin(deduped);
+  return (focusFps ? single.filter((p) => focusFps.has(p.fp)) : single).slice(0, (mapMode === 'range' || mapMode === 'all') ? MAX_MAP_PINS_RANGE : MAX_MAP_PINS);
+}
+
+/* One event, one pin (user, 2 Oct: the same event pinned twice). Two pins are
+ * one event when they are the same kind, within 25 km and 6 hours, and their
+ * headlines share most of their telling words ("Houthi sniper unit targets
+ * military sites in Jazan" and "Houthi sniper unit carries out operations
+ * against Saudi and Sudanese forces in Jazan"). A report's own second place is
+ * not a double of it. The curated pin, then the fuller one, stays. */
+const TWIN_STOP = new Set(('houthi houthis forces force government yemeni yemen saudi saudis coalition southern their with from into over near amid after before during against says said say reports report reported targets target targeting targeted strike strikes struck hits hit air airstrike airstrikes raid raids attack attacks positions position fighters areas area district districts directorate governorate front fronts military sites site launch launches launched carry carries carried out operations operation also this that been have were more than media artillery shelling shell shells fire villages village people civilians').split(' '));
+const twinWords = (s) => new Set((String(s || '').toLowerCase().match(/[a-z'-]{3,}|\d+/g) || []).filter((w) => !TWIN_STOP.has(w)).map((w) => w.replace(/(?:ies|es|s|ed|ing)$/, '')));
+function twinKm(a, b) {
+  const rad = Math.PI / 180;
+  const s = Math.sin(((b.lat - a.lat) * rad) / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(((b.lng - a.lng) * rad) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(s));
+}
+function oneEventOnePin(pins) {
+  const out = [];
+  const info = new Map();
+  const of = (p) => {
+    let x = info.get(p);
+    if (!x) {
+      x = { t: Date.parse(p.at) || 0, cat: p.mapCat || pinCategory(p.type), w: twinWords(p.label), base: String(p.fp || '').split('-pin-')[0] };
+      info.set(p, x);
+    }
+    return x;
+  };
+  for (const p of pins) {
+    const a = of(p);
+    let twin = -1;
+    for (let i = out.length - 1; i >= 0; i--) {
+      const b = of(out[i]);
+      if (Math.abs(a.t - b.t) > 6 * 3600e3) continue;
+      if (a.cat !== b.cat || a.base === b.base || !a.w.size || !b.w.size) continue;
+      if (twinKm(p, out[i]) > 25) continue;
+      let shared = 0;
+      for (const w of a.w) if (b.w.has(w)) shared++;
+      if (shared >= 2 && shared / Math.min(a.w.size, b.w.size) >= 0.5) { twin = i; break; }
+    }
+    if (twin < 0) { out.push(p); continue; }
+    const q = out[twin];
+    if ((p.mapOnly && !q.mapOnly) || (!!p.mapOnly === !!q.mapOnly && String(p.text || '').length > String(q.text || '').length)) out[twin] = p;
+  }
+  return out;
 }
 
 function popupHtml(ev) {
@@ -6664,14 +6711,14 @@ async function bootYemenDesk() {
       window.addEventListener('focus', () => pullLive({ silent: true }));
     }
     // The brief (and the district control that comes with it) only changes at
-    // 00:00 and 12:00. Nothing is asked in between; from two minutes after the
-    // boundary it is asked once a minute until the new one is written.
+    // 00:00, 06:00, 12:00 and 18:00. Nothing is asked in between; from the
+    // boundary on it is asked every 15 seconds until the new one is there.
     window.__yemenBriefTimer = setInterval(async () => {
       if (document.hidden || !briefDue()) return;
       const before = brief && brief.updatedAt;
       await pullBrief();
       if (brief && brief.updatedAt !== before && data) { renderSituation(data); renderCasualties(data); renderFronts(data); renderTimeline(data); renderBars(data); applyMapFilters(); }
-    }, 60 * 1000);
+    }, 15 * 1000);
   };
 
   if (map) {

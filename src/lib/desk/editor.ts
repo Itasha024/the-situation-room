@@ -36,6 +36,8 @@ import {
   dropInventedRole,
   fixHeadline,
   redundantBody,
+  casualtyHeadline,
+  sourceSentences,
   stripSpellingNotes,
   spokespersonLabel,
   stripOwnOutlet,
@@ -677,7 +679,13 @@ ${raw.body}`, c.text) : null;
   // A place is spelled once; notes on its other spellings go.
   r.headline = stripSpellingNotes(r.headline);
   r.body = stripSpellingNotes(r.body);
-  // A short report is its headline: a body that only says it again goes.
+  // A short report is its headline, its dead and wounded too (user, 2 Oct:
+  // "Al-Masirah said the Saudi air strike wounds 2 people" was a body).
+  if (r.body && sourceSentences(c.text) <= 4) {
+    const h = casualtyHeadline(r.headline, r.body);
+    if (h) [r.headline, r.body] = [h, ""];
+  }
+  // A body that only says the headline again goes.
   if (redundantBody(r.headline, r.body, c.text)) r.body = "";
   const problem = checkReading(r, c.text, strict);
   if (problem) {

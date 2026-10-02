@@ -117,6 +117,8 @@ export function spellingHints(sourceText: string, max = 20): string {
   }
   for (const p of PLACES) {
     if (out.length >= max) break;
+    // A name two places share is this one's only in its own context.
+    if ((p.needs && !new RegExp(p.needs, "i").test(t)) || (p.unless && new RegExp(p.unless, "i").test(t))) continue;
     for (const a of p.aliases) {
       if (!HAS_AR.test(a)) continue;
       let re: RegExp;
@@ -127,7 +129,7 @@ export function spellingHints(sourceText: string, max = 20): string {
       }
       const m = re.exec(t);
       if (m) {
-        out.push(`${m[1]} = ${p.name.replace(/^the /, "")}`);
+        out.push(`${m[1]} = ${p.name.replace(/^the /, "").replace(/ \(.*\)$/, "")}`);
         break;
       }
     }

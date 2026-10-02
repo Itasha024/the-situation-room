@@ -57,7 +57,9 @@ export async function refreshBrief(
     // After the first two hours only the strong writers are asked, and only once one is back (Google's reset).
     const late = now.getTime() - Date.parse(saved.brief.updatedAt) >= RETRY_FOR_MS;
     if (late && !anyAwake(STRONG_MODELS, now.getTime())) return { brief: saved.brief, built: false };
-    return { brief: await reprose(store, saved, now, false, late ? STRONG_MODELS : WRITER_MODELS), built: false };
+    // A backup writer's text already stands: only a strong writer can better it.
+    const strongOnly = late || !!saved.brief.situation?.model;
+    return { brief: await reprose(store, saved, now, false, strongOnly ? STRONG_MODELS : WRITER_MODELS), built: false };
   }
 
   // One build at a time: while it waits for a strong writer, visits get the last window.
@@ -74,17 +76,19 @@ let building: Promise<{ brief: Brief; built: boolean }> | null = null;
 /* ------------------------------------------------------------------ *
  * Written before the hour
  *
- * The prose of the window that closes at 00/06/12/18 is written a few minutes
- * early, from the cards logged so far, so it is ready, by a strong writer, at
- * the round time. The lead is how long the writers took last time (with room
- * for a busy minute), between 4 and 15 minutes. At the hour the brief is built
- * from every card of the window and takes that prose; cards of the last minutes
- * still count in the numbers, the maps and the fronts' marks.
+ * The prose of the window that closes at 00/06/12/18 is written early, from
+ * the cards logged so far, so it is ready at the round time. The lead is how
+ * long the writers took last time (with room for a busy minute), between 12
+ * and 20 minutes, so a busy Google leaves time for NVIDIA. At the hour the
+ * brief is built from every card of the window, takes that prose and is stored
+ * at once, never held for a better writer: the clock asks again later (2 Oct:
+ * the 12:00 update waited 5 minutes for Google's busy models). Cards of the
+ * last minutes still count in the numbers, the maps and the fronts' marks.
  * ------------------------------------------------------------------ */
 
 const PROSE_MS_KEY = "brief-prose-ms";
-const LEAD_MIN_MS = 4 * 60_000;
-const LEAD_MAX_MS = 15 * 60_000;
+const LEAD_MIN_MS = 12 * 60_000;
+const LEAD_MAX_MS = 20 * 60_000;
 let armedFor = "";
 let pre: { updatedAt: string; job: Promise<Prose | null> } | null = null;
 
@@ -125,7 +129,8 @@ async function prewrite(store: DeskStore, w: ReturnType<typeof briefWindow>, at:
       saved?.brief.situation?.line || "",
       (r) => frontIdsOf(r, extraFronts),
       controlLines,
-      undefined,
+      // Once a backup writer has the text, only a strong writer is worth asking again.
+      best ? STRONG_MODELS : WRITER_MODELS,
       budget,
     )).catch(() => null);
     if (p?.situation && (!best || (p.model && STRONG.has(p.model)))) best = p;
@@ -182,19 +187,9 @@ async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof bri
     inArea: (ll: [number, number], id: string) => inFrontArea(ll, id, extraFronts),
     controlLines,
   };
-  // The window is published once, well written: while only a fallback model (or
-  // none) answered, the strong writers are asked again, a minute apart, before
-  // the brief is stored. The last window stays on the page meanwhile.
-  let model = await proseInto(store, brief, inWindow, all, proseArgs, early);
-  for (let i = 0; i < 4 && !(model && STRONG.has(model)); i++) {
-    await new Promise((r) => setTimeout(r, 60_000));
-    const again: Brief = { ...brief, fronts: brief.fronts.map((f) => ({ ...f })) };
-    const m = await proseInto(store, again, inWindow, all, proseArgs);
-    if (m && (STRONG.has(m) || !model)) {
-      Object.assign(brief, again);
-      model = m;
-    }
-  }
+  // Stored on the hour with the prose written early (or now, when none was): a
+  // backup writer's text is asked again by the clock, 10 minutes on.
+  await proseInto(store, brief, inWindow, all, proseArgs, early);
   brief.proseTriedAt = new Date().toISOString();
   await store.putJson(BRIEF_KEY, { brief, history } satisfies StoredBrief);
   // The official numbers move on the same 6-hour clock. A failed fetch keeps

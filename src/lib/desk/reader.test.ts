@@ -279,6 +279,17 @@ test("a body that says the headline again goes; one with new facts stays", async
   assert.equal(redundantBody("Houthi drone hits Saudi border post", ""), false);
 });
 
+test("a short report's casualties go in its headline", async () => {
+  const { casualtyHeadline } = await import("./reader.ts");
+  assert.equal(casualtyHeadline("Saudi warplanes strike Al-Sabrah district in Ibb", "Al-Masirah said the Saudi air strike wounds 2 people."), "Saudi warplanes strike Al-Sabrah district in Ibb, wounding 2 people");
+  assert.equal(casualtyHeadline("Saudi air raid targets Al-Hazm district in Al-Jawf", "The raid killed 3 people and wounded 5 civilians."), "Saudi air raid targets Al-Hazm district in Al-Jawf, killing 3 people and wounding 5 civilians");
+  assert.equal(casualtyHeadline("Houthi shelling hits Al-Wazi'iyah", "Two children were injured, local sources said."), "Houthi shelling hits Al-Wazi'iyah, injuring two children");
+  // Already counted, a statement, or a body with more to say: left alone.
+  assert.equal(casualtyHeadline("Saudi strike kills 3 in Saada", "Three people were killed."), null);
+  assert.equal(casualtyHeadline("Houthi leader: the strikes will go on", "He said 2 people were killed."), null);
+  assert.equal(casualtyHeadline("Saudi strike hits Saada", "The strike destroyed a farm and a water tank near the Razih border crossing and wounded 2 people."), null);
+});
+
 test("'killing a martyr' is one person killed", async () => {
   const { reword } = await import("./editor.ts");
   assert.equal(reword("Saudi airstrike kills a martyr in Haifan"), "Saudi airstrike kills one person in Haifan");

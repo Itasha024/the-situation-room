@@ -144,6 +144,36 @@
     "live-t-me-shin-persian-10323": {
       "remove": true,
       "why": "satellite images of the King Khalid airport attack, already pinned"
+    },
+    "live-www-almashhad-news-news-497408-pin-Jabal al-A-wad": {
+      "lat": 16.48,
+      "lng": 44.08,
+      "place": "Jabal al-Aswad (Harf Sufyan)",
+      "why": "Jabal al-Aswad in Harf Sufyan, Amran was pinned on the Lahj ridge of that name"
+    },
+    "live-x-com-defenseliney-status-2105358185993285808": {
+      "lat": 16.48,
+      "lng": 44.08,
+      "place": "Jabal al-Aswad (Harf Sufyan)",
+      "why": "Jabal al-Aswad in Harf Sufyan, Amran was pinned on the Lahj ridge of that name"
+    },
+    "live-x-com-marebpress-status-2104991350831857714-pin-Jabal al-A-wad": {
+      "lat": 16.48,
+      "lng": 44.08,
+      "place": "Jabal al-Aswad (Harf Sufyan)",
+      "why": "Jabal al-Aswad in Harf Sufyan, Amran was pinned on the Lahj ridge of that name"
+    },
+    "live-x-com-defenseliney-status-2104983759405699261-pin-Jabal al-A-wad": {
+      "lat": 16.48,
+      "lng": 44.08,
+      "place": "Jabal al-Aswad (Harf Sufyan)",
+      "why": "Jabal al-Aswad in Harf Sufyan, Amran was pinned on the Lahj ridge of that name"
+    },
+    "live-x-com-almasdaronline-status-2105322981060915538": {
+      "lat": 16.2,
+      "lng": 44,
+      "place": "Amran",
+      "why": "strikes in Raida and Harf Sufyan, Amran, were pinned on the Lahj ridge Jabal al-Aswad"
     }
   }
 }

@@ -67,6 +67,12 @@ export type Place = {
   aliases: string[];
   /** Uppercase dateline slug, wire style. Defaults to name.toUpperCase(). */
   dateline?: string;
+  /**
+   * A name two places share: this one only when the words around it (a
+   * sentence's reach) match `needs`, and never when they match `unless`.
+   */
+  needs?: string;
+  unless?: string;
 };
 
 /* ------------------------------------------------------------------ *
@@ -426,6 +432,22 @@ const YEMEN: Place[] = [
     country: "Yemen",
     region: "in Lahj governorate",
     aliases: ["الجبل الأسود", "Jabal al-?Aswad", "אלג׳בל אלאסוד"],
+    unless: String.raw`Sufyan|Amran|سفيان|عمران`,
+  },
+  {
+    // The coalition's strikes on "Jabal al-Aswad in Harf Sufyan district,
+    // Amran" (30 Sep) were pinned on the Lahj ridge. No peak of that name in
+    // the district is on OpenStreetMap: placed on the district, 2 Oct.
+    name: "Jabal al-Aswad (Harf Sufyan)",
+    lat: 16.48,
+    lng: 44.08,
+    kind: "ridge",
+    country: "Yemen",
+    region: "in Harf Sufyan district, Amran governorate",
+    where: "Amran governorate",
+    dateline: "JABAL AL-ASWAD",
+    aliases: ["الجبل الأسود", "(?:Al-)?Jabal al-?Aswad"],
+    needs: String.raw`Sufyan|Amran|سفيان|عمران`,
   },
   {
     name: "Qahaza",
@@ -1074,6 +1096,11 @@ export function placesIn(text: string): Place[] {
   for (const { place, re } of MATCHERS) {
     const m = re.exec(t);
     if (!m) continue;
+    if (place.needs || place.unless) {
+      const around = t.slice(Math.max(0, m.index - 80), m.index + m[0].length + 100);
+      if (place.needs && !new RegExp(place.needs, "i").test(around)) continue;
+      if (place.unless && new RegExp(place.unless, "i").test(around)) continue;
+    }
     const prev = found.get(place.name);
     if (!prev || m.index < prev.idx) found.set(place.name, { place, idx: m.index });
   }

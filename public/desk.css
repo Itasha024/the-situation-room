@@ -1077,9 +1077,8 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .tally-box.claims .sl-unoff,.sl-key .sl-unoff{color:#f59e0b}
 .sl-key{display:flex;gap:.9rem;margin:.45rem 0 0;font-size:.64rem;color:var(--t-muted,#8fa3b6)}
 .sl-key span::before{content:"";display:inline-block;width:.45rem;height:.45rem;margin-right:.3rem;border-radius:50%;background:currentColor;vertical-align:.04em}
-.led-head{cursor:pointer}
-.led-detail{display:none}
-.led-more.open .led-detail{display:block}
+.led-detail{margin-top:.5rem}
+.led-more:not(.open) tr.led-rest{display:none}
 .led-more .led-tog{display:block}
 .tally-box.ledger td small.flag{display:inline;font-size:.64rem}
 .tally-box.ledger th small.span{display:block;margin-top:.1rem;font-size:.58rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t-muted,#8fa3b6)}

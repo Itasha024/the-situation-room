@@ -335,10 +335,11 @@ WRITING
   spelling in brackets.
 ${SPELLING_RULES}
 - A short item — four sentences or fewer — is its headline: the whole report
-  goes in the headline (the districts, the target, the weapon) and body is ""
-  (empty). Never a body that says the headline again in more words, and never
-  a body just to add a little: a place name or a detail belongs in the
-  headline. The one exception is casualties the headline cannot hold.
+  goes in the headline (the districts, the target, the weapon, the dead and
+  wounded: "Saudi air strike on Al-Sabrah district in Ibb wounds two people")
+  and body is "" (empty). Never a body that says the headline again in more
+  words, and never a body just to add a little: a place name, a detail or a
+  casualty figure belongs in the headline.
 - A longer item, as a wire story: the headline carries the most important
   facts; the body adds the next ones — detail, figures, context from the
   text — never a rephrasing of the headline. A body earns its place with at
@@ -817,6 +818,46 @@ export function newNames(body: string, headlineLower: string): string[] {
     flush();
   }
   return [...new Set(out)];
+}
+
+const TOLL_N = String.raw`(?:at least\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|several|dozens of)`;
+const TOLL_WHO = String.raw`(?:\s+[A-Za-z-]+){0,3}?\s+(?:people|persons?|civilians?|citizens?|fighters?|soldiers?|children|child|women|woman|men|man|members?|officers?|others|recruits|workers?|fishermen|farmers?)`;
+const TOLL_PASSIVE = String.raw`\s+(?:were\s+|was\s+|have been\s+|had been\s+)?`;
+const ING: Record<string, string> = { kill: "killing", wound: "wounding", injur: "injuring" };
+const TOLL_WORDS = /^(?:and|the|said|says|say|according|reported|reports|sources?|strikes?|attacks?|raids?|shelling|bombing|air|airstrike|people|while|also|another|others?|more|least)$/i;
+
+/**
+ * A short report's headline with the casualties its body carried ("…, wounding
+ * 2 people"), so the card needs no body. Null when the headline already counts
+ * casualties, is a statement, or the body says more than its toll.
+ */
+export function casualtyHeadline(headline: string, body: string): string | null {
+  const h = String(headline || "").trim();
+  const b = String(body || "").replace(/^[^—]{2,30}—\s*/, "").trim();
+  if (!h || !b || h.includes(":") || /\b(?:kill|wound|injur|dead|died|death|casualt|martyr)/i.test(h)) return null;
+  if ((b.match(/[.!?](?:\s|$)/g) || []).length > 2) return null;
+  const tolls: [string, string][] = [];
+  const add = (stem: string, who: string) => {
+    const s = stem.toLowerCase();
+    const k = s.startsWith("injur") ? "injur" : s.startsWith("kill") ? "kill" : "wound";
+    if (!tolls.some(([x]) => x === k)) tolls.push([k, who.trim()]);
+  };
+  const active = new RegExp(String.raw`\b(kill|wound|injur)(?:s|es|ed|ing|e)?\s+(${TOLL_N}${TOLL_WHO})\b`, "gi");
+  const passive = new RegExp(String.raw`\b(${TOLL_N}${TOLL_WHO})${TOLL_PASSIVE}(killed|wounded|injured)\b`, "gi");
+  for (const m of b.matchAll(active)) add(m[1], m[2]);
+  for (const m of b.matchAll(passive)) add(m[2], m[1]);
+  if (!tolls.length) return null;
+  // Nothing in the body but the toll and who said it: anything more is a body of its own.
+  const left = b
+    .replace(active, " ")
+    .replace(passive, " ")
+    .split(/[^A-Za-z'-]+/)
+    .filter((w) => w.length > 2 && !BODY_FILLER.has(w.toLowerCase()) && !h.toLowerCase().includes(w.toLowerCase()) && !TOLL_WORDS.test(w));
+  if (left.length > 3) return null;
+  tolls.sort((x, y) => (x[0] === "kill" ? -1 : y[0] === "kill" ? 1 : 0));
+  const clause = tolls.map(([k, who]) => `${ING[k]} ${who.replace(/^[A-Z][a-z]+\b/, (w) => (/^(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|Several|Dozens|At)$/.test(w) ? w.toLowerCase() : w))}`).join(" and ");
+  const out = `${h.replace(/[.,;\s]+$/, "")}, ${clause}`;
+  return out.length <= 140 ? out : null;
 }
 
 /** Sentences in a source text, Arabic or English; a Telegram line counts as one. */

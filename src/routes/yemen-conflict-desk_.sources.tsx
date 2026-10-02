@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { DeskDoc } from "@/components/desk-doc";
 
 /**
@@ -65,24 +65,16 @@ function Dots({ rating }: { rating: number }) {
 }
 
 function SourcesPage() {
-  const { nextAt, sources } = Route.useLoaderData();
+  const { sources } = Route.useLoaderData();
   // Every group starts closed (user, 2 Oct); each opens on its own, or all at once.
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const shown = GROUPS.filter(([g]) => sources.some((s) => s.group === g));
   const allOpen = shown.length > 0 && shown.every(([g]) => open[g]);
   const setAll = (v: boolean) => setOpen(Object.fromEntries(shown.map(([g]) => [g, v])));
-  // The time on the reader's own clock, once the page is in their browser.
-  const [when, setWhen] = useState("");
-  useEffect(() => {
-    const d = new Date(nextAt);
-    setWhen(
-      `${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })}, ${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`,
-    );
-  }, [nextAt]);
   return (
     <DeskDoc title="Sources list">
       <div className="sr-top">
-        <p className="sr-stamp">Updates every 24h{when ? ` · Updates ${when}` : ""}</p>
+        <p className="sr-stamp">Updates every 24h</p>
         {shown.length ? (
           <button
             type="button"

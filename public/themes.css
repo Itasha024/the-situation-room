@@ -397,7 +397,7 @@ html[data-theme="broadsheet-day"] .dv .dv-dot{background:#fff;box-shadow:0 0 0 2
 .situation .toggle-sit{display:block}
 .situation:not(.sit-open) .sit-rest{display:none}
 /* Clicking the text opens and closes it, as a Timeline box does (app.js renderSituation). */
-.situation .sit-click{cursor:pointer}
+.sit-click,.front-card.expandable{cursor:pointer}
 /* A long report in short paragraphs; a closed card shows the first one's three lines. */
 .card .lead.lead-multi{display:block;overflow:visible;-webkit-line-clamp:unset}
 .card .lead.lead-multi p{margin:0}
@@ -609,8 +609,6 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 @media (prefers-reduced-motion:reduce){.rel-pop.sheet{animation:none}}
 @media (max-width:720px){.rel-btn{padding:.4rem 0}}
 /* The two map methodology buttons (2 Oct): under the control bars, and in the legend under Territory. */
-.bars-meth{grid-column:1/-1;flex-basis:100%;width:100%;margin-top:.15rem}
-.rel-btn.leg-meth{margin:.25rem 0 .1rem;font-size:.58rem;letter-spacing:.06em}
 
 /* The report column's scroll bar: thin, in the theme's own lines (2 Oct) */
 .rail{scrollbar-width:thin;scrollbar-color:var(--t-line-strong,#4a433d) transparent}

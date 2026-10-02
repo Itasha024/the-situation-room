@@ -3489,8 +3489,7 @@ function renderBars(d) {
       <div class="track"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
     </div>`;
   }).join('');
-  document.getElementById('bars').innerHTML = rows ? `${rows}<div class="bars-meth"><button type="button" class="rel-btn" id="btn-share-meth" aria-expanded="false" aria-haspopup="dialog">Control share methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div>` : '';
-  wirePop(document.getElementById('btn-share-meth'), 'share-pop', SHARE_HTML);
+  document.getElementById('bars').innerHTML = rows ? `${rows}` : '';
 }
 
 function feedCardHtml(r, i) {
@@ -5845,7 +5844,7 @@ function phaseDates(p, isNow) {
     const m = /^(\d{4})-(\d{2})$/.exec(String(s || ''));
     if (!m) return String(s || '');
     // May, June and July in full, the others in three letters (September is "Sept"; user, 2 Oct).
-    if (LOC.startsWith('en')) return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'][+m[2] - 1]} ${m[1]}`;
+    if (LOC.startsWith('en')) return `${['Jan', 'Feb', 'March', 'April', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'][+m[2] - 1]} ${m[1]}`;
     return new Date(Date.UTC(+m[1], +m[2] - 1, 15)).toLocaleDateString(LOC, { month: 'short', year: 'numeric', timeZone: 'UTC' });
   };
   if (isNow) return T('{d} – now', { d: fmt(p.from) });
@@ -5979,14 +5978,12 @@ function renderLegend(d) {
       <div class="leg-sec">Territory</div>
       ${controlRows}
       ${row('saudi', COLORS.saudi, 'Saudi Arabia')}
-      <button type="button" class="rel-btn leg-meth" id="btn-map-meth" aria-expanded="false" aria-haspopup="dialog">Map colours methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button>
       <div class="leg-sec">Events</div>
       ${row('combat', EVENT_COLORS.combat, 'Ground fighting', true)}
       ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
       ${row('vessel', EVENT_COLORS.vessel, 'Maritime incident', true)}
       ${row('port', EVENT_COLORS.port, 'Energy incident', true)}
     </div>`;
-  wirePop(document.getElementById('btn-map-meth'), 'map-pop', MAP_HTML);
   fitLegend();
   if (!legendFitWired) {
     legendFitWired = true;
@@ -6625,32 +6622,6 @@ const REL_HTML = `<h3 id="rel-pop-h">Sources reliability methodology</h3>
 <li><b>Statements count only if the speaker denies saying them.</b></li>
 </ul>
 <p class="rel-foot">Ratings update every 24 hours. <a href="/yemen-conflict-desk/sources">Sources list →</a></p>`;
-
-/* How the control shares under the bars are made (user, 2 Oct). */
-const SHARE_HTML = `<h3 id="share-pop-h">Control share methodology</h3>
-<p>No source publishes these shares. The desk works them out from its own map.</p>
-<ul>
-<li><b>By district.</b> Yemen is split into its 335 districts, and each district's area is measured in square kilometres.</li>
-<li><b>Each district counts whole</b> for the side the map shows holding it: Houthi forces, the government, or contested.</li>
-<li><b>A share is that side's area</b> out of all of Yemen, rounded. Saudi Arabia is not counted.</li>
-<li><b>Land, not people.</b> A large desert district counts for more than a small, crowded city.</li>
-</ul>
-<p class="rel-foot">The shares change when the map's colours do, every 6 hours.</p>`;
-
-/* How the map's colours are set and changed (user, 2 Oct). */
-const MAP_HTML = `<h3 id="map-pop-h">Map colours methodology</h3>
-<ul>
-<li><b>Start:</b> the front lines of 24 September 2026, set by the desk from Wikipedia's page on the 2026 offensives, Al Jazeera, The National, Al Majalla and the desk's own reports. Earlier lines come from the maps of the Sanaa Center, ACLED and Critical Threats. A district with no line of its own takes its governorate's colour.</li>
-<li><b>Then the reports decide.</b> Only ground taken counts. Captured fighters, weapons or buildings do not.
-<ul>
-<li>A district changes side when two outlets not on the same side, or a wire agency, report the other side taking its town or the whole district. A non-aligned outlet counts as a side of its own;</li>
-<li>it turns contested when only one side reports it, or when only positions, hills or villages in it were taken;</li>
-<li>a contested district goes back to one side by the same rule, if the other side claims nothing there.</li>
-</ul></li>
-<li><b>A side's gains inside a district it already holds</b> change nothing.</li>
-<li><b>The same rule draws the flags</b> on the Latest developments and Fronts maps. A capture told by one side only is drawn as an advance.</li>
-</ul>
-<p class="rel-foot">Colours update every 6 hours.</p>`;
 
 /*
  * One pop-up per text, opened from any button that names it: hover on a PC,

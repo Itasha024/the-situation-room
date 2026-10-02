@@ -93,10 +93,15 @@ export async function accountPost(handle: string, name: string, keys: string[], 
     const list = ((await res.json()) as { results?: FxStatus[] })?.results ?? [];
     const sp = { x: handle, name };
     const own = handle.toLowerCase();
-    const posts = list
+    const mine = list
       .filter((s) => !s.reposted_by && String(s.author?.screen_name ?? own).toLowerCase() === own)
-      .map((s) => ({ s, at: Number(s.created_timestamp) * 1000, text: String(s.raw_text?.text ?? s.text ?? "") }))
-      .filter((p) => p.at >= reportAt - 48 * 3600_000 && p.at <= reportAt + 3600_000 && shared(p.text, keys) >= min && (!figures.length || figures.some((n) => p.text.includes(n))))
+      .map((s) => ({ s, at: Number(s.created_timestamp) * 1000, text: String(s.raw_text?.text ?? s.text ?? "") }));
+    // A word the account uses in most of its posts ("Pakistan" for Pakistan's
+    // foreign minister) says nothing about which post it is (user, 2 Oct: the
+    // Riyadh talks were linked to his post on a hijacked crew).
+    const telling = mine.length >= 5 ? keys.filter((k) => mine.filter((p) => shared(p.text, [k])).length <= mine.length * 0.4) : keys;
+    const posts = mine
+      .filter((p) => p.at >= reportAt - 48 * 3600_000 && p.at <= reportAt + 3600_000 && shared(p.text, telling) >= min && (!figures.length || figures.some((n) => p.text.includes(n))))
       .sort((a, b) => shared(b.text, keys) - shared(a.text, keys) || a.at - b.at);
     const best = posts[0];
     if (!best) return null;

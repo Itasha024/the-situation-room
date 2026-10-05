@@ -197,7 +197,13 @@ function stale(e: CacheEntry, c: Pick<Candidate, "url">): boolean {
 function isXPost(c: Pick<Candidate, "url">): boolean {
   return /^https:\/\/x\.com\/[^/]+\/status\//.test(c.url);
 }
+/** Iran's state and IRGC-affiliated media: the reader is told so, not only "Houthi-aligned". */
+const IRANIAN = /Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV|Al-?Alam/i;
 function alignmentOf(c: Candidate): string {
+  if (IRANIAN.test(c.source)) return "Iranian state media, Houthi-aligned (calls the Houthis \"the Yemeni armed forces\")";
+  // A party's own account on X (Saree, a ministry, a Houthi- or government-aligned
+  // channel) is that party's, not an analyst's (user's review, 5 Oct).
+  if (isXPost(c) && (c.lean === "houthi" || c.lean === "gov" || c.lean === "south")) return ALIGNMENT[outletSide(c.source, c.lean)];
   return isXPost(c) ? "open-source (OSINT) analyst's own X account, no declared alignment" : ALIGNMENT[outletSide(c.source, c.lean)];
 }
 type Cache = Record<string, CacheEntry>;
@@ -639,6 +645,19 @@ ${source}`;
   return null;
 }
 
+/** The outlet's own side, as the reader hint has it. */
+const GOV_WORDS = /مرتزق|الشرعي|العليمي|العمالقة|درع الوطن|الموالي[ةه] للسعودي|عملاء|الحكوم|قوات هادي|حزب الإصلاح|الإصلاح|طارق|pro-Saudi|Saudi-backed|mercenar|legitima|government|Giants|Nation'?s Shield|al-Alimi|Islah|Tareq/i;
+const OWN_FORCES = /(?:ال|لل|بال)قوات اليمني[ةه]|(?:ال|لل|بال)قوات المسلح[ةه] اليمني[ةه]|(?:ال|لل|بال)جيش اليمني|قواتنا|قوات صنعاء|(?:ال|لل)جيش واللجان|Yemeni (?:armed )?forces|Sanaa forces|Yemen'?s armed forces|نیروهای (?:مسلح )?یمن/i;
+/**
+ * A Houthi-aligned outlet (or Iranian state media) telling its own side's
+ * "Yemeni forces" with no word of the government side anywhere in the post:
+ * every "government forces" in the copy is a misreading of the Houthis.
+ */
+export function houthiYemeniForces(c: Pick<Candidate, "source" | "lean" | "text">): boolean {
+  const houthi = IRANIAN.test(c.source) || outletSide(c.source, c.lean) === "houthi";
+  return houthi && OWN_FORCES.test(c.text) && !GOV_WORDS.test(c.text);
+}
+
 function decide(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   const away = raw.publish ? notThisWar(`${raw.headline}
 ${raw.body}`, c.text) : null;
@@ -655,6 +674,12 @@ ${raw.body}`, c.text) : null;
   const side = raw.actor_side ?? (sideWords(`${r.headline} ${r.body}`, undefined) !== `${r.headline} ${r.body}` ? "houthi" : undefined);
   r.headline = sideWords(r.headline, side);
   r.body = sideWords(r.body, side);
+  // A Houthi-aligned outlet's "Yemeni forces" are the Houthis (user, 3 Oct, 14:16:
+  // Ali Bk's advance in Al-Shamaytayn went out as the government's).
+  if (houthiYemeniForces(c)) {
+    r.headline = r.headline.replace(/\b(?:Yemeni )?government (forces|army|troops)\b/gi, "Houthi forces").replace(/\bYemeni government\b/g, "Houthi");
+    r.body = r.body.replace(/\b(?:Yemeni )?government (forces|army|troops)\b/gi, "Houthi forces");
+  }
   if (r.speaker_lead) r.speaker_lead = sideWords(r.speaker_lead, side);
   // An outlet is never the speaker. A statement whose headline forgot its
   // speaker gets the speaker put first, and a colon that introduces no words

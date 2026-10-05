@@ -270,6 +270,16 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    programme title, a video segment, a battle map, a documentary, an analysis,
    an anniversary, a recap. "Marib and Taiz: the map of the battles #ThisDay"
    is a programme clip, not a report of clashes — publish=false.
+   A RECAP is publish=false, reject_reason "recap": a post retelling several
+   events of the last hours or days that were each reported as they happened
+   ("a summary of today's events", "Yemeni forces targeted several Aramco
+   facilities today", a map of the attacks since 1 Oct, a bullet list of the
+   day's advances), and old material shown as new — footage of yesterday's
+   fires, a total or toll already given (the army's "1,747 killed" a second
+   time). NOT a recap, and wanted: a side's own count over a period of what it
+   launched or struck, or of what the other side did to it ("the Houthis say
+   Saudi jets carried out 60 air strikes in 24 hours", "the coalition says
+   100 jets hit 324 targets", "Saree: 106 operations"), when it is a new count.
    Commentary is not a report either: explainers, opinion, columns, analysis,
    and the views of writers, media figures, researchers, analysts, experts,
    think tanks or FORMER officials ("a Saudi writer says", "former US envoy
@@ -362,9 +372,20 @@ ${SPELLING_RULES}
   then called it off: both).
 - Do not compress: keep who, what, where, casualties (killed and wounded,
   with their figures), weapon and unit. A short item stays whole.
+- Write ONLY from this item: never a figure, a place, a claim or a speaker
+  from another report, however close in time.
+- Keep the source's own hedges: "likely", "reportedly", "unconfirmed",
+  "claims", "according to" stay ("an attack, likely by the Houthis"). One
+  side's claim is that side's: "the Houthis say …", never stated as fact.
+- A mocking, sarcastic or satirical post is not a statement by the person it
+  mocks: publish=false.
 - Every number, name and place you write must be in the item's text. Add
   nothing: no background, no cause, no casualties, no attribution the text
-  does not give. Never add a role or title the text does not give: an agency
+  does not give. The one exception is CONTEXT: when the item alone does not
+  say why it matters (forces deployed to a village, a road closed, a unit
+  moved), add ONE short clause that says it, taken only from the "recent"
+  reports the desk published ("…, as Houthi forces push on Jabal Habashi").
+  Never context from outside knowledge. Never add a role or title the text does not give: an agency
   that "told" an outlet something is the agency, not its "aid chief".
 - Wounded is not killed. Write "kill" only when the text says people died;
   "three citizens were wounded" is "wound 3", never "kill 3".
@@ -417,7 +438,24 @@ ministers are Houthi; al-Alimi, the Aden ministers, the national army are
 government), the seat (Sanaa, Saba Sanaa, Al-Masirah vs Aden, Saba Aden, the
 Presidential Council), the content (fire on Saudi Arabia, its ships or its
 soldiers, "the aggression" = Houthi; "the militia", "the Houthi coup" =
-government). The outlet's alignment is a hint, never enough alone.
+government). The outlet's alignment is a hint, never enough alone — except
+for the words "Yemeni" and "Yemen" themselves, which mean the outlet's own side:
+- From a Houthi-aligned outlet (and Iranian state media: Press TV, IRNA, Fars,
+  Mehr, Tasnim, SNN, Nour News, IRIB, Al-Alam), "the Yemeni armed forces",
+  "the Yemeni army", "Yemeni forces", "Sanaa forces", "our forces", "the army
+  and popular committees", "a Yemeni missile/drone/attack" ARE Houthi forces;
+  "Saudi mercenaries", "Saudi-backed forces", "pro-Saudi forces", "the
+  aggression's tools" are the Yemeni government's forces. "The Saudi enemy's
+  gatherings, positions or forces" on the ground in Yemen are Saudi-backed
+  Yemeni government forces (Giants Brigades, Nation's Shield…), NOT Saudi
+  troops, unless the text names Saudi soldiers or a place in Saudi Arabia.
+  Never write a Houthi-aligned outlet's "Yemeni forces" as "Yemeni government
+  forces" (3 Oct: Ali Bk's "Yemeni forces advance in Al-Shamaytayn" were the
+  Houthis).
+- From a government-aligned outlet, "the Yemeni army", "the national army",
+  "our heroes" are the government's forces and "the militia" the Houthis.
+- A military source "to Saba" in Sanaa is a Houthi military source; one to
+  Saba in Aden a government one.
 actor_side = the side of whoever acted or spoke: houthi | government | stc |
 saudi | other | unclear. Write it: Houthi -> "Houthi forces", "a Houthi
 attack", "Houthi defence minister", never "Yemeni forces" or "a Yemeni
@@ -477,6 +515,12 @@ STATEMENTS (event_type statement or diplomacy)
   Otherwise the title alone ("Yemen's defence minister", "The Houthis' chief
   negotiator") or the affiliation alone ("A Houthi official", "A Saudi
   military analyst"). Never an unfamiliar personal name, in headline or body.
+- An unnamed official or source quoted in the item ("مصدر عسكري يمني", "a
+  military official said"): the speaker_lead is the source as the text gives
+  it, side first, and the headline carries their words after the colon —
+  "Yemeni military official: Houthi attacks on Jabal Han were repelled
+  overnight", "Houthi military source: …". Never promote a source to a
+  spokesman, never a tribal sheikh to an "official", never drop the side.
 - Say what was said, specifically. If the speaker denies an accusation, state
   the accusation and the denial.
 
@@ -497,6 +541,10 @@ was filmed as the video shows it, nothing more. A transcript garbles
 names and numbers: keep only the names and figures that are clear, and prefer
 the caption's spelling. Songs, chants, poems, prayers, sermons and a
 presenter reading other news are not reports: publish=false.
+Never transcribe the clip: publish it only when something said in it is news,
+and write that news as a wire story — what was said that matters, the
+strongest point in the headline, the others in the body, as long as they need
+— never a running account of everything said.
 
 SPEECH LINES
 Channels post a live speech one sentence at a time ("السيد القائد: ...").
@@ -908,7 +956,7 @@ export const BANNED_PHRASES: RegExp[] = [
 ];
 
 /** Bumped when the instructions change, so cached readings are redone. */
-export const PROMPT_VERSION = 3;
+export const PROMPT_VERSION = 4;
 
 export function contentHash(text: string): string {
   return createHash("sha256").update(`v${PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);

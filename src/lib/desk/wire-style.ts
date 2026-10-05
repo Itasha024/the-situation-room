@@ -385,6 +385,8 @@ export function tidyHeadline(s: string, cap = 140): string {
 /** Body hygiene: sentences end in a stop, no source dumps. */
 export function tidyBody(s: string): string {
   const t = String(s || "")
+    // A dateline with nothing after it is no body.
+    .replace(/^[^—\n.]{1,60}—\s*$/, "")
     // An empty dateline leaves "— text": drop the orphaned dash.
     .replace(/^\s*[—–-]\s*/, "")
     .replace(/\s+/g, " ")

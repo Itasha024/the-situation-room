@@ -425,6 +425,11 @@ const MIXED_SRC =
 
 /** Iran's state and IRGC-affiliated channels. */
 const IRAN_SRC = /Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV/i;
+/** Who an Iranian channel is retelling: Saree, Abdulsalam, Saba, Al-Masirah, the Houthi armed forces and ministries. */
+const IRAN_RELAY =
+  /سریع|سريع|عبدالسلام|عبد السلام|سخنگوی (?:نیروهای مسلح|ارتش) یمن|المتحدث (?:الرسمي )?باسم القوات المسلحة|القوات المسلحة اليمنية|وكالة سبأ|خبرگزاری سبا|المسيرة|المسیره|وزارة الصحة (?:في صنعاء|اليمنية)|\bSaree\b|\bSari'?\b|Abdulsalam|Yemen(?:i|'s) (?:armed forces|army) spokes|spokes(?:man|person) (?:for|of) (?:the )?Yemeni armed forces|Ansarullah spokes|\bSaba\b|Al-?Masirah|Yemen(?:i|'s) health ministry/i;
+/** "Summary of the day", "what happened today in Yemen": a channel's round-up. */
+const IRAN_RECAP = /خلاصه|مرور (?:اخبار|رویدادهای)|أبرز (?:الأحداث|التطورات)|حصاد اليوم|ملخص|round-?up|summary of (?:the )?(?:day|events|developments)|latest developments in Yemen/i;
 
 export function breadthOf(source: string): Breadth {
   if (FOCUSED_SRC.test(source)) return "focused";
@@ -597,6 +602,13 @@ export function gate(input: GateInput): Verdict {
     if (!rule.re.test(n)) continue;
     if (rule.unless && rule.unless.test(n)) continue;
     return out("exclude", rule.id, rule.note);
+  }
+  // An Iranian channel retelling the Houthis' own spokesmen, agency, channels or
+  // ministries: the desk reads those first-hand (user, 3 Oct, 07:47 and 09:16).
+  // And an Iranian summary of the day's events is a recap.
+  if (IRAN_SRC.test(input.source)) {
+    if (IRAN_RELAY.test(raw)) return out("exclude", "iran-relay", "An Iranian channel relaying a Yemeni source the desk reads first-hand.");
+    if (IRAN_RECAP.test(raw)) return out("exclude", "recap", "An Iranian channel's summary of events already reported one by one.");
   }
 
   /* 3. Topicality --------------------------------------------------- */

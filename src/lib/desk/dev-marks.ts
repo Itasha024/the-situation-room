@@ -1,6 +1,6 @@
 import type { DevKind, DevMark, DevSide } from "./prose.ts";
 import type { LiveReport } from "./types.ts";
-import { captureConfirmed } from "./control-live.ts";
+import { captureFlag, districtAt } from "./control-live.ts";
 import { governorateAt } from "./adm1.ts";
 import { placesIn } from "./gazetteer.ts";
 import { notNewEvent } from "./pin-rule.ts";
@@ -52,8 +52,10 @@ const SIDE_RE: [DevSide, RegExp][] = [
   ["southern", /\b(STC|Southern Transitional|southern forces|Security Belt|Hadrami Elite|Shabwa Defen[cs]e)\b/gi],
   ["saudi", /\b(Saudi|coalition)\b/gi],
   ["us", /\b(US|U\.S\.|American|CENTCOM|Pentagon)\b/g],
-  ["government", /\b(government|pro-government|Giants|National Resistance|Tareq|army|PLC|Presidential Leadership|Yemeni forces)\b/gi],
+  ["government", /\b(government|pro-government|Giants|National Resistance|Tareq|army|PLC|Presidential Leadership|Yemeni forces|military axis|axis forces|Nation'?s Shield|Joint Forces|Popular Resistance|resistance forces|tribal forces|tribesmen)\b/gi],
 ];
+/** "Houthi forces withdraw / flee / retreat": the ground went the other way (5 Oct, Taiz). */
+const GAVE_WAY = /\b(Houthis?|Ansar ?Allah|government|pro-government|Giants|army|Nation'?s Shield|southern|STC)(?:\s+[\w'-]+){0,2}\s+(?:withdr[ae]w\w*|flee\w*|fled|retreat\w*|pull(?:s|ed)? (?:out|back)|abandon\w*|surrender\w*)\b/i;
 /** A name after these words is the target, not the one who acted. */
 const OBJECT_BEFORE = /\b(on|at|against|targeting|targets?|hits?|struck|strikes?|kills?|killed|of|into|toward|towards|repels?|repelled|near|by)\s+(?:the |a |an )?(?:[\w-]+ )?$/i;
 
@@ -74,6 +76,9 @@ export function actorOf(r: Pick<LiveReport, "summary" | "text">, kind: DevKind):
   const h = String(r.summary || "");
   const all = `${h} ${String(r.text || "").slice(0, 300)}`;
   let side = find(h) ?? find(all);
+  // A side named only as the one that withdrew or fled is not the one that acted.
+  const gave = GAVE_WAY.exec(h);
+  if (gave && (kind === "advance" || kind === "capture" || kind === "fighting") && side === sideOfName(gave[1])) side = side === "houthi" ? "government" : "houthi";
   // Only the coalition, the US and Israel fly strike aircraft over Yemen.
   if (kind === "airstrike" && (side === "houthi" || !side)) side = /\b(US|U\.S\.|American)\b/.test(all) ? "us" : "saudi";
   // An interception's side is the one that fired what was shot down: the side
@@ -176,20 +181,24 @@ export function cardMarks(reports: LiveReport[], frontsOf: (r: LiveReport) => st
   for (const r of reports) {
     let kind = kindOf(r);
     if (!kind) continue;
-    // One side's word that it took ground is drawn as its advance; the flag waits for confirmation.
-    if (kind === "capture" && !captureConfirmed(r)) kind = "advance";
-    const side = kind === "repelled" ? repelAttacker(String(r.summary || "")) ?? repelAttacker(String(r.text || "").slice(0, 300)) ?? actorOf(r, kind) : actorOf(r, kind);
+    // "Ground taken" is the colours' rule (user, 5 Oct): the whole district, confirmed.
+    // A camp, an airport, a hill or a town taken, or one side's word alone, is an advance.
+    const flag = kind === "capture" ? captureFlag(r) : null;
+    if (kind === "capture" && !flag) kind = "advance";
+    const side = flag ? (flag.to === "houthi" ? "houthi" : "government") : kind === "repelled" ? repelAttacker(String(r.summary || "")) ?? repelAttacker(String(r.text || "").slice(0, 300)) ?? actorOf(r, kind) : actorOf(r, kind);
     // A missile or drone flies in from the launch area its report names; the launch
     // area itself is no target ("launch two ballistic missiles from Sanaa").
     const from = FIRED.has(kind) ? launchOf(r) : null;
     const at = Date.parse(String(r.at || "")) || 0;
-    const pins = pinsOf(r).filter((p) => !from || km(p.ll, from.ll) > 10);
+    let pins = pinsOf(r).filter((p) => !from || km(p.ll, from.ll) > 10);
+    // A flag stands in the district taken, not on another place the headline names.
+    if (flag) pins = pins.filter((p) => districtAt(p.ll[0], p.ll[1])?.id === flag.district);
     if (from && !pins.length) {
       launches.push({ kind, side, ll: from.ll, at });
       continue;
     }
     for (const p of pins) {
-      const m: DevMark = { place: p.name, kind, side, ll: p.ll };
+      const m: DevMark = { place: p.name, kind, side, ll: p.ll, ...(flag ? { district: flag.district } : {}) };
       if (kind === "interception") m.shot = /\b(drones?|UAVs?|unmanned|ScanEagle|MQ-9|Reaper)\b/i.test(`${r.summary} ${r.text ?? ""}`) ? "drone" : "missile";
       if (from && km(from.ll, p.ll) >= 30) m.fromLl = from.ll;
       const before = all.length;

@@ -33,7 +33,7 @@ import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
 
 export type Group = { lead: LiveReport; others: LiveReport[] };
-export type Written = { headline: string; body: string };
+export type Written = { headline: string; body: string; /** Accounts (1-based) the model found to tell another event. */ other?: number[] };
 /** Asks a model; null when none answered. */
 export type Ask = (system: string, user: string) => Promise<Record<string, unknown> | null>;
 
@@ -147,8 +147,40 @@ one side on one area. Write ONE report of it.
 - Body: one to four sentences with the facts the headline has no room for.
   Empty when the headline carries everything.
 - Do not name the outlets, except to attribute a claim only one side made.
+- Account [1] is the card's own source and link: the headline must be what
+  account [1] reports. Never give the card a headline from another account.
+- An account that tells ANOTHER event (another day, another place, another
+  speaker, a denial of what the others report, a reaction or statement about
+  it): leave it out, and list its number in "other". A denial is never part of
+  the claim it denies.
+- One side's claim stays that side's: a place or a figure that only some
+  accounts give is attributed to them ("Houthi-aligned channels also named
+  Yanbu"), never added to an official statement that did not name it.
 
-Answer JSON only: {"headline": "...", "body": "..."}`;
+Answer JSON only: {"headline": "...", "body": "...", "other": []}`;
+
+/** Words that carry the story, place names aside. */
+function storyWords(s: string): Set<string> {
+  const STOP = /^(?:the|and|for|with|from|that|this|their|they|into|over|after|amid|says?|said|reports?|reported|forces?|yemeni|houthis?|government|saudi|coalition|official|source|sources|military|spokesperson|spokesman|attack|attacks|strike|strikes|near|amid|while|about|against|toward|towards|have|been|were|will|also)$/;
+  return new Set((String(s).toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? []).filter((w) => !STOP.test(w) && !PLACE_WORDS.has(w)).map((w) => w.replace(/(?:es|s|ed|ing)$/, "")));
+}
+
+/**
+ * The headline tells what the lead (the card's own link) reports (user's review,
+ * 5 Oct: eleven cards a day carried a headline from an account in their Also,
+ * two of them saying the opposite of the linked post). Half its story words, or
+ * more of them than any other account gives, must be the lead's.
+ */
+export function leadCarries(headline: string, lead: LiveReport, others: LiveReport[]): boolean {
+  const h = storyWords(headline);
+  if (h.size < 2) return true;
+  const share = (r: LiveReport) => {
+    const t = storyWords(`${r.summary} ${r.text ?? ""}`);
+    return [...h].filter((w) => t.has(w)).length / h.size;
+  };
+  const own = share(lead);
+  return own >= 0.5 || others.every((o) => share(o) <= own);
+}
 
 function accountsText(all: LiveReport[]): string {
   return all
@@ -214,8 +246,12 @@ export function toWritten(json: Record<string, unknown> | null, all: LiveReport[
   let body = respell(stripSpellingNotes(roleNamesInProse(String(json.body ?? "").trim())));
   // The same rule as a single card: short accounts make a headline-only card.
   if (redundantBody(headline, body, accountsSource(all))) body = "";
-  const w = { headline: headline ? headline[0].toUpperCase() + headline.slice(1) : "", body };
-  return combineProblem(w, all, places) ? null : w;
+  const other = Array.isArray(json.other) ? (json.other as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 2 && n <= all.length) : [];
+  const kept = all.filter((_, i) => !other.includes(i + 1));
+  const w: Written = { headline: headline ? headline[0].toUpperCase() + headline.slice(1) : "", body, ...(other.length ? { other } : {}) };
+  // One event's accounts (not a wave over several places, where the lead tells one of them).
+  if (placesOf(all).length <= 1 && !leadCarries(w.headline, all[0], kept.slice(1))) return null;
+  return combineProblem(w, kept, placesOf(kept).length ? placesOf(kept) : places) ? null : w;
 }
 
 /** Words of the gazetteer's place names: a write-up may name the governorate a place is in. */
@@ -297,7 +333,13 @@ export async function combineGroups(
   jobs.forEach((j, i) => {
     const w = results[i];
     if (w) {
-      applyWritten(j.group, w, j.places);
+      // Accounts of another event go out as their own cards, not in this one's Also.
+      if (w.other?.length) {
+        const away = new Set(w.other.map((n) => j.all[n - 1]));
+        j.group.others = j.group.others.filter((o) => !away.has(o));
+        for (const o of away) out.push({ lead: o, others: [] });
+      }
+      applyWritten(j.group, w, placesOf(members(j.group)).length ? placesOf(members(j.group)) : j.places);
       written += 1;
       out.push(j.group);
     } else if (j.parts.length > 1) out.push(...j.parts);
@@ -365,6 +407,14 @@ export async function enrichCards(pairs: [LiveReport, LiveReport][], ask: Ask, s
         fresh[j.key] = w;
       }
       if (!w) return;
+      // A later account of another event leaves the card's Also, and the card keeps its own copy.
+      if (w.other?.length) {
+        const away = new Set(w.other.map((n) => j.all[n - 1]?.url));
+        j.home.alsoReportedBy = (j.home.alsoReportedBy ?? []).filter((a) => !away.has(a.url));
+        j.home.tags = [...new Set([...(j.home.tags ?? []), "merged"])];
+        out.push(j.home);
+        return;
+      }
       applyWritten({ lead: j.home, others: j.adds }, w, j.places);
       j.home.tags = [...new Set([...(j.home.tags ?? []), "merged"])];
       out.push(j.home);

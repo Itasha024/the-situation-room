@@ -22,7 +22,7 @@ import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
-import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
+import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, opposed, otherPartners, retellsSpeaker, sameCount, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -48,6 +48,8 @@ export type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/t
 type Channel = { id: string; name: string; lean: "houthi" | "gov" | "south" | "intl" };
 type Cadence = { everyMin: number } | { everyHours: number } | { atHours: number[] } | { atHour: number };
 type ChannelScan = Channel & { cadence: Cadence };
+/** reuters.com/fr/…, apnews.com/es/…, france24.com/fr/… when the desk reads the English edition. */
+const TRANSLATED_EDITION = /^https?:\/\/(?:www\.)?(?:reuters\.com|apnews\.com|bloomberg\.com|cnn\.com|bbc\.com)\/(?:fr|pt|es|de|it|ja|zh|ko|ru|tr|id)(?:-[a-z]{2})?\//i;
 /** `whole`: the site's own listing of everything, triaged by a model. */
 /** `html`: no feed; the site's section page is read and every link matching this pattern is an article. */
 type RssFeed = { url: string; name: string; id: string; cadence: Cadence; whole?: boolean; ua?: string; site?: string; lang?: "ar"; html?: RegExp };
@@ -81,13 +83,15 @@ const TG: ChannelScan[] = [
   { id: "Alibk3", name: "Ali Bk", lean: "houthi", cadence: C5 },
   { id: "SabrenNewss", name: "Sabereen News", lean: "houthi", cadence: C5 },
   { id: "naya_foriraq", name: "Naya", lean: "houthi", cadence: C5 },
-  { id: "shin_persian", name: "Shin Persian", lean: "houthi", cadence: C5 },
+  // Not Houthi-aligned: a Persian relay of others' X posts (UKMTO, Al Arabiya, Yemeni journalists), against the Iranian regime (5 Oct).
+  { id: "shin_persian", name: "Shin Persian", lean: "intl", cadence: C5 },
   // The breaking-news channel, not the main one: the main channel posts
   // programme clips ("Marib and Taiz: the battle map") that read as live
   // fighting and were published as clashes happening now.
   { id: "AlarabyTvBrk", name: "Al-Araby TV", lean: "intl", cadence: C5 },
   { id: "shajab_news", name: "Shajab News", lean: "houthi", cadence: C5 },
-  { id: "bin_1saeed", name: "Bin Saeed", lean: "gov", cadence: C5 },
+  // Houthi-aligned: "the Saudi enemy", "the Yemeni armed forces" for the Houthis (5 Oct; it was filed as government-side).
+  { id: "bin_1saeed", name: "Bin Saeed", lean: "houthi", cadence: C5 },
   { id: "AjaNews", name: "Al Jazeera", lean: "intl", cadence: C5 },
   { id: "alhadath_brk", name: "Al Hadath", lean: "gov", cadence: C5 },
   { id: "alarabiyaBr", name: "Al Arabiya", lean: "gov", cadence: C5 },
@@ -1275,6 +1279,23 @@ const CLAIM_WINDOW_MS = 30 * 60_000;
 const DUPLICATE_WINDOW_MS = 6 * 3600_000;
 /** One clip reposted by another account. */
 const FOOTAGE_WINDOW_MS = 12 * 3600_000;
+/**
+ * One channel posting the same event again and again with nothing new: the
+ * smoke over Riyadh on 3 Oct went out as ten Ali Bk cards, 09:55 and 10:00 among
+ * them (user, 3 Oct). Its sirens, "again" and "a new wave" stay their own cards.
+ */
+const SAME_CHANNEL_REPEAT_MS = 4 * 3600_000;
+const AGAIN_RE = /\bagain\b|\bnew (?:wave|attack|strike|raid|round|salvo)s?\b|\bsecond (?:wave|attack|strike|raid|salvo)\b|\banother (?:attack|strike|raid|salvo|wave)\b|\brenewed\b|مجدد|موجة جديدة/i;
+/**
+ * A wave of air strikes on one city told by many outlets within the hour: one
+ * card that grows, not a card per outlet (user, 3 Oct: the Saudi strikes on
+ * Sanaa, 13:00 to 14:00). A new target in it is written into the card.
+ */
+const STRIKE_WAVE_MS = 90 * 60_000;
+/** A speaker's lines this close to the card on his words are the same speech or statement. */
+const SPEECH_FOLD_MS = 2 * 3600_000;
+/** How far apart a party's own post and a relay's card may be for the own post to take the card. */
+const LEAD_SWAP_MS = 90 * 60_000;
 
 /**
  * A statement or diplomacy report that tells a story already on the desk, as
@@ -1328,7 +1349,8 @@ export function foldIntoPublished(
     // and a similar post from it most likely brings something new.
     // A statement or a meeting with a counterpart the card never names is
     // another event (a call with Qatar's emir is not the UAE's visit).
-    const open = (o: LiveReport) => same(o) && (o.source !== r.source || sameHeadline(o, r)) && !(talk(r) && otherPartners(o, r));
+    // A denial and the claim it denies, or each side taking the same ground, are never copies (5 Oct).
+    const open = (o: LiveReport) => same(o) && (o.source !== r.source || sameHeadline(o, r)) && !(talk(r) && otherPartners(o, r)) && !opposed(o, r);
     // A card already on the desk is a home whichever was posted first: a copy
     // seen late (the channel read after an outage) carries an earlier time than
     // the card it copies, and went out as a second card.
@@ -1345,6 +1367,19 @@ export function foldIntoPublished(
             !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
         )
       : undefined;
+    // A post already in a card's Also is that card's account, and never leads a
+    // card of its own (user's review, 5 Oct: eight duplicates a slice led with a
+    // link an earlier card already listed).
+    if (!home) home = homes.find((o) => same(o) && (o.alsoReportedBy ?? []).some((a) => linkKey(a.url) === linkKey(r.url)));
+    // One channel's own repeat with nothing new (user, 3 Oct).
+    if (!home && !alertCities(r) && !AGAIN_RE.test(r.summary)) {
+      home = homes.find(
+        (o) =>
+          same(o) && o.source === r.source && before(o, SAME_CHANNEL_REPEAT_MS) && !alertCities(o) && !opposed(o, r) &&
+          (r.duplicateOf === o.fp || sameEventAbroad(o, r, yemeniPlaceNames) || (FIELD_TYPES.has(r.type) && o.type === r.type && sameGround(o, r) && sameStory(o, r))) &&
+          !addsFacts(o, r) && !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
+      );
+    }
     // The same post forwarded by another channel, seen in a later scan.
     if (!home && r.copyKey) home = homes.find((o) => same(o) && o.copyKey === r.copyKey && (Date.parse(o.at) <= t || known(o)));
     // One event, two outlets, and the reader wrote both up in the same words.
@@ -1382,6 +1417,15 @@ export function foldIntoPublished(
           sameGround(o, r) && !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
       );
     }
+    // One wave of air strikes on one city, many outlets (user, 3 Oct).
+    if (!home && r.type === "strike" && !AGAIN_RE.test(r.summary)) {
+      home = homes.find(
+        (o) =>
+          open(o) && o.source !== r.source && o.type === "strike" && before(o, STRIKE_WAVE_MS) && sameGround(o, r) &&
+          yemeniPlaceNames(o.summary).some((p) => yemeniPlaceNames(r.summary).includes(p)) &&
+          !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
+      );
+    }
     // One event in Saudi Arabia, many outlets, each in its own words: the
     // Medina power station went out as eight cards in five minutes.
     if (!home) {
@@ -1400,6 +1444,13 @@ export function foldIntoPublished(
       home = homes.find(
         (o) => open(o) && o.source !== r.source && talk(o) && before(o, STORY_WINDOW_MS) && sameStory(o, r),
       );
+    }
+    // One speech, one card (user's review, 5 Oct: al-Alimi's speech went out as
+    // some 45 cards, a spokesman's statement as eight). A speaker's lines within
+    // two hours of the card on his words join it; what they add is written in.
+    const who = talk(r) ? namedSpeaker(r.summary) : null;
+    if (!home && who) {
+      home = homes.find((o) => same(o) && talk(o) && !opposed(o, r) && before(o, SPEECH_FOLD_MS) && namedSpeaker(o.summary) === who);
     }
     // Another outlet's line of a speaker's words the card already carries.
     if (!home && talk(r)) {
@@ -1429,24 +1480,26 @@ export function foldIntoPublished(
     // The movement's own outlet carrying a statement a sympathetic paper
     // reported first: the statement is the movement's, and the paper was
     // relaying it. The card keeps its place in the feed and its identity, and
-    // changes hands — the relay moving to "Also" rather than being dropped.
+    // changes hands; written from the original now, it carries no "Also" (user, 3 Oct).
     // Likewise the speaker's own account after a relay's card: Pakistan's
     // foreign ministry on X after Al Arabiya's card on its statement (user, 2 Oct).
     const ownWords = isOfficialBody(r.source) && !isOfficialBody(home.source) && speakerIs(r.source, home.summary);
+    // Only an own post of the same moment takes the card: Saree's statement of the
+    // evening took over a morning card on another count, and an editorial of 20:36
+    // a card of 14:29 (user's review, 5 Oct). A later post joins as a fold, no more.
+    const sameMoment = Math.abs(t - Date.parse(home.at)) <= LEAD_SWAP_MS;
     if (
-      ownWords ||
-      (homeOutlet(r.source) &&
-        !homeOutlet(home.source) &&
-        sideOfSource(r.source) === sideOfSource(home.source) &&
-        scoreReport(r) >= scoreReport(home))
+      sameMoment &&
+      (ownWords ||
+        (homeOutlet(r.source) && !homeOutlet(home.source) && sideOfSource(r.source) === sideOfSource(home.source) && scoreReport(r) >= scoreReport(home)))
     ) {
-      const relayed = { source: home.source, url: home.url, summary: home.summary };
       home.summary = r.summary;
       home.text = r.text;
       home.url = r.url;
       home.source = r.source;
       home.tier = r.tier;
-      home.alsoReportedBy = [relayed, ...(home.alsoReportedBy ?? [])].slice(0, 8);
+      // The card now comes from the original: the relays are not "Also" (user, 3 Oct, 07:09).
+      home.alsoReportedBy = [];
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap"])];
       if (home.side) home.confidence = confidenceOf(home, home.alsoReportedBy.map((a) => sideOfSource(a.source)));
       touched.add(home);
@@ -1879,6 +1932,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           const url = inRun && /news\.google\.com/.test(feed.url) ? feed.url.replace(/when%3A\w+/, "when%3A2d") : widenForGap(feed.url, feed.cadence, lastRead, now);
           let body = await fetchListing(url, feed.ua);
           let listed = body ? (feed.html ? parseHtmlListing(body, feed.url, feed.html) : parseListing(body)) : [];
+          // A wire's translated editions are its English story again (user's review, 5 Oct: Reuters in French and Portuguese, two more cards).
+          listed = listed.filter((it) => !TRANSLATED_EDITION.test(it.url));
           // A site whose own listing fails today (Arab News answers some
           // readers 403) is listed through Google News for this read instead.
           if (!listed.length && feed.site && !/news.google.com/.test(feed.url)) {
@@ -2284,7 +2339,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         // within minutes with no clashing figures; an alert, within its burst.
         // A channel's own posts group only when word for word the same.
         const fits = (g: { lead: LiveReport; others: LiveReport[] }) =>
-          [g.lead, ...g.others].every((o) => o.source !== r.source || sameHeadline(o, r)) &&
+          [g.lead, ...g.others].every((o) => (o.source !== r.source || sameHeadline(o, r)) && !opposed(o, r)) &&
           (alertRule
             ? apart(g) <= ALERT_BURST_MS
             : copyRule

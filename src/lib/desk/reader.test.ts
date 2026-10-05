@@ -251,7 +251,7 @@ test("the wider scope is in the reader's instructions", () => {
   assert.match(SYSTEM_PROMPT, /new coalition commander meets\s+Tareq Saleh/);
   assert.match(SYSTEM_PROMPT, /Saudi Grand Mufti calls for fighting the Houthis/);
   assert.match(SYSTEM_PROMPT, /a mufti of any\s+other country is a cleric/);
-  assert.equal(PROMPT_VERSION, 3);
+  assert.equal(PROMPT_VERSION, 4);
 });
 
 test("a daily 429 rests the model until midnight in California", () => {

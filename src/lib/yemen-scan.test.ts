@@ -509,7 +509,8 @@ test("the movement's own outlet takes the card from the paper that relayed it", 
   assert.equal(card.fp, "a", "the card keeps its identity and its place in the feed");
   assert.equal(card.source, "Al-Masirah", "but it is now the movement's own outlet that carries it");
   assert.match(String(card.text), /Nine people/, "with their fuller version of the words");
-  assert.deepEqual((card.alsoReportedBy ?? []).map((x) => x.source), ["Al-Akhbar"], "the relay is credited, not dropped");
+  // Written from the original now: the relay is no "Also" (user, 3 Oct, 07:09).
+  assert.deepEqual((card.alsoReportedBy ?? []).map((x) => x.source), [], "the card from the original carries no Also");
   assert.ok(card.tags?.includes("lead-swap"), "and the store is told to rewrite the stored row");
 });
 
@@ -758,7 +759,7 @@ test("after the laptop was offline, an hour's Google News query reaches back ove
   assert.match(widenForGap(url, { everyMin: 10 }, now - 61 * 60_000, now), /when%3A3h/);
 });
 
-test("one channel's sirens hours apart stay two alerts; the reader's duplicate_of does not merge one channel's posts", async () => {
+test("one channel's sirens stay two alerts, even when the reader calls them the same", async () => {
   const { foldIntoPublished } = await import("./yemen-scan.server.ts");
   const base = { live: true, text: "", score: 1, tags: [] } as const;
   const a = { ...base, fp: "a", url: "https://t.me/x/1", source: "Al Arabiya", at: "2026-09-29T09:00:00+03:00", type: "air_raid_alert", summary: "Sirens sound in Riyadh" };
@@ -783,7 +784,7 @@ test("one clip reposted by another account hours later folds into the first card
   foldIntoPublished(reports, new Set(["a"]));
   assert.equal(reports.length, 1);
   // A clip of another length is another event.
-  const c = { ...b, fp: "c", media: clip(41) };
+  const c = { ...b, fp: "c", url: "https://x.com/b/3", media: clip(41) };
   const two = [a, c] as never[];
   foldIntoPublished(two, new Set(["a"]));
   assert.equal(two.length, 2);
@@ -807,11 +808,13 @@ test("another outlet's line of an interview the card already carries folds into 
   const reports = [home, line] as never[];
   foldIntoPublished(reports, new Set(["h"]));
   assert.equal(reports.length, 1);
-  // Something he had not said on the card stays its own card.
+  // Something he had not said on the card is written into it: one interview, one card (user's review, 5 Oct).
   const other = { ...line, fp: "o", summary: "STC official Amr al-Bidh: southern forces will retake Mukalla port within weeks" };
   const two = [home, other] as never[];
-  foldIntoPublished(two, new Set(["h"]));
-  assert.equal(two.length, 2);
+  const enrich: [unknown, unknown][] = [];
+  foldIntoPublished(two, new Set(["h"]), [], enrich as never);
+  assert.equal(two.length, 1);
+  assert.equal(enrich.length, 1);
 });
 
 test("the two Sabas never mix: the government agency is not the Houthi outlet", async () => {

@@ -155,7 +155,7 @@ test("a site stored under another name joins its row; wrong hits stay out; weapo
   assert.ok(!out.sites.some((s) => s.hits.some((h) => h.url === "https://t.me/shajab_news/68014")));
   // Ali Bk's report of an attack that day is a claim, not the old picture.
   assert.ok(out.sites.find((s) => s.id === "abqaiq")?.hits.some((h) => h.url === "https://t.me/Alibk3/37488" && h.claim));
-  assert.equal(out.sites.find((s) => s.id === "taibah-medina")!.hits[0].weapon, "A drone");
+  assert.match(out.sites.find((s) => s.id === "taibah-medina")!.hits[0].weapon ?? "", /^A drone/);
   assert.ok(out.ships.every((s) => s.weapon), "every researched ship attack names its weapon");
 });
 

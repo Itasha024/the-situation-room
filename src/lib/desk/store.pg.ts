@@ -316,6 +316,8 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           // the cards after it: a tick once lost every older card this way.
           try {
             if (!r.url || !hasArticlePath(r.url)) return;
+            // A dateline with nothing after it ("JABAL MAT'HAN — ") is no body (user's review, 5 Oct).
+            if (r.text && /^[^—\n.]{1,60}—\s*$/.test(r.text)) r.text = "";
 
             // `returning fp` tells us whether this row was genuinely new, so the
             // tick reports real numbers rather than assuming every insert landed.
@@ -351,8 +353,8 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               }
               // The party's own outlet took the card from a paper that had only
               // been relaying it. Same card, same place in the feed; the copy,
-              // the link and the byline change hands, and the relay is kept in
-              // "Also" rather than dropped — so the swap is visible, not silent.
+              // the link and the byline change hands. Written from the original,
+              // it carries no "Also" (user, 3 Oct, 07:09).
               if (r.tags?.includes("lead-swap")) {
                 await sql`
                   update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)},

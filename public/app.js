@@ -2324,6 +2324,12 @@ const DEV_LABEL = {
 function devColor(side) { return side === 'us' ? '#94a3b8' : COLORS[DEV_CTRL[side]] || COLORS.contested; }
 /** The other side of a clash or a repelled attack. */
 function devFoe(side) { return side === 'houthi' ? 'government' : 'houthi'; }
+/** Who held a district before the taker: the latest change to it the update clock recorded. */
+function devHolderBefore(id, side) {
+  const to = DEV_CTRL[side];
+  const ch = ((brief && brief.controlLive && brief.controlLive.changes) || []).filter((c) => c && c.district === id && c.to === to);
+  return ch.length ? ch.sort((a, b) => String(b.at).localeCompare(String(a.at)))[0].from : null;
+}
 
 /*
  * The flags, drawn small: the Houthi movement's banner (its "sarkha" slogan,
@@ -2411,6 +2417,9 @@ function devMarksOf(list) {
   const marks = (Array.isArray(list) ? list : [])
     .filter((x) => x && DEV_LABEL[x.kind] && ok(x.ll))
     .map((x) => ({ ...x, ll: [+x.ll[0], +x.ll[1]], fromLl: ok(x.fromLl) ? [+x.fromLl[0], +x.fromLl[1]] : null }))
+    // "Ground taken" only for a whole district, confirmed, as the colours (user, 5 Oct):
+    // a capture the server did not tie to a district (older briefs too) is an advance.
+    .map((x) => (x.kind === 'capture' && !x.district ? { ...x, kind: 'advance' } : x))
     .filter(devPlausible);
   // "Fighting in Taiz" beside "fighting at Jabal Habashi": the named spot says it, once.
   return marks.filter((x) => !DEV_BROAD.test(String(x.place || '').trim()) || !marks.some((y) => y !== x
@@ -2421,9 +2430,11 @@ function devMarksOf(list) {
 function mainDevMarks() {
   if (brief && Array.isArray(brief.devMap)) return devMarksOf(brief.devMap);
   const kind = { capture: 'capture', fight: 'fighting', strike: 'airstrike' };
+  // Read from text there is no confirmation to go on: a capture is drawn as an advance.
   return developmentItems().filter((it) => kind[it.act]).map((it) => {
     const c = entryCenter(it.entry);
-    return c ? { place: it.entry.name, kind: kind[it.act], side: it.side === 'plc' ? 'government' : it.side || 'houthi', ll: c, fromLl: null } : null;
+    const k = kind[it.act] === 'capture' ? 'advance' : kind[it.act];
+    return c ? { place: it.entry.name, kind: k, side: it.side === 'plc' ? 'government' : it.side || 'houthi', ll: c, fromLl: null } : null;
   }).filter(Boolean);
 }
 
@@ -2568,11 +2579,15 @@ function drawDevMarks(m, marks, bounds) {
     const foe = devColor(devFoe(x.side));
     bounds.extend(x.ll);
     if (x.kind === 'capture' || x.kind === 'advance') {
-      const d = districtAt(x.ll[0], x.ll[1]);
+      const d = x.kind === 'capture' && x.district ? { id: x.district } : districtAt(x.ll[0], x.ll[1]);
       const f = d && districtGeo.features.find((g) => g.properties.id === d.id);
       if (f) {
-        const fill = L.geoJSON(f, { interactive: false, style: { color: x.kind === 'capture' ? foe : col, weight: x.kind === 'capture' ? 1.8 : 2.6, dashArray: x.kind === 'advance' ? '6 5' : null, fillColor: foe, fillOpacity: x.kind === 'capture' ? 0.6 : 0 } }).addTo(m);
-        movers.push({ type: 'fill', x, fill, col, foe });
+        // A taken district turns from the colour it had before into the taker's: its
+        // holder before the change (the update clock's record), not just "the other side".
+        const was = x.kind === 'capture' ? devHolderBefore(d.id, x.side) : null;
+        const from = was ? COLORS[was] || COLORS.contested : foe;
+        const fill = L.geoJSON(f, { interactive: false, style: { color: x.kind === 'capture' ? from : col, weight: x.kind === 'capture' ? 1.8 : 2.6, dashArray: x.kind === 'advance' ? '6 5' : null, fillColor: from, fillOpacity: x.kind === 'capture' ? 0.6 : 0 } }).addTo(m);
+        movers.push({ type: 'fill', x, fill, col, foe: from });
       }
     }
     if ((x.kind === 'missile' || x.kind === 'drone' || x.kind === 'interception') && x.fromLl) {

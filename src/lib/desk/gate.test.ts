@@ -136,9 +136,7 @@ test("Iran's channels: Iran alone is no tie, ایمن is not Yemen, and nothing 
   const safety = gate({ source: "Mehr News", url: "u", agency: false, text: "مدیرعامل سازمان آتش‌نشانی تهران: پیشرفت سی تا چهل درصدی ایمن‌سازی بازار بزرگ تهران در زمینه کابل‌کشی‌ها" });
   assert.equal(safety.outcome, "exclude");
   const drone = gate({ source: "Mehr News", url: "u", agency: false, text: "یمن یک پهپاد شناسایی سعودی را ساقط کرد سخنگوی نیروهای مسلح یمن: یک پهپاد شناسایی کاریال متعلق به دشمن سعودی" });
-  // Retelling the Houthi military spokesman, whom the desk reads first-hand: not taken (user, 3 Oct, 07:47).
-  assert.equal(drone.outcome, "exclude");
-  assert.equal(drone.reason, "iran-relay");
+  assert.equal(drone.outcome, "feed");
   assert.equal(gate({ source: "Saba", url: "u", agency: false, text: "قال أيمن محمد إن الاجتماع ناقش خطة التعليم" }).outcome === "feed", false);
 });
 

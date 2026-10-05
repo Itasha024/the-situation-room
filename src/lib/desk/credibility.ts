@@ -88,7 +88,7 @@ export function outletSide(source: string, lean: string): OutletSide {
   }
   if (lean === "houthi") return "houthi";
   if (lean === "gov" || lean === "south") return "gov";
-  if (/Saba(?! \(government\))|Bin Saeed|Masirah|Saree|Abdulsalam|Al-?Thawrah|Mayadeen|Akhbar|Yemen Press Agency/i.test(source)) return "houthi";
-  if (/SPA|Arab News|Asharq|Okaz|Hadath|Arabiya|Almashhad|Saba \(government\)|Sawt al-Asima|Mareb Press|Al-Masdar Online|Aden al-Ghad|Saudi Gazette/i.test(source)) return "gov";
+  if (/Saba(?! \(government\))|Masirah|Saree|Abdulsalam|Al-?Thawrah|Mayadeen|Akhbar|Yemen Press Agency/i.test(source)) return "houthi";
+  if (/SPA|Arab News|Asharq|Okaz|Hadath|Arabiya|Almashhad|Bin Saeed|Saba \(government\)|Sawt al-Asima|Mareb Press|Al-Masdar Online|Aden al-Ghad|Saudi Gazette/i.test(source)) return "gov";
   return "neutral";
 }

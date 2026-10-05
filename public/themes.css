@@ -646,13 +646,12 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 @media (max-width:700px){.toolbar .map-meth{align-self:flex-start;margin-top:-.3rem}}
 
 /* The report column's scroll bar: thin, in the theme's own lines (2 Oct) */
-/* The methodology pop-ups scroll with the same bar (user, 3 Oct). */
-.rail,.rel-pop{scrollbar-width:thin;scrollbar-color:var(--t-line-strong,#4a433d) transparent}
-.rail:hover,.rel-pop:hover{scrollbar-color:var(--t-muted,#a99d93) transparent}
-.rail::-webkit-scrollbar,.rel-pop::-webkit-scrollbar{width:10px}
-.rail::-webkit-scrollbar-track,.rel-pop::-webkit-scrollbar-track{background:transparent}
-.rail::-webkit-scrollbar-thumb,.rel-pop::-webkit-scrollbar-thumb{background:var(--t-line-strong,#4a433d);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
-.rail::-webkit-scrollbar-thumb:hover,.rel-pop::-webkit-scrollbar-thumb:hover{background-color:var(--t-muted,#a99d93)}
+.rail{scrollbar-width:thin;scrollbar-color:var(--t-line-strong,#4a433d) transparent}
+.rail:hover{scrollbar-color:var(--t-muted,#a99d93) transparent}
+.rail::-webkit-scrollbar{width:10px}
+.rail::-webkit-scrollbar-track{background:transparent}
+.rail::-webkit-scrollbar-thumb{background:var(--t-line-strong,#4a433d);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+.rail::-webkit-scrollbar-thumb:hover{background-color:var(--t-muted,#a99d93)}
 
 /* The desk's own pages (the Sources list) */
 .doc-root{min-height:100vh;background:var(--t-bg,var(--bg));color:var(--t-text,var(--text))}

@@ -515,8 +515,8 @@ function merged(prose: DevMark[], cards: DevMark[], launches: Launch[] = []): De
   const rest = [...cards];
   const out: DevMark[] = [];
   for (const m0 of prose) {
-    const confirmed = cards.find((c) => c.kind === "capture" && c.district && c.side === m0.side && nearAny(m0, [c], 3));
-    const m: DevMark = m0.kind === "capture" && !confirmed ? { ...m0, kind: "advance" } : { ...m0, ...(confirmed ? { district: confirmed.district } : {}) };
+    const confirmed = cards.some((c) => c.kind === "capture" && c.side === m0.side && nearAny(m0, [c], 3));
+    const m: DevMark = m0.kind === "capture" && !confirmed ? { ...m0, kind: "advance" } : { ...m0 };
     // Whose missile or drone was shot down, the cards say: the prose's "side" is not sure of it.
     const card = m.kind === "interception" ? cards.find((c) => c.kind === "interception" && nearAny(m, [c], 20)) : undefined;
     if (card) Object.assign(m, { side: card.side, ...(card.shot ? { shot: card.shot } : {}) });

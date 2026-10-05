@@ -49,29 +49,7 @@ const FULL = /\b(?:full|complete|total)\s+control\s+(?:of|over)\s+(?:the\s+)?([^
 const ALL = /^\s*(?:all\s+of|the\s+whole\s+of|the\s+whole|the\s+entire|whole|entire)\s+(?:the\s+)?/i;
 const IN_FULL = /\b(?:fully|completely|entirely|in\s+full)\b/i;
 /** The holder driven out: "drove the Houthis out of X", "expelled government forces from X". */
-const OUT = /\b(?:drove|drive[sn]?|driving|push(?:ed|es)?|forced?|expel(?:s|led)?|oust(?:s|ed)?)\b([^,;.]{0,40}?)\b(?:out\s+of|from)\s+(?:the\s+)?([^,;.]{0,60})/i;
-/**
- * A gathering, reinforcements or an attacking force pushed back is not the
- * district's holder driven out: "Houthi forces expel Saudi mobilization from
- * Al-Mawasit district" (5 Oct) took no district.
- */
-const NOT_HOLDER = /\b(?:mobili[sz]ations?|gatherings?|reinforcements?|infiltrat\w+|attack\w*|assault\w*|incursions?|cells?|convoys?|patrols?)\b/i;
-
-/**
- * Where one clause ends and the next, with its own subject, begins: "…, while
- * Houthi forces expel …", "… as Houthi forces withdraw", "…; …". The side, what
- * was taken and the district must come from the same clause: on 5 Oct "Government
- * forces destroy Houthi vehicles in Jabal Habashi, while Houthi forces expel Saudi
- * mobilization from Al-Mawasit district" turned Jabal Habashi to the government.
- */
-const CLAUSE = /\s*;\s*|,\s*(?:while|whereas|as|amid|after|and)\s+|\s+(?:while|whereas|amid)\s+|\s+as\s+(?=(?:the\s+)?(?:houthis?|ansar|government|pro-|yemeni|saudi|southern|giants|nation'?s|joint|national|resistance|tribal|tribes|coalition|stc|local)\b)/i;
-
-export function clausesOf(summary: string): string[] {
-  return String(summary || "")
-    .split(CLAUSE)
-    .map((c) => c.trim())
-    .filter(Boolean);
-}
+const OUT = /\b(?:drove|drive[sn]?|driving|push(?:ed|es)?|forced?|expel(?:s|led)?|oust(?:s|ed)?)\b[^,;.]{0,40}?\b(?:out\s+of|from)\s+(?:the\s+)?([^,;.]{0,60})/i;
 
 /** The words name the district itself ("Hays district", "Bayhan", "the district"), not a town in it. */
 function isDistrict(obj: string, districtName: string): boolean {
@@ -89,7 +67,7 @@ export function tookWhole(summary: string, districtName: string): boolean {
   const full = FULL.exec(summary);
   if (full && isDistrict(full[1], districtName)) return true;
   const out = OUT.exec(summary);
-  if (out && !NOT_HOLDER.test(out[1]) && isDistrict(out[2], districtName)) return true;
+  if (out && isDistrict(out[1], districtName)) return true;
   const m = TOOK.exec(summary);
   if (!m) return false;
   const obj = ` ${m[1]} `.split(STOP_AT)[0];
@@ -101,7 +79,7 @@ const BY_ID = new Map(ADM2.map((d) => [d.id, d]));
 /** A pin set on a governorate or its capital says nothing about which district. */
 const VAGUE = new Set(["taiz", "lahj", "dhale", "dali", "marib", "jawf", "bayda", "hodeidah", "hudaydah", "hajjah", "saada", "shabwa", "abyan", "aden", "sanaa", "ibb", "dhamar", "yemen"]);
 /** Captured people or kit, not ground. */
-const NOT_GROUND = /^\s*(?:an?\s+|two\s+|three\s+|\d+\s+|several\s+|dozens\s+of\s+)?(?:houthi\s+|government\s+)?(?:fighters?|commanders?|members?|prisoners?|militants?|soldiers?|cells?|weapons?|arms|ammunition|boats?|vessels?|drones?|ships?|tankers?|men|leaders?|officers?|people|group|spy|spies|vehicles?|equipment|armou?red|tanks?|launchers?|depots?)\b/i;
+const NOT_GROUND = /^\s*(?:an?\s+|two\s+|three\s+|\d+\s+|several\s+|dozens\s+of\s+)?(?:houthi\s+|government\s+)?(?:fighters?|commanders?|members?|prisoners?|militants?|soldiers?|cells?|weapons?|arms|ammunition|boats?|vessels?|drones?|ships?|tankers?|men|leaders?|officers?|people|group|spy|spies)\b/i;
 
 /**
  * A building, not ground: "Houthi forces seize Al-Juba hospital in Marib for
@@ -138,48 +116,18 @@ export function districtOf(r: LiveReport): (typeof ADM2)[number] | null {
   return null;
 }
 
-/** The district a clause names by name ("Dhubab district", "Al-Mawasit"), not by a pin. */
-function districtNamed(clause: string): (typeof ADM2)[number] | null {
-  const words = ` ${norm(clause)} `;
-  for (const [n, d] of BY_NORM) if (!VAGUE.has(n) && words.includes(` ${n} `)) return d;
-  return null;
-}
-
 /** Who holds a district now: the live layer, else the hand baseline, else its governorate. */
 export function sideNow(id: string, gov: string, live: ControlLive | null): Side {
   const s = live?.districts[id]?.side ?? CONTROL.find((d) => d.id === id)?.side ?? GOV_CONTROL[gov] ?? "contested";
   return s === "houthi" || s === "plc" ? s : "contested";
 }
 
-/** named: the clause names the card's place or the district, so its claim is about that ground. */
-type Claim = { r: LiveReport; to: "houthi" | "plc"; whole: boolean; named: boolean; d?: (typeof ADM2)[number] };
-
-/**
- * The outlets that told this claim: the card's own, and each outlet in its Also
- * whose own headline tells the same side taking ground there. An outlet in Also
- * that told another part of a compound headline (Al Mayadeen on Al-Mawasit, 5
- * Oct) is no second teller of the Jabal Habashi part.
- */
-function tellersOf(c: Claim): string[] {
-  const out = [c.r.source];
-  const place = norm(String(c.r.place || ""));
-  for (const a of c.r.alsoReportedBy ?? []) {
-    if (!a.summary || !c.d) {
-      out.push(a.source);
-      continue;
-    }
-    const told = clausesOf(a.summary).some((x) => {
-      const w = ` ${norm(x)} `;
-      return captor(x) === c.to && (w.includes(` ${norm(c.d!.name)} `) || (place.length >= 3 && w.includes(` ${place} `)));
-    });
-    if (told) out.push(a.source);
-  }
-  return out.filter(Boolean);
-}
+/** named: the headline names the card's place or the district, so its claim is about that ground. */
+type Claim = { r: LiveReport; to: "houthi" | "plc"; whole: boolean; named: boolean };
 
 /** Two outlets from different sides, or a wire agency. A merged card carries every outlet that told it. */
 function confirmed(claims: Claim[]): boolean {
-  const tellers = claims.flatMap(tellersOf);
+  const tellers = claims.flatMap((c) => [c.r.source, ...(c.r.alsoReportedBy ?? []).map((a) => a.source)]).filter(Boolean);
   // The Sources list's three groups: Houthi-aligned, government-aligned, non-aligned (2 Oct).
   const sides = new Set(tellers.map((o) => groupOf(o)));
   const wire = claims.some((c) => c.r.side === "agency") || tellers.some((o) => WIRES.test(o));
@@ -197,51 +145,25 @@ export function captureConfirmed(r: LiveReport): boolean {
   return confirmed([{ r, to: "plc", whole: true, named: true }]);
 }
 
-/** Each clause of a card that tells a side taking ground in a district. */
-export function claimsOf(r: LiveReport): Claim[] {
-  if (r.type !== "combat") return [];
-  const parts = clausesOf(String(r.summary || ""));
-  const pinned = districtOf(r);
-  const place = norm(String(r.place || ""));
-  const out: Claim[] = [];
-  for (const c of parts) {
-    const to = captor(c);
-    if (!to) continue;
-    const took = TOOK.exec(c);
-    if (took && (NOT_GROUND.test(took[1]) || BUILDING.test(` ${took[1]} `.split(STOP_AT)[0]))) continue;
-    const words = ` ${norm(c)} `;
-    // One clause: the card's district as before. Several: the district this clause names, or the pin's when it names the pinned place.
-    const d = parts.length === 1 ? pinned : (districtNamed(c) ?? (place.length >= 3 && words.includes(` ${place} `) ? pinned : null));
-    if (!d) continue;
-    const named = (place.length >= 3 && words.includes(` ${place} `)) || words.includes(` ${norm(d.name)} `);
-    out.push({ r, to, whole: tookWhole(c, d.name), named, d });
-  }
-  return out;
-}
-
-/**
- * A "ground taken" flag on the developments' and fronts' maps: the same rule as
- * the district colours (user, 3 Oct). The whole district taken (full control,
- * or its holder driven out), named in the clause, told by two outlets not on the
- * same side or a wire. A town, a camp, an airport, a hill or a village taken is
- * an advance, however many outlets tell it.
- */
-export function captureFlag(r: LiveReport): { to: "houthi" | "plc"; district: string; name: string } | null {
-  for (const c of claimsOf(r)) if (c.whole && c.named && c.d && confirmed([c])) return { to: c.to, district: c.d.id, name: c.d.name };
-  return null;
-}
-
 /** Apply one window's capture reports to the live layer. Returns the new layer. */
 export function updateControlLive(prev: ControlLive | null, reports: LiveReport[], now = new Date()): ControlLive {
   const out: ControlLive = { districts: { ...(prev?.districts ?? {}) }, changes: [...(prev?.changes ?? [])], asOf: now.toISOString() };
   const byDistrict = new Map<string, { d: (typeof ADM2)[number]; claims: Claim[] }>();
   for (const r of reports) {
-    for (const c of claimsOf(r)) {
-      const d = c.d as (typeof ADM2)[number];
-      const g = byDistrict.get(d.id) ?? { d, claims: [] };
-      g.claims.push(c);
-      byDistrict.set(d.id, g);
-    }
+    if (r.type !== "combat") continue;
+    const summary = String(r.summary || "");
+    const to = captor(summary);
+    if (!to) continue;
+    const took = TOOK.exec(summary);
+    if (took && (NOT_GROUND.test(took[1]) || BUILDING.test(` ${took[1]} `.split(STOP_AT)[0]))) continue;
+    const d = districtOf(r);
+    if (!d) continue;
+    const g = byDistrict.get(d.id) ?? { d, claims: [] };
+    const words = ` ${norm(summary)} `;
+    const place = norm(String(r.place || ""));
+    const named = (place.length >= 3 && words.includes(` ${place} `)) || words.includes(` ${norm(d.name)} `);
+    g.claims.push({ r, to, whole: tookWhole(summary, d.name), named });
+    byDistrict.set(d.id, g);
   }
   for (const { d, claims } of byDistrict.values()) {
     const from = sideNow(d.id, d.gov, out);

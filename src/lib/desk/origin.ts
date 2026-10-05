@@ -1136,8 +1136,6 @@ ${text}`.trim(),
    */
   const googleOnly = (c: Cited) => resolverResting() && !c.x && !c.speaker && !(c.site && opts.knownHost?.(c.site));
 
-  /** Words every card of this war shares: no sign two cards tell one speaker's words. */
-  const WAR_WORDS = /^(?:yemen\w*|saudi\w*|arabia|houthis?|ansar|government|forces?|coalition|sanaa|aden|taiz|marib|hodeidah|bab|mandab|red|sea|war|attacks?|military|operations?|united|states|us|riyadh|iran\w*|strikes?|officials?|says?|said)$/i;
   /** Held speaker reports still waiting: a second channel's account of the same words waits with them. */
   const heldSpeakers = () =>
     Object.entries(cache)
@@ -1163,13 +1161,9 @@ ${text}`.trim(),
       const copy = `${r.summary}\n${r.text ?? ""}`;
       const leader = opts.held
         ? heldSpeakers().find(([, e]) => {
-            const same = e.keys.filter((k) => copy.toLowerCase().includes(k.toLowerCase()) && !WAR_WORDS.test(k));
-            // Three of its words beside the war's own with the speaker named, four without, within the hold
-            // (user's review, 5 Oct: six cards on other events were credited to Marco Rubio,
-            // sharing only "Yemen", "Saudi" and "Houthi" with his).
-            const surname = String(e.cited.name || "").split(/\s+/).pop() ?? "";
-            const named = surname.length >= 3 && copy.toLowerCase().includes(surname.toLowerCase());
-            return (named ? same.length >= 3 : same.length >= 4) && same.some((k) => /^[A-Z]/.test(k)) && Math.abs(Date.parse(r.at) - Date.parse(e.report.at)) < SAME_WORDS_MS;
+            const same = e.keys.filter((k) => copy.toLowerCase().includes(k.toLowerCase()));
+            // Three of its words, a name among them, within the hold.
+            return same.length >= 3 && same.some((k) => /^[A-Z]/.test(k)) && Math.abs(Date.parse(r.at) - Date.parse(e.report.at)) < SAME_WORDS_MS;
           })
         : undefined;
       if (leader) {

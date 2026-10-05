@@ -26,19 +26,7 @@ export const TRANSITS_KEY = "ledger-transits";
  * Bloomberg); left out, it is read from the name (`sourceTier`).
  */
 /** `weapon`: what was used, as the source says ("ballistic missile", "drones", "explosive boat"). */
-export type LedgerSource = {
-  name: string;
-  url: string;
-  date: string;
-  claim?: boolean;
-  tier?: "official" | "wire";
-  note?: string;
-  weapon?: string;
-  /** The strike's time (HH:MM, Israel time) when the reports give it. */
-  time?: string;
-  /** A second, separate strike on the site that day ("struck again", a new wave): not a retelling (user, 5 Oct). */
-  again?: boolean;
-};
+export type LedgerSource = { name: string; url: string; date: string; claim?: boolean; tier?: "official" | "wire"; note?: string; weapon?: string };
 export type ShipWhat = "attacked" | "hit" | "seized" | "sunk" | "near miss" | "suspicious approach";
 export type ShipIncident = {
   id: string;
@@ -62,7 +50,7 @@ export type EnergySite = {
   name: string;
   kind: string;
   country: "Saudi Arabia" | "Yemen";
-  /** One per strike, the best source that told it: a site can be hit more than once a day (`again`). */
+  /** One per day it was hit, the first source that said so. */
   hits: LedgerSource[];
   status: SiteStatus;
   statusSrc?: LedgerSource;
@@ -84,17 +72,7 @@ export type LedgerFigure = { id: string; cat: "maritime" | "energy"; group?: Fig
 /** A declared ban, a warning to shipping, a naval mission's move. */
 export type LedgerNotice = { id: string; date: string; text: string; src: LedgerSource };
 /** `wrong`: site hits found to be wrong (old damage shown as new), kept out for good: that one link when `url` is set, else every hit of that day. */
-export type Ledger = {
-  since: string;
-  ships: ShipIncident[];
-  sites: EnergySite[];
-  figures: LedgerFigure[];
-  notices: LedgerNotice[];
-  updatedAt: string;
-  wrong?: { site: string; date: string; why: string; url?: string }[];
-  /** Ship rows found to retell another (by id or source link): they stay out. */
-  wrongShips?: { id?: string; url?: string; why: string }[];
-};
+export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string; wrong?: { site: string; date: string; why: string; url?: string }[] };
 
 /** The war began with the strike on Sanaa airport, 13 July 2026. */
 export const WAR_START = "2026-07-13";
@@ -136,21 +114,14 @@ export function seriesOf(label: string, unit: string, period: string, year = 202
 type KnownSite = { id: string; name: string; kind: string; country: EnergySite["country"]; re: RegExp };
 /** Saudi and Yemeni energy sites, so one site is one row whatever a report calls it. */
 export const KNOWN_SITES: KnownSite[] = [
-  { id: "east-west-pipeline", name: "East-West pipeline (Petroline)", kind: "pipeline", country: "Saudi Arabia", re: /East[- ]West (?:oil )?(?:pipeline|export line)|Petroline|pump(?:ing)? station|Khurais|خريص|خط (?:أنابيب )?شرق.?غرب|محطة (?:ضخ|الضخ)/i },
-  // North of Jeddah: before Jeddah, which "north of Jeddah" also names.
-  { id: "rabigh", name: "Petro Rabigh refinery, north of Jeddah", kind: "refinery", country: "Saudi Arabia", re: /Rabigh|رابغ/i },
+  { id: "east-west-pipeline", name: "East-West pipeline (Petroline)", kind: "pipeline", country: "Saudi Arabia", re: /East[- ]West pipeline|Petroline|pump(?:ing)? station|خط (?:أنابيب )?شرق.?غرب|محطة (?:ضخ|الضخ)/i },
   { id: "yanbu", name: "Yanbu terminals and refineries", kind: "terminal", country: "Saudi Arabia", re: /Yanbu|SAMREF|YASREF|Muajjiz|ينبع|المعجز/i },
   { id: "jazan", name: "Jazan refinery and terminal", kind: "refinery", country: "Saudi Arabia", re: /Jazan|Jizan|جازان|جيزان/i },
   { id: "jeddah", name: "Jeddah bulk plant", kind: "terminal", country: "Saudi Arabia", re: /Jeddah|Jiddah|جدة/i },
   { id: "ras-tanura", name: "Ras Tanura", kind: "terminal", country: "Saudi Arabia", re: /Ras Tanura|رأس تنورة/i },
   { id: "abqaiq", name: "Abqaiq", kind: "processing plant", country: "Saudi Arabia", re: /Abqaiq|بقيق/i },
-  /*
-   * Riyadh: one row (user, 5 Oct). The reports call the same Aramco site in Riyadh
-   * a refinery, an oil site, storage tanks, "facilities" or "Aramco in the Saudi
-   * capital"; on 3 Oct those words made nine rows of one attack. A second strike
-   * there is a second hit on this row, not another row.
-   */
-  { id: "riyadh-aramco", name: "Aramco facilities, Riyadh", kind: "refinery and fuel depot", country: "Saudi Arabia", re: /Riyadh refinery|(?:Aramco|refiner(?:y|ies)|oil|fuel|petroleum)\b[^.]{0,50}\b(?:Riyadh|(?:the )?Saudi capital)|(?:Riyadh|(?:the )?Saudi capital)\b[^.]{0,40}\b(?:Aramco|refiner(?:y|ies)|oil (?:site|facilit|storage|tanks?|depot|installation)|fuel)|Riyadh (?:fuel|oil) depot|مصفاة الرياض|(?:أرامكو|مصفاة|منشأ\S* نفطي\S*|خزان\S*)[^.]{0,40}(?:الرياض|العاصمة السعودية)|(?:الرياض|العاصمة السعودية)[^.]{0,40}(?:أرامكو|مصفاة)/i },
+  { id: "riyadh-refinery", name: "Riyadh refinery", kind: "refinery", country: "Saudi Arabia", re: /Riyadh refinery|مصفاة الرياض/i },
+  { id: "riyadh-depot", name: "Riyadh fuel depot (King Khalid airport)", kind: "fuel depot", country: "Saudi Arabia", re: /(?:fuel|oil|Aramco) (?:depot|tanks?|storage)[^.]{0,40}Riyadh|Riyadh[^.]{0,40}(?:fuel|oil|Aramco) (?:depot|tanks?|storage)|خزان[^.]{0,30}الرياض/i },
   { id: "najran-aramco", name: "Aramco plant, Najran", kind: "bulk plant", country: "Saudi Arabia", re: /Aramco[^.]{0,40}Najran|Najran[^.]{0,40}Aramco|أرامكو[^.]{0,30}نجران|نجران[^.]{0,30}أرامكو/i },
   { id: "abha-aramco", name: "Aramco bulk plant, Abha", kind: "bulk plant", country: "Saudi Arabia", re: /Aramco[^.]{0,40}Abha|Abha[^.]{0,40}Aramco|أرامكو[^.]{0,30}أبها|أبها[^.]{0,30}أرامكو/i },
   { id: "jubail-gas", name: "Gas facilities, Jubail", kind: "gas plant", country: "Saudi Arabia", re: /Jubail|الجبيل/i },
@@ -163,23 +134,9 @@ export const KNOWN_SITES: KnownSite[] = [
   { id: "dhabba", name: "Al-Dhabba terminal (Hadramawt)", kind: "terminal", country: "Yemen", re: /Dhabba|الضبة/i },
 ];
 
-/**
- * A name with no place in it ("Aramco refinery", "power stations", "Saudi oil
- * pipeline", "oil facilities"): it says which kind of site, not which one, so it
- * never makes a row of its own (user, 5 Oct).
- */
-export function placeless(name: string): boolean {
-  const n = String(name || "").trim();
-  if (/[\u0600-\u06FF]/.test(n)) return !/\s(?:في|ب)\S|\S+\s+\S+\s+\S+/.test(n) && /^(?:ال)?(?:مصفا|منشآ|منشأ|محطا|محطة|خط|أرامكو|شركة)/.test(n);
-  const words = n.replace(/\b(?:the|a|an|of|and|in|at|on|for|its|their)\b/gi, " ").split(/\s+/).filter(Boolean);
-  const proper = words.filter((w) => /^[A-Z]/.test(w) && !/^(?:Saudi|Arabian?|Aramco|Yemen\w*|Oil|Gas|Power|Refiner\w*|Pipeline\w*|Facilit\w*|Sites?|Plants?|Stations?|Company|Energy|State|National|Petroleum|Electricity|Fuel|Tanks?|Terminals?|Oilfields?|Fields?)$/.test(w));
-  return proper.length === 0;
-}
-
 export function siteOf(name: string, kind?: string, country?: string): { id: string; name: string; kind: string; country: EnergySite["country"] } | null {
   const hit = KNOWN_SITES.find((s) => s.re.test(name));
   if (hit) return { id: hit.id, name: hit.name, kind: hit.kind, country: hit.country };
-  if (placeless(name)) return null;
   const c = /saudi/i.test(String(country)) ? "Saudi Arabia" : /yemen/i.test(String(country)) ? "Yemen" : null;
   const clean = String(name || "").trim();
   if (!c || clean.length < 3) return null;
@@ -213,9 +170,9 @@ export function nameInText(text: string, name: string): boolean {
 const WHATS: ShipWhat[] = ["attacked", "hit", "seized", "sunk", "near miss", "suspicious approach"];
 const STATUSES: SiteStatus[] = ["working", "reduced", "down", "unknown"];
 
-type Doc = { name: string; url: string; date: string; text: string; headline?: string; time?: string };
+type Doc = { name: string; url: string; date: string; text: string; headline?: string };
 type ShipUpdate = { doc: number; date?: string; ship?: string; flag?: string; type?: string; place?: string; what?: string; attacker?: string; crew?: string; weapon?: string; claimed?: boolean };
-type SiteUpdate = { doc: number; site?: string; kind?: string; country?: string; hit?: boolean; status?: string; weapon?: string; claimed?: boolean; date?: string; time?: string; again?: boolean; earlier?: boolean };
+type SiteUpdate = { doc: number; site?: string; kind?: string; country?: string; hit?: boolean; status?: string; weapon?: string; claimed?: boolean };
 type FigureUpdate = { doc: number; cat?: string; group?: string; label?: string; value?: number; unit?: string; period?: string };
 type NoticeUpdate = { doc: number; text?: string };
 export type LedgerUpdates = { ships?: ShipUpdate[]; sites?: SiteUpdate[]; figures?: FigureUpdate[]; notices?: NoticeUpdate[] };
@@ -246,51 +203,6 @@ export function groupOf(cat: LedgerFigure["cat"], text: string): FigureGroup {
   return "traffic";
 }
 
-const minutes = (t?: string) => (t && /^\d{2}:\d{2}$/.test(t) ? +t.slice(0, 2) * 60 + +t.slice(3) : null);
-
-/**
- * One strike, one hit (user, 5 Oct). A site can be hit more than once a day, so
- * a report joins the day's hit it retells and makes a new hit only when it tells
- * a separate strike: marked `again` by the reader ("struck again", "a new
- * wave", "a second attack"), or given a time at least three hours from every
- * hit already there. The same strike in other words, from other outlets, or
- * told again later (fire still burning, footage of it) is the same hit; the
- * better source keeps the link.
- */
-export function addHit(row: EnergySite, src: LedgerSource): void {
-  const same = row.hits.filter((h) => h.date === src.date);
-  if (!same.length) {
-    row.hits.push({ ...src });
-    return;
-  }
-  const t = minutes(src.time);
-  const gap = (h: LedgerSource) => (t === null || minutes(h.time) === null ? null : Math.abs((minutes(h.time) as number) - t));
-  const near = (h: LedgerSource) => gap(h) !== null && (gap(h) as number) < 180;
-  // Told as a separate strike, with no hit that day at its time (one with no time
-  // joins a second strike already there); or three hours or more from every timed hit.
-  const separate = (src.again && !same.some(near) && !(t === null && same.some((h) => h.again))) || same.every((h) => gap(h) !== null && (gap(h) as number) >= 180);
-  if (separate) {
-    row.hits.push({ ...src, again: true });
-    return;
-  }
-  // The same strike: the one nearest in time; told as the second strike, the day's latest; else the day's first.
-  const h =
-    t !== null && same.some((x) => gap(x) !== null)
-      ? same.filter((x) => gap(x) !== null).reduce((a, b) => ((gap(a) as number) <= (gap(b) as number) ? a : b))
-      : src.again
-        ? same[same.length - 1]
-        : same[0];
-  const i = row.hits.indexOf(h);
-  if (betterSource(src, h)) {
-    row.hits[i] = { ...src, time: src.time ?? h.time, weapon: src.weapon ?? h.weapon };
-    if (h.again) row.hits[i].again = true;
-    else delete row.hits[i].again;
-  } else {
-    h.weapon ??= src.weapon;
-    h.time ??= src.time;
-  }
-}
-
 /**
  * The research baseline (ledger-baseline.ts: what happened from 13 July to the
  * ledger's first run, each with its source) under what the 6-hour reads added.
@@ -305,25 +217,14 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
   // A site stored under another name before its known names were added ("Taibah power
   // plant") joins its known row.
   for (const x of [...out.sites]) {
-    const k = KNOWN_SITES.find((s) => s.re.test(x.name) || s.re.test(`${x.name} ${x.kind}`));
-    // A row stored under a name with no place ("Aramco refinery", "power stations",
-    // user 5 Oct) joins the one row of its kind hit the same day, or goes.
-    if (!k && placeless(x.name)) {
-      const kind = /pipeline|pump/i.test(`${x.name} ${x.kind}`) ? /pipeline/i : /power|electric/i.test(`${x.name} ${x.kind}`) ? /power/i : /refiner|oil|aramco|fuel|tank|depot/i;
-      for (const h of x.hits) {
-        const into = out.sites.filter((y) => y !== x && !placeless(y.name) && y.hits.some((z) => z.date === h.date) && kind.test(`${y.kind} ${y.name}`));
-        if (into.length === 1) addHit(into[0], h);
-      }
-      out.sites.splice(out.sites.indexOf(x), 1);
-      continue;
-    }
+    const k = KNOWN_SITES.find((s) => s.re.test(x.name));
     if (!k || k.id === x.id) continue;
     const row = out.sites.find((s) => s.id === k.id);
     if (!row) {
       Object.assign(x, { id: k.id, name: k.name });
       continue;
     }
-    for (const h of x.hits) addHit(row, h);
+    for (const h of x.hits) if (!row.hits.some((y) => y.date === h.date)) row.hits.push(h);
     out.sites.splice(out.sites.indexOf(x), 1);
   }
   // Hits found to be wrong (pictures of old damage) stay out, whoever adds them again.
@@ -332,12 +233,10 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
     if (row) row.hits = row.hits.filter((h) => (w.url ? h.url !== w.url : h.date !== w.date));
   }
   out.sites = out.sites.filter((s) => s.hits.length || s.statusSrc);
-  for (const w of base.wrongShips ?? []) out.ships = out.ships.filter((x) => !(w.id && x.id === w.id) && !(w.url && x.src.url === w.url));
   for (const s of base.ships) {
     const row = out.ships.find((x) => x.id === s.id || (x.ship && s.ship && nameInText(x.ship, s.ship) && Math.abs(dayMs(x.date) - dayMs(s.date)) <= 86_400_000));
     if (!row) out.ships.push(structuredClone(s));
-    // A better source, or the research naming a ship the stored row had no name for.
-    else if (betterSource(s.src, row.src) || (!row.ship && s.ship)) Object.assign(row, structuredClone(s), { id: row.id, weapon: s.weapon ?? row.weapon });
+    else if (betterSource(s.src, row.src)) Object.assign(row, structuredClone(s), { id: row.id, weapon: s.weapon ?? row.weapon });
     else row.weapon ??= s.weapon;
   }
   for (const s of base.sites) {
@@ -348,10 +247,10 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
     }
     row.name = s.name;
     for (const h of s.hits) {
-      // The research's own pick of an outlet's post (its first report, not a follow-up) wins over the stored one of that outlet and day.
-      const mine = row.hits.find((x) => x.date === h.date && x.name === h.name && x.url !== h.url && !x.again);
-      if (mine && !h.again) Object.assign(mine, { ...h, weapon: h.weapon ?? mine.weapon });
-      else addHit(row, h);
+      const i = row.hits.findIndex((x) => x.date === h.date);
+      if (i < 0) row.hits.push({ ...h });
+      else if (betterSource(h, row.hits[i])) row.hits[i] = { ...h, weapon: h.weapon ?? row.hits[i].weapon };
+      else row.hits[i].weapon ??= h.weapon;
     }
     row.hits.sort((a, b) => a.date.localeCompare(b.date));
     if (s.statusSrc && (!row.statusSrc || dayMs(s.statusSrc.date) > dayMs(row.statusSrc.date))) {
@@ -364,7 +263,7 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
   // coalition's report). A second official or wire report still counts.
   for (const x of out.sites) {
     const hits = [...x.hits].sort((a, b) => a.date.localeCompare(b.date));
-    x.hits = hits.filter((h, i) => h.again || !(h.claim && !h.tier && i > 0 && Date.parse(h.date) - Date.parse(hits[i - 1].date) <= 36 * 3600_000));
+    x.hits = hits.filter((h, i) => !(h.claim && !h.tier && i > 0 && Date.parse(h.date) - Date.parse(hits[i - 1].date) <= 36 * 3600_000));
   }
   // One figure a month on each chart: the better source, then the newer.
   for (const f of base.figures) {
@@ -427,30 +326,21 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
   for (const s of u.sites ?? []) {
     const d = docs[s?.doc];
     if (!d || !s.site) continue;
-    // The strike's own date, when the text gives one within three days of the report; else the report's.
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(s.date)) && dayMs(String(s.date)) <= dayMs(d.date) && dayMs(d.date) - dayMs(String(s.date)) <= 3 * 86_400_000 ? String(s.date) : d.date;
-    const time = /^\d{1,2}:\d{2}$/.test(String(s.time || "")) ? String(s.time).padStart(5, "0") : undefined;
-    const hit = !!s.hit && !s.earlier && !notNewEvent(d.headline ?? d.text.split(". ")[0]);
-    let known = siteOf(s.site, s.kind, s.country);
-    // "Aramco refinery", "power stations": the row that was hit that day, if just one fits; else nothing.
-    if (!known && hit && placeless(s.site)) {
-      const kind = /pipeline|pump/i.test(s.site) ? /pipeline/i : /power|electric/i.test(s.site) ? /power/i : /refiner|oil|aramco|fuel|tank/i;
-      const same = next.sites.filter((x) => x.hits.some((h) => h.date === date) && kind.test(`${x.kind} ${x.name}`));
-      if (same.length === 1) known = { id: same[0].id, name: same[0].name, kind: same[0].kind, country: same[0].country };
-    }
+    const known = siteOf(s.site, s.kind, s.country);
     // The site is named in the text, by the model's words or its known names.
     const k = KNOWN_SITES.find((x) => x.id === known?.id);
-    if (!known || !(nameInText(d.text, s.site) || (k && k.re.test(d.text)) || placeless(s.site))) continue;
+    if (!known || !(nameInText(d.text, s.site) || (k && k.re.test(d.text)))) continue;
     let row = next.sites.find((x) => x.id === known.id);
     if (!row) {
-      if (!hit && !s.status) continue;
       row = { ...known, hits: [], status: "unknown" };
       next.sites.push(row);
     }
-    // A picture of old damage, a confirmation or a response to an earlier strike is not a new hit.
-    if (hit) {
-      const src: LedgerSource = { ...hitSrc(d, s.claimed), date, ...(s.weapon ? { weapon: String(s.weapon).slice(0, 80) } : {}), ...(time ? { time } : {}), ...(s.again ? { again: true } : {}) };
-      addHit(row, src);
+    // A picture of old damage is not a new hit (pin-rule.ts), whatever the model says.
+    if (s.hit && !notNewEvent(d.headline ?? d.text.split(". ")[0])) {
+      const src = { ...hitSrc(d, s.claimed), ...(s.weapon ? { weapon: String(s.weapon).slice(0, 80) } : {}) };
+      const i = row.hits.findIndex((h) => h.date === d.date);
+      if (i < 0) row.hits.push(src);
+      else if (betterSource(src, row.hits[i])) row.hits[i] = src;
     }
     const status = STATUSES.includes(s.status as SiteStatus) ? (s.status as SiteStatus) : null;
     // The latest word on a site stands; an older report never overrides it.
@@ -503,24 +393,19 @@ function ledgerDocs(reports: LiveReport[]): Doc[] {
     .filter((r) => SEA_ENERGY.test(`${r.summary || ""} ${r.text || ""}`))
     .sort((a, b) => Date.parse(String(b.at)) - Date.parse(String(a.at)))
     .slice(0, 30)
-    .map((r) => {
-      // The desk's day and clock are Israel time (UTC+3): a strike at 01:00 is that day's.
-      const local = new Date((Date.parse(String(r.at || "")) || 0) + 3 * 3600_000).toISOString();
-      return {
-        name: String(r.source || "desk report"),
-        url: String(r.url || ""),
-        date: local.slice(0, 10),
-        time: local.slice(11, 16),
-        headline: String(r.summary || ""),
-        text: `${r.summary || ""}. ${r.text || ""}`.slice(0, 1400),
-      };
-    });
+    .map((r) => ({
+      name: String(r.source || "desk report"),
+      url: String(r.url || ""),
+      date: String(r.at || "").slice(0, 10),
+      headline: String(r.summary || ""),
+      text: `${r.summary || ""}. ${r.text || ""}`.slice(0, 1400),
+    }));
 }
 
 const SYSTEM = `You keep the Maritime and Energy ledger of the current round of the Yemen war (Houthis vs the Yemeni government and the Saudi-led coalition, since the strike on Sanaa airport on 13 July 2026).
 You get NEW documents (news cards). Return only what a document itself states:
 - ships: each attack on, hit on, seizure or sinking of a ship, a near miss, or a suspicious approach, in the Red Sea, Bab al-Mandab, the Gulf of Aden, the Arabian Sea off Yemen, or Saudi or Yemeni waters. Fields: date (YYYY-MM-DD, of the incident), ship (its name, only if the text names it), flag, type (tanker, bulk carrier, container ship...), place (as the text puts it, e.g. "40 nm west of Hodeidah"), what (one of: attacked, hit, seized, sunk, near miss, suspicious approach), attacker (only if the text says who), crew (hurt or missing, as the text says), weapon (what was used, as the text says, with its type when named: "ballistic missile", "two Palestine-2 ballistic missiles", "drones", "explosive boat", "cruise missiles and drones"; empty if the text does not say), claimed (true when the text gives the attack only as one side's word, e.g. "the Houthis said they targeted", with no word from the ship, its owner, UKMTO, a navy, the target country or witnesses). Hormuz and the Gulf are out unless the text says the Houthis did it. Piracy by Somali or unknown gunmen is out.
-- sites: each Saudi or Yemeni energy site the text says was hit, or whose state it gives (pipelines and pump stations, refineries, terminals, oilfields, gas and power plants, desalination plants). Fields: site (its name as the text writes it), kind, country (Saudi Arabia or Yemen), hit (true when the text reports it hit in this document's news), status (working, reduced or down, only when the text says so; "resumed", "back in service" = working; "halted", "shut" = down; "partly", "reduced" = reduced), weapon (as for ships), claimed (true when the hit is only one side's word, as for ships; a hit the target country's ministry, Aramco, civil defence or witnesses report is not a claim), date (YYYY-MM-DD of the strike itself, which can be a day or two before the report), time (HH:MM of the strike, Israel time, only when the text gives it), again (true only when the text tells a SEPARATE strike on that site after an earlier one the same day: "struck again", "a new wave", "a second attack", new sirens or interceptions hours later), earlier (true when the document is about a strike on an earlier day rather than reporting one: a claim or confirmation of an earlier strike, satellite pictures of its damage, footage of it, a statement, condemnation or response to it, an update such as "the fire is still burning"). One entry per site: a text naming two sites ("Aramco in Riyadh and Khurais") gives two entries. Use the site's own name and place ("Aramco facilities in Riyadh", "Khurais oil field"); a name with no place ("a refinery", "power stations") only when the text gives none. Satellite pictures of damage from an earlier attack, or smoke seen with no attack reported, are not a new hit.
+- sites: each Saudi or Yemeni energy site the text says was hit, or whose state it gives (pipelines and pump stations, refineries, terminals, oilfields, gas and power plants, desalination plants). Fields: site (its name as the text writes it), kind, country (Saudi Arabia or Yemen), hit (true when the text reports it hit in this document's news), status (working, reduced or down, only when the text says so; "resumed", "back in service" = working; "halted", "shut" = down; "partly", "reduced" = reduced), weapon (as for ships), claimed (true when the hit is only one side's word, as for ships; a hit the target country's ministry, Aramco, civil defence or witnesses report is not a claim). Satellite pictures of damage from an earlier attack, or smoke seen with no attack reported, are not a new hit.
 - figures: a number the text gives about shipping or energy in this war. Fields: cat (maritime or energy), group, label (short, e.g. "Saudi crude exports from Yanbu"), value (the number as written, e.g. 1.2 for "1.2 million"), unit (e.g. "million barrels a day"), period (what it covers, as the text says: "September", "22-26 Sep", "since 20 July", "Tuesday 22 Sep"; empty if it does not say). Groups:
   maritime: traffic (ships crossing Bab al-Mandab, Suez or around the Cape, escorts asked for), oil (barrels of oil through Bab al-Mandab, the Red Sea or Suez), cost (war-risk insurance, freight rates, Suez Canal revenue), security (warships, naval missions, escorts), attacks (a side's own count of ships it attacked or turned back);
   energy: exports (Saudi or Yemeni crude or fuel exports, from Yanbu, via Hormuz, in total; oil output), pipeline (East-West pipeline or other pipeline throughput and capacity), prices (Brent or other oil and gas prices).
@@ -540,7 +425,7 @@ export async function refreshLedger(store: DeskStore, windowReports: LiveReport[
   const current = withBaseline((await store.getJson<Ledger>(LEDGER_KEY)) ?? LEDGER_SEED);
   const docs = ledgerDocs(windowReports);
   if (!docs.length) return current;
-  const user = JSON.stringify({ documents: docs.map((d, i) => ({ index: i, source: d.name, date: d.date, posted: d.time, text: d.text })) });
+  const user = JSON.stringify({ documents: docs.map((d, i) => ({ index: i, source: d.name, date: d.date, text: d.text })) });
   const got = await askChain("ledger", SYSTEM, user, { temperature: 0, models: COMBINE_MODELS });
   if (!got) return current;
   const next = applyLedger(current, got.json as LedgerUpdates, docs, now);

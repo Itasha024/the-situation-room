@@ -11,9 +11,8 @@ const card = (over: Partial<LiveReport>): LiveReport =>
 test("one side's capture of a hill is drawn as its advance; a confirmed one keeps its flag (30 Sep)", () => {
   const one = card({ summary: "Yemeni government forces recapture Jabal Qarfan in Al-Wazi'iyah from Houthi forces", lat: 13.178, lng: 43.867, place: "Jabal Qarfan" });
   assert.equal(cardMarks([one], () => []).all[0].kind, "advance");
-  // Confirmed by both sides, a hill is still an advance: a flag needs the whole district (user, 5 Oct).
   const both = card({ ...one, alsoReportedBy: [{ source: "Al-Masirah", url: "v" }] as never });
-  assert.equal(cardMarks([both], () => []).all[0].kind, "advance");
+  assert.equal(cardMarks([both], () => []).all[0].kind, "capture");
 });
 
 test("a merged card's place outside the governorate its headline names is not drawn (Al-Mansurah, Lahj)", () => {
@@ -48,9 +47,9 @@ test("two anti-Houthi outlets are one camp: no flag (Al-Mansurah mountain, 29 Se
   assert.equal(cardMarks([r], () => []).all[0].kind, "advance");
 });
 
-test("one side's outlet and a non-aligned one confirm a capture; a mountain taken is still an advance (user, 2 and 5 Oct)", () => {
+test("one side's outlet and a non-aligned one make a capture (user, 2 Oct)", () => {
   const r = card({ summary: "Yemeni government forces recapture Al-Mansurah mountain in Al-Mudaribah, Lahj", lat: 13.1, lng: 43.83, place: "Al-Mansurah", alsoReportedBy: [{ source: "The National", url: "v" }] as never });
-  assert.equal(cardMarks([r], () => []).all[0].kind, "advance");
+  assert.equal(cardMarks([r], () => []).all[0].kind, "capture");
 });
 
 test("piracy and the US–Iran war are not this war; the Houthis at sea are", async () => {

@@ -49,11 +49,6 @@ export type DevMark = {
   fromLl?: [number, number];
   /** For an interception: what was shot down. */
   shot?: "drone" | "missile";
-  /**
-   * For a capture: the district taken whole and confirmed (control-live.ts
-   * captureFlag). A capture mark without it is drawn as an advance (user, 5 Oct).
-   */
-  district?: string;
 };
 export const DEV_KINDS = ["capture", "advance", "fighting", "repelled", "airstrike", "shelling", "missile", "drone", "interception", "naval", "energy", "alert"] as const;
 export type DevKind = (typeof DEV_KINDS)[number];

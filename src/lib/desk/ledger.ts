@@ -71,8 +71,16 @@ export const FIGURE_GROUPS: FigureGroup[] = ["traffic", "oil", "cost", "security
 export type LedgerFigure = { id: string; cat: "maritime" | "energy"; group?: FigureGroup; label: string; value: number; unit: string; period?: string; series?: string; month?: string; span?: string; src: LedgerSource };
 /** A declared ban, a warning to shipping, a naval mission's move. */
 export type LedgerNotice = { id: string; date: string; text: string; src: LedgerSource };
-/** `wrong`: site hits found to be wrong (old damage shown as new), kept out for good: that one link when `url` is set, else every hit of that day. */
-export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string; wrong?: { site: string; date: string; why: string; url?: string }[] };
+/**
+ * `wrong`: rows found to be wrong (old damage shown as new, a later report of
+ * an earlier strike, a reaction), kept out for good. A site's hit: that one
+ * link when `url` is set, else every hit of that day. A ship: its row by id.
+ * `fixes`: a hit checked by hand, which stands over whatever the reads stored
+ * for that site and day (user, 3 Oct: the 30 Sep and 1 Oct links).
+ */
+export type LedgerWrong = { site?: string; ship?: string; date?: string; why: string; url?: string };
+export type LedgerFix = { site: string; hit: LedgerSource; why: string };
+export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string; wrong?: LedgerWrong[]; fixes?: LedgerFix[] };
 
 /** The war began with the strike on Sanaa airport, 13 July 2026. */
 export const WAR_START = "2026-07-13";
@@ -114,18 +122,22 @@ export function seriesOf(label: string, unit: string, period: string, year = 202
 type KnownSite = { id: string; name: string; kind: string; country: EnergySite["country"]; re: RegExp };
 /** Saudi and Yemeni energy sites, so one site is one row whatever a report calls it. */
 export const KNOWN_SITES: KnownSite[] = [
-  { id: "east-west-pipeline", name: "East-West pipeline (Petroline)", kind: "pipeline", country: "Saudi Arabia", re: /East[- ]West pipeline|Petroline|pump(?:ing)? station|خط (?:أنابيب )?شرق.?غرب|محطة (?:ضخ|الضخ)/i },
+  { id: "east-west-pipeline", name: "East-West pipeline (Petroline)", kind: "pipeline", country: "Saudi Arabia", re: /East[- ]West (?:oil )?pipeline|Petroline|pump(?:ing)? station|Saudi (?:oil|crude) (?:transport |export )?pipeline|خط (?:أنابيب )?(?:النفط )?(?:السعودي )?شرق.?غرب|خط تصدير النفط السعودي|[أا]نبوب نقل النفط السعودي|محطة (?:ضخ|الضخ)/i },
+  { id: "rabigh", name: "Rabigh refinery", kind: "refinery", country: "Saudi Arabia", re: /Rabigh|Rabegh|رابغ/i },
   { id: "yanbu", name: "Yanbu terminals and refineries", kind: "terminal", country: "Saudi Arabia", re: /Yanbu|SAMREF|YASREF|Muajjiz|ينبع|المعجز/i },
   { id: "jazan", name: "Jazan refinery and terminal", kind: "refinery", country: "Saudi Arabia", re: /Jazan|Jizan|جازان|جيزان/i },
   { id: "jeddah", name: "Jeddah bulk plant", kind: "terminal", country: "Saudi Arabia", re: /Jeddah|Jiddah|جدة/i },
   { id: "ras-tanura", name: "Ras Tanura", kind: "terminal", country: "Saudi Arabia", re: /Ras Tanura|رأس تنورة/i },
   { id: "abqaiq", name: "Abqaiq", kind: "processing plant", country: "Saudi Arabia", re: /Abqaiq|بقيق/i },
-  { id: "riyadh-refinery", name: "Riyadh refinery", kind: "refinery", country: "Saudi Arabia", re: /Riyadh refinery|مصفاة الرياض/i },
-  { id: "riyadh-depot", name: "Riyadh fuel depot (King Khalid airport)", kind: "fuel depot", country: "Saudi Arabia", re: /(?:fuel|oil|Aramco) (?:depot|tanks?|storage)[^.]{0,40}Riyadh|Riyadh[^.]{0,40}(?:fuel|oil|Aramco) (?:depot|tanks?|storage)|خزان[^.]{0,30}الرياض/i },
+  // The depot by King Khalid airport only when a report says depot or tanks and no refinery.
+  { id: "riyadh-depot", name: "Riyadh fuel depot (King Khalid airport)", kind: "fuel depot", country: "Saudi Arabia", re: /^(?![\s\S]*(?:refiner|مصف))[\s\S]*(?:(?:fuel|oil|Aramco) (?:depot|tanks?|storage)[^.]{0,40}Riyadh|Riyadh[^.]{0,40}(?:fuel|oil|Aramco) (?:depot|tanks?|storage)|خزان[^.]{0,30}الرياض)/i },
+  // Any other Aramco site in Riyadh is the refinery (user, 3 Oct: nine names, one attack).
+  { id: "riyadh-refinery", name: "Aramco refinery, Riyadh", kind: "refinery", country: "Saudi Arabia", re: /Riyadh refinery|مصفاة الرياض|(?:Aramco|refiner(?:y|ies)|oil (?:site|facilit(?:y|ies)))[^.]{0,40}(?:Riyadh|Saudi capital)|(?:Riyadh|Saudi capital)[^.]{0,40}(?:Aramco|refiner)|أرامكو[^.]{0,30}(?:الرياض|العاصمة السعودية)|مصفا[ةى][^.]{0,20}بالرياض/i },
+  { id: "khurais", name: "Khurais oilfield", kind: "oilfield", country: "Saudi Arabia", re: /Khurais|خريص/i },
   { id: "najran-aramco", name: "Aramco plant, Najran", kind: "bulk plant", country: "Saudi Arabia", re: /Aramco[^.]{0,40}Najran|Najran[^.]{0,40}Aramco|أرامكو[^.]{0,30}نجران|نجران[^.]{0,30}أرامكو/i },
   { id: "abha-aramco", name: "Aramco bulk plant, Abha", kind: "bulk plant", country: "Saudi Arabia", re: /Aramco[^.]{0,40}Abha|Abha[^.]{0,40}Aramco|أرامكو[^.]{0,30}أبها|أبها[^.]{0,30}أرامكو/i },
   { id: "jubail-gas", name: "Gas facilities, Jubail", kind: "gas plant", country: "Saudi Arabia", re: /Jubail|الجبيل/i },
-  { id: "taibah-medina", name: "Taibah electricity station, Medina", kind: "power station", country: "Saudi Arabia", re: /Taibah|Taiba (?:power|electricity)|(?:Medina|Madinah)[^.]{0,30}(?:power|electricity) (?:station|plant)|محطة (?:كهرباء )?طيبة/i },
+  { id: "taibah-medina", name: "Taibah electricity station, Medina", kind: "power station", country: "Saudi Arabia", re: /Taibah|Taiba (?:power|electricity)|(?:Medina|Madinah)[^.]{0,30}(?:power|electricity) (?:station|plant)|(?:power|electricity) (?:station|plant)[^.]{0,20}(?:Medina|Madinah)|محطة (?:كهرباء )?طيبة|محطة كهرباء[^.]{0,20}المدينة/i },
   { id: "safer", name: "Safer (Marib)", kind: "oilfield", country: "Yemen", re: /Safer|صافر/i },
   { id: "ras-isa", name: "Ras Isa", kind: "terminal", country: "Yemen", re: /Ras Isa|رأس عيسى/i },
   { id: "aden-refinery", name: "Aden refinery", kind: "refinery", country: "Yemen", re: /Aden refinery|مصافي عدن|مصفاة عدن/i },
@@ -134,9 +146,20 @@ export const KNOWN_SITES: KnownSite[] = [
   { id: "dhabba", name: "Al-Dhabba terminal (Hadramawt)", kind: "terminal", country: "Yemen", re: /Dhabba|الضبة/i },
 ];
 
+/**
+ * Not an energy site: an airport, air base or camp (unless its fuel depot), or
+ * a name with no place ("Aramco facilities", "power stations"). User, 3 Oct.
+ */
+export function notEnergySite(name: string): boolean {
+  const n = String(name || "");
+  if (/airport|air ?base|airbase|\bcamp\b|مطار|قاعدة|معسكر/i.test(n) && !/fuel|oil|depot|tanks?|storage|وقود|خزان/i.test(n)) return true;
+  return !n.replace(/\b(?:the|saudi|arabia|aramco|company|companies|oil|gas|energy|power|electricity|facilit(?:y|ies)|sites?|stations?|plants?|refiner(?:y|ies)|in|of|and|at|its)\b|شركة|أرامكو|منشآت|منشأة|السعودية|[^\p{L}]/giu, "").trim();
+}
+
 export function siteOf(name: string, kind?: string, country?: string): { id: string; name: string; kind: string; country: EnergySite["country"] } | null {
   const hit = KNOWN_SITES.find((s) => s.re.test(name));
   if (hit) return { id: hit.id, name: hit.name, kind: hit.kind, country: hit.country };
+  if (notEnergySite(name)) return null;
   const c = /saudi/i.test(String(country)) ? "Saudi Arabia" : /yemen/i.test(String(country)) ? "Yemen" : null;
   const clean = String(name || "").trim();
   if (!c || clean.length < 3) return null;
@@ -171,8 +194,9 @@ const WHATS: ShipWhat[] = ["attacked", "hit", "seized", "sunk", "near miss", "su
 const STATUSES: SiteStatus[] = ["working", "reduced", "down", "unknown"];
 
 type Doc = { name: string; url: string; date: string; text: string; headline?: string };
-type ShipUpdate = { doc: number; date?: string; ship?: string; flag?: string; type?: string; place?: string; what?: string; attacker?: string; crew?: string; weapon?: string; claimed?: boolean };
-type SiteUpdate = { doc: number; site?: string; kind?: string; country?: string; hit?: boolean; status?: string; weapon?: string; claimed?: boolean };
+/** `retold`: the document is about a strike reported before (a day-later claim, its aftermath, a reaction). */
+type ShipUpdate = { doc: number; date?: string; ship?: string; flag?: string; type?: string; place?: string; what?: string; attacker?: string; crew?: string; weapon?: string; claimed?: boolean; retold?: boolean };
+type SiteUpdate = { doc: number; site?: string; kind?: string; country?: string; date?: string; hit?: boolean; retold?: boolean; status?: string; weapon?: string; claimed?: boolean };
 type FigureUpdate = { doc: number; cat?: string; group?: string; label?: string; value?: number; unit?: string; period?: string };
 type NoticeUpdate = { doc: number; text?: string };
 export type LedgerUpdates = { ships?: ShipUpdate[]; sites?: SiteUpdate[]; figures?: FigureUpdate[]; notices?: NoticeUpdate[] };
@@ -184,6 +208,15 @@ const sameTown = (a: string, b: string) => {
   return [...towns(b)].some((w) => x.has(w));
 };
 const dayMs = (d: string) => Date.parse(`${String(d).slice(0, 10)}T00:00:00Z`);
+/** The strike's own day as the model gives it: up to 7 days before the report, else the report's day. */
+const strikeDay = (given: unknown, reported: string) => {
+  const g = String(given ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(g)) return reported;
+  const back = dayMs(reported) - dayMs(g);
+  return back >= 0 && back <= 7 * 86_400_000 ? g : reported;
+};
+/** A report of a strike already told: fires still burning, new footage, satellite heat, the aftermath, a reaction. */
+export const RETOLD_RE = /\b(?:continu\w*|still (?:burn|ris|ablaze)\w*|new (?:footage|scenes|images|pictures|video)|more (?:footage|scenes)|aftermath|satellite|thermal|heat signature|condemn\w*|this weekend|days? after|yesterday'?s)\b|مشاهد جديدة|المزيد من مشاهد|صور (?:الأقمار|جديدة)|الأقمار الصناعية|استمرار|متواصل|لا تزال|تتواصل|يدين|تدين|أول من أمس/i;
 
 /** The Houthis' own outlets and the channels of their camp (Fars, IRNA, Shajab, Ali Bk...). */
 export const houthiOutlet = (name: string) => outletSide(String(name || "")) === "Houthi-aligned";
@@ -227,12 +260,9 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
     for (const h of x.hits) if (!row.hits.some((y) => y.date === h.date)) row.hits.push(h);
     out.sites.splice(out.sites.indexOf(x), 1);
   }
-  // Hits found to be wrong (pictures of old damage) stay out, whoever adds them again.
-  for (const w of base.wrong ?? []) {
-    const row = out.sites.find((s) => s.id === w.site);
-    if (row) row.hits = row.hits.filter((h) => (w.url ? h.url !== w.url : h.date !== w.date));
-  }
-  out.sites = out.sites.filter((s) => s.hits.length || s.statusSrc);
+  // Airports, camps and placeless names are no energy sites (user, 3 Oct: "Abha airport", "power stations").
+  const kept = new Set([...KNOWN_SITES.map((k) => k.id), ...base.sites.map((s) => s.id)]);
+  out.sites = out.sites.filter((s) => kept.has(s.id) || !notEnergySite(s.name));
   for (const s of base.ships) {
     const row = out.ships.find((x) => x.id === s.id || (x.ship && s.ship && nameInText(x.ship, s.ship) && Math.abs(dayMs(x.date) - dayMs(s.date)) <= 86_400_000));
     if (!row) out.ships.push(structuredClone(s));
@@ -260,6 +290,21 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
       row.statusSrc = { ...s.statusSrc };
     }
   }
+  // Rows found to be wrong stay out, whoever adds them again, the baseline's own too.
+  for (const w of base.wrong ?? []) {
+    if (w.ship) out.ships = out.ships.filter((x) => x.id !== w.ship);
+    const row = w.site ? out.sites.find((s) => s.id === w.site) : undefined;
+    if (row) row.hits = row.hits.filter((h) => (w.url ? h.url !== w.url : h.date !== w.date));
+  }
+  // A hit checked by hand stands over what was stored for that site and day.
+  for (const f of base.fixes ?? []) {
+    let row = out.sites.find((s) => s.id === f.site);
+    const k = KNOWN_SITES.find((x) => x.id === f.site);
+    if (!row && k) out.sites.push((row = { id: k.id, name: k.name, kind: k.kind, country: k.country, hits: [], status: "unknown" }));
+    if (!row) continue;
+    row.hits = [...row.hits.filter((h) => h.date !== f.hit.date), { ...f.hit }].sort((a, b) => a.date.localeCompare(b.date));
+  }
+  out.sites = out.sites.filter((s) => s.hits.length || s.statusSrc);
   // One side's word within 36 hours of an earlier hit on the same site is that
   // hit told again (user, 2 Oct: Nour News's round-up on Taibah a day after the
   // coalition's report). A second official or wire report still counts.
@@ -291,13 +336,16 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
     const d = docs[s?.doc];
     if (!d || !WHATS.includes(s.what as ShipWhat) || !s.place) continue;
     if (s.ship && !nameInText(d.text, s.ship)) continue;
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(s.date)) ? String(s.date) : d.date;
+    const date = strikeDay(s.date, d.date);
     // One incident, one row: the same ship within a day; a ship with no name
-    // is the one off the same town that day.
+    // is the one off the same town that day. A later report of an attack
+    // already told adds nothing new (5 Oct: the 4 Oct tanker off Mocha told again as "Red Sea").
+    const retold = s.retold === true;
     const same = next.ships.find((x) =>
-      Math.abs(dayMs(x.date) - dayMs(date)) <= 86_400_000 &&
-      (s.ship && x.ship ? nameInText(x.ship, s.ship) || nameInText(s.ship, x.ship) : sameTown(x.place, s.place as string)),
+      Math.abs(dayMs(x.date) - dayMs(date)) <= (retold ? 3 : 1) * 86_400_000 &&
+      (retold || (s.ship && x.ship ? nameInText(x.ship, s.ship) || nameInText(s.ship, x.ship) : sameTown(x.place, s.place as string))),
     );
+    if (retold && !same) continue;
     if (same) {
       same.ship ??= s.ship || undefined;
       // A later report can say more: hit beats attacked, sunk beats hit.
@@ -338,9 +386,15 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
       next.sites.push(row);
     }
     // A picture of old damage is not a new hit (pin-rule.ts), whatever the model says.
-    if (s.hit && !notNewEvent(d.headline ?? d.text.split(". ")[0])) {
-      const src = { ...hitSrc(d, s.claimed), ...(s.weapon ? { weapon: String(s.weapon).slice(0, 80) } : {}) };
-      const i = row.hits.findIndex((h) => h.date === d.date);
+    // Nor is a later report of a strike told before: a day-later claim, fires
+    // still burning, a reaction (user, 3 Oct). One side's word of that kind
+    // within 7 days of a hit on the site is that hit. A hit is dated by the strike.
+    const when = strikeDay(s.date, d.date);
+    const headline = d.headline ?? d.text.split(". ")[0];
+    const src = { ...hitSrc(d, s.claimed), date: when, ...(s.weapon ? { weapon: String(s.weapon).slice(0, 80) } : {}) };
+    const told = !!src.claim && RETOLD_RE.test(headline) && row.hits.some((h) => h.date <= when && dayMs(when) - dayMs(h.date) <= 7 * 86_400_000);
+    if (s.hit && !s.retold && !told && !notNewEvent(headline)) {
+      const i = row.hits.findIndex((h) => h.date === when);
       if (i < 0) row.hits.push(src);
       else if (betterSource(src, row.hits[i])) row.hits[i] = src;
     }
@@ -406,8 +460,8 @@ function ledgerDocs(reports: LiveReport[]): Doc[] {
 
 const SYSTEM = `You keep the Maritime and Energy ledger of the current round of the Yemen war (Houthis vs the Yemeni government and the Saudi-led coalition, since the strike on Sanaa airport on 13 July 2026).
 You get NEW documents (news cards). Return only what a document itself states:
-- ships: each attack on, hit on, seizure or sinking of a ship, a near miss, or a suspicious approach, in the Red Sea, Bab al-Mandab, the Gulf of Aden, the Arabian Sea off Yemen, or Saudi or Yemeni waters. Fields: date (YYYY-MM-DD, of the incident), ship (its name, only if the text names it), flag, type (tanker, bulk carrier, container ship...), place (as the text puts it, e.g. "40 nm west of Hodeidah"), what (one of: attacked, hit, seized, sunk, near miss, suspicious approach), attacker (only if the text says who), crew (hurt or missing, as the text says), weapon (what was used, as the text says, with its type when named: "ballistic missile", "two Palestine-2 ballistic missiles", "drones", "explosive boat", "cruise missiles and drones"; empty if the text does not say), claimed (true when the text gives the attack only as one side's word, e.g. "the Houthis said they targeted", with no word from the ship, its owner, UKMTO, a navy, the target country or witnesses). Hormuz and the Gulf are out unless the text says the Houthis did it. Piracy by Somali or unknown gunmen is out.
-- sites: each Saudi or Yemeni energy site the text says was hit, or whose state it gives (pipelines and pump stations, refineries, terminals, oilfields, gas and power plants, desalination plants). Fields: site (its name as the text writes it), kind, country (Saudi Arabia or Yemen), hit (true when the text reports it hit in this document's news), status (working, reduced or down, only when the text says so; "resumed", "back in service" = working; "halted", "shut" = down; "partly", "reduced" = reduced), weapon (as for ships), claimed (true when the hit is only one side's word, as for ships; a hit the target country's ministry, Aramco, civil defence or witnesses report is not a claim). Satellite pictures of damage from an earlier attack, or smoke seen with no attack reported, are not a new hit.
+- ships: each attack on, hit on, seizure or sinking of a ship, a near miss, or a suspicious approach, in the Red Sea, Bab al-Mandab, the Gulf of Aden, the Arabian Sea off Yemen, or Saudi or Yemeni waters. Fields: date (YYYY-MM-DD, of the incident), ship (its name, only if the text names it), flag, type (tanker, bulk carrier, container ship...), place (as the text puts it, e.g. "40 nm west of Hodeidah"), what (one of: attacked, hit, seized, sunk, near miss, suspicious approach), attacker (only if the text says who), crew (hurt or missing, as the text says), weapon (what was used, as the text says, with its type when named: "ballistic missile", "two Palestine-2 ballistic missiles", "drones", "explosive boat", "cruise missiles and drones"; empty if the text does not say), claimed (true when the text gives the attack only as one side's word, e.g. "the Houthis said they targeted", with no word from the ship, its owner, UKMTO, a navy, the target country or witnesses), retold (true when the document is about an attack that happened before this document's news: a later report, a claim a day after, a round-up). Hormuz and the Gulf are out unless the text says the Houthis did it. Piracy by Somali or unknown gunmen is out.
+- sites: each Saudi or Yemeni energy site the text says was hit, or whose state it gives (pipelines and pump stations, refineries, terminals, oilfields, gas and power plants, desalination plants). Airports, air bases and camps are not energy sites. A site needs its place: "Aramco facilities" or "power stations" with no town are not a site. Fields: site (its name as the text writes it, with its town), kind, country (Saudi Arabia or Yemen), date (YYYY-MM-DD of the strike itself, not of the report), hit (true when the text reports it hit in this document's news), retold (true when the document is about a strike reported before: the attacking side's claim of it a day later, fires still burning, new footage or satellite pictures of it, its damage, a condemnation or another reaction, a round-up of several days; then hit is false and only status may change), status (working, reduced or down, only when the text says so; "resumed", "back in service" = working; "halted", "shut" = down; "partly", "reduced" = reduced), weapon (as for ships), claimed (true when the hit is only one side's word, as for ships; a hit the target country's ministry, Aramco, civil defence or witnesses report is not a claim). Satellite pictures of damage from an earlier attack, or smoke seen with no attack reported, are not a new hit.
 - figures: a number the text gives about shipping or energy in this war. Fields: cat (maritime or energy), group, label (short, e.g. "Saudi crude exports from Yanbu"), value (the number as written, e.g. 1.2 for "1.2 million"), unit (e.g. "million barrels a day"), period (what it covers, as the text says: "September", "22-26 Sep", "since 20 July", "Tuesday 22 Sep"; empty if it does not say). Groups:
   maritime: traffic (ships crossing Bab al-Mandab, Suez or around the Cape, escorts asked for), oil (barrels of oil through Bab al-Mandab, the Red Sea or Suez), cost (war-risk insurance, freight rates, Suez Canal revenue), security (warships, naval missions, escorts), attacks (a side's own count of ships it attacked or turned back);
   energy: exports (Saudi or Yemeni crude or fuel exports, from Yanbu, via Hormuz, in total; oil output), pipeline (East-West pipeline or other pipeline throughput and capacity), prices (Brent or other oil and gas prices).

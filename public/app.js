@@ -1591,9 +1591,12 @@ const OLDER_PAGE = 200;
 
 async function pullOlderDesk() {
   if (archiveExhausted || !data) return false;
-  const times = (data.reports || []).map((r) => Date.parse(reportTime(r))).filter(Number.isFinite);
-  if (!times.length) return false;
-  const oldest = new Date(Math.min(...times)).toISOString();
+  // The oldest of the archive's own rows: the built-in reports go back to July,
+  // and paging from them skipped every stored report in between (7 Oct: the
+  // feed went from 6 Oct straight to 21 Sep).
+  const t = archiveOldest();
+  if (!Number.isFinite(t)) return false;
+  const oldest = new Date(t).toISOString();
   try {
     const res = await fetch('/api/desk?limit=' + OLDER_PAGE + '&before=' + encodeURIComponent(oldest));
     if (!res.ok) return false;
@@ -1609,6 +1612,41 @@ async function pullOlderDesk() {
     console.warn('older reports', e);
     return false;
   }
+}
+
+/** The oldest stored report the page holds (ms), or Infinity. */
+function archiveOldest() {
+  const times = deskArchive.reports.map((r) => Date.parse(r.at || reportTime(r))).filter(Number.isFinite);
+  return times.length ? Math.min(...times) : Infinity;
+}
+
+/*
+ * The stored reports back to a day (YYYY-MM-DD, the desk's clock), a page at a
+ * time, for the map's day and range views: the first 400 rows now cover a day
+ * and a half, so 3 Oct showed an empty map (7 Oct). True when it added any.
+ */
+let archiveFilling = null;
+async function fillArchiveTo(ymd, maxPages = 20) {
+  if (!ymd || archiveExhausted) return false;
+  const want = Date.parse(`${ymd}T00:00:00+03:00`);
+  if (!Number.isFinite(want) || archiveOldest() <= want) return false;
+  if (archiveFilling) return archiveFilling;
+  archiveFilling = (async () => {
+    let added = false;
+    for (let i = 0; i < maxPages && archiveOldest() > want; i++) {
+      if (!(await pullOlderDesk())) break;
+      added = true;
+    }
+    return added;
+  })();
+  try { return await archiveFilling; } finally { archiveFilling = null; }
+}
+
+/** After the map's day changes: fetch that day's stored reports, then draw again. */
+function fillMapDay() {
+  const from = mapMode === 'day' ? (mapDate || todayYmd()) : mapMode === 'range' ? mapDateFrom : mapMode === 'all' ? CONFLICT_START : null;
+  // The whole war: the newest pages only, to keep a phone's download small.
+  fillArchiveTo(from, mapMode === 'all' ? 8 : 20).then((added) => { if (added) { applyMapFilters(); renderFeed(data); } }).catch(() => {});
 }
 
 /*
@@ -6074,6 +6112,7 @@ function wireUi(d) {
       markDayBtn(null);
       syncDayNav();
       applyMapFilters();
+      fillMapDay();
     };
   }
   const prev = document.getElementById('btn-day-prev');
@@ -6085,6 +6124,7 @@ function wireUi(d) {
     markDayBtn(null);
     syncDayNav();
     applyMapFilters();
+    fillMapDay();
   };
   if (next) next.onclick = () => {
     enterDayMode(shiftYmd(mapDate || todayYmd(), 1));
@@ -6092,6 +6132,7 @@ function wireUi(d) {
     markDayBtn(null);
     syncDayNav();
     applyMapFilters();
+    fillMapDay();
   };
   if (todayBtn) todayBtn.onclick = (ev) => {
     if (ev) { ev.preventDefault(); ev.stopPropagation(); }
@@ -6116,6 +6157,7 @@ function wireUi(d) {
     markDayBtn('btn-conflict-all');
     syncDayNav();
     applyMapFilters();
+    fillMapDay();
   };
 
   syncDayNav();
@@ -6123,7 +6165,10 @@ function wireUi(d) {
   document.getElementById('btn-more-reports').onclick = async () => {
     const btn = document.getElementById('btn-more-reports');
     if (feedSearch) { feedSearch.shown += SEARCH_STEP; renderFeed(data); return; }
-    if (reportsShown >= sortedReports(data).filter(leanOk).length) {
+    // Fetch older stored reports before the next batch reaches past them (into the built-in ones).
+    const list = sortedReports(data).filter(leanOk);
+    const last = list[Math.min(reportsShown + MORE_STEP, list.length) - 1];
+    if (reportsShown >= list.length || (!archiveExhausted && last && Date.parse(reportTime(last)) < archiveOldest())) {
       btn.disabled = true;
       btn.textContent = 'Loading…';
       await pullOlderDesk();

@@ -6,8 +6,8 @@
       "why": "air strikes on Kamaran Island; 'boats' made it a vessel attack"
     },
     "live-t-me-shin-persian-10320": {
-      "cat": "strike",
-      "why": "fuel tanks near Riyadh are not a port"
+      "remove": true,
+      "why": "retells the 19 Sep hit on the Riyadh depot (user, 3 Oct)"
     },
     "live-t-me-army21ye-3747": {
       "cat": "strike",
@@ -174,6 +174,22 @@
       "lng": 44,
       "place": "Amran",
       "why": "strikes in Raida and Harf Sufyan, Amran, were pinned on the Lahj ridge Jabal al-Aswad"
+    },
+    "bf-2026-09-27-yanbu-oil-claim": {
+      "remove": true,
+      "why": "Al-Akhbar satellite pictures of the 24 Sep Yanbu attack (user, 3 Oct)"
+    },
+    "live-t-me-alibk3-37482": {
+      "remove": true,
+      "why": "satellite traces of the late-September Yanbu strikes, no new attack"
+    },
+    "live-www-adngad-net-news-886161": {
+      "remove": true,
+      "why": "the 4 Oct tanker off Mocha, told again the next day"
+    },
+    "live-www-adngad-net-news-886131": {
+      "remove": true,
+      "why": "the 4 Oct tanker off Mocha, told again the next day"
     }
   }
 }

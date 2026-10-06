@@ -22,11 +22,15 @@ const REUTERS_JODI_JUL = "https://www.reuters.com/business/energy/saudi-crude-oi
 /** The Houthi military spokesman's own channel: where each of their claims first appears. */
 const SAREE = (post: number, date: string, extra: Partial<LedgerSource> = {}) => S("Yahya Saree, Houthi military spokesman", `https://t.me/army21ye/${post}`, date, { claim: true, ...extra });
 const MOE = (id: string, date: string, extra: Partial<LedgerSource> = {}) => S("Saudi Energy Ministry", `https://x.com/MoEnergy_Saudi/status/${id}`, date, { tier: "official", ...extra });
+/** 1 Oct, Taibah: the coalition spokesman's own post (user, 3 Oct). */
+const CJFC_1OCT = S("Saudi-led coalition spokesman", "https://x.com/CJFCSpox/status/2105696227568353710", "2026-10-01", { tier: "official", weapon: "A drone", note: "A transformer damaged, the coalition says; the Houthis deny it." });
 
 export const LEDGER_BASELINE: Ledger = {
   since: "2026-07-13",
   updatedAt: "2026-09-30T21:00:00+03:00",
   ships: [
+    // 4 Oct: UKMTO's warning 151-26; a Houthi-aligned channel told it minutes before, Seatrade the next day.
+    { id: "2026-10-04-60-nautical-miles-south-of-mocha-yemen", date: "2026-10-04", type: "tanker", place: "60 nm south of Mocha", what: "near miss", crew: "Safe", weapon: "Explosions near the ship", note: "A Houthi-aligned channel said a naval cruise missile targeted a tanker near Bab al-Mandab.", src: UKMTO("151-26", "2106820205938692327", "2026-10-04") },
     // 1 Oct: a security firm's alert (not UKMTO; UKMTO's warning that day, 147-26, was in Hormuz).
     { id: "2026-10-01-yanbu-port-tanker", date: "2026-10-01", flag: "Liberia", type: "tanker", place: "Yanbu port", what: "hit", crew: "A fire; loading at the port stopped for a time", weapon: "Aerial projectile", note: "Houthi-aligned outlets said a missile hit Aramco's North Yanbu station in the port that evening.", src: S("OSINT Hexagone (a maritime security alert)", "https://x.com/osinthexagone/status/2105763243184603198", "2026-10-01") },
     { id: "2026-09-15-yanbu-port-ship", date: "2026-09-15", type: "Saudi ship", place: "Yanbu port", what: "attacked", attacker: "Houthis", weapon: "During a missile and drone attack on Yanbu", note: "Houthi-aligned channels reported it; no word from the ship's side.", src: S("Shajab News", "https://t.me/shajab_news/67034", "2026-09-15", { claim: true }) },
@@ -139,7 +143,6 @@ export const LEDGER_BASELINE: Ledger = {
       country: "Saudi Arabia",
       hits: [
         S("AFP (France 24)", "https://www.france24.com/en/middle-east/20260919-smoke-flames-seen-near-riyadh-airport-major-flight-disruptions-reported", "2026-09-19", { weapon: "Missiles and drones, the Houthis say; the coalition says it shot down a ballistic missile over Riyadh", note: "A fire on an Aramco fuel tank, put out." }),
-        S("Shin Persian", "https://t.me/shin_persian/10320", "2026-09-21", { claim: true }),
       ],
       status: "unknown",
     },
@@ -164,7 +167,7 @@ export const LEDGER_BASELINE: Ledger = {
       name: "Taibah electricity station, Medina",
       kind: "power station",
       country: "Saudi Arabia",
-      hits: [S("Saudi-led coalition (Al Arabiya)", "https://t.me/alarabiyaBr/149261", "2026-10-01", { tier: "official", weapon: "A drone", note: "A transformer damaged, the coalition says; the Houthis deny it." })],
+      hits: [CJFC_1OCT],
       status: "unknown",
     },
     {
@@ -220,5 +223,45 @@ export const LEDGER_BASELINE: Ledger = {
     { site: "yanbu", date: "2026-09-30", why: "satellite pictures of earlier damage" },
     // Shajab's was smoke seen from space; Ali Bk's report of an attack that day stays (a claim).
     { site: "abqaiq", date: "2026-09-30", why: "satellite pictures of earlier damage", url: "https://t.me/shajab_news/68014" },
+    // The user's review of 3 Oct and the sweep after it (7 Oct): later reports of a strike told before, reactions, one attack many names.
+    { site: "riyadh-depot", date: "2026-09-21", why: "Shin Persian's post retells the 19 Sep hit on the depot" },
+    { site: "yanbu", date: "2026-09-27", why: "Al-Akhbar's satellite pictures of the 24 Sep attack" },
+    { site: "taibah-medina", date: "2026-10-02", why: "the Hadramawt council's condemnation of the 1 Oct attack" },
+    { site: "yanbu", date: "2026-10-02", why: "Maritime Executive on the 1 Oct strike (its loading halt is the 1 Oct row's status)" },
+    { site: "riyadh-depot", date: "2026-10-03", why: "Ali Bk's satellite heat by the Riyadh refinery's tanks: the 3 Oct refinery attack" },
+    { site: "riyadh", date: "2026-10-03", why: "Al-Mihwar's night post was about Abqaiq; the Houthis' own 3 Oct statement named Riyadh only" },
+    { site: "abqaiq", date: "2026-10-03", why: "one aligned channel's word of explosions; the Houthis' own statement named Riyadh only" },
+    { site: "riyadh-refinery", date: "2026-10-04", why: "the Houthis' day-later claim and footage of the 3 Oct fire" },
+    { site: "riyadh-refinery", date: "2026-10-05", why: "OilPrice and Naya retell the 3 Oct attack" },
+    { site: "riyadh-refinery", date: "2026-10-06", why: "Naya's and Shajab's footage of the 3 Oct fire" },
+    { site: "yanbu", date: "2026-10-04", why: "Reuters' report of the 3 Oct Riyadh attack, filed under Yanbu" },
+    { site: "khurais", date: "2026-10-04", why: "the 4 Oct attack on the East-West pipeline's pump station by Khurais: one row" },
+    { site: "east-west-pipeline", date: "2026-10-05", why: "the pipeline stopped after the 4 Oct attack: a status, not a new strike" },
+    { site: "jeddah", date: "2026-10-05", why: "reports of smoke 'in Jeddah' were the Rabigh refinery, the only one the Houthis named" },
+    { site: "rabigh", date: "2026-10-06", why: "the 5 Oct evening claim told again the next morning" },
+    { site: "taibah-medina", date: "2026-10-06", why: "Qatar's condemnation, no new attack" },
+    // Ships: the 4 Oct tanker off Mocha, told by a Houthi-aligned channel and the next day by Seatrade.
+    { ship: "2026-10-04-near-bab-al-mandab", why: "the same tanker UKMTO reported 60 nm south of Mocha that night" },
+    { ship: "2026-10-05-red-sea", why: "Seatrade's report of the 4 Oct tanker off Mocha" },
+  ],
+  // Hand-checked hits: they stand over what the reads stored for that site and day.
+  fixes: [
+    { site: "abqaiq", hit: S("Ali Bk", "https://t.me/Alibk3/37488", "2026-09-30", { claim: true, weapon: "Drones", note: "Its own sources, Ali Bk says; drone attacks went on into the afternoon and Dammam airport stopped flights. No Saudi word." }), why: "user, 3 Oct: the first post, not the later one" },
+    { site: "taibah-medina", hit: CJFC_1OCT, why: "user, 3 Oct: the coalition spokesman's own post" },
+    {
+      site: "riyadh-refinery",
+      hit: S("Reuters", "https://www.reuters.com/business/energy/fire-smoke-seen-near-aramco-facility-riyadh-witness-says-2026-10-03/", "2026-10-03", { tier: "wire", weapon: "Ballistic missiles and drones, the Houthis say", note: "Fire and smoke by the refinery's tanks from about 8 am, witnesses and satellite heat; flights at Riyadh airport stopped for a time. The Houthis claimed it that evening. No Saudi word." }),
+      why: "user, 3 Oct: one attack in the morning; every later report is the same event",
+    },
+    {
+      site: "east-west-pipeline",
+      hit: S("CBS News", "https://www.cbsnews.com/live-updates/iran-war-trump-us-oil-prices-yemen-red-sea-houthis-bab-el-mandeb/", "2026-10-04", { weapon: "Ballistic missiles and drones, the Houthis say", note: "Pump station No. 2 by Khurais; the pipeline stopped for a time. The Houthis named Aramco in Khurais. The flow was back to 5.8 million barrels a day on 6 Oct, the energy minister says." }),
+      why: "the 4 Oct attack by Khurais: the Houthis' claim, satellite heat, and the pipeline's halt the next day",
+    },
+    {
+      site: "rabigh",
+      hit: S("Al Jazeera", "https://t.me/AjaNews/515587", "2026-10-05", { claim: true, note: "The Houthis named the Aramco refinery in Rabigh with Riyadh's airport and bases in the south; smoke over the refinery was filmed that evening. No Saudi word." }),
+      why: "the 5 Oct evening attack, one row",
+    },
   ],
 };

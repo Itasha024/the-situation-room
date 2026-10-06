@@ -236,6 +236,50 @@
       "lng": 48.05,
       "place": "Khurais",
       "why": "the 4 Oct attack hit the East-West pipeline pump station by Khurais (the Riyadh part retells 3 Oct), not Amran"
+    },
+    "live-t-me-alibk3-37791": {
+      "remove": true,
+      "why": "the 3 Oct Riyadh fire, told again (one attack, one pin)"
+    },
+    "live-x-com-war-cube-status-2106763064435429725": {
+      "remove": true,
+      "why": "a round-up of 1-4 Oct attacks"
+    },
+    "live-t-me-alomhoar-113491-pin-Yanbu": {
+      "remove": true,
+      "why": "one aligned channel; the Houthis own statement named Riyadh only"
+    },
+    "live-t-me-alomhoar-113491": {
+      "remove": true,
+      "why": "one aligned channel; the Houthis own statement named Riyadh only"
+    },
+    "live-t-me-alibk3-37865": {
+      "remove": true,
+      "why": "the 3 Oct Riyadh fire, still burning"
+    },
+    "live-www-sawt-alasima-net-news-120842": {
+      "remove": true,
+      "why": "the 4 Oct statement; its pin is the spokesman own post, at Khurais"
+    },
+    "live-t-me-farsna-466161": {
+      "remove": true,
+      "why": "the 3 Oct Riyadh attack, claimed again"
+    },
+    "live-t-me-presstv-209460": {
+      "remove": true,
+      "why": "the 4 Oct statement; its pin is the spokesman own post, at Khurais"
+    },
+    "live-www-adngad-net-news-885841": {
+      "remove": true,
+      "why": "the 3 Oct Riyadh attack, claimed again"
+    },
+    "live-t-me-presstv-209375": {
+      "remove": true,
+      "why": "the 3 Oct Riyadh attack, claimed again"
+    },
+    "live-t-me-alomhoar-113504": {
+      "remove": true,
+      "why": "the 4 Oct Khurais attack: one pin, the spokesman own post"
     }
   }
 }

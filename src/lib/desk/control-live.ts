@@ -135,13 +135,40 @@ function confirmed(claims: Claim[]): boolean {
 }
 
 /**
- * One card's capture told the way control needs it before it moves: two outlets
- * not on the same side (a non-aligned outlet counts as its own), or a wire. The
- * developments' maps draw anything less as an advance, not a flag (user, 30 Sep:
- * one side's claim of a hill is no capture). Two anti-Houthi outlets (Aden al-Ghad
- * and Almashhad) are one side, not two. The same rule as control's (user, 2 Oct).
+ * What the headline says was taken is ground: not fighters, kit or boats
+ * ("seized weapons"), and not a building (a hospital taken over moves no line).
+ */
+export function tookGround(summary: string): boolean {
+  const took = TOOK.exec(String(summary || ""));
+  return !took || !(NOT_GROUND.test(took[1]) || BUILDING.test(` ${took[1]} `.split(STOP_AT)[0]));
+}
+
+/** The claim names the card's place or its district, so it is about that ground. */
+function namesGround(r: LiveReport, d: (typeof ADM2)[number]): boolean {
+  const words = ` ${norm(String(r.summary || ""))} `;
+  const place = norm(String(r.place || ""));
+  return (place.length >= 3 && words.includes(` ${place} `)) || words.includes(` ${norm(d.name)} `);
+}
+
+/**
+ * One card's capture told the way control needs it before a district changes
+ * side, and the only kind the developments' maps draw as ground taken (a flag,
+ * the district in the taker's colour). The same rule as control's, whole (user,
+ * 3 Oct: flags of ground taken where the conditions were not met):
+ *  - a combat report of ground taken, not people, kit or a building;
+ *  - the whole district: full control of it, its holder driven out, or "X
+ *    district" taken; a town, its centre, a hill or a village is an advance;
+ *  - the claim names the place or the district;
+ *  - two outlets not on the same side (a non-aligned outlet counts as its own),
+ *    or a wire. Two anti-Houthi outlets (Aden al-Ghad and Almashhad) are one side.
+ * Anything less is drawn as the side's advance.
  */
 export function captureConfirmed(r: LiveReport): boolean {
+  if (r.type !== "combat") return false;
+  const summary = String(r.summary || "");
+  if (!tookGround(summary)) return false;
+  const d = districtOf(r);
+  if (!d || !namesGround(r, d) || !tookWhole(summary, d.name)) return false;
   return confirmed([{ r, to: "plc", whole: true, named: true }]);
 }
 
@@ -154,15 +181,11 @@ export function updateControlLive(prev: ControlLive | null, reports: LiveReport[
     const summary = String(r.summary || "");
     const to = captor(summary);
     if (!to) continue;
-    const took = TOOK.exec(summary);
-    if (took && (NOT_GROUND.test(took[1]) || BUILDING.test(` ${took[1]} `.split(STOP_AT)[0]))) continue;
+    if (!tookGround(summary)) continue;
     const d = districtOf(r);
     if (!d) continue;
     const g = byDistrict.get(d.id) ?? { d, claims: [] };
-    const words = ` ${norm(summary)} `;
-    const place = norm(String(r.place || ""));
-    const named = (place.length >= 3 && words.includes(` ${place} `)) || words.includes(` ${norm(d.name)} `);
-    g.claims.push({ r, to, whole: tookWhole(summary, d.name), named });
+    g.claims.push({ r, to, whole: tookWhole(summary, d.name), named: namesGround(r, d) });
     byDistrict.set(d.id, g);
   }
   for (const { d, claims } of byDistrict.values()) {

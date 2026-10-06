@@ -1,9 +1,10 @@
 import type { DevKind, DevMark, DevSide } from "./prose.ts";
 import type { LiveReport } from "./types.ts";
-import { captureConfirmed } from "./control-live.ts";
+import { captureConfirmed, tookGround } from "./control-live.ts";
 import { governorateAt } from "./adm1.ts";
 import { placesIn } from "./gazetteer.ts";
 import { notNewEvent } from "./pin-rule.ts";
+import { MAP_FIXES } from "./map-fixes-data.ts";
 
 /*
  * Every event the desk recorded at a place, read from the cards themselves, so
@@ -37,7 +38,8 @@ export function kindOf(r: Pick<LiveReport, "type" | "summary" | "text">): DevKin
   if (ENERGY_RE.test(h) && HIT_RE.test(h)) return "energy";
   if (test(/\b(drones?|UAVs?|unmanned)\b/i)) return "drone";
   if (test(/\b(missiles?|ballistic|rockets?)\b/i)) return "missile";
-  if (test(/\b(captur\w*|seiz\w*|took control|takes? control|recaptur\w*|liberat\w*|overr[au]n)\b/i)) return "capture";
+  // Ground taken; "seized weapons" or a building taken over is no capture.
+  if (test(/\b(captur\w*|seiz\w*|(?:took|takes?|taken|taking) (?:full |complete |total )?control|recaptur\w*|liberat\w*|overr[au]n)\b/i) && tookGround(h)) return "capture";
   if (test(/\b(repel\w*|repuls\w*|foil\w*|thwart\w*|beat back|beats back|failed attack)\b/i)) return "repelled";
   if (test(/\b(air ?strikes?|air ?raids?|warplanes?|fighter jets?|jets? (?:struck|hit|bomb\w*)|bomb(?:ed|ing|s)?)\b/i)) return "airstrike";
   if (test(/\b(shell\w*|artillery|mortars?|howitzers?|tanks? fire)\b/i)) return "shelling";
@@ -52,7 +54,8 @@ const SIDE_RE: [DevSide, RegExp][] = [
   ["southern", /\b(STC|Southern Transitional|southern forces|Security Belt|Hadrami Elite|Shabwa Defen[cs]e)\b/gi],
   ["saudi", /\b(Saudi|coalition)\b/gi],
   ["us", /\b(US|U\.S\.|American|CENTCOM|Pentagon)\b/g],
-  ["government", /\b(government|pro-government|Giants|National Resistance|Tareq|army|PLC|Presidential Leadership|Yemeni forces)\b/gi],
+  // Nation's Shield (درع الوطن) is a government force: with no side found the mark fell to the Houthis (Jabal Habashi, 6 Oct).
+  ["government", /\b(government|pro-government|Giants|National Resistance|Nation'?s Shield|Homeland Shield|Tareq|army|PLC|Presidential Leadership|Yemeni forces)\b/gi],
 ];
 /** A name after these words is the target, not the one who acted. */
 const OBJECT_BEFORE = /\b(on|at|against|targeting|targets?|hits?|struck|strikes?|kills?|killed|of|into|toward|towards|repels?|repelled|near|by)\s+(?:the |a |an )?(?:[\w-]+ )?$/i;
@@ -164,6 +167,22 @@ export function launchOf(r: Pick<LiveReport, "summary" | "text">): { name: strin
   return p ? { name: p.name, ll: [p.lat, p.lng] } : null;
 }
 
+/**
+ * The card's pins with the hand corrections of public/map-fixes.json, as the
+ * main map draws them: a removed pin is left out, a wrong spot moved (user,
+ * 3 Oct: the developments' maps drew pins the main map had dropped). A card
+ * with several places has a key per place (snapshot.ts writes it).
+ */
+function fixedPins(r: LiveReport): { name: string; ll: [number, number] }[] {
+  const whole = MAP_FIXES[String(r.fp)];
+  if (whole && typeof whole.lat === "number" && typeof whole.lng === "number") return [{ name: whole.place ?? String(r.place || ""), ll: [whole.lat, whole.lng] }];
+  return pinsOf(r).flatMap((p) => {
+    const f = MAP_FIXES[`${r.fp}-pin-${p.name.replace(/s+/g, "-")}`] ?? MAP_FIXES[`${r.fp}-pin-${p.name.replace(/\s+/g, "-")}`];
+    if (f?.remove) return [];
+    return f && typeof f.lat === "number" && typeof f.lng === "number" ? [{ name: f.place ?? p.name, ll: [f.lat, f.lng] as [number, number] }] : [p];
+  });
+}
+
 export type Launch = { kind: DevKind; side: DevSide; ll: [number, number]; at: number };
 
 /** Every event of the cards at a place, each front's, and the launches reported with no target. */
@@ -175,7 +194,7 @@ export function cardMarks(reports: LiveReport[], frontsOf: (r: LiveReport) => st
   const fired: { m: DevMark; at: number }[] = [];
   for (const r of reports) {
     let kind = kindOf(r);
-    if (!kind) continue;
+    if (!kind || MAP_FIXES[String(r.fp)]?.remove) continue;
     // One side's word that it took ground is drawn as its advance; the flag waits for confirmation.
     if (kind === "capture" && !captureConfirmed(r)) kind = "advance";
     const side = kind === "repelled" ? repelAttacker(String(r.summary || "")) ?? repelAttacker(String(r.text || "").slice(0, 300)) ?? actorOf(r, kind) : actorOf(r, kind);
@@ -183,7 +202,7 @@ export function cardMarks(reports: LiveReport[], frontsOf: (r: LiveReport) => st
     // area itself is no target ("launch two ballistic missiles from Sanaa").
     const from = FIRED.has(kind) ? launchOf(r) : null;
     const at = Date.parse(String(r.at || "")) || 0;
-    const pins = pinsOf(r).filter((p) => !from || km(p.ll, from.ll) > 10);
+    const pins = fixedPins(r).filter((p) => !from || km(p.ll, from.ll) > 10);
     if (from && !pins.length) {
       launches.push({ kind, side, ll: from.ll, at });
       continue;

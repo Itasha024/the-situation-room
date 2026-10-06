@@ -520,9 +520,12 @@ function merged(prose: DevMark[], cards: DevMark[], launches: Launch[] = []): De
     // Whose missile or drone was shot down, the cards say: the prose's "side" is not sure of it.
     const card = m.kind === "interception" ? cards.find((c) => c.kind === "interception" && nearAny(m, [c], 20)) : undefined;
     if (card) Object.assign(m, { side: card.side, ...(card.shot ? { shot: card.shot } : {}) });
+    // The prose's advance where a card's capture by that side was confirmed: the capture stands, drawn once.
+    if (m.kind === "advance" && cards.some((c) => c.kind === "capture" && c.side === m.side && nearAny(m, [c], 20))) continue;
     for (let i = rest.length - 1; i >= 0; i--) {
       const c = rest[i];
-      if ((c.kind === m.kind || (m.kind === "advance" && c.kind === "capture")) && c.side === m.side && nearAny(m, [c], 20)) {
+      // A card's confirmed capture is never swallowed by the prose's advance.
+      if (c.kind === m.kind && c.side === m.side && nearAny(m, [c], 20)) {
         // The card knew where it was fired from: the prose's mark keeps that path.
         if (!m.fromLl && c.fromLl) m.fromLl = c.fromLl;
         rest.splice(i, 1);

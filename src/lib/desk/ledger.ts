@@ -238,6 +238,8 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
     if (!row) out.ships.push(structuredClone(s));
     else if (betterSource(s.src, row.src)) Object.assign(row, structuredClone(s), { id: row.id, weapon: s.weapon ?? row.weapon });
     else row.weapon ??= s.weapon;
+    // The same row by id: the hand-checked words stand (user, 3 Oct: "two dhow boats").
+    if (row && row.id === s.id) Object.assign(row, { ...(s.type ? { type: s.type } : {}), ...(s.note ? { note: s.note } : {}) });
   }
   for (const s of base.sites) {
     const row = out.sites.find((x) => x.id === s.id);

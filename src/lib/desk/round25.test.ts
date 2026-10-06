@@ -8,11 +8,12 @@ import type { LiveReport } from "./types.ts";
 const card = (over: Partial<LiveReport>): LiveReport =>
   ({ fp: "f", at: "2026-09-30T06:00:00Z", source: "Aden al-Ghad", url: "u", type: "combat", summary: "", text: "", ...over }) as LiveReport;
 
-test("one side's capture of a hill is drawn as its advance; a confirmed one keeps its flag (30 Sep)", () => {
+test("one side's capture of a hill is drawn as its advance; told by both sides it is still an advance (30 Sep; 3 Oct)", () => {
   const one = card({ summary: "Yemeni government forces recapture Jabal Qarfan in Al-Wazi'iyah from Houthi forces", lat: 13.178, lng: 43.867, place: "Jabal Qarfan" });
   assert.equal(cardMarks([one], () => []).all[0].kind, "advance");
+  // A hill is not the whole district: no flag, whoever tells it (user, 3 Oct; round29.test.ts).
   const both = card({ ...one, alsoReportedBy: [{ source: "Al-Masirah", url: "v" }] as never });
-  assert.equal(cardMarks([both], () => []).all[0].kind, "capture");
+  assert.equal(cardMarks([both], () => []).all[0].kind, "advance");
 });
 
 test("a merged card's place outside the governorate its headline names is not drawn (Al-Mansurah, Lahj)", () => {
@@ -47,8 +48,8 @@ test("two anti-Houthi outlets are one camp: no flag (Al-Mansurah mountain, 29 Se
   assert.equal(cardMarks([r], () => []).all[0].kind, "advance");
 });
 
-test("one side's outlet and a non-aligned one make a capture (user, 2 Oct)", () => {
-  const r = card({ summary: "Yemeni government forces recapture Al-Mansurah mountain in Al-Mudaribah, Lahj", lat: 13.1, lng: 43.83, place: "Al-Mansurah", alsoReportedBy: [{ source: "The National", url: "v" }] as never });
+test("one side's outlet and a non-aligned one make a capture (user, 2 Oct), of the whole district (3 Oct)", () => {
+  const r = card({ summary: "Yemeni government forces take full control of Al-Madaribah district, Lahj", lat: 13.1, lng: 43.83, place: "Al-Madaribah", alsoReportedBy: [{ source: "The National", url: "v" }] as never });
   assert.equal(cardMarks([r], () => []).all[0].kind, "capture");
 });
 

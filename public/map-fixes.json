@@ -190,6 +190,52 @@
     "live-www-adngad-net-news-886131": {
       "remove": true,
       "why": "the 4 Oct tanker off Mocha, told again the next day"
+    },
+    "live-maritime-executive-com-article-explosion-and-fire-reported-at-yanbu": {
+      "remove": true,
+      "why": "the 1 Oct strike on Yanbu, told the next day"
+    },
+    "live-x-com-osinthexagone-status-2106161688076603489": {
+      "remove": true,
+      "why": "the 1 Oct strike on Yanbu, told again"
+    },
+    "live-x-com-osinthexagone-status-2106131332548153667": {
+      "remove": true,
+      "why": "the 1 Oct tanker hit at Yanbu, told again"
+    },
+    "live-x-com-yah-saree-status-2106456751755411929-pin-Yanbu": {
+      "remove": true,
+      "why": "the Houthis 3 Oct statement named Riyadh only"
+    },
+    "live-t-me-alibk3-37763": {
+      "remove": true,
+      "why": "the 3 Oct Riyadh fire, told again (one attack, one pin)"
+    },
+    "live-t-me-shajab-news-68238": {
+      "remove": true,
+      "why": "footage of the 3 Oct Riyadh fire"
+    },
+    "live-en-ypagency-net-407342": {
+      "remove": true,
+      "why": "the 4 Oct statement; its pin is the spokesman own post, at Khurais"
+    },
+    "live-t-me-alomhoar-113491-pin-Abqaiq": {
+      "remove": true,
+      "why": "one aligned channel; the Houthis own statement named Riyadh only"
+    },
+    "live-t-me-naya-foriraq-92462": {
+      "remove": true,
+      "why": "an aligned channel claim the Houthis own statement did not make"
+    },
+    "live-t-me-shajab-news-68260": {
+      "remove": true,
+      "why": "the same tanker off Mocha as Al Arabiya pin"
+    },
+    "live-x-com-yah-saree-status-2106731063213256838": {
+      "lat": 25.1,
+      "lng": 48.05,
+      "place": "Khurais",
+      "why": "the 4 Oct attack hit the East-West pipeline pump station by Khurais (the Riyadh part retells 3 Oct), not Amran"
     }
   }
 }

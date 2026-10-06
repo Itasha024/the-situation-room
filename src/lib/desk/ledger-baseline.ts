@@ -237,7 +237,6 @@ export const LEDGER_BASELINE: Ledger = {
     { site: "yanbu", date: "2026-10-04", why: "Reuters' report of the 3 Oct Riyadh attack, filed under Yanbu" },
     { site: "khurais", date: "2026-10-04", why: "the 4 Oct attack on the East-West pipeline's pump station by Khurais: one row" },
     { site: "east-west-pipeline", date: "2026-10-05", why: "the pipeline stopped after the 4 Oct attack: a status, not a new strike" },
-    { site: "jeddah", date: "2026-10-05", why: "reports of smoke 'in Jeddah' were the Rabigh refinery, the only one the Houthis named" },
     { site: "rabigh", date: "2026-10-06", why: "the 5 Oct evening claim told again the next morning" },
     { site: "taibah-medina", date: "2026-10-06", why: "Qatar's condemnation, no new attack" },
     // Ships: the 4 Oct tanker off Mocha, told by a Houthi-aligned channel and the next day by Seatrade.

@@ -280,6 +280,69 @@
     "live-t-me-alomhoar-113504": {
       "remove": true,
       "why": "the 4 Oct Khurais attack: one pin, the spokesman own post"
+    },
+    "live-t-me-alomhoar-113425": {
+      "label": "Houthi ballistic missile launched toward government forces positions in Taiz",
+      "side": "houthi",
+      "why": "\"Saudi militia\" is the Houthi word for government forces (3-4 Oct review)"
+    },
+    "live-t-me-alibk3-37785": {
+      "label": "Houthi forces advance towards Al-Zaza'a in Al-Shamaytayn district of Taiz after securing Bani Mohammed",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (3-4 Oct review)"
+    },
+    "live-t-me-alibk3-37810": {
+      "label": "Saudi air strikes hit Al-Zukirah area to obstruct the Houthi advance toward Al-Turbah",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (3-4 Oct review)"
+    },
+    "live-en-ypagency-net-407314": {
+      "label": "Saudi air strikes hit Al-Barh in Maqbanah killing one, wounding five, and also strike Al-Zukirah area to block the Houthi advance toward Al-Turbah",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (3-4 Oct review)"
+    },
+    "live-t-me-shajab-news-68203": {
+      "label": "Houthi forces target Dammam in eastern Saudi Arabia",
+      "side": "houthi",
+      "why": "the government never fires at Saudi Arabia (3-4 Oct review)"
+    },
+    "live-t-me-alibk3-37852": {
+      "label": "Houthi forces reach Al-Safaqi junction, cutting the last supply route for government forces between Taiz, Al-Turbah and Aden",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (3-4 Oct review)"
+    },
+    "live-t-me-alomhoar-113500": {
+      "label": "Houthi forces launch wide attack on government forces sites in Al-Akhan and Al-Khanif mountains, Al-Mudaribah district, Lahj",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (3-4 Oct review)"
+    },
+    "live-t-me-alibk3-37874": {
+      "label": "Houthi forces reach Al-Azahiz near Al-Turbah and clash with government forces",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (3-4 Oct review)"
+    },
+    "live-t-me-almayadeen-399790": {
+      "label": "Houthi military source: Saudi-backed forces expelled from Al-Turbah, Al-Shamaytayn and Samih districts in Taiz",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (3-4 Oct review)"
+    },
+    "live-t-me-almayadeen-400153": {
+      "label": "Houthi forces: targeting of Badr camp killed and wounded a number of Saudi officers",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (3-4 Oct review)"
+    },
+    "live-t-me-almayadeen-400159": {
+      "label": "Houthi forces strike Saudi military supplies at Badr camp near Aden International Airport",
+      "side": "houthi",
+      "why": "the government never strikes Saudi forces (7 Oct)"
+    },
+    "live-t-me-snntv-519030": {
+      "label": "Houthi forces launch ballistic missiles and drones at Saudi military bases in Jazan and Asir",
+      "side": "houthi",
+      "why": "Iranian relay of the Houthi spokesman; its \"Yemeni armed forces\" are the Houthis (7 Oct)"
+    },
+    "live-t-me-snntv-519032": {
+      "label": "Houthi forces shoot down a Saudi CH-4 armed reconnaissance drone in Al-Jawf governorate",
+      "side": "houthi",
+      "why": "Iranian relay of the Houthi spokesman (7 Oct)"
     }
   }
 }

@@ -633,8 +633,21 @@ const YEMENI_FORCES_AR = /القوات (?:المسلحة )?اليمنية|الج
 const GOV_WORDS = /لشرعي|الحكومي|التابعة للحكومة|الجيش الوطني|المقاومة الوطنية|العمالقة|درع الوطن|القوات الجنوبية|الانتقالي|مجلس القيادة|\bgovernment\b|\blegitima/i;
 const GOV_COPY = /\bYemeni government (?:forces|army|troops)\b|\bgovernment forces\b/g;
 const FIRE_ON_SAUDI = /\b(?:missiles?|drones?|ballistic|UAVs?)\b.{0,80}\b(?:Saudi|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Khamis Mushait|Aramco|Dammam|Khurais|Abqaiq|Ras Tanura|Taif|Medina)\b|\b(?:Saudi|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Aramco)\b.{0,40}\b(?:hit|targeted|struck) by (?:missiles?|drones?)/i;
+/**
+ * Nor does it attack Saudi forces, their supplies or Saudi cities, whatever
+ * side the reader gave (7 Oct, Al Mayadeen: "Yemeni government forces strike
+ * Saudi military supplies at Badr camp"; 4 Oct, Shajab: "Yemeni government
+ * forces target Dammam"; Al-Mihwar: "... launch wide attack on Saudi-aligned
+ * militia sites").
+ */
+const GOV_ON_SAUDI =
+  /^Yemeni government (?:forces|army|troops)\b[^.]{0,100}?\b(?:launch|fire|target|strike|attack|hit|shell|bomb|seiz|captur|advanc|reach|clash|expel)\w*\b[^.]{0,80}?\b(?:(?:Saudi|pro-Saudi|Saudi-(?:aligned|backed|led))\s+(?:military\s+)?(?:forces|troops|soldiers|officers|supplies|reinforcements|positions|bases?|camps?|gatherings|concentrations|militias?|militia sites|fighters|sites)|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Khamis Mushait|Aramco|Dammam|Khurais|Abqaiq|Ras Tanura|Taif|Medina)\b/i;
 export function houthiAfterAll(side: string | null | undefined, copy: string, source: string, outlet: string): boolean {
-  if (side !== "government") return false;
+  if (GOV_ON_SAUDI.test(copy)) return true;
+  // No side given, and the copy kept the outlet's "Yemeni forces" (Ali Bk, 4
+  // Oct: "Yemeni forces reach Al-Safaqi junction"): the same outlet test.
+  const unsided = side == null && /\bYemeni (?:armed )?(?:forces|army)\b/.test(copy) && !/\bgovernment\b/i.test(copy);
+  if (side !== "government" && !unsided) return false;
   if (/\bYemeni government forces (?:launch|fire|target|strike|attack)\w*/i.test(copy) && FIRE_ON_SAUDI.test(copy)) return true;
   return outlet === "houthi" && YEMENI_FORCES_AR.test(source) && !GOV_WORDS.test(source);
 }

@@ -197,7 +197,10 @@ export function cardMarks(reports: LiveReport[], frontsOf: (r: LiveReport) => st
     if (!kind || MAP_FIXES[String(r.fp)]?.remove) continue;
     // One side's word that it took ground is drawn as its advance; the flag waits for confirmation.
     if (kind === "capture" && !captureConfirmed(r)) kind = "advance";
-    const side = kind === "repelled" ? repelAttacker(String(r.summary || "")) ?? repelAttacker(String(r.text || "").slice(0, 300)) ?? actorOf(r, kind) : actorOf(r, kind);
+    // A hand correction of the side (map-fixes.json): a card that wrote the
+    // Houthis as the government (3-4 Oct review).
+    const fixedSide = MAP_FIXES[String(r.fp)]?.side as DevSide | undefined;
+    const side = fixedSide ?? (kind === "repelled" ? repelAttacker(String(r.summary || "")) ?? repelAttacker(String(r.text || "").slice(0, 300)) ?? actorOf(r, kind) : actorOf(r, kind));
     // A missile or drone flies in from the launch area its report names; the launch
     // area itself is no target ("launch two ballistic missiles from Sanaa").
     const from = FIRED.has(kind) ? launchOf(r) : null;

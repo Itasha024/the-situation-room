@@ -543,7 +543,10 @@ a threat or warning to a named party; an announcement (an operation,
 escalation, halt, deadline or condition); a new position on talks or a deal;
 a claim of a specific attack or its result; a figure. Praise, prayer,
 thanks, history, the anniversary, general accusations and slogans are
-rejected with reject_reason "speech-rhetoric". A published line is
+rejected with reject_reason "speech-rhetoric". The same holds for every
+speaker's speech, Yemen's president's too: "we express our great gratitude to
+Saudi Arabia", "today we begin a decisive phase in the history of our nation",
+"the state gave peace every chance" are rhetoric (4 Oct). A published line is
 headlined "<role>: <what was said>", e.g. "Houthi leader: Saudi Arabia will
 pay a price if the siege on Hodeidah port continues" — always with the
 speaker at the head, even when the channel's line does not name him again.
@@ -594,13 +597,20 @@ export const OUTLET_LEAD = new RegExp(
   "i",
 );
 
+/** "Yemen Yemen's president", "Al-Al-Al-Jawf": a word the model wrote twice. */
+export function unstutter(s: string): string {
+  return String(s || "")
+    .replace(/\bYemen (?=Yemen(?:'s|i)?\b)/g, "")
+    .replace(/\b(?:Al[-‑])+(?=Al[-‑][A-Z])/g, "");
+}
+
 /**
  * Headline fixes the model keeps needing: an outlet opening the headline goes
  * ("Reuters sources: Reuters: …"), and a colon after a name that introduces
  * no words of theirs ("Trump: held a call …") becomes a plain sentence.
  */
 export function fixHeadline(headline: string): string {
-  let h = String(headline || "").trim();
+  let h = unstutter(String(headline || "").trim());
   while (OUTLET_LEAD.test(h)) h = h.replace(OUTLET_LEAD, "");
   h = h.replace(/^(?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi:/i, "Houthi leader:");
   // Only Rashad al-Alimi is Yemen's president. "Yemen's president Salem

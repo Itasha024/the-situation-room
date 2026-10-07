@@ -448,6 +448,101 @@ export function sameWave(a: { type: string; summary: string; text?: string }, b:
   return !numbersClash(`${a.summary} ${a.text ?? ""}`, `${b.summary} ${b.text ?? ""}`);
 }
 
+/**
+ * One named event told again and again through the day (3-4 Oct review): the
+ * government's repulse of the night attack on Jabal Han went out six times
+ * between 10:35 and 16:35, the capture of Al-Hisn in Jabal Sameh nine times,
+ * the Houthi missile on Badr camp in Aden four times in an hour. The same side
+ * doing the same thing at the same named spot within six hours is one event,
+ * whoever tells it; a "new" or "renewed" strike is not, nor are figures that
+ * disagree.
+ */
+export const SAME_TARGET_MS = 6 * 3600_000;
+const SPOT_HEAD = "camp|airport|hospital|base|refinery|station|port|palace|compound|mosque|school|factory|market|prison|junction|bridge|field|pipeline|complex|terminal";
+/** Words that name no one spot: sides, cities, governorates, and the heads themselves. */
+const NOT_A_SPOT = new Set(
+  (
+    "houthi houthis saudi yemeni yemen government forces coalition army military national popular resistance giants brigades nation shield southern " +
+    "mount jabal wadi habashi sabr ras international square maternity maternal child children district front fronts city area areas governorate province countryside entrance eastern western northern southern central old " +
+    "sanaa hodeidah saada aden marib taiz hajjah amran dhamar jawf mukalla lahj bayda shabwa abyan riyadh jeddah yanbu jizan jazan najran abha khamis mushait dammam medina mecca taif arabia " +
+    SPOT_HEAD.replace(/\|/g, " ")
+  ).split(" "),
+);
+/** The named spots a headline gives: "Jabal Han", "Badr camp" → "s:han", "s:badr"; a plain "Al-" name → "n:…". */
+export function namedSpots(s: string, sitesOnly = false): Set<string> {
+  const out = new Set<string>();
+  const t = String(s || "");
+  for (const m of t.matchAll(/\b(?:Jabal|Mount|Wadi)\s+(?:Al-|al-)?([A-Z][\w'’-]+)/g)) {
+    const k = m[1].toLowerCase();
+    if (!NOT_A_SPOT.has(k)) out.add(`s:${k}`);
+  }
+  for (const m of t.matchAll(new RegExp(`\\b((?:(?:Al-|al-)?[A-Z][\\w'’-]+\\s+){1,4})(?:${SPOT_HEAD})\\b`, "g"))) {
+    for (const w of m[1].trim().split(/\s+/)) {
+      const k = w.replace(/^al-/i, "").toLowerCase();
+      if (k.length >= 3 && !NOT_A_SPOT.has(k)) out.add(`s:${k}`);
+    }
+  }
+  // Of the plain "Al-" names only the first, the object: "seize Al-Safiyah in
+  // Al-Shamaytayn" and "seize Al-Burkani in Al-Shamaytayn" are two villages.
+  const first = sitesOnly ? null : /\bAl-([A-Z][\w'’-]{2,})/.exec(t.replace(/\b(?:Jabal|Mount|Wadi)\s+Al-/g, ""));
+  if (first && !NOT_A_SPOT.has(first[1].toLowerCase())) out.add(`n:${first[1].toLowerCase()}`);
+  return out;
+}
+const ACTIONS: [RegExp, string][] = [
+  [/\b(?:repel\w*|repuls\w*|thwart\w*|foil\w*|withstand\w*|broke|break\w*)\b/i, "repel"],
+  [/\b(?:captur\w*|seiz\w*|liberat\w*|recaptur\w*|retak\w*|take control|took control|control)\b/i, "capture"],
+  [/\b(?:intercept\w*|shoot down|shot down|shoots down)\b/i, "intercept"],
+  [/\b(?:strikes?|struck|hit|hits|target\w*|raids?|bomb\w*|shell\w*|launch\w*|fire[sd]?)\b/i, "strike"],
+];
+function actionOf(s: string): string {
+  for (const [re, a] of ACTIONS) if (re.test(s)) return a;
+  return "";
+}
+/** Who acts, as the headline opens: the side named first, or the striker. */
+function actorOf(s: string): string {
+  const t = String(s || "").replace(/^[^:]{2,60}:\s*/, "");
+  if (/^(?:Yemeni )?government|^Yemeni (?:government|military|army)|^(?:Giants|Nation's Shield|National Resistance|Popular Resistance|Southern) /i.test(t)) return "gov";
+  if (/^Houthi/i.test(t)) return "houthi";
+  return striker(t);
+}
+/** A plain "Al-" name is often a whole district: it holds for three hours, a named site or hill for six. */
+const NAME_ONLY_MS = 3 * 3600_000;
+export function sameTarget(a: { type: string; summary: string; text?: string; at?: string }, b: { type: string; summary: string; text?: string; at?: string }): boolean {
+  if (alertCities(a) || alertCities(b)) return false;
+  if (NEW_STRIKE.test(b.summary)) return false;
+  const act = actionOf(a.summary);
+  if (!act || act !== actionOf(b.summary)) return false;
+  // A strike needs a site: two strikes on one district hours apart are two.
+  const sitesOnly = act === "strike";
+  const sa = namedSpots(a.summary, sitesOnly);
+  const shared = [...namedSpots(b.summary, sitesOnly)].filter((k) => sa.has(k));
+  if (!shared.length) return false;
+  const gap = a.at && b.at ? Math.abs(Date.parse(a.at) - Date.parse(b.at)) : 0;
+  if (!shared.some((k) => k.startsWith("s:")) && gap > NAME_ONLY_MS) return false;
+  const who = actorOf(a.summary);
+  if (!who || who !== actorOf(b.summary)) return false;
+  return !numbersClash(`${a.summary} ${a.text ?? ""}`, `${b.summary} ${b.text ?? ""}`);
+}
+
+/**
+ * Speakers whose speeches and statements their own outlets carry line by
+ * line: another outlet's line is a copy of theirs (user, 21 Sep: "speech
+ * lines come only from the speaker's official outlet"). On 4 Oct the
+ * president's speech went out as some 45 cards and the coalition's evening
+ * statement as 15, from Al Arabiya, Al Hadath, Al Jazeera, Saudi News...
+ */
+export const SPEECH_COPY_MS = 4 * 3600_000;
+const SPEECH_OWNERS: { key: string; who: RegExp; outlets: RegExp }[] = [
+  { key: "alimi", who: /^(?:Yemen(?:'s|i)? president|Yemeni president|(?:Rashad )?al-Alimi|Presidential (?:Leadership )?Council (?:head|chairman))\b/i, outlets: /^(?:Saba \(government\)|Yemen TV)$/ },
+  { key: "maliki", who: /^(?:The coalition|(?:Saudi-led )?coalition(?: spokes(?:man|person))?|Turki al-Maliki)\b(?=[^:]{0,40}(?::|\b(?:says|vows|announces|warns|affirms|stresses)\b))/i, outlets: /^SPA$/ },
+  { key: "mashat", who: /^(?:The )?(?:Houthi (?:supreme )?political council (?:head|chairman|president)|(?:Mahdi )?al-Mashat)\b/i, outlets: /^(?:Saba \(Houthi-run\)|Al-Masirah)$/ },
+  { key: "houthi leader", who: /^(?:The )?Houthi leader\b|^Abdul-?Malik al-Houthi\b/i, outlets: /^Al-Masirah$/ },
+];
+export function speechOwner(summary: string): { key: string; outlets: RegExp } | null {
+  const s = String(summary || "").replace(/^Yemen (?=Yemen)/, "");
+  return SPEECH_OWNERS.find((o) => o.who.test(s)) ?? null;
+}
+
 const GENERIC_BODY = new Set(["foreign", "ministry", "ministers", "minister", "office", "affairs", "government", "defence", "defense", "interior", "state", "department", "official", "the", "and", "for", "news", "agency", "embassy", "mission", "council", "expatriates", "kingdom", "republic"]);
 /**
  * The body a source is, speaking in the headline: "Pakistan Foreign Ministry" is

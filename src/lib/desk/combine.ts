@@ -28,7 +28,7 @@ import { alertCities } from "./copies.ts";
 import { governorateAt } from "./adm1.ts";
 import { PLACE_BY_NAME, datelineFor, type Place } from "./gazetteer.ts";
 import { stripAttribution } from "./origin.ts";
-import { redundantBody, roleNamesInProse, stripSpellingNotes } from "./reader.ts";
+import { redundantBody, roleNamesInProse, stripSpellingNotes, unstutter } from "./reader.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -184,10 +184,17 @@ function figures(s: string): string[] {
  * What is wrong with a combined write-up, or "" when nothing is: English
  * only, every place and every headline figure of the accounts kept.
  */
+const MASHUP =
+  /\b(?:as|while)\s+(?:the\s+)?(?:Yemeni\s+)?(?:government|Houthi|Houthis|coalition|Saudi|Yemeni|Taiz|local|STC|US|UN)\b[^,;]{0,50}?\b(?:report|reports|reported|say|says|said|claim|claims|claimed|announce|announces|condemn|condemns|declare|declares|deny|denies|warn|warns|urge|urges)\b/i;
 export function combineProblem(w: Written, all: LiveReport[], places: Place[]): string {
   const out = `${w.headline} ${w.body}`;
   if (!w.headline.trim()) return "no headline";
   if (w.headline.length > 240) return "headline too long";
+  // Two events in one headline, the second another party's claim: "Coalition
+  // says Houthi claims misleading as Yemeni forces report 257 operations"
+  // (3 Oct), "Houthis claim operations in Taiz as Yemeni forces say they hit
+  // Houthi targets" (4 Oct). The later account was another story.
+  if (MASHUP.test(w.headline)) return "two events in one headline";
   if (/[؀-ۿ]/.test(out)) return "Arabic in the copy";
   const lower = out.toLowerCase();
   const missing = places.filter((p) => !lower.includes(p.name.replace(/^the /i, "").toLowerCase()));
@@ -215,7 +222,28 @@ export function toWritten(json: Record<string, unknown> | null, all: LiveReport[
   // The same rule as a single card: short accounts make a headline-only card.
   if (redundantBody(headline, body, accountsSource(all))) body = "";
   const w = { headline: headline ? headline[0].toUpperCase() + headline.slice(1) : "", body };
+  // The lead's side stays the side: a Houthi strike on Badr camp came back as
+  // "Yemeni government forces strike Saudi military supplies" (7 Oct), from
+  // Al Mayadeen's "القوات المسلحة اليمنية". And "Yemeni forces" on a Houthi
+  // card are the Houthis.
+  const lead = headlineSide(all[0]?.summary ?? "");
+  const wrote = headlineSide(w.headline);
+  if (lead && wrote && lead !== wrote) return null;
+  if (lead === "houthi") {
+    w.headline = w.headline.replace(/\b(?:the )?Yemen(?:i|'s) (?:armed )?(?:forces|army)\b/gi, "Houthi forces").replace(/^the Houthi/, "The Houthi");
+    w.body = w.body.replace(/\b(?:the )?Yemen(?:i|'s) (?:armed )?(?:forces|army)\b/gi, "Houthi forces");
+  }
+  w.headline = unstutter(w.headline);
+  w.body = unstutter(w.body);
   return combineProblem(w, all, places) ? null : w;
+}
+
+/** Who acts, as a headline opens: "Houthi …", "Yemeni government …", a speaker's side before the colon. */
+function headlineSide(s: string): "houthi" | "gov" | "" {
+  const t = String(s || "").trim();
+  if (/^(?:The )?Houthi\b/i.test(t)) return "houthi";
+  if (/^(?:Yemeni )?government (?:forces|army|troops)\b|^Yemeni government (?:forces|army|troops|air ?strikes?|warplanes?)\b/i.test(t)) return "gov";
+  return "";
 }
 
 /** Words of the gazetteer's place names: a write-up may name the governorate a place is in. */

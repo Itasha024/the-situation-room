@@ -4966,7 +4966,7 @@ function buildMapPins(d) {
       if (g) place = g.place;
     }
     if (fix && typeof fix.lat === 'number') { lat = fix.lat; lng = fix.lng; place = fix.place || place; }
-    const label = (r.summary && !isWeakHeadline(r.summary)) ? r.summary : headlineFrom(blob);
+    const label = (fix && fix.label) || ((r.summary && !isWeakHeadline(r.summary)) ? r.summary : headlineFrom(blob));
     if (isWeakHeadline(label)) return;
     const cat = (fix && fix.cat) || classifyForMap(blob, r.type);
     if (!cat || cat === 'statement') return;

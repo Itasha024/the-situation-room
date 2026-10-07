@@ -13,7 +13,7 @@
 import { createHash } from "node:crypto";
 import { placesInCountry, type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
-import { NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
+import { FINAL_EXCLUDES, NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
 import { deskDay } from "./desk/brief.ts";
 import { backupDaily } from "./desk/backup.ts";
@@ -22,7 +22,7 @@ import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
-import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, sameCount, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameWave, sameWords, WAVE_WINDOW_MS } from "./desk/copies.ts";
+import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, sameCount, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechOwner, sameWords, WAVE_WINDOW_MS } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -651,7 +651,10 @@ function toLiveReport(source: string, url: string, rawText: string, at: string, 
   if (!d.ok) {
     // On the wide radar (an official speaking, an alert in Saudi Arabia): the
     // reader decides, not the keyword gate.
-    if (d.outcome === "exclude" && onRadar(rawText)) {
+    // Not for what is out by rule whoever speaks: an Iranian channel's relay
+    // of the Houthi spokesman, a round-up, a price list (Fars and SNN on 7 Oct
+    // went out through the radar after the gate had dropped them).
+    if (d.outcome === "exclude" && !FINAL_EXCLUDES.has(d.reason) && onRadar(rawText)) {
       return { report: null, outcome: "tray", reason: "radar", note: "Official statement or alert: sent to the reader.", tags: [...d.tags, "radar"], topicality: 0 };
     }
     return { report: null, outcome: d.outcome, reason: d.reason, note: d.note, tags: d.tags, topicality: 0 };
@@ -1418,6 +1421,20 @@ export function foldIntoPublished(
     // target too: one card, written again with what each account adds.
     const wave = !home ? homes.find((o) => same(o) && before(o, WAVE_WINDOW_MS) && sameWave(o, r)) : undefined;
     if (wave) home = wave;
+    // One named event told again through the day: Jabal Han's night attack
+    // repelled, six cards; Al-Hisn taken, nine (3-4 Oct review).
+    const told = !home ? homes.find((o) => same(o) && before(o, SAME_TARGET_MS) && sameTarget(o, r)) : undefined;
+    if (told) home = told;
+    // A speech's line from another outlet when the speaker's own outlet is
+    // carrying the speech: a copy, not a card (user, 21 Sep; on 4 Oct the
+    // president's speech went out as some 45 cards from a dozen outlets).
+    if (!home && talk(r)) {
+      const who = speechOwner(r.summary);
+      if (who && !who.outlets.test(r.source)) {
+        const own = homes.filter((o) => same(o) && who.outlets.test(o.source) && speechOwner(o.summary)?.key === who.key && Math.abs(t - Date.parse(o.at)) <= SPEECH_COPY_MS);
+        home = own.sort((x, y) => Math.abs(t - Date.parse(x.at)) - Math.abs(t - Date.parse(y.at)))[0];
+      }
+    }
     // Another account reposting the same clip hours later: one event.
     if (!home && FIELD_TYPES.has(r.type)) {
       home = homes.find((o) => open(o) && o.source !== r.source && before(o, FOOTAGE_WINDOW_MS) && sameFootage(o, r));
@@ -1502,13 +1519,13 @@ export function foldIntoPublished(
     // lacks (South24's "over 200 Houthi targets", from the Axios piece the
     // desk could not open), go into the card even when it is the original.
     const relayed = !!r.citing && sameOutlet(home.source, r.citing);
-    if (enrich && addsFacts(home, r) && (wave || relayed)) enrich.push([home, r]);
+    if (enrich && addsFacts(home, r) && (wave || told || relayed)) enrich.push([home, r]);
     // A card written from the original source needs no "Also": the others
     // only relay it.
     if (isOriginal(home) || relayed) continue;
     // The later account says something the card does not (a figure, a place):
     // the card is written again from both, so nothing new is lost to "Also".
-    if (!wave && enrich && addsFacts(home, r)) enrich.push([home, r]);
+    if (!wave && !told && enrich && addsFacts(home, r)) enrich.push([home, r]);
     const also =[...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url, summary: r.summary }];
     const seen = new Set([home.source]);
     home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);

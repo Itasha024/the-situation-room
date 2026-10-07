@@ -375,7 +375,7 @@ const NOISE: NoiseRule[] = [
     // package; every event in it was reported on its own, first-hand.
     id: "summary",
     note: "A summary or round-up of events already reported one by one.",
-    re: /بسته ?خبر|مهم ?ترين ?خبرها|حصاد ?(?:اليوم|الاسبوع|الليله|الساعات|الحرب|العدوان)|ملخص ?(?:الاحداث|اليوم|التطورات|المستجدات)|ابرز ?(?:الاحداث|التطورات|المستجدات|الاخبار)|خلاصه ?(?:الاحداث|التطورات)|\bround-?up\b|\bsummary of (?:events|the day|today)|\bthe day in (?:brief|review)\b|\bnews ?(?:package|wrap)\b/,
+    re: /بسته ?خبر|مهم ?ترين ?خبرها|(?:^|\n)[^؀-ۿa-z0-9\n]{0,6}اخرين (?:تحولات|اخبار|رويدادها)|حصاد ?(?:اليوم|الاسبوع|الليله|الساعات|الحرب|العدوان)|ملخص ?(?:الاحداث|اليوم|التطورات|المستجدات)|ابرز ?(?:الاحداث|التطورات|المستجدات|الاخبار)|خلاصه ?(?:الاحداث|التطورات)|\bround-?up\b|\bsummary of (?:events|the day|today)|\bthe day in (?:brief|review)\b|\bnews ?(?:package|wrap)\b/,
   },
   {
     id: "obituary",
@@ -448,7 +448,7 @@ const IRAN_SRC = /Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV/
  * desk reads from Saree. Iran's OWN words on Yemen stay in.
  */
 const YEMENI_PARTY_SAYS =
-  /\bsaree\b|yemen(?:'s|’s|i) armed forces (?:say|said|announce|claim|spokes)|yemeni army spokes|according to (?:al-?masirah|saba)|(?:يحيي|العميد) سريع|المتحدث (?:باسم )?القوات المسلحه|القوات المسلحه اليمنيه:|سخنگوي (?:نيروهاي )?(?:مسلح|ارتش) يمن|نيروهاي مسلح يمن|انصارالله (?:اعلام|گفت)|به نقل از (?:المسيره|سبا)/;
+  /\bsaree\b|yemen(?:'s|’s|i) armed forces (?:say|said|announce|claim|spokes)|yemeni army spokes|according to (?:al-?masirah|saba)|(?:يحيي|العميد) سريع|المتحدث (?:باسم )?القوات المسلحه|القوات المسلحه اليمنيه:|سخنگوي (?:نيروهاي )?(?:مسلح|ارتش) يمن|نيروهاي مسلح يمن|انصارالله (?:اعلام|گفت)|سخنگوي (?:جنبش )?انصار ?الله|\bhouthi (?:military |armed forces )?spokes|\bansar ?all?ah spokes|به نقل از (?:المسيره|سبا)/;
 const STRIKE_COUNT = /[\d٠-٩۰-۹]+ ?(?:حمله|غاره|غارات|air ?strikes?|raids?|strikes?)[^.\n]{0,60}(?:24|٢٤|۲۴) ?(?:ساعت|ساعه|hours?)/;
 const IRAN_OWN_VOICE = /\b(?:araghchi|pezeshkian|khamenei|baghaei|iran(?:'s|ian) (?:foreign|defen[cs]e) (?:minister|ministry)|irgc spokes)|عراقچي|عراقجي|پزشكيان|بزشكيان|خامنه|بقايي|سخنگوي (?:وزارت|سپاه)/;
 export function iranRelay(source: string, normalised: string): boolean {
@@ -785,3 +785,9 @@ export function gate(input: GateInput): Verdict {
 export function mapsAsPin(type: string): boolean {
   return type === "strike" || type === "combat" || type === "vessel" || type === "port";
 }
+
+/**
+ * Out by rule whoever is speaking: the wide radar (an official's words, an
+ * alert in Saudi Arabia) never sends these to the reader.
+ */
+export const FINAL_EXCLUDES = new Set(["iran-relay", "summary", "prices"]);

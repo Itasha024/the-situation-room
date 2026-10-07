@@ -649,6 +649,9 @@ export function fixHeadline(headline: string): string {
   // Only Rashad al-Alimi is Yemen's president. "Yemen's president Salem
   // Al-Khunbashi" was a council member given the chairman's title.
   h = h.replace(/\bYemen's president (?!Rashad\b|[Aa]l-Alimi\b)(?:[A-Z][\w'-]+ ){0,3}(?:[Aa]l-)?[A-Z][\w'-]+(?= |$|:)/g, "Presidential Council member");
+  // Known offices: SNN called Rubio "US Senator" (7 Oct 10:47); he is Secretary of State.
+  h = h.replace(/\b(?:US |U\.S\. )?(?:Senator|Sen\.) (Marco Rubio)\b/g, "US Secretary of State $1");
+  h = h.replace(/\b(?:US |U\.S\. )?(?:Senator|Sen\.) (JD Vance|J\.D\. Vance)\b/g, "US Vice President $1");
   // People readers do not know by name go by their role.
   for (const [name, role] of ROLE_NAMES) h = h.replace(name, (_m, at: number) => (at === 0 ? role.replace(/^the /, "") : role));
   h = h.replace(/\b(Yemen's president)(?:,? \1)+/gi, "$1");

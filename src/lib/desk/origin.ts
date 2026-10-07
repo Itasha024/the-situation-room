@@ -165,6 +165,9 @@ const CITABLE: [RegExp, Cited][] = [
   [/الجزيرة نت|موقع الجزيرة|Al Jazeera Net/i, O("Al Jazeera", "aljazeera.net", "QA", { lang: "ar" })],
   [/ميدل إيست آي|Middle East Eye/i, O("Middle East Eye", "middleeasteye.net", "UK")],
   [/العربي الجديد/, O("Al-Araby Al-Jadeed", "alaraby.co.uk", "UK", { lang: "ar" })],
+  [/ذا نيو عرب|The New Arab/i, O("The New Arab", "newarab.com", "UK")],
+  [/سكاي نيوز عربية|Sky News Arabia/i, O("Sky News Arabia", "skynewsarabia.com", "AE", { lang: "ar" })],
+  [/(?:ا|إ)ندبندنت عربية|Independent Arabia/i, O("Independent Arabia", "independentarabia.com", "UK", { lang: "ar" })],
   // The UN bodies that publish the displacement, hunger and casualty figures
   // the desk keeps being asked to carry. Each publishes its own release; a
   // channel quoting "the UNHCR said" is quoting a document with a URL.

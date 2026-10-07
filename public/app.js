@@ -880,6 +880,8 @@ const SOURCE_LEAN = {
   Alfaqaar: 'houthi', 'Taiz military axis': 'gov', 'Yemen Coast Guard': 'gov',
   "Yemen's human rights minister": 'gov', 'Clash Report': 'intl', OSINTdefender: 'intl',
   Bloomberg: 'intl', 'Financial Times': 'intl', 'Intelligence Online': 'intl', 'NBC News': 'intl',
+  'Sky News Arabia': 'gov', 'Independent Arabia': 'gov', 'Al-Ayyam': 'south', 'Khabar Agency': 'indep',
+  'The New Arab': 'intl', 'Clearwater Dynamics': 'intl', Pentagon: 'intl', CENTCOM: 'intl', 'White House': 'intl', 'State Department': 'intl',
   'The Telegraph': 'intl', 'Barak Ravid': 'intl', 'Natasha Bertrand': 'intl', 'Trey Yingst': 'intl', 'Jennifer Griffin': 'intl',
 };
 

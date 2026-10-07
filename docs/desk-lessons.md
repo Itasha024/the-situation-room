@@ -64,3 +64,4 @@ Newest round first.
 - 8 Oct: a Houthi-aligned outlet's own attack claim went out as fact (Al-Mihwar, Al-Turbah) → `ownClaim` leads it with "Houthi(-aligned) media:"; test in round29.test.ts.
 - 8 Oct: the Sanaa foreign ministry's post had no speaker → `officialLead` puts an official body first; test in round29.test.ts.
 - 7 Oct: SNN called Rubio "US Senator" → `fixHeadline` maps Rubio/Vance to their offices.
+- 8 Oct (5b): 30 more sites, US government feeds and two YouTube channels read; numeric HTML codes decoded (Al-Ayyam). Not read: AFP (no free site), Truth Social (refuses readers), saba.ye and liveuamap (Cloudflare). Test: round29.test.ts "stage 5b listings".

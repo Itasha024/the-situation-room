@@ -108,6 +108,21 @@ model got to are judged by keyword for now and asked about again next read.
 | SPA | Google News, `site:spa.gov.sa` alone, Arabic edition, last hour | 5 min |
 | Sheba Intelligence | its section pages: news, reports, investigations, politics, daily brief (no feed; its sitemap re-dates old articles) | hourly |
 | Yemen Future (يمن فيوتشر), non-governmental | its front page, the newest of every section (no feed) | 10 min |
+| France 24 (EN Middle East, AR) | `france24.com/en/middle-east/rss`, `/ar/rss` | 15 min |
+| BBC (EN Middle East, BBC Arabic) | `feeds.bbci.co.uk/news/world/middle_east/rss.xml`, `/arabic/rss.xml` | 15 min |
+| Al-Monitor, Middle East Eye, The New Arab, The Guardian (Middle East) | their RSS feeds | 15 min |
+| Sky News Arabia, Independent Arabia | their RSS feeds | 10 min |
+| Asharq Al-Awsat (English), Alhurra (English) | `english.aawsat.com/feed`, `alhurra.com/en/rss` | 10–15 min |
+| Financial Times (Middle East), Bloomberg (politics), Politico (defense), NBC News (world) | their RSS feeds; paywalled pages give only what they publish openly | 30 min |
+| AP, Intelligence Online, The Telegraph | Google News `site:` alone: AP and Intelligence Online refuse readers (Cloudflare), the Telegraph answers a paywall | 15 min–hourly |
+| CENTCOM, Pentagon, White House | their own release feeds | 10–15 min |
+| State Department | Google News `site:state.gov` (its feed refuses readers) | 15 min |
+| Clearwater Dynamics (maritime alerts, non-aligned) | its public alerts page | 10 min |
+| Crater Sky, Al-Ayyam (Aden) | their front pages | 10 min |
+| Yemen Monitor, Khabar Agency, Saba (government, sabanew.net) | their RSS feeds | 10 min |
+| YouTube: Fox News, White House | each channel's free feed: titles and descriptions only, not the speech | 30 min |
+
+Not read, and why (5b, 8 Oct): **AFP** has no free site of its own (France 24 carries its copy); **Truth Social** answers automated readers with an empty app page and its API refuses them, so Trump's posts come through the White House, Rapid Response and the wires; **Clash Report** has no YouTube channel the feed can find (its X and Telegram are read); **saba.ye** (Houthi Saba) and **liveuamap** are behind Cloudflare.
 
 Any site whose own listing fails on a read is listed through Google News (a day wide; what was judged before is skipped)
 (`site:` alone) for that read. Nothing behind Cloudflare or a paywall is

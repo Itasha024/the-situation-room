@@ -1,3 +1,4 @@
+import { parseHtmlListing, parseListing } from "./sitemap.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { captureConfirmed, tookGround } from "./control-live.ts";
@@ -153,4 +154,14 @@ test("an official body's own post leads with that body (8 Oct, Sanaa foreign min
   assert.equal(officialLead("Saudi Arabia continues crimes against Yemen", "Sanaa Foreign Ministry"), "Houthi foreign ministry: Saudi Arabia continues crimes against Yemen");
   assert.equal(officialLead("Saudi Foreign Ministry condemns attack on Abha airport", "Saudi Foreign Ministry"), "Saudi Foreign Ministry condemns attack on Abha airport");
   assert.equal(officialLead("Clashes in Taiz", "Al-Masirah"), "Clashes in Taiz");
+});
+
+test("stage 5b listings: Al-Ayyam's coded Arabic and a YouTube video's description are read", () => {
+  const html = `<a href="/news/7L6K6AWI-029HUC">&#x200B;&#x647;&#x62C;&#x648;&#x645; &#x62D;&#x648;&#x62B;&#x64A; &#x639;&#x644;&#x649; &#x645;&#x637;&#x627;&#x631; &#x639;&#x62F;&#x646;</a>`;
+  const [a] = parseHtmlListing(html, "https://www.alayyam.info/", /^https:\/\/www\.alayyam\.info\/news\/[A-Z0-9-]{10,}$/);
+  assert.equal(a.title, "هجوم حوثي على مطار عدن");
+  const atom = `<feed><entry><title>Press Secretary Briefs the Press</title><link rel="alternate" href="https://www.youtube.com/watch?v=x1"/><published>2026-10-07T18:00:00+00:00</published><media:group><media:description>Yemen and the Red Sea</media:description></media:group></entry></feed>`;
+  const [y] = parseListing(atom);
+  assert.equal(y.url, "https://www.youtube.com/watch?v=x1");
+  assert.equal(y.desc, "Yemen and the Red Sea");
 });

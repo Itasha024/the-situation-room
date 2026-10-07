@@ -87,7 +87,7 @@ export function isAggregator(source: string): boolean {
 /** Which side an outlet is on, from its catalogue lean and name. */
 export function outletSide(source: string, lean: string): OutletSide {
   if (
-    /^(Reuters|AP|AFP|BBC|WSJ|NYT|Washington Post|CNN|CBS|ABC|Axios|Bloomberg|Politico|US media|UKMTO)$/i.test(
+    /^(Reuters|AP|AFP|BBC|WSJ|NYT|Washington Post|CNN|CBS|ABC|NBC News|Axios|Bloomberg|Politico|Financial Times|The Guardian|The Telegraph|France 24|US media|UKMTO)$/i.test(
       source.trim(),
     )
   ) {

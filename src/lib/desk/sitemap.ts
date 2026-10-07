@@ -20,7 +20,10 @@ function decode(s: string): string {
     .replace(/<[^>]+>/g, " ")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
     .replace(/&#0?39;|&apos;/g, "'").replace(/&#8217;/g, "’").replace(/&#8216;/g, "‘")
-    .replace(/&#822[01];/g, '"').replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+    .replace(/&#822[01];/g, '"').replace(/&nbsp;/g, " ")
+    // Al-Ayyam writes every Arabic letter as a code (&#x647;); a zero-width space leads its headlines.
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/[​﻿]/g, "").replace(/&amp;/g, "&")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -49,7 +52,7 @@ export function parseListing(xml: string): Listed[] {
     const title = tag(b, "title");
     const href = atom ? (/<link[^>]+href=["']([^"']+)["']/i.exec(b) || [])[1] || "" : "";
     const url = decode(href || tag(b, "link") || tag(b, "guid")).trim();
-    const desc = tag(b, "description") || tag(b, "summary");
+    const desc = tag(b, "description") || tag(b, "summary") || tag(b, "media:description");
     const at = Date.parse(tag(b, "pubDate") || tag(b, "published") || tag(b, "updated") || tag(b, "dc:date"));
     if (url && /^https?:\/\//i.test(url) && title) out.push({ url, title, desc: desc.slice(0, 600), at });
   }

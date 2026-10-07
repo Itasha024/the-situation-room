@@ -482,6 +482,46 @@ const RSS: RssFeed[] = [
     site: "en.al-akhbar.com",
     html: /^https:\/\/en\.al-akhbar\.com\/news\/[a-z0-9-]{20,}/,
   })),
+  // Round 29 stage 5b (user, 3 Oct list): the remaining sites, each tested from
+  // the server first. AP, Intelligence Online and the Telegraph refuse readers
+  // (Cloudflare, a paywall answer) and the State Department refuses its feed,
+  // so those four are listed through Google News, nothing bypassed.
+  { id: "france24-me", url: "https://www.france24.com/en/middle-east/rss", name: "France 24", cadence: C15, whole: true, site: "france24.com" },
+  { id: "france24-ar", lang: "ar", url: "https://www.france24.com/ar/rss", name: "France 24", cadence: C15, whole: true },
+  { id: "bbc-me", url: "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml", name: "BBC", cadence: C15, whole: true, site: "bbc.com" },
+  { id: "bbc-ar", lang: "ar", url: "https://feeds.bbci.co.uk/arabic/rss.xml", name: "BBC", cadence: C15, whole: true },
+  { id: "almonitor", url: "https://www.al-monitor.com/rss", name: "Al-Monitor", cadence: C15, whole: true, site: "al-monitor.com" },
+  { id: "mee", url: "https://www.middleeasteye.net/rss", name: "Middle East Eye", cadence: C15, whole: true, site: "middleeasteye.net" },
+  { id: "skyar", lang: "ar", url: "https://www.skynewsarabia.com/rss.xml", name: "Sky News Arabia", cadence: C10, whole: true, site: "skynewsarabia.com" },
+  { id: "indyar", lang: "ar", url: "https://www.independentarabia.com/rss.xml", name: "Independent Arabia", cadence: C10, whole: true, site: "independentarabia.com" },
+  { id: "newarab", url: "https://www.newarab.com/rss", ua: "curl/8.5.0", name: "The New Arab", cadence: C15, whole: true, site: "newarab.com" },
+  { id: "aawsat-en", url: "https://english.aawsat.com/feed", name: "Asharq Al-Awsat", cadence: C10, whole: true, site: "english.aawsat.com" },
+  { id: "alhurra-en", url: "https://www.alhurra.com/en/rss", name: "Alhurra", cadence: C15, whole: true },
+  { id: "ft-me", url: "https://www.ft.com/world/mideast?format=rss", name: "Financial Times", cadence: C30, whole: true, site: "ft.com" },
+  { id: "bloomberg", url: "https://feeds.bloomberg.com/politics/news.rss", name: "Bloomberg", cadence: C30, whole: true, site: "bloomberg.com" },
+  { id: "politico", url: "https://rss.politico.com/defense.xml", name: "Politico", cadence: C30, whole: true, site: "politico.com" },
+  { id: "nbc", url: "https://feeds.nbcnews.com/nbcnews/public/world", name: "NBC News", cadence: C30, whole: true, site: "nbcnews.com" },
+  { id: "guardian-me", url: "https://www.theguardian.com/world/middleeast/rss", name: "The Guardian", cadence: C15, whole: true, site: "theguardian.com" },
+  { id: "ap", url: gnews("site:apnews.com when:1h"), name: "AP", cadence: C15, whole: true, site: "apnews.com" },
+  { id: "intel-online", url: gnews("(site:intelligenceonline.com OR site:intelligenceonline.fr) when:1d"), name: "Intelligence Online", cadence: C1H, whole: true, site: "intelligenceonline.com" },
+  { id: "telegraph", url: gnews("site:telegraph.co.uk/world-news when:2h"), name: "The Telegraph", cadence: C30, whole: true, site: "telegraph.co.uk" },
+  // US government: CENTCOM and the Pentagon's releases, the White House's and the State Department's.
+  { id: "centcom-web", url: "https://www.centcom.mil/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=808&max=20", name: "CENTCOM", cadence: C10, whole: true, site: "centcom.mil" },
+  { id: "pentagon", url: "https://www.defense.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=20", name: "Pentagon", cadence: C15, whole: true, site: "defense.gov" },
+  { id: "whitehouse", url: "https://www.whitehouse.gov/news/feed/", name: "White House", cadence: C15, whole: true, site: "whitehouse.gov" },
+  { id: "state", url: gnews("site:state.gov when:2h"), name: "State Department", cadence: C15, whole: true, site: "state.gov" },
+  // Clearwater Dynamics' public maritime alerts, non-aligned (no feed: its alerts page).
+  { id: "cwd", url: "https://www.cwdynamics.com/alerts/", name: "Clearwater Dynamics", cadence: C10, whole: true, site: "cwdynamics.com", html: /^https:\/\/www\.cwdynamics\.com\/alerts\/alert\/\d+$/ },
+  // Yemeni sites: Aden's Crater Sky and Al-Ayyam (front pages; Crater Sky's feed is broken), Yemen Monitor, Khabar, and the government's Saba.
+  { id: "cratersky", lang: "ar", url: "https://crater-sky.com/", name: "Crater Sky", cadence: C10, whole: true, site: "crater-sky.com", html: /^https:\/\/crater-sky\.com\/posts\/\d+$/ },
+  { id: "alayyam", lang: "ar", url: "https://www.alayyam.info/", name: "Al-Ayyam", cadence: C10, whole: true, site: "alayyam.info", html: /^https:\/\/www\.alayyam\.info\/news\/[A-Z0-9-]{10,}$/ },
+  { id: "yemenmonitor", lang: "ar", url: "https://www.yemenmonitor.com/feed", name: "Yemen Monitor", cadence: C10, whole: true, site: "yemenmonitor.com" },
+  { id: "khabar", lang: "ar", url: "https://khabaragency.net/rss.xml", name: "Khabar Agency", cadence: C10, whole: true, site: "khabaragency.net" },
+  { id: "sabanew", lang: "ar", url: "https://sabanew.net/rss.php?lang=ar", name: "Saba (government)", cadence: C10, whole: true, site: "sabanew.net" },
+  // YouTube, through each channel's free feed: titles and descriptions only
+  // (no free, allowed route to the speech itself). Clash Report keeps no channel the feed finds.
+  { id: "yt-fox", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCXIJgqnII2ZOINSWNOGFThA", name: "Fox News", cadence: C30, whole: true },
+  { id: "yt-whitehouse", url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCYxRlFDqcWM4y7FfpiAN3KQ", name: "White House", cadence: C30, whole: true },
   // Safety nets: one keyword search across each language's sites, hourly. A
   // listing can drop an article (a sitemap's cap, an edited URL); these catch it.
   {

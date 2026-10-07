@@ -101,7 +101,7 @@ export async function accountPost(handle: string, name: string, keys: string[], 
     // Riyadh talks were linked to his post on a hijacked crew).
     const telling = mine.length >= 5 ? keys.filter((k) => mine.filter((p) => shared(p.text, [k])).length <= mine.length * 0.4) : keys;
     const posts = mine
-      .filter((p) => p.at >= reportAt - 48 * 3600_000 && p.at <= reportAt + 3600_000 && shared(p.text, telling) >= min && (!figures.length || figures.some((n) => p.text.includes(n))))
+      .filter((p) => p.at >= reportAt - 48 * 3600_000 && p.at <= reportAt + 3600_000 && shared(p.text, telling) >= min && (!figures.length || figures.some((n) => p.text.includes(n))) && onTheWar(p.text, keys))
       .sort((a, b) => shared(b.text, keys) - shared(a.text, keys) || a.at - b.at);
     const best = posts[0];
     if (!best) return null;
@@ -109,6 +109,20 @@ export async function accountPost(handle: string, name: string, keys: string[], 
   } catch {
     return null;
   }
+}
+
+/**
+ * The post must be about the story's war when the story is (user, 3 Oct 06:09:
+ * "Pakistan foreign minister: Iran proposes political engagement with the
+ * Houthis" was linked to Pakistan's post on Dar's UN week briefing, which
+ * shared "Deputy Prime Minister", "Foreign Minister" and "Dar" and nothing
+ * of the story). One of the story's war words — Iran, the Houthis, Yemen,
+ * Saudi Arabia — must be in the post.
+ */
+const WAR_KEY = /^(?:yemen\w*|houthis?|ansar|saudi\w*|riyadh|iran\w*|tehran|sanaa|aden|mandab|aramco|coalition|red sea|اليمن|يمني\S*|الحوثي\S*|السعودي\S*|الرياض|إيران|ايران|صنعاء|عدن)$/i;
+export function onTheWar(text: string, keys: string[]): boolean {
+  const war = keys.filter((k) => WAR_KEY.test(k.trim()));
+  return !war.length || shared(text, war) >= 1;
 }
 
 /** A country's own web domain: an outlet under it is that country's press. */

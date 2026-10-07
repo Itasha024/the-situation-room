@@ -261,7 +261,13 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    government, envoy or commander about the war or its sides, and commanders
    appointed or replaced, are in scope ("the new coalition commander meets
    Tareq Saleh", "Iran's foreign minister receives the Houthi negotiator",
-   "al-Alimi meets the US ambassador").
+   "al-Alimi meets the US ambassador"). Judge each item on whether a reader
+   following the war learns something: a low-level appointment with nothing
+   about the fighting ("Nation's Shield forces appoint a media department
+   director") and the daily list of exchange rates ("currency rates in Aden,
+   Hadramawt and Sanaa", "the riyal holds steady") are publish=false,
+   reject_reason "not-relevant"; a commander of fighting forces appointed, or
+   a currency collapse the text ties to the war, is news.
 2. CURRENT. It reports something that happened or was said now — which
    includes something newly FOUND about an earlier event: an investigation's
    finding, a new admission, a leak, a first figure ("Iraqi investigators
@@ -269,7 +275,17 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    East-West pipeline" is current). NOT a
    programme title, a video segment, a battle map, a documentary, an analysis,
    an anniversary, a recap. "Marib and Taiz: the map of the battles #ThisDay"
-   is a programme clip, not a report of clashes — publish=false.
+   is a programme clip, not a report of clashes — publish=false,
+   reject_reason "recap". A RECAP is any post that sums up events already
+   reported one by one — "over the past 24 hours refineries in Riyadh and
+   Yanbu were attacked", "flights at Riyadh airport were disrupted while
+   explosions were reported in Asir", a channel's news package or
+   round-up of the night ("بسته خبری", "حصاد", "أبرز الأحداث", "ملخص") —
+   whoever posts it: publish=false. And an Iranian outlet (IRNA, Press TV,
+   Fars, Tasnim, Al-Alam) relaying a Yemeni party's own numbers or claims
+   ("the Saudi coalition carried out 94 strikes in 24 hours", from the
+   Houthi military) is publish=false, reject_reason "relay": the desk reads
+   the Yemeni side first-hand.
    Commentary is not a report either: explainers, opinion, columns, analysis,
    and the views of writers, media figures, researchers, analysts, experts,
    think tanks or FORMER officials ("a Saudi writer says", "former US envoy
@@ -345,6 +361,11 @@ ${SPELLING_RULES}
   text — never a rephrasing of the headline. A body earns its place with at
   least two new facts (figures, named people, places, units, a quote) or
   casualties; if it would add only one small detail, body is "".
+- Keep the text's own WHY. When the item says why the event matters, that
+  clause goes in: "Houthi forces send police and personnel from Saada to
+  Salaf village in Taiz" lost the post's point — the deployment shows the
+  scale of the Houthi push to take Taiz, and the contingent was hit by drones
+  soon after. One clause of the text's context, never one you add.
 - NEVER shorten an interesting item to fit. A statement, interview or report
   that makes several newsworthy points keeps EVERY one of them: the strongest
   in the headline, all the others in the body, one sentence each, as long as
@@ -417,7 +438,13 @@ ministers are Houthi; al-Alimi, the Aden ministers, the national army are
 government), the seat (Sanaa, Saba Sanaa, Al-Masirah vs Aden, Saba Aden, the
 Presidential Council), the content (fire on Saudi Arabia, its ships or its
 soldiers, "the aggression" = Houthi; "the militia", "the Houthi coup" =
-government). The outlet's alignment is a hint, never enough alone.
+government). The outlet's alignment is a hint, never enough alone — with one
+rule: in a Houthi-aligned outlet "القوات اليمنية", "القوات المسلحة اليمنية",
+"الجيش اليمني" and "Yemeni forces" ARE the Houthis, unless the text says
+الشرعية, government or names a government unit ("القوات المسلحة اليمنية التابعة
+للشرعية" is the government). Ali Bk's "القوات اليمنية تتقدم نحو الزعازع" is
+"Houthi forces advance towards Al-Zaza'a", never "Yemeni government forces".
+The government never fires missiles or drones at Saudi Arabia.
 actor_side = the side of whoever acted or spoke: houthi | government | stc |
 saudi | other | unclear. Write it: Houthi -> "Houthi forces", "a Houthi
 attack", "Houthi defence minister", never "Yemeni forces" or "a Yemeni
@@ -479,6 +506,13 @@ STATEMENTS (event_type statement or diplomacy)
   military analyst"). Never an unfamiliar personal name, in headline or body.
 - Say what was said, specifically. If the speaker denies an accusation, state
   the accusation and the denial.
+- An UNNAMED official, commander or source is still the speaker: his claim
+  is never written as a fact. "قائد عسكري يمني: كسرنا محاولاتهم للسيطرة على
+  جبل هان" is "Yemeni military commander: we broke Houthi attempts to take
+  Jabal Han overnight", never "Yemeni military forces repelled Houthi
+  attacks". Use the text's own word (official, commander, source) and the
+  country or side the text gives: "Yemeni military official: …", "Saudi
+  security source: …", "Houthi military source: …".
 
 DATES
 Iran's channels date in the Iranian solar calendar (مهر, آبان, "1405/07/07")
@@ -497,6 +531,10 @@ was filmed as the video shows it, nothing more. A transcript garbles
 names and numbers: keep only the names and figures that are clear, and prefer
 the caption's spelling. Songs, chants, poems, prayers, sermons and a
 presenter reading other news are not reports: publish=false.
+Write the NEWS in the video, never the video: the main things said, each
+in one sentence. Never a running transcript, a narrator's history of the
+city, or residents' slogans one after another (Press TV, 3 Oct: a Hodeidah
+clip written out line by line). A body only for what is interesting.
 
 SPEECH LINES
 Channels post a live speech one sentence at a time ("السيد القائد: ...").
@@ -1083,6 +1121,8 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
     if (lead && !h.toLowerCase().startsWith(lead.toLowerCase())) return "statement does not lead with its speaker";
   }
   if (OUTLET_LEAD.test(h)) return "headline leads with outlet";
+  const added = SAUDI_SITES.find(([en, src]) => en.test(`${h} ${b}`) && !src.test(sourceText));
+  if (added) return `place not in source: ${added[0].source.split("|")[0].replace(/\\b/g, "")} — name only the places the text names`;
   // Never let pass: a card that puts the other side's leader's words in his mouth.
   const who = wrongSpeaker(`${h} ${b}`, sourceText);
   if (who) return who;
@@ -1107,6 +1147,22 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   }
   return null;
 }
+
+/**
+ * Saudi sites a card may name only when its text does. Saree's 3 Oct
+ * statement named Riyadh alone, and cards on it said "Riyadh, Yanbu and
+ * Abqaiq" and "Riyadh and Khurais": the model filled in the usual targets.
+ */
+const SAUDI_SITES: [RegExp, RegExp][] = [
+  [/\bYanbu\b/i, /Yanbu|ينبع/i],
+  [/\bAbqaiq\b/i, /Abqaiq|بقيق/i],
+  [/\bKhurais\b/i, /Khurais|خريص/i],
+  [/\bRabigh\b/i, /Rabigh|رابغ/i],
+  [/\bRas Tanura\b/i, /Ras Tanura|رأس تنورة|راس تنورة/i],
+  [/\bJ(?:i|a)zan\b/i, /J(?:i|a)zan|جازان|جيزان/i],
+  [/\bJeddah\b/i, /Jeddah|Jiddah|جدة|جده/i],
+  [/\bTaibah\b/i, /Taibah|طيبة/i],
+];
 
 /** A headline opening on a personal name ("Amin al-Warafi receives …", "Amin al-Warafi: …"). */
 const UNKNOWN_NAME_LEAD = /^(?:(?:Dr|Sheikh|Brig|Gen|Maj|Col)\.? )?[A-Z][a-z]+(?: [A-Z][a-z]+)? (?:al|Al|el|El)-[A-Z][\w'-]+(?=:| [a-z])/;

@@ -405,6 +405,49 @@ export function sameEventAbroad(a: { summary: string; text?: string }, b: { summ
   return both / Math.min(x.size, y.size) >= 0.5;
 }
 
+/**
+ * One channel's own posts on one event abroad (user, 3 Oct 09:55 and 10:00):
+ * Ali Bk's "smoke rises near the targeted oil site in Riyadh" and, five
+ * minutes later, "footage shows smoke rising near the targeted oil site" are
+ * one event with nothing new. A channel's own posts stay apart otherwise (its
+ * sirens at 09:00 and at 13:00 are two alerts), so only a later post that is
+ * the aftermath — smoke, fire, footage — and tells no new strike folds.
+ */
+export const OWN_AFTERMATH_MS = 2 * 3600_000;
+const AFTERMATH = /\b(?:smoke|fires?|burn\w*|blaze|flames|footage|scenes|video|images|aftermath)\b/i;
+const NEW_STRIKE = /\b(?:new|another|second|third|fresh|renewed|again)\b[^.]{0,30}\b(?:attacks?|strikes?|explosions?|blasts?|hits?|drones?|missiles?)\b|\bre-?target\w*/i;
+export function ownAftermath(a: { summary: string; text?: string }, b: { summary: string; text?: string }, yemeniPlaces: (s: string) => string[]): boolean {
+  return AFTERMATH.test(b.summary) && !NEW_STRIKE.test(b.summary) && sameEventAbroad(a, b, yemeniPlaces);
+}
+
+/**
+ * A wave of strikes on one city is one event (user, 3 Oct: "the reports about
+ * Saudi attacks in Sanaa are basically same event so no need a hundred
+ * reports"). Between 13:00 and 14:00 Sabereen, SNN, South24, Aden al-Ghad and
+ * Al Hadath each had a card on the same Saudi strikes on Sanaa. Strikes by
+ * the same side on the same city within two hours join one card, and the card
+ * is written again with each new target; casualty figures that disagree keep
+ * two cards.
+ */
+export const WAVE_WINDOW_MS = 2 * 3600_000;
+const WAVE_CITY = /\b(Sanaa|Hodeidah|Saada|Aden|Marib|Taiz|Hajjah|Amran|Dhamar|Ibb|Al-Jawf|Mukalla|Lahj|Al-Bayda|Shabwa|Abyan)\b/;
+/** Who struck, as the headline says it: the Houthis named as the target are not the striker. */
+function striker(s: string): string {
+  if (/\b(?:Saudi|coalition)\b/i.test(s)) return "saudi";
+  if (/\b(?:US|U\.S\.|American)\b/.test(s)) return "us";
+  if (/\bgovernment\b|\bYemeni (?:warplanes|aircraft|air force|army)\b/i.test(s)) return "gov";
+  if (/^Houthi\b/.test(s)) return "houthi";
+  return "";
+}
+export function sameWave(a: { type: string; summary: string; text?: string }, b: { type: string; summary: string; text?: string }): boolean {
+  if (a.type !== "strike" || b.type !== "strike") return false;
+  const ca = WAVE_CITY.exec(a.summary)?.[1];
+  if (!ca || ca !== WAVE_CITY.exec(b.summary)?.[1]) return false;
+  const sa = striker(a.summary);
+  if (!sa || sa !== striker(b.summary)) return false;
+  return !numbersClash(`${a.summary} ${a.text ?? ""}`, `${b.summary} ${b.text ?? ""}`);
+}
+
 const GENERIC_BODY = new Set(["foreign", "ministry", "ministers", "minister", "office", "affairs", "government", "defence", "defense", "interior", "state", "department", "official", "the", "and", "for", "news", "agency", "embassy", "mission", "council", "expatriates", "kingdom", "republic"]);
 /**
  * The body a source is, speaking in the headline: "Pakistan Foreign Ministry" is

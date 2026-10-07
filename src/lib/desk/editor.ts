@@ -21,6 +21,7 @@ import { type Place, placesIn } from "./gazetteer.ts";
 import { placeNamesIn } from "./prose-places.ts";
 import { type OutletSide, credibility, outletSide } from "./credibility.ts";
 import { recordOf } from "./source-rating.ts";
+import { domainOf, majorCarrier } from "./origin.ts";
 import {
   type EventType,
   type Reading,
@@ -197,6 +198,16 @@ function stale(e: CacheEntry, c: Pick<Candidate, "url">): boolean {
 function isXPost(c: Pick<Candidate, "url">): boolean {
   return /^https:\/\/x\.com\/[^/]+\/status\//.test(c.url);
 }
+/**
+ * Articles the reader reads whole, not their top 2,400 characters: an original,
+ * an exclusive, and any major outlet's own article (user, 3 Oct 05:56: the
+ * Axios piece on Trump's Camp David meeting went out as its headline; "read
+ * the whole article, there was probably more relevant info there").
+ */
+function readWhole(c: Candidate): boolean {
+  return c.tags.includes("original") || c.tags.includes("exclusive") || (!/^https:\/\/(?:t\.me|x\.com|twitter\.com)\//.test(c.url) && majorCarrier(domainOf(c.url)));
+}
+
 function alignmentOf(c: Candidate): string {
   return isXPost(c) ? "open-source (OSINT) analyst's own X account, no declared alignment" : ALIGNMENT[outletSide(c.source, c.lean)];
 }
@@ -333,7 +344,7 @@ export async function editCandidates(
       alignment: alignmentOf(c),
       postedAt: c.at,
       text: c.text,
-      full: c.tags.includes("original"),
+      full: readWhole(c),
     }));
     const { readings, model, error, exhausted, minute, slow } = await readBatch(items, key, skip, recent);
     count(model);
@@ -399,7 +410,7 @@ export async function editCandidates(
       alignment: alignmentOf(c),
       postedAt: c.at,
       text: c.text,
-      full: c.tags.includes("original"),
+      full: readWhole(c),
       fix: note,
     }));
     const res = await readBatch(items, key, skip, recent);
@@ -608,6 +619,26 @@ export function sideWords(s: string, side: string | undefined): string {
   return out;
 }
 
+/**
+ * A government actor that is the Houthis after all (user, 3 Oct 14:16, "big
+ * mistake"). Ali Bk's "القوات اليمنية تتقدم نحو الزعازع" went out as "Yemeni
+ * government forces advance": a Houthi-aligned outlet calls the Houthis
+ * "the Yemeni forces", and says الشرعية or names a government unit when it
+ * means the government (Al-Aqsa TV: "القوات المسلحة اليمنية التابعة
+ * للشرعية"). And the government never fires missiles or drones at Saudi
+ * Arabia (Sabereen, 5 Oct: "Yemeni government forces launch missile and drone
+ * strikes on Riyadh, Rabigh, Abha").
+ */
+const YEMENI_FORCES_AR = /القوات (?:المسلحة )?اليمنية|الجيش اليمني|قواتنا المسلحة|\bYemen(?:i|'s) (?:armed )?forces\b|\bYemeni army\b/i;
+const GOV_WORDS = /لشرعي|الحكومي|التابعة للحكومة|الجيش الوطني|المقاومة الوطنية|العمالقة|درع الوطن|القوات الجنوبية|الانتقالي|مجلس القيادة|\bgovernment\b|\blegitima/i;
+const GOV_COPY = /\bYemeni government (?:forces|army|troops)\b|\bgovernment forces\b/g;
+const FIRE_ON_SAUDI = /\b(?:missiles?|drones?|ballistic|UAVs?)\b.{0,80}\b(?:Saudi|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Khamis Mushait|Aramco|Dammam|Khurais|Abqaiq|Ras Tanura|Taif|Medina)\b|\b(?:Saudi|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Aramco)\b.{0,40}\b(?:hit|targeted|struck) by (?:missiles?|drones?)/i;
+export function houthiAfterAll(side: string | null | undefined, copy: string, source: string, outlet: string): boolean {
+  if (side !== "government") return false;
+  if (/\bYemeni government forces (?:launch|fire|target|strike|attack)\w*/i.test(copy) && FIRE_ON_SAUDI.test(copy)) return true;
+  return outlet === "houthi" && YEMENI_FORCES_AR.test(source) && !GOV_WORDS.test(source);
+}
+
 export function reword(s: string): string {
   let out = String(s || "");
   for (const [re, to] of REWORD) out = out.replace(re, to);
@@ -651,8 +682,17 @@ ${raw.body}`, c.text) : null;
   r.headline = dropInventedRole(spokespersonLabel(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.source, c.text), c.text);
   r.body = stripOwnOutlet(r.body, c.source);
   if (r.speaker_lead) r.speaker_lead = dropInventedRole(spokespersonLabel(r.speaker_lead, c.source, c.text), c.text);
+  // A Houthi-aligned outlet's "Yemeni forces" are the Houthis (user, 3 Oct).
+  if (houthiAfterAll(raw.actor_side, `${r.headline} ${r.body}`, c.text, outletSide(c.source, c.lean))) {
+    if (/\bHouthis?\b/.test(`${r.headline} ${r.body}`)) {
+      return { kind: "reject", reason: "reader-check", note: "Wrong side: in this Houthi-aligned outlet \"Yemeni forces\" are the Houthis; the actor is Houthi, not the government." };
+    }
+    r.actor_side = "houthi";
+    r.headline = r.headline.replace(GOV_COPY, "Houthi forces");
+    r.body = r.body.replace(GOV_COPY, "Houthi forces");
+  }
   // One side for both, judged on the whole copy: the body alone may not say "Saudi".
-  const side = raw.actor_side ?? (sideWords(`${r.headline} ${r.body}`, undefined) !== `${r.headline} ${r.body}` ? "houthi" : undefined);
+  const side = r.actor_side ?? (sideWords(`${r.headline} ${r.body}`, undefined) !== `${r.headline} ${r.body}` ? "houthi" : undefined);
   r.headline = sideWords(r.headline, side);
   r.body = sideWords(r.body, side);
   if (r.speaker_lead) r.speaker_lead = sideWords(r.speaker_lead, side);

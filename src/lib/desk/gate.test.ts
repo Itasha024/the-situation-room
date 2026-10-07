@@ -135,8 +135,11 @@ test("Iran's channels: Iran alone is no tie, ایمن is not Yemen, and nothing 
   assert.equal(flag.outcome, "exclude");
   const safety = gate({ source: "Mehr News", url: "u", agency: false, text: "مدیرعامل سازمان آتش‌نشانی تهران: پیشرفت سی تا چهل درصدی ایمن‌سازی بازار بزرگ تهران در زمینه کابل‌کشی‌ها" });
   assert.equal(safety.outcome, "exclude");
+  // Iran's channel relaying the Houthi military spokesman: the desk reads him
+  // first-hand (user, 3 Oct 07:47). It was "feed" before that rule.
   const drone = gate({ source: "Mehr News", url: "u", agency: false, text: "یمن یک پهپاد شناسایی سعودی را ساقط کرد سخنگوی نیروهای مسلح یمن: یک پهپاد شناسایی کاریال متعلق به دشمن سعودی" });
-  assert.equal(drone.outcome, "feed");
+  assert.equal(drone.outcome, "exclude");
+  assert.equal(drone.reason, "iran-relay");
   assert.equal(gate({ source: "Saba", url: "u", agency: false, text: "قال أيمن محمد إن الاجتماع ناقش خطة التعليم" }).outcome === "feed", false);
 });
 

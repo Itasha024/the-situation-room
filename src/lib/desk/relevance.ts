@@ -342,7 +342,9 @@ const NOISE: NoiseRule[] = [
   {
     id: "prices",
     note: "Commodity or currency prices with no link to the conflict's energy or shipping story.",
-    re: /اسعار ?الذهب|سعر ?الصرف|اسعار ?العملات|الريال ?اليمني|gold ?price|exchange ?rate/,
+    // "نشرة أسعار صرف العملات الأجنبية" (Sawt al-Asima, 3 Oct 11:01) slipped
+    // past "اسعار العملات" with صرف between the words.
+    re: /اسعار ?الذهب|سعر ?الصرف|اسعار ?(?:صرف ?)?العملات|نشره ?(?:اسعار|الصرف)|الريال ?اليمني|gold ?price|exchange ?rates?|currency ?rates?/,
     unless: /نفط|خام|برنت|ناقله|شحن|oil|crude|brent|tanker|shipping|aramco/,
   },
   {
@@ -366,6 +368,14 @@ const NOISE: NoiseRule[] = [
     id: "press-review",
     note: "Press review or headline round-up — no new reporting of its own.",
     re: /ابرز ?عناوين ?الصحف|عناوين ?الصحف|الصحافه ?اليوم|press ?review|what ?the ?papers ?say|morning ?briefing/,
+  },
+  {
+    // User, 3 Oct 09:16 and 07:47: "dont bring these summary of events posts".
+    // IRNA's "بسته خبری … مهم‌ترین خبرهای جهان در شب گذشته" is a night's news
+    // package; every event in it was reported on its own, first-hand.
+    id: "summary",
+    note: "A summary or round-up of events already reported one by one.",
+    re: /بسته ?خبر|مهم ?ترين ?خبرها|حصاد ?(?:اليوم|الاسبوع|الليله|الساعات|الحرب|العدوان)|ملخص ?(?:الاحداث|اليوم|التطورات|المستجدات)|ابرز ?(?:الاحداث|التطورات|المستجدات|الاخبار)|خلاصه ?(?:الاحداث|التطورات)|\bround-?up\b|\bsummary of (?:events|the day|today)|\bthe day in (?:brief|review)\b|\bnews ?(?:package|wrap)\b/,
   },
   {
     id: "obituary",
@@ -392,6 +402,10 @@ export const NOISE_REASONS = [
   {
     id: "tray",
     note: "Plausibly relevant but not established. Held for corroboration rather than dropped.",
+  },
+  {
+    id: "iran-relay",
+    note: "An Iranian outlet relaying a Yemeni party's own claim or figures; the desk reads that party first-hand.",
   },
   {
     id: "speech-relay",
@@ -425,6 +439,22 @@ const MIXED_SRC =
 
 /** Iran's state and IRGC-affiliated channels. */
 const IRAN_SRC = /Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV/i;
+
+/**
+ * An Iranian outlet passing on what a Yemeni party said (user, 3 Oct 07:47:
+ * "dont bring these numbers from Iranian channels, when they clearly take it
+ * from official Yemeni sources we have"). Press TV's "Yemen's armed forces say
+ * they conducted two retaliatory attacks" is Saree's statement, which the
+ * desk reads from Saree. Iran's OWN words on Yemen stay in.
+ */
+const YEMENI_PARTY_SAYS =
+  /\bsaree\b|yemen(?:'s|’s|i) armed forces (?:say|said|announce|claim|spokes)|yemeni army spokes|according to (?:al-?masirah|saba)|(?:يحيي|العميد) سريع|المتحدث (?:باسم )?القوات المسلحه|القوات المسلحه اليمنيه:|سخنگوي (?:نيروهاي )?(?:مسلح|ارتش) يمن|نيروهاي مسلح يمن|انصارالله (?:اعلام|گفت)|به نقل از (?:المسيره|سبا)/;
+const STRIKE_COUNT = /[\d٠-٩۰-۹]+ ?(?:حمله|غاره|غارات|air ?strikes?|raids?|strikes?)[^.\n]{0,60}(?:24|٢٤|۲۴) ?(?:ساعت|ساعه|hours?)/;
+const IRAN_OWN_VOICE = /\b(?:araghchi|pezeshkian|khamenei|baghaei|iran(?:'s|ian) (?:foreign|defen[cs]e) (?:minister|ministry)|irgc spokes)|عراقچي|عراقجي|پزشكيان|بزشكيان|خامنه|بقايي|سخنگوي (?:وزارت|سپاه)/;
+export function iranRelay(source: string, normalised: string): boolean {
+  if (!IRAN_SRC.test(source) || IRAN_OWN_VOICE.test(normalised)) return false;
+  return YEMENI_PARTY_SAYS.test(normalised) || STRIKE_COUNT.test(normalised);
+}
 
 export function breadthOf(source: string): Breadth {
   if (FOCUSED_SRC.test(source)) return "focused";
@@ -597,6 +627,10 @@ export function gate(input: GateInput): Verdict {
     if (!rule.re.test(n)) continue;
     if (rule.unless && rule.unless.test(n)) continue;
     return out("exclude", rule.id, rule.note);
+  }
+
+  if (iranRelay(input.source, n)) {
+    return out("exclude", "iran-relay", "An Iranian outlet relaying a Yemeni party's own claim or figures; the desk reads that party first-hand.");
   }
 
   /* 3. Topicality --------------------------------------------------- */

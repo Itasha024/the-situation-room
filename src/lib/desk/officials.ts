@@ -105,6 +105,14 @@ export const BODIES: [RegExp, Cited][] = [
   [/القوات البحرية المشتركة|Combined Maritime Forces|\bCMF\b|\bJMIC\b/, { name: "Combined Maritime Forces", site: "combinedmaritimeforces.com", lang: "en", kind: "official", country: "US", x: "CMF_Bahrain" }],
   [/الأمم المتحدة في اليمن|UN (?:in|office in) Yemen|UN Resident Coordinator/i, { name: "UN in Yemen", site: "yemen.un.org", lang: "en", kind: "official", country: "UN", x: "UNinYE" }],
   [/الأمين العام للأمم المتحدة|UN Secretary[- ]General/i, { name: "UN Secretary-General", site: "un.org", lang: "en", kind: "official", country: "UN", x: "antonioguterres" }],
+  // The user's 3 Oct review: each of these was told by a relay while its own
+  // account had it first (10:07, 10:58, 10:53, 11:11), and the Coast Guard is
+  // the government's official account at sea.
+  [/الدفاع المدني السعودي|المديرية العامة للدفاع المدني|الدفاع المدني (?:ب|في )?(?:منطقة|المملكة)|Saudi Civil Defen[cs]e/i, { name: "Saudi Civil Defense", site: "998.gov.sa", lang: "ar", kind: "official", country: "SA", x: "SaudiDCD" }],
+  [/وزير حقوق الإنسان|مشدل|(?:Yemen(?:'s|i))? (?:human rights minister|minister of human rights)/i, { name: "Yemen's human rights minister", site: "sabanew.net", lang: "ar", kind: "official", country: "YE", x: "mashdal" }],
+  [/ستيفن داوتي|Stephen Doughty|UK (?:Middle East|MENA) minister|وزير (?:الدولة )?البريطاني لشؤون الشرق الأوسط/i, { name: "UK Middle East minister", site: "gov.uk", lang: "en", kind: "official", country: "UK", x: "SDoughtyMP" }],
+  [/محور تعز|Taiz (?:military )?axis/i, { name: "Taiz military axis", site: "sabanew.net", lang: "ar", kind: "official", country: "YE", x: "axistaiz" }],
+  [/خفر السواحل اليمني|مصلحة خفر السواحل|Yemen(?:i|'s) Coast Guard/i, { name: "Yemeni Coast Guard", site: "sabanew.net", lang: "ar", kind: "official", country: "YE", x: "d74054" }],
 ];
 
 /** The UN in general: last, after its agencies and envoy (origin.ts). */

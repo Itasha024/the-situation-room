@@ -22,7 +22,7 @@ import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
-import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, retellsSpeaker, sameCount, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameWords } from "./desk/copies.ts";
+import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, sameCount, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameWave, sameWords, WAVE_WINDOW_MS } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -912,9 +912,9 @@ const BODY_FETCHES = 90;
  * runs 2–4k characters; below that the desk was reading a teaser and writing a
  * three-line report from it.
  */
-const ARTICLE_CHARS = 5000;
+const ARTICLE_CHARS = 8000;
 /** An article's text plus the feed's own title and teaser above it. */
-const ITEM_CHARS = 5600;
+const ITEM_CHARS = 8600;
 /** Reports kept in the cycle payload (the scan box and carry-forward). */
 const PAYLOAD_REPORTS = 300;
 /**
@@ -1273,6 +1273,15 @@ const SAME_HEADLINE_COUNTED_MS = 8 * 3600_000;
 const CLAIM_WINDOW_MS = 30 * 60_000;
 /** The reader's "same event as": no further back than this. */
 const DUPLICATE_WINDOW_MS = 6 * 3600_000;
+/** A relay and the card of the outlet it cites: one story within the day. */
+const RELAY_HOME_MS = 24 * 3600_000;
+/** "Axios", "axios", "The Wall Street Journal" and "Wall Street Journal" are one outlet. */
+export function sameOutlet(a: string, b: string): boolean {
+  const k = (s: string) => String(s || "").toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9؀-ۿ]+/g, "");
+  const x = k(a);
+  const y = k(b);
+  return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 4 && (x.startsWith(y) || y.startsWith(x))));
+}
 /** One clip reposted by another account. */
 const FOOTAGE_WINDOW_MS = 12 * 3600_000;
 
@@ -1345,6 +1354,20 @@ export function foldIntoPublished(
             !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
         )
       : undefined;
+    // A relay of an outlet whose own card is on the desk (user, 3 Oct 06:09,
+    // 07:09, 10:52, 10:53): Al Hadath, Almashhad and South24 each had a card
+    // "according to Axios" beside Axios's own card, Almashhad's with Axios in
+    // its "Also". The relay is the original's: it joins that card, and what it
+    // adds is written into it. Its story, its thread, or the one card that
+    // outlet has on the desk that day.
+    if (!home && r.citing) {
+      const theirs = homes.filter((o) => same(o) && sameOutlet(o.source, r.citing!) && Math.abs(t - Date.parse(o.at)) <= RELAY_HOME_MS);
+      home = theirs.find((o) => o.fp === r.replyTo || sameStory(o, r)) ?? (theirs.length === 1 && talk(r) && talk(theirs[0]) ? theirs[0] : undefined);
+    }
+    // And the outlet itself, arriving after a relay's card on its story.
+    if (!home && !r.citing) {
+      home = homes.find((o) => same(o) && !!o.citing && sameOutlet(r.source, o.citing) && Math.abs(t - Date.parse(o.at)) <= RELAY_HOME_MS && sameStory(o, r));
+    }
     // The same post forwarded by another channel, seen in a later scan.
     if (!home && r.copyKey) home = homes.find((o) => same(o) && o.copyKey === r.copyKey && (Date.parse(o.at) <= t || known(o)));
     // One event, two outlets, and the reader wrote both up in the same words.
@@ -1387,6 +1410,14 @@ export function foldIntoPublished(
     if (!home) {
       home = homes.find((o) => open(o) && o.source !== r.source && before(o, ABROAD_WINDOW_MS) && sameEventAbroad(o, r, yemeniPlaceNames));
     }
+    // The same channel's later post on that event, only its smoke or footage.
+    if (!home) {
+      home = homes.find((o) => same(o) && o.source === r.source && before(o, OWN_AFTERMATH_MS) && ownAftermath(o, r, yemeniPlaceNames));
+    }
+    // A wave of strikes on one city, from any outlet, the same channel's next
+    // target too: one card, written again with what each account adds.
+    const wave = !home ? homes.find((o) => same(o) && before(o, WAVE_WINDOW_MS) && sameWave(o, r)) : undefined;
+    if (wave) home = wave;
     // Another account reposting the same clip hours later: one event.
     if (!home && FIELD_TYPES.has(r.type)) {
       home = homes.find((o) => open(o) && o.source !== r.source && before(o, FOOTAGE_WINDOW_MS) && sameFootage(o, r));
@@ -1433,6 +1464,21 @@ export function foldIntoPublished(
     // Likewise the speaker's own account after a relay's card: Pakistan's
     // foreign ministry on X after Al Arabiya's card on its statement (user, 2 Oct).
     const ownWords = isOfficialBody(r.source) && !isOfficialBody(home.source) && speakerIs(r.source, home.summary);
+    // The outlet a relay's card cites, arriving after it: the original leads,
+    // and a card from the original needs no "Also" (user, 3 Oct 07:09).
+    const theOriginal = !!home.citing && !r.citing && sameOutlet(r.source, home.citing);
+    if (theOriginal) {
+      home.summary = r.summary;
+      home.text = r.text;
+      home.url = r.url;
+      home.source = r.source;
+      home.tier = r.tier;
+      home.citing = undefined;
+      home.alsoReportedBy = undefined;
+      home.tags = [...new Set([...(home.tags ?? []), "lead-swap", "original"])];
+      touched.add(home);
+      continue;
+    }
     if (
       ownWords ||
       (homeOutlet(r.source) &&
@@ -1452,13 +1498,18 @@ export function foldIntoPublished(
       touched.add(home);
       continue;
     }
+    // A wave's new targets, and what a relay carries that the original's card
+    // lacks (South24's "over 200 Houthi targets", from the Axios piece the
+    // desk could not open), go into the card even when it is the original.
+    const relayed = !!r.citing && sameOutlet(home.source, r.citing);
+    if (enrich && addsFacts(home, r) && (wave || relayed)) enrich.push([home, r]);
     // A card written from the original source needs no "Also": the others
     // only relay it.
-    if (isOriginal(home) || r.citing === home.source) continue;
+    if (isOriginal(home) || relayed) continue;
     // The later account says something the card does not (a figure, a place):
     // the card is written again from both, so nothing new is lost to "Also".
-    if (enrich && addsFacts(home, r)) enrich.push([home, r]);
-    const also = [...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url, summary: r.summary }];
+    if (!wave && enrich && addsFacts(home, r)) enrich.push([home, r]);
+    const also =[...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url, summary: r.summary }];
     const seen = new Set([home.source]);
     home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);
     // More outlets, more trust: counted by side, as in the cycle's own grouping.
@@ -1996,7 +2047,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // Thin RSS teasers get their lead paragraph pulled so the gate has something
   // to judge. The same items reappear cycle after cycle, so leads are cached by
   // URL and each article page is fetched once.
-  const leadable = (h: RawHit) => !(h.fromTg || (h.text.length >= 500 && !isGnews(h.url)) || /\.pdf(\?|$)/i.test(h.url));
+  const leadable = (h: RawHit) => !(h.fromTg || (h.text.length >= 2000 && !isGnews(h.url)) || /\.pdf(\?|$)/i.test(h.url));
   const leadCache = await loadLeadCache(hits.filter(leadable).map((h) => h.url));
   const leadChanged = new Set<string>();
   const addLead = (h: RawHit, lead: string) => {

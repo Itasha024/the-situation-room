@@ -69,6 +69,32 @@ export function ownInformation(text: string, source: string): boolean {
   return false;
 }
 
+/**
+ * The big English outlets rarely say "exclusive": their own scoop is "two
+ * officials said", "people familiar with the matter", in the headline or the
+ * first lines (Reuters' Turkey support to Saudi Arabia, 7 Oct; Axios' "US
+ * declines to join, officials say", 2 Oct). On their own site that is their
+ * own reporting; credited to another outlet it is that outlet's.
+ */
+const MAJORS = /^(?:Reuters|Axios|WSJ|(?:The )?Wall Street Journal|(?:The )?New York Times|NYT|(?:The )?Washington Post|CNN|Bloomberg|Financial Times|FT|AP|Associated Press|Politico|NBC News|CBS News|ABC News|Fox News|(?:The )?Guardian|(?:The )?Telegraph|BBC(?: News)?)$/i;
+const OTHERS = /\b(?:Reuters|Axios|Wall Street Journal|the Journal|New York Times|the Times|Washington Post|the Post|CNN|Bloomberg|Financial Times|AP|Associated Press|Politico|NBC|CBS|ABC|Fox News|Guardian|Telegraph|BBC|Al Arabiya|Al Jazeera|Asharq|Al-Monitor|Middle East Eye)\b/gi;
+const SAID = /\b(?:two|three|four|five|several|multiple|a few|\d+)\s+(?:[\w-]+\s+){0,3}(?:officials?|sources?|people|diplomats?)\b[^.\n]{0,80}\b(?:said|say|says|told)\b|\bpeople (?:familiar with|briefed on|with knowledge of)\b|\baccording to (?:two|three|four|several|multiple|\d+)\s+(?:[\w-]+\s+){0,3}(?:officials?|sources?|people)\b|,\s*(?:[\w-]+\s+){0,2}(?:officials|sources)\s+(?:say|said)\s*(?:\n|$)/im;
+
+function ownSourcing(text: string, source: string): boolean {
+  const head = text.slice(0, 500);
+  if (!SAID.test(head)) return false;
+  // Someone else's scoop retold: "officials told Axios", "Reuters reported".
+  const self = String(source || "").toLowerCase();
+  for (const m of head.matchAll(OTHERS)) {
+    const n = m[0].toLowerCase();
+    if (self.includes(n.replace(/^the /, "")) || n.includes(self) || (n === "the journal" && /journal|wsj/.test(self)) || (n === "the times" && /times/.test(self)) || (n === "the post" && /post/.test(self))) continue;
+    const before = head.slice(Math.max(0, m.index - 16), m.index);
+    const after = head.slice(m.index + m[0].length, m.index + m[0].length + 14);
+    if (/\b(?:told|to|by|according to|reported|reports|citing|cited)\s*$/i.test(before) || /^\W{0,3}\s*(?:reported|reports|said|says)\b/i.test(after)) return false;
+  }
+  return true;
+}
+
 /** Is this the outlet's own exclusive? `source` is the outlet carrying it. */
 export function isExclusive(text: string, source: string): boolean {
   // "Exclusive footage" is a clip, not the outlet's own reporting: Alfaqaar's
@@ -76,7 +102,10 @@ export function isExclusive(text: string, source: string): boolean {
   const t = String(text || "")
     .slice(0, 1500)
     .replace(/(?:مشاهد|صور|لقطات|فيديو|مقطع|تصوير)\s+(?:جديدة\s+)?حصري(?:اً|ا|ة)?|\bexclusive(?:ly)?\s+(?:footage|video|images?|pictures?|photos?|scenes|clip)\b|\b(?:footage|video|images?|pictures?|photos?|scenes|clip)\s+(?:obtained\s+)?exclusively\b/gi, " ");
-  if (GENERIC.some((re) => re.test(t))) return true;
+  // A site's terms ("a non-exclusive licence", SPA's "ترخيصا غير حصريا", 6 Oct) are not a label.
+  const u = t.replace(/\bnon-?\s?exclusive\b|غير\s+حصري(?:اً|ا|ة)?/gi, " ");
+  if (GENERIC.some((re) => re.test(u))) return true;
+  if (MAJORS.test(String(source || "").trim()) && ownSourcing(t, source)) return true;
   // The outlet's own name after "told", "learned", "علمت", "مصادر لـ".
   const words = String(source || "")
     .split(/\s+/)

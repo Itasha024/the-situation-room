@@ -813,7 +813,7 @@ function toLiveReport(source: string, url: string, rawText: string, at: string, 
   };
 }
 
-async function fetchText(url: string, ms = 8000): Promise<string | null> {
+export async function fetchText(url: string, ms = 8000): Promise<string | null> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -1116,6 +1116,8 @@ type RawHit = {
   picked?: boolean;
   /** Listed with no date (a section page): its time is when first seen, until its page gives one. */
   undated?: boolean;
+  /** The whole article as its feed carries it: axios.com turns readers away (403), its feed does not. */
+  feedBody?: string;
   /** The post's picture or video (X, Telegram): a candidate for the card, looked at before it is shown. */
   media?: Media;
   /** A newspaper's X post that linked this article (its id orders the account's posts). */
@@ -1176,7 +1178,7 @@ function listedHit(it: Listed, feed: RssFeed, firstSeen?: number): RawHit | null
   if (title.length < 12 || !/^https?:\/\//i.test(url) || isIsraeliSource(source, url)) return null;
   const desc = decodeEntities(it.desc);
   const at = Number.isFinite(it.at) ? jerusalemIso(new Date(it.at)) : jerusalemIso(firstSeen ? new Date(firstSeen) : undefined);
-  return { source, url, text: `${title} ${desc}`.trim().slice(0, 1200), at, lean: "", fromTg: false, title, ...(Number.isFinite(it.at) ? {} : { undated: true }) };
+  return { source, url, text: `${title} ${desc}`.trim().slice(0, 1200), at, lean: "", fromTg: false, title, ...(Number.isFinite(it.at) ? {} : { undated: true }), ...(it.body ? { feedBody: decodeEntities(it.body) } : {}) };
 }
 
 function outletFromGoogleTitle(title: string, fallback: string): { title: string; source: string } {
@@ -1567,6 +1569,14 @@ export function foldIntoPublished(
     if (!home && r.citing) {
       const theirs = homes.filter((o) => same(o) && sameOutlet(o.source, r.citing!) && Math.abs(t - Date.parse(o.at)) <= RELAY_HOME_MS);
       home = theirs.find((o) => o.fp === r.replyTo || sameStory(o, r)) ?? (theirs.length === 1 && talk(r) && talk(theirs[0]) ? theirs[0] : undefined);
+      // Its headline worded apart from the outlet's own: Axios' "aides meet to
+      // discuss Saudi-Houthi conflict" went out four more times as "secret
+      // meeting at Camp David" (3 Oct), Axios having three cards that day. The
+      // outlet's card it shares clearly most words with is its card.
+      if (!home && talk(r)) {
+        const scored = theirs.filter(talk).map((o) => ({ o, n: wordsInCommon(o.summary, r.summary) })).sort((a, b) => b.n - a.n);
+        if (scored[0] && scored[0].n >= 3 && (scored.length === 1 || scored[0].n >= scored[1].n + 2)) home = scored[0].o;
+      }
     }
     // Two outlets relaying one body's statement when the body's own post is
     // not on the desk: one card. The Saudi defence ministry's Mecca Alliance
@@ -2384,10 +2394,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       }
       const page = real || key;
       const html = await fetchText(page, 6000);
-      if (!html && !real) return; // not cached: a failed fetch is retried next cycle
+      if (!html && !real && !h.feedBody) return; // not cached: a failed fetch is retried next cycle
       // A paywalled article still yields its address; its lead may be empty.
       const cap = exclusive(h) ? EXCLUSIVE_CHARS : ARTICLE_CHARS;
       let lead = html ? extractLead(html, cap) : "";
+      // The page will not open (axios.com, 403) but the feed gave the article whole.
+      if (h.feedBody && h.feedBody.length > lead.length) lead = h.feedBody.slice(0, cap);
       // Still a teaser. If the publisher offers an AMP copy — which they serve
       // openly, for readers arriving from search — read that instead: it is the
       // same article without the subscription wall drawn over it. One extra

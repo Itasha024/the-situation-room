@@ -269,3 +269,20 @@ test("7 Oct 09:29 — Reuters' market wrap stays out", () => {
   const g = gate({ source: "Reuters", url: "https://www.reuters.com/fr/affaires/point-marchs-leurope-vue-en-baisse-regain-de-tension-entre-larabie-saoudite-et-2026-10-07/", agency: true, text: "POINT MARCHÉS-L'Europe vue en baisse, regain de tension entre l'Arabie saoudite et les Houthis" } as never);
   assert.equal(g.reason, "markets");
 });
+
+test("3 Oct 03:09-22:33 — four outlets retelling Axios' Camp David scoop join Axios' card, though their headlines differ", async () => {
+  const { foldIntoPublished } = await import("../yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [], type: "diplomacy" } as const;
+  const cd = { ...base, fp: "cd", url: "https://www.axios.com/2026/10/03/trumps-cabinet-camp-david-iran-war-yemen-houthis", source: "Axios", at: "2026-10-03T02:56:00+03:00", summary: "Trump's top national security aides meet to discuss Saudi-Houthi conflict, officials say" };
+  const off1 = { ...base, fp: "o1", url: "https://www.axios.com/2026/10/02/saudis-yemen-houthis-bab-al-mandeb-strait", source: "Axios", at: "2026-10-02T23:08:00+03:00", summary: "Saudi Arabia plans major offensive against Houthis, but US declines to join, officials say" };
+  const off2 = { ...off1, fp: "o2", type: "statement" as const, at: "2026-10-02T23:10:00+03:00", summary: "Saudi Arabia plans major offensive against Houthis, but US declines to join" };
+  const relays = [
+    ["Al Hadath", "2026-10-03T03:09:00+03:00", "Trump's top national security aides met secretly at Camp David to discuss Iran and Yemen"],
+    ["Almashhad", "2026-10-03T04:09:00+03:00", "US officials meet at Camp David to discuss Yemen conflict and Iran policies"],
+    ["South24", "2026-10-03T07:53:00+03:00", "Top national security advisers of US President Donald Trump hold secret meeting at Camp David on Iran"],
+    ["Aden al-Ghad", "2026-10-03T22:33:00+03:00", "US officials held secret meeting at Camp David to discuss Iran and the Saudi-Houthi war"],
+  ].map(([source, at, summary], i) => ({ ...base, fp: `r${i}`, url: `https://example.com/${i}`, source, at, summary, citing: "Axios" }));
+  const reports = [...relays] as never[];
+  foldIntoPublished(reports, new Set(), [cd, off1, off2] as never[]);
+  assert.equal(reports.length, 0);
+});

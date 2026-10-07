@@ -181,3 +181,26 @@ test("stage 6a: Witkoff and the press secretary are searched for like the others
   assert.equal(namedSpeaker("Witkoff says talks with the Houthis are close"), "witkoff");
   assert.equal(namedSpeaker("Karoline Leavitt: the US will answer any Houthi attack"), "leavitt");
 });
+
+test("stage 6b: a major's unnamed officials are its own scoop; a site's licence terms are not an exclusive", () => {
+  // Reuters, 7 Oct: on its own site, "two officials said" is Reuters' reporting.
+  assert.ok(isExclusive("Turkey sending technical and defensive support to Saudi Arabia to help fight Houthis, officials say\nTurkey is sending mainly defensive and technical support to Saudi Arabia to help it fight Yemen's Iran-aligned Houthis, two officials said on Wednesday.", "Reuters"));
+  assert.ok(isExclusive("Saudi Arabia plans major offensive against Houthis, but US declines to join, officials say\nSaudi Arabia is preparing a major offensive.", "Axios"));
+  // Retold by another outlet, or not a major: not an exclusive here.
+  assert.ok(!isExclusive("Turkey is sending support to Saudi Arabia, two officials told Reuters on Wednesday.", "Fox News"));
+  assert.ok(!isExclusive("Turkey is sending support to Saudi Arabia, two officials said, Reuters reported.", "CNN"));
+  assert.ok(!isExclusive("Turkey is sending support to Saudi Arabia, two officials said on Wednesday.", "OilPrice.com"));
+  // A named minister speaking in public is not a scoop.
+  assert.ok(!isExclusive("Turkish Foreign Minister Hakan Fidan said Ankara backs Riyadh.", "Reuters"));
+  // SPA, 6 Oct: every page ends with "a non-exclusive licence" in its terms.
+  assert.ok(!isExclusive("واس أجرى وزير الدفاع اتصالًا هاتفيًا بوزير الدفاع الإيطالي. فإنك تمنحنا ترخيصا غير حصريا، ومجانيا", "SPA"));
+  assert.ok(!isExclusive("By submitting any content to the SPA website, you grant us a non-exclusive, free, permanent licence.", "SPA"));
+});
+
+test("stage 6b: a feed that carries the whole article gives it as the article's body", () => {
+  const xml = `<rss><channel><item><title>Saudi Arabia plans major offensive against Houthis</title><link>https://www.axios.com/2026/10/02/saudis-yemen-houthis-bab-al-mandeb-strait</link><description>&lt;p&gt;Short teaser.&lt;/p&gt;</description><content:encoded><![CDATA[<p>${"Saudi Arabia is preparing a major offensive against the Houthis. ".repeat(20)}</p>]]></content:encoded><pubDate>Fri, 02 Oct 2026 20:00:00 +0000</pubDate></item></channel></rss>`;
+  const [it] = parseListing(xml);
+  assert.equal(it.desc, "Short teaser.");
+  assert.ok((it.body ?? "").length > 1000);
+  assert.ok(!/<p>/.test(it.body ?? ""));
+});

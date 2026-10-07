@@ -170,3 +170,40 @@ test("5-6 Oct — Shin Persian relaying UKMTO's notices stays out: the desk read
   const g = gate({ source: "Shin Persian", url: "https://t.me/shin_persian/10745", agency: false, text: "🔴 هشدار UKMTO شماره 152-26 درباره امنیت دریانوردی در دریای سرخ و خلیج عدن" } as never);
   assert.equal(g.reason, "iran-relay");
 });
+
+/* ---- Stage 5a: the new X and Telegram sources ---- */
+
+test("5a — a newspaper's X post linking its article becomes that article, read whole", async () => {
+  const { parseFxStatuses } = await import("../yemen-scan.server.ts");
+  const { WAR_ONLY } = await import("../yemen-scan.server.ts");
+  const acct = { handle: "Reuters", name: "Reuters", lean: "intl", cadence: { everyMin: 10 }, only: WAR_ONLY, article: true } as never;
+  const post = (id: string, text: string, card?: object) => ({ url: `https://x.com/Reuters/status/${id}`, id, text, created_timestamp: 1791358208, author: { screen_name: "Reuters" }, ...(card ? { card } : {}) });
+  const json = { results: [
+    post("2107735207855931559", "Houthis fire missiles at Saudi oil facility, sources say https://reut.rs/abc", { url: "https://reut.rs/abc", title: "Houthis fire missiles at Saudi oil facility, sources say", description: "Yemen's Houthi movement fired...", domain: "www.reuters.com" }),
+    post("2107735207855931560", "Morning Bid: Who's the boss? https://reut.rs/xyz", { url: "https://reut.rs/xyz", title: "Morning Bid: Who's the boss?", description: "A look at the day ahead in markets", domain: "www.reuters.com" }),
+    post("2107735207855931561", "BREAKING: Explosions heard in Sanaa, Yemen - witnesses"),
+  ] };
+  const rows = parseFxStatuses(json, acct);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].url, "https://reut.rs/abc");
+  assert.equal(rows[0].fromTg, false);
+  assert.equal(rows[0].xPost, "https://x.com/Reuters/status/2107735207855931559");
+  assert.equal(rows[1].fromTg, true);
+  assert.equal(rows[1].url, "https://x.com/Reuters/status/2107735207855931561");
+});
+
+test("5a — Clash Report is never the primary source: its card gives way to the first source of its own", async () => {
+  const { isAggregator } = await import("./credibility.ts");
+  assert.ok(isAggregator("Clash Report"));
+  assert.ok(!isAggregator("Al Arabiya"));
+  const { foldIntoPublished } = await import("../yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 60, tags: [], type: "strike" } as const;
+  const clash = { ...base, fp: "cr", url: "https://x.com/clashreport/status/1", source: "Clash Report", at: "2026-10-07T09:00:00+03:00", summary: "Houthi ballistic missiles target Aden International Airport" };
+  const own = { ...base, fp: "ar", url: "https://t.me/alarabiyaBr/1", source: "Al Arabiya", at: "2026-10-07T09:06:00+03:00", summary: "Houthi ballistic missiles target Aden International Airport" };
+  const reports = [own] as never[];
+  const stored = [clash] as never[];
+  foldIntoPublished(reports, new Set(), stored);
+  assert.equal(reports.length, 0);
+  assert.equal((stored[0] as { source: string }).source, "Al Arabiya");
+  assert.deepEqual(((stored[0] as { alsoReportedBy?: { source: string }[] }).alsoReportedBy ?? []).map((a) => a.source), ["Clash Report"]);
+});

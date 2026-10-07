@@ -23,7 +23,7 @@ import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
 import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS } from "./desk/copies.ts";
-import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
+import { type OutletSide, homeOutlet, isAggregator, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
@@ -116,6 +116,11 @@ const TG: ChannelScan[] = [
   { id: "snntv", name: "SNN", lean: "houthi", cadence: C15 },
   { id: "Nournews_ir", name: "Nour News", lean: "houthi", cadence: C15 },
   { id: "presstv", name: "Press TV", lean: "houthi", cadence: C15 },
+  // The user's 3 Oct list. Al-Faqaar films the strikes on Saudi Arabia from the
+  // Houthi side. Clash Report is a fast aggregator, never a primary source: its
+  // card gives way to the first account from a source of its own (AGGREGATOR).
+  { id: "Alfaqaar313", name: "Alfaqaar", lean: "houthi", cadence: C5 },
+  { id: "clashreport", name: "Clash Report", lean: "intl", cadence: C15 },
 ];
 
 /**
@@ -126,9 +131,12 @@ const TG: ChannelScan[] = [
  * all tried on 24 September. Public posts only, read at a polite interval.
  */
 /** `picture`: the account posts its words as a picture (UKMTO's warning cards), read by a vision model before `only` is tried. */
-type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence; only?: RegExp; picture?: boolean };
+/** `article`: a newspaper's account. A post linking its own article stands for that article, which is read whole like the site's. */
+type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence; only?: RegExp; picture?: boolean; article?: boolean };
 const C10: Cadence = { everyMin: 10 };
 const X = (handle: string, name: string, lean: Channel["lean"], cadence: Cadence, only?: RegExp, picture?: boolean): XAccount => ({ handle, name, lean, cadence, ...(only ? { only } : {}), ...(picture ? { picture } : {}) });
+/** A newspaper's or a broadcaster's account: only this war, and its articles read whole. */
+const XA = (handle: string, name: string, lean: Channel["lean"], cadence: Cadence): XAccount => ({ ...X(handle, name, lean, cadence, WAR_ONLY), article: true });
 /**
  * Sky News Arabia's breaking account posts about 150 times a day, most of it
  * other agencies' news. Only what its own sources told it goes on: "مصادر
@@ -248,6 +256,52 @@ const X_ACCOUNTS: XAccount[] = [
   X("JavierBlas", "Javier Blas", "intl", C15, SEA_WAR),
   X("osinthexagone", "OSINT Hexagone", "intl", C15, SEA_WAR),
   X("EGYOSINT", "Egypt OSINT", "intl", C15, SEA_WAR),
+  // The user's 3 Oct list. Yemen's own: the Taiz military axis, the human
+  // rights minister, the coast guard in Aden; and the UK's Middle East minister.
+  X("axistaiz", "Taiz military axis", "gov", C10),
+  X("d74054", "Yemen Coast Guard", "gov", C10),
+  X("mashdal", "Yemen's human rights minister", "gov", C30),
+  X("SDoughtyMP", "UK Middle East minister", "intl", C30, WAR_ONLY),
+  // Washington: every word on this war, from the officials' own accounts.
+  X("CENTCOM", "CENTCOM", "intl", C10, WAR_ONLY),
+  X("WhiteHouse", "White House", "intl", C15, WAR_ONLY),
+  X("POTUS", "Donald Trump", "intl", C15, WAR_ONLY),
+  X("RapidResponse47", "White House Rapid Response", "intl", C15, WAR_ONLY),
+  X("JDVance", "JD Vance", "intl", C30, WAR_ONLY),
+  X("VP", "JD Vance", "intl", C30, WAR_ONLY),
+  X("marcorubio", "Marco Rubio", "intl", C30, WAR_ONLY),
+  // Reporters with officials' ear. Barak Ravid's posts carry his Axios
+  // stories in his own words (axios.com refuses automated readers).
+  X("BarakRavid", "Barak Ravid", "intl", C15, WAR_ONLY),
+  X("NatashaBertrand", "Natasha Bertrand", "intl", C30, WAR_ONLY),
+  X("TreyYingst", "Trey Yingst", "intl", C30, WAR_ONLY),
+  // Fast aggregators, never primary (AGGREGATOR).
+  X("clashreport", "Clash Report", "intl", C10, WAR_ONLY),
+  X("sentdefender", "OSINTdefender", "intl", C15, WAR_ONLY),
+  // The newspapers and broadcasters: a post about this war opens its article.
+  XA("Reuters", "Reuters", "intl", C10),
+  XA("WSJ", "WSJ", "intl", C15),
+  XA("nytimes", "NYT", "intl", C15),
+  XA("washingtonpost", "Washington Post", "intl", C15),
+  XA("axios", "Axios", "intl", C15),
+  XA("business", "Bloomberg", "intl", C15),
+  XA("ftworldnews", "Financial Times", "intl", C30),
+  XA("Intel_Online", "Intelligence Online", "intl", C30),
+  XA("CNN", "CNN", "intl", C15),
+  XA("FoxNews", "Fox News", "intl", C15),
+  XA("CBSNews", "CBS", "intl", C30),
+  XA("ABC", "ABC", "intl", C30),
+  XA("NBCNews", "NBC News", "intl", C30),
+  XA("nypost", "NY Post", "intl", C30),
+  XA("politico", "Politico", "intl", C30),
+  XA("Telegraph", "The Telegraph", "intl", C30),
+  XA("France24_en", "France 24", "intl", C30),
+  XA("France24_ar", "France 24", "intl", C30),
+  XA("arabnews", "Arab News", "gov", C15),
+  XA("aawsat_News", "Asharq Al-Awsat", "gov", C15),
+  XA("aawsat_eng", "Asharq Al-Awsat", "gov", C30),
+  XA("TheNationalNews", "The National", "gov", C30),
+  XA("alaraby_ar", "Al-Araby Al-Jadeed", "intl", C15),
 ];
 
 /** Newer than the last post read: X ids grow with time. A pinned post is old and falls out here. */
@@ -268,6 +322,7 @@ type FxStatus = {
   author?: { screen_name?: string };
   media?: Parameters<typeof xMedia>[0];
   article?: { title?: string; preview_text?: string };
+  card?: { url?: string; title?: string; description?: string; domain?: string } | null;
 };
 
 /** One account's own posts as raw items: reposts and replies to others left out. */
@@ -287,9 +342,26 @@ ${s.article.preview_text ?? ""}` : "";
     const text = decodeEntities(art || String(s.raw_text?.text ?? s.text ?? "")).trim();
     const url = s.url || (s.id ? `https://x.com/${acct.handle}/status/${s.id}` : "");
     if (!url || text.length < 12) continue;
-    if (acct.only && !acct.picture && !acct.only.test(text)) continue;
-    const media = xMedia(s.media, url);
+    const card = acct.article && s.card?.url && !/(?:^|\.)(?:x|twitter)\.com$/i.test(s.card.domain ?? "") ? s.card : null;
+    const cardText = card ? `${card.title ?? ""} ${card.description ?? ""}`.trim() : "";
+    if (acct.only && !acct.picture && !acct.only.test(`${text} ${cardText}`)) continue;
     const ms = Number(s.created_timestamp) * 1000;
+    // A newspaper's post linking its article stands for the article: read whole
+    // as the site's own listing would give it, never the post's line alone.
+    if (card) {
+      out.push({
+        source: acct.name,
+        url: card.url as string,
+        text: decodeEntities(cardText || text).slice(0, 1200),
+        at: jerusalemIso(Number.isFinite(ms) && ms > 0 ? new Date(ms) : new Date()),
+        lean: "",
+        fromTg: false,
+        ...(card.title ? { title: decodeEntities(card.title) } : {}),
+        xPost: url,
+      });
+      continue;
+    }
+    const media = xMedia(s.media, url);
     out.push({
       source: acct.name,
       url,
@@ -886,8 +958,33 @@ async function replayFetch(url: string): Promise<string | null> {
 }
 const replaying = (state: ScanState, id: string, now: number) => now < REPLAY.until && !state.lastScanAt[`${REPLAY.key}:${id}`];
 
+/** Where a short link lands: its redirects followed, nothing of the page read. The link itself when that fails. */
+async function finalUrl(url: string): Promise<string> {
+  if (!/^https?:\/\/(?:[^/]+\.)?(?:reut\.rs|wapo\.st|nyti\.ms|on\.wsj\.com|bloom\.bg|trib\.al|bit\.ly|cnn\.it|fxn\.ws|abcn\.ws|cbsn\.ws|nbcnews\.to|nyp\.st|politi\.co|f24\.my|ow\.ly|buff\.ly|dlvr\.it|ift\.tt|aje\.io|tinyurl\.com|t\.co)\//i.test(url)) return url;
+  try {
+    const res = await fetch(url, { method: "HEAD", redirect: "follow", headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)" }, signal: AbortSignal.timeout(8_000) });
+    return res.url || url;
+  } catch {
+    return url;
+  }
+}
+
 /** One page of an X account through FxTwitter; a 404 or timeout is tried once more (it answers unevenly). */
 async function fxPage(handle: string, cursor?: string): Promise<{ results?: unknown[]; cursor?: { bottom?: string | null } } | null> {
+  // Six at a time: some 120 accounts fall due on the same minute, and FxTwitter answers a burst with 404s.
+  if (fxSlots > 0) fxSlots -= 1;
+  else await new Promise<void>((r) => fxWaiters.push(r));
+  try {
+    return await fxPageNow(handle, cursor);
+  } finally {
+    const next = fxWaiters.shift();
+    if (next) next();
+    else fxSlots += 1;
+  }
+}
+let fxSlots = 6;
+const fxWaiters: (() => void)[] = [];
+async function fxPageNow(handle: string, cursor?: string): Promise<{ results?: unknown[]; cursor?: { bottom?: string | null } } | null> {
   const url = `https://api.fxtwitter.com/2/profile/${handle}/statuses${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -964,6 +1061,8 @@ type RawHit = {
   undated?: boolean;
   /** The post's picture or video (X, Telegram): a candidate for the card, looked at before it is shown. */
   media?: Media;
+  /** A newspaper's X post that linked this article (its id orders the account's posts). */
+  xPost?: string;
 };
 
 /* ------------------------------------------------------------------ *
@@ -1525,8 +1624,11 @@ export function foldIntoPublished(
       touched.add(home);
       continue;
     }
+    // An aggregator's card gives way to the first source of its own (user, 3 Oct).
+    const overAggregator = isAggregator(home.source) && !isAggregator(r.source);
     if (
       ownWords ||
+      overAggregator ||
       (homeOutlet(r.source) &&
         !homeOutlet(home.source) &&
         sideOfSource(r.source) === sideOfSource(home.source) &&
@@ -1843,8 +1945,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
             const all = parseFxStatuses(page, acct);
             // Only what is new since the last read; on first sight, the last few hours.
             const seenId = state.lastXPost?.[acct.handle];
-            const idOf = (u: string) => /\/status\/(\d+)/.exec(u)?.[1] ?? "";
-            rows = all.filter((r) => newerX(idOf(r.url), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS));
+            const idOf = (r: RawHit) => /\/status\/(\d+)/.exec(r.xPost ?? r.url)?.[1] ?? "";
+            rows = all.filter((r) => newerX(idOf(r), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS));
             // A replay pages back to its start once, for what the downtime missed.
             const replayKey = `x:${acct.handle}`;
             if (seenId && replaying(state, replayKey, now)) {
@@ -1868,7 +1970,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
               for (; cursor && paged < X_BACKFILL_PAGES; paged += 1) {
                 const older = await fxPage(acct.handle, cursor);
                 const more = older ? parseFxStatuses(older, acct) : [];
-                const fresh = more.filter((r) => newerX(idOf(r.url), seenId) && !rows.some((x) => x.url === r.url));
+                const fresh = more.filter((r) => newerX(idOf(r), seenId) && !rows.some((x) => x.url === r.url));
                 rows.push(...fresh);
                 if (!more.length || fresh.length < more.length - 1) break;
                 cursor = older?.cursor?.bottom ?? undefined;
@@ -1893,7 +1995,10 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
               if (unread) console.log(`[x] ${acct.handle}: a warning's picture went unread; again next tick`);
               rows = unread ? [] : read;
             }
-            const newest = all.map((r) => idOf(r.url)).reduce((m, id) => (newerX(id, m || undefined) ? id : m), seenId ?? "");
+            // A newspaper's short link (reut.rs, wapo.st) is followed to its
+            // article, so the site's own listing of it is the same item.
+            if (acct.article) rows = await Promise.all(rows.map(async (r) => (r.xPost ? { ...r, url: cleanUrl(await finalUrl(r.url)) } : r)));
+            const newest = all.map((r) => idOf(r)).reduce((m, id) => (newerX(id, m || undefined) ? id : m), seenId ?? "");
             if (newest && !unread) (state.lastXPost ??= {})[acct.handle] = newest;
             ok = true;
           }

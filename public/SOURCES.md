@@ -21,6 +21,12 @@ The previous 288-endpoint catalog is **parked**. The desk now scans **only** the
 | United States: Marco Rubio (`@SecRubio`), Energy Department (`@ENERGY`), Treasury (`@USTreasury`), US Embassy Yemen (`@USEmbassyYemen`) | every 15 minutes |
 | Suez and the EU and UN: Suez Canal Authority (`@SuezAuthorityEG`), European Commission (`@EU_Commission`), Ursula von der Leyen (`@vonderleyen`), EU in Yemen (`@EUinYemen`), UN OCHA (`@UNOCHA`), António Guterres (`@antonioguterres`), United Nations (`@UN`) | every 15 minutes |
 | The sea and energy: UKMTO (`@UK_MTO`, every 5 minutes), Saudi Energy Ministry (`@MoEnergy_Saudi`, every 10 minutes), Kpler, TankerTrackers, MarineTraffic, Vortexa, Javier Blas, OSINT Hexagone, Egypt OSINT (every 15 minutes). Details below, under "The sea and energy" | |
+| **Added 7 Oct (the user's 3 Oct list).** Yemen's own: Taiz military axis (`@axistaiz`) and Yemen Coast Guard, Aden (`@d74054`), every 10 minutes; the human rights minister, Mashdal Mohammed Omar (`@mashdal`), and the UK Middle East minister, Stephen Doughty (`@SDoughtyMP`, only this war), every 30 minutes | |
+| Washington, only posts about this war: CENTCOM (`@CENTCOM`, 10 min), the White House (`@WhiteHouse`), President Trump (`@POTUS`), White House Rapid Response (`@RapidResponse47`) every 15 minutes; JD Vance (`@JDVance`, `@VP`) and Marco Rubio's own account (`@marcorubio`) every 30 minutes | |
+| Reporters, only posts about this war: Barak Ravid (`@BarakRavid`, Axios; his posts carry his Axios stories, as axios.com refuses automated readers) every 15 minutes; Natasha Bertrand (`@NatashaBertrand`, CNN) and Trey Yingst (`@TreyYingst`, Fox) every 30 minutes | |
+| Fast aggregators, **never a primary source**: Clash Report (`@clashreport`, 10 min, and its Telegram channel) and OSINTdefender (`@sentdefender`, 15 min). First with a story, their card gives way to the first source of its own, and they move to "Also" | |
+| Newspapers and broadcasters, only posts about this war. A post linking the outlet's article opens that article, read whole like the site's own listing: Reuters (10 min); WSJ, NYT, Washington Post, Axios, Bloomberg (`@business`), CNN, Fox News, Arab News, Asharq Al-Awsat (`@aawsat_News`) every 15 minutes; FT (`@ftworldnews`), Intelligence Online, CBS, ABC, NBC News, NY Post, Politico, The Telegraph, France 24 (EN, AR), Asharq Al-Awsat English, The National every 30 minutes; Al-Araby Al-Jadeed (`@alaraby_ar`) every 15 minutes. Paywalled articles give only what they show openly | |
+| Not added: The Guardian (left X in Nov 2024), Alhurra (silent since Apr 2025), Al-Akhbar English (silent since Mar 2026), The New Arab and Jennifer Griffin (their accounts do not answer); Al-Akhbar and Erem News are already read through their Telegram channels, and their sites refuse automated readers | |
 
 ---
 
@@ -66,6 +72,8 @@ The client pulls `/api/scan` every 5 minutes. The map/feed are patched in place 
 - Al-Aqsa Breaking — `@alagsa3agel`
 - Al-Akhbar — `@Alakhbar_News` (every 15 minutes)
 - Erem News — `@eremnews` (every 15 minutes)
+- Alfaqaar — `@Alfaqaar313` (Houthi-aligned; films the strikes on Saudi Arabia). Added 7 Oct
+- Clash Report — `@clashreport` (every 15 minutes; a fast aggregator, never a primary source). Added 7 Oct
 
 ## Websites — read whole
 

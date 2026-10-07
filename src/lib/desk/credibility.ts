@@ -77,6 +77,13 @@ function clamp(n: number): number {
 export function homeOutlet(source: string): boolean {
   return /^(?:Al-?Masirah|Saba(?! \(government\))|Yahya Saree|Mohammed Abdulsalam|Al-?Thawrah|SPA)\b/i.test(String(source || "").trim());
 }
+/**
+ * Fast aggregators, never a primary source (user, 3 Oct: Clash Report). First
+ * with a story, their card stands only until a source of its own tells it.
+ */
+export function isAggregator(source: string): boolean {
+  return /^(?:Clash Report|OSINTdefender)$/i.test(String(source || "").trim());
+}
 /** Which side an outlet is on, from its catalogue lean and name. */
 export function outletSide(source: string, lean: string): OutletSide {
   if (

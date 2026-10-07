@@ -92,10 +92,10 @@ const WIRE = /^(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Xinhua|An
  * journalist on the same side is not one, whatever they post.
  */
 const OFFICIAL =
-  /^(?:Yahya Saree|Mohammed Abdulsalam|Yemeni Army (?:spokesman|Media)|Coalition spokesman|Rashad al-Alimi|Muammar al-Eryani|Abu Zaraa al-Mahrami|Abdullah al-Alimi|Shaya al-Zindani|Afrah al-Zouba|Tareq Saleh|Aidarous al-Zubaidi|Hezam al-Asad|Hussein al-Ezzi|Mohammed Ali al-Houthi|Marco Rubio|Ursula von der Leyen|António Guterres|UKMTO|SPA|WAM|Saba(?: \((?:government|Houthi-run)\))?|Southern Transitional Council|National Resistance(?: Political Bureau)?|GCC(?: Secretariat)?|EU|State Department|United Nations|UN(?: in Yemen| OCHA)?|EU in Yemen|European Commission|US (?:Energy Department|Treasury|Embassy Yemen)|Suez Canal Authority|.+ Foreign (?:Ministry|Office))$/i;
+  /^(?:Yahya Saree|Mohammed Abdulsalam|Yemeni Army (?:spokesman|Media)|Coalition spokesman|Rashad al-Alimi|Muammar al-Eryani|Abu Zaraa al-Mahrami|Abdullah al-Alimi|Shaya al-Zindani|Afrah al-Zouba|Tareq Saleh|Aidarous al-Zubaidi|Hezam al-Asad|Hussein al-Ezzi|Mohammed Ali al-Houthi|Marco Rubio|Ursula von der Leyen|António Guterres|UKMTO|SPA|WAM|Saba(?: \((?:government|Houthi-run)\))?|Southern Transitional Council|National Resistance(?: Political Bureau)?|GCC(?: Secretariat)?|EU|State Department|United Nations|UN(?: in Yemen| OCHA)?|EU in Yemen|European Commission|US (?:Energy Department|Treasury|Embassy Yemen)|Suez Canal Authority|Taiz military axis|Yemen Coast Guard|Yemen's human rights minister|UK Middle East minister|CENTCOM|White House(?: Rapid Response)?|Donald Trump|JD Vance|.+ Foreign (?:Ministry|Office))$/i;
 
 /** Placed by hand where the catalogue and the card leans disagree (checked 2 Oct). */
-const GROUP_BY_NAME: Record<string, Group> = { gcc: "gov", "gcc secretariat": "gov", "sheba intelligence": "nonaligned" };
+const GROUP_BY_NAME: Record<string, Group> = { gcc: "gov", "gcc secretariat": "gov", "sheba intelligence": "nonaligned", "clash report": "nonaligned", osintdefender: "nonaligned" };
 
 export function isWire(name: string): boolean {
   return WIRE.test(String(name || "").trim());

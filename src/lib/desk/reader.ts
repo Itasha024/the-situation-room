@@ -1402,12 +1402,18 @@ const env = (name: string) => (typeof process !== "undefined" && process.env[nam
  * opens only its small models (Ministral, Nemo), and Ministral 14B called the
  * Houthi spokesman "government forces", so Mistral has no model by default.
  * NVIDIA's gpt-oss-120b was retired on 3 Sep.
+ *
+ * Tried on 24 live Telegram posts against Gemini (8 Oct, scripts/model-trial.mts):
+ * Nemotron 3 Ultra agreed on 23 of 24 publish calls and 6 of 7 sides in 38 s,
+ * so it leads NVIDIA's list; Super agreed less (22, 3 of 5 sides) in 17 s.
+ * Kimi K3 and Gemma 4 read as well but took over 4 minutes; DeepSeek V4.1
+ * Flash and GLM 5.3 Flash never answered in 150 s.
  */
 export type Fallback = { name: string; url: string; key: () => string; models: string[]; batch: number; ms?: number };
 const list = (name: string, dflt: string) => (env(name) || dflt).split(",").map((s) => s.trim()).filter(Boolean);
 export const FALLBACKS: Fallback[] = [
   { name: "cerebras", url: "https://api.cerebras.ai/v1/chat/completions", key: () => env("CEREBRAS_API_KEY"), models: list("CEREBRAS_MODELS", "gpt-oss-120b"), batch: 15 },
-  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "nvidia/nemotron-3-super-120b-a12b"), batch: 5, ms: 90_000 },
+  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "nvidia/nemotron-3-ultra-550b-a55b,nvidia/nemotron-3-super-120b-a12b"), batch: 5, ms: 90_000 },
   { name: "openrouter", url: "https://openrouter.ai/api/v1/chat/completions", key: () => env("OPENROUTER_API_KEY"), models: list("OPENROUTER_MODELS", "openai/gpt-oss-120b:free"), batch: 10 },
   { name: "groq", url: "https://api.groq.com/openai/v1/chat/completions", key: () => groqKey(), models: GROQ_MODELS, batch: 4 },
   { name: "mistral", url: "https://api.mistral.ai/v1/chat/completions", key: () => env("MISTRAL_API_KEY"), models: list("MISTRAL_MODELS", ""), batch: 15 },

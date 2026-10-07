@@ -127,7 +127,7 @@ Not read, and why (5b, 8 Oct): **AFP** has no free site of its own (France 24 ca
 Any site whose own listing fails on a read is listed through Google News (a day wide; what was judged before is skipped)
 (`site:` alone) for that read. Nothing behind Cloudflare or a paywall is
 bypassed: a walled article is read through a syndicated copy, an existing
-Wayback capture, or other outlets' accounts of it (see `origin.ts`).
+Wayback capture, or other outlets' accounts of it (see `origin.ts`). Archive.today copies are allowed (user, 8 Oct) but every archive.today mirror answers the desk with a CAPTCHA, so none is read.
 
 **Safety nets**, hourly: one keyword search across the Arabic sites and one
 across the English ones, for an article a listing dropped.

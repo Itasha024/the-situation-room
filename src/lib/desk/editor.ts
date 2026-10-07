@@ -634,6 +634,26 @@ export function sideWords(s: string, side: string | undefined): string {
 const YEMENI_FORCES_AR = /القوات (?:المسلحة )?اليمنية|الجيش اليمني|قواتنا المسلحة|\bYemen(?:i|'s) (?:armed )?forces\b|\bYemeni army\b/i;
 const GOV_WORDS = /لشرعي|الحكومي|التابعة للحكومة|الجيش الوطني|المقاومة الوطنية|العمالقة|درع الوطن|القوات الجنوبية|الانتقالي|مجلس القيادة|\bgovernment\b|\blegitima/i;
 const GOV_COPY = /\bYemeni government (?:forces|army|troops)\b|\bgovernment forces\b/g;
+
+/** An official body that posts its own statements, and the name a reader knows it by. */
+const OFFICIAL_BODY = /Ministry|Foreign Office|spokesman|State Department|Embassy|CENTCOM|White House|Civil Defence|military axis/i;
+const BODY_NAME: Record<string, string> = { "Sanaa Foreign Ministry": "Houthi foreign ministry", "Yemen Foreign Ministry": "Yemeni government foreign ministry" };
+export function officialLead(headline: string, source: string): string {
+  if (!OFFICIAL_BODY.test(source) || /^[^:]{2,70}:\s/.test(headline)) return headline;
+  const name = BODY_NAME[source] ?? source;
+  // It already names itself: "Saudi Foreign Ministry condemns …".
+  if (new RegExp(OFFICIAL_BODY.exec(name)?.[0] ?? name, "i").test(headline)) return headline;
+  return `${name}: ${headline}`;
+}
+
+const CLAIMED_ATTACK = new Set(["air_strike", "shelling", "missile_launch", "drone_attack", "ground_clash", "advance_or_capture", "maritime_attack"]);
+/** A Houthi-aligned outlet's Houthi attack, led by who claims it unless the headline already says so. */
+export function ownClaim(headline: string, actor: string | null | undefined, type: string, source: string): string {
+  if (actor !== "houthi" || !CLAIMED_ATTACK.has(type)) return headline;
+  if (/^[^:]{2,60}:\s/.test(headline) || /\b(?:say|says|said|claim|claims|claimed|reports?|reported|according|footage|video)\b/i.test(headline)) return headline;
+  const who = /Masirah|^Saba|Thawrah|Ansarollah|Saree|^YPA$|Yemen Press Agency/i.test(source) ? "Houthi media" : "Houthi-aligned media";
+  return `${who}: ${headline}`;
+}
 const FIRE_ON_SAUDI = /\b(?:missiles?|drones?|ballistic|UAVs?)\b.{0,80}\b(?:Saudi|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Khamis Mushait|Aramco|Dammam|Khurais|Abqaiq|Ras Tanura|Taif|Medina)\b|\b(?:Saudi|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Aramco)\b.{0,40}\b(?:hit|targeted|struck) by (?:missiles?|drones?)/i;
 /**
  * Nor does it attack Saudi forces, their supplies or Saudi cities, whatever
@@ -730,6 +750,10 @@ ${raw.body}`, c.text) : null;
     r.headline = r.headline.replace(GOV_COPY, "Houthi forces");
     r.body = r.body.replace(GOV_COPY, "Houthi forces");
   }
+  // A Houthi-aligned outlet's own claim of a Houthi attack or its result is a
+  // claim, not a fact: who says it goes first (user, 8 Oct: Al-Mihwar's
+  // "Houthi ballistic missiles strike Saudi gatherings in Al-Turbah" went out bare).
+  if (outletSide(c.source, c.lean) === "houthi") r.headline = ownClaim(r.headline, r.actor_side, r.event_type, c.source);
   // One side for both, judged on the whole copy: the body alone may not say "Saudi".
   const side = r.actor_side ?? (sideWords(`${r.headline} ${r.body}`, undefined) !== `${r.headline} ${r.body}` ? "houthi" : undefined);
   r.headline = sideWords(r.headline, side);
@@ -744,6 +768,9 @@ ${raw.body}`, c.text) : null;
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
     r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
   }
+  // An official body's own post is its statement: it leads (user, 8 Oct: the
+  // Sanaa foreign ministry's "Saudi Arabia continues crimes against Yemen" went out with no speaker).
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
   // The name went to its role, or the colon was no quote: the lead follows.
   if (lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
     const role = fixHeadline(lead);

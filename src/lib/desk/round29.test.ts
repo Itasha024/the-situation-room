@@ -4,6 +4,7 @@ import { captureConfirmed, tookGround } from "./control-live.ts";
 import { cardMarks, kindOf } from "./dev-marks.ts";
 import { applyLedger, notEnergySite, siteOf, withBaseline, LEDGER_SEED, type Ledger } from "./ledger.ts";
 import { LEDGER_BASELINE } from "./ledger-baseline.ts";
+import { officialLead, ownClaim } from "./editor.ts";
 
 /* Round 29: the user's review of 3 Oct. */
 
@@ -136,4 +137,20 @@ test("a tanker attack told again the next day is the same row", () => {
   // No earlier row: a retold attack adds none.
   const none = applyLedger(structuredClone(LEDGER_SEED), { ships: [{ doc: 0, place: "Red Sea", what: "attacked", retold: true }] }, docs, new Date());
   assert.equal(none.ships.length, 0);
+});
+
+test("a Houthi-aligned outlet's own attack claim is led by who claims it (8 Oct, Al-Mihwar)", () => {
+  assert.equal(ownClaim("Houthi ballistic missiles strike Saudi forces in Al-Turbah area of Lahj", "houthi", "missile_launch", "Al-Mihwar"),
+    "Houthi-aligned media: Houthi ballistic missiles strike Saudi forces in Al-Turbah area of Lahj");
+  assert.equal(ownClaim("Houthi forces shell Saudi positions in Jazan", "houthi", "shelling", "Al-Masirah"), "Houthi media: Houthi forces shell Saudi positions in Jazan");
+  // Already attributed, another side, or not an attack: unchanged.
+  assert.equal(ownClaim("Houthi military: missiles hit Riyadh", "houthi", "missile_launch", "Al-Masirah"), "Houthi military: missiles hit Riyadh");
+  assert.equal(ownClaim("Houthis say missiles hit Riyadh", "houthi", "missile_launch", "Ali Bk"), "Houthis say missiles hit Riyadh");
+  assert.equal(ownClaim("Saudi forces shell Razeh", "saudi", "shelling", "Al-Masirah"), "Saudi forces shell Razeh");
+});
+
+test("an official body's own post leads with that body (8 Oct, Sanaa foreign ministry)", () => {
+  assert.equal(officialLead("Saudi Arabia continues crimes against Yemen", "Sanaa Foreign Ministry"), "Houthi foreign ministry: Saudi Arabia continues crimes against Yemen");
+  assert.equal(officialLead("Saudi Foreign Ministry condemns attack on Abha airport", "Saudi Foreign Ministry"), "Saudi Foreign Ministry condemns attack on Abha airport");
+  assert.equal(officialLead("Clashes in Taiz", "Al-Masirah"), "Clashes in Taiz");
 });

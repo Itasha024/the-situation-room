@@ -409,6 +409,9 @@ ${SPELLING_RULES}
   head — "Houthi media: Saudi strikes hit residential areas in Taiz",
   "Saudi-led coalition: Houthi drone hit a school in Jazan" — and keep the
   victims and figures.
+- A Houthi-aligned outlet's report of a Houthi attack or its result (a hit,
+  a strike on "gatherings", a capture) is the Houthis' claim, not a fact:
+  "Houthi-aligned media: Houthi missiles hit Saudi forces in Al-Turbah".
 - Forces by their English names: درع الوطن = Nation's Shield forces, درع
   الجزيرة = Peninsula Shield forces, الحزام الأمني = Security Belt forces,
   العمالقة = Giants Brigades, المقاومة الوطنية = National Resistance forces.

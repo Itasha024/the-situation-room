@@ -61,3 +61,6 @@ Newest round first.
 | 7 Oct 10:30, 10:44: Alfaqaar's "exclusive footage" marked an exclusive; Shajab's new clip of the Jeddah fire written as "ongoing fires" | Exclusive footage is a clip, not an outlet's own reporting; new footage says it is footage of an attack told before, never "ongoing" unless the text says so | `exclusive.ts isExclusive`, reader prompt (video) | `round29-review.test.ts` |
 | 7 Oct 09:29: Reuters' "POINT MARCHÉS" market wrap as a card | Market wraps and previews are out | `relevance.ts` NOISE `markets` | `round29-review.test.ts` |
 | 7 Oct (user): use archive.md for paywalled articles | Tried from the server: archive.md/.ph/.today answer with a CAPTCHA, and the Wayback Machine had no copy and would not save one. Not used; never bypassed | — | (live check) |
+- 8 Oct: a Houthi-aligned outlet's own attack claim went out as fact (Al-Mihwar, Al-Turbah) → `ownClaim` leads it with "Houthi(-aligned) media:"; test in round29.test.ts.
+- 8 Oct: the Sanaa foreign ministry's post had no speaker → `officialLead` puts an official body first; test in round29.test.ts.
+- 7 Oct: SNN called Rubio "US Senator" → `fixHeadline` maps Rubio/Vance to their offices.

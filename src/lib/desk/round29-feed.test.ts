@@ -40,7 +40,7 @@ test("14:16 — a Houthi-aligned outlet's 'Yemeni forces' are the Houthis, never
     ALI_BK_14_16,
   );
   assert.equal(v.kind, "publish");
-  if (v.kind === "publish") assert.match(v.report.summary, /^Houthi forces advance towards Al-Zaza'a/);
+  if (v.kind === "publish") assert.match(v.report.summary, /^Houthi media: Houthi forces advance towards Al-Zaza'a/);
   // Al-Aqsa TV says whose forces they are: التابعة للشرعية is the government.
   assert.equal(houthiAfterAll("government", "Yemeni government forces capture Houthi fighters", AL_AQSA_14_10, "houthi"), false);
   // A Saudi-aligned outlet's "Yemeni army" is not turned Houthi.

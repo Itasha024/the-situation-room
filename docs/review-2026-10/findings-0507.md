@@ -81,6 +81,6 @@ Shin Persian relayed UKMTO's notices as six cards with no content ("UKMTO issues
 
 **Energy.** The table has no row after 5 Oct.
 - The Riyadh fire footage of 6 Oct is already out as the 3 Oct attack retold (Stage 2).
-- On 6 Oct the Houthis named Jeddah again: Saree at 12:18, and their evening claim was reported by Saudi Gazette and al-Eryani. Under the user's 2 Oct rule, one side's claim within 36 hours of an earlier hit on the same site is that hit told again, so it is not a new row.
+- The 6 Oct Jeddah reports (Saree 12:18, Saudi Gazette, al-Eryani) told the 5 Oct hit, not a new one (checked by the user), so there is no 6 Oct row. The 36-hour rule is gone: a retelling is judged by what the report says, never by time.
 
 **Shipping.** The 4 Oct tanker off Mocha is one row (Stage 2).

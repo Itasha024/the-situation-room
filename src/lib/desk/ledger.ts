@@ -305,13 +305,9 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
     row.hits = [...row.hits.filter((h) => h.date !== f.hit.date), { ...f.hit }].sort((a, b) => a.date.localeCompare(b.date));
   }
   out.sites = out.sites.filter((s) => s.hits.length || s.statusSrc);
-  // One side's word within 36 hours of an earlier hit on the same site is that
-  // hit told again (user, 2 Oct: Nour News's round-up on Taibah a day after the
-  // coalition's report). A second official or wire report still counts.
-  for (const x of out.sites) {
-    const hits = [...x.hits].sort((a, b) => a.date.localeCompare(b.date));
-    x.hits = hits.filter((h, i) => !(h.claim && !h.tier && i > 0 && Date.parse(h.date) - Date.parse(hits[i - 1].date) <= 36 * 3600_000));
-  }
+  // Whether a report is a new hit or an earlier one told again is read from the
+  // report itself (the model's `retold`, RETOLD_RE), never from the time between
+  // them: one site can be hit twice in a day, or once in two months (user, 7 Oct).
   // One figure a month on each chart: the better source, then the newer.
   for (const f of base.figures) {
     const i = out.figures.findIndex((x) => x.id === f.id || (f.series && x.series === f.series && x.month === f.month));

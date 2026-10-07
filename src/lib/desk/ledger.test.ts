@@ -159,7 +159,7 @@ test("a site stored under another name joins its row; wrong hits stay out; weapo
   assert.ok(out.ships.every((s) => s.weapon), "every researched ship attack names its weapon");
 });
 
-test("one side's word a day after a reported hit on the same site is that hit told again", async () => {
+test("a new hit on one site a day after another stands: time never decides a retelling (user, 7 Oct)", async () => {
   const { withBaseline } = await import("./ledger.ts");
   const stored = structuredClone(LEDGER_SEED);
   stored.sites = [{ id: "taibah-medina", name: "Taibah power plant", kind: "power", country: "Saudi Arabia", status: "working", hits: [
@@ -167,5 +167,5 @@ test("one side's word a day after a reported hit on the same site is that hit to
     { url: "b", date: "2026-10-02", name: "Nour News", claim: true },
   ] }] as typeof stored.sites;
   const row = withBaseline(stored, { ...stored, sites: [] }).sites.find((s) => s.id === "taibah-medina");
-  assert.deepEqual(row?.hits.map((h) => h.url), ["a"]);
+  assert.deepEqual(row?.hits.map((h) => h.url), ["a", "b"]);
 });

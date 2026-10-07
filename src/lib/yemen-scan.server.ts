@@ -536,6 +536,13 @@ const RSS: RssFeed[] = [
     name: "US media",
     cadence: C30,
   },
+  // US officials' words on this war, whether or not a card has quoted them yet.
+  {
+    id: "us-officials",
+    url: gnews(`(Trump OR Vance OR Rubio OR Hegseth OR Witkoff OR Leavitt OR CENTCOM) (Yemen OR Houthi OR Houthis OR "Red Sea" OR "Bab al-Mandab" OR Sanaa OR Aden) when:2h`),
+    name: "US media",
+    cadence: C15,
+  },
 ];
 
 const LEARNED_NAME = "Learned outlets";
@@ -890,7 +897,7 @@ export function amphtmlOf(html: string, pageUrl: string): string {
  * characters, not paragraphs, so a long piece arrives long and a short one
  * stays short.
  */
-export function extractLead(html: string): string {
+export function extractLead(html: string, cap = ARTICLE_CHARS): string {
   const meta = (p: string) =>
     (html.match(new RegExp(`(?:property|name)=["']${p}["'][^>]*content=["']([^"']{40,})["']`, "i")) || [])[1] ||
     (html.match(new RegExp(`content=["']([^"']{40,})["'][^>]*(?:property|name)=["']${p}["']`, "i")) || [])[1] ||
@@ -922,10 +929,10 @@ export function extractLead(html: string): string {
   const boxed = decodeEntities(box.replace(/<br\s*\/?>/gi, " "));
   if (boxed.length > 80) parts.push(boxed);
   for (const p of paras) {
-    if (parts.join(" ").length >= ARTICLE_CHARS) break;
+    if (parts.join(" ").length >= cap) break;
     if (!parts.some((x) => x.includes(p.slice(0, 50)))) parts.push(p);
   }
-  return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, ARTICLE_CHARS);
+  return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, cap);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1059,6 +1066,12 @@ const BODY_FETCHES = 90;
 const ARTICLE_CHARS = 8000;
 /** An article's text plus the feed's own title and teaser above it. */
 const ITEM_CHARS = 8600;
+/**
+ * An exclusive is the outlet's own reporting, every fact of it wanted: a long
+ * Axios or Asharq Al-Awsat piece runs past 8k, and its last paragraphs were
+ * cut. A handful a day, so the cost is small.
+ */
+const EXCLUSIVE_CHARS = 12_000;
 /** Reports kept in the cycle payload (the scan box and carry-forward). */
 const PAYLOAD_REPORTS = 300;
 /**
@@ -1786,7 +1799,7 @@ export function foldIntoPublished(
  * House, State, the Pentagon, the wires, the TV networks — as soon as a card
  * quotes them: a relay carries one line, the original carries all of them.
  */
-const SPEAKER_SEARCH: Record<string, string> = { trump: "Trump", vance: "Vance", rubio: "Rubio", hegseth: "Hegseth" };
+const SPEAKER_SEARCH: Record<string, string> = { trump: "Trump", vance: "Vance", rubio: "Rubio", hegseth: "Hegseth", witkoff: "Witkoff", leavitt: "Leavitt" };
 const SPEAKER_SEARCH_GAP_MS = 60 * 60_000;
 const SPEAKER_SEARCHES_PER_TICK = 2;
 
@@ -2322,11 +2335,14 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   // Thin RSS teasers get their lead paragraph pulled so the gate has something
   // to judge. The same items reappear cycle after cycle, so leads are cached by
   // URL and each article page is fetched once.
-  const leadable = (h: RawHit) => !(h.fromTg || (h.text.length >= 2000 && !isGnews(h.url)) || /\.pdf(\?|$)/i.test(h.url));
+  // An exclusive is opened whatever its teaser: a 2,000-character teaser is
+  // still a fraction of the piece.
+  const exclusive = (h: RawHit) => !h.fromTg && isExclusive(h.text, h.source);
+  const leadable = (h: RawHit) => !(h.fromTg || (h.text.length >= 2000 && !isGnews(h.url) && !exclusive(h)) || /\.pdf(\?|$)/i.test(h.url));
   const leadCache = await loadLeadCache(hits.filter(leadable).map((h) => h.url));
   const leadChanged = new Set<string>();
   const addLead = (h: RawHit, lead: string) => {
-    if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, ITEM_CHARS);
+    if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, exclusive(h) ? EXCLUSIVE_CHARS + 600 : ITEM_CHARS);
   };
   // An undated listing's article takes the date its own page gives.
   const datePage = (h: RawHit, pub: number | undefined) => {
@@ -2370,7 +2386,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       const html = await fetchText(page, 6000);
       if (!html && !real) return; // not cached: a failed fetch is retried next cycle
       // A paywalled article still yields its address; its lead may be empty.
-      let lead = html ? extractLead(html) : "";
+      const cap = exclusive(h) ? EXCLUSIVE_CHARS : ARTICLE_CHARS;
+      let lead = html ? extractLead(html, cap) : "";
       // Still a teaser. If the publisher offers an AMP copy — which they serve
       // openly, for readers arriving from search — read that instead: it is the
       // same article without the subscription wall drawn over it. One extra
@@ -2379,7 +2396,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         const amp = amphtmlOf(html, page);
         if (amp && amp !== page) {
           const ampHtml = await fetchText(amp, 6000);
-          const ampLead = ampHtml ? extractLead(ampHtml) : "";
+          const ampLead = ampHtml ? extractLead(ampHtml, cap) : "";
           if (ampLead.length > lead.length) lead = ampLead;
         }
       }
@@ -2400,7 +2417,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         // item is written up by others within hours.
         const cover = { name: h.source, keys: keywords(h.title, lang, h.source), at: Date.parse(h.at) };
         const full = await readOriginal({ url: page, source: h.source, title: h.title }, lang, undefined, cover);
-        if (full.length > lead.length) lead = full.replace(/\s+/g, " ").trim().slice(0, ARTICLE_CHARS);
+        if (full.length > lead.length) lead = full.replace(/\s+/g, " ").trim().slice(0, cap);
       }
       const pub = html ? pageDate(html) : NaN;
       leadCache[key] = { lead, at: now, ...(real ? { real } : {}), ...(Number.isFinite(pub) ? { pub } : {}) };

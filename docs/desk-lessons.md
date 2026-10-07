@@ -65,3 +65,4 @@ Newest round first.
 - 8 Oct: the Sanaa foreign ministry's post had no speaker → `officialLead` puts an official body first; test in round29.test.ts.
 - 7 Oct: SNN called Rubio "US Senator" → `fixHeadline` maps Rubio/Vance to their offices.
 - 8 Oct (5b): 30 more sites, US government feeds and two YouTube channels read; numeric HTML codes decoded (Al-Ayyam). Not read: AFP (no free site), Truth Social (refuses readers), saba.ye and liveuamap (Cloudflare). Test: round29.test.ts "stage 5b listings".
+- 8 Oct 6a: exclusives are opened whatever their teaser and kept to 12k characters; the English majors' own-reporting signs (seen by, can reveal, spoke to, first reported by <own outlet>) mark an exclusive, a relay of them does not; Witkoff and the press secretary are searched like Trump/Rubio, and a standing 15-minute search covers US officials on Yemen. Archive.today was allowed by the user for paywalled articles but CAPTCHAs the VM, so it is not read.

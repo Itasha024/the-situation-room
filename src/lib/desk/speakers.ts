@@ -35,6 +35,7 @@ export const SPEAKERS: Speaker[] = [
   S("Pete Hegseth", /\bHegseth\b|هيغسيث|هيجسيث/, "US", "English", "en", "PeteHegseth", "war.gov"),
   S("JD Vance", /\bVance\b|فانس/, "US", "English", "en", "JDVance", "whitehouse.gov"),
   S("Steve Witkoff", /\bWitkoff\b|ويتكوف/, "US", "English", "en"),
+  S("Karoline Leavitt", /\bLeavitt\b|ليفيت/, "US", "English", "en", "PressSec", "whitehouse.gov"),
   S("Keir Starmer", /\bStarmer\b|ستارمر/, "UK", "English", "gb", "Keir_Starmer", "gov.uk"),
   S("Yvette Cooper", /\bYvette Cooper\b|إيفيت كوبر/, "UK", "English", "gb", "YvetteCooperMP", "gov.uk"),
   S("John Healey", /\bHealey\b|هيلي/, "UK", "English", "gb", "JohnHealey_MP", "gov.uk"),

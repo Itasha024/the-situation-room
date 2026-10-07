@@ -88,6 +88,10 @@ export function isExclusive(text: string, source: string): boolean {
     const name = esc(n);
     if (new RegExp(String.raw`\b(?:told|tells)\s+(?:the\s+)?(?:al-?\s?)?${name}`, "i").test(t)) return true;
     if (new RegExp(String.raw`(?:al-?\s?)?${name}\b[^.\n]{0,30}\b(?:has|have)\s+learned`, "i").test(t)) return true;
+    // The English majors' own reporting: "documents seen by Reuters", "Axios
+    // can reveal", "officials who spoke to the Journal", "first reported by Axios".
+    if (new RegExp(String.raw`\b${name}\b[^.\n]{0,30}\b(?:can reveal|can confirm|has seen|has reviewed|has obtained|understands)\b`, "i").test(t)) return true;
+    if (new RegExp(String.raw`\b(?:seen|reviewed|obtained|viewed|verified)\s+by\s+(?:the\s+)?${name}\b|\b(?:spoke|speaking|talked)\s+(?:to|with)\s+(?:the\s+)?${name}\b|\bfirst\s+reported\s+by\s+(?:the\s+)?${name}\b`, "i").test(t)) return true;
     if (new RegExp(String.raw`علمت\s*[«"]?\s*(?:ال)?${name}|مصادر[^.\n]{0,20}لـ?\s*[«"]?\s*(?:ال)?${name}|قالت?\s+مصادر[^.\n]{0,30}لـ?\s*[«"]?${name}`).test(t)) return true;
     // "أفادت مصادر استخباراتية في صنعاء، «الأخبار»، بأن": the verb takes the
     // outlet with no "لـ". The quote marks keep الأخبار "the news" out.

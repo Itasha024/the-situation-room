@@ -66,7 +66,7 @@ export function speakerKey(who: string): string {
     .replace(/^(?:the\s+)?(?:u\.?s\.?|us|american|former)\s+/, "")
     .replace(/['’]s\b/g, "")
     .replace(/\b[a-z]+\b/g, (x) => DEMONYMS[x] ?? x);
-  const known = /\b(trump|rubio|vance|hegseth|biden|netanyahu|khamenei|araghchi|pezeshkian|guterres|grundberg|fletcher)\b/.exec(w);
+  const known = /\b(trump|rubio|vance|hegseth|witkoff|leavitt|biden|netanyahu|khamenei|araghchi|pezeshkian|guterres|grundberg|fletcher)\b/.exec(w);
   if (known) return known[1];
   for (const [re, key] of SPEAKER_ALIASES) if (re.test(w)) return key;
   return w.replace(/^(?:president|secretary of state|secretary|minister|prime minister)\s+/, "");

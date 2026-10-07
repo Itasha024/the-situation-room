@@ -1,3 +1,5 @@
+import { isExclusive } from "./exclusive.ts";
+import { namedSpeaker } from "./links.ts";
 import { parseHtmlListing, parseListing } from "./sitemap.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -164,4 +166,18 @@ test("stage 5b listings: Al-Ayyam's coded Arabic and a YouTube video's descripti
   const [y] = parseListing(atom);
   assert.equal(y.url, "https://www.youtube.com/watch?v=x1");
   assert.equal(y.desc, "Yemen and the Red Sea");
+});
+
+test("stage 6a: the English majors' own reporting is an exclusive; a relay is not", () => {
+  assert.ok(isExclusive("Houthi drones were bought through Oman, according to documents seen by Reuters.", "Reuters"));
+  assert.ok(isExclusive("Axios can reveal that Witkoff met Saudi officials on Yemen.", "Axios"));
+  assert.ok(isExclusive("Two US officials who spoke to the Journal said the strikes will widen.", "Wall Street Journal"));
+  assert.ok(!isExclusive("Witkoff met Saudi officials on Yemen, Axios reported.", "Fox News"));
+  assert.ok(!isExclusive("Houthi drones were bought through Oman, according to documents seen by Reuters.", "The National"));
+  assert.ok(!isExclusive("Exclusive footage shows the strike on Sanaa.", "Fox News"));
+});
+
+test("stage 6a: Witkoff and the press secretary are searched for like the others", () => {
+  assert.equal(namedSpeaker("Witkoff says talks with the Houthis are close"), "witkoff");
+  assert.equal(namedSpeaker("Karoline Leavitt: the US will answer any Houthi attack"), "leavitt");
 });

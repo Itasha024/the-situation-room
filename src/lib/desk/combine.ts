@@ -28,7 +28,7 @@ import { alertCities } from "./copies.ts";
 import { governorateAt } from "./adm1.ts";
 import { PLACE_BY_NAME, datelineFor, type Place } from "./gazetteer.ts";
 import { stripAttribution } from "./origin.ts";
-import { redundantBody, roleNamesInProse, stripSpellingNotes, unstutter } from "./reader.ts";
+import { MASHUP, redundantBody, roleNamesInProse, stripSpellingNotes, unstutter } from "./reader.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -184,8 +184,6 @@ function figures(s: string): string[] {
  * What is wrong with a combined write-up, or "" when nothing is: English
  * only, every place and every headline figure of the accounts kept.
  */
-const MASHUP =
-  /\b(?:as|while)\s+(?:the\s+)?(?:Yemeni\s+)?(?:government|Houthi|Houthis|coalition|Saudi|Yemeni|Taiz|local|STC|US|UN)\b[^,;]{0,50}?\b(?:report|reports|reported|say|says|said|claim|claims|claimed|announce|announces|condemn|condemns|declare|declares|deny|denies|warn|warns|urge|urges)\b/i;
 export function combineProblem(w: Written, all: LiveReport[], places: Place[]): string {
   const out = `${w.headline} ${w.body}`;
   if (!w.headline.trim()) return "no headline";

@@ -343,6 +343,141 @@
       "label": "Houthi forces shoot down a Saudi CH-4 armed reconnaissance drone in Al-Jawf governorate",
       "side": "houthi",
       "why": "Iranian relay of the Houthi spokesman (7 Oct)"
+    },
+    "live-t-me-presstv-209510": {
+      "label": "Houthi forces advance in Taiz and Lahj, cutting supply routes and pressuring Saudi-backed forces",
+      "side": "houthi",
+      "why": "Iranian relay of the Houthis; its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-alibk3-38034": {
+      "label": "Houthi forces seize Al-Haqal area near Jabal Habashi after taking Yafrus",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-bin-1saeed-74302": {
+      "label": "Houthi forces advance in Taiz governorate",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-sabrennewss-227633": {
+      "label": "Houthi forces launch missile and drone strikes on Riyadh, Rabigh, Abha, Khamis Mushait, Najran and Jazan",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-irna-1313-459023": {
+      "label": "Houthi forces say they conducted three operations targeting sites in Saudi Arabia",
+      "side": "houthi",
+      "why": "Iranian relay of the Houthis; its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-alomhoar-113633": {
+      "label": "Houthi forces claim full control of Mocha",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-sabrennewss-227641": {
+      "label": "Houthi forces launch three strikes on Saudi targets",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-bin-1saeed-74328": {
+      "label": "Houthi forces claim to retake Dhubab airport, the only site Saudi-backed forces held that morning",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-bin-1saeed-74333": {
+      "label": "Houthi forces deploy in Al-Mafadir and Al-Shamaytayn districts of Taiz after clearing them of Saudi-backed forces",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-snntv-518623": {
+      "label": "Houthi forces claim control of Aliyah, Jabal Sabran, Ihtijaj al-Quds and Al-Madhaj",
+      "side": "houthi",
+      "why": "Iranian relay of the Houthis; its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-alibk3-38082": {
+      "label": "Houthi forces claim control of Al-Hujariyah except Al-Salw",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-alibk3-38083": {
+      "label": "Houthi forces claim control of Al-Hujariyah and Bani Yusuf in Taiz governorate",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-shajab-news-68364": {
+      "label": "Houthi forces in Dhubab city as Saudi-backed forces flee toward Aden",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-alibk3-38089": {
+      "label": "Houthi forces expel Saudi-backed forces from Dhubab and seize equipment as Giants Brigades forces flee",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-naya-foriraq-92676": {
+      "label": "Houthi forces take control of Bani Hamad area in Taiz governorate",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-presstv-209657": {
+      "label": "Houthi forces warn of military operation over Riyadh airspace, plane warned not to land at King Khalid International Airport",
+      "side": "houthi",
+      "why": "Iranian relay of the Houthis; its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-x-com-yah-saree-status-2107325437483655560": {
+      "label": "Houthi forces strike Saudi-backed forces in Al-Jawf and Marib",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-almayadeen-399999": {
+      "label": "Houthi forces strike Saudi-backed forces east of Al-Jawf, causing deaths and injuries and burning vehicles",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-almayadeen-400000": {
+      "label": "Houthi forces strike Saudi-backed forces east of Ragwan in Marib",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-abdulsalamsalah-2684": {
+      "label": "Houthi forces clear Saudi-backed forces from Al-Ma'afir and Al-Shamaytayn districts of Taiz",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-alibk3-38113": {
+      "label": "Houthi forces strike Shabwa Defence Forces and Saba Axis in Marib, causing casualties",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-naya-foriraq-92682": {
+      "label": "Houthi forces pursue Saudi-backed forces in remaining districts of Taiz",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-alomhoar-113709": {
+      "label": "Houthi forces strike Saudi forces' operations room in Aden with ballistic missiles",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-bin-1saeed-74482": {
+      "label": "Houthi forces shell a government forces' site at Aden International Airport",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-presstv-209788": {
+      "label": "Houthi forces target Saudi army's 22nd Brigade at Aden airport with ballistic missiles",
+      "side": "houthi",
+      "why": "Iranian relay of the Houthis; its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-alibk3-38236": {
+      "label": "Houthi forces attack Al-Matali area to cut the supply line to the Al-Aqrud front",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-t-me-sabrennewss-227742": {
+      "label": "Houthi forces advance to the area overlooking Al-Misrakh district centre in Taiz",
+      "side": "houthi",
+      "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
     }
   }
 }

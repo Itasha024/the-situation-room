@@ -89,3 +89,84 @@ test("3-4 Oct — a card written from several accounts keeps the lead's side, on
   assert.equal(fixHeadline("Yemen Yemen's president praises Saudi Arabia as a partner in security"), "Yemen's president praises Saudi Arabia as a partner in security");
   assert.equal(fixHeadline("Houthis claim control of As-Safiya while government reports strikes in Saada, Al‑Al‑Al-Jawf"), "Houthis claim control of As-Safiya while government reports strikes in Saada, Al-Jawf");
 });
+
+/* ---- Stage 4b: the review of 5-7 Oct ---- */
+
+test("5 Oct 14:30-01:13 — a front report never follows a held Rubio relay on common words ('←Marco Rubio' on 259 reports)", async () => {
+  const { sameSpeakerWords } = await import("./origin.ts");
+  const keys = ["Bab", "forces", "oppose", "control", "near", "al-Mandab", "Arabia", "Yemeni", "Houthi", "official", "Saudi"];
+  assert.equal(sameSpeakerWords("Three Saudi soldiers killed in clashes near the Yemeni border", "Marco Rubio", keys), false);
+  assert.equal(sameSpeakerWords("Giants Brigades forces surround Mocha near Bab al-Mandab", "Marco Rubio", keys), false);
+  const rubio = ["Saudi", "Arabia", "right", "defend", "itself", "Houthi", "attacks", "uphold", "security", "agreement", "commitments"];
+  assert.equal(sameSpeakerWords("Rubio: Washington will uphold its security agreement and commitments to Saudi Arabia, which has the right to defend itself", "Marco Rubio", rubio), true);
+});
+
+test("5-7 Oct — the Houthis' words for the other side are never the government's", () => {
+  const gov = (h: string) => houthiAfterAll("government", h, "", "neutral");
+  assert.ok(gov("Yemeni government forces strike Saudi mobilisations in Al-Jawf and Marib")); // Saree, 6 Oct 07:21
+  assert.ok(gov("Yemeni government forces shell Saudi government forces gatherings in Ras al-Ara, dozens killed")); // Naya
+  assert.ok(gov("Yemeni government forces expel Saudi infiltrations in Dhubab and seize equipment after Giants Brigades forces flee")); // Ali Bk
+  assert.ok(gov("Yemeni government forces in Dhubab city as Saudi government forces flee toward Aden")); // Shajab
+  assert.ok(gov("Yemeni government forces clear opponents mobilisations in Al-Maafir and Al-Shmaytayn districts of Taiz")); // Abdulsalam
+  assert.ok(gov("Yemeni government forces strike Shabwa Defence Forces and Saba Axis in Marib, causing casualties")); // Ali Bk
+  assert.ok(gov("Yemeni government forces conduct three ballistic missile operations")); // Al Mayadeen
+  assert.ok(gov("Yemeni government forces target Saudi troop concentrations between Ras al-Ara and al-Suqya with over 20 strikes"));
+  assert.ok(gov("Yemeni government forces liberate Dhubab Airport, the only site held by Saudi militias this morning")); // Bin Saeed
+  // The government's own: its strikes, its missile finds, another party in a second clause.
+  assert.ok(!gov("Yemeni government forces destroyed a ballistic missile depot in Saada")); // Yemen TV
+  assert.ok(!gov("Yemeni government forces advance with Saudi air cover toward Mocha"));
+  assert.ok(!gov("Yemeni government army and resistance forces destroy Houthi vehicles in Jabal Habashi, while Houthi forces expel Saudi mobilization from Al-Mawasit"));
+});
+
+test("5-7 Oct — a reader's headline with another party's account joined on keeps its first event", async () => {
+  const { firstEvent } = await import("./reader.ts");
+  assert.equal(
+    firstEvent("Coalition intercepts Houthi ballistic missile toward Khamis Mushait as Houthi media report suspension of air operations at King Khalid International Airport"),
+    "Coalition intercepts Houthi ballistic missile toward Khamis Mushait",
+  );
+  assert.equal(
+    firstEvent("Yemen foreign minister meets Jordan Senate president in Amman as Saudi Council of Ministers reaffirms support for Yemeni government"),
+    "Yemen foreign minister meets Jordan Senate president in Amman",
+  );
+  // Two sides' claims on one place, and a denial, are one contested event.
+  const contested = "Houthis claim Bab al-Mandab, Dhubab and Mocha while Yemeni army says it captured Bab al-Mandab and Dhubab airport";
+  assert.equal(firstEvent(contested), contested);
+  const denied = "Yemeni forces claim control of Bab al-Mandab, Dhubab airport and Mocha as Houthis deny presence";
+  assert.equal(firstEvent(denied), denied);
+});
+
+test("5-7 Oct — one decision, one town taken, one attack on Aden airport: one card each", async () => {
+  const { sameDecision, sameSiteAttack } = await import("./copies.ts");
+  const at = (h: string) => `2026-10-05T${h}:00+03:00`;
+  assert.ok(sameDecision({ summary: "Saudi Arabia to regularize status of undocumented Yemenis", at: at("21:08") }, { summary: "Saudi Arabia begins correcting status of Yemenis in Riyadh", at: at("21:26") }));
+  assert.ok(sameDecision({ summary: "Saudi Arabia restores East-West pipeline throughput to 5.8 million barrels per day" }, { summary: "Saudi Arabia restores East-West pipeline flows to 5.8 million barrels per day" }));
+  assert.ok(!sameDecision({ summary: "Saudi Arabia’s East-West pipeline operating normally with crude oil continuing to flow, sources say" }, { summary: "Fire reported at Saudi oil pipeline" }));
+  assert.ok(!sameDecision({ summary: "Some flights diverted to King Fahd International Airport in Dammam" }, { summary: "Air traffic suspended and nine aircraft diverted from King Abdulaziz International Airport in Jeddah" }));
+  const c = (summary: string, t: string) => ({ type: "combat", summary, at: at(t) });
+  assert.ok(sameTarget(c("Yemeni government forces capture Mocha as road to Turbah in Taiz reopens", "17:52"), c("Yemeni government forces capture Mocha city and port in Taiz governorate", "18:41")));
+  assert.ok(!sameTarget(c("Yemeni government forces capture Mocha city", "19:20"), c("Houthi forces capture Mocha, Dhubab and Perim Island", "22:08")));
+  const s = (summary: string) => ({ type: "strike", summary });
+  assert.ok(sameSiteAttack(s("Houthi ballistic missiles target Aden International Airport"), s("Smoke columns rise from Aden International Airport after targeting by Abu Jabril")));
+  assert.ok(!sameSiteAttack(s("Houthi ballistic missiles target Aden International Airport"), s("Saudi air strikes hit Sanaa airport")));
+  assert.ok(!sameSiteAttack(s("Houthi missiles target Aden airport"), s("Houthi forces launch new missile strike on Aden airport")));
+});
+
+test("5 Oct — the spokesmen's lines from other outlets, and relays of one ministry's statement, join one card", async () => {
+  assert.equal(speechOwner("Yemeni government forces spokesperson: Dhubab airport is under our forces' control")?.key, "gov spokesman");
+  assert.equal(speechOwner("Houthi spokesperson: Saudi regime's crimes reveal its true nature")?.key, "abdulsalam");
+  assert.equal(speechOwner("Houthi Armed Forces spokesperson: we shot down a CH-4"), null);
+  const { foldIntoPublished } = await import("../yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [], type: "statement" } as const;
+  const own = { ...base, fp: "sp", url: "https://t.me/army/1", source: "Yemeni Army spokesman", at: "2026-10-05T11:29:00+03:00", summary: "Yemeni government forces spokesperson: hundreds of Houthi fighters trapped in Dhubab must surrender" };
+  const asharq = { ...base, fp: "as", url: "https://t.me/asharq/1", source: "Asharq News", at: "2026-10-05T11:33:00+03:00", summary: "Yemeni government forces spokesperson: Dhubab airport is under our forces' control" };
+  const araby = { ...base, fp: "ar", url: "https://t.me/araby/1", source: "Al-Araby TV", at: "2026-10-05T21:01:00+03:00", summary: "Saudi defense minister says Mecca Alliance will deploy forces to Saudi Arabia and activate collective deterrence", citing: "Saudi Defence Ministry" };
+  const mubasher = { ...base, fp: "mu", url: "https://t.me/mubasher/1", source: "Al Jazeera Mubasher", at: "2026-10-05T21:07:00+03:00", summary: "Saudi defence minister: Collective deterrence activated against attacks on kingdom", citing: "Saudi Defense Ministry" };
+  const reports = [asharq, mubasher] as never[];
+  foldIntoPublished(reports, new Set(), [own, araby] as never[]);
+  assert.equal(reports.length, 0);
+});
+
+test("5-6 Oct — Shin Persian relaying UKMTO's notices stays out: the desk reads UKMTO", () => {
+  const g = gate({ source: "Shin Persian", url: "https://t.me/shin_persian/10745", agency: false, text: "🔴 هشدار UKMTO شماره 152-26 درباره امنیت دریانوردی در دریای سرخ و خلیج عدن" } as never);
+  assert.equal(g.reason, "iran-relay");
+});

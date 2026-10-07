@@ -71,6 +71,47 @@ export function sameStory(a: { summary: string; text?: string }, b: { summary: s
   return names >= 3 && overlap >= 0.3;
 }
 
+/** How many story words two headlines share. */
+export function wordsInCommon(a: string, b: string): number {
+  const x = storyWords(a);
+  let n = 0;
+  for (const w of storyWords(b)) if (x.has(w)) n += 1;
+  return n;
+}
+
+const STATE_UP =/\b(?:normal\w*|uninterrupted|continu\w*|restor\w*|resum\w*|recover\w*|reopen\w*)\b/i;
+const STATE_DOWN = /\b(?:stop\w*|halt\w*|fires?|attack\w*|damage\w*|out of service|suspend\w*|shut\w*|closed?|disrupt\w*)\b/i;
+/** One says a thing works again, the other that it stopped: "pipeline operating normally" and "fire at the pipeline". */
+function stateClash(a: string, b: string): boolean {
+  const up = (s: string) => STATE_UP.test(s) && !STATE_DOWN.test(s);
+  const down = (s: string) => STATE_DOWN.test(s) && !STATE_UP.test(s);
+  return (up(a) && down(b)) || (down(a) && up(b));
+}
+/**
+ * One decision or economic fact told by several outlets, judged on the
+ * headlines alone (the bodies' surroundings matched a transport minister's
+ * meeting to a state minister's): the same story, the same places if both
+ * name any, and no clash of state or figures. Saudi Arabia's regularising of
+ * Yemenis' residency went out as eight cards on 5 Oct.
+ */
+export function sameDecision(a: { summary: string; at?: string }, b: { summary: string; at?: string }): boolean {
+  // Decisions, not events: a strike or an attack is judged by the field rules.
+  if (EVENT_WORDS.test(a.summary) || EVENT_WORDS.test(b.summary)) return false;
+  if (!sameStory({ summary: a.summary }, { summary: b.summary })) return false;
+  if (stateClash(a.summary, b.summary) || numbersClash(a.summary, b.summary)) return false;
+  const places = (s: string) => new Set([...storyNames(s.replace(/^\S+\s*/, ""))].filter((w) => !TITLE_WORDS.has(w)));
+  const pa = places(a.summary);
+  const pb = places(b.summary);
+  if (pa.size && pb.size && ![...pb].some((w) => pa.has(w))) return false;
+  const shared = wordsInCommon(a.summary, b.summary);
+  if (shared >= 3) return true;
+  // Two words only ("status", "Yemenis") hold within ninety minutes, both naming where.
+  const gap = a.at && b.at ? Math.abs(Date.parse(a.at) - Date.parse(b.at)) : Infinity;
+  return shared >= 2 && pa.size > 0 && pb.size > 0 && gap <= 90 * 60_000;
+}
+const EVENT_WORDS = /\b(?:strikes?|struck|hit|hits|attack\w*|clash\w*|shell\w*|intercept\w*|kill\w*|wound\w*|explosions?|missiles?|drones?)\b/i;
+const TITLE_WORDS = new Set("king prince international airport port ministry minister foreign university centre center council company corporation authority general".split(" "));
+
 /**
  * Two outlets, one event, and the reader wrote both up in the same words.
  *
@@ -482,6 +523,12 @@ export function namedSpots(s: string, sitesOnly = false): Set<string> {
       if (k.length >= 3 && !NOT_A_SPOT.has(k)) out.add(`s:${k}`);
     }
   }
+  // A Yemeni city's own site: "Aden International Airport" was no spot (both
+  // words are cities' or generic), and the missiles on it went out as some
+  // twenty cards on 7 Oct.
+  for (const m of t.matchAll(/\b(Aden|Sanaa|Sana'a|Hodeidah|Mukalla|Marib|Taiz|Mocha|Mokha|Seiyun|Ataq|Saada)\s+(?:International\s+)?(airport|port|palace|refinery)\b/gi)) {
+    out.add(`s:${m[1].toLowerCase().replace(/'/g, "")}-${m[2].toLowerCase()}`);
+  }
   // Of the plain "Al-" names only the first, the object: "seize Al-Safiyah in
   // Al-Shamaytayn" and "seize Al-Burkani in Al-Shamaytayn" are two villages.
   const first = sitesOnly ? null : /\bAl-([A-Z][\w'’-]{2,})/.exec(t.replace(/\b(?:Jabal|Mount|Wadi)\s+Al-/g, ""));
@@ -505,6 +552,18 @@ function actorOf(s: string): string {
   if (/^Houthi/i.test(t)) return "houthi";
   return striker(t);
 }
+/**
+ * The town a capture names first, city or not: "capture Mocha city", "seize
+ * Mocha, Dhubab and Al-Khokha" → "s:mocha". Mocha's fall went out as ten
+ * cards on 5 Oct; a town is no spot for a strike, but taking it is one event.
+ */
+const TAKE_OBJECT = /\b(?:captur|seiz|liberat|recaptur|retak)\w*\s+(?:the\s+)?(?:city of\s+)?(?:Al-|al-)?([A-Z][\w'’-]{2,})/g;
+function takenTown(s: string, act: string): string[] {
+  if (act !== "capture") return [];
+  const m = TAKE_OBJECT.exec(String(s || ""));
+  TAKE_OBJECT.lastIndex = 0;
+  return m && !/^(?:Houthi|Saudi|Yemeni|Government|Strategic|Key|Several|New|Positions?|Sites?|Areas?)$/i.test(m[1]) ? [`s:${m[1].toLowerCase()}`] : [];
+}
 /** A plain "Al-" name is often a whole district: it holds for three hours, a named site or hill for six. */
 const NAME_ONLY_MS = 3 * 3600_000;
 export function sameTarget(a: { type: string; summary: string; text?: string; at?: string }, b: { type: string; summary: string; text?: string; at?: string }): boolean {
@@ -514,13 +573,32 @@ export function sameTarget(a: { type: string; summary: string; text?: string; at
   if (!act || act !== actionOf(b.summary)) return false;
   // A strike needs a site: two strikes on one district hours apart are two.
   const sitesOnly = act === "strike";
-  const sa = namedSpots(a.summary, sitesOnly);
-  const shared = [...namedSpots(b.summary, sitesOnly)].filter((k) => sa.has(k));
+  const sa = new Set([...namedSpots(a.summary, sitesOnly), ...takenTown(a.summary, act)]);
+  const shared = [...namedSpots(b.summary, sitesOnly), ...takenTown(b.summary, act)].filter((k) => sa.has(k));
   if (!shared.length) return false;
   const gap = a.at && b.at ? Math.abs(Date.parse(a.at) - Date.parse(b.at)) : 0;
   if (!shared.some((k) => k.startsWith("s:")) && gap > NAME_ONLY_MS) return false;
   const who = actorOf(a.summary);
   if (!who || who !== actorOf(b.summary)) return false;
+  return !numbersClash(`${a.summary} ${a.text ?? ""}`, `${b.summary} ${b.text ?? ""}`);
+}
+
+/**
+ * One attack on a Yemeni city's site told as it unfolded: the explosion, the
+ * missiles, the smoke, the shelling of "a militia site at the airport" (7
+ * Oct, Aden airport: some twenty cards in four hours, the sides often
+ * written wrong, so the actor cannot be the test). Field reports on the same
+ * city site within three hours, neither a new strike, are one event.
+ */
+export const SITE_ATTACK_MS = 3 * 3600_000;
+const ATTACK_WORDS = /\b(?:strikes?|struck|hit|hits|target\w*|missiles?|drones?|explosions?|smoke|shell\w*|attack\w*|bomb\w*)\b/i;
+export function sameSiteAttack(a: { type: string; summary: string; text?: string }, b: { type: string; summary: string; text?: string }): boolean {
+  const field = (t: string) => t === "strike" || t === "combat";
+  if (!field(a.type) || !field(b.type)) return false;
+  if (NEW_STRIKE.test(b.summary) || !ATTACK_WORDS.test(a.summary) || !ATTACK_WORDS.test(b.summary)) return false;
+  const site = (s: string) => [...namedSpots(s, true)].filter((k) => /^s:[a-z]+-[a-z]+$/.test(k));
+  const sa = new Set(site(a.summary));
+  if (!site(b.summary).some((k) => sa.has(k))) return false;
   return !numbersClash(`${a.summary} ${a.text ?? ""}`, `${b.summary} ${b.text ?? ""}`);
 }
 
@@ -532,15 +610,28 @@ export function sameTarget(a: { type: string; summary: string; text?: string; at
  * statement as 15, from Al Arabiya, Al Hadath, Al Jazeera, Saudi News...
  */
 export const SPEECH_COPY_MS = 4 * 3600_000;
-const SPEECH_OWNERS: { key: string; who: RegExp; outlets: RegExp }[] = [
+/**
+ * `own`: the outlet is the speaker's own account, so every statement on it is
+ * his, headline prefix or not (5 Oct: the government forces' spokesman's lines
+ * from Al Arabiya, Asharq, Al Hadath and Yemen Shabab TV beside his own
+ * channel's; Abdulsalam's from Al-Masirah beside his X account).
+ */
+const SPEECH_OWNERS: { key: string; who: RegExp; outlets: RegExp; own?: RegExp }[] = [
   { key: "alimi", who: /^(?:Yemen(?:'s|i)? president|Yemeni president|(?:Rashad )?al-Alimi|Presidential (?:Leadership )?Council (?:head|chairman))\b/i, outlets: /^(?:Saba \(government\)|Yemen TV)$/ },
-  { key: "maliki", who: /^(?:The coalition|(?:Saudi-led )?coalition(?: spokes(?:man|person))?|Turki al-Maliki)\b(?=[^:]{0,40}(?::|\b(?:says|vows|announces|warns|affirms|stresses)\b))/i, outlets: /^SPA$/ },
+  { key: "maliki", who: /^(?:The coalition|(?:Saudi-led )?coalition(?: spokes(?:man|person))?|Turki al-Maliki)\b(?=[^:]{0,40}(?::|\b(?:says|vows|announces|warns|affirms|stresses)\b))/i, outlets: /^(?:SPA|Coalition spokesman|Coalition \(SPA\))$/, own: /^(?:Coalition spokesman|Coalition \(SPA\))$/ },
   { key: "mashat", who: /^(?:The )?(?:Houthi (?:supreme )?political council (?:head|chairman|president)|(?:Mahdi )?al-Mashat)\b/i, outlets: /^(?:Saba \(Houthi-run\)|Al-Masirah)$/ },
   { key: "houthi leader", who: /^(?:The )?Houthi leader\b|^Abdul-?Malik al-Houthi\b/i, outlets: /^Al-Masirah$/ },
+  { key: "gov spokesman", who: /^(?:Yemeni (?:government )?(?:forces|army|armed forces|military) spokes(?:man|person)|Yemeni Army spokes(?:man|person)|(?:Brig(?:adier)?\.? (?:Gen(?:eral)?\.? )?)?Abdu(?:h)? Majli)\b/i, outlets: /^(?:Yemeni Army spokesman|Yemeni Army Media)$/, own: /^(?:Yemeni Army spokesman|Yemeni Army Media)$/ },
+  { key: "abdulsalam", who: /^(?:Houthi (?:chief negotiator|spokes(?:man|person))|Ansar Allah spokes(?:man|person)|Mohammed Abdulsalam)\b/i, outlets: /^Mohammed Abdulsalam$/, own: /^Mohammed Abdulsalam$/ },
 ];
-export function speechOwner(summary: string): { key: string; outlets: RegExp } | null {
+export function speechOwner(summary: string): { key: string; outlets: RegExp; own?: RegExp } | null {
   const s = String(summary || "").replace(/^Yemen (?=Yemen)/, "");
   return SPEECH_OWNERS.find((o) => o.who.test(s)) ?? null;
+}
+/** Is this card the speaker's own, from his outlet? */
+export function speechFrom(o: { source: string; summary: string }, who: { key: string; outlets: RegExp; own?: RegExp }): boolean {
+  if (!who.outlets.test(o.source)) return false;
+  return !!who.own?.test(o.source) || speechOwner(o.summary)?.key === who.key;
 }
 
 const GENERIC_BODY = new Set(["foreign", "ministry", "ministers", "minister", "office", "affairs", "government", "defence", "defense", "interior", "state", "department", "official", "the", "and", "for", "news", "agency", "embassy", "mission", "council", "expatriates", "kingdom", "republic"]);

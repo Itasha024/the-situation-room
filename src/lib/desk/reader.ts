@@ -597,6 +597,32 @@ export const OUTLET_LEAD = new RegExp(
   "i",
 );
 
+/**
+ * Two events in one headline, the second another party's account joined on
+ * with "as" or "while": "Coalition says Houthi claims misleading as Yemeni
+ * forces report 257 operations" (3 Oct), "Coalition intercepts Houthi
+ * missiles over Khamis Mushait as Houthis claim strikes on Jeddah" (6 Oct).
+ */
+export const MASHUP =
+  /\b(?:as|while)\s+(?:the\s+)?(?:Yemeni\s+)?(?:government|Houthi|Houthis|coalition|Saudi|Yemeni|Yemen's|Taiz|local|STC|US|UN|Iran|Iranian)\b[^,;]{0,50}?\b(?:report|reports|reported|say|says|said|claim|claims|claimed|announce|announces|condemn|condemns|declare|declares|deny|denies|warn|warns|urge|urges|reaffirm|reaffirms|praise|praises|monitor|monitors|order|orders)\b/i;
+/**
+ * A reader's two-event headline keeps its first event; the other is its own
+ * report. Two sides' claims on the same place are one contested event and
+ * stay: "Houthis claim Bab al-Mandab while Yemeni army says it captured Bab
+ * al-Mandab".
+ */
+export function firstEvent(headline: string): string {
+  const h = String(headline || "");
+  const m = MASHUP.exec(h);
+  // A denial answers the first event: "… as Houthis deny presence".
+  if (!m || /\bden(?:y|ies)\b/i.test(m[0])) return h;
+  const head = h.slice(0, m.index).replace(/[\s,;]+$/, "");
+  const names = (s: string) => new Set((s.match(/\b[A-Z][a-z]{3,}\b/g) || []).filter((w) => !/^(?:Houthis?|Yemeni|Yemen|Saudi|Arabia|Coalition|Government|Forces|Armed|Army|Iran|Iranian)$/.test(w)));
+  const first = names(head);
+  if ([...names(h.slice(m.index))].some((w) => first.has(w))) return h;
+  return head.split(/\s+/).length >= 4 ? head : h;
+}
+
 /** "Yemen Yemen's president", "Al-Al-Al-Jawf": a word the model wrote twice. */
 export function unstutter(s: string): string {
   return String(s || "")

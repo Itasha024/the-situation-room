@@ -22,7 +22,7 @@ import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
-import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, sameCount, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechOwner, sameWords, WAVE_WINDOW_MS } from "./desk/copies.ts";
+import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -1278,9 +1278,14 @@ const CLAIM_WINDOW_MS = 30 * 60_000;
 const DUPLICATE_WINDOW_MS = 6 * 3600_000;
 /** A relay and the card of the outlet it cites: one story within the day. */
 const RELAY_HOME_MS = 24 * 3600_000;
-/** "Axios", "axios", "The Wall Street Journal" and "Wall Street Journal" are one outlet. */
+/** Two relays of one body's statement: the same story within two hours, or any of its words within twenty minutes. */
+const SAME_STATEMENT_MS = 2 * 3600_000;
+const SAME_STATEMENT_NEAR_MS = 20 * 60_000;
+/** One economic or policy decision told again by other outlets. */
+const POLICY_WINDOW_MS = 6 * 3600_000;
+/** "Axios", "axios", "The Wall Street Journal" and "Wall Street Journal" are one outlet; "Defense" and "Defence" one ministry. */
 export function sameOutlet(a: string, b: string): boolean {
-  const k = (s: string) => String(s || "").toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9؀-ۿ]+/g, "");
+  const k = (s: string) => String(s || "").toLowerCase().replace(/^the\s+/, "").replace(/defense/g, "defence").replace(/[^a-z0-9؀-ۿ]+/g, "");
   const x = k(a);
   const y = k(b);
   return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 4 && (x.startsWith(y) || y.startsWith(x))));
@@ -1367,6 +1372,17 @@ export function foldIntoPublished(
       const theirs = homes.filter((o) => same(o) && sameOutlet(o.source, r.citing!) && Math.abs(t - Date.parse(o.at)) <= RELAY_HOME_MS);
       home = theirs.find((o) => o.fp === r.replyTo || sameStory(o, r)) ?? (theirs.length === 1 && talk(r) && talk(theirs[0]) ? theirs[0] : undefined);
     }
+    // Two outlets relaying one body's statement when the body's own post is
+    // not on the desk: one card. The Saudi defence ministry's Mecca Alliance
+    // statement went out from Al-Araby TV, Naya, Ali Bk and Al Jazeera
+    // Mubasher within six minutes; Rubio's from five outlets in eleven (5 Oct).
+    if (!home && r.citing && talk(r)) {
+      home = homes.find(
+        (o) =>
+          same(o) && o.source !== r.source && !!o.citing && sameOutlet(o.citing, r.citing!) && talk(o) && before(o, SAME_STATEMENT_MS) &&
+          (sameStory(o, r) || (Math.abs(t - Date.parse(o.at)) <= SAME_STATEMENT_NEAR_MS && wordsInCommon(o.summary, r.summary) >= 2)),
+      );
+    }
     // And the outlet itself, arriving after a relay's card on its story.
     if (!home && !r.citing) {
       home = homes.find((o) => same(o) && !!o.citing && sameOutlet(r.source, o.citing) && Math.abs(t - Date.parse(o.at)) <= RELAY_HOME_MS && sameStory(o, r));
@@ -1425,13 +1441,16 @@ export function foldIntoPublished(
     // repelled, six cards; Al-Hisn taken, nine (3-4 Oct review).
     const told = !home ? homes.find((o) => same(o) && before(o, SAME_TARGET_MS) && sameTarget(o, r)) : undefined;
     if (told) home = told;
+    // One attack on a Yemeni city's site told as it unfolded (Aden airport, 7 Oct).
+    const site = !home ? homes.find((o) => same(o) && before(o, SITE_ATTACK_MS) && sameSiteAttack(o, r)) : undefined;
+    if (site) home = site;
     // A speech's line from another outlet when the speaker's own outlet is
     // carrying the speech: a copy, not a card (user, 21 Sep; on 4 Oct the
     // president's speech went out as some 45 cards from a dozen outlets).
     if (!home && talk(r)) {
       const who = speechOwner(r.summary);
       if (who && !who.outlets.test(r.source)) {
-        const own = homes.filter((o) => same(o) && who.outlets.test(o.source) && speechOwner(o.summary)?.key === who.key && Math.abs(t - Date.parse(o.at)) <= SPEECH_COPY_MS);
+        const own = homes.filter((o) => same(o) && speechFrom(o, who) && Math.abs(t - Date.parse(o.at)) <= SPEECH_COPY_MS);
         home = own.sort((x, y) => Math.abs(t - Date.parse(x.at)) - Math.abs(t - Date.parse(y.at)))[0];
       }
     }
@@ -1447,6 +1466,16 @@ export function foldIntoPublished(
     if (!home && talk(r)) {
       home = homes.find(
         (o) => open(o) && o.source !== r.source && talk(o) && before(o, STORY_WINDOW_MS) && sameStory(o, r),
+      );
+    }
+    // One decision told by many outlets, each reader typing it as it saw fit:
+    // Saudi Arabia's regularising of Yemenis' residency went out as eight
+    // cards on 5 Oct, as "economy", "diplomacy" and "statement".
+    if (!home && (talk(r) || r.type === "economy")) {
+      home = homes.find(
+        (o) =>
+          open(o) && o.source !== r.source && (talk(o) || o.type === "economy") && (r.type === "economy" || o.type === "economy") &&
+          before(o, POLICY_WINDOW_MS) && sameDecision(o, r),
       );
     }
     // Another outlet's line of a speaker's words the card already carries.
@@ -1519,13 +1548,13 @@ export function foldIntoPublished(
     // lacks (South24's "over 200 Houthi targets", from the Axios piece the
     // desk could not open), go into the card even when it is the original.
     const relayed = !!r.citing && sameOutlet(home.source, r.citing);
-    if (enrich && addsFacts(home, r) && (wave || told || relayed)) enrich.push([home, r]);
+    if (enrich && addsFacts(home, r) && (wave || told || site || relayed)) enrich.push([home, r]);
     // A card written from the original source needs no "Also": the others
     // only relay it.
     if (isOriginal(home) || relayed) continue;
     // The later account says something the card does not (a figure, a place):
     // the card is written again from both, so nothing new is lost to "Also".
-    if (!wave && !told && enrich && addsFacts(home, r)) enrich.push([home, r]);
+    if (!wave && !told && !site && enrich && addsFacts(home, r)) enrich.push([home, r]);
     const also =[...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url, summary: r.summary }];
     const seen = new Set([home.source]);
     home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);

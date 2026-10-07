@@ -35,6 +35,7 @@ import {
   pacificDay,
   repairable,
   dropInventedRole,
+  firstEvent,
   fixHeadline,
   redundantBody,
   casualtyHeadline,
@@ -641,9 +642,24 @@ const FIRE_ON_SAUDI = /\b(?:missiles?|drones?|ballistic|UAVs?)\b.{0,80}\b(?:Saud
  * militia sites").
  */
 const GOV_ON_SAUDI =
-  /^Yemeni government (?:forces|army|troops)\b[^.]{0,100}?\b(?:launch|fire|target|strike|attack|hit|shell|bomb|seiz|captur|advanc|reach|clash|expel)\w*\b[^.]{0,80}?\b(?:(?:Saudi|pro-Saudi|Saudi-(?:aligned|backed|led))\s+(?:military\s+)?(?:forces|troops|soldiers|officers|supplies|reinforcements|positions|bases?|camps?|gatherings|concentrations|militias?|militia sites|fighters|sites)|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Khamis Mushait|Aramco|Dammam|Khurais|Abqaiq|Ras Tanura|Taif|Medina)\b/i;
+  /^Yemeni government (?:forces|army|troops)\b[^.]{0,100}?\b(?:launch|fire|target|strike|attack|hit|shell|bomb|seiz|captur|advanc|reach|clash|expel|pursu|clear|driv)\w*\b[^.]{0,80}?\b(?:(?:Saudi|pro-Saudi|Saudi-(?:aligned|backed|led))\s+(?:military\s+)?(?:forces|troops|soldiers|officers|supplies|reinforcements|positions|bases?|camps?|gatherings|concentrations|militias?|militia sites|fighters|sites)|Riyadh|Jeddah|Yanbu|Rabigh|Jizan|Jazan|Najran|Abha|Khamis Mushait|Aramco|Dammam|Khurais|Abqaiq|Ras Tanura|Taif|Medina)\b/i;
+/**
+ * The Houthis' own words for the other side, which no government outlet uses
+ * of its allies: "Saudi mobilisations", "Saudi infiltrations", "Saudi troop
+ * concentrations", "Saudi government forces", "Saudi militias" (5-6 Oct:
+ * Saree, Al-Masirah, Naya, Sabereen and Ali Bk each written as the government's).
+ */
+const SAUDI_FOE =
+  /\b(?:(?:Saudi|pro-Saudi|Saudi-(?:aligned|backed|led))\s+(?:forces?\s+)?(?:troop\s+)?(?:mobili[sz]ations?|infiltrations?|militias?|mercenar\w+|concentrations|gatherings|crowds?|build-?ups?|targets)|Saudi government forces|opponents(?:['’])? (?:mobili[sz]ations?|concentrations|gatherings))\b/i;
+/** Government forces striking the government's own units ("strike Shabwa Defence Forces and Saba Axis", Ali Bk, 6 Oct). */
+const GOV_ON_OWN =
+  /^Yemeni government (?:forces|army|troops)\s+(?:strike|target|attack|shell|ambush|bomb|hit)\w*\s+(?:\w+\s+){0,2}?(?:Giants|Nation's Shield|Shabwa Defen[cs]e|Saba Axis|Southern (?:forces|Armed)|National Resistance|Taiz (?:military )?axis)/i;
+/** The government fires no ballistic missiles in this war (Al Mayadeen, 5 Oct: "three ballistic missile operations"). */
+const GOV_BALLISTIC = /^Yemeni government (?:forces|army|troops)\b[^.]{0,60}?(?:\b(?:launch|fire|conduct)\w*\b[^.]{0,30}?\bballistic missiles?\b|\bwith ballistic missiles?\b)/i;
 export function houthiAfterAll(side: string | null | undefined, copy: string, source: string, outlet: string): boolean {
-  if (GOV_ON_SAUDI.test(copy)) return true;
+  if (GOV_ON_SAUDI.test(copy) || GOV_ON_OWN.test(copy) || GOV_BALLISTIC.test(copy)) return true;
+  // The first clause only: "…, while Houthi forces expel Saudi mobilisations" is another party.
+  if (/^Yemeni government (?:forces|army|troops)\b/i.test(copy) && (SAUDI_FOE.test(copy.split(/[.;]\s|,? (?:while|as|amid) /)[0]) || /\bSaudi government forces\b/.test(copy))) return true;
   // No side given, and the copy kept the outlet's "Yemeni forces" (Ali Bk, 4
   // Oct: "Yemeni forces reach Al-Safaqi junction"): the same outlet test.
   const unsided = side == null && /\bYemeni (?:armed )?(?:forces|army)\b/.test(copy) && !/\bgovernment\b/i.test(copy);
@@ -689,7 +705,7 @@ ${raw.body}`, c.text) : null;
   if (away) return { kind: "reject", reason: "other-theatre", note: sentence(away) };
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
-  const r: Reading = { ...raw, headline: fixHeadline(reword(respell(anglicise(raw.headline)))), body: reword(respell(anglicise(raw.body))) };
+  const r: Reading = { ...raw, headline: firstEvent(fixHeadline(reword(respell(anglicise(raw.headline))))), body: reword(respell(anglicise(raw.body))) };
   // The outlet is on the card: not in its headline, not in its body. And a
   // spokesperson or a role is only what the text says it is.
   r.headline = dropInventedRole(spokespersonLabel(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.source, c.text), c.text);

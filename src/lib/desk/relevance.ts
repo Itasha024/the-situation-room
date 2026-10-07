@@ -437,8 +437,8 @@ const FOCUSED_SRC =
 const MIXED_SRC =
   /jazeera|جزيره|al-?araby|العربي|hadath|الحدث|arabiya|العربيه|aawsat|asharq|الشرق|akhbar|الاخبار|erem|ارم|alhurra|الحره|arab ?news|mayadeen|mubasher|tasnim|fars news|mehr news|irib|irna|\bsnn\b|nour news|press ?tv/i;
 
-/** Iran's state and IRGC-affiliated channels. */
-const IRAN_SRC = /Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV/i;
+/** Iran's state and IRGC-affiliated channels, and the Persian-language axis channel Shin Persian. */
+const IRAN_SRC = /Tasnim|Fars News|Mehr News|IRIB|IRNA|^SNN$|Nour News|Press TV|Shin Persian/i;
 
 /**
  * An Iranian outlet passing on what a Yemeni party said (user, 3 Oct 07:47:
@@ -451,9 +451,11 @@ const YEMENI_PARTY_SAYS =
   /\bsaree\b|yemen(?:'s|’s|i) armed forces (?:say|said|announce|claim|spokes)|yemeni army spokes|according to (?:al-?masirah|saba)|(?:يحيي|العميد) سريع|المتحدث (?:باسم )?القوات المسلحه|القوات المسلحه اليمنيه:|سخنگوي (?:نيروهاي )?(?:مسلح|ارتش) يمن|نيروهاي مسلح يمن|انصارالله (?:اعلام|گفت)|سخنگوي (?:جنبش )?انصار ?الله|\bhouthi (?:military |armed forces )?spokes|\bansar ?all?ah spokes|به نقل از (?:المسيره|سبا)/;
 const STRIKE_COUNT = /[\d٠-٩۰-۹]+ ?(?:حمله|غاره|غارات|air ?strikes?|raids?|strikes?)[^.\n]{0,60}(?:24|٢٤|۲۴) ?(?:ساعت|ساعه|hours?)/;
 const IRAN_OWN_VOICE = /\b(?:araghchi|pezeshkian|khamenei|baghaei|iran(?:'s|ian) (?:foreign|defen[cs]e) (?:minister|ministry)|irgc spokes)|عراقچي|عراقجي|پزشكيان|بزشكيان|خامنه|بقايي|سخنگوي (?:وزارت|سپاه)/;
+/** UKMTO's notices, which the desk reads from UKMTO (5-6 Oct: Shin Persian's "UKMTO issues warning 152-26", six cards). */
+const UKMTO_SAYS = /ukmto|عمليات تجارت دريايي|عمليات التجاره البحريه/;
 export function iranRelay(source: string, normalised: string): boolean {
   if (!IRAN_SRC.test(source) || IRAN_OWN_VOICE.test(normalised)) return false;
-  return YEMENI_PARTY_SAYS.test(normalised) || STRIKE_COUNT.test(normalised);
+  return YEMENI_PARTY_SAYS.test(normalised) || STRIKE_COUNT.test(normalised) || UKMTO_SAYS.test(normalised);
 }
 
 export function breadthOf(source: string): Breadth {

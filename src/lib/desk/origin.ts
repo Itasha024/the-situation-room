@@ -483,6 +483,29 @@ const COMMON = new Set(
   "trump donald president houthi yemen yemeni saudi arabia iran iranian israel israeli united state states washington red sea war military force attack strike official government us u.s american discuss discusses discussed regional development developments security meet meets receive receives talk talks call calls relation relations cooperation bilateral latest situation".split(" ").map(stem),
 );
 
+/** Words of a front report or of the war at large, not of anyone's statement: "forces", "near", "Dawn of Yemen". */
+const FIELD_WORDS = new Set(
+  "forces control near oppose bab mandab al-mandab taiz sanaa aden marib hodeidah mocha dhubab border clash clashes killed advance advances capture seize gain gains area areas district front operation operations dawn fajr rashad al-alimi alimi added ongoing continue".split(" ").map(stem),
+);
+
+/**
+ * Is an unattributed report another channel's account of a held speaker's
+ * words? It shares the held relay's own words, never the war's common ones:
+ * three when it names the speaker, five and a name among them when it does
+ * not ("France will send soldiers and defense systems to protect the Yanbu
+ * facility"). On 5 Oct a relay of Rubio held with "Bab", "forces", "near",
+ * "Yemeni", "Saudi" among its words, and 259 front reports followed it
+ * ("Three Saudi soldiers killed near the Yemeni border ←Marco Rubio"); 49
+ * more followed Baghaei.
+ */
+export function sameSpeakerWords(copy: string, speaker: string, keys: string[]): boolean {
+  const words = new Set((String(copy || "").match(/[A-Za-z][A-Za-z'’-]+/g) || []).map(stem));
+  const surname = String(speaker || "").trim().split(/\s+/).pop() ?? "";
+  const named = surname.length >= 4 && words.has(stem(surname));
+  const same = keys.filter((k) => !COMMON.has(stem(k)) && !FIELD_WORDS.has(stem(k)) && stem(k) !== stem(surname) && words.has(stem(k)));
+  return named ? same.length >= 3 : same.length >= 5 && same.some((k) => /^[A-Z]/.test(k));
+}
+
 /**
  * How long before the relay the original may have run. Almashhad carried NBC's
  * Pentagon-split scoop two days after NBC did; four days is another story.
@@ -1150,7 +1173,12 @@ ${text}`.trim(),
       await readFrom(r, prior);
       continue;
     }
-    if (prior) {
+    // A report the old, loose test set to follow a speaker it never named
+    // (5 Oct, "←Marco Rubio" on front reports): it is read afresh.
+    if (prior && prior.follows && !sameSpeakerWords(`${r.summary}\n${r.text ?? ""}`, prior.cited.name, prior.keys)) {
+      delete cache[r.fp];
+      dirty = true;
+    } else if (prior) {
       r.citing = prior.cited.name;
       if (prior.holdUntil && !prior.released) opts.held?.add(r.fp);
       continue; // waiting: retried below
@@ -1160,11 +1188,7 @@ ${text}`.trim(),
     if (!cited) {
       const copy = `${r.summary}\n${r.text ?? ""}`;
       const leader = opts.held
-        ? heldSpeakers().find(([, e]) => {
-            const same = e.keys.filter((k) => copy.toLowerCase().includes(k.toLowerCase()));
-            // Three of its words, a name among them, within the hold.
-            return same.length >= 3 && same.some((k) => /^[A-Z]/.test(k)) && Math.abs(Date.parse(r.at) - Date.parse(e.report.at)) < SAME_WORDS_MS;
-          })
+        ? heldSpeakers().find(([, e]) => Math.abs(Date.parse(r.at) - Date.parse(e.report.at)) < SAME_WORDS_MS && sameSpeakerWords(copy, e.cited.name, e.keys))
         : undefined;
       if (leader) {
         const [lfp, le] = leader;

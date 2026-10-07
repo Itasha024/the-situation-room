@@ -262,5 +262,10 @@ export const LEDGER_BASELINE: Ledger = {
       hit: S("Al Jazeera", "https://t.me/AjaNews/515587", "2026-10-05", { claim: true, note: "The Houthis named the Aramco refinery in Rabigh with Riyadh's airport and bases in the south; smoke over the refinery was filmed that evening. No Saudi word." }),
       why: "the 5 Oct evening attack, one row",
     },
+    {
+      site: "jeddah",
+      hit: S("Ali Bk", "https://t.me/Alibk3/38196", "2026-10-06", { claim: true, note: "A new fire at the Aramco site that evening (\"again\", Ali Bk); Jeddah airport stopped flights for over an hour that night. The Houthis had named Jeddah among their midday drone targets. No Saudi word." }),
+      why: "user, 7 Oct: a second attack on Jeddah the day after the 5 Oct one, which the reads took for a retelling",
+    },
   ],
 };

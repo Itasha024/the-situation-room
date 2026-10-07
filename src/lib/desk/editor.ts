@@ -35,6 +35,7 @@ import {
   pacificDay,
   repairable,
   dropInventedRole,
+  diplomatPost,
   firstEvent,
   fixHeadline,
   redundantBody,
@@ -708,9 +709,18 @@ ${raw.body}`, c.text) : null;
   const r: Reading = { ...raw, headline: firstEvent(fixHeadline(reword(respell(anglicise(raw.headline))))), body: reword(respell(anglicise(raw.body))) };
   // The outlet is on the card: not in its headline, not in its body. And a
   // spokesperson or a role is only what the text says it is.
-  r.headline = dropInventedRole(spokespersonLabel(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.source, c.text), c.text);
+  r.headline = diplomatPost(dropInventedRole(spokespersonLabel(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.source, c.text), c.text), c.text);
   r.body = stripOwnOutlet(r.body, c.source);
   if (r.speaker_lead) r.speaker_lead = dropInventedRole(spokespersonLabel(r.speaker_lead, c.source, c.text), c.text);
+  // The model's headline led with its speaker and these fixes reworded that
+  // lead ("US Embassy charge d'affaires Neal Hopp: US Embassy charge d'affaires
+  // condemns …" → "US chargé d'affaires to Yemen condemns …"): the speaker is
+  // the headline's new lead, not a miss.
+  const sp = String(raw.speaker_lead || "").trim().toLowerCase();
+  if (sp && raw.headline.trim().toLowerCase().startsWith(sp) && !r.headline.toLowerCase().startsWith(String(r.speaker_lead || "").toLowerCase())) {
+    const own = /^([^:]{2,70}?)(?::\s| (?:calls|urges|warns|says|condemns|rejects|welcomes|demands|denies|accuses|announces|meets|discusses|stresses|affirms|vows|pledges|praises|thanks)\b)/.exec(r.headline)?.[1];
+    if (own) r.speaker_lead = own;
+  }
   // A Houthi-aligned outlet's "Yemeni forces" are the Houthis (user, 3 Oct).
   if (houthiAfterAll(raw.actor_side, `${r.headline} ${r.body}`, c.text, outletSide(c.source, c.lean))) {
     if (/\bHouthis?\b/.test(`${r.headline} ${r.body}`)) {

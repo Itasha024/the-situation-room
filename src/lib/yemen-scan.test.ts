@@ -783,7 +783,7 @@ test("one clip reposted by another account hours later folds into the first card
   foldIntoPublished(reports, new Set(["a"]));
   assert.equal(reports.length, 1);
   // A clip of another length is another event.
-  const c = { ...b, fp: "c", media: clip(41) };
+  const c = { ...b, fp: "c", url: "https://x.com/b/3", media: clip(41) };
   const two = [a, c] as never[];
   foldIntoPublished(two, new Set(["a"]));
   assert.equal(two.length, 2);
@@ -808,7 +808,7 @@ test("another outlet's line of an interview the card already carries folds into 
   foldIntoPublished(reports, new Set(["h"]));
   assert.equal(reports.length, 1);
   // Something he had not said on the card stays its own card.
-  const other = { ...line, fp: "o", summary: "STC official Amr al-Bidh: southern forces will retake Mukalla port within weeks" };
+  const other = { ...line, fp: "o", url: "https://x.com/South24E/3", summary: "STC official Amr al-Bidh: southern forces will retake Mukalla port within weeks" };
   const two = [home, other] as never[];
   foldIntoPublished(two, new Set(["h"]));
   assert.equal(two.length, 2);

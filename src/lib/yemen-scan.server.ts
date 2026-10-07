@@ -275,6 +275,7 @@ const X_ACCOUNTS: XAccount[] = [
   X("BarakRavid", "Barak Ravid", "intl", C15, WAR_ONLY),
   X("NatashaBertrand", "Natasha Bertrand", "intl", C30, WAR_ONLY),
   X("TreyYingst", "Trey Yingst", "intl", C30, WAR_ONLY),
+  X("JenGriffinFNC", "Jennifer Griffin", "intl", C30, WAR_ONLY),
   // Fast aggregators, never primary (AGGREGATOR).
   X("clashreport", "Clash Report", "intl", C10, WAR_ONLY),
   X("sentdefender", "OSINTdefender", "intl", C15, WAR_ONLY),
@@ -302,6 +303,7 @@ const X_ACCOUNTS: XAccount[] = [
   XA("aawsat_eng", "Asharq Al-Awsat", "gov", C30),
   XA("TheNationalNews", "The National", "gov", C30),
   XA("alaraby_ar", "Al-Araby Al-Jadeed", "intl", C15),
+  XA("alhurranews", "Alhurra", "intl", C15),
 ];
 
 /** Newer than the last post read: X ids grow with time. A pinned post is old and falls out here. */
@@ -468,12 +470,14 @@ const RSS: RssFeed[] = [
   // Arabic site, and its PDF edition, refuse every reader). Once a day at
   // 07:00, the whole edition: the front page and every section that carries
   // the war, since a Yemen story often sits inside a Lebanon or world piece.
-  // Its sitemap has no headlines, so the pages are read instead.
+  // Its sitemap has no headlines, so the pages are read instead. The front
+  // page and the Yemen section every half hour: the site posts through the
+  // day, not only the morning edition (user, 7 Oct).
   ...["", "category/yemen", "category/peninsula", "category/arab", "category/world", "category/politics"].map((sec): RssFeed => ({
     id: `akhbar-en-${sec.replace("category/", "") || "home"}`,
     url: `https://en.al-akhbar.com/${sec}`,
     name: "Al-Akhbar",
-    cadence: AKHBAR_DAILY,
+    cadence: sec === "" || sec === "category/yemen" ? C30 : AKHBAR_DAILY,
     whole: true,
     site: "en.al-akhbar.com",
     html: /^https:\/\/en\.al-akhbar\.com\/news\/[a-z0-9-]{20,}/,
@@ -1369,6 +1373,15 @@ const SAME_HEADLINE_WINDOW_MS = 45 * 60_000;
 const ALERT_BURST_MS = 8 * 60_000;
 /** Two outlets on one field event, in different words, on one spot. */
 const GROUND_WINDOW_MS = 20 * 60_000;
+/** Two outlets on one attack on a named district. */
+const SAME_DISTRICT_MS = 45 * 60_000;
+/** "Saudi shelling hits Al-Dhahir district" and "Saudi rocket fire hits Al-Dhahir district": one district, one attacker. */
+export function sameDistrictAttack(a: string, b: string): boolean {
+  const district = (s: string) => /\b((?:al-)?[a-z][\w'-]+(?: [a-z][\w'-]+)?) district\b/i.exec(s)?.[1].toLowerCase().replace(/^al-/, "") ?? "";
+  const by = (s: string) => (/\b(?:Saudi|coalition)\b/i.test(s) ? "s" : "") + (/\bHouthis?\b/i.test(s) ? "h" : "") + (/\bgovernment\b/i.test(s) ? "g" : "");
+  const da = district(a);
+  return !!da && da === district(b) && by(a) === by(b) && by(a).length === 1;
+}
 /** An identical headline carrying a figure or a named object does not happen twice in a night. */
 const SAME_HEADLINE_COUNTED_MS = 8 * 3600_000;
 /** One claim repeated with its figure by other outlets. */
@@ -1439,6 +1452,30 @@ export function foldIntoPublished(
     if (published.has(r.fp)) continue;
     const t = Date.parse(r.at);
     const same = (o: LiveReport) => o !== r && !gone.has(o) && o.fp !== r.fp;
+    // A post already in a card's "Also" is that card's, whatever the reader
+    // writes of it on a later look: Bin Saeed's post of Saree's statement was
+    // folded into Aden al-Ghad's card, read again a scan later in other words,
+    // and went out as its own card (7 Oct 10:49).
+    if (homes.some((o) => same(o) && (o.alsoReportedBy ?? []).some((a) => a.url === r.url))) {
+      gone.add(r);
+      continue;
+    }
+    // The spokesman's words from another outlet once his own post is on the
+    // desk: that post is the card, and an outlet quoting him adds nothing, even
+    // a summing-up of his morning's statements hours later (user, 7 Oct 10:49:
+    // Bin Saeed at 10:49 on statements Saree posted from 05:47).
+    if (!OWN_CHANNELS.has(r.source)) {
+      const spk = [...OWN_CHANNELS].filter((s) => quotesOwnChannel(`${r.summary} ${r.text ?? ""}`, s));
+      const his = homes
+        .filter((o) => same(o) && spk.includes(o.source) && Math.abs(t - Date.parse(o.at)) <= OWN_WORDS_MS && wordsInCommon(o.summary, r.summary) >= 2)
+        .sort((x, y) => wordsInCommon(y.summary, r.summary) - wordsInCommon(x.summary, r.summary))[0];
+      if (his) {
+        gone.add(r);
+        foldTrail.set(r.url, `${his.source}: ${his.summary.slice(0, 90)}`);
+        foldTrail.set(r.fp, `${his.source}: ${his.summary.slice(0, 90)}`);
+        continue;
+      }
+    }
     // A channel's own posts are never one another's copies unless word for
     // word: its sirens over Riyadh at 09:00 and again at 13:00 are two alerts,
     // and a similar post from it most likely brings something new.
@@ -1461,6 +1498,13 @@ export function foldIntoPublished(
             !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
         )
       : undefined;
+    // The spokesman's own post after an outlet's card quoting him: his post
+    // takes that card over (below), rather than going out beside it.
+    if (!home && OWN_CHANNELS.has(r.source)) {
+      home = homes.find(
+        (o) => same(o) && !OWN_CHANNELS.has(o.source) && quotesOwnChannel(`${o.summary} ${o.text ?? ""}`, r.source) && Math.abs(t - Date.parse(o.at)) <= OWN_TAKEOVER_MS && wordsInCommon(o.summary, r.summary) >= 2,
+      );
+    }
     // A relay of an outlet whose own card is on the desk (user, 3 Oct 06:09,
     // 07:09, 10:52, 10:53): Al Hadath, Almashhad and South24 each had a card
     // "according to Axios" beside Axios's own card, Almashhad's with Axios in
@@ -1521,6 +1565,17 @@ export function foldIntoPublished(
         (o) =>
           open(o) && o.source !== r.source && o.type === r.type && before(o, GROUND_WINDOW_MS) &&
           sameGround(o, r) && !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
+      );
+    }
+    // The same district named by two outlets for the same kind of attack by
+    // the same side, within 45 minutes: Al-Masirah's "Saudi rockets on al-Dhahir"
+    // and Al Mayadeen's relay of Saba's line 26 minutes later (7 Oct). The
+    // governorate alone is too wide for this; the district is not.
+    if (!home && FIELD_TYPES.has(r.type)) {
+      home = homes.find(
+        (o) =>
+          open(o) && o.source !== r.source && o.type === r.type && before(o, SAME_DISTRICT_MS) && sameDistrictAttack(o.summary, r.summary) &&
+          !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
       );
     }
     // One event in Saudi Arabia, many outlets, each in its own words: the
@@ -1608,7 +1663,25 @@ export function foldIntoPublished(
     // changes hands — the relay moving to "Also" rather than being dropped.
     // Likewise the speaker's own account after a relay's card: Pakistan's
     // foreign ministry on X after Al Arabiya's card on its statement (user, 2 Oct).
-    const ownWords = isOfficialBody(r.source) && !isOfficialBody(home.source) && speakerIs(r.source, home.summary);
+    const ownWords =
+      (isOfficialBody(r.source) && !isOfficialBody(home.source) && speakerIs(r.source, home.summary)) ||
+      // The spokesman's own channel over any outlet quoting him (user, 7 Oct):
+      // Saree's posts of 05:47-06:48 went into Al-Masirah's and Al-Araby's
+      // cards on his words as their "Also".
+      (OWN_CHANNELS.has(r.source) && !OWN_CHANNELS.has(home.source));
+    if (OWN_CHANNELS.has(r.source) && !OWN_CHANNELS.has(home.source)) {
+      home.summary = r.summary;
+      home.text = r.text;
+      home.url = r.url;
+      home.source = r.source;
+      home.tier = r.tier;
+      home.citing = undefined;
+      // Outlets quoting him relay him; only what they add stays in "Also".
+      home.alsoReportedBy = (home.alsoReportedBy ?? []).filter((a) => !quotesOwnChannel(a.summary ?? "", r.source));
+      home.tags = [...new Set([...(home.tags ?? []), "lead-swap", "original"])];
+      touched.add(home);
+      continue;
+    }
     // The outlet a relay's card cites, arriving after it: the original leads,
     // and a card from the original needs no "Also" (user, 3 Oct 07:09).
     const theOriginal = !!home.citing && !r.citing && sameOutlet(r.source, home.citing);
@@ -1815,6 +1888,17 @@ function scoreReport(x: LiveReport): number {
   );
 }
 const OWN_CHANNELS = new Set(["Yahya Saree", "Mohammed Abdulsalam"]);
+/** How long a spokesman's own post is the home of his words told by others. */
+const OWN_WORDS_MS = 12 * 3600_000;
+/** How far back an outlet's card quoting him is taken over by his own post. */
+const OWN_TAKEOVER_MS = 6 * 3600_000;
+/** Does this text carry the words of the spokesman whose own channel `who` is? */
+export function quotesOwnChannel(text: string, who: string): boolean {
+  const t = String(text || "");
+  if (who === "Yahya Saree") return /Saree|سريع|Houthi (?:Armed Forces|military|army) spokes|Yemeni (?:Armed Forces|armed forces|military) spokes|المتحدث (?:الرسمي )?باسم القوات المسلحة/i.test(t);
+  if (who === "Mohammed Abdulsalam") return /Abdulsalam|Abdul-?Salam|عبدالسلام|عبد السلام|Houthi (?:chief )?(?:spokes|negotiator)/i.test(t);
+  return false;
+}
 /** Official bodies' own outlets: the original of their statements. */
 const OFFICIAL_OUTLETS = new Set(["SPA", "Saba", "Saba (Houthi-run)", "Saba (government)"]);
 

@@ -303,6 +303,13 @@ const AIR_EVENT =
 
 const NOISE: NoiseRule[] = [
   {
+    // Reuters' "POINT MARCHÉS" (7 Oct 09:29): Europe's stocks seen lower, the
+    // war one line among the indices. A market wrap is not news of the war.
+    id: "markets",
+    note: "A market wrap or preview: indices and prices, no news of the war.",
+    re: /point ?march[eé]?s|\bmorning bid\b|\bmarkets? (?:wrap|preview|close|open)\b|\bstocks? to watch\b|\bwall st(?:reet)? (?:week|day) ahead\b/,
+  },
+  {
     id: "air-activity",
     note: "Surveillance or early-warning aircraft flying patrols. Routine air activity, not an alert or a strike.",
     re: AIR_ACTIVITY,

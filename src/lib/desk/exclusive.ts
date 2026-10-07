@@ -71,7 +71,11 @@ export function ownInformation(text: string, source: string): boolean {
 
 /** Is this the outlet's own exclusive? `source` is the outlet carrying it. */
 export function isExclusive(text: string, source: string): boolean {
-  const t = String(text || "").slice(0, 1500);
+  // "Exclusive footage" is a clip, not the outlet's own reporting: Alfaqaar's
+  // "مشاهد حصرية" of the Khurais fire went out as an exclusive (7 Oct 10:30).
+  const t = String(text || "")
+    .slice(0, 1500)
+    .replace(/(?:مشاهد|صور|لقطات|فيديو|مقطع|تصوير)\s+(?:جديدة\s+)?حصري(?:اً|ا|ة)?|\bexclusive(?:ly)?\s+(?:footage|video|images?|pictures?|photos?|scenes|clip)\b|\b(?:footage|video|images?|pictures?|photos?|scenes|clip)\s+(?:obtained\s+)?exclusively\b/gi, " ");
   if (GENERIC.some((re) => re.test(t))) return true;
   // The outlet's own name after "told", "learned", "علمت", "مصادر لـ".
   const words = String(source || "")

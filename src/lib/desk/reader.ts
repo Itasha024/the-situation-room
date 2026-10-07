@@ -495,6 +495,9 @@ STATEMENTS (event_type statement or diplomacy)
   with what it is or its full name: "Masam, the Saudi project clearing
   landmines in Yemen, said …". Never for the ones readers know (the UN, WHO,
   the EU, the GCC, the Red Cross, the Houthis), and never in the headline.
+- A diplomat's title says where he is posted: "US chargé d'affaires to
+  Yemen", "Saudi ambassador to Yemen", never "US Embassy charge d'affaires".
+  The speaker is named once: never "<title name>: <the same title> condemns".
 - Tom Fletcher is "UN aid chief Tom Fletcher". An official's "we" is his
   organisation: a UN official's "we fear famine" is "the UN fears famine" in the
   body. One person is never "they": "Fletcher told Al Arabiya the UN fears …".
@@ -535,6 +538,10 @@ Write the NEWS in the video, never the video: the main things said, each
 in one sentence. Never a running transcript, a narrator's history of the
 city, or residents' slogans one after another (Press TV, 3 Oct: a Hodeidah
 clip written out line by line). A body only for what is interesting.
+New footage of a fire or a strike ("مشاهد جديدة") shows an attack told
+before: say "new footage of the fire at …" and, when the text says, which
+attack; never "ongoing" or "still burning" unless the text says so (Shajab,
+7 Oct: a clip of the Jeddah fire written as "ongoing fires").
 
 SPEECH LINES
 Channels post a live speech one sentence at a time ("السيد القائد: ...").
@@ -660,7 +667,7 @@ export function fixHeadline(headline: string): string {
   // "STC leadership: STC urges …": the second, shorter form stands.
   const twice = /^([^:]{2,70}):\s+((?:[\w'.-]+ ){0,5}?)((?:calls|urges|warns|issues|says|reports|confirms|threatens|reveals|declares|explains|clarifies|condemns|rejects|announces|welcomes|demands|stresses|affirms|accuses|denies|vows|pledges|discusses|meets|receives|inspects|visits|tours|checks|inaugurates|opens|attends|honou?rs|chairs|reviews|praises|thanks|congratulates|directs|launches)\b.*)$/.exec(h);
   if (twice && twice[2]) {
-    const ROLE_WORD = /\b(?:chief|minister|spokes\w+|official|leader(?:ship)?|president|council|secretary(?:-general)?|envoy|STC|governor|commander)\b/i;
+    const ROLE_WORD = /\b(?:chief|minister|spokes\w+|official|leader(?:ship)?|president|council|secretary(?:-general)?|envoy|STC|governor|commander|ambassador|embassy|charg[eé] d'affaires|diplomat)\b/i;
     const roles = (s: string) => new Set((s.toLowerCase().match(new RegExp(ROLE_WORD.source, "gi")) || []));
     const first = roles(twice[1]);
     const second = roles(twice[2]);
@@ -765,6 +772,19 @@ export function dropInventedRole(headline: string, sourceText: string): string {
   if (!/\baid chief\b/i.test(headline) || /Fletcher/i.test(headline)) return headline;
   if (/\b(?:chief|head|director|coordinator|chair)\b|فليتشر|مدير|رئيس|منسق|المسؤول/i.test(sourceText)) return headline;
   return headline.replace(/\s+aid chief\b/i, "");
+}
+
+/**
+ * A diplomat's title says where he is posted (user, 7 Oct: "US Embassy charge
+ * d'affaires" left the reader to guess which embassy). Yemen when the text is
+ * about Yemen and names no other posting.
+ */
+export function diplomatPost(headline: string, sourceText: string): string {
+  const re = /\b(US|American|UK|British|Saudi|Emirati|UAE|Omani|Qatari|Iranian|Egyptian|French|German|Russian|Chinese|Japanese|Dutch|EU) (?:[Ee]mbassy )?(charg[eé] d'affaires|ambassador)\b(?! (?:to|in|at|for) )/;
+  if (!re.test(headline)) return headline;
+  const t = String(sourceText || "");
+  if (!/اليمن|\bYemen/i.test(t) || /(?:ambassador|charg[eé] d'affaires) (?:to|in) (?!Yemen)[A-Z]|(?:سفير|القائم بأعمال)[^.،\n]{0,30}(?:لدى|في) (?!اليمن)/.test(t)) return headline;
+  return headline.replace(re, (_m, who: string, title: string) => `${who} ${/^charg/i.test(title) ? "chargé d'affaires" : title} to Yemen`);
 }
 
 /** Running prose (the 6-hour brief): the same people by role, "Houthi leader" included. */

@@ -9,7 +9,7 @@ import { gate, FINAL_EXCLUDES } from "./relevance.ts";
 import { houthiAfterAll } from "./editor.ts";
 import { namedSpots, sameTarget, speechOwner } from "./copies.ts";
 import { toWritten } from "./combine.ts";
-import { fixHeadline } from "./reader.ts";
+import { fixHeadline, diplomatPost } from "./reader.ts";
 import type { LiveReport } from "./types.ts";
 
 test("7 Oct 06:33, 08:19, 09:01 — Iran's channels relaying the Houthi spokesman, or summing up, stay out, and the radar does not bring them back", () => {
@@ -206,4 +206,66 @@ test("5a — Clash Report is never the primary source: its card gives way to the
   assert.equal(reports.length, 0);
   assert.equal((stored[0] as { source: string }).source, "Al Arabiya");
   assert.deepEqual(((stored[0] as { alsoReportedBy?: { source: string }[] }).alsoReportedBy ?? []).map((a) => a.source), ["Clash Report"]);
+});
+
+test("7 Oct 10:20 — the US chargé d'affaires is named once, and posted to Yemen", () => {
+  const src = "القائم بأعمال السفارة الأمريكية لدى اليمن نيل هوب يدين تجنيد الحوثيين للأطفال خلال لقائه وزير الشؤون الاجتماعية والعمل";
+  const h = diplomatPost(fixHeadline("US Embassy charge d'affaires Neal Hopp: US Embassy charge d'affaires condemns Houthi child recruitment"), src);
+  assert.equal(h, "US chargé d'affaires to Yemen condemns Houthi child recruitment");
+  // Another posting stays as written.
+  assert.equal(diplomatPost("Saudi ambassador condemns Houthi attack", "السفير السعودي لدى واشنطن يدين هجوم الحوثيين على اليمن"), "Saudi ambassador condemns Houthi attack");
+});
+
+/* ---- 7 Oct, the morning's cards ---- */
+
+test("7 Oct — Saree's own post takes over a card quoting him, and a summing-up hours later is no card (user, 7 Oct 10:49)", async () => {
+  const { foldIntoPublished } = await import("../yemen-scan.server.ts");
+  const base = { live: true, score: 1, tags: [], tier: "claim" } as const;
+  const araby = { ...base, fp: "ar", type: "missile_launch", url: "https://t.me/alarabytvbrk/66375", source: "Al-Araby TV", at: "2026-10-07T06:01:00+03:00", summary: "Houthis said they targeted Abha International Airport, Khamis Mushait air base, and Riyadh's King Khalid International Airport", text: "الحوثيون: استهدفنا مطار أبها الدولي وقاعدة خميس مشيط ومطار الملك خالد", alsoReportedBy: [{ source: "Shajab News", url: "https://t.me/shajab_news/1", summary: "Houthi Armed Forces spokesperson: we targeted Abha airport" }] };
+  const saree = { ...base, fp: "sa", type: "statement", url: "https://t.me/army21ye/3837", source: "Yahya Saree", at: "2026-10-07T06:05:00+03:00", summary: "Houthi Armed Forces spokesperson: we carried out two operations targeting Abha International Airport and Khamis Mushait air base", text: "نفذت قواتنا المسلحة بفضل الله عمليتين عسكريتين استهدفتا مطار أبها الدولي وقاعدة خميس مشيط الجوية" };
+  const stored = [araby] as never[];
+  const fresh = [saree] as never[];
+  foldIntoPublished(fresh, new Set(), stored);
+  assert.equal(fresh.length, 0);
+  assert.equal((stored[0] as { source: string }).source, "Yahya Saree");
+  assert.deepEqual((stored[0] as { alsoReportedBy: unknown[] }).alsoReportedBy, []);
+  // Bin Saeed at 10:49, summing up what Saree said from 05:47.
+  const bin = { ...base, fp: "bs", type: "missile_launch", url: "https://t.me/bin_1saeed/74502", source: "Bin Saeed", at: "2026-10-07T10:49:00+03:00", summary: "Houthi forces launch missiles and drones at King Khalid airport in Riyadh, Abha airport, Khamis Mushait base, and Al-Daghareer, Akafah and Al-Mawsim camps", text: "العميد يحيى سريع: نفذت القوات المسلحة اليمنية عدة عمليات عسكرية استهدفت مطار الملك خالد في الرياض، ومطار أبها الدولي، وقاعدة خميس مشيط" };
+  const later = [bin] as never[];
+  foldIntoPublished(later, new Set(), stored);
+  assert.equal(later.length, 0);
+});
+
+test("7 Oct 10:49 — a post already in a card's Also is never a card of its own", async () => {
+  const { foldIntoPublished } = await import("../yemen-scan.server.ts");
+  const base = { live: true, score: 1, tags: [], tier: "claim", type: "combat", text: "" } as const;
+  const home = { ...base, fp: "ag", url: "https://www.adngad.net/news/886861", source: "Aden al-Ghad", at: "2026-10-07T09:59:00+03:00", summary: "Coalition intercepts Houthi ballistic missile north of Riyadh", alsoReportedBy: [{ source: "Bin Saeed", url: "https://t.me/bin_1saeed/74502" }] };
+  const again = { ...base, fp: "bs", url: "https://t.me/bin_1saeed/74502", source: "Bin Saeed", at: "2026-10-07T10:49:00+03:00", summary: "Houthi forces fire at Abha airport" };
+  const fresh = [again] as never[];
+  foldIntoPublished(fresh, new Set(), [home] as never[]);
+  assert.equal(fresh.length, 0);
+});
+
+test("7 Oct 10:37 — Saudi rockets on al-Dhahir from Al-Masirah, then Saba's line on Al Mayadeen: one card", async () => {
+  const { foldIntoPublished, sameDistrictAttack } = await import("../yemen-scan.server.ts");
+  assert.equal(sameDistrictAttack("Saudi shelling hits Al-Dhahir district in Saada", "Saudi rocket fire hits Al-Dhahir district in Saada governorate"), true);
+  assert.equal(sameDistrictAttack("Saudi shelling hits Al-Dhahir district in Saada", "Houthi shelling hits Al-Dhahir district"), false);
+  assert.equal(sameDistrictAttack("Saudi shelling hits Shada district", "Saudi shelling hits Al-Dhahir district"), false);
+  const base = { live: true, score: 1, tags: [], tier: "claim", type: "combat", text: "", place: "Saada", lat: 16.94, lng: 43.76 } as const;
+  const masirah = { ...base, fp: "m", url: "https://t.me/almasirah2/301841", source: "Al-Masirah", at: "2026-10-07T10:11:30+03:00", summary: "Saudi shelling hits Al-Dhahir district in Saada" };
+  const mayadeen = { ...base, fp: "y", url: "https://t.me/almayadeen/400192", source: "Al Mayadeen", at: "2026-10-07T10:37:12+03:00", summary: "Saudi rocket fire hits Al-Dhahir district in Saada governorate" };
+  const fresh = [mayadeen] as never[];
+  foldIntoPublished(fresh, new Set(), [masirah] as never[]);
+  assert.equal(fresh.length, 0);
+});
+
+test("7 Oct 10:30 — \"exclusive footage\" from a channel is a clip, not an exclusive report", async () => {
+  const { isExclusive } = await import("./exclusive.ts");
+  assert.equal(isExclusive("مشاهد حصرية للفقار ترصد ألسنة اللهب وهي تلتهم منشآت خريص النفطية التابعة لأرامكو", "Alfaqaar"), false);
+  assert.equal(isExclusive("خاص | مصادر لـ«الأخبار»: وفد سعودي في مسقط", "Al-Akhbar"), true);
+});
+
+test("7 Oct 09:29 — Reuters' market wrap stays out", () => {
+  const g = gate({ source: "Reuters", url: "https://www.reuters.com/fr/affaires/point-marchs-leurope-vue-en-baisse-regain-de-tension-entre-larabie-saoudite-et-2026-10-07/", agency: true, text: "POINT MARCHÉS-L'Europe vue en baisse, regain de tension entre l'Arabie saoudite et les Houthis" } as never);
+  assert.equal(g.reason, "markets");
 });

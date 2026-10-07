@@ -880,7 +880,7 @@ const SOURCE_LEAN = {
   Alfaqaar: 'houthi', 'Taiz military axis': 'gov', 'Yemen Coast Guard': 'gov',
   "Yemen's human rights minister": 'gov', 'Clash Report': 'intl', OSINTdefender: 'intl',
   Bloomberg: 'intl', 'Financial Times': 'intl', 'Intelligence Online': 'intl', 'NBC News': 'intl',
-  'The Telegraph': 'intl', 'Barak Ravid': 'intl', 'Natasha Bertrand': 'intl', 'Trey Yingst': 'intl',
+  'The Telegraph': 'intl', 'Barak Ravid': 'intl', 'Natasha Bertrand': 'intl', 'Trey Yingst': 'intl', 'Jennifer Griffin': 'intl',
 };
 
 const LEAN_LABEL = {

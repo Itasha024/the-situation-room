@@ -696,3 +696,34 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 .sr-dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(90deg,var(--t-strong,#fff) var(--f),var(--t-line-strong,#4a433d) var(--f))}
 .sr-empty{color:var(--t-muted)}
 @media (max-width:720px){.doc{font-size:.97rem}.sr-table th:last-child,.sr-table td.sr-rate{width:7.8rem}.sr-dot{width:8px;height:8px}}
+
+/* Round 30: the desks. The desk's name opens a list of the desks, each a small flag then its name;
+   in the side menu each desk's line is its flag's stripes (user, 8 Oct). */
+.site-menu li a.sm-desk{position:relative;border-left-color:transparent!important}
+.site-menu li a.sm-desk::before{content:"";position:absolute;left:-3px;top:0;bottom:0;width:3px;background:var(--flag);box-shadow:0 0 0 .5px var(--t-line-strong,#555);opacity:0;transition:opacity .15s}
+.site-menu li a.sm-desk:hover::before,.site-menu li a.sm-desk:focus-visible::before,.site-menu li a.sm-desk[aria-current="page"]::before{opacity:1}
+[data-desk="iran"] .top h1.desk-label::before{background:linear-gradient(#239f40 0 33.34%,#fff 0 66.67%,#da0000 0)}
+.top .brand{position:relative}
+.desk-pick{all:unset;display:inline-flex;align-items:center;gap:.45em;cursor:pointer}
+.desk-pick:focus-visible{outline:1px solid var(--accent-ui,#7eb6ff);outline-offset:3px}
+.desk-pick .dp-car{width:.72em;height:.72em;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.desk-pick[aria-expanded="true"] .dp-car{transform:rotate(180deg)}
+.desk-list{position:absolute;top:calc(100% + .45rem);left:0;z-index:1500;min-width:250px;margin:0;padding:.25rem 0;list-style:none;background:var(--t-bg,#1b1918);border:1px solid var(--t-line-strong,#334155);box-shadow:var(--shadow-pop,0 8px 30px #0008)}
+.desk-list a{display:flex;align-items:center;gap:.65rem;padding:.6rem .85rem;color:var(--t-text,#e2e8f0);text-decoration:none;font:600 .8rem/1.2 var(--f-body,inherit);letter-spacing:.07em;text-transform:uppercase}
+.desk-list a:hover,.desk-list a:focus-visible{background:var(--t-surface-2,#222);color:var(--t-strong,#fff);outline:none}
+.desk-list a[aria-current="page"]{color:var(--t-strong,#fff)}
+.desk-list a[aria-current="page"]::after{content:"";margin-inline-start:auto;width:6px;height:6px;border-radius:50%;background:var(--accent-ui,#7eb6ff)}
+.desk-list .flag{flex:none;width:21px;height:14px;color:var(--t-text,#e2e8f0)}
+html.desk-leaving body{opacity:0;transition:opacity .18s ease-out}
+@media (prefers-reduced-motion:reduce){html.desk-leaving body{transition:none}}
+/* A desk's parts still being built */
+.soon{margin:.15rem 0 .55rem;font-size:.84rem;font-style:italic;color:var(--t-muted,#8fa0b4)}
+dl.soon-list{display:grid;grid-template-columns:max-content 1fr;gap:.4rem 1.1rem;margin:.3rem 0 0;font-size:.84rem;line-height:1.4}
+dl.soon-list dt{font-weight:600;color:var(--t-strong,#fff)}
+dl.soon-list dd{margin:0;color:var(--t-text-2,var(--t-text,#cbd5e1))}
+ul.soon-list{columns:2 240px;margin:.3rem 0 0;padding-inline-start:1.1rem;font-size:.84rem;line-height:1.6;color:var(--t-text,#d7e2ef)}
+@media (max-width:720px){dl.soon-list{grid-template-columns:1fr;gap:.1rem}dl.soon-list dd{margin-bottom:.45rem}}
+.trump-pin{margin:.6rem 0 .5rem;padding:.55rem .7rem;border:1px solid var(--t-line-strong,#334155);border-inline-start:3px solid #b91c1c;background:var(--t-surface-2,transparent)}
+.trump-pin>b{display:block;font:700 .66rem/1.2 var(--f-body,inherit);letter-spacing:.12em;text-transform:uppercase;color:var(--t-strong,#fff)}
+.trump-pin .soon{margin:.25rem 0 0}
+.lean-f[disabled]{cursor:default}

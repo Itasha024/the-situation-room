@@ -355,12 +355,12 @@ function fmtClock(ts) {
   });
 }
 
-/** The clock in the top line: Yemen's time, to the second. */
+/** The clock in the top line: the desk's country's time, to the second. */
 function startYemenClock() {
   const el = document.getElementById('ye-clock');
   if (!el || el.dataset.on) return;
   el.dataset.on = '1';
-  const fmt = new Intl.DateTimeFormat(LOC, { timeZone: 'Asia/Aden', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const fmt = new Intl.DateTimeFormat(LOC, { timeZone: deskOf().tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   // Each digit sits in a cell as wide as the font's widest digit (what tabular figures do;
   // this font has none), so on PC the ticking seconds never move "Yemen" before the clock.
   const tick = () => { el.innerHTML = fmt.format(new Date()).replace(/[0-9]/g, (d) => `<span class="dg">${d}</span>`); };
@@ -6496,9 +6496,67 @@ try { setFavicon(THEME); } catch (e) {}
  * The masthead's left: a menu button (three lines) opening a side panel with
  * the site's desks.
  */
-const SITE_PAGES = [
-  ['/yemen-conflict-desk', 'Yemen Conflict Desk', 'Live', [['/yemen-conflict-desk/methodology', 'Methodology']]],
+/*
+ * The site's desks (Round 30; src/lib/desks.ts keeps the same list). A desk
+ * still being built is in the menus only for a reader on it, or who opened a
+ * page once with ?desks=1.
+ */
+const DESKS = [
+  { id: 'yemen', name: 'Yemen Conflict Desk', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden', kids: [['/yemen-conflict-desk/methodology', 'Methodology']] },
+  { id: 'iran', name: 'Iran Conflict Desk', href: '/iran-conflict-desk', sub: 'Being built', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran', soon: true, kids: [] },
 ];
+function deskOf() {
+  const el = document.querySelector('[data-desk]');
+  const id = (el && el.dataset.desk) || 'yemen';
+  return DESKS.find((d) => d.id === id) || DESKS[0];
+}
+function desksShown() {
+  let all = !!deskOf().soon;
+  try {
+    if (/[?&]desks=1\b/.test(location.search)) localStorage.setItem('desk-desks', '1');
+    all = all || localStorage.getItem('desk-desks') === '1';
+  } catch (e) {}
+  return DESKS.filter((d) => all || !d.soon);
+}
+/** A small flag: its stripes, top to bottom, with a hairline so the white shows on either theme. */
+const flagSvg = (d) => `<svg class="flag" viewBox="0 0 18 12" aria-hidden="true">${d.flag.map((c, i) => `<rect y="${i * 4}" width="18" height="4" fill="${c}"/>`).join('')}<rect x=".25" y=".25" width="17.5" height="11.5" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width=".5"/></svg>`;
+/** The same stripes as a strip, for the side menu's line by each desk. */
+const flagStrip = (d) => `linear-gradient(${d.flag.map((c, i) => `${c} ${(i * 100 / d.flag.length).toFixed(2)}% ${((i + 1) * 100 / d.flag.length).toFixed(2)}%`).join(',')})`;
+const SITE_PAGES = () => desksShown().map((d) => [d.href, d.name, d.sub, d.kids, d]);
+
+/*
+ * The desk's name in the header opens a list of the desks (user, 8 Oct): a
+ * small flag, then the name; picking one fades this page out and opens that
+ * desk. Only once there is more than one desk to show.
+ */
+function installDeskPicker() {
+  const h = document.querySelector('.top h1.desk-label');
+  const desks = desksShown();
+  if (!h || h.querySelector('.desk-pick') || desks.length < 2) return;
+  const here = deskOf();
+  h.innerHTML = `<button type="button" class="desk-pick" aria-haspopup="true" aria-expanded="false" aria-controls="desk-list">${escapeHtml(h.textContent.trim())}<svg class="dp-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>`;
+  const list = document.createElement('ul');
+  list.id = 'desk-list';
+  list.className = 'desk-list';
+  list.hidden = true;
+  list.innerHTML = desks.map((d) => `<li><a href="${d.href}"${d.id === here.id ? ' aria-current="page"' : ''}>${flagSvg(d)}<span>${escapeHtml(d.name)}</span></a></li>`).join('');
+  h.parentElement.appendChild(list);
+  const btn = h.querySelector('.desk-pick');
+  const open = (on) => { list.hidden = !on; btn.setAttribute('aria-expanded', String(on)); };
+  btn.addEventListener('click', (e) => { e.stopPropagation(); open(list.hidden); });
+  document.addEventListener('click', (e) => { if (!list.contains(e.target)) open(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !list.hidden) { open(false); btn.focus(); } });
+  list.addEventListener('click', (e) => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    e.preventDefault();
+    if (a.getAttribute('aria-current')) { open(false); return; }
+    document.documentElement.classList.add('desk-leaving');
+    setTimeout(() => { location.href = a.href; }, 180);
+  });
+  // Back from the other desk, this page shows again as it was left.
+  window.addEventListener('pageshow', () => { document.documentElement.classList.remove('desk-leaving'); open(false); });
+}
 function installMast() {
   const el = document.querySelector('.mast-date');
   if (!el || el.querySelector('.mast-menu')) return;
@@ -6512,7 +6570,7 @@ function installMast() {
     <nav class="sm-panel" aria-label="Site">
       <div class="sm-head"><span class="sm-name">The Situation Room</span><button type="button" class="sm-x" data-close aria-label="Close menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <p class="sm-date">${escapeHtml(new Date().toLocaleDateString(LOC, { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p>
-      <ul>${SITE_PAGES.map(([href, name, sub, kids]) => `<li><a href="${href}"${href === here ? ' aria-current="page"' : ''}><b>${name}</b><small>${sub}</small></a>${(kids || []).length ? `<ul class="sm-sub">${kids.map(([h, n]) => `<li><a href="${h}"${h === here ? ' aria-current="page"' : ''}>${n}</a></li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>
+      <ul>${SITE_PAGES().map(([href, name, sub, kids, d]) => `<li><a class="sm-desk" style="--flag:${flagStrip(d)}" href="${href}"${href === here ? ' aria-current="page"' : ''}><b>${name}</b><small>${sub}</small></a>${(kids || []).length ? `<ul class="sm-sub">${kids.map(([h, n]) => `<li><a href="${h}"${h === here ? ' aria-current="page"' : ''}>${n}</a></li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>
       <div class="sm-theme" role="group" aria-label="Theme">${[['broadsheet-night', 'Dark'], ['broadsheet-day', 'Light']].map(([t, n]) => `<button type="button" data-theme="${t}" aria-pressed="${t === THEME}">${THEME_ICONS[t][1]}<span>${n}</span></button>`).join('')}</div>
     </nav>`;
   panel.querySelectorAll('.sm-theme button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));
@@ -6614,7 +6672,9 @@ const sectionBox = (id) => {
 };
 function installSectionNav() {
   if (document.getElementById('sec-nav')) return;
-  const items = SECTIONS.filter(([id]) => document.getElementById(id));
+  // The Iran desk calls its Fronts "Arenas" (user, 8 Oct).
+  const items = SECTIONS.filter(([id]) => document.getElementById(id))
+    .map(([id, name]) => [id, id === 'fronts-wrap' && deskOf().id === 'iran' ? 'Arenas' : name]);
   if (!items.length) return;
   const nav = document.createElement('nav');
   nav.id = 'sec-nav';
@@ -6850,6 +6910,8 @@ function startYemenDesk() {
 async function bootYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
+  if (deskOf().id !== 'yemen') return bootOtherDesk(el);
+  try { installDeskPicker(); } catch (e) { console.error(e); }
   try { installMast(); } catch (e) { console.error(e); }
   try { installLangSwitch(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
@@ -6929,6 +6991,35 @@ async function bootYemenDesk() {
       stamp.textContent = T('Failed to load');
     }
   }
+}
+
+/*
+ * A desk still being built (Round 30): the masthead, the menus, the clock and
+ * a plain map of its region. Its parts arrive stage by stage.
+ */
+function bootOtherDesk(el) {
+  try { installDeskPicker(); } catch (e) { console.error(e); }
+  try { installMast(); } catch (e) { console.error(e); }
+  try { installLangSwitch(); } catch (e) { console.error(e); }
+  try { installSectionNav(); } catch (e) { console.error(e); }
+  try { startYemenClock(); } catch (e) { console.error(e); }
+  try { wireRailResize(); } catch (e) { console.error(e); }
+  if (map && map.getContainer && map.getContainer() === el && el.isConnected) return;
+  if (map) { try { map.remove(); } catch (e) {} map = null; }
+  if (!window.L) return;
+  map = L.map('map', { zoomControl: true, attributionControl: true, zoomSnap: 0.25 });
+  // Iran, the Gulf, Iraq, Syria, Lebanon, Israel and Jordan, and the seas around them.
+  const START = [[12.0, 31.5], [40.5, 63.5]];
+  const FIT = { padding: [6, 6], animate: false };
+  map.fitBounds(START, FIT);
+  oneEarth(map);
+  baseAttr = '© OpenStreetMap';
+  baseTiles = L.tileLayer(TILE_URL, { maxZoom: 18, noWrap: true, attribution: TILE_ATTR || baseAttr }).addTo(map);
+  let touched = false;
+  map.getContainer().addEventListener('pointerdown', () => { touched = true; }, { once: true });
+  const again = () => { if (map && !touched) { map.invalidateSize(); map.fitBounds(START, FIT); } };
+  if (document.readyState === 'complete') setTimeout(again, 400);
+  else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
 }
 
 window.startYemenDesk = startYemenDesk;

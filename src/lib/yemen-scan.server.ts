@@ -43,6 +43,7 @@ import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
 import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranWar } from "./desk/iran-reader.ts";
+import { colonSpeaker } from "./desk/reader.ts";
 
 export { checkLinks, namedSpeaker, speakerKey };
 
@@ -1692,7 +1693,7 @@ export function foldIntoPublished(
     }
     if (!home && talk(r)) {
       home = homes.find(
-        (o) => open(o) && o.source !== r.source && talk(o) && before(o, STORY_WINDOW_MS) && sameStory(o, r),
+        (o) => open(o) && o.source !== r.source && talk(o) && before(o, STORY_WINDOW_MS) && (sameStory(o, r) || retoldInAlso(o, r)),
       );
     }
     // One decision told by many outlets, each reader typing it as it saw fit:
@@ -2790,7 +2791,9 @@ export async function shapeCards(
   pipe.hint?.(hits);
   // An outlet does not open a headline, nor close it ("…, WSJ says"): the
   // source line says who reported it. Only after tracing, which reads the name.
-  for (const r of reports) r.summary = stripAttribution(r.summary, [r.source, r.citing]);
+  // Anyone who speaks gets the colon, after every rewrite too (8 Oct: a traced
+  // card went out "Trump says …").
+  for (const r of reports) r.summary = colonSpeaker(stripAttribution(r.summary, [r.source, r.citing]));
   // A card written from its original replaces the relay's version of it.
   const fromOriginal = new Set(reports.filter((r) => r.tags?.includes("original")).map((r) => r.fp));
   for (let i = reports.length - 1; i >= 0; i -= 1) {
@@ -3293,7 +3296,6 @@ export function sourceLean(name: string): string {
   return TG.find((c) => c.name === name)?.lean ?? "";
 }
 
-/** A card the reader marked as its outlet's own exclusive. */
 /** Headlines whose speakers are two different known figures. */
 function otherFigure(a: string, b: string): boolean {
   const x = leadSpeaker(a);
@@ -3301,6 +3303,16 @@ function otherFigure(a: string, b: string): boolean {
   return !!x && !!y && x.name !== y.name;
 }
 
+/**
+ * A report told again in the words of one of the card's "Also" lines: Khabari
+ * Plus's "US Army lost 81 aircraft…" at 23:15 matched Al Jazeera's line on the
+ * 13:34 card, not the card's own headline (8 Oct).
+ */
+function retoldInAlso(home: LiveReport, r: LiveReport): boolean {
+  return (home.alsoReportedBy ?? []).some((a) => !!a.summary && sameStory({ summary: a.summary }, { summary: r.summary }));
+}
+
+/** A card the reader marked as its outlet's own exclusive. */
 export function isExclusiveCard(r: LiveReport): boolean {
   return !!r.flags?.includes("exclusive") || !!r.tags?.includes("exclusive");
 }

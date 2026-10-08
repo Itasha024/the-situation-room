@@ -77,7 +77,46 @@ type FxStatus = { url?: string; id?: string; text?: string; raw_text?: { text?: 
 
 /** The speaker's own post on X that carries the words, through FxTwitter. */
 async function ownPost(sp: Speaker, keys: string[], reportAt: number): Promise<Hit | null> {
+  // Trump speaks on Truth Social, not X (8 Oct: his gasoline post went out
+  // from Vahid Online and Clash Report, "citing Donald Trump").
+  if (sp.name === "Donald Trump") {
+    const t = await truthPost(keys, reportAt);
+    if (t) return t;
+  }
   return sp.x ? accountPost(sp.x, sp.name, keys, reportAt) : null;
+}
+
+type Truth = { url: string; at: number; text: string };
+let truthFeed: { at: number; posts: Truth[] } | null = null;
+
+/** Trump's Truth Social posts, from trumpstruth.org's feed (read once a few minutes). */
+export function parseTruthFeed(xml: string): Truth[] {
+  const dec = (s: string) => s.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/\s+/g, " ").trim();
+  return xml.split("<item>").slice(1).map((it) => ({
+    url: dec(/<link>([\s\S]*?)<\/link>/.exec(it)?.[1] ?? ""),
+    at: Date.parse(dec(/<pubDate>([\s\S]*?)<\/pubDate>/.exec(it)?.[1] ?? "")),
+    text: dec(/<description>([\s\S]*?)<\/description>/.exec(it)?.[1] ?? /<title>([\s\S]*?)<\/title>/.exec(it)?.[1] ?? ""),
+  })).filter((p) => p.url && Number.isFinite(p.at) && p.text);
+}
+
+/** The post of his, from the two days before the relay, that carries the story's words. */
+export function truthMatch(posts: Truth[], keys: string[], reportAt: number): Hit | null {
+  const best = posts
+    .filter((p) => p.at >= reportAt - 48 * 3600_000 && p.at <= reportAt + 3600_000 && shared(p.text, keys) >= (keys.length >= 5 ? 3 : 2))
+    .sort((a, b) => shared(b.text, keys) - shared(a.text, keys) || b.at - a.at)[0];
+  return best ? { url: best.url, source: "Truth Social (Trump)", title: best.text.slice(0, 140) } : null;
+}
+
+async function truthPost(keys: string[], reportAt: number): Promise<Hit | null> {
+  if (!truthFeed || Date.now() - truthFeed.at > 3 * 60_000) {
+    try {
+      const res = await fetch("https://www.trumpstruth.org/feed", { signal: AbortSignal.timeout(8000), headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)" } });
+      truthFeed = { at: Date.now(), posts: res.ok ? parseTruthFeed(await res.text()) : [] };
+    } catch {
+      truthFeed = { at: Date.now(), posts: [] };
+    }
+  }
+  return truthMatch(truthFeed.posts, keys, reportAt);
 }
 
 /**

@@ -59,6 +59,7 @@ const OFFICIAL: [Nation, RegExp][] = [
   ["saudi", /^(?:Saudi Ministry|Saudi Defense Ministry|Turki al-Maliki)/i],
   ["yemen", /^(?:Yahya Saree|Mohammed Abdulsalam)$/i],
   ["uk", /^(?:UKMTO|UK Ministry of Defence|UK MOD)$/i],
+  ["lebanon", /^(?:Lebanese Army|Lebanese presidency|Lebanon's prime minister's office|Lebanon Foreign Ministry|Youssef Raggi)/i],
 ];
 /** A country's state news agencies and broadcasters. */
 const AGENCY: [Nation, RegExp][] = [
@@ -79,7 +80,7 @@ const OUTLET_NATION: [Nation, RegExp][] = [
   ["saudi", /^(?:Al Arabiya|Al Hadath|Asharq Al-Awsat|Asharq News|Arab News|Okaz|Saudi Gazette)$/i],
   ["uae", /^(?:Sky News Arabia|The National|Erem News)$/i],
   ["qatar", /^(?:Al Jazeera|Al Jazeera Mubasher|Al-Araby TV|Al-Araby Al-Jadeed|The New Arab)$/i],
-  ["lebanon", /^(?:Al Mayadeen|Al-Akhbar|Al-Manar|L'Orient)/i],
+  ["lebanon", /^(?:Al Mayadeen|Al-Akhbar|Al-Manar|L'Orient|Unews|NNA|National News Agency|LBCI|MTV Lebanon|Lebanon 24)/i],
   ["uk", /^(?:BBC|The Telegraph|The Guardian|Financial Times|Sky News)$/i],
 ];
 /** Wires every desk trusts for any country's story. */
@@ -155,4 +156,26 @@ export function rivalRelay(headline: string, source: string, lean = "", own = fa
   if (axis && (who === "israel" || who === "us")) return `relay: ${who === "us" ? "the US" : "Israel"} is told from its own sources, not ${s}'s relay`;
   if (israeli && (who === "iran" || who === "us")) return `relay: ${who === "us" ? "the US" : "Iran"} is told from its own sources, not ${s}'s relay`;
   return null;
+}
+
+/** A government's own voice, by the account's name: Truth Social, the IDF, Iran's foreign ministry. */
+export function officialVoice(source: string): Nation | null {
+  return find(OFFICIAL, String(source || "").trim());
+}
+
+/** Where in Lebanon a strike lands. */
+const LEBANON_PLACE = /\b(?:Lebanon|Lebanese|Beirut|Dahiyeh|Dahieh|Bint Jbeil|Tyre|Sidon|Nabatieh|Nabatiyeh|Marjayoun|Bekaa|Baalbek|Hermel|Khiam|Naqoura|Litani)\b/i;
+
+/**
+ * Israel's attacks in Lebanon are told by Lebanon's own sources (user, 8 Oct:
+ * "Israeli shelling targets Baraashit" went out from Al-Alam, Iran's channel).
+ * The IDF's own word on its own strike stays: that is Israel's side, told by
+ * Israel. Any other country's outlet only relays what Lebanon reports.
+ */
+export function attackTeller(headline: string, source: string, actor: string, combat: boolean): string | null {
+  if (!combat || actor !== "israel" || !LEBANON_PLACE.test(String(headline || ""))) return null;
+  const s = String(source || "").trim();
+  const n = find(OFFICIAL, s) ?? find(AGENCY, s) ?? find(OUTLET_NATION, s);
+  if (n === "lebanon" || find(OFFICIAL, s) === "israel") return null;
+  return `relay: Israel's attacks in Lebanon are told by Lebanon's own sources, not ${s}`;
 }

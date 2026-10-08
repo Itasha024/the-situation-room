@@ -290,6 +290,8 @@ const SAUDI_INTERCEPT = /\b(?:Saudi|Riyadh|Jeddah)\b.{0,60}\bintercept\w*|\binte
 const YEMEN_THEATRE = { test: (s: string) => YEMEN_THEATRE_WORDS.test(s) || SAUDI_INTERCEPT.test(s) };
 /** Syria's theatre: Israel in southern Syria, Syria's own affairs (user, 8 Oct). */
 const SYRIA_THEATRE = /\b(?:Syria|Syrian|Quneitra|Daraa|Deraa|Suwayda|Sweida|Suweida|Suweiseh|Golan|Damascus countryside|Rif Dimashq|Beit Jinn|Jaba|Umm Batna)\b/i;
+/** Another war: Russia's in Ukraine is not this desk's unless Iran is in the story (8 Oct, Peskov on the "deadlock"). */
+const OTHER_WAR = /\b(?:Ukrain\w*|Kyiv|Kiev|Zelensky\w*|Donbass?|Crimea\w*|Kursk)\b/i;
 const IRAN_PARTY = /\b(?:Iran\w*|IRGC|Quds Force|Hezbollah|Revolutionary Guards?)\b/i;
 /** Iran itself in a story: Hezbollah's name alone does not make the Houthis' fire on Saudi Arabia Iran's. */
 const IRAN_ACTOR = /\b(?:Iran\w*|IRGC|Revolutionary Guards?|Quds Force)\b/i;
@@ -318,6 +320,7 @@ export function iranCopyProblem(r: { headline: string; body?: string; speaker_le
   if (OUTLET_OPENS.test(h)) return "leads with outlet: an outlet is never the teller; lead with the fact, or with the official or source who said it";
   if (YEMEN_THEATRE.test(copy) && !IRAN_ACTOR.test(copy) && !IRAN_IN_YEMEN_STORY.test(copy)) return "yemen desk: the Houthis' war with Saudi Arabia is the Yemen desk's";
   if (SYRIA_THEATRE.test(copy) && !IRAN_PARTY.test(copy)) return "not iran: Syria is not this desk's";
+  if (OTHER_WAR.test(h) && !IRAN_PARTY.test(copy) && !/\b(?:Hormuz|Shahed)\b/i.test(copy)) return "not iran: the Ukraine war is not this desk's";
   const src = String(sourceText || "");
   if (MULTIPLIER.test(h) && !MULTIPLIER_SRC.test(src)) return "figure not in source: the text gives no million or billion";
   if (r.event_type === "statement" && !r.speaker_lead && !SAY_VERB.test(h)) {

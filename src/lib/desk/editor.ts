@@ -56,9 +56,9 @@ import {
 import { type DeskStore, migrateBlob } from "./store.ts";
 import type { DeskId } from "../desks.ts";
 import { deskKey } from "./desk-route.ts";
-import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash, iranCopyProblem, iranReword } from "./iran-reader.ts";
+import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash, iranCopyProblem, iranReword, isIranWar } from "./iran-reader.ts";
 import { isExclusive } from "./exclusive.ts";
-import { rivalRelay } from "./speaker-press.ts";
+import { attackTeller, officialVoice, rivalRelay } from "./speaker-press.ts";
 import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
@@ -1057,6 +1057,13 @@ const IRAN_ALIGNMENT: Record<string, string> = {
  * Yemen's side rules. Every report is said as its teller's; no "claim" is added.
  */
 function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
+  // A government's own post on the war is its words, never commentary: Trump's
+  // Truth Social post on gasoline and Iran's bomb was turned away as
+  // commentary (8 Oct) and the desk carried it only from relays. It is sent
+  // back once to be written as his words.
+  if (!raw.publish && /commentary|recap|rhetoric/i.test(String(raw.reject_reason || "")) && officialVoice(c.source) && isIranWar(c.text)) {
+    return { kind: "reject", reason: "reader-check", note: "Own words: a government's own post on the war is never commentary; write it as their words." };
+  }
   // The site's general copy rules, as on the Yemen desk (user, 8 Oct): Iran's
   // calendar out, one spelling per name, the outlet off its own copy, no
   // role the text did not give.
@@ -1095,6 +1102,9 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);
+  // Israel's attacks in Lebanon from Lebanon's own sources only (user, 8 Oct).
+  const teller = attackTeller(report.summary, c.source, String(r.actor_side ?? ""), report.type === "combat");
+  if (teller) return { kind: "reject", reason: "reader", note: sentence(teller) };
   // The arenas and who acted travel as the card's labels (the store keeps them).
   const arenas = (r.arenas ?? []).filter((a) => a in IRAN_ARENAS).slice(0, 2);
   report.flags = [...(report.flags ?? []), ...arenas.map((a) => `arena:${a}`), ...(r.actor_side ? [`actor:${r.actor_side}`] : [])];

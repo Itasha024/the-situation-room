@@ -7125,6 +7125,8 @@ function renderIranScan() {
   const s = iranDesk.scan;
   const title = document.querySelector('#live-scan-box .ls-title');
   if (title) title.textContent = s && s.scannedAt ? 'Live scan · last scan ' + fmtClock(s.scannedAt) : 'Live scan';
+  const up = document.getElementById('updated');
+  if (up && s && s.scannedAt) up.textContent = 'UPDATED ' + fmtClock(s.scannedAt);
   const details = document.getElementById('live-scan-details');
   const list = document.getElementById('live-scan-list');
   if (!s || !list || !details || !details.open) return;

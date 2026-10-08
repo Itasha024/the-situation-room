@@ -1,11 +1,13 @@
 /**
  * The Iran desk's scan (Round 30 stage 3b). Server-only.
  *
- * One scanner reads each source once. The Yemen scan reads the sources both
- * desks share and hands this one their items about Iran's war (its inbox,
- * IRAN_INBOX). This scan reads the Iran desk's own sources (iran-sources.ts),
- * adds the inbox, and sends the lot through the Iran reader (iran-reader.ts),
- * whose cards are the Iran desk's alone ("ir-…", desks ["iran"]).
+ * One scanner reads each source once (site-scan.server.ts). The site scan
+ * reads the Iran desk's own sources (iran-sources.ts) and leaves what passes
+ * this desk's gate in its inbox (IRAN_INBOX); the items about Iran's war from
+ * the sources both desks share follow once the Yemen reader has read them.
+ * This cycle reads the inbox and sends it through the Iran reader
+ * (iran-reader.ts), whose cards are the Iran desk's alone ("ir-…", desks
+ * ["iran"]). With the site scan off, it reads its own sources itself.
  *
  * It runs on its own clock and its own lock, beside the Yemen tick, so the
  * Yemen desk's cycle is no longer than before. Its reader takes the other free
@@ -41,6 +43,12 @@ import {
 } from "./yemen-scan.server.ts";
 
 const STATE_KEY = "iran:scan-state";
+/**
+ * Where the site scan keeps how far it has read each Iran source. Apart from
+ * the reader's state (what it has read), since the two run on their own clocks
+ * and would otherwise write over each other.
+ */
+const FETCH_STATE_KEY = "iran:fetch-state";
 export const IRAN_TICK_USAGE_KEY = "iran:tick-usage";
 
 type IranState = {
@@ -54,6 +62,16 @@ type IranState = {
 };
 
 type Feed = { id: string; url: string; name: string; lean: IranLean; every: number };
+
+type FetchState = Pick<IranState, "lastScanAt" | "lastTgPost" | "lastXPost">;
+
+/**
+ * A row of the Iran inbox: items for this desk's reader. `own` rows come from
+ * the Iran desk's own sources, read by the site scan, with their status; the
+ * rest are the shared sources' items, handed on after the Yemen reader read
+ * them. (Before 8 Oct a row was the bare list of items.)
+ */
+export type IranInboxRow = { hits: RawHit[]; status?: SourceStatus[]; own?: boolean };
 
 /**
  * The safety net: Google News searched each hour for the war's words, in
@@ -154,22 +172,18 @@ export const IRAN_PIPE: DeskPipe = {
   traceShare: 0.4,
 };
 
-export type IranTickResult = { ok: boolean; scannedAt: string; sourcesTried: number; sourcesOk: number; fromInbox: number; candidates: number; reportsAdded: number; note: string; tookMs: number; error?: string };
-
-export async function runIranCycle(): Promise<IranTickResult> {
-  const started = Date.now();
-  const now = started;
-  const store = await getStore();
-  const state: IranState = { lastScanAt: {}, lastTgPost: {}, lastXPost: {}, seen: {}, ...((await store.getJson<IranState>(STATE_KEY)) ?? {}) };
-  const prev = await store.getJson<ScanPayload>(IRAN_PAYLOAD);
-  const seenAt = jerusalemIso(new Date(now));
-
-  // 1. The Iran desk's own sources, each on its own clock.
+/**
+ * The Iran desk's own sources, each on its own clock, and what of theirs is
+ * about the war or its economy (the desk's own gate). The site scan calls it
+ * with the scan's store of how far each source was read.
+ */
+export async function fetchIranSources(state: FetchState, now: number): Promise<{ hits: RawHit[]; status: SourceStatus[] }> {
+  const iState = state as IranState;
   const status: SourceStatus[] = [];
   const own: RawHit[] = [];
   const jobs: Promise<void>[] = [];
   const run = (id: string, name: string, kind: SourceStatus["kind"], every: number, read: () => Promise<{ rows: RawHit[]; ok: boolean }>) => {
-    if (!due(state, id, every, now)) return;
+    if (!due(iState, id, every, now)) return;
     jobs.push(
       (async () => {
         let res = { rows: [] as RawHit[], ok: false };
@@ -178,21 +192,63 @@ export async function runIranCycle(): Promise<IranTickResult> {
         } catch {
           // Unread this tick; the status says so.
         }
-        state.lastScanAt[id] = Date.now();
+        iState.lastScanAt[id] = Date.now();
         own.push(...res.rows);
         status.push({ id, name, kind, ok: res.ok, cadence: every >= 60 ? "hourly" : `every ${every} min`, hits: res.rows.length });
       })(),
     );
   };
-  for (const s of IRAN_TG) run(`tg:${s.id}`, s.name, "tg", s.every, () => readTg(s, state, now));
-  for (const s of IRAN_X) run(`x:${s.id}`, s.name, "x", s.every, () => readX(s, state, now));
+  for (const s of IRAN_TG) run(`tg:${s.id}`, s.name, "tg", s.every, () => readTg(s, iState, now));
+  for (const s of IRAN_X) run(`x:${s.id}`, s.name, "x", s.every, () => readX(s, iState, now));
   for (const f of [...IRAN_RSS, ...SEARCHES]) run(`web:${f.id}`, f.name, "web", f.every, () => readFeed(f));
   await Promise.allSettled(jobs);
+
+  return { hits: own.filter((h) => passesIranOwnGate(`${h.title ?? ""} ${h.text}`)), status };
+}
+
+/** The site scan's part for the Iran desk: its own sources read, into its inbox. */
+export async function scanIranSources(store: Awaited<ReturnType<typeof getStore>>, now: number): Promise<number> {
+  const state: FetchState = { lastScanAt: {}, lastTgPost: {}, lastXPost: {}, ...((await store.getJson<FetchState>(FETCH_STATE_KEY)) ?? {}) };
+  // First run: how far the Iran cycle had read each source itself.
+  if (!Object.keys(state.lastScanAt).length) {
+    const old = await store.getJson<IranState>(STATE_KEY);
+    if (old) Object.assign(state, { lastScanAt: { ...old.lastScanAt }, lastTgPost: { ...old.lastTgPost }, lastXPost: { ...old.lastXPost } });
+  }
+  const { hits, status } = await fetchIranSources(state, now);
+  const row: IranInboxRow = { hits, status, own: true };
+  await store.putMany(IRAN_INBOX, { [`own-${now}`]: row });
+  await store.putJson(FETCH_STATE_KEY, { lastScanAt: state.lastScanAt, lastTgPost: state.lastTgPost, lastXPost: state.lastXPost });
+  return hits.length;
+}
+
+export type IranTickResult = { ok: boolean; scannedAt: string; sourcesTried: number; sourcesOk: number; fromInbox: number; candidates: number; reportsAdded: number; note: string; tookMs: number; error?: string };
+
+/** `fromScan`: the site scan read this desk's own sources (site-scan mode "on"). */
+export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
+  const started = Date.now();
+  const now = started;
+  const store = await getStore();
+  const state: IranState = { lastScanAt: {}, lastTgPost: {}, lastXPost: {}, seen: {}, ...((await store.getJson<IranState>(STATE_KEY)) ?? {}) };
+  const prev = await store.getJson<ScanPayload>(IRAN_PAYLOAD);
+  const seenAt = jerusalemIso(new Date(now));
+
+  // 1. The Iran desk's own sources: read here in the old path (site-scan
+  //    mode "off"), else by the site scan, which leaves them in the inbox.
+  let status: SourceStatus[] = [];
+  let own: RawHit[] = [];
+  if (!fromScan) ({ hits: own, status } = await fetchIranSources(state, now));
 
   // 2. What the Yemen scan handed over from the shared sources.
   let inbox: RawHit[] = [];
   try {
-    inbox = (await store.takeMany<RawHit[]>(IRAN_INBOX)).flat();
+    for (const row of await store.takeMany<RawHit[] | IranInboxRow>(IRAN_INBOX)) {
+      if (Array.isArray(row)) inbox.push(...row);
+      else if (row.own) {
+        own.push(...row.hits);
+        // The newest read of each source is its status.
+        for (const st of row.status ?? []) status = [...status.filter((x) => x.id !== st.id), st];
+      } else inbox.push(...row.hits);
+    }
   } catch (err) {
     console.error("[iran] inbox:", err instanceof Error ? err.message : err);
   }
@@ -201,7 +257,7 @@ export async function runIranCycle(): Promise<IranTickResult> {
   //    the war's and the economy's words, the shared ones were gated already.
   for (const [u, t] of Object.entries(state.seen)) if (now - t > SEEN_KEEP_MS) delete state.seen[u];
   const byUrl = new Map<string, RawHit>();
-  for (const h of [...own.filter((h) => passesIranOwnGate(`${h.title ?? ""} ${h.text}`)), ...inbox, ...(state.pending ?? [])]) {
+  for (const h of [...own, ...inbox, ...(state.pending ?? [])]) {
     const t = Date.parse(h.at);
     if (state.seen[h.url] || (Number.isFinite(t) && now - t > MAX_AGE_MS)) continue;
     if (Number.isFinite(t) && t > now + 10 * 60_000) h.at = seenAt;
@@ -303,7 +359,7 @@ export async function runIranCycle(): Promise<IranTickResult> {
   const allHits = [...rawHits, ...(prev?.rawHits ?? []).filter((h) => keep(h) && !byUrl.has(h.url))].filter(keep).slice(0, RAW_HITS);
   const reports = uniqReports.slice(0, PAYLOAD_REPORTS);
   const statusAll = [...status, ...(prev?.sourceStatus ?? []).filter((s) => !status.some((x) => x.id === s.id))].sort((a, b) => a.name.localeCompare(b.name));
-  const note = `${status.length} sources read, ${inbox.length} items from the shared sources, ${candidates.length} new to read, ${opened} articles opened, ${cards.length} new cards, ${folded} copies folded.${modelNote ? ` Reader: ${modelNote}.` : ""}`;
+  const note = `${status.length} sources read${fromScan ? " by the site scan" : ""}, ${own.length} items from them, ${inbox.length} from the shared sources, ${candidates.length} new to read, ${opened} articles opened, ${cards.length} new cards, ${folded} copies folded.${modelNote ? ` Reader: ${modelNote}.` : ""}`;
   const payload: ScanPayload = {
     ok: true,
     scannedAt: seenAt,

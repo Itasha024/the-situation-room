@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
-import { runScanCycle } from "@/lib/yemen-scan.server";
+import { runSiteCycle, siteMode } from "@/lib/site-scan.server";
 import { runIranCycle } from "@/lib/iran-scan.server";
 import { getStore } from "@/lib/desk/store";
 
@@ -117,7 +117,7 @@ async function runStoreLocked(): Promise<Record<string, unknown>> {
     return { ok: false, error: `database unreachable: ${err instanceof Error ? err.message : String(err)}`, tookMs: Date.now() - startedAt };
   }
   try {
-    const result = await runScanCycle();
+    const result = await runSiteCycle();
     return { ...result, tookMs: Date.now() - startedAt };
   } catch (err) {
     return {
@@ -150,7 +150,8 @@ async function runIranLocked(): Promise<Record<string, unknown>> {
       return { ok: false, error: `database unreachable: ${err instanceof Error ? err.message : String(err)}`, tookMs: Date.now() - startedAt };
     }
     try {
-      return { ...(await runIranCycle()) };
+      // With the site scan on, its own sources were read by the scan and wait in its inbox.
+      return { ...(await runIranCycle((await siteMode(store)) === "on")) };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : "Iran tick failed", tookMs: Date.now() - startedAt };
     } finally {

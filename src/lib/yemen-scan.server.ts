@@ -2064,7 +2064,31 @@ function lap(stage: string): void {
   lapAt = t;
 }
 
+/**
+ * What one read of the Yemen desk's sources found, ready for its reader: the
+ * items (triaged, opened, one per address), each source's status, and the
+ * items from the sources both desks share that are about the war with Iran.
+ * The site scan (site-scan.server.ts) puts it in the Yemen inbox.
+ */
+export type YemenFetch = {
+  /** When the scan started: the cycle's time on the desk. */
+  at: number;
+  hits: RawHit[];
+  status: SourceStatus[];
+  sourcesOk: number;
+  /** The learned outlets' feeds, so the status page keeps only real sources. */
+  learnedIds: string[];
+  /** For the Iran desk, after the Yemen reader has read them. */
+  iranShared: RawHit[];
+};
+
+/** One cycle in one go: the old path (site-scan mode "off"). */
 async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<ScanPayload> {
+  return readYemen(state, prev, await fetchYemenSources(state, prev));
+}
+
+/** The Yemen desk's sources read once: the site scan's part for this desk. */
+export async function fetchYemenSources(state: ScanState, prev: ScanPayload | null): Promise<YemenFetch> {
   lap("start");
   const now = Date.now();
   const cycleSeenAt = jerusalemIso(new Date(now));
@@ -2496,28 +2520,16 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   const resolved = hits.filter((h) => !isGnews(h.url) || (leadCache[h.url]?.tries ?? 0) >= GNEWS_HOLD_TRIES);
   hits.length = 0;
   hits.push(...resolved);
+  return { at: now, hits, status, sourcesOk, learnedIds: learnedFeeds(learned).map((f) => f.id), iranShared: iranInbox };
+}
 
-  /**
-   * Two stages. The keyword gate (via `toLiveReport`) is only a cheap
-   * pre-filter: what it excludes never costs a model call. Everything else is
-   * decided by the reader (`editCandidates`), and only its verdict publishes —
-   * the keyword composer turned programme clips, other countries' wars and
-   * launch bases into reports. `DESK_READER_REQUIRED=0` restores the old
-   * composer as a fallback, for local work without a key.
-   */
-  // Leaders' words come from their own outlet; relays pass only when it was down.
+/**
+ * The keyword gate before the Yemen reader: what reaches the reader, and each
+ * item's gate verdict for the scan box. Leaders' words come from their own
+ * outlet; relays pass only when it was down.
+ */
+export function yemenCandidates(hits: RawHit[], status: SourceStatus[]): { pre: Map<string, Composed>; candidates: Candidate[] } {
   const officialDown = !status.some((s) => s.id === "almasirah2" && s.ok);
-  // A post stamped in the future (a wrong clock or a misread date) is dated to
-  // this scan instead of floating above the whole feed.
-  for (const h of hits) if (Date.parse(h.at) > now + 10 * 60_000) h.at = cycleSeenAt;
-  // A video's spoken words join its post before the gate and the reader see it (listen.ts).
-  try {
-    const heard = await listenToVideos(await getStore(), hits, now);
-    if (heard) console.log(`[listen] ${heard} post(s) given their video's words`);
-  } catch (err) {
-    console.error("[listen] failed:", err instanceof Error ? err.message : err);
-  }
-  lap("listen");
   const pre = new Map<string, Composed>();
   const candidates: Candidate[] = [];
   for (const h of hits) {
@@ -2541,6 +2553,34 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       tags: c.tags,
     });
   }
+  return { pre, candidates };
+}
+
+/** The Yemen desk's reader and cards, from one read of its sources (its inbox). */
+export async function readYemen(state: ScanState, prev: ScanPayload | null, got: YemenFetch): Promise<ScanPayload> {
+  const { at: now, hits, status, sourcesOk, iranShared: iranInbox } = got;
+  const cycleSeenAt = jerusalemIso(new Date(now));
+
+  /**
+   * Two stages. The keyword gate (via `toLiveReport`) is only a cheap
+   * pre-filter: what it excludes never costs a model call. Everything else is
+   * decided by the reader (`editCandidates`), and only its verdict publishes —
+   * the keyword composer turned programme clips, other countries' wars and
+   * launch bases into reports. `DESK_READER_REQUIRED=0` restores the old
+   * composer as a fallback, for local work without a key.
+   */
+  // A post stamped in the future (a wrong clock or a misread date) is dated to
+  // this scan instead of floating above the whole feed.
+  for (const h of hits) if (Date.parse(h.at) > now + 10 * 60_000) h.at = cycleSeenAt;
+  // A video's spoken words join its post before the gate and the reader see it (listen.ts).
+  try {
+    const heard = await listenToVideos(await getStore(), hits, now);
+    if (heard) console.log(`[listen] ${heard} post(s) given their video's words`);
+  } catch (err) {
+    console.error("[listen] failed:", err instanceof Error ? err.message : err);
+  }
+  lap("listen");
+  const { pre, candidates } = yemenCandidates(hits, status);
   const { verdicts, modelNote } = await editCandidates(await getStore(), candidates, now);
   const floor = process.env.DESK_READER_REQUIRED === "0";
   lap(`reader (${candidates.length} candidates)`);
@@ -2589,7 +2629,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     const keptUrls = new Set(rawHits.filter((h) => h.kept).map((h) => h.url));
     const handOver = new Map<string, RawHit>();
     for (const h of iranInbox) if (!keptUrls.has(h.url)) handOver.set(h.url, h);
-    if (handOver.size) await (await getStore()).putMany(IRAN_INBOX, { [String(now)]: [...handOver.values()] });
+    if (handOver.size) await (await getStore()).putMany(IRAN_INBOX, { [String(now)]: { hits: [...handOver.values()] } });
   } catch (err) {
     console.error("[iran] inbox:", err instanceof Error ? err.message : err);
   }
@@ -2612,7 +2652,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     // deleted two days earlier on the status page, still advertising the
     // daily 07:00 read it was dropped for failing — the page went on
     // describing a capability the desk no longer had.
-    const real = new Set([...TG.map((c) => c.id), ...RSS.map((f) => f.id), ...learnedFeeds(learned).map((f) => f.id)]);
+    const real = new Set([...TG.map((c) => c.id), ...RSS.map((f) => f.id), ...got.learnedIds]);
     for (const s of prev.sourceStatus) {
       if (s?.id && !haveS.has(s.id) && real.has(s.id)) status.push(s);
     }
@@ -3100,7 +3140,7 @@ export async function refreshSourceRatings(store: Awaited<ReturnType<typeof getS
 export const TICK_USAGE_KEY = "tick-usage";
 export type TickUsage = { at: string; tookMs: number; cpuMs: number; dbReadKB: number; dbWrittenKB: number; queries: number };
 
-export async function runScanCycle(): Promise<TickResult> {
+export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | null) => Promise<ScanPayload> = scanOnce): Promise<TickResult> {
   guardUndici();
   resetDbMeter();
   const started = Date.now();
@@ -3110,7 +3150,7 @@ export async function runScanCycle(): Promise<TickResult> {
   const prev = await store.loadPayload();
   await primeRatings(store).catch(() => {});
 
-  const payload = await scanOnce(state, prev);
+  const payload = await scan(state, prev);
   // Which desks each card is shown on (Round 30): one read, every desk it concerns.
   for (const r of [...payload.reports, ...(payload.touched ?? [])]) r.desks = desksOf(r);
   // A post the Iran desk's reader wrote up first: this card joins that one (store.pg.ts).

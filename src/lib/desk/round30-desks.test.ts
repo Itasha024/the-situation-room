@@ -285,3 +285,37 @@ test("a headline that is only its speaker and a colon is not published (8 Oct)",
   const v = decideIranForTest(reading({ speaker_lead: "", headline: "Mohammad Jafar Qaempanah, deputy executive to Masoud Pezeshkian:" }), "قائم‌پناه معاون اجرایی پزشکیان گفت");
   assert.equal(v.kind, "reject");
 });
+
+test("a speaker headline may be a quote or 'says', on both desks (8 Oct)", async () => {
+  const quote = decideIranForTest(
+    reading({ speaker_lead: "Rubio", actor: "Rubio", actor_side: "us", headline: 'Rubio: "Iran will never have a nuclear weapon"', arenas: ["nuclear"] }),
+    "Rubio: Iran will never have a nuclear weapon.",
+    "Reuters",
+    "intl",
+  );
+  assert.equal(quote.kind, "publish");
+  if (quote.kind === "publish") assert.equal(quote.report.summary, 'Rubio: "Iran will never have a nuclear weapon"');
+  const says = decideIranForTest(
+    reading({ headline: "Araghchi says Iran will not negotiate under threat" }),
+    "عراقجي: إيران لن تتفاوض تحت التهديد",
+  );
+  assert.equal(says.kind, "publish");
+  if (says.kind === "publish") assert.equal(says.report.summary, "Araghchi says Iran will not negotiate under threat");
+  const empty = decideIranForTest(reading({ speaker_lead: "Rubio", headline: 'Rubio: ""' }), "Rubio spoke to reporters.");
+  assert.equal(empty.kind, "reject");
+  const { fixHeadline } = await import("./reader.ts");
+  assert.equal(fixHeadline("Houthi spokesperson says Saudi jets carried out strikes"), "Houthi spokesperson says Saudi jets carried out strikes");
+});
+
+test("the Iran feed starts on 8 Oct: no older card is read on that desk (8 Oct)", async () => {
+  const store = createPgStore(provider);
+  await store.mergeIntoDesk([card(9, { fp: "old-iran", at: "2026-09-30T12:00:00+03:00", url: "https://example.com/news/old-iran", desks: ["yemen", "iran"] })]);
+  const { deskById } = await import("../desks.ts");
+  const floor = deskById("iran").feedFrom;
+  const ir = await store.recentDesk(500, undefined, { desk: "iran", floor });
+  assert.ok(!ir.reports.some((r) => r.fp === "old-iran"));
+  assert.ok(ir.reports.every((r) => Date.parse(String(r.at)) >= Date.parse(String(floor))));
+  // Yemen has no floor: its card is still there.
+  const ye = await store.recentDesk(500, undefined, { desk: "yemen", floor: deskById("yemen").feedFrom });
+  assert.ok(ye.reports.some((r) => r.fp === "old-iran"));
+});

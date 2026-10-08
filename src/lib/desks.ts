@@ -18,6 +18,8 @@ export type Desk = {
   cadenceHours: number;
   /** The first day on the map. */
   mapFrom: string;
+  /** Latest reports start here (ISO); no card older is served on this desk. */
+  feedFrom?: string;
   description: string;
 };
 
@@ -43,6 +45,9 @@ export const DESKS: Desk[] = [
     clockLabel: "Iran",
     cadenceHours: 3,
     mapFrom: "2026-02-28",
+    // The user, 8 Oct: the feed cannot reach back to February, so it starts
+    // the day the desk began reading (00:00 Israel time).
+    feedFrom: "2026-10-08T00:00:00+03:00",
     description:
       "Live open-source reporting on the war with Iran: strikes on every side, the Strait of Hormuz, the talks, the nuclear file and the numbers, from every side's sources.",
   },

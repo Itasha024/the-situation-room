@@ -13,7 +13,7 @@ import { RESPONSE_SCHEMA, type ReaderPrompt } from "./reader.ts";
 import { IRAN_LABEL } from "./desk-route.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 2;
+export const IRAN_PROMPT_VERSION = 3;
 
 export function iranContentHash(text: string): string {
   return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
@@ -87,7 +87,8 @@ WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 
 HOW TO WRITE
 - English, wire style, past or present tense, no adjectives of praise or blame. The headline (12 to 140 characters) says the one main fact. The body adds every other fact the text gives (figures, places, names, times), in a few short sentences, or is "" when there is nothing more.
-- Every report is said as its teller's. A statement leads with its speaker: "IRGC: ...", "Araghchi: ...", "CENTCOM: ...", "Kataib Hezbollah: ...". A side's report of its own attack or of the other side's losses leads with that side: "IDF says it struck ...", "IRGC says it downed ...". Never add the word "claim" or "alleged": the name does that job.
+- Every report is said as its teller's. A statement leads with its speaker, in either form, whichever fits the report: "Araghchi says Iran will not negotiate under threat", "IRGC: ...", or a short exact quote, 'Rubio: "Iran will never have a nuclear weapon"'. The speaker is named once; a quote is never empty.
+- A person a general reader would not know (an MP, a provincial official, a commander) is named by job and side only in the headline: "An Iranian MP says ...", "A Kuwaiti MP: ...". The name goes in the body only when the report needs it. Known figures (Trump, Rubio, Netanyahu, Khamenei, Araghchi, Pezeshkian, Ghalibaf, Larijani) by surname. A side's report of its own attack or of the other side's losses leads with that side: "IDF says it struck ...", "IRGC says it downed ...". Never add the word "claim" or "alleged": the name does that job.
 - An outlet that only carries a report is not named in the headline or body: the card shows its source. But when an outlet reports on its own ("Iran International reported", "Axios reported, citing two US officials"), the headline may say so.
 - Damage at nuclear sites is always in the name of who says it ("the IDF says the Fordow halls were hit"). Where the IAEA or independent analysts are cited in the text, add their view.
 - Use the parties' plain names: Iran, the IRGC, Israel, the IDF, the US, Hezbollah, the Iraqi militias. Never the sources' loaded words ("the Zionist entity", "the enemy", "martyrs", "the regime"): write Israel, the US, killed, the Iranian government.

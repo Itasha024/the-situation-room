@@ -103,7 +103,8 @@ export interface DeskStore {
   recentDesk(limit?: number, before?: string, opts?: RecentOpts): Promise<DeskSlice>;
 }
 
-export type RecentOpts = { events?: boolean; reports?: boolean; since?: string; desk?: DeskId };
+/** `floor`: no card older than this (ISO) is read; the pins are not floored. */
+export type RecentOpts = { events?: boolean; reports?: boolean; since?: string; desk?: DeskId; floor?: string };
 
 export type MergeResult = {
   reportsAdded: number;

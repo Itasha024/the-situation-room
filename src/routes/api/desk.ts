@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
 import { deskParam } from "@/lib/desk/desk-route";
 import { checkLinks } from "@/lib/desk/links";
-import type { DeskId } from "@/lib/desks";
+import { type DeskId, deskById } from "@/lib/desks";
 import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
 import { getStore } from "@/lib/desk/store";
@@ -41,7 +41,8 @@ const reading = new Map<string, Promise<{ at: number; body: string }>>();
 async function readDesk(limit: number, before: string | undefined, desk: DeskId, since?: string) {
   const store = await getStore();
   // `since`: the map's pins alone, back to that day — the whole war's map.
-  const slice = await store.recentDesk(limit, before, since ? { desk, since, reports: false } : { desk });
+  const floor = deskById(desk).feedFrom;
+  const slice = await store.recentDesk(limit, before, since ? { desk, since, reports: false } : { desk, floor });
   // Cards stored before the link rules keep their row; a link that
   // breaks the rules is just not shown (links.ts).
   checkLinks(slice.reports as never[], slice.reports as never[]);

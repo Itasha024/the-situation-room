@@ -467,9 +467,11 @@ STATEMENTS (event_type statement or diplomacy)
 - speaker_lead is REQUIRED: the person or body the report is about.
 - A colon ONLY when the item carries that person's own words (a quote, speech,
   post, interview, statement, remarks): "Houthi spokesperson: Saudi jets
-  carried out 28 strikes in 24 hours". Then ALWAYS the colon, straight after
-  the speaker — never "UN spokesman says …" or "UN spokesman warns …": write
-  "UN spokesman: …".
+  carried out 28 strikes in 24 hours". With the person's own words, either
+  form, whichever fits the report: "UN spokesman: talks will resume next
+  week", "Rubio: \"We will not let the Houthis close the Red Sea\"" (a short
+  exact quote), or "UN spokesman says talks will resume next week". The
+  speaker is named once, and a quote is never empty.
   A report ABOUT someone (what they did, decided or discussed, or what
   officials, sources or an outlet say about them) is a plain sentence with no
   colon: "Trump held a phone call with Yemen's Presidential Council head
@@ -518,7 +520,8 @@ STATEMENTS (event_type statement or diplomacy)
   or "Houthi leader says the Houthis' demands are legitimate".
   Otherwise the title alone ("Yemen's defence minister", "The Houthis' chief
   negotiator") or the affiliation alone ("A Houthi official", "A Saudi
-  military analyst"). Never an unfamiliar personal name, in headline or body.
+  military analyst"). Never an unfamiliar personal name in the headline; in
+  the body only when the report needs it ("The MP, Ahmed Saif, said …").
 - Say what was said, specifically. If the speaker denies an accusation, state
   the accusation and the denial.
 - An UNNAMED official, commander or source is still the speaker: his claim
@@ -700,9 +703,8 @@ export function fixHeadline(headline: string): string {
   h = h.replace(/^Yemen(?:i)? ((?:culture|information|foreign|defen[cs]e|interior|oil|finance|prime|youth) minister):/i, "Yemen's $1:");
   // "X said that our …" is his own words without the quote: the colon form.
   h = h.replace(/^([^:]{2,60}?) (?:said|says|stated|stressed|affirmed|declared|added) (?:that )?((?:our|we|us|my|I)\b.*)$/, "$1: $2");
-  // A spokesman's or minister's statement always takes the colon: "UN
-  // spokesman says talks will resume" → "UN spokesman: talks will resume".
-  h = h.replace(SPEAKER_SAYS, "$1: $2");
+  // "UN spokesman says talks will resume" and "UN spokesman: talks will
+  // resume" are both kept as written (the user, 8 Oct): whichever fits.
   const m = /^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);
   if (m && (REPORTED_VERB.test(m[2]) || /ed$/.test(m[2]))) h = `${m[1]} ${h.slice(m[0].length - m[2].length)}`;
   // A colon after a name that is then reported on is no quote: "Al-Alimi:
@@ -809,12 +811,6 @@ export function roleNamesInProse(text: string): string {
   // A sentence opens with a capital, whatever role now leads it.
   return t.replace(/(^|[.!?]\s+)the /g, "$1The ");
 }
-/**
- * "<role> says/warns (that) X" for a speaker whose words X are: the colon form.
- * "warns of X" is no quote: "minister: of Houthi escalation" lost its verb.
- */
-const SPEAKER_SAYS =
-  /^((?:[\w'.-]+ ){0,4}(?:spokes(?:man|person|woman)|minister|envoy|leader|secretary-general|chief|coordinator|Guterres|Grundberg|Fletcher)) (?:says|said|stated|warns|warned|stresses|stressed|affirms|affirmed|confirms|confirmed|declares|declared) (?:that )?(?!(?:of|against|about|over|on|for|to|with)\b)(.+)$/i;
 
 const BODY_FILLER = new Set(
   ("the and are was were has have had been for with from that this its their there after into over also " +
@@ -1185,6 +1181,8 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
     if (!have.has(n)) return `figure not in source: ${n}`;
   }
 
+  // A speaker with nothing after the colon, or an empty quote, says nothing.
+  if (/:\s*(?:["“”'‘’]\s*["“”'‘’]\s*)?$/.test(h.trim())) return "headline is only its speaker: say what they said";
   if (r.event_type === "statement" || r.event_type === "diplomacy") {
     // A headline shaped "X: ..." names its speaker even when the field is empty.
     const lead = String(r.speaker_lead || "").trim() || (/^([^:]{2,60}):\s/.exec(h)?.[1] ?? "");

@@ -187,7 +187,7 @@ export function createFsStore(): DeskStore {
         String(b.at || "").localeCompare(String(a.at || ""));
       return {
         updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null,
-        reports: opts.reports === false ? [] : [...(data.reports ?? [])].filter(older).sort(byAtDesc).slice(0, limit) as DeskReportRow[],
+        reports: opts.reports === false ? [] : [...(data.reports ?? [])].filter((r) => older(r) && !(opts.floor && Date.parse(String(r.at || "")) < Date.parse(opts.floor))).sort(byAtDesc).slice(0, limit) as DeskReportRow[],
         events: [...(data.events ?? [])].filter((e) => older(e as Record<string, unknown>)).sort(byAtDesc).slice(0, limit) as unknown as DeskEventRow[],
       };
     },

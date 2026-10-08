@@ -236,6 +236,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       const cursor = before && Number.isFinite(Date.parse(before)) ? before : null;
       const since = opts.since && Number.isFinite(Date.parse(opts.since)) ? opts.since : null;
       const desk = opts.desk ?? null;
+      const floor = opts.floor && Number.isFinite(Date.parse(opts.floor)) ? opts.floor : null;
       const sql = await sqlProvider();
       const iso = (v: unknown): string =>
         v instanceof Date ? v.toISOString() : typeof v === "string" ? v : "";
@@ -247,6 +248,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                case when exists (select 1 from desk_report p where p.fp = d.reply_to) then reply_to end as reply_to
           from desk_report d
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
+           and (${floor}::timestamptz is null or at >= ${floor}::timestamptz)
            and (${desk}::text is null or ${desk}::text = any(desks))
          order by at desc
          limit ${limit}

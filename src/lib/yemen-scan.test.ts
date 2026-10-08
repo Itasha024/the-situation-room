@@ -716,7 +716,8 @@ test("a copy seen late, with an earlier time than the card on the desk, folds in
 test("a later outlet that adds a figure is kept to write into the card", async () => {
   const { foldIntoPublished } = await import("./yemen-scan.server.ts");
   const base = { live: true, text: "", score: 1, tags: [] } as const;
-  const home = { ...base, fp: "a", url: "https://t.me/ajanews/1", source: "Al Jazeera", at: "2026-09-28T19:58:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran in Saudi Arabia", place: "Najran", lat: 17.49, lng: 44.13 };
+  // The card is from Yemen's own press, so a Yemeni outlet adding a figure is written in, not swapped in.
+  const home = { ...base, fp: "a", url: "https://t.me/almasirah/1", source: "Al-Masirah", at: "2026-09-28T19:58:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran in Saudi Arabia", place: "Najran", lat: 17.49, lng: 44.13 };
   const more = { ...base, fp: "b", url: "https://t.me/alomhoar/2", source: "Al-Mihwar", at: "2026-09-28T20:05:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran; 2 wounded by debris", place: "Najran", lat: 17.49, lng: 44.13 };
   const same = { ...base, fp: "c", url: "https://t.me/sabrenNewss/3", source: "Sabereen News", at: "2026-09-28T20:06:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran in Saudi Arabia", place: "Najran", lat: 17.49, lng: 44.13 };
   const reports = [home, more, same] as never[];
@@ -725,6 +726,18 @@ test("a later outlet that adds a figure is kept to write into the card", async (
   assert.equal(reports.length, 1);
   assert.equal(enrich.length, 1, "only the account with the new figure is written in");
   assert.equal(((enrich[0] as { fp: string }[])[1]).fp, "b");
+});
+
+test("a Yemeni outlet takes the lead of a Houthi story from Al Jazeera (user, 8 Oct)", async () => {
+  const { foldIntoPublished } = await import("./yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const home = { ...base, fp: "a", url: "https://t.me/ajanews/1", source: "Al Jazeera", at: "2026-09-28T19:58:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran in Saudi Arabia", place: "Najran", lat: 17.49, lng: 44.13 };
+  const local = { ...base, fp: "b", url: "https://t.me/alomhoar/2", source: "Al-Mihwar", at: "2026-09-28T20:05:00Z", type: "strike", summary: "Houthi ballistic missile targets Najran; 2 wounded by debris", place: "Najran", lat: 17.49, lng: 44.13 };
+  const reports = [home, local] as never[];
+  foldIntoPublished(reports, new Set(["a"]));
+  assert.equal(reports.length, 1);
+  assert.equal((home as { source: string }).source, "Al-Mihwar");
+  assert.deepEqual((home as { alsoReportedBy?: { source: string }[] }).alsoReportedBy?.map((x) => x.source), ["Al Jazeera"]);
 });
 
 test("two different posts from one channel stay two cards", async () => {

@@ -82,7 +82,7 @@ export function homeOutlet(source: string): boolean {
  * with a story, their card stands only until a source of its own tells it.
  */
 export function isAggregator(source: string): boolean {
-  return /^(?:Clash Report|OSINTdefender)$/i.test(String(source || "").trim());
+  return /^(?:Clash Report|OSINTdefender|OSINT Hexagone)$/i.test(String(source || "").trim());
 }
 /** Which side an outlet is on, from its catalogue lean and name. */
 export function outletSide(source: string, lean: string): OutletSide {

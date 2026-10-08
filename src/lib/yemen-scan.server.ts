@@ -29,7 +29,7 @@ import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatu
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
-import { nearerToSpeaker } from "./desk/speaker-press.ts";
+import { nearerSource } from "./desk/speaker-press.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
@@ -1774,8 +1774,8 @@ export function foldIntoPublished(
     if (
       ownWords ||
       overAggregator ||
-      // A leader's words from his own country's press over a third country's relay (user, 8 Oct).
-      nearerToSpeaker(home.summary, { source: r.source, lean: iranLeanOfSource(r.source) }, { source: home.source, lean: iranLeanOfSource(home.source) }) ||
+      // The report's own country's sources, the most official first (user, 8 Oct).
+      nearerSource(home.summary, accountOf(r.source), accountOf(home.source)) ||
       (homeOutlet(r.source) &&
         !homeOutlet(home.source) &&
         sideOfSource(r.source) === sideOfSource(home.source) &&
@@ -1948,6 +1948,12 @@ export function threadSpeeches(reports: LiveReport[], _published: Set<string>, s
     if (!inPayload.has(r.fp)) touched.push(r);
   }
   return touched;
+}
+
+/** An outlet's desk groups, for which account leads a card. */
+function accountOf(source: string) {
+  const yemen = TG.find((c) => c.name === source)?.lean ?? X_ACCOUNTS.find((x) => x.name === source)?.lean ?? "";
+  return { source, lean: iranLeanOf(source) ?? "", side: yemen === "houthi" || yemen === "gov" || yemen === "south" ? "yemen" : "" };
 }
 
 /** Which of two reports on the same story to keep. */

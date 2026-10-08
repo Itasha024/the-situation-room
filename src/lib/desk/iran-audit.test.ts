@@ -78,3 +78,8 @@ test("Syria is not this desk's, unless Iran or Hezbollah is a party", () => {
   }
   assert.equal(verdict("Israel strikes IRGC weapons depot near Damascus, Syria", "الحرس الثوري دمشق", { event_type: "air_strike" }).kind, "publish");
 });
+
+test("Houthi fire on Saudi airports is the Yemen desk's, whoever relays it", () => {
+  const v = verdict("Hezbollah says it struck Riyadh, Najran and Khamis Mushait airports with missiles", "القوات المسلحة اليمنية مطار الرياض نجران خميس مشيط t.me/army21ye", { event_type: "missile_launch" });
+  assert.equal(v.kind, "reject");
+});

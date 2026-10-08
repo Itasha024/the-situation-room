@@ -78,7 +78,8 @@ export const IRAN_TG: IranSource[] = [
   // Lebanese, Iran-aligned; now and then a scoop of its own.
   { id: "unewschannel", name: "Unews", lean: "axis", every: 5 },
   // Hezbollah's own statements.
-  { id: "C_Military1", name: "Hezbollah military media", lean: "axis", every: 5 },
+  // An Axis relay channel, not Hezbollah: it reposts the Houthi army and Hebrew media (audit, 8 Oct).
+  { id: "C_Military1", name: "Axis military relay", lean: "axis", every: 5 },
   { id: "rahbar_ir", name: "Khamenei's office", lean: "axis", every: 15 },
   { id: "s_a_araghchi", name: "Abbas Araghchi", lean: "axis", every: 15 },
   // The president's son and adviser; mostly his own writing, so only the war's posts pass.

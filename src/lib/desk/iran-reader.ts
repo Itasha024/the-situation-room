@@ -14,7 +14,7 @@ import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 7;
+export const IRAN_PROMPT_VERSION = 8;
 
 export function iranContentHash(text: string): string {
   return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
@@ -105,7 +105,7 @@ ISRAELI MEDIA
 WHO SPEAKS
 - A post that opens with a teller and a colon is that teller's words: "الخارجية الأميركية للحدث: ..." (the US State Department told Al Hadath) is "US State Department: ...", "IRGC: ..." is the IRGC's. The teller is the speaker_lead and opens the headline; never drop it, and never write their words as a plain fact.
 - What one party says ABOUT another stays the first party's: "US State Department: Hezbollah is spreading reports it got $200 million from Iran" is never "Hezbollah says it received $200 million".
-- A channel that relays someone else (#إعلام_العدو, "وسائل إعلام عبرية", "قناة كان العبرية:", a post signed with another channel's link, such as the Houthi army's t.me/army21ye) is not the speaker or the actor: the one it quotes is. Hezbollah military media relays the Houthi army's statements; those are the Houthis'.
+- A channel that relays someone else (#إعلام_العدو, "وسائل إعلام عبرية", "قناة كان العبرية:", a post signed with another channel's link, such as the Houthi army's t.me/army21ye) is not the speaker or the actor: the one it quotes is. The Axis military relay (C_Military1) reposts the Houthi army's statements; those are the Houthis', and Houthi fire on Saudi Arabia is the yemen desk's.
 - In Persian, انگلیس and انگلیسی mean Britain and British (UKMTO is "UKMTO" or "the UK's maritime agency"), never "English".
 
 WHO DID WHAT TO WHOM: never infer, never assume
@@ -290,6 +290,8 @@ const YEMEN_THEATRE = { test: (s: string) => YEMEN_THEATRE_WORDS.test(s) || SAUD
 /** Syria's theatre: Israel in southern Syria, Syria's own affairs (user, 8 Oct). */
 const SYRIA_THEATRE = /\b(?:Syria|Syrian|Quneitra|Daraa|Deraa|Suwayda|Sweida|Suweida|Suweiseh|Golan|Damascus countryside|Rif Dimashq|Beit Jinn|Jaba|Umm Batna)\b/i;
 const IRAN_PARTY = /\b(?:Iran\w*|IRGC|Quds Force|Hezbollah|Revolutionary Guards?)\b/i;
+/** Iran itself in a story: Hezbollah's name alone does not make the Houthis' fire on Saudi Arabia Iran's. */
+const IRAN_ACTOR = /\b(?:Iran\w*|IRGC|Revolutionary Guards?|Quds Force)\b/i;
 const IRAN_IN_YEMEN_STORY = /\b(?:Israel\w*|Eilat|US (?:warship|ship|Navy|base|forces)|American (?:warship|ship)|Red Sea shipping)\b/i;
 
 /** "22 million" where the text says 22: a multiplier the text never gave. */
@@ -313,7 +315,7 @@ export function iranCopyProblem(r: { headline: string; body?: string; speaker_le
   const copy = `${h} ${r.body ?? ""}`;
   if (COMMENTARY.test(`${h} ${r.speaker_lead ?? ""}`)) return "commentary: analysts, experts and former officials are not reports";
   if (OUTLET_OPENS.test(h)) return "leads with outlet: an outlet is never the teller; lead with the fact, or with the official or source who said it";
-  if (YEMEN_THEATRE.test(copy) && !isIranWar(copy) && !IRAN_IN_YEMEN_STORY.test(copy)) return "yemen desk: the Houthis' war with Saudi Arabia is the Yemen desk's";
+  if (YEMEN_THEATRE.test(copy) && !IRAN_ACTOR.test(copy) && !IRAN_IN_YEMEN_STORY.test(copy)) return "yemen desk: the Houthis' war with Saudi Arabia is the Yemen desk's";
   if (SYRIA_THEATRE.test(copy) && !IRAN_PARTY.test(copy)) return "not iran: Syria is not this desk's";
   const src = String(sourceText || "");
   if (MULTIPLIER.test(h) && !MULTIPLIER_SRC.test(src)) return "figure not in source: the text gives no million or billion";

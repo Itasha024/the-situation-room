@@ -57,10 +57,10 @@ test("a statement keeps the teller its text opens with", () => {
   assert.equal(verdict("US State Department: Hezbollah has brought only misery to Lebanon", "‏الخارجية الأميركية للحدث:  حزب الله لم يجلب سوى البؤس للبنان", { speaker_lead: "US State Department" }).kind, "publish");
 });
 
-test("the sources' loaded words are reworded", () => {
+test("the sources' loaded words are reworded; \"Iranian regime\" stays", () => {
   const v = verdict("UAE bans 472 vessels linked to Iranian regime from its ports", "472 شناور مرتبط با رژیم ایران", { event_type: "economy" });
   assert.equal(v.kind, "publish");
-  assert.equal(v.kind === "publish" && v.report.summary, "UAE bans 472 vessels linked to the Iranian government from its ports");
+  assert.equal(v.kind === "publish" && v.report.summary, "UAE bans 472 vessels linked to Iranian regime from its ports");
   const w = verdict("Basij says Hormuz shows Islamic Iran's capability", "منظمة تعبئة المستضعفين: مضيق هرمز يظهر اقتدار إيران الإسلامية", { speaker_lead: "Basij" });
   assert.ok(w.kind === "publish" && !/Islamic Iran/.test(w.report.summary), w.kind === "publish" ? w.report.summary : w.note);
 });

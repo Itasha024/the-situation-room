@@ -14,7 +14,7 @@ import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 5;
+export const IRAN_PROMPT_VERSION = 6;
 
 export function iranContentHash(text: string): string {
   return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
@@ -124,7 +124,7 @@ HOW TO WRITE
 - NEVER write about what is missing or unverified: no "no casualties were reported", "details were not given", "could not be independently verified", "it was unclear".
 - Never name the outlet that carries the item, its correspondent, or that anyone "told" it something: the card shows the source. Not "Khabari Plus quotes Trump", not "Iran International reported that", not "a source told Tasnim": write Trump's words, the fact, "a source said". What officials or sources told an outlet ends the headline: ", US officials say", ", sources say". An outlet is NEVER the speaker_lead and never opens the headline.
 - A place a general reader does not know gets a short locator once, in the body only ("Nikshahr in Sistan and Baluchestan province, south-east Iran"). Never for Tehran, Isfahan, Bandar Abbas, Hormuz, Riyadh, Doha, Beirut, Baghdad, Tel Aviv, Haifa.
-- Use the parties' plain names: Iran, the IRGC, Israel, the IDF, the US, Hezbollah, the Iraqi militias, killed. Never the sources' loaded words ("the Zionist entity", "the enemy", "the occupation", "martyrs", "the regime", "mercenaries", "terrorists" for a party's forces): write Israel, the US, killed, the Iranian government.
+- Use the parties' plain names: Iran, the IRGC, Israel, the IDF, the US, Hezbollah, the Iraqi militias, killed. Never the sources' loaded words ("the Zionist entity", "the enemy", "the occupation", "martyrs", "the Zionist regime", "mercenaries", "terrorists" for a party's forces): write Israel, the US, killed. Iran's government may be called the Iranian regime, as the site does; Israel and the US are never "a regime".
 - A party's claim of harm to civilians ("homes", "a massacre", "a school") is that party's claim, not a fact: who says it goes first, and the victims and figures are kept ("Iranian media: US strike hit a school in Minab, killing 5").
 - Damage at nuclear sites is always in the name of who says it ("the IDF says the Fordow halls were hit"). Where the IAEA or independent analysts are cited in the text, add their view.
 - Spell each place and person once, the usual English way, and never explain the spelling: no "also spelled", no second spelling in brackets.
@@ -226,16 +226,13 @@ export function passesIsraeliMediaGate(text: string): boolean {
 }
 
 /**
- * The sources' loaded words for Iran and Israel, reworded on the Iran desk's
- * copy (audit of 8 Oct: "linked to the Iranian regime", "Islamic Iran's
- * capability", "the Israel regime" went out).
+ * The sources' loaded words for Israel and Iran, reworded on the Iran desk's
+ * copy (audit of 8 Oct: "Islamic Iran's capability", "the Israel regime" went
+ * out). "The Iranian regime" is the site's own wording and stays (user, 8 Oct).
  */
 const IRAN_REWORD: [RegExp, string][] = [
-  [/\b(?:Iran's|the Iranian|Iranian) (?:clerical |Islamic )?regime\b/g, "the Iranian government"],
-  [/\bThe Iranian (?:clerical |Islamic )?regime\b/g, "The Iranian government"],
   [/\b(?:the )?(?:Israel|Israeli|Zionist) regime\b/gi, "Israel"],
   [/\bIslamic Iran\b/g, "Iran"],
-  [/\bthe (?:Islamic Republic's |mullahs' )?regime\b/g, "the Iranian government"],
 ];
 
 export function iranReword(s: string): string {

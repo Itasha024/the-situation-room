@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { metered } from "@/lib/desk/cpu-meter";
+import { deskParam } from "@/lib/desk/desk-route";
 import { checkLinks } from "@/lib/desk/links";
+import type { DeskId } from "@/lib/desks";
 import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
 import { getStore } from "@/lib/desk/store";
@@ -35,9 +37,9 @@ const STALE_MS = 30 * 60_000;
 const memo = new Map<string, { at: number; body: string }>();
 const reading = new Map<string, Promise<{ at: number; body: string }>>();
 
-async function readDesk(limit: number, before: string | undefined) {
+async function readDesk(limit: number, before: string | undefined, desk: DeskId) {
   const store = await getStore();
-  const slice = await store.recentDesk(limit, before);
+  const slice = await store.recentDesk(limit, before, { desk });
   // Cards stored before the link rules keep their row; a link that
   // breaks the rules is just not shown (links.ts).
   checkLinks(slice.reports as never[], slice.reports as never[]);
@@ -50,10 +52,10 @@ async function readDesk(limit: number, before: string | undefined) {
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }
 
-function renew(key: string, limit: number, before: string | undefined) {
+function renew(key: string, limit: number, before: string | undefined, desk: DeskId) {
   let p = reading.get(key);
   if (!p) {
-    p = readDesk(limit, before)
+    p = readDesk(limit, before, desk)
       .then((hit) => {
         if (memo.size > 20) memo.clear();
         memo.set(key, hit);
@@ -79,11 +81,14 @@ export const Route = createFileRoute("/api/desk")({
           // Paging back: rows strictly older than this ISO time.
           const before = url.searchParams.get("before") || undefined;
 
-          const key = `${limit}|${before ?? ""}`;
+          // Which desk's cards (Round 30); none asked is Yemen's, as before.
+          const desk = deskParam(url.searchParams.get("desk"));
+
+          const key = `${desk}|${limit}|${before ?? ""}`;
           let hit = memo.get(key);
           const age = hit ? Date.now() - hit.at : Infinity;
-          if (!hit || age > STALE_MS) hit = await renew(key, limit, before);
-          else if (age > MEMO_MS) renew(key, limit, before).catch(() => {});
+          if (!hit || age > STALE_MS) hit = await renew(key, limit, before, desk);
+          else if (age > MEMO_MS) renew(key, limit, before, desk).catch(() => {});
 
           return raw(
             hit.body,

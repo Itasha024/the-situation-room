@@ -14,6 +14,8 @@ import { readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
+import type { DeskId } from "../desks.ts";
+import { onDesk } from "./desk-route.ts";
 import { deriveEvents, hasArticlePath, toDeskReportRow } from "./snapshot.ts";
 import type { DeskSlice, DeskStore, MergeResult } from "./store.ts";
 import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
@@ -165,10 +167,10 @@ export function createFsStore(): DeskStore {
      * two drivers answering the same question, so `/api/desk` behaves
      * identically in development and deployed.
      */
-    async recentDesk(limit = 400, before?: string, _opts?: { events?: boolean }): Promise<DeskSlice> {
+    async recentDesk(limit = 400, before?: string, opts: { events?: boolean; desk?: DeskId } = {}): Promise<DeskSlice> {
       const cut = before ? Date.parse(before) : NaN;
       const older = (r: Record<string, unknown>) =>
-        !Number.isFinite(cut) || Date.parse(String(r.at || "")) < cut;
+        (!Number.isFinite(cut) || Date.parse(String(r.at || "")) < cut) && (!opts.desk || onDesk(r, opts.desk));
       const data = await readJson<DeskSnapshot>(DATA_FILE);
       if (!data) return { updatedAt: null, reports: [], events: [] };
       const byAtDesc = (a: Record<string, unknown>, b: Record<string, unknown>) =>
@@ -209,7 +211,7 @@ export function createFsStore(): DeskStore {
         const { events, unplaced } = deriveEvents(r);
         for (const e of events) {
           if (haveFp.has(e.fp)) continue;
-          data.events.unshift({ ...e });
+          data.events.unshift({ ...e, ...(r.desks?.length && r.desks.join() !== "yemen" ? { desks: r.desks } : {}) });
           haveFp.add(e.fp);
           out.eventsAdded += 1;
         }

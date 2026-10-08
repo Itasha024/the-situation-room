@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
+import { deskParam, onDesk } from "@/lib/desk/desk-route";
 import { scanYemenSources } from "@/lib/yemen-scan.server";
 
 /**
@@ -12,9 +13,12 @@ import { scanYemenSources } from "@/lib/yemen-scan.server";
 export const Route = createFileRoute("/api/scan")({
   server: {
     handlers: {
-      GET: () => metered("scan", async () => {
+      GET: ({ request }) => metered("scan", async () => {
         try {
           const payload = await scanYemenSources();
+          // One scan feeds every desk; each is sent only its own cards (Round 30).
+          const desk = deskParam(new URL(request.url).searchParams.get("desk"));
+          payload.reports = payload.reports.filter((r) => onDesk(r, desk));
           return new Response(JSON.stringify(payload), {
             headers: {
               "content-type": "application/json; charset=utf-8",

@@ -23,6 +23,7 @@ import {
   understandLocally,
 } from "@/lib/desk/search";
 import { respell } from "@/lib/desk/spelling";
+import { deskParam, onDesk } from "@/lib/desk/desk-route";
 import { getStore } from "@/lib/desk/store";
 
 /**
@@ -239,7 +240,9 @@ export const Route = createFileRoute("/api/search")({
           const { fps, about, full }: { fps: string[]; about: string; full?: boolean } = fast ? await quick(q) : { ...(await search(q)), full: true };
           const { rows } = await archive();
           const byFp = new Map(rows.map((r) => [r.fp, r]));
-          const reports = fps.map((fp) => byFp.get(fp)).filter(Boolean);
+          // One archive for every desk; each desk is answered with its own cards (Round 30).
+          const desk = deskParam(url.searchParams.get("desk"));
+          const reports = fps.map((fp) => byFp.get(fp)).filter((r): r is Row => !!r && onDesk(r, desk));
           return json({ ok: true, q, about, full, total: reports.length, reports }, 200, { "cache-control": "public, max-age=60", "cdn-cache-control": "public, s-maxage=300" });
         } catch (err) {
           const message = err instanceof Error ? err.message : "search failed";

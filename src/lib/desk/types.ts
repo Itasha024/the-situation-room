@@ -6,6 +6,7 @@
  * re-exports them, so existing imports keep working.
  */
 
+import type { DeskId } from "../desks.ts";
 import type { DeskType } from "./digest.ts";
 
 /**
@@ -63,6 +64,8 @@ export type LiveReport = {
   media?: Media;
   /** Labels shown on the card: "exclusive" (a piece the outlet has on its own). */
   flags?: string[];
+  /** The desks the card is shown on (desk-route.ts); none means Yemen's. */
+  desks?: DeskId[];
   /** `copyKey` of the post it was written from: forwards of one post share it. */
   copyKey?: string;
   /** Inputs to the trust figure — see credibility.ts. */

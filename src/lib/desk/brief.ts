@@ -87,12 +87,13 @@ function deskIso(t: number): string {
  * The boundary that has just passed, and the next one: 00, 06, 12 and 18 on
  * Israel's clock, which moves with it when summer time ends (25 Oct).
  */
-export function briefWindow(now = new Date()): { updatedAt: string; nextUpdateAt: string; startedAt: string } {
+/** `hours`: the desk's rhythm (desks.ts): Yemen's 6, Iran's 3. */
+export function briefWindow(now = new Date(), hours = CADENCE_HOURS): { updatedAt: string; nextUpdateAt: string; startedAt: string } {
   const { year, month, day, hour } = deskParts(now);
-  const slot = Math.floor((hour % 24) / CADENCE_HOURS) * CADENCE_HOURS;
+  const slot = Math.floor((hour % 24) / hours) * hours;
   const at = deskInstant(year, month, day, slot);
-  const next = deskInstant(year, month, day, slot + CADENCE_HOURS);
-  const start = deskInstant(year, month, day, slot - CADENCE_HOURS);
+  const next = deskInstant(year, month, day, slot + hours);
+  const start = deskInstant(year, month, day, slot - hours);
   return { updatedAt: deskIso(at), nextUpdateAt: deskIso(next), startedAt: deskIso(start) };
 }
 

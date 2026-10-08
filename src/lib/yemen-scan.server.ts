@@ -19,6 +19,7 @@ import { deskDay } from "./desk/brief.ts";
 import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
+import { desksOf } from "./desk/desk-route.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
@@ -3030,6 +3031,8 @@ export async function runScanCycle(): Promise<TickResult> {
   await primeRatings(store).catch(() => {});
 
   const payload = await scanOnce(state, prev);
+  // Which desks each card is shown on (Round 30): one read, every desk it concerns.
+  for (const r of [...payload.reports, ...(payload.touched ?? [])]) r.desks = desksOf(r);
 
   // Persist in dependency order, and surface every failure. The old code
   // fire-and-forgot this and swallowed the error, which is why a read-only

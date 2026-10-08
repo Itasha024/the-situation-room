@@ -13,9 +13,13 @@ import type { Sql } from "../db.ts";
 import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import { deriveEvents, hasArticlePath } from "./snapshot.ts";
 import { dbMeter, type DeskSlice, type DeskStore, type MergeResult } from "./store.ts";
+import type { DeskId } from "../desks.ts";
+import { DEFAULT_DESK } from "./desk-route.ts";
 import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
 
 const SCAN_STATE_KEY = "scan_state";
+/** Yemen's alone, as every card before the Iran desk: the row carries no `desks`, as before. */
+const notYemenAlone = (d: unknown): d is string[] => Array.isArray(d) && d.length > 0 && d.join() !== DEFAULT_DESK;
 const PAYLOAD_KEY = "payload";
 /** fp → when a card was deleted by hand; a scan running meanwhile cannot bring it back. */
 const DROPPED_KEY = "json:dropped";
@@ -216,27 +220,30 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
      * `at` comes back as a Date from `pg`, so it is normalised to ISO here —
      * the page compares timestamps as strings.
      */
-    async recentDesk(limit = 400, before?: string, opts: { events?: boolean } = {}): Promise<DeskSlice> {
+    async recentDesk(limit = 400, before?: string, opts: { events?: boolean; desk?: DeskId } = {}): Promise<DeskSlice> {
       const cursor = before && Number.isFinite(Date.parse(before)) ? before : null;
+      const desk = opts.desk ?? null;
       const sql = await sqlProvider();
       const iso = (v: unknown): string =>
         v instanceof Date ? v.toISOString() : typeof v === "string" ? v : "";
 
       const reports = await sql<Record<string, unknown>>`
         select fp, url, at, source, type, summary, body, priority, confidence,
-               score, tier, place, lat, lng, also_reported_by, citing, media, flags,
+               score, tier, place, lat, lng, also_reported_by, citing, media, flags, desks,
                -- A reply to a row since deleted leads nowhere: shown as none.
                case when exists (select 1 from desk_report p where p.fp = d.reply_to) then reply_to end as reply_to
           from desk_report d
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
+           and (${desk}::text is null or ${desk}::text = any(desks))
          order by at desc
          limit ${limit}
       `;
       // The tick's own look-backs want the cards only: the pins are not read.
       const events = opts.events === false ? [] : await sql<Record<string, unknown>>`
-        select fp, at, type, lat, lng, place, label, body, source, url, map_only
+        select fp, at, type, lat, lng, place, label, body, source, url, map_only, desks
           from desk_event
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
+           and (${desk}::text is null or ${desk}::text = any(desks))
          order by at desc
          limit ${limit}
       `;
@@ -272,6 +279,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           if (r.citing) row.citing = r.citing;
           if (r.media) row.media = r.media;
           if (Array.isArray(r.flags) && r.flags.length) row.flags = r.flags;
+          if (notYemenAlone(r.desks)) row.desks = r.desks;
           return row as DeskReportRow;
         }),
         events: events.map(
@@ -288,6 +296,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               source: e.source ?? undefined,
               url: e.url ?? undefined,
               mapOnly: !!e.map_only,
+              ...(notYemenAlone(e.desks) ? { desks: e.desks as string[] } : {}),
             }) as DeskEventRow,
         ),
       };
@@ -316,26 +325,39 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           // the cards after it: a tick once lost every older card this way.
           try {
             if (!r.url || !hasArticlePath(r.url)) return;
+            const desks = r.desks?.length ? r.desks : [DEFAULT_DESK];
 
             // `returning fp` tells us whether this row was genuinely new, so the
             // tick reports real numbers rather than assuming every insert landed.
             const inserted = await sql<{ fp: string }>`
               insert into desk_report
                 (fp, url, at, source, type, summary, body, priority, confidence, score, tier, place, lat, lng,
-                 also_reported_by, reply_to, citing, media, flags)
+                 also_reported_by, reply_to, citing, media, flags, desks)
               select
                 ${r.fp}, ${r.url}, ${r.at}::timestamptz, ${r.source}, ${r.type}, ${pgSafe(r.summary)}, ${r.text == null ? null : pgSafe(r.text)},
                 ${r.type === "economy" ? 2 : 1}, ${r.confidence ?? 3}, ${r.score ?? null},
                 ${r.tier ?? null}, ${r.place ?? null}, ${r.lat ?? null}, ${r.lng ?? null},
                 ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb,
                 ${r.replyTo ?? null}, ${r.citing ?? null},
-                ${r.media ? pgJson(r.media) : null}::jsonb, ${r.flags?.length ? pgJson(r.flags) : null}::jsonb
+                ${r.media ? pgJson(r.media) : null}::jsonb, ${r.flags?.length ? pgJson(r.flags) : null}::jsonb,
+                ${desks}::text[]
                -- A card deleted by hand stays deleted.
                where not exists (select 1 from desk_state s where s.key = ${DROPPED_KEY} and s.value ? ${r.fp})
               on conflict do nothing
               returning fp
             `;
             if (!inserted.length) {
+              // Seen again as another desk's too: it joins that desk, and so do its pins.
+              if (notYemenAlone(desks)) {
+                await sql`
+                  update desk_report set desks = array(select distinct unnest(desks || ${desks}::text[]) order by 1)
+                   where fp = ${r.fp} and not (desks @> ${desks}::text[])
+                `;
+                await sql`
+                  update desk_event set desks = array(select distinct unnest(desks || ${desks}::text[]) order by 1)
+                   where (fp = ${r.fp} or fp like ${r.fp + "-%"}) and not (desks @> ${desks}::text[])
+                `;
+              }
               // The original of a relayed report turned up after it was stored:
               // the original replaces the relay as its source and link. Any relay
               // — a website (Almashhad citing Bloomberg) as well as a channel: a
@@ -426,10 +448,11 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             for (const e of events) {
               const ev = await sql<{ fp: string }>`
                 insert into desk_event
-                  (fp, at, type, lat, lng, place, label, body, source, url, map_only)
+                  (fp, at, type, lat, lng, place, label, body, source, url, map_only, desks)
                 values (
                   ${e.fp}, ${e.at}, ${e.type}, ${e.lat}, ${e.lng}, ${e.place ?? null},
-                  ${e.label}, ${e.text ?? null}, ${e.source ?? null}, ${e.url ?? null}, ${e.mapOnly}
+                  ${e.label}, ${e.text ?? null}, ${e.source ?? null}, ${e.url ?? null}, ${e.mapOnly},
+                  ${desks}::text[]
                 )
                 on conflict (fp) do nothing
                 returning fp

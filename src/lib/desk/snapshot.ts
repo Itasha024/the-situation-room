@@ -43,6 +43,8 @@ export type DeskEventRow = {
   source?: string;
   url?: string;
   mapOnly: boolean;
+  /** Only when not Yemen's alone (desk-route.ts). */
+  desks?: string[];
 };
 
 /** A link that points at a section front rather than one report is not a report. */
@@ -78,6 +80,8 @@ export function toDeskReportRow(r: LiveReport): DeskReportRow {
     ...(r.citing ? { citing: r.citing } : {}),
     ...(r.media ? { media: r.media } : {}),
     ...(r.flags?.length ? { flags: r.flags } : {}),
+    // Yemen's alone, as every card before the Iran desk, carries nothing.
+    ...(r.desks?.length && r.desks.join() !== "yemen" ? { desks: r.desks } : {}),
     // Set only on rows the reader wrote; also the trust figure's inputs.
     ...(r.side ? { side: r.side, interest: r.interest, hasTime: r.hasTime } : {}),
   };

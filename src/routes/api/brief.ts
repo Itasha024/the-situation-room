@@ -3,6 +3,8 @@ import type { Brief } from "@/lib/desk/brief";
 import { briefWindow } from "@/lib/desk/brief";
 import { refreshBrief } from "@/lib/desk/brief-store";
 import { metered } from "@/lib/desk/cpu-meter";
+import { deskParam } from "@/lib/desk/desk-route";
+import { deskById } from "@/lib/desks";
 import { getStore } from "@/lib/desk/store";
 import { mergeNumbers } from "@/lib/desk/numbers";
 import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally";
@@ -21,8 +23,11 @@ import { CONTROL_LIVE_KEY, type ControlLive } from "@/lib/desk/control-live";
 export const Route = createFileRoute("/api/brief")({
   server: {
     handlers: {
-      GET: () => metered("brief", async () => {
+      GET: ({ request }) => metered("brief", async () => {
         try {
+          // The Iran desk's brief is built from stage 4 of Round 30; until then it has none.
+          const desk = deskParam(new URL(request.url).searchParams.get("desk"));
+          if (desk !== "yemen") return json({ ok: true, desk, pending: true, ...briefWindow(new Date(), deskById(desk).cadenceHours) }, 200, "public, max-age=60", "public, s-maxage=300");
           const store = await getStore();
           const { brief } = await refreshBrief(store);
           const timelineNow = (await store.getJson<TimelineNow>(TIMELINE_NOW_KEY)) ?? null;

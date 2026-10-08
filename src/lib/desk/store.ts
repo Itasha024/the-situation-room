@@ -19,6 +19,7 @@
  * two never disagree about which world they are in.
  */
 
+import type { DeskId } from "../desks.ts";
 import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import type { LiveReport, ScanPayload, ScanState } from "./types.ts";
 
@@ -86,8 +87,11 @@ export interface DeskStore {
    *
    * `before` (an ISO time) pages back: only rows strictly older are returned,
    * so "Show earlier reports" can walk the whole archive a page at a time.
+   *
+   * `desk`: only the cards and pins shown on that desk. Without it, every
+   * desk's — the scanner's own look-backs, which must see everything it kept.
    */
-  recentDesk(limit?: number, before?: string, opts?: { events?: boolean }): Promise<DeskSlice>;
+  recentDesk(limit?: number, before?: string, opts?: { events?: boolean; desk?: DeskId }): Promise<DeskSlice>;
 }
 
 export type MergeResult = {

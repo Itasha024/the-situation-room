@@ -280,3 +280,8 @@ test("a headline that names its speaker gets no second name in front (8 Oct, 'Ma
   assert.equal(v.kind, "publish");
   if (v.kind === "publish") assert.equal(v.report.summary, "US Secretary of State Rubio says the US can carry out any operation against Iran");
 });
+
+test("a headline that is only its speaker and a colon is not published (8 Oct)", () => {
+  const v = decideIranForTest(reading({ speaker_lead: "", headline: "Mohammad Jafar Qaempanah, deputy executive to Masoud Pezeshkian:" }), "قائم‌پناه معاون اجرایی پزشکیان گفت");
+  assert.equal(v.kind, "reject");
+});

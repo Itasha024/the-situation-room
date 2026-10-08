@@ -1068,6 +1068,8 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   r.headline = stripSpellingNotes(r.headline);
   r.body = stripSpellingNotes(r.body);
   if (redundantBody(r.headline, r.body, c.text)) r.body = "";
+  // A speaker and a colon with nothing after it says nothing (8 Oct, "… deputy executive to Masoud Pezeshkian:").
+  if (r.publish && /:\s*$/.test(r.headline.trim())) return { kind: "reject", reason: "reader-check", note: "Headline is only its speaker: say what they said." };
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);

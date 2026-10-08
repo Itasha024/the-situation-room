@@ -236,7 +236,8 @@ function bumpStreaks(saved: StoredBrief): BriefHistory["streaks"] {
 async function windowReports(store: DeskStore, w: { startedAt: string; updatedAt: string }): Promise<{ all: LiveReport[]; inWindow: LiveReport[] }> {
   const start = Date.parse(w.startedAt);
   const end = Date.parse(w.updatedAt);
-  const { reports } = await store.recentDesk(WINDOW_ROWS, undefined, { events: false });
+  // The Yemen desk's cards only: an Iran card is no news of the Yemen war (8 Oct).
+  const { reports } = await store.recentDesk(WINDOW_ROWS, undefined, { events: false, desk: "yemen" });
   // A picture of earlier damage is no new attack: it feeds neither the text nor the numbers (Stage D, user 2 Oct).
   const all = reports.map((r) => r as unknown as LiveReport).filter((r) => !oldPicture(String(r.summary ?? "")));
   const inWindow = all.filter((r) => {

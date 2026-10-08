@@ -131,14 +131,14 @@ export function placesOf(all: LiveReport[]): Place[] {
   return out.sort((a, b) => Number(a.country === "sea") - Number(b.country === "sea"));
 }
 
-const SYSTEM = `You are the editor of a wire desk covering the war in Yemen. The accounts
+/** The writer's prompt; `war` and `claims` name the desk's war and an example of its sides' claims. */
+export const combineSystem = (war = "the war in Yemen", claims = '("the Houthis said", "Saudi media\n  said")') => `You are the editor of a wire desk covering ${war}. The accounts
 below come from several outlets. They tell ONE event, or one wave of attacks by
 one side on one area. Write ONE report of it.
 
 - Carry every fact from every account: every place, every figure, every weapon,
   every named unit, person or object, and the outcome (intercepted, hit, killed).
-- Attribute each side's claim to that side ("the Houthis said", "Saudi media
-  said"). Where accounts give different figures, give both, attributed.
+- Attribute each side's claim to that side ${claims}. Where accounts give different figures, give both, attributed.
 - Add nothing the accounts do not say. No background, no analysis.
 - English only; places in the English spelling the accounts use. Spell each
   place once, the usual way; never explain a spelling ("also spelled").
@@ -149,6 +149,7 @@ one side on one area. Write ONE report of it.
 - Do not name the outlets, except to attribute a claim only one side made.
 
 Answer JSON only: {"headline": "...", "body": "..."}`;
+const SYSTEM = combineSystem();
 
 function accountsText(all: LiveReport[]): string {
   return all
@@ -282,6 +283,7 @@ export async function combineGroups(
   rank: (r: LiveReport) => number,
   store?: DeskStore,
   isNew: (r: LiveReport) => boolean = () => true,
+  system = SYSTEM,
 ): Promise<{ groups: Group[]; written: number; asked: number; tried: number }> {
   type Job = { parts: Group[]; group: Group; all: LiveReport[]; places: Place[]; key: string };
   const jobs: Job[] = [];
@@ -308,7 +310,7 @@ export async function combineGroups(
       if (asked >= COMBINE_CALLS) return null;
       asked += 1;
       const deadline = new Promise<null>((r) => setTimeout(() => r(null), COMBINE_MS));
-      const json = await Promise.race([ask(SYSTEM, accountsText(j.all)).catch(() => null), deadline]);
+      const json = await Promise.race([ask(system, accountsText(j.all)).catch(() => null), deadline]);
       const w = toWritten(json, j.all, j.places);
       fresh[j.key] = w;
       return w;
@@ -369,7 +371,7 @@ export function addsFacts(home: LiveReport, r: LiveReport): boolean {
  * its identity, source and link; its headline and body now carry every fact.
  * Returns the cards rewritten, tagged "merged" so the store saves the copy.
  */
-export async function enrichCards(pairs: [LiveReport, LiveReport][], ask: Ask, store?: DeskStore): Promise<LiveReport[]> {
+export async function enrichCards(pairs: [LiveReport, LiveReport][], ask: Ask, store?: DeskStore, system = SYSTEM): Promise<LiveReport[]> {
   const byHome = new Map<LiveReport, LiveReport[]>();
   for (const [home, r] of pairs) byHome.set(home, [...(byHome.get(home) ?? []), r]);
   const jobs = [...byHome].slice(0, ENRICH_CALLS).map(([home, adds]) => {
@@ -386,7 +388,7 @@ export async function enrichCards(pairs: [LiveReport, LiveReport][], ask: Ask, s
       if (j.key in cached) w = (cached as Record<string, Written | null>)[j.key];
       else {
         const deadline = new Promise<null>((res) => setTimeout(() => res(null), COMBINE_MS));
-        const json = await Promise.race([ask(SYSTEM, accountsText(j.all)).catch(() => null), deadline]);
+        const json = await Promise.race([ask(system, accountsText(j.all)).catch(() => null), deadline]);
         w = toWritten(json, j.all, j.places);
         fresh[j.key] = w;
       }

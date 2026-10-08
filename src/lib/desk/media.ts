@@ -216,7 +216,7 @@ async function askGemini(model: string, prompt: string, mime: string, bytes: str
 
 const KEEP = new Set(["launch", "strike", "interception", "ship", "battlefield", "damage", "satellite", "map"]);
 
-const PROMPT = `You look at the still of a video or photo attached to a news post about the war in Yemen, and say what it shows.
+const prompt = (war = "the war in Yemen") => `You look at the still of a video or photo attached to a news post about ${war}, and say what it shows.
 Classes: launch (a missile or drone launch), strike (an explosion, impact or smoke at a place), interception (air defence, a missile shot down), ship (a ship attacked, burning or seized), battlefield (fighters at a position, captured ground, destroyed vehicles), damage (a damaged building or site), satellite (satellite imagery), map (a map of the front), speech (a leader or spokesman speaking to camera), interview (someone talking to a reporter or a microphone, a witness), hospital (the wounded or patients in a hospital), portrait (a person posing or a headshot), meeting (officials meeting, handshakes, a conference), studio (a TV studio or presenter), logo (a logo, a text card, an infographic of text), crowd (a rally or funeral), other.
 graphic: true if it shows bodies, blood, wounded people close up, or a prisoner's face.
 Answer ONLY JSON {"class":"...","graphic":true|false}.`;
@@ -224,7 +224,7 @@ Answer ONLY JSON {"class":"...","graphic":true|false}.`;
 type VisionLog = { day: string; n: number };
 
 /** The still, looked at by a free model: what it shows, and whether it is graphic. Null when no model answered. */
-export async function lookAt(imageUrl: string, caption: string): Promise<{ cls: string; graphic: boolean } | null> {
+export async function lookAt(imageUrl: string, caption: string, war?: string): Promise<{ cls: string; graphic: boolean } | null> {
   if (!groqKey() && !readerKey()) return null;
   let bytes: string;
   let mime = "image/jpeg";
@@ -241,7 +241,7 @@ export async function lookAt(imageUrl: string, caption: string): Promise<{ cls: 
   } catch {
     return null;
   }
-  const ask = `${PROMPT}
+  const ask = `${prompt(war)}
 The post says: ${caption.slice(0, 400)}`;
   for (const model of VISION_MODELS) {
     try {
@@ -282,9 +282,12 @@ export async function attachMedia(
   cards: { r: LiveReport; media: Media; postText: string }[],
   usedThumbs: Set<string>,
   now = new Date(),
+  war?: string,
+  /** A desk's own count of looks a day (the Iran desk's apart from Yemen's). */
+  dayKey = VISION_KEY,
 ): Promise<number> {
   const day = now.toISOString().slice(0, 10);
-  const log = (await store.getJson<VisionLog>(VISION_KEY)) ?? { day, n: 0 };
+  const log = (await store.getJson<VisionLog>(dayKey)) ?? { day, n: 0 };
   if (log.day !== day) Object.assign(log, { day, n: 0 });
   let looked = 0;
   let given = 0;
@@ -304,7 +307,7 @@ export async function attachMedia(
   }
   for (let i = 0; i < picked.length; i += 4) {
     const batch = picked.slice(i, i + 4);
-    const looks = await Promise.all(batch.map((c) => lookAt(c.media.thumb, c.postText)));
+    const looks = await Promise.all(batch.map((c) => lookAt(c.media.thumb, c.postText, war)));
     batch.forEach((c, k) => {
       const look = looks[k];
       if (!look || !keeps(look, c.r) || usedThumbs.has(c.media.thumb)) return;
@@ -313,7 +316,7 @@ export async function attachMedia(
       given += 1;
     });
   }
-  if (looked) await store.putJson(VISION_KEY, log);
+  if (looked) await store.putJson(dayKey, log);
   return given;
 }
 

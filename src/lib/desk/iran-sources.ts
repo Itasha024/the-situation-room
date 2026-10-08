@@ -60,13 +60,13 @@ export const IRAN_TG: IranSource[] = [
   // links each post to tasnimnews.ir; the Arabic one relays Tasnim Arabic.
   { id: "Tasnimnews_EN", name: "Tasnim", lean: "axis", every: 5 },
   { id: "Tasnim_ar", name: "Tasnim (Arabic relay)", lean: "axis", every: 5, note: "a relay of Tasnim Arabic, not Tasnim's own" },
-  { id: "Khabar_Fouri", name: "Khabar Fouri", lean: "axis", every: 5 },
+  { id: "Khabar_Fouri", name: "Khabar Fori", lean: "axis", every: 5 },
   { id: "khabari", name: "Khabari Plus", lean: "axis", every: 5 },
   { id: "isna94", name: "ISNA", lean: "axis", every: 5 },
   { id: "imnanews_ir", name: "IMNA", lean: "axis", every: 15 },
   { id: "akhbarefori", name: "Akhbar-e Fori", lean: "axis", every: 5 },
   { id: "alalamarabic", name: "Al-Alam", lean: "axis", every: 5 },
-  { id: "Tehran_Fouri", name: "Tehran Fouri", lean: "axis", every: 5 },
+  { id: "Tehran_Fouri", name: "Tehran Fori", lean: "axis", every: 5 },
   { id: "ilnair", name: "ILNA", lean: "axis", every: 15 },
   { id: "emtedadnet", name: "Emtedad", lean: "axis", every: 15 },
   { id: "PressTVhebrew", name: "Press TV Hebrew", lean: "axis", every: 15 },
@@ -85,6 +85,7 @@ export const IRAN_TG: IranSource[] = [
   { id: "anjmotahed", name: "United Students", lean: "opposition", every: 15 },
   { id: "SimaINTV", name: "Simay-e Azadi (MEK)", lean: "opposition", every: 15 },
   { id: "idfinfarsi", name: "IDF Farsi", lean: "israel", every: 5 },
+  { id: "IDFSpokespersonArabic", name: "IDF Arabic", lean: "israel", every: 10 },
   { id: "farsivoa", name: "VOA Farsi", lean: "us", every: 5 },
   { id: "bbcpersian", name: "BBC Persian", lean: "intl", every: 5 },
   { id: "netblocks", name: "NetBlocks", lean: "intl", every: 15 },
@@ -216,6 +217,12 @@ export const IRAN_X: IranSource[] = [
   { id: "manototv", name: "Manoto", lean: "opposition", every: 15 },
   // Israel.
   { id: "MossadSpokesman", name: "Mossad Farsi", lean: "israel", every: 15 },
+  // The IDF (added 8 Oct). Lt. Col. Ella Waweya has been its Arabic spokesperson
+  // since February 2026; Avichay Adraee, her predecessor, still posts now and then.
+  { id: "IDF", name: "IDF", lean: "israel", every: 10 },
+  { id: "IDFFarsi", name: "IDF Farsi", lean: "israel", every: 10 },
+  { id: "CaptainElla1", name: "Ella Waweya (IDF Arabic spokesperson)", lean: "israel", every: 10 },
+  { id: "avichayadraee", name: "Avichay Adraee", lean: "israel", every: 30 },
   // The US.
   { id: "RadioFarda_", name: "Radio Farda", lean: "us", every: 10 },
   { id: "USEmbMuscat", name: "US Embassy Muscat", lean: "us", every: 30 },

@@ -64,6 +64,66 @@ export const PEOPLE: Person[] = [
   { en: "Faisal bin Farhan", ar: ["فيصل بن فرحان"], variants: [String.raw`Faysal [Bb]in Farhan`] },
   { en: "Mohammed Al Jaber", ar: ["محمد آل جابر", "محمد ال جابر"], variants: [String.raw`Moh?amm?[ea]d (?:Al-|al-|Aal )Jaber`] },
   { en: "Turki al-Maliki", ar: ["تركي المالكي"], variants: [String.raw`Turki ${AL}Malki`] },
+  // Iran (8 Oct, the Iran desk): by surname, as the wires write them. `ar`
+  // holds the Persian spelling and the Arabic one. A Persian name follows
+  // Persian sounds, not Arabic ones: ق and غ are "gh" (Ghalibaf, not Qalibaf),
+  // و is "v" (Velayati), the vowels are e and o (Esmaeil, Mohsen).
+  { en: "Araghchi", ar: ["عراقچی", "عراقچي", "عراقجي", "عراقتشي"], variants: [String.raw`Ara(?:q|k|g|gh)(?:ch|j|tch)[iy]`, String.raw`Iraq(?:ch|j)i`, String.raw`Erak?chi`, String.raw`Araghchy`] },
+  { en: "Khamenei", ar: ["خامنه‌ای", "خامنه ای", "خامنه‌اي", "خامنئي", "خامنئی"], variants: [String.raw`Kham(?:e|a)n(?:e|eh)?'?(?:i|ai|ii)`, String.raw`Khameini`, String.raw`Khamina?i`].map((v) => String.raw`(?!Khamenei\b)${v}`) },
+  { en: "Pezeshkian", ar: ["پزشکیان", "پزشكيان", "بزشكيان", "بزشکیان"], variants: [String.raw`(?:Pez|Paz|Biz|Bez|Piz|Pez)(?:e|i)?shk(?:i|y|iy)an`].map((v) => String.raw`(?!Pezeshkian\b)${v}`) },
+  { en: "Ghalibaf", ar: ["قالیباف", "قاليباف"], variants: [String.raw`(?:Qal|Kal|Ghal)(?:i|ee|e)baa?f`].map((v) => String.raw`(?!Ghalibaf\b)${v}`) },
+  { en: "Baghaei", ar: ["بقائی", "بقایی", "بقائي", "بقايي"], variants: [String.raw`Ba(?:q|gh)a(?:'i|ee|i|ie|yi|ei)`].map((v) => String.raw`(?!Baghaei\b)${v}`) },
+  { en: "Ghaempanah", ar: ["قائم‌پناه", "قائم پناه", "قائمپناه"], variants: [String.raw`(?:Qa|Gha)(?:e|i|')?m[- ]?[Pp]anah`].map((v) => String.raw`(?!Ghaempanah\b)${v}`) },
+  { en: "Haddad-Adel", ar: ["حداد عادل", "حدادعادل"], variants: [String.raw`Hadd?ad(?:[- ]e)?[- ]?Adel`, String.raw`Haddadadad`].map((v) => String.raw`(?!Haddad-Adel\b)${v}`) },
+  { en: "Mohammad Eslami", ar: ["محمد اسلامی", "محمد إسلامي"], variants: [String.raw`Moh?amm?[ae]d Islami`] },
+  { en: "Gharibabadi", ar: ["غریب‌آبادی", "غریب آبادی", "غريب آبادي"], variants: [String.raw`(?:Qarib|Gharib)[- ]?[Aa]badi`].map((v) => String.raw`(?!Gharibabadi\b)${v}`) },
+  { en: "Velayati", ar: ["ولایتی", "ولايتي"], variants: [String.raw`Wilayati`, String.raw`Velayaty`] },
+  { en: "Mohajerani", ar: ["مهاجرانی", "مهاجراني"], variants: [String.raw`Muhajerani`, String.raw`Mohajerany`] },
+  { en: "Takht-Ravanchi", ar: ["تخت‌روانچی", "تخت روانچی", "تخت روانجي"], variants: [String.raw`Takht(?:[- ]e)?[- ]Ravanchi`].map((v) => String.raw`(?!Takht-Ravanchi\b)${v}`) },
+  { en: "Mohseni-Ejei", ar: ["محسنی اژه‌ای", "محسنی اژه ای", "محسني إجئي"], variants: [String.raw`Mohseni[- ]Ej(?:e|eh)(?:'i|i|ie|ii|hi)`].map((v) => String.raw`(?!Mohseni-Ejei\b)${v}`) },
+  { en: "Qaani", ar: ["قاآنی", "قاآني", "قآني"], variants: [String.raw`Gh?aa'?ani`, String.raw`Qa'?ani`, String.raw`Ghaani`].map((v) => String.raw`(?!Qaani\b)${v}`) },
+  { en: "Pakpour", ar: ["پاکپور", "پاک‌پور", "باكبور"], variants: [String.raw`Pakpur`] },
+  { en: "Nasirzadeh", ar: ["نصیرزاده", "نصيرزاده"], variants: [String.raw`Nasir[- ]?[Zz]ade`, String.raw`Nasir Zadeh`].map((v) => String.raw`(?!Nasirzadeh\b)${v}`) },
+  { en: "Kanaani", ar: ["کنعانی", "كنعاني"], variants: [String.raw`Kan'?ani`].map((v) => String.raw`(?!Kanaani\b)${v}`) },
+  { en: "Zolghadr", ar: ["ذوالقدر"], variants: [String.raw`Z[ou]l(?:q|gh)adr`].map((v) => String.raw`(?!Zolghadr\b)${v}`) },
+  { en: "Shamkhani", ar: ["شمخانی", "شمخاني"] },
+  { en: "Larijani", ar: ["لاریجانی", "لاريجاني"], variants: [String.raw`Larijany`] },
+  { en: "Mousavi", ar: ["موسوی", "موسوي"], variants: [String.raw`Musavi`, String.raw`Moussavi`] },
+  { en: "Tangsiri", ar: ["تنگسیری", "تنكسيري"] },
+  { en: "Vahidi", ar: ["وحیدی", "وحيدي"] },
+  { en: "Jalili", ar: ["جلیلی", "جليلي"] },
+  { en: "Mokhber", ar: ["محمد مخبر"], variants: [String.raw`Mukhber`] },
+  { en: "Hatami", ar: ["حاتمی", "حاتمي"] },
+  { en: "Ahmadian", ar: ["احمدیان", "أحمديان"] },
+  { en: "Kpler", ar: ["کپلر", "كبلر"], variants: [String.raw`Capler(?: Analytics)?`, String.raw`Kepler(?= (?:data|Analytics|figures|says|said|estimates))`] },
+];
+
+/**
+ * Iran's places as the wires write them (8 Oct). Kept apart from PEOPLE (whose
+ * words are never places) and from the Yemen gazetteer (which pins them).
+ */
+export const IRAN_PLACES: Person[] = [
+  { en: "Bandar Abbas", ar: ["بندرعباس", "بندر عباس"], variants: [String.raw`Bandar[- ]e[- ]Abbas`, String.raw`Bandar-Abbas`] },
+  { en: "Bushehr", ar: ["بوشهر"], variants: [String.raw`Bushire`, String.raw`Bouchehr`, String.raw`Busheh?r(?<!Bushehr)`] },
+  { en: "Isfahan", ar: ["اصفهان", "أصفهان"], variants: [String.raw`Esfahan`, String.raw`Isfehan`] },
+  { en: "Fordow", ar: ["فردو", "فوردو"], variants: [String.raw`Ford(?:o|u|ou|ow)(?<!Fordow)`] },
+  { en: "Natanz", ar: ["نطنز"] },
+  { en: "Kharg", ar: ["خارک", "خارك"], variants: [String.raw`Khark`] },
+  { en: "Chabahar", ar: ["چابهار", "جابهار", "تشابهار"], variants: [String.raw`Chah[- ]?Bahar`] },
+  { en: "Sistan and Baluchestan", ar: ["سیستان و بلوچستان", "سيستان وبلوشستان", "سيستان وبلوچستان", "سيستان و بلوشستان"], variants: [String.raw`Sistan[- ](?:and[- ])?Bal(?:o|u)ch(?:i|e)stan(?<!Sistan and Baluchestan)`] },
+  { en: "Khuzestan", ar: ["خوزستان"], variants: [String.raw`Khuzistan`] },
+  { en: "Ahvaz", ar: ["اهواز", "الأهواز"], variants: [String.raw`Ahwaz`] },
+  { en: "Qom", ar: [], variants: [String.raw`Ghom`] },
+  { en: "Qeshm", ar: ["قشم"], variants: [String.raw`Gheshm`, String.raw`Qishm`] },
+  { en: "Asaluyeh", ar: ["عسلویه", "عسلوية"], variants: [String.raw`Ass?al(?:ou|u)y(?:eh|e)(?<!Asaluyeh)`] },
+  { en: "Kermanshah", ar: ["کرمانشاه", "كرمانشاه"], variants: [String.raw`Kirmanshah`] },
+  { en: "Hormozgan", ar: ["هرمزگان", "هرمزكان"], variants: [String.raw`Hormuzgan`] },
+  { en: "Jask", ar: ["جاسک", "جاسك"] },
+  { en: "Parchin", ar: ["پارچین", "بارشين"] },
+  { en: "Mashhad", ar: [], variants: [String.raw`Meshed`] },
+  { en: "Tabriz", ar: ["تبریز", "تبريز"] },
+  { en: "Shiraz", ar: ["شیراز", "شيراز"] },
+  { en: "Nikshahr", ar: ["نیکشهر", "نيكشهر"], variants: [String.raw`Nik[- ]Shahr`] },
 ];
 
 /** Place spellings that are other names, not other spellings: never swapped. */
@@ -75,7 +135,7 @@ const B = String.raw`(?<![A-Za-z'’-])(?<!\b[AaEe][ln] )`;
 const E = String.raw`(?![A-Za-z'’-])`;
 
 const SWAPS: Swap[] = [
-  ...PEOPLE.flatMap((p) => (p.variants ?? []).map((v) => ({ re: new RegExp(`${B}(?:${v})${E}`, "g"), src: v, to: p.en }))),
+  ...[...PEOPLE, ...IRAN_PLACES].flatMap((p) => (p.variants ?? []).map((v) => ({ re: new RegExp(`${B}(?:${v})${E}`, "g"), src: v, to: p.en }))),
   ...[...PLACES]
     .sort((a, b) => b.name.length - a.name.length)
     .flatMap((p) =>
@@ -103,6 +163,8 @@ export function respell(text: string): string {
 }
 
 const HAS_AR = /[؀-ۿ]/;
+/** An Arabic or Persian letter (پ چ ژ ک گ ی too). */
+const FA_LETTER = "[\u0621-\u064A\u067E\u0686\u0698\u06A9\u06AF\u06CC]";
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** "يحيى سريع = Yahya Saree; الحديدة = Hodeidah": how this post's names are written. */
@@ -114,6 +176,12 @@ export function spellingHints(sourceText: string, max = 20): string {
     const hit = p.ar.find((a) => new RegExp(`(?<![\\u0621-\\u064A])${esc(a)}`).test(t));
     if (hit) out.push(`${hit} = ${p.en}`);
     if (out.length >= max) break;
+  }
+  // Iran's places as whole words, Persian letters included on both sides.
+  for (const p of IRAN_PLACES) {
+    if (out.length >= max) break;
+    const hit = p.ar.find((a) => new RegExp(`(?<!${FA_LETTER})${esc(a)}(?!${FA_LETTER})`).test(t));
+    if (hit) out.push(`${hit} = ${p.en}`);
   }
   for (const p of PLACES) {
     if (out.length >= max) break;
@@ -146,3 +214,23 @@ export const SPELLING_RULES = `- Names: when an item has "spelling", write those
   "Abdul-"/"Abdul" for عبد (Abdulaziz, Abdul-Malik); no apostrophes or marks
   for ع and ء; ة is "a" or "ah" (Hodeidah, Shabwa); ق is "q", خ "kh", غ "gh",
   ش "sh", ث "th", ذ and ظ "dh". Never transliterate an ordinary word: translate it.`;
+
+/**
+ * The Iran reader's rules for a Persian name the desk does not know (8 Oct:
+ * "Haddadadad" for Haddad-Adel, "Qaem Panah" for Ghaempanah, "Capler" for Kpler).
+ */
+export const PERSIAN_SPELLING_RULES = `- Names: when an item has "spelling", write those names exactly so. Any other
+  Iranian name the way the wires (Reuters, AP, AFP) and Iran's own English
+  outlets write it, by PERSIAN sounds, never Arabic ones: ق and غ are "gh"
+  (Ghalibaf, Gharibabadi, Ghaempanah), و is "v" (Velayati, Vahidi), خ "kh",
+  چ "ch", ژ "zh", ش "sh"; the short vowels are "e" and "o", not "i" and "u"
+  (Esmaeil, Mohsen, Mojtaba, Hossein, Mohammad); ی at the end is "i" (Rezaei,
+  Baghaei); ع and ء are not written. A compound name keeps its hyphen
+  (Haddad-Adel, Mohseni-Ejei, Takht-Ravanchi); never join or double its parts.
+  An Arabic name the way the wires write Arabic names (al-, bin, q for ق).
+- A firm, an outlet or a body keeps its own Latin name, never a spelling back
+  from Persian or Arabic: کپلر is Kpler, ویندوارد Windward, وال‌استریت ژورنال
+  the Wall Street Journal. If you do not know a name's Latin form, describe
+  it ("a German business weekly") rather than guess a spelling.
+- Never transliterate an ordinary word: translate it. ماه is "month", not a
+  name ("اعتراضات دی ماه" are the January 2026 protests).`;

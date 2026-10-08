@@ -119,3 +119,56 @@ export function calendarHints(text: string, now = new Date()): string {
   if (!found.length) return "";
   return found.map((f) => `"${f.text}" (${f.cal === "persian" ? "Iranian solar calendar" : "Hijri calendar"}) = ${f.en}`).join("; ");
 }
+
+/** Iran's months as English copy writes them (Amordad is Mordad). */
+const PERSIAN_MONTHS_EN = ["Farvardin", "Ordibehesht", "Khordad", "Tir", "Mordad", "Shahrivar", "Mehr", "Aban", "Azar", "Dey", "Bahman", "Esfand"];
+const MONTH_EN_RE = "(Farvardin|Ordibehesht|Khordad|Tir|A?mordad|Shahrivar|Mehr|Aban|Azar|Dey|Bahman|Esfand)";
+const monthIndex = (name: string) => PERSIAN_MONTHS_EN.findIndex((m) => m.toLowerCase() === name.toLowerCase().replace(/^amordad$/, "mordad"));
+
+/** The Solar Hijri year a month falls in: the latest one not after `now`. */
+function persianYearOf(month: number, now: Date): number {
+  const [y, m] = toCalendar("persian", now);
+  return month <= m ? y : y - 1;
+}
+
+const gDay = (d: Date) => `${d.getUTCDate()} ${MONTHS_EN[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+const part = (day: number) => (day <= 10 ? "early" : day <= 20 ? "mid" : "late");
+
+/**
+ * Iran's calendar left in English copy, put into the ordinary one (8 Oct:
+ * "on Thursday 16 Mehr (8 October 2026)", "since early Shahrivar", "the Mah
+ * 2026 protests"). The reader is told each date (`calendarHints`) and still
+ * copies a few.
+ *  - "16 Mehr (8 October 2026)" keeps the Gregorian date only.
+ *  - "16 Mehr" and "16 Mehr 1405" become "8 October 2026".
+ *  - "early/mid/late Shahrivar", "in/since/during Shahrivar" become the
+ *    Gregorian part of the month it falls in ("late August").
+ *  - The protests of Dey 1404 ("Dey protests", "Mah protests": ماه is "month")
+ *    are the January 2026 protests.
+ * A month name with no day, part or preposition is left alone: "Mehr" is also
+ * Mehr News, and "Azar" a person.
+ */
+export function westernDates(text: string, now = new Date()): string {
+  let t = String(text || "");
+  if (!t) return t;
+  t = t.replace(new RegExp(String.raw`\b(\d{1,2})(?:st|nd|rd|th)? ${MONTH_EN_RE}(?: (1[34]\d\d))?(?:,? (?:\(|which is |i\.e\. )(\d{1,2} [A-Z][a-z]+ \d{4})\)?)?`, "g"), (all, d: string, mon: string, y: string | undefined, greg: string | undefined) => {
+    if (greg) return greg;
+    const m = monthIndex(mon) + 1;
+    const date = fromCalendar("persian", y ? Number(y) : persianYearOf(m, now), m, Number(d));
+    return date ? gDay(date) : all;
+  });
+  t = t.replace(new RegExp(String.raw`\b(early|mid|late|the end of|the start of|the beginning of)[- ]${MONTH_EN_RE}(?! News)(?: (1[34]\d\d))?\b`, "gi"), (all, when: string, mon: string, y: string | undefined) => {
+    const m = monthIndex(mon) + 1;
+    const year = y ? Number(y) : persianYearOf(m, now);
+    const day = /early|start|beginning/i.test(when) ? 5 : /mid/i.test(when) ? 15 : 27;
+    const date = fromCalendar("persian", year, m, day);
+    return date ? `${part(date.getUTCDate())} ${MONTHS_EN[date.getUTCMonth()]}` : all;
+  });
+  t = t.replace(new RegExp(String.raw`\b(in|since|during|until|by|from) ${MONTH_EN_RE}(?! News)(?: (1[34]\d\d))?\b`, "g"), (all, prep: string, mon: string, y: string | undefined) => {
+    const m = monthIndex(mon) + 1;
+    const date = fromCalendar("persian", y ? Number(y) : persianYearOf(m, now), m, 1);
+    return date ? `${prep} ${part(date.getUTCDate())} ${MONTHS_EN[date.getUTCMonth()]}` : all;
+  });
+  t = t.replace(/\b(?:Dey|Mah)(?:[- ](?:month|Mah))?(?: (?:1404|2026))? (protests?|uprising|unrest|demonstrations)\b/g, "January 2026 $1");
+  return t;
+}

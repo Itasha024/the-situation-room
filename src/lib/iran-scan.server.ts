@@ -16,10 +16,14 @@ import { IRAN_RSS, IRAN_TG, IRAN_X, type IranLean } from "./desk/iran-sources.ts
 import { passesIranOwnGate } from "./desk/iran-reader.ts";
 import { type Candidate, IRAN_READER, USAGE_KEY, type Usage, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
-import { sameWords } from "./desk/copies.ts";
+import { combineSystem } from "./desk/combine.ts";
+import { isExclusive } from "./desk/exclusive.ts";
+import { hearable, listenToVideos } from "./desk/listen.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 import {
+  type DeskPipe,
+  shapeCards,
   IRAN_INBOX,
   IRAN_PAYLOAD,
   type RawHit,
@@ -80,8 +84,6 @@ const GNEWS_PER_TICK = 10;
 const PAYLOAD_REPORTS = 300;
 const RAW_HITS = 200;
 const RAW_HITS_MS = 3 * 3600_000;
-/** Two outlets' copies of one story fold into one card within this window. */
-const COPY_MS = 90 * 60_000;
 /**
  * Gemini's lite models are the Yemen reader's first; the Iran reader uses them
  * only while today's calls on them stay under this, so Yemen keeps its share.
@@ -126,29 +128,31 @@ async function readFeed(f: Feed): Promise<{ rows: RawHit[]; ok: boolean }> {
   return { rows: ok ? parseRss(body as string, f.name).map((r) => ({ ...r, lean: f.lean })) : [], ok };
 }
 
-/** Folds copies of one story (two outlets, minutes apart, the same words) into one card. */
-function foldCopies(reports: LiveReport[], earlier: LiveReport[]): { cards: LiveReport[]; folded: number } {
-  const cards: LiveReport[] = [];
-  let folded = 0;
-  const sorted = [...reports].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-  for (const r of sorted) {
-    const near = (o: LiveReport) => Math.abs(Date.parse(o.at) - Date.parse(r.at)) <= COPY_MS && (sameWords(o.summary, r.summary) || (!!r.copyKey && o.copyKey === r.copyKey));
-    if (earlier.some(near)) {
-      folded += 1;
-      continue;
-    }
-    const into = cards.find(near);
-    if (into) {
-      if (into.source !== r.source && !(into.alsoReportedBy ?? []).some((a) => a.source === r.source)) {
-        into.alsoReportedBy = [...(into.alsoReportedBy ?? []), { source: r.source, url: r.url }].slice(0, 6);
-      }
-      folded += 1;
-      continue;
-    }
-    cards.push(r);
-  }
-  return { cards, folded };
-}
+/**
+ * The Iran desk's own keys for the steps every desk shares (yemen-scan's
+ * shapeCards): its queue, its relays waiting for their original, its count of
+ * picture looks, and its war in the writer's and the picture check's prompts.
+ */
+export const IRAN_PIPE: DeskPipe = {
+  desk: "iran",
+  queueKey: IRAN_READER.queueKey,
+  originCacheKey: "iran:origin-cache-v3",
+  combineSystem: combineSystem("the war with Iran", '("the IRGC said", "the IDF said")'),
+  war: "the war with Iran",
+  visionKey: "iran:media-vision",
+  // The Yemen desk's combining and link models are Gemini's lite ones and
+  // Groq's: this desk asks NVIDIA and OpenRouter first, so their quotas last.
+  combineModels: [
+    { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
+    { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
+    { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
+  ],
+  linkModels: [
+    { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
+    { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
+  ],
+  traceShare: 0.4,
+};
 
 export type IranTickResult = { ok: boolean; scannedAt: string; sourcesTried: number; sourcesOk: number; fromInbox: number; candidates: number; reportsAdded: number; note: string; tookMs: number; error?: string };
 
@@ -231,7 +235,16 @@ export async function runIranCycle(): Promise<IranTickResult> {
   const readable = hits.filter((h) => !isGnews(h.url));
   state.pending = hits.filter((h) => isGnews(h.url)).slice(0, 60);
 
-  // 5. The Iran reader.
+  // 5. A video's spoken words join its post before the reader sees it, as on
+  //    the Yemen desk; the Iran desk keeps its own half of the day's listening.
+  try {
+    const heard = await listenToVideos(store, readable, now, { worth: (h) => hearable(h) && passesIranOwnGate(h.text), dayKey: "iran:listen-day" });
+    if (heard) console.log(`[iran] [listen] ${heard} post(s) given their video's words`);
+  } catch (err) {
+    console.error("[iran] [listen] failed:", err instanceof Error ? err.message : err);
+  }
+
+  // 6. The Iran reader.
   const candidates: Candidate[] = readable.map((h) => ({
     source: h.source,
     url: h.url,
@@ -250,12 +263,23 @@ export async function runIranCycle(): Promise<IranTickResult> {
   const cfg = liteToday >= GEMINI_LITE_SHARE ? { ...IRAN_READER, models: [] } : IRAN_READER;
   const { verdicts, modelNote } = await editCandidates(store, candidates, now, cfg);
 
-  // 6. Cards: copies folded, the rest stored on the Iran desk.
-  const published: LiveReport[] = [];
-  for (const v of verdicts.values()) if (v.kind === "publish" && !v.report.duplicateOf) published.push({ ...v.report, desks: ["iran"] });
-  const earlier = (prev?.reports ?? []).filter((r) => now - Date.parse(r.at) < 12 * 3600_000);
-  const { cards, folded } = foldCopies(published, earlier);
-  const merge = cards.length ? await store.mergeIntoDesk(cards) : { reportsAdded: 0, eventsAdded: 0, unplaced: [] };
+  // 7. Cards, by the steps every desk shares: a relay traced to its original,
+  //    copies of one story one card with "Also", the time a card first went
+  //    out kept, pictures, follow-ups and later facts (user, 8 Oct).
+  const texts = new Map(readable.map((h) => [h.url, h]));
+  const approved: LiveReport[] = [];
+  for (const [url, v] of verdicts) {
+    if (v.kind !== "publish") continue;
+    const h = texts.get(url);
+    if (h && isExclusive(h.text, h.source)) v.report.flags = [...new Set([...(v.report.flags ?? []), "exclusive"])];
+    v.report.desks = ["iran"];
+    approved.push(v.report);
+  }
+  const { uniqReports, touched } = await shapeCards(IRAN_PIPE, approved, readable, prev, now);
+  const before = new Set((prev?.reports ?? []).map((r) => r.fp));
+  const cards = uniqReports.filter((r) => !before.has(r.fp));
+  const folded = approved.length - cards.length;
+  const merge = uniqReports.length || touched.length ? await store.mergeIntoDesk([...uniqReports.slice(0, PAYLOAD_REPORTS), ...touched]) : { reportsAdded: 0, eventsAdded: 0, unplaced: [] };
 
   // 7. The scan box: what came in and what became of it.
   const rawHits: RawScanHit[] = hits.map((h) => {
@@ -277,9 +301,7 @@ export async function runIranCycle(): Promise<IranTickResult> {
   });
   const keep = (r: { seenAt?: string; at: string }) => now - Date.parse(r.seenAt || r.at) <= RAW_HITS_MS;
   const allHits = [...rawHits, ...(prev?.rawHits ?? []).filter((h) => keep(h) && !byUrl.has(h.url))].filter(keep).slice(0, RAW_HITS);
-  const reports = [...cards, ...(prev?.reports ?? []).filter((r) => !cards.some((c) => c.fp === r.fp))]
-    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
-    .slice(0, PAYLOAD_REPORTS);
+  const reports = uniqReports.slice(0, PAYLOAD_REPORTS);
   const statusAll = [...status, ...(prev?.sourceStatus ?? []).filter((s) => !status.some((x) => x.id === s.id))].sort((a, b) => a.name.localeCompare(b.name));
   const note = `${status.length} sources read, ${inbox.length} items from the shared sources, ${candidates.length} new to read, ${opened} articles opened, ${cards.length} new cards, ${folded} copies folded.${modelNote ? ` Reader: ${modelNote}.` : ""}`;
   const payload: ScanPayload = {

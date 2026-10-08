@@ -13,6 +13,7 @@
 
 import { anglicise } from "./anglicise.ts";
 import { respell } from "./spelling.ts";
+import { westernDates } from "./calendars.ts";
 import { type NeedsPlace, geocodeJobs } from "./geocode.ts";
 import { maritimeType, seaPlace } from "./maritime.ts";
 import { offsetFromText } from "./offshore.ts";
@@ -772,7 +773,7 @@ ${raw.body}`, c.text) : null;
   if (away) return { kind: "reject", reason: "other-theatre", note: sentence(away) };
   // Arabic left in the English copy and the sources' partisan words are fixed
   // here, not grounds for rejection.
-  const r: Reading = { ...raw, headline: firstEvent(fixHeadline(reword(respell(anglicise(raw.headline))))), body: reword(respell(anglicise(raw.body))) };
+  const r: Reading = { ...raw, headline: firstEvent(fixHeadline(westernDates(reword(respell(anglicise(raw.headline)))))), body: westernDates(reword(respell(anglicise(raw.body)))) };
   // The outlet is on the card: not in its headline, not in its body. And a
   // spokesperson or a role is only what the text says it is.
   r.headline = diplomatPost(dropInventedRole(spokespersonLabel(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.source, c.text), c.text), c.text);
@@ -1026,11 +1027,11 @@ export function decideForTest(r: Reading, text: string): EditorVerdict {
  * Put candidates on the reader's queue for the next cycle: an original found
  * and read in full after this cycle's reading was done.
  */
-export async function queueForReading(store: DeskStore, cands: Candidate[], now = Date.now()): Promise<void> {
+export async function queueForReading(store: DeskStore, cands: Candidate[], now = Date.now(), key = QUEUE_KEY): Promise<void> {
   if (!cands.length) return;
-  const queue = (await store.getJson<Queued[]>(QUEUE_KEY)) ?? [];
+  const queue = (await store.getJson<Queued[]>(key)) ?? [];
   for (const c of cands) if (!queue.some((q) => q.url === c.url)) queue.push({ ...c, queuedAt: now });
-  await store.putJson(QUEUE_KEY, queue);
+  await store.putJson(key, queue);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1052,8 +1053,14 @@ const IRAN_ALIGNMENT: Record<string, string> = {
  * Yemen's side rules. Every report is said as its teller's; no "claim" is added.
  */
 function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
-  const r: Reading = { ...raw, headline: firstEvent(fixHeadline(reword(respell(anglicise(raw.headline))))), body: reword(respell(anglicise(raw.body))) };
-  if (r.speaker_lead) r.speaker_lead = dropInventedRole(r.speaker_lead, c.text);
+  // The site's general copy rules, as on the Yemen desk (user, 8 Oct): Iran's
+  // calendar out, one spelling per name, the outlet off its own copy, no
+  // role the text did not give.
+  const fix = (s: string) => westernDates(reword(respell(anglicise(s))));
+  const r: Reading = { ...raw, headline: firstEvent(fixHeadline(fix(raw.headline))), body: fix(raw.body) };
+  r.headline = dropInventedRole(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.text);
+  r.body = stripOwnOutlet(r.body, c.source);
+  if (r.speaker_lead) r.speaker_lead = dropInventedRole(stripOwnOutlet(r.speaker_lead, c.source), c.text);
   let lead = String(r.speaker_lead || "").trim().replace(/\s*:+\s*$/, "");
   if (OUTLET_LEAD.test(`${lead}:`)) lead = "";
   r.speaker_lead = lead || null;
@@ -1067,6 +1074,11 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
   r.headline = stripSpellingNotes(r.headline);
   r.body = stripSpellingNotes(r.body);
+  // A short report is its headline, its dead and wounded too.
+  if (r.body && sourceSentences(c.text) <= 4) {
+    const h = casualtyHeadline(r.headline, r.body);
+    if (h) [r.headline, r.body] = [h, ""];
+  }
   if (redundantBody(r.headline, r.body, c.text)) r.body = "";
   // A speaker and a colon with nothing after it says nothing (8 Oct, "… deputy executive to Masoud Pezeshkian:").
   if (r.publish && /:\s*$/.test(r.headline.trim())) return { kind: "reject", reason: "reader-check", note: "Headline is only its speaker: say what they said." };

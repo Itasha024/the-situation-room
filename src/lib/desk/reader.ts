@@ -767,6 +767,8 @@ export function stripOwnOutlet(text: string, source: string): string {
   const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
   t = t.replace(new RegExp(`^((?:[A-Z][\\w'-]* ){0,3}— )?${o}(?:'s)?(?: correspondent| reporter)?:\\s*`, "i"), "$1");
   t = t.replace(new RegExp(`(^|— |\\. )${o}(?:'s)?(?: correspondent| reporter)? (?:reported|reports|said|says|stated|learned|revealed) (?:that )?(\\S)`, "gi"), (_m, pre: string, c: string) => `${pre}${c.toUpperCase()}`);
+  // "Khabari Plus quotes Trump: …" is Trump's words (8 Oct, the Iran desk).
+  t = t.replace(new RegExp(`(^|— |\\. )${o}(?:'s)? (?:quotes|quoted|cites|cited) (\\S)`, "gi"), (_m, pre: string, c: string) => `${pre}${c.toUpperCase()}`);
   t = t.replace(new RegExp(`\\btold ${o}(?: TV)?(?: that)? `, "gi"), "said ");
   t = t.replace(new RegExp(`,? (?:according to|in (?:a statement|remarks|an interview) to) ${o}(?=[,.]|$)`, "gi"), "");
   t = t.replace(new RegExp(`,? ${o} (?:says|said|reports|reported)$`, "i"), "");

@@ -34,10 +34,11 @@ import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
 import { listenToVideos } from "./desk/listen.ts";
 import { triage } from "./desk/triage.ts";
-import { askChain, COMBINE_MODELS } from "./desk/models.ts";
+import { askChain, type ChainModel, COMBINE_MODELS } from "./desk/models.ts";
 import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves } from "./desk/combine.ts";
 import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
 import { TRIAGE_MODELS } from "./desk/triage.ts";
+import type { DeskId } from "./desks.ts";
 import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranWar } from "./desk/iran-reader.ts";
 
@@ -2000,11 +2001,11 @@ export function leadRank(r: LiveReport): number {
  * The last day of desk rows, as reports: a new outlet on a story whose card
  * has left the payload still folds into that card instead of becoming another.
  */
-async function storedCards(): Promise<LiveReport[]> {
+async function storedCards(desk: DeskId = "yemen"): Promise<LiveReport[]> {
   try {
     const store = await getStore();
     const since = Date.now() - STORY_WINDOW_MS;
-    return (await store.recentDesk(150, undefined, { events: false })).reports
+    return (await store.recentDesk(150, undefined, { events: false, desk })).reports
       .filter((r) => Date.parse(String(r.at)) >= since)
       .map((r) => ({ ...(r as unknown as LiveReport), text: String((r as { text?: string }).text ?? ""), live: true as const }));
   } catch {
@@ -2594,6 +2595,96 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   }
   // Items read from the queue — seen in an earlier cycle, read only now.
   for (const [url, v] of verdicts) if (v.kind === "publish" && !pre.has(url)) reports.push(v.report);
+  const { uniqReports, touched, combined, combineTried } = await shapeCards({ ...YEMEN_PIPE, hint: (h) => hintOutlets(state, h, now) }, reports, hits, prev, now, floor);
+  if (prev && Array.isArray(prev.rawHits)) {
+    const haveH = new Set(rawHits.map((h) => linkKey(h.url)));
+    for (const h of prev.rawHits) {
+      const u = linkKey(String(h.url || ""));
+      if (u && !haveH.has(u)) {
+        rawHits.push({ ...h, seenAt: h.seenAt || h.at });
+        haveH.add(u);
+      }
+    }
+  }
+  if (prev && Array.isArray(prev.sourceStatus)) {
+    const haveS = new Set(status.map((s) => s.id));
+    // Only sources that still exist. Carrying every id forward kept a feed
+    // deleted two days earlier on the status page, still advertising the
+    // daily 07:00 read it was dropped for failing — the page went on
+    // describing a capability the desk no longer had.
+    const real = new Set([...TG.map((c) => c.id), ...RSS.map((f) => f.id), ...learnedFeeds(learned).map((f) => f.id)]);
+    for (const s of prev.sourceStatus) {
+      if (s?.id && !haveS.has(s.id) && real.has(s.id)) status.push(s);
+    }
+  }
+
+  const tried = status.length;
+  const skipped = Math.max(0, TG.length + X_ACCOUNTS.length + RSS.length - tried);
+  const cycleNote = skipped
+    ? `${tried} sources this cycle; ${skipped} on a slower schedule (dailies and agencies).`
+    : `All ${tried} sources scanned this cycle.`;
+  // Say plainly when the reader could not run: a quiet feed must not look
+  // like a quiet war.
+  const readerNote = (modelNote ? ` Reader: ${modelNote}.` : "") + (combineTried ? ` Combined ${combined} of ${combineTried} groups into one card each.` : "");
+
+  return {
+    ok: true,
+    // The scan's start, on the round five minutes the clock runs it at: what
+    // the sources said as of then. The reader's work after that is not "newer".
+    scannedAt: jerusalemIso(new Date(now)),
+    reports: uniqReports.slice(0, PAYLOAD_REPORTS),
+    ...(touched.length ? { touched } : {}),
+    sourcesTried: tried,
+    sourcesOk,
+    // Newest-seen first: what the scanner just pulled sits at the top of the box.
+    rawHits: rawHits
+      .filter((h) => !(now - Date.parse(h.seenAt || h.at) > RAW_HITS_MS))
+      .sort((a, b) => Date.parse(b.seenAt || b.at) - Date.parse(a.seenAt || a.at) || Date.parse(b.at) - Date.parse(a.at))
+      .slice(0, PAYLOAD_RAW_HITS),
+    sourceStatus: status.sort((a, b) => a.name.localeCompare(b.name)),
+    cycleNote: cycleNote + readerNote,
+    reasons: NOISE_REASONS,
+  };
+}
+
+/**
+ * A desk's cards from its reader's verdicts: the steps every desk shares
+ * (user, 8 Oct: "every general rule goes on the Iran desk too"). A relay is
+ * traced to its original, which replaces it; copies of one story become one
+ * card with "Also"; a card keeps the time it first went out; pictures, video
+ * words, follow-ups and later facts are added. `pipe` holds the desk's own keys,
+ * so one desk's traces, queue and allowances never mix with another's.
+ */
+export type DeskPipe = {
+  desk: DeskId;
+  /** Where an original read in full waits for the desk's reader. */
+  queueKey?: string;
+  /** The desk's store of relays waiting for their original. */
+  originCacheKey?: string;
+  /** The writer's prompt when several accounts become one card. */
+  combineSystem?: string;
+  /** The war, as the picture check is told it. */
+  war?: string;
+  /** The desk's count of picture looks a day. */
+  visionKey?: string;
+  /** Outlets a relay named, read early next tick (Yemen's site hints). */
+  hint?: (hits: RawHit[]) => void;
+  /** The models that write a card from several accounts, and that judge its links. */
+  combineModels?: ChainModel[];
+  linkModels?: ChainModel[];
+  /** The desk's share of the trace's Google searches (Yemen: all of it). */
+  traceShare?: number;
+};
+export const YEMEN_PIPE: DeskPipe = { desk: "yemen" };
+
+export async function shapeCards(
+  pipe: DeskPipe,
+  reports: LiveReport[],
+  hits: RawHit[],
+  prev: ScanPayload | null,
+  now: number,
+  floor = false,
+): Promise<{ uniqReports: LiveReport[]; touched: LiveReport[]; combined: number; combineTried: number }> {
   // Every report the reader approved, to account for at the end: each becomes
   // a card, joins one, or waits for its original. One that did none of these
   // is named in the log (the Riyadh schools report vanished with no trace).
@@ -2611,6 +2702,8 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       held,
       listingOf: siteListing,
       knownHost: readsHost,
+      cacheKey: pipe.originCacheKey,
+      share: pipe.traceShare,
     });
     // A relay whose original is still being looked for is not published yet.
     for (let i = reports.length - 1; i >= 0; i -= 1) if (held.has(reports[i].fp)) reports.splice(i, 1);
@@ -2618,13 +2711,13 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     if (held.size) console.log(`[origin] ${held.size} relay(s) held while their original is looked for`);
     // Originals read in full go to the reader next cycle; the card is then
     // rewritten from the original's text under the same fp.
-    await queueForReading(await getStore(), reread, now);
+    await queueForReading(await getStore(), reread, now, pipe.queueKey);
   } catch (err) {
     // Untraced reports keep their relay as source; nothing else changes.
     console.error("[origin] trace failed:", err instanceof Error ? err.stack || err.message : err);
   }
   lap("origins");
-  hintOutlets(state, hits, now);
+  pipe.hint?.(hits);
   // An outlet does not open a headline, nor close it ("…, WSJ says"): the
   // source line says who reported it. Only after tracing, which reads the name.
   for (const r of reports) r.summary = stripAttribution(r.summary, [r.source, r.citing]);
@@ -2706,10 +2799,11 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       [...byStory.values()].map((g) => pickLead(members(g), leadRank)),
       isNew,
     ),
-    async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000, models: COMBINE_MODELS }))?.json ?? null,
+    async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000, models: pipe.combineModels ?? COMBINE_MODELS }))?.json ?? null,
     leadRank,
     await getStore(),
     isNew,
+    pipe.combineSystem,
   );
   lap("combine");
   for (const { lead, others } of groups) {
@@ -2756,7 +2850,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     else uniqReports.push(r);
   }
   const published = new Set((prev?.reports ?? []).map((r) => r.fp));
-  const stored = await storedCards();
+  const stored = await storedCards(pipe.desk);
   // A card already on the desk is not new again: it keeps the time it went
   // out with, and is no new card (an undated site article seen again).
   {
@@ -2801,7 +2895,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         const own = mediaByUrl.get(r.url) ?? (r.alsoReportedBy ?? []).map((a) => mediaByUrl.get(a.url)).find(Boolean);
         return own && !r.media ? [{ r, ...own }] : [];
       });
-      const given = await attachMedia(await getStore(), cands, used);
+      const given = await attachMedia(await getStore(), cands, used, new Date(), pipe.war, pipe.visionKey);
       if (given) console.log(`[media] ${given} card(s) given a picture or video`);
     }
   } catch (err) {
@@ -2824,8 +2918,9 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     try {
       const rewritten = await enrichCards(
         enrich,
-        async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000, models: COMBINE_MODELS }))?.json ?? null,
+        async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000, models: pipe.combineModels ?? COMBINE_MODELS }))?.json ?? null,
         await getStore(),
+        pipe.combineSystem,
       );
       for (const h of rewritten) if (!touched.includes(h) && !uniqReports.includes(h)) touched.push(h);
       if (rewritten.length) console.log(`[fold] ${rewritten.length} card(s) written again with a later account's facts`);
@@ -2851,62 +2946,14 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
     const judged = await judgeLinks(
       newCards.filter((r) => uniqReports.includes(r)),
       [...stored, ...uniqReports],
-      async (system, user) => (await askChain("links", system, user, { temperature: 0, models: TRIAGE_MODELS.slice(0, 2), timeoutMs: 12_000 }))?.json ?? null,
+      async (system, user) => (await askChain("links", system, user, { temperature: 0, models: pipe.linkModels ?? TRIAGE_MODELS.slice(0, 2), timeoutMs: 12_000 }))?.json ?? null,
     );
     if (judged.length) console.log(`[links] judge changed ${judged.length} link(s)`);
   } catch (err) {
     console.error("[links] judge failed:", err instanceof Error ? err.message : err);
   }
   lap("links");
-  if (prev && Array.isArray(prev.rawHits)) {
-    const haveH = new Set(rawHits.map((h) => linkKey(h.url)));
-    for (const h of prev.rawHits) {
-      const u = linkKey(String(h.url || ""));
-      if (u && !haveH.has(u)) {
-        rawHits.push({ ...h, seenAt: h.seenAt || h.at });
-        haveH.add(u);
-      }
-    }
-  }
-  if (prev && Array.isArray(prev.sourceStatus)) {
-    const haveS = new Set(status.map((s) => s.id));
-    // Only sources that still exist. Carrying every id forward kept a feed
-    // deleted two days earlier on the status page, still advertising the
-    // daily 07:00 read it was dropped for failing — the page went on
-    // describing a capability the desk no longer had.
-    const real = new Set([...TG.map((c) => c.id), ...RSS.map((f) => f.id), ...learnedFeeds(learned).map((f) => f.id)]);
-    for (const s of prev.sourceStatus) {
-      if (s?.id && !haveS.has(s.id) && real.has(s.id)) status.push(s);
-    }
-  }
-
-  const tried = status.length;
-  const skipped = Math.max(0, TG.length + X_ACCOUNTS.length + RSS.length - tried);
-  const cycleNote = skipped
-    ? `${tried} sources this cycle; ${skipped} on a slower schedule (dailies and agencies).`
-    : `All ${tried} sources scanned this cycle.`;
-  // Say plainly when the reader could not run: a quiet feed must not look
-  // like a quiet war.
-  const readerNote = (modelNote ? ` Reader: ${modelNote}.` : "") + (combineTried ? ` Combined ${combined} of ${combineTried} groups into one card each.` : "");
-
-  return {
-    ok: true,
-    // The scan's start, on the round five minutes the clock runs it at: what
-    // the sources said as of then. The reader's work after that is not "newer".
-    scannedAt: jerusalemIso(new Date(now)),
-    reports: uniqReports.slice(0, PAYLOAD_REPORTS),
-    ...(touched.length ? { touched } : {}),
-    sourcesTried: tried,
-    sourcesOk,
-    // Newest-seen first: what the scanner just pulled sits at the top of the box.
-    rawHits: rawHits
-      .filter((h) => !(now - Date.parse(h.seenAt || h.at) > RAW_HITS_MS))
-      .sort((a, b) => Date.parse(b.seenAt || b.at) - Date.parse(a.seenAt || a.at) || Date.parse(b.at) - Date.parse(a.at))
-      .slice(0, PAYLOAD_RAW_HITS),
-    sourceStatus: status.sort((a, b) => a.name.localeCompare(b.name)),
-    cycleNote: cycleNote + readerNote,
-    reasons: NOISE_REASONS,
-  };
+  return { uniqReports, touched, combined, combineTried };
 }
 
 /* ------------------------------------------------------------------ *

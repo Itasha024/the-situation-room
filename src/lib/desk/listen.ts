@@ -27,7 +27,7 @@ import type { Media } from "./types.ts";
 
 export const SAID = "[Said in the video]";
 const PREFIX = "listen";
-const DAY_KEY = "listen-day";
+const YEMEN_DAY_KEY = "listen-day";
 /** Whisper's free tier: 2,000 files and 28,800 seconds of sound a day. Half of it, at most. */
 const DAY_FILES = 600;
 const DAY_SECONDS = 14_000;
@@ -70,11 +70,14 @@ export function usableTranscript(t: string): string | null {
 }
 
 /** Is this post's video worth listening to? */
-export function worthListening(h: Hit): boolean {
+/** A video that can be heard at all: a file, short enough, not heard already. */
+export function hearable(h: Hit): boolean {
   const m = h.media;
-  if (!m || m.kind !== "video" || !m.src) return false;
-  if ((m.duration ?? 0) > MAX_SECONDS) return false;
-  if (h.text.includes(SAID)) return false;
+  return !!m && m.kind === "video" && !!m.src && (m.duration ?? 0) <= MAX_SECONDS && !h.text.includes(SAID);
+}
+
+export function worthListening(h: Hit): boolean {
+  if (!hearable(h)) return false;
   const v = gate({ source: h.source, url: h.url, text: h.text, agency: false });
   // Excluded by name (a ceremony, a cleric, commentary, a relay): the words would not change that.
   if (v.outcome === "exclude" && !["empty", "off-topic"].includes(v.reason)) return false;
@@ -137,9 +140,10 @@ export async function transcribe(src: string): Promise<{ text: string } | { none
  * Write out this scan's videos worth hearing and add their words to the posts,
  * in place. Returns how many posts gained words.
  */
-export async function listenToVideos(store: DeskStore, hits: Hit[], now = Date.now()): Promise<number> {
+export async function listenToVideos(store: DeskStore, hits: Hit[], now = Date.now(), opts: { worth?: (h: Hit) => boolean; dayKey?: string } = {}): Promise<number> {
   if (!groqKey()) return 0;
-  const want = hits.filter(worthListening);
+  const DAY_KEY = opts.dayKey ?? YEMEN_DAY_KEY;
+  const want = hits.filter(opts.worth ?? worthListening);
   if (!want.length) return 0;
   const ids = want.map((h) => idOf(h.url));
   const known = await store.getMany<Heard>(PREFIX, ids);

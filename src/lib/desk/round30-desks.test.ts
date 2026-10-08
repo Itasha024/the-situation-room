@@ -319,3 +319,58 @@ test("the Iran feed starts on 8 Oct: no older card is read on that desk (8 Oct)"
   const ye = await store.recentDesk(500, undefined, { desk: "yemen", floor: deskById("yemen").feedFrom });
   assert.ok(ye.reports.some((r) => r.fp === "old-iran"));
 });
+
+/* ------------------------------------------------------------------ *
+ * 8 Oct: the site's general rules on the Iran desk too, and Persian spelling
+ * ------------------------------------------------------------------ */
+
+import { respell, spellingHints } from "./spelling.ts";
+import { westernDates } from "./calendars.ts";
+import { findCitation } from "./origin.ts";
+import { combineSystem } from "./combine.ts";
+import { IRAN_SYSTEM_PROMPT } from "./iran-reader.ts";
+
+test("Iranian names and places are written the wires' way", () => {
+  assert.equal(
+    respell("Gholamali Haddadadad and Qaem Panah; Abbas Araqchi met Qalibaf and Baqaei in Esfahan; Capler Analytics data"),
+    "Gholamali Haddad-Adel and Ghaempanah; Abbas Araghchi met Ghalibaf and Baghaei in Isfahan; Kpler data",
+  );
+  const ok = "Khamenei, Pezeshkian, Araghchi, Bandar Abbas, Mehr News and Ford Motor";
+  assert.equal(respell(ok), ok);
+  assert.match(spellingHints("عراقچی گفت در بندرعباس"), /عراقچی = Araghchi; بندرعباس = Bandar Abbas/);
+});
+
+test("Iran's calendar left in English copy becomes the ordinary one", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  assert.equal(westernDates("said on Thursday 16 Mehr (8 October 2026) in Lisbon", now), "said on Thursday 8 October 2026 in Lisbon");
+  assert.equal(westernDates("on 7 Mehr 1405", now), "on 29 September 2026");
+  assert.equal(westernDates("the lowest since early Shahrivar", now), "the lowest since late August");
+  assert.equal(westernDates("linked to the Mah 2026 protests", now), "linked to the January 2026 protests");
+  assert.equal(westernDates("Mehr News reported", now), "Mehr News reported");
+});
+
+test("a relay in Persian is traced to who said it (8 Oct: VOA Farsi on CENTCOM, Akhbar-e Fori on Kpler)", () => {
+  assert.equal(findCitation("سنتکام اعلام کرد ناو آبراهام لینکلن به کالیفرنیا بازگشت", "VOA Farsi", "https://t.me/farsivoa/1")?.name, "CENTCOM");
+  assert.equal(findCitation("به گزارش کپلر، کشورهای خلیج فارس عوارض پنهانی می‌پردازند", "Akhbar-e Fori", "https://t.me/akhbarefori/1")?.name, "Kpler");
+});
+
+test("the outlet that carries a quote is not in the Iran card (8 Oct: \"Khabari Plus quotes Trump\")", () => {
+  const v = decideIranForTest(
+    reading({ speaker_lead: "", actor: "Trump", actor_side: "us", headline: "Khabari Plus quotes Trump: the problem is Iran hitting Los Angeles", body: "", arenas: ["military"] }),
+    "ترامپ: مشکل این است که ایران با موشک به لس‌آنجلس بزند",
+    "Khabari Plus",
+  );
+  assert.equal(v.kind, "publish");
+  if (v.kind !== "publish") return;
+  assert.ok(!/Khabari/i.test(v.report.summary), v.report.summary);
+  assert.match(v.report.summary, /^Trump: /);
+});
+
+test("the Iran reader is told the site's general rules; Yemen's combine prompt is unchanged", () => {
+  for (const rule of [/reject_reason "commentary"/, /FORMER officials/, /reject_reason "recap"/, /reject_reason "cleric"/, /reject_reason "protocol"/, /four sentences or fewer\) is its headline/, /Never name the outlet that carries the item/, /NEVER shorten an interesting item/, /SPEECH LINES/, /\[Said in the video\]/, /PERSIAN sounds/, /Ella Waweya/]) {
+    assert.match(IRAN_SYSTEM_PROMPT, rule);
+  }
+  assert.match(combineSystem(), /^You are the editor of a wire desk covering the war in Yemen\. /);
+  assert.match(combineSystem(), /\("the Houthis said", "Saudi media\n  said"\)/);
+  assert.match(combineSystem("the war with Iran", '("the IRGC said")'), /covering the war with Iran\. [\s\S]*\("the IRGC said"\)/);
+});

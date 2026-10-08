@@ -98,27 +98,27 @@ const B = (name: string, site: string, country = "", extra: Partial<Cited> = {})
 const CITABLE: [RegExp, Cited][] = [
   // The bodies with their own accounts first ("Aspides, the EU's naval mission" is Aspides).
   ...BODIES,
-  [/نيويورك تايمز|New York Times|\bNYT\b/i, O("NYT", "nytimes.com", "US")],
-  [/وول ستريت جورنال|Wall Street Journal|\bWSJ\b/i, O("WSJ", "wsj.com", "US")],
-  [/واشنطن بوست|Washington Post/i, O("Washington Post", "washingtonpost.com", "US")],
-  [/رويترز|Reuters/i, O("Reuters", "reuters.com", "US", { wire: true })],
-  [/أسوشيتد برس|اسوشيتد برس|Associated Press|\bAP\b/, O("AP", "apnews.com", "US", { wire: true })],
-  [/أكسيوس|اكسيوس|Axios/i, O("Axios", "axios.com", "US")],
-  [/بلومبرغ|بلومبيرغ|Bloomberg/i, O("Bloomberg", "bloomberg.com", "US", { wire: true })],
-  [/فاينانشال تايمز|فايننشال تايمز|Financial Times/i, O("Financial Times", "ft.com", "UK")],
-  [/الغارديان|Guardian/i, O("The Guardian", "theguardian.com", "UK")],
+  [/نیویورک ?تایمز|نيويورك تايمز|New York Times|\bNYT\b/i, O("NYT", "nytimes.com", "US")],
+  [/وال ?استریت ?ژورنال|وول ستريت جورنال|Wall Street Journal|\bWSJ\b/i, O("WSJ", "wsj.com", "US")],
+  [/واشنگتن ?پست|واشنطن بوست|Washington Post/i, O("Washington Post", "washingtonpost.com", "US")],
+  [/رویترز|رويترز|Reuters/i, O("Reuters", "reuters.com", "US", { wire: true })],
+  [/آسوشیتد ?پرس|أسوشيتد برس|اسوشيتد برس|Associated Press|\bAP\b/, O("AP", "apnews.com", "US", { wire: true })],
+  [/آکسیوس|اکسیوس|أكسيوس|اكسيوس|Axios/i, O("Axios", "axios.com", "US")],
+  [/بلومبرگ|بلومبرغ|بلومبيرغ|Bloomberg/i, O("Bloomberg", "bloomberg.com", "US", { wire: true })],
+  [/فایننشال ?تایمز|فاينانشال تايمز|فايننشال تايمز|Financial Times/i, O("Financial Times", "ft.com", "UK")],
+  [/گاردین|الغارديان|Guardian/i, O("The Guardian", "theguardian.com", "UK")],
   [/بوليتيكو|Politico/i, O("Politico", "politico.com", "US")],
-  [/سي إن إن|سي ان ان|\bCNN\b/i, O("CNN", "cnn.com", "US")],
-  [/فوكس نيوز|Fox News/i, O("Fox News", "foxnews.com", "US")],
-  [/إن بي سي|ان بي سي|\bNBC\b/i, O("NBC News", "nbcnews.com", "US")],
-  [/سي بي إس|سي بي اس|\bCBS\b/i, O("CBS News", "cbsnews.com", "US")],
+  [/سی[‌ ]?ان[‌ ]?ان|سي إن إن|سي ان ان|\bCNN\b/i, O("CNN", "cnn.com", "US")],
+  [/فاکس ?نیوز|فوكس نيوز|Fox News/i, O("Fox News", "foxnews.com", "US")],
+  [/ان[‌ ]?بی[‌ ]?سی|إن بي سي|ان بي سي|\bNBC\b/i, O("NBC News", "nbcnews.com", "US")],
+  [/سی[‌ ]?بی[‌ ]?اس|سي بي إس|سي بي اس|\bCBS\b/i, O("CBS News", "cbsnews.com", "US")],
   [/إيه بي سي|اي بي سي|\bABC News\b/i, O("ABC News", "abcnews.go.com", "US")],
   [/نيوزويك|Newsweek/i, O("Newsweek", "newsweek.com", "US")],
   [/سيمافور|Semafor/i, O("Semafor", "semafor.com", "US")],
   [/المونيتور|Al-Monitor/i, O("Al-Monitor", "al-monitor.com", "US")],
   [/(?<!نيويورك |فاينانشال |فايننشال )التايمز|(?<!New York |Financial )\bThe Times\b(?! of)/, O("The Times", "thetimes.com", "UK")],
-  [/التلغراف|تلغراف|Telegraph/i, O("The Telegraph", "telegraph.co.uk", "UK")],
-  [/الإيكونوميست|إيكونوميست|Economist/i, O("The Economist", "economist.com", "UK")],
+  [/تلگراف|التلغراف|تلغراف|Telegraph/i, O("The Telegraph", "telegraph.co.uk", "UK")],
+  [/اکونومیست|الإيكونوميست|إيكونوميست|Economist/i, O("The Economist", "economist.com", "UK")],
   [/الإندبندنت(?! عربية)|اندبندنت(?! عربية)|Independent(?! Arabia)/, O("The Independent", "independent.co.uk", "UK")],
   // Sky News Arabia is Emirati and its own outlet; Sky News is British.
   [/سكاي نيوز(?! عربية)|Sky News(?! Arabia)/i, O("Sky News", "news.sky.com", "UK")],
@@ -132,13 +132,13 @@ const CITABLE: [RegExp, Cited][] = [
   [/لوموند|لو موند|Le Monde/i, O("Le Monde", "lemonde.fr", "FR")],
   [/لوفيغارو|لو فيغارو|Le Figaro/i, O("Le Figaro", "lefigaro.fr", "FR")],
   [/دير شبيغل|شبيغل|Spiegel/i, O("Der Spiegel", "spiegel.de", "DE")],
-  [/وكالة تسنيم|Tasnim/i, O("Tasnim", "tasnimnews.ir", "IR")],
-  [/وكالة فارس|Fars News/i, O("Fars", "farsnews.ir", "IR")],
-  [/(?:وكالة )?إرنا|\bIRNA\b/i, O("IRNA", "irna.ir", "IR")],
-  [/وكالة مهر|Mehr News/i, O("Mehr", "mehrnews.com", "IR")],
+  [/خبرگزاری تسنیم|تسنیم|وكالة تسنيم|Tasnim/i, O("Tasnim", "tasnimnews.ir", "IR")],
+  [/خبرگزاری فارس|وكالة فارس|Fars News/i, O("Fars", "farsnews.ir", "IR")],
+  [/ایرنا|(?:وكالة )?إرنا|\bIRNA\b/i, O("IRNA", "irna.ir", "IR")],
+  [/خبرگزاری مهر|وكالة مهر|Mehr News/i, O("Mehr", "mehrnews.com", "IR")],
   [/جوان أونلاين|جوان اونلاين|صحيفة جوان|Javan/i, O("Javan", "javanonline.ir", "IR")],
-  [/برس تي في|Press TV/i, O("Press TV", "presstv.ir", "IR")],
-  [/كيهان|Kayhan/i, O("Kayhan", "kayhan.ir", "IR")],
+  [/پرس[‌ ]?تی[‌ ]?وی|برس تي في|Press TV/i, O("Press TV", "presstv.ir", "IR")],
+  [/کیهان|كيهان|Kayhan/i, O("Kayhan", "kayhan.ir", "IR")],
   [/قناة الميادين|الميادين نت|Al Mayadeen/i, O("Al Mayadeen", "almayadeen.net", "LB", { lang: "ar" })],
   [/القدس العربي|Al-Quds Al-Arabi/i, O("Al-Quds Al-Arabi", "alquds.co.uk", "UK", { lang: "ar" })],
   [/رأي اليوم|Rai Al-Youm/i, O("Rai Al-Youm", "raialyoum.com", "UK", { lang: "ar" })],
@@ -150,16 +150,16 @@ const CITABLE: [RegExp, Cited][] = [
   [/المتحدث (?:الرسمي )?باسم (?:قوات )?التحالف|تحالف دعم الشرعية|coalition spokesman/i, B("Coalition (SPA)", "spa.gov.sa", "SA")],
   [/الخارجية السعودية|Saudi (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Saudi Foreign Ministry", "spa.gov.sa", "SA")],
   [/وكالة الأنباء السعودية|\(واس\)|\bواس\b|Saudi Press Agency/i, B("SPA", "spa.gov.sa", "SA")],
-  [/سنتكوم|القيادة المركزية الأمريكية|CENTCOM|Central Command/i, B("CENTCOM", "centcom.mil", "US")],
-  [/الخارجية الأمريكية|الخارجية الأميركية|State Department/i, B("State Department", "state.gov", "US")],
+  [/سنتکام|فرماندهی مرکزی (?:ارتش )?(?:آمریکا|ایالات متحده)|سنتكوم|القيادة المركزية الأمريكية|CENTCOM|Central Command/i, B("CENTCOM", "centcom.mil", "US", { x: "CENTCOM" })],
+  [/وزارت خارجه (?:آمریکا|ایالات متحده)|الخارجية الأمريكية|الخارجية الأميركية|State Department/i, B("State Department", "state.gov", "US")],
   [/المبعوث الأممي|غروندبرغ|UN envoy|Grundberg/i, B("UN envoy's office", "osesgy.unmissions.org", "UN", { x: "OSE_Yemen" })],
   [/مجلس الأمن الدولي|Security Council/i, B("UN Security Council", "press.un.org")],
   [/عمليات التجارة البحرية البريطانية|\bUKMTO\b/i, B("UKMTO", "ukmto.org", "UK")],
   [/وزارة الدفاع البريطانية|\bUK (?:Defen[cs]e Ministry|Ministry of Defen[cs]e)\b|\bMoD\b/, B("UK Ministry of Defence", "gov.uk", "UK")],
   [/الاتحاد الأوروبي|\bEEAS\b|European Union/i, B("EU", "eeas.europa.eu")],
   // Wires and broadcasters the channels relay by name.
-  [/فرانس برس|وكالة الصحافة الفرنسية|\bAFP\b|Agence France[- ]Presse/i, O("AFP", "afp.com", "FR", { wire: true })],
-  [/بي بي سي|\bBBC\b/i, O("BBC", "bbc.com", "UK")],
+  [/خبرگزاری فرانسه|فرانس برس|وكالة الصحافة الفرنسية|\bAFP\b|Agence France[- ]Presse/i, O("AFP", "afp.com", "FR", { wire: true })],
+  [/بی[‌ ]?بی[‌ ]?سی|بي بي سي|\bBBC\b/i, O("BBC", "bbc.com", "UK")],
   [/الأناضول|أناضول|Anadolu/i, O("Anadolu", "aa.com.tr", "TR", { wire: true })],
   [/تي آر تي|\bTRT\b/i, O("TRT", "trt.net.tr", "TR")],
   [/الجزيرة نت|موقع الجزيرة|Al Jazeera Net/i, O("Al Jazeera", "aljazeera.net", "QA", { lang: "ar" })],
@@ -179,15 +179,16 @@ const CITABLE: [RegExp, Cited][] = [
   [/المنظمة البحرية الدولية|\bIMO\b/, B("IMO", "imo.org")],
   // Governments whose statements arrive through whoever saw them first.
   [/الخارجية البريطانية|وزارة الخارجية البريطانية|Foreign(?:,| and) Commonwealth|\bFCDO\b|British Foreign Office/i, B("UK Foreign Office", "gov.uk", "UK")],
-  [/البنتاغون|وزارة الدفاع الأمريكية|Pentagon|\bDoD\b/i, B("Pentagon", "defense.gov", "US")],
-  [/البيت الأبيض|White House/i, B("White House", "whitehouse.gov", "US")],
+  [/پنتاگون|وزارت (?:دفاع|جنگ) آمریکا|البنتاغون|وزارة الدفاع الأمريكية|Pentagon|\bDoD\b/i, B("Pentagon", "defense.gov", "US")],
+  [/کاخ سفید|البيت الأبيض|White House/i, B("White House", "whitehouse.gov", "US", { x: "WhiteHouse" })],
   // Shipping, oil and conflict data: their figures travel through everyone
   // ("Kpler estimates…"), so the desk goes to the firm itself, or to the first
   // major outlet that published its numbers.
-  [/كبلر|كيبلر|Kpler/i, O("Kpler", "kpler.com", "", { x: "Kpler", data: true })],
+  [/آژانس بین[‌ ]?المللی انرژی اتمی|الوكالة الدولية للطاقة الذرية|\bIAEA\b|International Atomic Energy Agency/i, B("IAEA", "iaea.org", "", { x: "iaeaorg" })],
+  [/کپلر|كبلر|كيبلر|Kpler/i, O("Kpler", "kpler.com", "", { x: "Kpler", data: true })],
   [/فورتكسا|Vortexa/i, O("Vortexa", "vortexa.com", "UK", { data: true })],
-  [/تانكر ?تراكرز|TankerTrackers/i, O("TankerTrackers", "tankertrackers.com", "", { x: "TankerTrackers", data: true })],
-  [/ويندوارد|Windward/i, O("Windward", "windward.ai", "", { x: "WindwardAI", data: true })],
+  [/تانکر ?ترکرز|تانكر ?تراكرز|TankerTrackers/i, O("TankerTrackers", "tankertrackers.com", "", { x: "TankerTrackers", data: true })],
+  [/ویندوارد|ويندوارد|Windward/i, O("Windward", "windward.ai", "", { x: "WindwardAI", data: true })],
   [/مارين ?ترافيك|MarineTraffic/i, O("MarineTraffic", "marinetraffic.com", "", { x: "MarineTraffic", data: true })],
   [/أمبري|امبري|Ambrey/i, O("Ambrey", "ambrey.com", "UK", { data: true })],
   [/أرغوس ميديا|Argus Media/i, O("Argus", "argusmedia.com", "UK", { x: "ArgusMedia", data: true })],
@@ -208,7 +209,7 @@ const CITABLE: [RegExp, Cited][] = [
 const ISRAELI = /إسرائيل|عبرية|يديعوت|هآرتس|معاريف|القناة (?:12|13|14|الثانية عشرة)|Israel|Hebrew|Haaretz|Yedioth|Ynet|Maariv|Jerusalem Post|Times of Israel|i24|Channel (?:12|13|14)\b|\bKan\b/i;
 
 /** A citation marker: the name must be what the post is relaying, not a subject. */
-const RELAY = /(?:نقلا عن|نقلاً عن|وفقا ل|وفقاً ل|بحسب|حسب|عن|قالت|ذكرت|أفادت|أعلنت|كشفت|أكدت|:|according to|citing|told|tells?|said|reported|reports|estimat\w*|data|figures|show(?:s|ed)?|analysis|track\w*|تقديرات|بيانات|أظهرت|تظهر|تقدر)/i;
+const RELAY = /(?:به گزارش|به نقل از|گزارش (?:داد|داده)|اعلام (?:کرد|کرده)|گفت|نوشت|طبق|بنابر|مدعی شد|نقلا عن|نقلاً عن|وفقا ل|وفقاً ل|بحسب|حسب|عن|قالت|ذكرت|أفادت|أعلنت|كشفت|أكدت|:|according to|citing|told|tells?|said|reported|reports|estimat\w*|data|figures|show(?:s|ed)?|analysis|track\w*|تقديرات|بيانات|أظهرت|تظهر|تقدر)/i;
 
 /** What a body does in its own statement: condemns, calls for, warns, welcomes, holds talks. */
 const STATEMENT = /\b(?:condemn\w*|call(?:s|ed)? (?:for|on)|urg\w*|warn\w*|welcom\w*|announc\w*|stat(?:es|ed)|express\w*|den(?:y|ies|ied)|demand\w*|hold(?:s|ing)? talks|held talks|met|meets|discuss\w*|reject\w*|affirm\w*|stress\w*)\b|دعا|دعت|تدعو|أدان|أدانت|تدين|يدين|حذر|حذرت|رحب|رحبت|طالب|طالبت|بحث|التقى|استنكر|استنكرت|أكد|أكدت/i;
@@ -643,6 +644,13 @@ export type TraceOptions = {
   listingOf?: (site: string) => Promise<Listed[]>;
   /** Does the desk already read this host? */
   knownHost?: (host: string) => boolean;
+  /** The desk's own store of traces (the Iran desk's apart from Yemen's). */
+  cacheKey?: string;
+  /**
+   * A share of the tick's searches, reads and time (0..1): Google answers the
+   * server's searches only so often, and the Yemen desk's trace keeps the whole.
+   */
+  share?: number;
 };
 
 /** Paths that are never the article itself: video, photo and live pages, a bare front page. */
@@ -1012,21 +1020,24 @@ export async function traceOrigins(
   opts: TraceOptions = {},
 ): Promise<LiveReport[]> {
   const started = Date.now();
-  const inTime = () => Date.now() - started < TRACE_MS;
+  const share = Math.min(1, Math.max(0, opts.share ?? 1));
+  const part = (n: number) => Math.max(1, Math.floor(n * share));
+  const inTime = () => Date.now() - started < TRACE_MS * share;
   // Google's link resolver is shared with the scan: a tick spends a few, and none while Google asks for a rest.
   const resolved0 = resolveCount();
   const searched0 = searchCount();
-  const canWork = () => inTime() && resolveCount() - resolved0 < RESOLVE_BUDGET && searchCount() - searched0 < SEARCH_BUDGET;
-  const cache = (await store.getJson<Record<string, Entry>>(CACHE_KEY)) ?? {};
+  const canWork = () => inTime() && resolveCount() - resolved0 < part(RESOLVE_BUDGET) && searchCount() - searched0 < part(SEARCH_BUDGET);
+  const cacheKey = opts.cacheKey ?? CACHE_KEY;
+  const cache = (await store.getJson<Record<string, Entry>>(cacheKey)) ?? {};
   const registry = (await store.getJson<Registry>(REGISTRY_KEY)) ?? {};
   const regBefore = JSON.stringify(registry);
   let learned: Learned[] | null = null;
   let dirtyLearned = false;
-  let budget = ORIGIN_BUDGET;
-  let holds = HOLD_BUDGET;
-  let reads = READ_BUDGET;
-  let covers = COVERAGE_BUDGET;
-  let discovers = DISCOVER_BUDGET;
+  let budget = part(ORIGIN_BUDGET);
+  let holds = part(HOLD_BUDGET);
+  let reads = part(READ_BUDGET);
+  let covers = part(COVERAGE_BUDGET);
+  let discovers = part(DISCOVER_BUDGET);
   let dirty = false;
   const apply = (r: LiveReport, f: Found) => {
     // The original stands alone: no "Also" line of relays.
@@ -1334,7 +1345,7 @@ ${text}`.trim(),
     const kept = Object.entries(cache)
       .sort((a, b) => stamp(b[1]) - stamp(a[1]))
       .slice(0, CACHE_MAX);
-    await store.putJson(CACHE_KEY, Object.fromEntries(kept));
+    await store.putJson(cacheKey, Object.fromEntries(kept));
   }
   return late;
 }

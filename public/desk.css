@@ -1106,3 +1106,13 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .tally-box.ledger table.list th.w{width:24%}
 .tally-box.ledger table.list td.w .unk{opacity:.7}
 @media (max-width:520px){.tally-box.ledger table.list td.w,.tally-box.ledger table.list th.w{font-size:.85em}}
+
+/* The Iran desk's six source groups (Round 30 stage 3b): the colours of its filter buttons. */
+.card.ir-axis{border-inline-start-color:#c45c26}
+.card.ir-opposition{border-inline-start-color:#a855f7}
+.card.ir-israel{border-inline-start-color:#3b82f6}
+.card.ir-us{border-inline-start-color:#ef4444}
+.card.ir-gulf{border-inline-start-color:#22c55e}
+.card.ir-intl{border-inline-start-color:#94a3b8}
+.ls-note{margin:0 0 8px;font-size:12px;opacity:.75}
+.ls-verdict{margin-inline-start:auto;font-size:11px;opacity:.7}

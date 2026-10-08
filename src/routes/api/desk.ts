@@ -7,6 +7,7 @@ import type { DeskId } from "@/lib/desks";
 import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
 import { getStore } from "@/lib/desk/store";
+import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -49,6 +50,8 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   for (const r of slice.reports) {
     r.summary = respell(unglue(String(r.summary ?? "")));
     if (r.text) r.text = respell(String(r.text));
+    // The Iran desk's filter buttons go by the source's group.
+    if (desk === "iran") (r as Record<string, unknown>).lean = iranLeanOfSource(String(r.source ?? ""));
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }

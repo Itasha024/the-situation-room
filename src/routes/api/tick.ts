@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
 import { runScanCycle } from "@/lib/yemen-scan.server";
+import { runIranCycle } from "@/lib/iran-scan.server";
 import { getStore } from "@/lib/desk/store";
 
 /**
@@ -27,9 +28,9 @@ import { getStore } from "@/lib/desk/store";
 export const Route = createFileRoute("/api/tick")({
   server: {
     handlers: {
-      POST: async ({ request }) => metered("tick", () => tick(request)),
+      POST: async ({ request }) => metered(tickLabel(request), () => tick(request)),
       // GET is allowed too: several free schedulers can only issue GETs.
-      GET: async ({ request }) => metered("tick", () => tick(request)),
+      GET: async ({ request }) => metered(tickLabel(request), () => tick(request)),
     },
   },
 });
@@ -129,9 +130,47 @@ async function runStoreLocked(): Promise<Record<string, unknown>> {
   }
 }
 
+/**
+ * The Iran desk's scan (`?desk=iran`): its own clock (the host's
+ * desk-iran-tick.timer), its own lock, beside the Yemen cycle (Round 30).
+ */
+const IRAN_LOCK_KEY = "iran:tick-lock";
+let runningIran: Promise<Record<string, unknown>> | null = null;
+async function runIranLocked(): Promise<Record<string, unknown>> {
+  if (runningIran) return { ok: true, skipped: "an Iran cycle is already running" };
+  runningIran = (async () => {
+    const startedAt = Date.now();
+    let store: Awaited<ReturnType<typeof getStore>>;
+    try {
+      store = await getStore();
+      const held = await store.getJson<{ at: number }>(IRAN_LOCK_KEY);
+      if (held && Date.now() - held.at < LOCK_TTL_MS) return { ok: true, skipped: "an Iran cycle is already running" };
+      await store.putJson(IRAN_LOCK_KEY, { at: Date.now() });
+    } catch (err) {
+      return { ok: false, error: `database unreachable: ${err instanceof Error ? err.message : String(err)}`, tookMs: Date.now() - startedAt };
+    }
+    try {
+      return { ...(await runIranCycle()) };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Iran tick failed", tookMs: Date.now() - startedAt };
+    } finally {
+      await store.putJson(IRAN_LOCK_KEY, { at: 0 }).catch(() => {});
+    }
+  })();
+  try {
+    return await runningIran;
+  } finally {
+    runningIran = null;
+  }
+}
+
 async function tick(request: Request): Promise<Response> {
   const denied = authorize(request);
   if (denied) return json({ ok: false, error: denied }, 401);
+  if (new URL(request.url).searchParams.get("desk") === "iran") {
+    const result = await runIranLocked();
+    return json(result, result.ok === false ? 500 : 200);
+  }
 
   const background = backgroundRunner(request);
   // `?wait=1` keeps the old synchronous answer, for a human checking by hand.
@@ -151,4 +190,9 @@ function json(body: unknown, status = 200) {
     status,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
   });
+}
+
+/** The CPU meter keeps the two desks' cycles apart. */
+function tickLabel(request: Request): string {
+  return new URL(request.url).searchParams.get("desk") === "iran" ? "tick-iran" : "tick";
 }

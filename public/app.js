@@ -7034,6 +7034,7 @@ function bootOtherDesk(el) {
   try { wireRailResize(); } catch (e) { console.error(e); }
   if (map && map.getContainer && map.getContainer() === el && el.isConnected) return;
   if (map) { try { map.remove(); } catch (e) {} map = null; }
+  try { startIranFeed(); } catch (e) { console.error(e); }
   if (!window.L) return;
   map = L.map('map', { zoomControl: true, attributionControl: true, zoomSnap: 0.25 });
   // Iran, the Gulf, Iraq, Syria, Lebanon, Israel and Jordan, and the seas around them.
@@ -7048,6 +7049,89 @@ function bootOtherDesk(el) {
   const again = () => { if (map && !touched) { map.invalidateSize(); map.fitBounds(START, FIT); } };
   if (document.readyState === 'complete') setTimeout(again, 400);
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
+}
+
+/*
+ * The Iran desk's Latest reports and Live scan (Round 30 stage 3b): its own
+ * cards (/api/desk?desk=iran), drawn by the Yemen desk's card code, and its
+ * own scan's box (/api/scan?desk=iran). The six buttons filter by the
+ * source's group, which the API gives each card ("lean").
+ */
+const IRAN_GROUPS = { iran: 'axis', opp: 'opposition', il: 'israel', us: 'us', gulf: 'gulf', intl: 'intl' };
+const IRAN_GROUP_NAMES = { axis: 'Iran and Axis-aligned', opposition: 'Iranian opposition', israel: 'Israeli', us: 'US', gulf: 'Gulf and Arab', intl: 'International' };
+const iranDesk = { reports: [], lean: '', scan: null, timer: 0, shown: 60 };
+function startIranFeed() {
+  if (iranDesk.timer) return;
+  const buttons = document.querySelectorAll('#feed-legend .lean-f');
+  buttons.forEach((b) => {
+    b.disabled = false;
+    b.addEventListener('click', () => {
+      const lean = IRAN_GROUPS[b.dataset.lean] || '';
+      iranDesk.lean = iranDesk.lean === lean ? '' : lean;
+      buttons.forEach((x) => x.setAttribute('aria-pressed', String(IRAN_GROUPS[x.dataset.lean] === iranDesk.lean)));
+      iranDesk.shown = 60;
+      renderIranFeed();
+    });
+  });
+  const details = document.getElementById('live-scan-details');
+  if (details) details.addEventListener('toggle', renderIranScan);
+  const pull = () => { loadIranFeed(); loadIranScan(); };
+  pull();
+  iranDesk.timer = setInterval(pull, 60_000);
+}
+async function loadIranFeed() {
+  try {
+    const res = await fetch('/api/desk?desk=iran&limit=300', { cache: 'no-cache' });
+    if (!res.ok) return;
+    const d = await res.json();
+    iranDesk.reports = (d.reports || []).sort((a, b) => Date.parse(reportTime(b)) - Date.parse(reportTime(a)));
+    for (const r of iranDesk.reports) if (r.fp) reportByFp.set(String(r.fp), r);
+    renderIranFeed();
+  } catch (e) { console.warn('iran feed', e); }
+}
+function renderIranFeed() {
+  const el = document.getElementById('feed');
+  if (!el) return;
+  const all = iranDesk.reports.filter((r) => !iranDesk.lean || r.lean === iranDesk.lean);
+  const list = all.slice(0, iranDesk.shown);
+  if (!list.length) {
+    el.innerHTML = `<p class="soon">${iranDesk.reports.length ? 'No report from this group yet.' : 'The desk is reading its sources: the first reports appear here within minutes.'}</p>`;
+    return;
+  }
+  el.innerHTML = list.map((r, i) => feedCardHtml(r, i)).join('') +
+    (all.length > list.length ? `<button type="button" class="more" id="iran-more">Show earlier reports (+${Math.min(60, all.length - list.length)})</button>` : '');
+  el.querySelectorAll('.card').forEach((card) => {
+    const r = list[Number(card.dataset.i)];
+    const lean = (r && r.lean) || 'intl';
+    card.className = card.className.replace(/\blean-\S+/, 'ir-' + lean);
+    card.title = IRAN_GROUP_NAMES[lean] || '';
+    wireFeedCard(card);
+  });
+  const more = document.getElementById('iran-more');
+  if (more) more.addEventListener('click', () => { iranDesk.shown += 60; renderIranFeed(); });
+  wireMediaClicks(el);
+  const up = document.getElementById('updated');
+  if (up && iranDesk.scan && iranDesk.scan.scannedAt) up.textContent = 'UPDATED ' + fmtClock(iranDesk.scan.scannedAt);
+}
+async function loadIranScan() {
+  try {
+    const res = await fetch('/api/scan?desk=iran', { cache: 'no-cache' });
+    if (!res.ok) return;
+    iranDesk.scan = await res.json();
+    renderIranScan();
+  } catch (e) { console.warn('iran scan', e); }
+}
+function renderIranScan() {
+  const s = iranDesk.scan;
+  const title = document.querySelector('#live-scan-box .ls-title');
+  if (title) title.textContent = s && s.scannedAt ? 'Live scan · last scan ' + fmtClock(s.scannedAt) : 'Live scan';
+  const details = document.getElementById('live-scan-details');
+  const list = document.getElementById('live-scan-list');
+  if (!s || !list || !details || !details.open) return;
+  const rows = (s.rawHits || []).slice(0, 80);
+  list.innerHTML = (s.cycleNote ? `<p class="ls-note">${escapeHtml(s.cycleNote)}</p>` : '') + (rows.length
+    ? rows.map((h) => `<div class="ls-row"><div class="ls-top"><span class="ls-src">${escapeHtml(canonicalSourceName(h.source))}</span><span class="ls-at">${escapeHtml(h.at ? fmtStamp(h.at) : '')}</span><span class="ls-verdict">${h.kept ? 'Published' : h.outcome === 'tray' ? 'Waiting for the reader' : 'Not published'}</span></div><a class="ls-snip" href="${escapeHtml(h.url)}" target="_blank" rel="noopener">${escapeHtml((h.snippet || '').slice(0, 240))}</a></div>`).join('')
+    : '<p class="soon">Nothing read yet.</p>');
 }
 
 window.startYemenDesk = startYemenDesk;

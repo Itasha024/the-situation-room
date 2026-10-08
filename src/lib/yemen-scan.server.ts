@@ -38,6 +38,8 @@ import { askChain, COMBINE_MODELS } from "./desk/models.ts";
 import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves } from "./desk/combine.ts";
 import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
 import { TRIAGE_MODELS } from "./desk/triage.ts";
+import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
+import { isIranWar } from "./desk/iran-reader.ts";
 
 export { checkLinks, namedSpeaker, speakerKey };
 
@@ -46,8 +48,8 @@ export { checkLinks, namedSpeaker, speakerKey };
 // (brief.ts, the API routes) keep working unchanged.
 export type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 
-type Channel = { id: string; name: string; lean: "houthi" | "gov" | "south" | "intl" };
-type Cadence = { everyMin: number } | { everyHours: number } | { atHours: number[] } | { atHour: number };
+export type Channel = { id: string; name: string; lean: "houthi" | "gov" | "south" | "intl" };
+export type Cadence = { everyMin: number } | { everyHours: number } | { atHours: number[] } | { atHour: number };
 type ChannelScan = Channel & { cadence: Cadence };
 /** `whole`: the site's own listing of everything, triaged by a model. */
 /** `html`: no feed; the site's section page is read and every link matching this pattern is an article. */
@@ -133,7 +135,7 @@ const TG: ChannelScan[] = [
  */
 /** `picture`: the account posts its words as a picture (UKMTO's warning cards), read by a vision model before `only` is tried. */
 /** `article`: a newspaper's account. A post linking its own article stands for that article, which is read whole like the site's. */
-type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence; only?: RegExp; picture?: boolean; article?: boolean };
+export type XAccount = { handle: string; name: string; lean: Channel["lean"]; cadence: Cadence; only?: RegExp; picture?: boolean; article?: boolean };
 const C10: Cadence = { everyMin: 10 };
 const X = (handle: string, name: string, lean: Channel["lean"], cadence: Cadence, only?: RegExp, picture?: boolean): XAccount => ({ handle, name, lean, cadence, ...(only ? { only } : {}), ...(picture ? { picture } : {}) });
 /** A newspaper's or a broadcaster's account: only this war, and its articles read whole. */
@@ -379,7 +381,7 @@ ${s.article.preview_text ?? ""}` : "";
   return out;
 }
 
-function gnews(q: string, hl = "en-US", gl = "US", ceid = "US:en") {
+export function gnews(q: string, hl = "en-US", gl = "US", ceid = "US:en") {
   const enc = encodeURIComponent(q);
   return `https://news.google.com/rss/search?q=${enc}&hl=${hl}&gl=${gl}&ceid=${ceid}`;
 }
@@ -547,6 +549,10 @@ const RSS: RssFeed[] = [
 ];
 
 const LEARNED_NAME = "Learned outlets";
+/** The rows the Yemen scan hands the Iran scan, one per tick (iran-scan.server.ts takes them). */
+export const IRAN_INBOX = "iran-inbox";
+/** The Iran scan's last payload (its cards and its scan box). */
+export const IRAN_PAYLOAD = "iran:payload";
 
 /**
  * Outlets where the origin search found an original the desk had not been
@@ -631,7 +637,7 @@ function siteListing(site: string): Promise<Listed[]> {
  * Cadence bookkeeping
  * ------------------------------------------------------------------ */
 
-function cadenceLabel(c: Cadence): string {
+export function cadenceLabel(c: Cadence): string {
   if ("everyMin" in c) return `every ${c.everyMin} min`;
   if ("everyHours" in c) return `every ${c.everyHours} h`;
   if ("atHours" in c) return `at ${c.atHours.map((h) => `${String(h).padStart(2, "0")}:00`).join(" / ")}`;
@@ -657,7 +663,7 @@ function jerusalemClock(d = new Date()) {
  * used to reset the cadence map, so the scanner either believed it had never
  * run (re-fetching all 38 sources every request) or lost the fact that it had.
  */
-function cadenceDue(state: ScanState, id: string, cadence: Cadence, now: number): boolean {
+export function cadenceDue(state: ScanState, id: string, cadence: Cadence, now: number): boolean {
   if (!state.scannedOnce) return true;
   const last = state.lastScanAt[id] || 0;
   const age = now - last;
@@ -677,7 +683,7 @@ function cadenceDue(state: ScanState, id: string, cadence: Cadence, now: number)
  * Payload shapes
  * ------------------------------------------------------------------ */
 
-function jerusalemIso(d = new Date()) {
+export function jerusalemIso(d = new Date()) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Aden",
     year: "numeric",
@@ -710,7 +716,7 @@ export function decodeEntities(s: string) {
     .trim();
 }
 
-function fpOf(url: string, title: string) {
+export function fpOf(url: string, title: string) {
   const slug = (url || title)
     .toLowerCase()
     .replace(/https?:\/\//, "")
@@ -1022,7 +1028,7 @@ async function finalUrl(url: string): Promise<string> {
 }
 
 /** One page of an X account through FxTwitter; a 404 or timeout is tried once more (it answers unevenly). */
-async function fxPage(handle: string, cursor?: string): Promise<{ results?: unknown[]; cursor?: { bottom?: string | null } } | null> {
+export async function fxPage(handle: string, cursor?: string): Promise<{ results?: unknown[]; cursor?: { bottom?: string | null } } | null> {
   // Six at a time: some 120 accounts fall due on the same minute, and FxTwitter answers a burst with 404s.
   if (fxSlots > 0) fxSlots -= 1;
   else await new Promise<void>((r) => fxWaiters.push(r));
@@ -1101,7 +1107,7 @@ const WALLED_UNDER = 500;
 /** Walled articles chased through other outlets per cycle: a search and up to three pages each. */
 const WALLED_RESCUES = 4;
 
-type RawHit = {
+export type RawHit = {
   source: string;
   url: string;
   text: string;
@@ -1214,7 +1220,7 @@ function outletFromGoogleTitle(title: string, fallback: string): { title: string
   return { title: m[1].trim(), source: mapped };
 }
 
-function parseRss(xml: string, source: string): RawHit[] {
+export function parseRss(xml: string, source: string): RawHit[] {
   const items: RawHit[] = [];
   const blocks = xml.split(/<item[\s>]/i).slice(1);
   for (const b of blocks.slice(0, RSS_ITEMS)) {
@@ -1248,7 +1254,7 @@ function parseRss(xml: string, source: string): RawHit[] {
 }
 
 /** The post number in a t.me/<channel>/<n> URL, or 0. */
-function tgPostNo(url: string): number {
+export function tgPostNo(url: string): number {
   const m = /\/(\d+)(?:\?|$)/.exec(url);
   return m ? Number(m[1]) : 0;
 }
@@ -2077,6 +2083,14 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
   ];
   let sourcesOk = 0;
   const hits: RawHit[] = [];
+  // Items from the sources both desks read that are about the war with Iran:
+  // handed to the Iran desk's scan (iran-scan.server.ts), which reads them
+  // with its own reader. Each source is still fetched once (Round 30).
+  const iranInbox: RawHit[] = [];
+  const toIran = (rows: RawHit[], lean: IranLean | undefined) => {
+    if (!lean) return;
+    for (const r of rows) if (isIranWar(`${r.title ?? ""} ${r.text}`)) iranInbox.push({ ...r, lean, picked: undefined });
+  };
   const status: SourceStatus[] = [];
   const jobs: Promise<void>[] = [];
 
@@ -2095,6 +2109,12 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
             const seenId = state.lastXPost?.[acct.handle];
             const idOf = (r: RawHit) => /\/status\/(\d+)/.exec(r.xPost ?? r.url)?.[1] ?? "";
             rows = all.filter((r) => newerX(idOf(r), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS));
+            // The Iran desk takes this account's posts on its war, whatever the Yemen filter keeps.
+            const ixLean = SHARED_X[acct.handle];
+            if (ixLean) {
+              const every = acct.only ? parseFxStatuses(page, { ...acct, only: undefined }) : all;
+              toIran(every.filter((r) => newerX(idOf(r), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS)), ixLean);
+            }
             // A replay pages back to its start once, for what the downtime missed.
             const replayKey = `x:${acct.handle}`;
             if (seenId && replaying(state, replayKey, now)) {
@@ -2207,6 +2227,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         if (newest > 0) (state.lastTgPost ??= {})[ch.id] = newest;
         if (ok) sourcesOk += 1;
         hits.push(...rows);
+        toIran(rows, SHARED_TG[ch.id]);
         state.lastScanAt[`tg:${ch.id}`] = Date.now();
         status.push({ id: ch.id, name: ch.name, kind: "tg", ok, cadence: cadenceLabel(ch.cadence), hits: rows.length });
       })(),
@@ -2279,6 +2300,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
           }
           if (ok) sourcesOk += 1;
           hits.push(...rows);
+          toIran(unjudged.filter((u) => u.feed === feed).map((u) => u.hit), SHARED_RSS[feed.name]);
           // Every article in the window is new to the desk: the listing may
           // have filled up since the last read and dropped some unseen.
           const inWindow = listed.filter((it) => !Number.isFinite(it.at) || now - it.at <= window).length;
@@ -2293,6 +2315,7 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
         if (ok && body) rows = parseRss(body, feed.name);
         if (ok) sourcesOk += 1;
         hits.push(...rows);
+        toIran(rows, SHARED_RSS[feed.name]);
         // A feed answers with one page. If everything on that page was
         // published since the last read, the page filled up in between and
         // whatever fell off the bottom was never seen. Telegram pages back to
@@ -2558,6 +2581,16 @@ async function scanOnce(state: ScanState, prev: ScanPayload | null): Promise<Sca
       note,
       tags: c.tags,
     });
+  }
+  // What the Yemen reader kept is on the Iran desk already when it is about
+  // Iran (desk-route.ts); the rest of the Iran items go to the Iran scan.
+  try {
+    const keptUrls = new Set(rawHits.filter((h) => h.kept).map((h) => h.url));
+    const handOver = new Map<string, RawHit>();
+    for (const h of iranInbox) if (!keptUrls.has(h.url)) handOver.set(h.url, h);
+    if (handOver.size) await (await getStore()).putMany(IRAN_INBOX, { [String(now)]: [...handOver.values()] });
+  } catch (err) {
+    console.error("[iran] inbox:", err instanceof Error ? err.message : err);
   }
   // Items read from the queue — seen in an earlier cycle, read only now.
   for (const [url, v] of verdicts) if (v.kind === "publish" && !pre.has(url)) reports.push(v.report);
@@ -3033,6 +3066,14 @@ export async function runScanCycle(): Promise<TickResult> {
   const payload = await scanOnce(state, prev);
   // Which desks each card is shown on (Round 30): one read, every desk it concerns.
   for (const r of [...payload.reports, ...(payload.touched ?? [])]) r.desks = desksOf(r);
+  // A post the Iran desk's reader wrote up first: this card joins that one (store.pg.ts).
+  try {
+    const iran = await store.getJson<{ reports?: { url: string }[] }>(IRAN_PAYLOAD);
+    const urls = new Set((iran?.reports ?? []).map((r) => r.url));
+    for (const r of [...payload.reports, ...(payload.touched ?? [])]) if (urls.has(r.url) && !r.tags?.includes("iran-url")) r.tags = [...(r.tags ?? []), "iran-url"];
+  } catch {
+    // Unread, a shared post stays on the desk that stored it first.
+  }
 
   // Persist in dependency order, and surface every failure. The old code
   // fire-and-forgot this and swallowed the error, which is why a read-only
@@ -3115,6 +3156,17 @@ export async function runScanCycle(): Promise<TickResult> {
 
 export const SCAN_SOURCE_COUNT = TG.length + RSS.length;
 export { digest };
+
+/** A source's filter group on the Iran desk, by its published name (iran-sources.ts). */
+export function iranLeanOfSource(name: string): IranLean {
+  const own = iranLeanOf(name);
+  if (own) return own;
+  const tg = TG.find((c) => c.name === name);
+  if (tg && SHARED_TG[tg.id]) return SHARED_TG[tg.id];
+  const x = X_ACCOUNTS.find((a) => a.name === name);
+  if (x && SHARED_X[x.handle]) return SHARED_X[x.handle];
+  return "intl";
+}
 
 /** A catalogue outlet's declared lean, by its published name ("" if unknown). */
 export function sourceLean(name: string): string {

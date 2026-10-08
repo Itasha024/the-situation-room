@@ -60,7 +60,9 @@ export type Reading = {
   confident_roles: boolean;
   actor: string | null;
   /** Whose side acted or spoke; decides "Houthi" vs "Yemeni government" wording. */
-  actor_side?: "houthi" | "government" | "stc" | "saudi" | "other" | "unclear";
+  actor_side?: "houthi" | "government" | "stc" | "saudi" | "other" | "unclear" | "iran" | "hezbollah" | "iraqi_militias" | "us" | "israel" | "gulf";
+  /** The Iran desk's arenas this item belongs to, by subject (iran-reader.ts). */
+  arenas?: string[];
   /** English names of the places struck, or where the event happened. */
   targets: string[];
   /** English names of places a weapon or aircraft came FROM. Never pinned. */
@@ -81,6 +83,13 @@ export type Reading = {
   /** The fp of a published report telling this same event with nothing new: this item joins its "Also". */
   duplicate_of?: string;
 };
+
+/**
+ * What one desk's reader is told and must answer in: its instructions, its
+ * answer's shape, and its list of sides (anything else a model says is mapped
+ * onto it). The Yemen desk's is the default everywhere (Round 30).
+ */
+export type ReaderPrompt = { system: string; schema: object; sides: readonly string[]; side: (word: string) => string };
 
 /** A report already on the desk, shown to the reader so it can spot follow-ups. */
 export type RecentReport = { ref: string; at: string; headline: string };
@@ -136,7 +145,7 @@ export function pacificDay(now: number): string {
 export const FULL_TEXT_MAX = 8000;
 
 /** The answer's shape, enforced by the API so a reply always parses. */
-const RESPONSE_SCHEMA = {
+export const RESPONSE_SCHEMA = {
   type: "OBJECT",
   properties: {
     items: {
@@ -1241,7 +1250,7 @@ export function pointsIn(text: string): number {
 
 type CallResult = { readings: Reading[]; model: string } | { error: string };
 
-async function callModel(items: ReaderItem[], apiKey: string, model: string, recent: RecentReport[]): Promise<CallResult> {
+async function callModel(items: ReaderItem[], apiKey: string, model: string, recent: RecentReport[], prompt: ReaderPrompt): Promise<CallResult> {
   const payload = items.map((i) => ({
     id: i.id,
     source: i.source,
@@ -1260,9 +1269,9 @@ async function callModel(items: ReaderItem[], apiKey: string, model: string, rec
       signal: ctrl.signal,
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        system_instruction: { parts: [{ text: prompt.system }] },
         contents: [{ role: "user", parts: [{ text: JSON.stringify({ recent, items: payload }) }] }],
-        generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA },
+        generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: prompt.schema },
       }),
     });
     // A 429 is either the minute's quota (wait a cycle) or the day's (wait for
@@ -1311,6 +1320,9 @@ export async function readBatch(
   skip: ReadonlySet<string> = new Set(),
   recent: RecentReport[] = [],
   models: readonly string[] = READER_MODELS,
+  prompt: ReaderPrompt = YEMEN_PROMPT,
+  /** The other free services before Gemini (the Iran desk's reader, so Yemen's Gemini quota lasts). */
+  fallbacksFirst = false,
 ): Promise<{ readings: Map<string, Reading>; model?: string; error?: string; exhausted: string[]; minute: string[]; slow: string[] }> {
   let lastError = "";
   // Out for the day, and out for this minute only.
@@ -1318,13 +1330,15 @@ export async function readBatch(
   const minute: string[] = [];
   // Hung past the timeout: the caller rests it for a while, across scans.
   const slow: string[] = [];
+  type Done = { readings: Map<string, Reading>; model?: string; exhausted: string[]; minute: string[]; slow: string[] };
+  const gemini = async (): Promise<Done | null> => {
   for (const model of models) {
     if (!apiKey || skip.has(model) || exhausted.includes(model) || minute.includes(model)) continue;
     // Busy (503): one short retry. A timeout is not retried: the model that
     // hung once this minute will hang again, and the next one is waiting.
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const started = Date.now();
-      const r = await callModel(items, apiKey, model, recent);
+      const r = await callModel(items, apiKey, model, recent, prompt);
       if ("readings" in r) {
         logCall(model, items.length, started);
         const byId = new Map<string, Reading>();
@@ -1350,9 +1364,12 @@ export async function readBatch(
       else await sleep(1500);
     }
   }
+  return null;
+  };
   // Every Gemini model out (or no Gemini key): the other free services read
   // what they can, each model with its own allowance. What they do not reach
   // stays queued for the next cycle.
+  const others = async (): Promise<Done | null> => {
   for (const p of FALLBACKS) {
     const pk = p.key();
     if (!pk) continue;
@@ -1362,7 +1379,7 @@ export async function readBatch(
       if (skip.has(tag) || exhausted.includes(tag) || minute.includes(tag)) continue;
       const started = Date.now();
       const n = Math.min(items.length, p.batch);
-      const r = await callOpenAI(items.slice(0, p.batch), pk, recent.slice(0, 15), p, gm);
+      const r = await callOpenAI(items.slice(0, p.batch), pk, recent.slice(0, 15), p, gm, prompt);
       if ("readings" in r) {
         logCall(tag, n, started);
         const byId = new Map<string, Reading>();
@@ -1374,6 +1391,12 @@ export async function readBatch(
       if (r.daily) exhausted.push(tag);
       else if (/429|503|abort/i.test(r.error)) minute.push(tag);
     }
+  }
+  return null;
+  };
+  for (const step of fallbacksFirst ? [others, gemini] : [gemini, others]) {
+    const done = await step();
+    if (done) return done;
   }
   return { readings: new Map(), error: lastError || "every model skipped (quota)", exhausted, minute, slow };
 }
@@ -1424,12 +1447,16 @@ export const noThinking = (model: string) => (/nemotron/.test(model) ? { chat_te
 
 /** Gemini keeps actor_side to its list; the other services may answer in words ("Houthi forces"). */
 const SIDES = ["houthi", "government", "stc", "saudi", "other", "unclear"] as const;
-function sideWord(x: Reading): Reading {
+function sideWord(x: Reading, prompt: ReaderPrompt = YEMEN_PROMPT): Reading {
   const s = String(x?.actor_side ?? "").toLowerCase();
-  if (!s || (SIDES as readonly string[]).includes(s)) return x;
-  const side = /houthi|ansar/.test(s) ? "houthi" : /\bstc\b|transitional/.test(s) ? "stc" : /saudi|coalition/.test(s) ? "saudi" : /gov|giant|amaliqa|legitim/.test(s) ? "government" : "unclear";
-  return { ...x, actor_side: side };
+  if (!s || prompt.sides.includes(s)) return x;
+  return { ...x, actor_side: prompt.side(s) as Reading["actor_side"] };
 }
+function yemenSide(s: string): string {
+  return /houthi|ansar/.test(s) ? "houthi" : /\bstc\b|transitional/.test(s) ? "stc" : /saudi|coalition/.test(s) ? "saudi" : /gov|giant|amaliqa|legitim/.test(s) ? "government" : "unclear";
+}
+/** The Yemen desk's reader: its prompt, its answer's shape, its sides. */
+export const YEMEN_PROMPT: ReaderPrompt = { system: SYSTEM_PROMPT, schema: RESPONSE_SCHEMA, sides: SIDES, side: yemenSide };
 
 /** A model's name in the logs and rest lists: Groq's bare, any other service's prefixed. */
 export function serviceModel(service: string, model: string): string {
@@ -1447,6 +1474,7 @@ async function callOpenAI(
   recent: RecentReport[],
   provider: Fallback,
   model: string,
+  prompt: ReaderPrompt = YEMEN_PROMPT,
 ): Promise<{ readings: Reading[]; model: string } | { error: string; daily: boolean }> {
   const payload = items.map((i) => ({
     id: i.id,
@@ -1472,7 +1500,7 @@ async function callOpenAI(
         ...noThinking(model),
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: prompt.system },
           { role: "user", content: JSON.stringify({ recent, items: payload }) },
         ],
       }),
@@ -1488,7 +1516,7 @@ async function callOpenAI(
     // Some models (Mistral's small ones) answer with the bare list, or under another name.
     const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed.items) ? parsed.items : Object.values(parsed).find(Array.isArray);
     if (!list) return { error: "no items in response", daily: false };
-    return { readings: (list as Reading[]).map(sideWord), model };
+    return { readings: (list as Reading[]).map((x) => sideWord(x, prompt)), model };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "call failed", daily: false };
   } finally {

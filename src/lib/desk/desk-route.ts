@@ -37,7 +37,7 @@ export function deskKey(desk: DeskId, key: string): string {
 }
 
 // "Iran-backed", "Iranian-made", "المدعومة من إيران": a label on someone else, not Iran acting.
-const IRAN_LABEL =
+export const IRAN_LABEL =
   /\bIran(?:ian)?[- ](?:backed|aligned|allied|supported|sponsored|made|built|supplied|designed|funded|armed|linked)\b|(?:ال)?(?:مدعوم|موال|متحالف)\S*\s+(?:من\s+|مع\s+)?ل?[إا]يران|(?:ال)?مدعوم[ةه]?\s+(?:ایران|از\s+ایران)/gi;
 const IRAN_ACTS =
   /\b(?:Iran|Iranian|Iranians|Tehran|IRGC|Revolutionary Guards?|Khamenei|Pezeshkian|Araghchi|Hormuz|Bandar Abbas|Kharg|Natanz|Fordow|Isfahan)\b|[إا]يران|الإيراني|طهران|الحرس الثوري|خامنئي|بزشكيان|عراقجي|هرمز|ایران|تهران|سپاه|خامنه‌ای|پزشکیان|عراقچی/i;

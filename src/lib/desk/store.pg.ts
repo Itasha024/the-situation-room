@@ -185,6 +185,18 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       }
     },
 
+    async takeMany<T>(prefix: string): Promise<T[]> {
+      const sql = await sqlProvider();
+      dbMeter.queries += 1;
+      const rows = await sql<{ v: string }>`
+        delete from desk_state where key like ${`row:${prefix}:%`} returning value::text as v
+      `;
+      return rows.map((r) => {
+        dbMeter.read += r.v.length;
+        return JSON.parse(r.v) as T;
+      });
+    },
+
     async prune(prefix: string, olderThanMs: number): Promise<number> {
       const sql = await sqlProvider();
       const cut = new Date(Date.now() - olderThanMs).toISOString();
@@ -349,6 +361,22 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               returning fp
             `;
             if (!inserted.length) {
+              // Two desks' readers wrote one post (the Iran desk's cards are "ir-…"):
+              // the card stored first stays, and joins the other desk.
+              if (r.fp.startsWith("ir-") || r.tags?.includes("iran-url")) {
+                const joined = await sql<{ fp: string }>`
+                  update desk_report set desks = array(select distinct unnest(desks || ${desks}::text[]) order by 1)
+                   where url = ${r.url} and fp <> ${r.fp} and (${r.fp.startsWith("ir-")} or fp like 'ir-%')
+                     and not (desks @> ${desks}::text[])
+                  returning fp
+                `;
+                for (const j of joined) {
+                  await sql`
+                    update desk_event set desks = array(select distinct unnest(desks || ${desks}::text[]) order by 1)
+                     where (fp = ${j.fp} or fp like ${j.fp + "-%"}) and not (desks @> ${desks}::text[])
+                  `;
+                }
+              }
               // Seen again as another desk's too: it joins that desk, and so do its pins.
               if (notYemenAlone(desks)) {
                 await sql`

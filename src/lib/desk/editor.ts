@@ -48,8 +48,14 @@ import {
   fallbackKey,
   readBatch,
   readerKey,
+  READER_MODELS,
+  YEMEN_PROMPT,
+  type ReaderPrompt,
 } from "./reader.ts";
 import { type DeskStore, migrateBlob } from "./store.ts";
+import type { DeskId } from "../desks.ts";
+import { deskKey } from "./desk-route.ts";
+import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash } from "./iran-reader.ts";
 import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
@@ -238,6 +244,44 @@ const TYPE_OF: Record<EventType, DeskType> = {
   economy: "economy",
 };
 
+/**
+ * One desk's reading: where its queue and cache live, its prompt and checks,
+ * its share of the model calls. The Yemen desk's is the default (Round 30).
+ */
+export type DeskReader = {
+  desk: DeskId;
+  queueKey: string;
+  cachePrefix: string;
+  missedKey: string;
+  hash: (text: string) => string;
+  decide: (r: Reading, c: Candidate, strict?: boolean) => EditorVerdict;
+  alignment: (c: Candidate) => string;
+  prompt: ReaderPrompt;
+  models: readonly string[];
+  fallbacksFirst: boolean;
+  /** Calls this cycle; unset, the Yemen budget. */
+  maxCalls?: number;
+  secondLook: boolean;
+  geocode: boolean;
+  /** The most items kept waiting, newest first; unset, no limit. */
+  queueMax?: number;
+};
+
+export const YEMEN_READER: DeskReader = {
+  desk: "yemen",
+  queueKey: QUEUE_KEY,
+  cachePrefix: CACHE_PREFIX,
+  missedKey: MISSED_KEY,
+  hash: contentHash,
+  decide: (r, c, strict = true) => decide(r, c, strict),
+  alignment: (c) => alignmentOf(c),
+  prompt: YEMEN_PROMPT,
+  models: READER_MODELS,
+  fallbacksFirst: false,
+  secondLook: true,
+  geocode: true,
+};
+
 /** Is the reader switched on? Without a key the desk publishes nothing new. */
 export function readerAvailable(): boolean {
   return !!readerKey() || fallbackKey();
@@ -251,8 +295,9 @@ export async function editCandidates(
   store: DeskStore,
   fresh: Candidate[],
   now = Date.now(),
+  cfg: DeskReader = YEMEN_READER,
 ): Promise<{ verdicts: Map<string, EditorVerdict>; queued: Candidate[]; modelNote: string }> {
-  const queue = ((await store.getJson<Queued[]>(QUEUE_KEY)) ?? []).filter((q) => now - q.queuedAt < QUEUE_TTL_MS);
+  const queue = ((await store.getJson<Queued[]>(cfg.queueKey)) ?? []).filter((q) => now - q.queuedAt < QUEUE_TTL_MS);
 
   // This cycle's items plus anything still waiting from earlier cycles.
   const byUrl = new Map<string, Queued>();
@@ -262,8 +307,8 @@ export async function editCandidates(
 
   // Only this cycle's readings are fetched, one row each, and only those
   // written this cycle are saved (the whole cache was 2.6 MB a tick each way).
-  await migrateOnce(store);
-  const cache: Cache = await store.getMany<CacheEntry>(CACHE_PREFIX, all.map((c) => contentHash(c.text)));
+  if (cfg.desk === "yemen") await migrateOnce(store);
+  const cache: Cache = await store.getMany<CacheEntry>(cfg.cachePrefix, all.map((c) => cfg.hash(c.text)));
   const dirty = new Set<string>();
   const setEntry = (hash: string, e: CacheEntry) => {
     cache[hash] = e;
@@ -274,9 +319,9 @@ export async function editCandidates(
   const readingOf = new Map<string, Reading>();
   const unread: Queued[] = [];
   for (const c of all) {
-    const hit = cache[contentHash(c.text)];
+    const hit = cache[cfg.hash(c.text)];
     if (hit && !stale(hit, c)) {
-      verdicts.set(c.url, decide(hit.reading, c, !hit.loose));
+      verdicts.set(c.url, cfg.decide(hit.reading, c, !hit.loose));
       readingOf.set(c.url, hit.reading);
     } else unread.push(c);
   }
@@ -324,7 +369,7 @@ export async function editCandidates(
   const fixes: { c: Queued; note: string }[] = [];
   if (unread.length && anyReader) {
     try {
-      const { reports } = await store.recentDesk(RECENT_MAX, undefined, { events: false });
+      const { reports } = await store.recentDesk(RECENT_MAX, undefined, { events: false, desk: cfg.desk });
       for (const r of reports) {
         if (now - Date.parse(String(r.at)) > RECENT_MS || !r.fp) continue;
         const ref = "r" + (recent.length + 1);
@@ -336,19 +381,19 @@ export async function editCandidates(
     }
   }
   // A backlog (a replay, an outage caught up) gets a few more calls a cycle.
-  const maxCalls = toRead.length > BACKLOG_ITEMS ? BACKLOG_CALLS_PER_CYCLE : MAX_CALLS_PER_CYCLE;
+  const maxCalls = cfg.maxCalls ?? (toRead.length > BACKLOG_ITEMS ? BACKLOG_CALLS_PER_CYCLE : MAX_CALLS_PER_CYCLE);
   const batches: Queued[][] = [];
   for (let i = 0; i < toRead.length; i += READER_BATCH) batches.push(toRead.slice(i, i + READER_BATCH));
   const readOne = async (batch: Queued[]) => {
     const items: ReaderItem[] = batch.map((c, n) => ({
       id: String(n),
       source: c.source,
-      alignment: alignmentOf(c),
+      alignment: cfg.alignment(c),
       postedAt: c.at,
       text: c.text,
       full: readWhole(c),
     }));
-    const { readings, model, error, exhausted, minute, slow } = await readBatch(items, key, skip, recent);
+    const { readings, model, error, exhausted, minute, slow } = await readBatch(items, key, skip, recent, cfg.models, cfg.prompt, cfg.fallbacksFirst);
     count(model);
     for (const m of exhausted) {
       quota[m] = nextPacificMidnight(now);
@@ -367,8 +412,8 @@ export async function editCandidates(
         return;
       }
       unref(r, c);
-      setEntry(contentHash(c.text), { reading: r, at: now });
-      const v = decide(r, c);
+      setEntry(cfg.hash(c.text), { reading: r, at: now });
+      const v = cfg.decide(r, c);
       verdicts.set(c.url, v);
       readingOf.set(c.url, r);
       if (v.kind === "reject" && v.reason === "reader-check" && repairable(v.note)) fixes.push({ c, note: v.note });
@@ -393,8 +438,8 @@ export async function editCandidates(
       continue;
     }
     const copy = { ...r };
-    setEntry(contentHash(c.text), { reading: copy, at: now });
-    verdicts.set(c.url, decide(copy, c));
+    setEntry(cfg.hash(c.text), { reading: copy, at: now });
+    verdicts.set(c.url, cfg.decide(copy, c));
     readingOf.set(c.url, copy);
   }
 
@@ -409,25 +454,25 @@ export async function editCandidates(
     const items: ReaderItem[] = batch.map(({ c, note }, n) => ({
       id: String(n),
       source: c.source,
-      alignment: alignmentOf(c),
+      alignment: cfg.alignment(c),
       postedAt: c.at,
       text: c.text,
       full: readWhole(c),
       fix: note,
     }));
-    const res = await readBatch(items, key, skip, recent);
+    const res = await readBatch(items, key, skip, recent, cfg.models, cfg.prompt, cfg.fallbacksFirst);
     count(res.model);
-    const missed = (await store.getJson<Missed[]>(MISSED_KEY)) ?? [];
+    const missed = (await store.getJson<Missed[]>(cfg.missedKey)) ?? [];
     batch.forEach(({ c, note }, n) => {
       const first = readingOf.get(c.url)!;
       const second = res.readings.get(String(n));
       if (second) unref(second, c);
       let outcome = "unread";
-      let v = second ? decide(second, c) : undefined;
+      let v = second ? cfg.decide(second, c) : undefined;
       let entry: CacheEntry | undefined = v?.kind === "publish" ? { reading: second!, at: now } : undefined;
       if (v?.kind === "publish") outcome = "published after repair";
       else {
-        const loose = decide(second ?? first, c, false);
+        const loose = cfg.decide(second ?? first, c, false);
         if (loose.kind === "publish") {
           v = loose;
           entry = { reading: second ?? first, at: now, loose: true };
@@ -437,11 +482,11 @@ export async function editCandidates(
       if (v?.kind === "publish" && entry) {
         verdicts.set(c.url, v);
         readingOf.set(c.url, entry.reading);
-        setEntry(contentHash(c.text), entry);
+        setEntry(cfg.hash(c.text), entry);
       }
       missed.unshift({ at: new Date(now).toISOString(), source: c.source, url: c.url, text: c.text.replace(/\s+/g, " ").slice(0, 280), reason: `check: ${note}`, second: outcome });
     });
-    await store.putJson(MISSED_KEY, missed.slice(0, MISSED_MAX));
+    await store.putJson(cfg.missedKey, missed.slice(0, MISSED_MAX));
   }
 
   for (const c of stillQueued) {
@@ -454,10 +499,10 @@ export async function editCandidates(
    * must never lose, so the stronger model reads it once more, and its
    * reading stands. Every such rejection is also logged on the missed list.
    */
-  const doubt = all.filter((c) => {
+  const doubt = !cfg.secondLook ? [] : all.filter((c) => {
     const r = readingOf.get(c.url);
     const v = verdicts.get(c.url);
-    const entry = cache[contentHash(c.text)];
+    const entry = cache[cfg.hash(c.text)];
     if (!r || v?.kind !== "reject" || entry?.second) return false;
     // Attempted, but every model was resting: wait rather than ask again now.
     if (entry?.secondTriedAt && now - entry.secondTriedAt < SECOND_RETRY_MS) return false;
@@ -465,25 +510,25 @@ export async function editCandidates(
     return fieldReport(c.text) || onRadar(c.text);
   });
   if (doubt.length) {
-    const missed = (await store.getJson<Missed[]>(MISSED_KEY)) ?? [];
+    const missed = (await store.getJson<Missed[]>(cfg.missedKey)) ?? [];
     const batch = doubt.slice(0, SECOND_LOOK_MAX);
     let second = new Map<string, Reading>();
     if (anyReader) {
       const items: ReaderItem[] = batch.map((c, n) => ({
         id: String(n),
         source: c.source,
-        alignment: alignmentOf(c),
+        alignment: cfg.alignment(c),
         postedAt: c.at,
         text: c.text,
       }));
-      const res = await readBatch(items, key, skip, recent, SECOND_LOOK_MODELS);
+      const res = await readBatch(items, key, skip, recent, SECOND_LOOK_MODELS, cfg.prompt);
       count(res.model);
       second = res.readings;
     }
     batch.forEach((c, n) => {
       const first = readingOf.get(c.url)!;
       const r = second.get(String(n));
-      const hash = contentHash(c.text);
+      const hash = cfg.hash(c.text);
       if (!r) {
         // No model answered — every one of them is resting. Stamp the attempt
         // so the item waits its backoff instead of being asked again five
@@ -497,7 +542,7 @@ export async function editCandidates(
       r.follows_up = "";
       r.duplicate_of = "";
       setEntry(hash, { reading: r, at: now, second: true });
-      const v = decide(r, c);
+      const v = cfg.decide(r, c);
       const outcome = v.kind === "publish" ? "published" : `rejected again: ${v.kind === "reject" ? v.note : ""}`;
       if (v.kind === "publish") {
         verdicts.set(c.url, v);
@@ -512,7 +557,7 @@ export async function editCandidates(
         second: outcome,
       });
     });
-    await store.putJson(MISSED_KEY, missed.slice(0, MISSED_MAX));
+    await store.putJson(cfg.missedKey, missed.slice(0, MISSED_MAX));
   }
 
   // A field event the gazetteer could not place: look its target up instead.
@@ -520,7 +565,7 @@ export async function editCandidates(
   for (const c of all) {
     const v = verdicts.get(c.url);
     const r = readingOf.get(c.url);
-    if (v?.kind !== "publish" || !r || v.report.place) continue;
+    if (!cfg.geocode || v?.kind !== "publish" || !r || v.report.place) continue;
     if (v.report.type === "statement" || v.report.type === "diplomacy") continue;
     // A street address for a ship is a place on land: a ship is placed only from the gazetteer's waters and ports.
     if (v.report.type === "vessel") continue;
@@ -543,12 +588,13 @@ export async function editCandidates(
     // Unplaced stays unplaced; the report itself is unaffected.
   }
 
-  await store.putMany(CACHE_PREFIX, Object.fromEntries([...dirty].map((h) => [h, cache[h]])));
+  await store.putMany(cfg.cachePrefix, Object.fromEntries([...dirty].map((h) => [h, cache[h]])));
   if (now - lastPrune > PRUNE_EVERY_MS) {
     lastPrune = now;
-    await store.prune(CACHE_PREFIX, CACHE_KEEP_MS).catch(() => 0);
+    await store.prune(cfg.cachePrefix, CACHE_KEEP_MS).catch(() => 0);
   }
-  await store.putJson(QUEUE_KEY, stillQueued);
+  if (cfg.queueMax !== undefined) stillQueued.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  await store.putJson(cfg.queueKey, cfg.queueMax === undefined ? stillQueued : stillQueued.slice(0, cfg.queueMax));
   await store.putJson(QUOTA_KEY, quota);
   await store.putJson(USAGE_KEY, calls24);
 
@@ -985,4 +1031,69 @@ export async function queueForReading(store: DeskStore, cands: Candidate[], now 
   const queue = (await store.getJson<Queued[]>(QUEUE_KEY)) ?? [];
   for (const c of cands) if (!queue.some((q) => q.url === c.url)) queue.push({ ...c, queuedAt: now });
   await store.putJson(QUEUE_KEY, queue);
+}
+
+/* ------------------------------------------------------------------ *
+ * The Iran desk's reading (Round 30 stage 3b)
+ * ------------------------------------------------------------------ */
+
+const IRAN_ALIGNMENT: Record<string, string> = {
+  axis: "Iran or Axis-aligned (Iranian state media, Hezbollah, the Iraqi militias)",
+  opposition: "Iranian opposition",
+  israel: "Israeli",
+  us: "US",
+  gulf: "Gulf or Arab",
+  intl: "international, no declared alignment",
+};
+
+/**
+ * The Iran reader's checks: the same copy rules as Yemen's (every figure in
+ * the source, no loaded words, a statement leads with its speaker), none of
+ * Yemen's side rules. Every report is said as its teller's; no "claim" is added.
+ */
+function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
+  const r: Reading = { ...raw, headline: firstEvent(fixHeadline(reword(respell(anglicise(raw.headline))))), body: reword(respell(anglicise(raw.body))) };
+  if (r.speaker_lead) r.speaker_lead = dropInventedRole(r.speaker_lead, c.text);
+  let lead = String(r.speaker_lead || "").trim();
+  if (OUTLET_LEAD.test(`${lead}:`)) lead = "";
+  r.speaker_lead = lead || null;
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
+    r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
+  }
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
+  r.headline = stripSpellingNotes(r.headline);
+  r.body = stripSpellingNotes(r.body);
+  if (redundantBody(r.headline, r.body, c.text)) r.body = "";
+  const problem = checkReading(r, c.text, strict);
+  if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
+  const report = toReport(r, c);
+  // The arenas and who acted travel as the card's labels (the store keeps them).
+  const arenas = (r.arenas ?? []).filter((a) => a in IRAN_ARENAS).slice(0, 2);
+  report.flags = [...(report.flags ?? []), ...arenas.map((a) => `arena:${a}`), ...(r.actor_side ? [`actor:${r.actor_side}`] : [])];
+  report.desks = ["iran"];
+  return { kind: "publish", report };
+}
+
+export const IRAN_READER: DeskReader = {
+  desk: "iran",
+  queueKey: deskKey("iran", QUEUE_KEY),
+  cachePrefix: "iran-read",
+  missedKey: deskKey("iran", MISSED_KEY),
+  hash: iranContentHash,
+  decide: (r, c, strict = true) => decideIran(r, c, strict),
+  alignment: (c) => (isXPost(c) && !c.lean ? "an X account, no declared alignment" : IRAN_ALIGNMENT[c.lean] ?? "no declared alignment"),
+  prompt: IRAN_PROMPT,
+  // The lite models only: the strong ones write Yemen's 6-hour update.
+  models: ["gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash-lite"],
+  // The other free services first, so the Yemen reader's Gemini quota lasts the day.
+  fallbacksFirst: true,
+  maxCalls: 3,
+  queueMax: 200,
+  secondLook: false,
+  geocode: false,
+};
+
+/** `decideIran` on a bare source text, for tests. */
+export function decideIranForTest(r: Reading, text: string, source = "Tasnim", lean = "axis"): EditorVerdict {
+  return decideIran(r, { source, url: "https://t.me/Tasnimnews_EN/1", text, at: "2026-10-08T12:00:00Z", lean, fp: "ir-t", score: 1, tags: [] });
 }

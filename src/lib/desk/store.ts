@@ -61,6 +61,11 @@ export interface DeskStore {
    */
   getMany<T>(prefix: string, ids: string[]): Promise<Record<string, T>>;
   putMany(prefix: string, entries: Record<string, unknown>): Promise<void>;
+  /**
+   * Every entry under a prefix, removed as it is read: one desk's scan hands
+   * the other its items this way (the Iran inbox), and nothing is taken twice.
+   */
+  takeMany<T>(prefix: string): Promise<T[]>;
   /** Drop a cache's entries not written for `olderThanMs`. */
   prune(prefix: string, olderThanMs: number): Promise<number>;
 

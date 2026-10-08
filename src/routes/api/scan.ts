@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
 import { deskParam, onDesk } from "@/lib/desk/desk-route";
-import { scanYemenSources } from "@/lib/yemen-scan.server";
+import { IRAN_PAYLOAD, scanYemenSources } from "@/lib/yemen-scan.server";
+import { getStore } from "@/lib/desk/store";
+import type { ScanPayload } from "@/lib/desk/types";
 
 /**
  * What the desk currently holds.
@@ -15,10 +17,14 @@ export const Route = createFileRoute("/api/scan")({
     handlers: {
       GET: ({ request }) => metered("scan", async () => {
         try {
-          const payload = await scanYemenSources();
           // One scan feeds every desk; each is sent only its own cards (Round 30).
+          // The Iran desk's scan box is its own scan's: its sources, its verdicts.
           const desk = deskParam(new URL(request.url).searchParams.get("desk"));
-          payload.reports = payload.reports.filter((r) => onDesk(r, desk));
+          const payload =
+            desk === "iran"
+              ? ((await (await getStore()).getJson<ScanPayload>(IRAN_PAYLOAD)) ?? { ok: true as const, scannedAt: "", reports: [], sourcesTried: 0, sourcesOk: 0, rawHits: [], sourceStatus: [] })
+              : await scanYemenSources();
+          if (desk !== "iran") payload.reports = payload.reports.filter((r) => onDesk(r, desk));
           return new Response(JSON.stringify(payload), {
             headers: {
               "content-type": "application/json; charset=utf-8",

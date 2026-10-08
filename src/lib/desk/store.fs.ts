@@ -127,6 +127,13 @@ export function createFsStore(): DeskStore {
       await writeJsonAtomic(rowsFile(prefix), all);
     },
 
+    async takeMany<T>(prefix: string): Promise<T[]> {
+      const all = (await readJson<Record<string, { v: T; at: number }>>(rowsFile(prefix))) ?? {};
+      const out = Object.values(all).map((r) => r.v);
+      if (out.length) await writeJsonAtomic(rowsFile(prefix), {});
+      return out;
+    },
+
     async prune(prefix: string, olderThanMs: number): Promise<number> {
       const all = (await readJson<Record<string, { v: unknown; at: number }>>(rowsFile(prefix))) ?? {};
       const cut = Date.now() - olderThanMs;

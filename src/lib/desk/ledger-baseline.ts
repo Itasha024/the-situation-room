@@ -220,6 +220,8 @@ export const LEDGER_BASELINE: Ledger = {
   notices: [],
   // Satellite pictures of earlier damage, carried on 30 Sep as new attacks (Ali Bk, Fars, Shajab, IRNA).
   wrong: [
+    // The user, 8 Oct: the Iran war's, not Yemen's.
+    { ship: "2026-10-08-acers", why: "tanker attacked off Qatar: the Iran war" },
     { site: "yanbu", date: "2026-09-30", why: "satellite pictures of earlier damage" },
     // Shajab's was smoke seen from space; Ali Bk's report of an attack that day stays (a claim).
     { site: "abqaiq", date: "2026-09-30", why: "satellite pictures of earlier damage", url: "https://t.me/shajab_news/68014" },

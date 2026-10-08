@@ -169,3 +169,13 @@ test("a new hit on one site a day after another stands: time never decides a ret
   const row = withBaseline(stored, { ...stored, sites: [] }).sites.find((s) => s.id === "taibah-medina");
   assert.deepEqual(row?.hits.map((h) => h.url), ["a", "b"]);
 });
+
+test("a ship attacked in the Gulf stays out of the Yemen sea count unless the Houthis did it (8 Oct)", async () => {
+  const { applyLedger, LEDGER_SEED } = await import("./ledger.ts");
+  const doc = { name: "Splash247", url: "https://splash247.com/x", date: "2026-10-08", text: "The tanker Acers was attacked off Qatar." };
+  const now = new Date("2026-10-08T12:00:00+03:00");
+  const out = applyLedger(LEDGER_SEED, { ships: [{ doc: 0, ship: "Acers", place: "off Qatar", what: "attacked", date: "2026-10-08" }] }, [doc] as never, now);
+  assert.equal(out.ships.length, 0);
+  const red = applyLedger(LEDGER_SEED, { ships: [{ doc: 0, ship: "Acers", place: "off Qatar", what: "attacked", date: "2026-10-08", attacker: "the Houthis" }] }, [doc] as never, now);
+  assert.equal(red.ships.length, 1);
+});

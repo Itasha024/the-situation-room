@@ -42,6 +42,12 @@ const IRAN_LABEL =
 const IRAN_ACTS =
   /\b(?:Iran|Iranian|Iranians|Tehran|IRGC|Revolutionary Guards?|Khamenei|Pezeshkian|Araghchi|Hormuz|Bandar Abbas|Kharg|Natanz|Fordow|Isfahan)\b|[إا]يران|الإيراني|طهران|الحرس الثوري|خامنئي|بزشكيان|عراقجي|هرمز|ایران|تهران|سپاه|خامنه‌ای|پزشکیان|عراقچی/i;
 
+/** Seas that belong to the Iran desk: the Gulf, Hormuz, the Gulf of Oman and the Gulf states' coasts. */
+export const OFF_YEMEN_SEA =
+  /\b(?:Persian Gulf|Arabian Gulf|the Gulf\b(?! of Aden)|Hormuz|Gulf of Oman|Qatar|Bahrain|Kuwait|Fujairah|Khor Fakkan|Ras Tanura|Ras Laffan|Jebel Ali|Dubai|Abu Dhabi|Sharjah|Muscat|Sohar|Iran|Iranian|Bandar Abbas|Kharg|Basra)\b|الخليج العربي|الخليج الفارسي|هرمز|خليج عمان|قطر|البحرين|الكويت|الفجيرة|إيران/i;
+// A ship card that names none of these is not Yemen's, whatever kept it.
+const YEMEN_SEA = /\b(?:Yemen\w*|Houthis?|Ansar ?Allah|Red Sea|Bab (?:al|el)[- ]Mand[ae]b|Gulf of Aden|Arabian Sea|Hodeidah|Mocha|Aden|Salif|Ras Isa|Socotra|Mukalla)\b|اليمن|الحوثي|أنصار الله|البحر الأحمر|باب المندب|خليج عدن|الحديدة/i;
+
 export function isIranCard(r: Pick<LiveReport, "summary" | "text">): boolean {
   const text = `${r.summary}\n${r.text ?? ""}`.replace(IRAN_LABEL, " ");
   return IRAN_ACTS.test(text);
@@ -50,5 +56,9 @@ export function isIranCard(r: Pick<LiveReport, "summary" | "text">): boolean {
 /** The desks a newly kept card is shown on. A card that already has its desks keeps them. */
 export function desksOf(r: LiveReport): DeskId[] {
   if (r.desks?.length) return r.desks;
+  // A ship hit in the Gulf, Hormuz or the Gulf of Oman with no word of Yemen
+  // is the Iran war's alone (8 Oct: the tanker Acers off Qatar on the Yemen desk).
+  const all = `${r.summary}\n${r.text ?? ""}\n${r.place ?? ""}`;
+  if (r.type === "vessel" && OFF_YEMEN_SEA.test(all) && !YEMEN_SEA.test(all)) return ["iran"];
   return isIranCard(r) ? ["yemen", "iran"] : ["yemen"];
 }

@@ -80,7 +80,7 @@ export const Route = createFileRoute("/api/desk")({
           // The map's pins since a day (?since=YYYY-MM-DD): the whole war, no
           // cards. Pins are small; the bound only stops a runaway.
           const sinceDay = url.searchParams.get("since") || "";
-          const since = /^d{4}-d{2}-d{2}$/.test(sinceDay) ? `${sinceDay}T00:00:00+03:00` : undefined;
+          const since = /^\d{4}-\d{2}-\d{2}$/.test(sinceDay) ? `${sinceDay}T00:00:00+03:00` : undefined;
           const cap = since ? 20_000 : 1000;
           const limit = Number.isFinite(asked) ? Math.min(Math.max(asked, 1), cap) : since ? cap : 400;
 

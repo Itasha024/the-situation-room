@@ -14,6 +14,7 @@ import { askChain, COMBINE_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { outletSide } from "./digest.ts";
 import { LEDGER_BASELINE } from "./ledger-baseline.ts";
+import { OFF_YEMEN_SEA } from "./desk-route.ts";
 import { notNewEvent } from "./pin-rule.ts";
 
 export const LEDGER_KEY = "ledger";
@@ -332,6 +333,9 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
     const d = docs[s?.doc];
     if (!d || !WHATS.includes(s.what as ShipWhat) || !s.place) continue;
     if (s.ship && !nameInText(d.text, s.ship)) continue;
+    // The Gulf, Hormuz and the Gulf of Oman are the Iran war's, not Yemen's,
+    // unless the Houthis did it (8 Oct: the tanker Acers off Qatar counted here).
+    if (OFF_YEMEN_SEA.test(s.place) && !/houthi|ansar ?allah|الحوثي|أنصار الله/i.test(s.attacker ?? "")) continue;
     const date = strikeDay(s.date, d.date);
     // One incident, one row: the same ship within a day; a ship with no name
     // is the one off the same town that day. A later report of an attack

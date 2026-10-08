@@ -158,3 +158,11 @@ test("the map's pins alone, back to a day: the whole war, not the newest cards' 
   assert.ok(!fps.includes("r30-older"), "before the start day is left out");
   assert.ok(!fps.includes("r30-2"), "another desk's pin is left out");
 });
+
+test("a ship hit in the Gulf with no word of Yemen is the Iran desk's alone (8 Oct, the Acers)", () => {
+  assert.deepEqual(desksOf(card(12, { type: "vessel", summary: "Tanker Acers attacked off Qatar, casualties reported", text: "", place: undefined })), ["iran"]);
+  assert.deepEqual(desksOf(card(13, { type: "vessel", summary: "Container ship attacked in the Red Sea", text: "" })), ["yemen"]);
+  // The Houthis named: still Yemen's, and Iran's too where Iran is named.
+  assert.deepEqual(desksOf(card(14, { type: "vessel", summary: "Houthis claim attack on tanker in the Gulf of Oman", text: "", place: undefined })), ["yemen"]);
+  assert.deepEqual(desksOf(card(15, { type: "vessel", summary: "Tanker seized in the Strait of Hormuz", text: "", place: undefined })), ["iran"]);
+});

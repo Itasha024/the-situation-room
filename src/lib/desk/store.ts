@@ -90,9 +90,15 @@ export interface DeskStore {
    *
    * `desk`: only the cards and pins shown on that desk. Without it, every
    * desk's — the scanner's own look-backs, which must see everything it kept.
+   *
+   * `reports: false` with `since`: the map's pins alone, back to a day. The
+   * map's whole-war view had only the newest 2,000 cards' pins, so as days
+   * passed its count stood still near 920 (8 Oct).
    */
-  recentDesk(limit?: number, before?: string, opts?: { events?: boolean; desk?: DeskId }): Promise<DeskSlice>;
+  recentDesk(limit?: number, before?: string, opts?: RecentOpts): Promise<DeskSlice>;
 }
+
+export type RecentOpts = { events?: boolean; reports?: boolean; since?: string; desk?: DeskId };
 
 export type MergeResult = {
   reportsAdded: number;

@@ -37,9 +37,10 @@ const STALE_MS = 30 * 60_000;
 const memo = new Map<string, { at: number; body: string }>();
 const reading = new Map<string, Promise<{ at: number; body: string }>>();
 
-async function readDesk(limit: number, before: string | undefined, desk: DeskId) {
+async function readDesk(limit: number, before: string | undefined, desk: DeskId, since?: string) {
   const store = await getStore();
-  const slice = await store.recentDesk(limit, before, { desk });
+  // `since`: the map's pins alone, back to that day — the whole war's map.
+  const slice = await store.recentDesk(limit, before, since ? { desk, since, reports: false } : { desk });
   // Cards stored before the link rules keep their row; a link that
   // breaks the rules is just not shown (links.ts).
   checkLinks(slice.reports as never[], slice.reports as never[]);
@@ -52,10 +53,10 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId)
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }
 
-function renew(key: string, limit: number, before: string | undefined, desk: DeskId) {
+function renew(key: string, limit: number, before: string | undefined, desk: DeskId, since?: string) {
   let p = reading.get(key);
   if (!p) {
-    p = readDesk(limit, before, desk)
+    p = readDesk(limit, before, desk, since)
       .then((hit) => {
         if (memo.size > 20) memo.clear();
         memo.set(key, hit);
@@ -76,7 +77,12 @@ export const Route = createFileRoute("/api/desk")({
           const asked = Number(url.searchParams.get("limit") || NaN);
           // Bounded so a crafted query cannot ask the desk to serialise the
           // entire archive on every request.
-          const limit = Number.isFinite(asked) ? Math.min(Math.max(asked, 1), 1000) : 400;
+          // The map's pins since a day (?since=YYYY-MM-DD): the whole war, no
+          // cards. Pins are small; the bound only stops a runaway.
+          const sinceDay = url.searchParams.get("since") || "";
+          const since = /^d{4}-d{2}-d{2}$/.test(sinceDay) ? `${sinceDay}T00:00:00+03:00` : undefined;
+          const cap = since ? 20_000 : 1000;
+          const limit = Number.isFinite(asked) ? Math.min(Math.max(asked, 1), cap) : since ? cap : 400;
 
           // Paging back: rows strictly older than this ISO time.
           const before = url.searchParams.get("before") || undefined;
@@ -84,11 +90,11 @@ export const Route = createFileRoute("/api/desk")({
           // Which desk's cards (Round 30); none asked is Yemen's, as before.
           const desk = deskParam(url.searchParams.get("desk"));
 
-          const key = `${desk}|${limit}|${before ?? ""}`;
+          const key = `${desk}|${limit}|${before ?? ""}|${since ?? ""}`;
           let hit = memo.get(key);
           const age = hit ? Date.now() - hit.at : Infinity;
-          if (!hit || age > STALE_MS) hit = await renew(key, limit, before, desk);
-          else if (age > MEMO_MS) renew(key, limit, before, desk).catch(() => {});
+          if (!hit || age > STALE_MS) hit = await renew(key, limit, before, desk, since);
+          else if (age > MEMO_MS) renew(key, limit, before, desk, since).catch(() => {});
 
           return raw(
             hit.body,

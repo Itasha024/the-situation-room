@@ -12,7 +12,7 @@
 import type { Sql } from "../db.ts";
 import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import { deriveEvents, hasArticlePath } from "./snapshot.ts";
-import { dbMeter, type DeskSlice, type DeskStore, type MergeResult } from "./store.ts";
+import { dbMeter, type DeskSlice, type DeskStore, type RecentOpts, type MergeResult } from "./store.ts";
 import type { DeskId } from "../desks.ts";
 import { DEFAULT_DESK } from "./desk-route.ts";
 import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
@@ -220,14 +220,15 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
      * `at` comes back as a Date from `pg`, so it is normalised to ISO here —
      * the page compares timestamps as strings.
      */
-    async recentDesk(limit = 400, before?: string, opts: { events?: boolean; desk?: DeskId } = {}): Promise<DeskSlice> {
+    async recentDesk(limit = 400, before?: string, opts: RecentOpts = {}): Promise<DeskSlice> {
       const cursor = before && Number.isFinite(Date.parse(before)) ? before : null;
+      const since = opts.since && Number.isFinite(Date.parse(opts.since)) ? opts.since : null;
       const desk = opts.desk ?? null;
       const sql = await sqlProvider();
       const iso = (v: unknown): string =>
         v instanceof Date ? v.toISOString() : typeof v === "string" ? v : "";
 
-      const reports = await sql<Record<string, unknown>>`
+      const reports = opts.reports === false ? [] : await sql<Record<string, unknown>>`
         select fp, url, at, source, type, summary, body, priority, confidence,
                score, tier, place, lat, lng, also_reported_by, citing, media, flags, desks,
                -- A reply to a row since deleted leads nowhere: shown as none.
@@ -243,6 +244,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
         select fp, at, type, lat, lng, place, label, body, source, url, map_only, desks
           from desk_event
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
+           and (${since}::timestamptz is null or at >= ${since}::timestamptz)
            and (${desk}::text is null or ${desk}::text = any(desks))
          order by at desc
          limit ${limit}

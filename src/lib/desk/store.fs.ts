@@ -17,7 +17,7 @@ import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import type { DeskId } from "../desks.ts";
 import { onDesk } from "./desk-route.ts";
 import { deriveEvents, hasArticlePath, toDeskReportRow } from "./snapshot.ts";
-import type { DeskSlice, DeskStore, MergeResult } from "./store.ts";
+import type { DeskSlice, DeskStore, MergeResult, RecentOpts } from "./store.ts";
 import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
 
 const PUBLIC_DIR = join(process.cwd(), "public");
@@ -167,17 +167,20 @@ export function createFsStore(): DeskStore {
      * two drivers answering the same question, so `/api/desk` behaves
      * identically in development and deployed.
      */
-    async recentDesk(limit = 400, before?: string, opts: { events?: boolean; desk?: DeskId } = {}): Promise<DeskSlice> {
+    async recentDesk(limit = 400, before?: string, opts: RecentOpts = {}): Promise<DeskSlice> {
       const cut = before ? Date.parse(before) : NaN;
-      const older = (r: Record<string, unknown>) =>
-        (!Number.isFinite(cut) || Date.parse(String(r.at || "")) < cut) && (!opts.desk || onDesk(r, opts.desk));
+      const from = opts.since ? Date.parse(opts.since) : NaN;
+      const older = (r: Record<string, unknown>) => {
+        const t = Date.parse(String(r.at || ""));
+        return (!Number.isFinite(cut) || t < cut) && (!Number.isFinite(from) || t >= from) && (!opts.desk || onDesk(r, opts.desk));
+      };
       const data = await readJson<DeskSnapshot>(DATA_FILE);
       if (!data) return { updatedAt: null, reports: [], events: [] };
       const byAtDesc = (a: Record<string, unknown>, b: Record<string, unknown>) =>
         String(b.at || "").localeCompare(String(a.at || ""));
       return {
         updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null,
-        reports: [...(data.reports ?? [])].filter(older).sort(byAtDesc).slice(0, limit) as DeskReportRow[],
+        reports: opts.reports === false ? [] : [...(data.reports ?? [])].filter(older).sort(byAtDesc).slice(0, limit) as DeskReportRow[],
         events: [...(data.events ?? [])].filter((e) => older(e as Record<string, unknown>)).sort(byAtDesc).slice(0, limit) as unknown as DeskEventRow[],
       };
     },

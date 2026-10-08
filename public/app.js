@@ -1648,11 +1648,39 @@ async function fillArchiveTo(ymd, maxPages = 20) {
   try { return await archiveFilling; } finally { archiveFilling = null; }
 }
 
+/*
+ * Every stored pin of the war, once, for the range and whole-war views. Those
+ * views used to draw only the pins of the newest 2,000 cards, so as days
+ * passed the whole war's count stood still near 920 (8 Oct). Pins alone are
+ * small; the cards behind them are still paged in only when asked for.
+ */
+let allPinsLoaded = null;
+function loadAllPins() {
+  allPinsLoaded ??= fetch('/api/desk?since=' + CONFLICT_START)
+    .then((res) => (res.ok ? res.json() : null))
+    .then((body) => {
+      const rows = body && Array.isArray(body.events) ? body.events : [];
+      if (!rows.length || !data) { allPinsLoaded = null; return false; }
+      // Kept with the archive, so a later rebuild of the page's data keeps them.
+      const have = new Set([...(data.events || []), ...deskArchive.events].map((e) => String(e.fp || '')));
+      const fresh = rows.filter((e) => e && e.fp && !have.has(String(e.fp)));
+      if (!fresh.length) return false;
+      deskArchive.events = [...deskArchive.events, ...fresh];
+      data.events = [...fresh, ...(data.events || [])];
+      return true;
+    })
+    .catch((e) => { console.warn('map pins', e); allPinsLoaded = null; return false; });
+  return allPinsLoaded;
+}
+
 /** After the map's day changes: fetch that day's stored reports, then draw again. */
 function fillMapDay() {
   const from = mapMode === 'day' ? (mapDate || todayYmd()) : mapMode === 'range' ? mapDateFrom : mapMode === 'all' ? CONFLICT_START : null;
-  // The whole war: the newest pages only, to keep a phone's download small.
-  fillArchiveTo(from, mapMode === 'all' ? 8 : 20).then((added) => { if (added) { applyMapFilters(); renderFeed(data); } }).catch(() => {});
+  if (mapMode === 'range' || mapMode === 'all') {
+    loadAllPins().then((added) => { if (added) applyMapFilters(); });
+    return;
+  }
+  fillArchiveTo(from, 20).then((added) => { if (added) { applyMapFilters(); renderFeed(data); } }).catch(() => {});
 }
 
 /*

@@ -144,3 +144,17 @@ test("the brief's window: Yemen's 6 hours as before, Iran's 3", () => {
   assert.equal(Date.parse(three.nextUpdateAt) - Date.parse(three.updatedAt), 3 * 3600_000);
   assert.equal(Date.parse(six.nextUpdateAt) - Date.parse(six.updatedAt), 6 * 3600_000);
 });
+
+test("the map's pins alone, back to a day: the whole war, not the newest cards' (8 Oct)", async () => {
+  const store = createPgStore(provider);
+  await store.mergeIntoDesk([
+    card(10, { fp: "r30-old", at: "2026-07-20T10:00:00+03:00" }),
+    card(11, { fp: "r30-older", at: "2026-07-01T10:00:00+03:00" }),
+  ]);
+  const pins = await store.recentDesk(20_000, undefined, { desk: "yemen", since: "2026-07-13T00:00:00+03:00", reports: false });
+  assert.equal(pins.reports.length, 0);
+  const fps = pins.events.map((e) => e.fp);
+  assert.ok(fps.includes("r30-old"));
+  assert.ok(!fps.includes("r30-older"), "before the start day is left out");
+  assert.ok(!fps.includes("r30-2"), "another desk's pin is left out");
+});

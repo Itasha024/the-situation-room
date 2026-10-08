@@ -599,6 +599,8 @@ export type Found = {
   nextReadAt?: number;
   /** Found at an outlet that only carried the words: never learned as a source. */
   carrier?: boolean;
+  /** The interview the speaker gave this outlet: its exclusive, with no "Also". */
+  exclusive?: boolean;
 };
 
 /** The original, read in full and queued for the reader to write the card from. */
@@ -1045,6 +1047,7 @@ export async function traceOrigins(
     r.source = f.source;
     r.citing = undefined;
     r.alsoReportedBy = undefined;
+    if (f.exclusive) r.flags = [...new Set([...(r.flags ?? []), "exclusive"])];
   };
   let routes: RouteLog | undefined;
   /**
@@ -1128,7 +1131,7 @@ ${text}`.trim(),
     if (sp) {
       if (!e.trKeys) e.trKeys = await translateKeys(e.keys, sp.lang);
       const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o), e.cited.spokeTo ?? []);
-      return hit && !ISRAELI_HOST.test(hostOf(hit.url)) ? { url: hit.url, source: hit.source, title: hit.title } : null;
+      return hit && !ISRAELI_HOST.test(hostOf(hit.url)) ? { url: hit.url, source: hit.source, title: hit.title, ...(hit.told ? { exclusive: true } : {}) } : null;
     }
     const claim = `${e.report.summary}. ${e.report.text ?? ""}`.trim();
     const own = async (): Promise<Found | null> => {

@@ -23,6 +23,7 @@ import { desksOf } from "./desk/desk-route.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
+import { leadSpeaker } from "./desk/speakers.ts";
 import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, isAggregator, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
@@ -1724,6 +1725,9 @@ export function foldIntoPublished(
         (o) => open(o) && o.source !== r.source && before(o, DUPLICATE_WINDOW_MS) && sameCountAt(o, r) && !differentSpeakers(o, r),
       );
     }
+    // Two known figures' words are two cards: Hegseth's interview was folded
+    // into a card on Trump's post from five hours earlier (8 Oct).
+    if (home && otherFigure(home.summary, r.summary)) home = undefined;
     if (!home) continue;
     gone.add(r);
     // By id too: a relay traced to its original carries the original's link.
@@ -3290,6 +3294,13 @@ export function sourceLean(name: string): string {
 }
 
 /** A card the reader marked as its outlet's own exclusive. */
+/** Headlines whose speakers are two different known figures. */
+function otherFigure(a: string, b: string): boolean {
+  const x = leadSpeaker(a);
+  const y = leadSpeaker(b);
+  return !!x && !!y && x.name !== y.name;
+}
+
 export function isExclusiveCard(r: LiveReport): boolean {
   return !!r.flags?.includes("exclusive") || !!r.tags?.includes("exclusive");
 }

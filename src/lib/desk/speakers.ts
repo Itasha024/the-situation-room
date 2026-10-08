@@ -76,13 +76,27 @@ const SPEECH_AR = /(?:قال|أعلن|صرح|أكد|حذر|تعهد|أضاف|د�
  */
 export function speakerOf(summary: string, text = ""): Speaker | null {
   const t = `${summary}\n${text}`.slice(0, 600);
+  // The one named first speaks: "Hegseth: Trump wants peace" is Hegseth's
+  // words about Trump, not Trump's (user, 8 Oct: it went out "citing Donald Trump").
+  let best: Speaker | null = null;
+  let at = Infinity;
   for (const sp of SPEAKERS) {
     const m = sp.re.exec(t);
-    if (!m) continue;
+    if (!m || m.index >= at) continue;
     const around = t.slice(Math.max(0, m.index - 24), m.index + m[0].length + 40);
-    if (SPEECH_EN.test(around) || SPEECH_AR.test(around)) return sp;
+    if (SPEECH_EN.test(around) || SPEECH_AR.test(around)) {
+      best = sp;
+      at = m.index;
+    }
   }
-  return null;
+  return best;
+}
+
+/** The known figure who speaks in a headline: the one before its colon, or before "says". */
+export function leadSpeaker(summary: string): Speaker | null {
+  const h = String(summary || "");
+  const lead = /^([^:"“]{2,70}):\s/.exec(h)?.[1] ?? /^(.{2,70}?)\s+(?:says|said|tells|told)\b/.exec(h)?.[1] ?? "";
+  return lead ? (SPEAKERS.find((sp) => sp.re.test(lead)) ?? null) : null;
 }
 
 /**

@@ -20,8 +20,9 @@ import type { Listed } from "./sitemap.ts";
 import { SPEAKERS, type Speaker } from "./speakers.ts";
 import type { DeskStore } from "./store.ts";
 import { TRIAGE_MODELS } from "./triage.ts";
+import { findVenue } from "./venue.ts";
 
-export type Hit = { url: string; source: string; title?: string };
+export type Hit = { url: string; source: string; title?: string; /** An interview he gave this outlet: its exclusive. */ told?: boolean };
 
 /** Each country's press, where its leaders' words are first reported. */
 export const SPEAKER_PRESS: Record<string, string[]> = {
@@ -181,8 +182,14 @@ export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[
       if (url && (speakerOutlet(sp, hostOfSite(url)) || toldHere(hit.outlet))) return { url, source: hit.outlet || sp.name, title: hit.title };
     }
   }
-  return null;
+  // None of his press has the words: where did he speak today? (user, 8 Oct:
+  // Hegseth's Iran lines were Jack Posobiec's interview for Human Events.)
+  const v = await findVenue(sp, reportAt, isIsraeliHost);
+  return v ? { url: v.url, source: v.source, title: v.title, told: true } : null;
 }
+
+/** An Israeli outlet's site: never the venue of a foreign leader's words. */
+const isIsraeliHost = (host: string) => /(?:^|\.)(?:co\.il|org\.il|gov\.il|jpost\.com|timesofisrael\.com|i24news\.tv|jfeed\.com|ynetnews\.com|haaretz\.com|israelhayom\.com|jns\.org)$/i.test(host);
 
 /** One outlet by two spellings of its name: "CNN" and "CNN International", "Le Monde" and "Le Monde.fr". */
 export function sameOutlet(a: string, b: string): boolean {

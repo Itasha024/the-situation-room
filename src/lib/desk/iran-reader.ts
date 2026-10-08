@@ -14,7 +14,7 @@ import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 6;
+export const IRAN_PROMPT_VERSION = 7;
 
 export function iranContentHash(text: string): string {
   return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
@@ -86,7 +86,8 @@ WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 - The Houthis' own war in Yemen (Houthis against the Yemeni government or Saudi Arabia, fronts inside Yemen): reject_reason "yemen desk". A Houthi act in Iran's cause (fire on Israel or US ships, tied to Iran) is published.
 - Houthi missiles or drones on Saudi Arabia, Saudi interceptions over Riyadh or other Saudi cities, debris falling there, and flights to Saudi cities stopped over them: reject_reason "yemen desk".
 - An incident the text dates days back (a UKMTO report of 6 October relayed on the 8th) is not new: duplicate_of the recent report that told it, else publish=false, reject_reason "old".
-- Gaza and the West Bank, unless Iran or Hezbollah act in it. Other wars (Ukraine, Sudan) unless Iran is a party.
+- Gaza and the West Bank, unless Iran or Hezbollah act in it.
+- Syria: Israel's operations there (Quneitra, Daraa, southern Syria, the Golan buffer zone) and Syria's own affairs, reject_reason "not iran", unless Iran, the IRGC or Hezbollah is a party. Syria is not this desk's, and an Iranian outlet is never the source for it. Other wars (Ukraine, Sudan) unless Iran is a party.
 - Commentary, reject_reason "commentary": explainers, opinion, columns, analysis, and the views of writers, media figures, researchers, analysts, experts, think tanks and FORMER officials ("Atwan: Trump seeks to shift the costs", "an Iran International analyst says", "former US envoy Hochstein says"), whoever carries them. A poll is not commentary.
 - Recaps, reject_reason "recap": a post that sums up events already reported one by one, a channel's round-up or news package ("بسته خبری", "مرور اخبار", "حصاد", "أبرز الأحداث", "ملخص"), a programme title, a documentary, an anniversary, a battle map. Old events retold as new.
 - Clerics, reject_reason "cleric": a cleric, Friday-prayer leader, preacher, marja or body of clerics preaching, praising or condemning. The exceptions: a cleric who holds an office in this war (the Supreme Leader, the judiciary chief, a minister, a commander), and a party's official religious leadership calling to fight, declaring jihad or ruling on this war.
@@ -97,6 +98,7 @@ WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 
 ISRAELI MEDIA
 - Items whose source is an Israeli outlet or reporter (N12, Kan, Channel 13, Channel 14, i24 News, Walla, Ynet, Haaretz, Israel Hayom, the Jerusalem Post, Amit Segal, and the Israeli Telegram channels) are published only for Israel's OWN reporting on this war: its reporters, Israeli officials and Israeli sources.
+- Israeli outlets relaying what a foreign government, official or outlet said or did (US Treasury sanctions, a Trump post, an Iranian minister, a "foreign desk" post) are relays too, reject_reason "relay": the original is read directly. Kept: Israeli officials, the IDF, Israeli security sources, the outlet's own correspondents, and exclusives.
 - An item that only repeats a foreign outlet's report ("according to Reuters", "Al Jazeera reports", "a report in the New York Times", "Iranian media say") is rejected, reject_reason "relay": the original is read directly. An Israeli outlet's exclusive ("פרסום ראשון", "exclusive", "revealed") is kept.
 - What Israeli officials or sources told the outlet ends the headline: ", Israeli officials say", ", Israeli sources say".
 
@@ -210,6 +212,25 @@ const FOREIGN_RELAY = new RegExp(
   "i",
 );
 
+/** An Israeli outlet's foreign-news desk ("דסק החוץ"): relays by definition. */
+const FOREIGN_DESK = /דסק (?:ה)?חוץ/;
+
+/**
+ * Israel's own side in an Israeli outlet's item: its officials, forces and
+ * sources, or the outlet's own correspondent (user, 8 Oct: an N12 post of the
+ * US Treasury's sanctions is a relay).
+ */
+const ISRAELI_SIDE = new RegExp(
+  [
+    `(?:גורם|גורמים|בכיר|בכירים|פקיד|פקידים|מקור|מקורות|הערכה|הערכות)\\s+(?:ביטחוני|ביטחוניים|ישראלי|ישראליים|בישראל|במערכת הביטחון|מדיני|מדיניים|בצה)`,
+    `בישראל\\s+(?:מעריכים|חוששים|נערכים|עוקבים|סבורים|מסרו|אומרים)`,
+    `צה"ל|צה״ל|מערכת הביטחון|נתניהו|ראש הממשלה|שר הביטחון|הקבינט|המוסד|שב"כ|פיקוד העורף|חיל האוויר|אמ"ן|הרמטכ"ל|לשכת ראש הממשלה|נודע ל|כתבנו|כתבתנו|הכתב(?:ת)?\\s+(?:שלנו|הצבאי|הצבאית|המדיני|המדינית)`,
+    `\\bIDF\\b|\\bIsraeli\\s+(?:officials?|sources?|security|military|defen[cs]e|army|air force|intelligence|assessment|cabinet)`,
+    `\\b(?:Netanyahu|Mossad|Shin Bet|Home Front Command|security cabinet|our correspondent)\\b|\\bIsrael(?:'s)?\\s+(?:Defen[cs]e|Prime)\\s+Minist`,
+  ].join("|"),
+  "i",
+);
+
 /** The outlet's own scoop: kept even when the story is also elsewhere. */
 const EXCLUSIVE = /פרסום ראשון|בלעדי|חשיפת|נחשף ב|exclusive|first reported by (?:N12|Kan|Channel 1[234]|i24|Ynet|Walla|Haaretz|Israel Hayom|the Jerusalem Post)/i;
 
@@ -222,7 +243,8 @@ export function passesIsraeliMediaGate(text: string): boolean {
   const t = String(text || "");
   if (!isIranWar(t) && !IRAN_WAR_HE.test(t)) return false;
   if (EXCLUSIVE.test(t)) return true;
-  return !FOREIGN_RELAY.test(t.slice(0, 220));
+  if (FOREIGN_DESK.test(t) || FOREIGN_RELAY.test(t.slice(0, 220))) return false;
+  return ISRAELI_SIDE.test(t.slice(0, 400));
 }
 
 /**
@@ -265,6 +287,9 @@ const YEMEN_THEATRE_WORDS =
 /** Missiles over Saudi cities with no attacker named ("Saudi Arabia intercepted two ballistic missiles over Riyadh"). */
 const SAUDI_INTERCEPT = /\b(?:Saudi|Riyadh|Jeddah)\b.{0,60}\bintercept\w*|\bintercept\w*.{0,60}\b(?:Saudi|Riyadh|Jeddah)\b/i;
 const YEMEN_THEATRE = { test: (s: string) => YEMEN_THEATRE_WORDS.test(s) || SAUDI_INTERCEPT.test(s) };
+/** Syria's theatre: Israel in southern Syria, Syria's own affairs (user, 8 Oct). */
+const SYRIA_THEATRE = /\b(?:Syria|Syrian|Quneitra|Daraa|Deraa|Suwayda|Sweida|Suweida|Suweiseh|Golan|Damascus countryside|Rif Dimashq|Beit Jinn|Jaba|Umm Batna)\b/i;
+const IRAN_PARTY = /\b(?:Iran\w*|IRGC|Quds Force|Hezbollah|Revolutionary Guards?)\b/i;
 const IRAN_IN_YEMEN_STORY = /\b(?:Israel\w*|Eilat|US (?:warship|ship|Navy|base|forces)|American (?:warship|ship)|Red Sea shipping)\b/i;
 
 /** "22 million" where the text says 22: a multiplier the text never gave. */
@@ -289,6 +314,7 @@ export function iranCopyProblem(r: { headline: string; body?: string; speaker_le
   if (COMMENTARY.test(`${h} ${r.speaker_lead ?? ""}`)) return "commentary: analysts, experts and former officials are not reports";
   if (OUTLET_OPENS.test(h)) return "leads with outlet: an outlet is never the teller; lead with the fact, or with the official or source who said it";
   if (YEMEN_THEATRE.test(copy) && !isIranWar(copy) && !IRAN_IN_YEMEN_STORY.test(copy)) return "yemen desk: the Houthis' war with Saudi Arabia is the Yemen desk's";
+  if (SYRIA_THEATRE.test(copy) && !IRAN_PARTY.test(copy)) return "not iran: Syria is not this desk's";
   const src = String(sourceText || "");
   if (MULTIPLIER.test(h) && !MULTIPLIER_SRC.test(src)) return "figure not in source: the text gives no million or billion";
   if (r.event_type === "statement" && !r.speaker_lead && !SAY_VERB.test(h)) {

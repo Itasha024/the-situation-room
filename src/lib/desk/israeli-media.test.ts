@@ -13,7 +13,6 @@ test("Israeli media: the Iran war passes, in Hebrew with its prefixes and in Eng
   assert.ok(passesIsraeliMediaGate("צה\"ל תקף מטרות של חיזבאללה בדרום לבנון"));
   assert.ok(passesIsraeliMediaGate("הערכה בישראל: ויטקוף ייפגש עם עראקצ'י בשבוע הבא"));
   assert.ok(passesIsraeliMediaGate("Israeli officials: Tehran rebuilding missile launchers"));
-  assert.ok(passesIsraeliMediaGate("שיט במצרי הורמוז: מכלית נעצרה"));
 });
 
 test("Israeli media: Israel's other news does not pass", () => {
@@ -47,4 +46,14 @@ test("Israeli media: every outlet is in the Israeli group, and the blocked ones 
   for (const w of ["ukmto.org", "now14.co.il", "the IAEA's Iran page"]) assert.ok(IRAN_NOT_READ.some((n) => n.what.includes(w)), w);
   const ids = [...IRAN_TG, ...IRAN_RSS].map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length, "no source twice");
+});
+
+test("Israeli media: a foreign government's words or acts are a relay; Israel's own side passes", () => {
+  // N12's post of 8 Oct, 20:06: the US Treasury's sanctions, from its foreign desk.
+  assert.ok(!passesIsraeliMediaGate(`דסק החוץ ארה"ב הטילה סנקציות על 17 כלי שיט בגין העברת נפט איראני גולמי. בכיר במשרד האוצר האמריקני אמר כי ארה"ב מעריכה שלאיראן נותרו 20 מיליון חביות נפט`));
+  assert.ok(!passesIsraeliMediaGate(`ארה"ב הטילה סנקציות חדשות על צי הצללים של איראן`));
+  assert.ok(!passesIsraeliMediaGate("טראמפ: איראן תשלם מחיר כבד אם תתקוף"));
+  assert.ok(!passesIsraeliMediaGate("שיט במצרי הורמוז: מכלית נעצרה"));
+  assert.ok(passesIsraeliMediaGate("גורמים ביטחוניים: איראן מעבירה טילים לעיראק"));
+  assert.ok(passesIsraeliMediaGate("נתניהו כינס את הקבינט לדיון על איראן"));
 });

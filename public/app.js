@@ -3638,6 +3638,25 @@ function flashCard(el) {
 }
 
 /**
+ * "#r=<fp>" in the address (the Iran desk's "Full report on the Yemen desk"
+ * link): that card is shown, opened and flashed, once.
+ */
+function revealHashCard() {
+  const m = /^#r=(.+)$/.exec(location.hash || '');
+  if (!m || !data) return;
+  const fp = decodeURIComponent(m[1]);
+  history.replaceState(null, '', location.pathname + location.search);
+  const all = sortedReports(data).filter(leanOk);
+  const at = all.findIndex((r) => String(r.fp) === fp);
+  if (at < 0) return;
+  if (at >= reportsShown) { reportsShown = at + 1; renderFeed(data); }
+  const card = document.querySelector(`#feed .card[data-fp="${CSS.escape(fp)}"]`);
+  if (!card) return;
+  if (card.classList.contains('expandable') && !card.classList.contains('open')) card.click();
+  setTimeout(() => { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); flashCard(card); }, 150);
+}
+
+/**
  * After a jump to an earlier report, a way back to the one it was opened
  * from, shown only while that card is out of sight.
  */
@@ -6394,6 +6413,7 @@ async function paint(first, shown, briefP) {
   renderLiveScan();
   renderCasualties(data);
   renderFeed(data);
+  revealHashCard();
   // After the feed: its render builds the pin index the prose links to.
   renderSituation(data);
   // New cards since the last refresh flash once.
@@ -7098,7 +7118,18 @@ function renderIranFeed() {
     el.innerHTML = `<p class="soon">${iranDesk.reports.length ? 'No report from this group yet.' : 'The desk is reading its sources: the first reports appear here within minutes.'}</p>`;
     return;
   }
-  el.innerHTML = list.map((r, i) => feedCardHtml(r, i)).join('') +
+  // A card the Yemen desk also carries is told in full there: here its
+  // headline and a link to it (user, 8 Oct).
+  el.innerHTML = list.map((r, i) => {
+    const html = feedCardHtml(r, i);
+    if (!(Array.isArray(r.desks) && r.desks.includes('yemen') && r.fp)) return html;
+    const box = document.createElement('div');
+    box.innerHTML = html;
+    const card = box.firstElementChild;
+    card.querySelectorAll('.lead, .actions').forEach((x) => x.remove());
+    card.insertAdjacentHTML('beforeend', `<a class="x-desk" href="/yemen-conflict-desk#r=${encodeURIComponent(r.fp)}">Full report on the Yemen desk →</a>`);
+    return box.innerHTML;
+  }).join('') +
     (all.length > list.length ? `<button type="button" class="more" id="iran-more">Show earlier reports (+${Math.min(60, all.length - list.length)})</button>` : '');
   el.querySelectorAll('.card').forEach((card) => {
     const r = list[Number(card.dataset.i)];

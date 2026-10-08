@@ -1086,7 +1086,7 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   if (r.publish && /:\s*$/.test(r.headline.trim())) return { kind: "reject", reason: "reader-check", note: "Headline is only its speaker: say what they said." };
   // The rules the free models kept breaking (audit of 8 Oct), in code.
   const own = r.publish ? iranCopyProblem(r, c.text) : null;
-  if (own) return { kind: "reject", reason: /^(?:commentary|yemen desk)/.test(own) ? "reader" : "reader-check", note: sentence(own) };
+  if (own) return { kind: "reject", reason: /^(?:commentary|yemen desk|not iran)/.test(own) ? "reader" : "reader-check", note: sentence(own) };
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);

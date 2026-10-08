@@ -69,3 +69,12 @@ test("missiles intercepted over Riyadh with no attacker named are the Yemen desk
   assert.equal(verdict("Saudi Arabia intercepted two ballistic missiles over Riyadh", "اعتراض صاروخين باليستيين في سماء الرياض", { event_type: "interception" }).kind, "reject");
   assert.equal(verdict("Saudi Arabia intercepts Iranian missiles over Riyadh", "اعتراض صواريخ إيرانية في سماء الرياض", { event_type: "interception" }).kind, "publish");
 });
+
+test("Syria is not this desk's, unless Iran or Hezbollah is a party", () => {
+  for (const h of ["Israeli forces advance in southern Syria, close road between Jaba and Umm Batna in Quneitra countryside", "Israeli artillery strikes abandoned military base in Suweiseh area, Quneitra province, Syria"]) {
+    const v = verdict(h, "القنيطرة جباتا أم باطنة السويسة", { event_type: "ground_clash" });
+    assert.equal(v.kind, "reject", h);
+    assert.equal(v.kind === "reject" && v.reason, "reader", "a rejection, not a rewrite");
+  }
+  assert.equal(verdict("Israel strikes IRGC weapons depot near Damascus, Syria", "الحرس الثوري دمشق", { event_type: "air_strike" }).kind, "publish");
+});

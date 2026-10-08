@@ -771,6 +771,8 @@ html{scroll-behavior:smooth}
 .card .also{margin:.3rem 0 0;font-size:.68rem;color:var(--t-muted,#8b98a8)}
 .card .reply-to{display:block;margin:.15rem 0 .3rem;padding:.2rem .45rem;border-left:2px solid #5b7290;background:rgba(91,114,144,.12);font-size:.68rem;color:var(--t-text-2,#9fb4cc);text-decoration:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border-radius:2px}
 .card .reply-to:hover{color:var(--t-text,#c9d8ea)}
+.card .x-desk{display:inline-block;margin-top:.35rem;font-size:.72rem;font-weight:600;letter-spacing:.02em;color:var(--t-text-2,#9fb4cc);text-decoration:none;border-bottom:1px solid currentColor}
+.card .x-desk:hover{color:var(--t-text,#c9d8ea)}
 .card.flash{outline:2px solid #9fb4cc;outline-offset:2px;transition:outline-color 1.2s}
 .card .also a{color:var(--t-text-2,#9fb4cc);text-decoration:none}
 .card .also a:hover{text-decoration:underline}

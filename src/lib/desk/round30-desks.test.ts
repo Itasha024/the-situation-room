@@ -269,3 +269,14 @@ test("the Iran inbox is taken whole, once", async () => {
   assert.deepEqual(got, ["a", "b"]);
   assert.deepEqual(await store.takeMany("iran-inbox"), []);
 });
+
+test("a headline that names its speaker gets no second name in front (8 Oct, 'Marco Rubio::')", () => {
+  const v = decideIranForTest(
+    reading({ speaker_lead: "Marco Rubio:", actor: "Rubio", actor_side: "us", headline: "US Secretary of State Rubio says the US can carry out any operation against Iran", arenas: ["military"] }),
+    "Rubio said in Portugal that the United States can carry out any operation against Iran.",
+    "Iran International",
+    "opposition",
+  );
+  assert.equal(v.kind, "publish");
+  if (v.kind === "publish") assert.equal(v.report.summary, "US Secretary of State Rubio says the US can carry out any operation against Iran");
+});

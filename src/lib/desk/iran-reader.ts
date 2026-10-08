@@ -13,7 +13,7 @@ import { RESPONSE_SCHEMA, type ReaderPrompt } from "./reader.ts";
 import { IRAN_LABEL } from "./desk-route.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 1;
+export const IRAN_PROMPT_VERSION = 2;
 
 export function iranContentHash(text: string): string {
   return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
@@ -98,7 +98,7 @@ HOW TO WRITE
 FIELDS
 - event_type: air_strike, missile_launch, drone_attack, interception, air_raid_alert, shelling, ground_clash, advance_or_capture, maritime_attack, statement, diplomacy, economy.
 - actor_side: who acted or spoke: iran, hezbollah, iraqi_militias (Iraqi and Syrian militias), us, israel, gulf (any Gulf state), houthi, other, unclear.
-- arenas: one or two arena ids, by SUBJECT, not by speaker (the US Treasury Secretary on Iran's oil is "sanctions"; a Qatari minister on the talks is "talks"): military, talks, hormuz, nuclear, inside_iran, sanctions, axis (Hezbollah, the Iraqi and Syrian militias, the Houthis' Iran side), us_region, inside_us, israel_home.
+- arenas: one or two arena ids, by SUBJECT, not by speaker (the US Treasury Secretary on Iran's oil is "sanctions"; a Qatari minister on the talks is "talks"; a threat or a vow to strike or to fight back is "military"; a blockade of Iran's ports or shipping is "hormuz"). "inside_iran" is only for life and politics inside Iran (shortages, prices, protests, arrests, executions, internet, rifts at the top), never for what Iran's officials say about the war: military, talks, hormuz, nuclear, inside_iran, sanctions, axis (Hezbollah, the Iraqi and Syrian militias, the Houthis' Iran side), us_region, inside_us, israel_home.
 - targets: English names of places struck or where the event happened, as the text names them. origins: places a weapon or aircraft came from. Statements: both [].
 - speaker_lead: for a statement or diplomacy item, the speaker as the headline opens with it; "" otherwise.
 - interest: "for" if the report favours the side of the outlet carrying it, "against" if it harms it, else "neutral".

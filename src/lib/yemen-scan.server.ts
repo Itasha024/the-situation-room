@@ -3165,7 +3165,10 @@ export function iranLeanOfSource(name: string): IranLean {
   if (tg && SHARED_TG[tg.id]) return SHARED_TG[tg.id];
   const x = X_ACCOUNTS.find((a) => a.name === name);
   if (x && SHARED_X[x.handle]) return SHARED_X[x.handle];
-  return "intl";
+  // A Yemen desk source the Iran list does not name: its Yemen side decides
+  // (the Houthis' outlets are Axis-aligned, the government's and Saudi's Gulf).
+  const side = outletSide(name, tg?.lean ?? x?.lean ?? "");
+  return side === "houthi" ? "axis" : side === "gov" ? "gulf" : "intl";
 }
 
 /** A catalogue outlet's declared lean, by its published name ("" if unknown). */

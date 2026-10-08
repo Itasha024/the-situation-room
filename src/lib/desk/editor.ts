@@ -1054,10 +1054,14 @@ const IRAN_ALIGNMENT: Record<string, string> = {
 function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   const r: Reading = { ...raw, headline: firstEvent(fixHeadline(reword(respell(anglicise(raw.headline))))), body: reword(respell(anglicise(raw.body))) };
   if (r.speaker_lead) r.speaker_lead = dropInventedRole(r.speaker_lead, c.text);
-  let lead = String(r.speaker_lead || "").trim();
+  let lead = String(r.speaker_lead || "").trim().replace(/\s*:+\s*$/, "");
   if (OUTLET_LEAD.test(`${lead}:`)) lead = "";
   r.speaker_lead = lead || null;
-  if ((r.event_type === "statement" || r.event_type === "diplomacy") && lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
+  // "US Secretary of State Rubio says …" names its speaker already: no "Marco Rubio:" in front (8 Oct).
+  const surname = (lead.split(/\s+/).pop() ?? "").toLowerCase();
+  const named = surname.length > 2 && r.headline.slice(0, 70).toLowerCase().split(/[^\p{L}'-]+/u).includes(surname);
+  if (named && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) r.speaker_lead = null;
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && lead && !named && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
     r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
   }
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
@@ -1087,7 +1091,8 @@ export const IRAN_READER: DeskReader = {
   models: ["gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash-lite"],
   // The other free services first, so the Yemen reader's Gemini quota lasts the day.
   fallbacksFirst: true,
-  maxCalls: 3,
+  // NVIDIA reads five items a call in a few seconds (8 Oct): six calls a cycle.
+  maxCalls: 6,
   queueMax: 200,
   secondLook: false,
   geocode: false,

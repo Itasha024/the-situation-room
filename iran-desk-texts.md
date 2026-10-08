@@ -13,11 +13,11 @@ Nothing here is live yet. Change anything; say "approved" when it reads right.
 | **Gulf and Arab** | Gulf and Arab governments and agencies (Saudi, UAE, Qatar, Oman, Kuwait, Bahrain, Egypt, Jordan, Iraq, Lebanon), Al Jazeera, Al Arabiya, Al Hadath, Asharq, Sky News Arabia, Erem, Al-Araby, Asharq Al-Awsat, The National, Arab News, Independent Arabia, The New Arab |
 | **International** | Reuters, AP, BBC (and BBC Persian), France 24, FT, The Telegraph, Al-Monitor, Middle East Eye, Intelligence Online, the UN and EU, the UK, Pakistan, Turkey, UKMTO, Kpler, TankerTrackers, MarineTraffic, Vortexa, the shipping press, NetBlocks, OSINT accounts and aggregators |
 
-Questions:
-- Is Al Jazeera right in Gulf and Arab, rather than International?
-- Is BBC Persian right in International, rather than opposition?
+Settled 8 Oct: Al Jazeera is Gulf and Arab; BBC Persian is International.
 
 ## 2. Arenas (the section's boxes)
+
+Arenas follow the subject, not the speaker. What an official says goes to the arena it is about: the US Treasury Secretary on Iran's oil goes to Sanctions; a Qatari minister on the talks goes to Talks. One statement can sit in two arenas.
 
 | Arena | What goes in it |
 |---|---|
@@ -38,8 +38,8 @@ Questions:
 - **Six attack groups, for the map:** Iran, Hezbollah, Iraqi and Syrian militias, US, Israel, Gulf states.
 - **The Iraqi militias.** Their statements, claims and threats are kept: Kataib Hezbollah, Nujaba, the Islamic Resistance in Iraq and the others. They are taken from the channels that carry them first (Sabereen News, Naya, Al-Mihwar and the like) and said as theirs.
 - **Damage at nuclear sites.** Damage may be taken from either side's military, but it is always said as theirs ("the IDF says the Fordow halls were hit"). Where the IAEA or independent analysts (ISIS, satellite imagery) have assessed it, that is added.
-- **Each side's word.** Each side is trusted for its own official positions. Its claims of the other side's losses are marked as claims, until the other side, a wire or a monitor confirms them.
-- **Opposition outlets.** Their reports of protests, arrests and strikes inside Iran are kept, said as theirs, and marked as claims until a second, unrelated source has them.
+- **Each side's word.** Every report is said as its teller's: "the IRGC says", "Reuters reported". The word "claim" isn't added; the name does that job. Sources aren't counted to confirm a report. The Yemen desk counts them for its control map; the Iran desk has no control map.
+- **Opposition outlets.** Their reports of protests, arrests and strikes inside Iran are kept, said as theirs ("Iran International reported").
 - **Yemen.** A card about the Houthis' own war goes to the Yemen desk. A card where Iran acts goes to both, with a link to the other desk.
 
 ## 4. Additions to the sources reliability methodology
@@ -48,9 +48,9 @@ Questions:
 >
 > **Damage at nuclear sites** may be reported from either side's military, but always in its name ("the IDF says"). Where the IAEA, or independent analysts working from satellite images, have assessed the damage, their view is given beside it.
 >
-> **Each side** is trusted for its own official positions: what its government says it wants, will do, or has decided. Its claims of the other side's losses are marked as claims until the other side, a wire agency or an independent monitor confirms them.
+> **Each side** is trusted for its own official positions: what its government says it wants, will do, or has decided. What it says of the other side is given in its name ("the IDF says", "Tasnim reported"), so the reader always knows who is speaking.
 >
-> **Reports from inside Iran** often reach the outside first through opposition outlets. They are carried, in their name, and marked as unconfirmed until a second source with no tie to the first has them.
+> **Reports from inside Iran** often reach the outside first through opposition outlets. They are carried in their name ("Iran International reported").
 
 ## 5. Source checks (8 Oct, from the server)
 

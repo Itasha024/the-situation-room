@@ -1729,6 +1729,23 @@ export function foldIntoPublished(
     // By id too: a relay traced to its original carries the original's link.
     foldTrail.set(r.url, `${home.source}: ${home.summary.slice(0, 90)}`);
     foldTrail.set(r.fp, `${home.source}: ${home.summary.slice(0, 90)}`);
+    // An outlet's exclusive leads always, with no "Also": the others only
+    // retell it (user, 8 Oct). An exclusive arriving after a card on its
+    // story takes that card over.
+    if (isExclusiveCard(home) && home.source !== r.source) continue;
+    if (isExclusiveCard(r)) {
+      home.summary = r.summary;
+      home.text = r.text;
+      home.url = r.url;
+      home.source = r.source;
+      home.tier = r.tier;
+      home.citing = undefined;
+      home.alsoReportedBy = undefined;
+      home.flags = [...new Set([...(home.flags ?? []), "exclusive"])];
+      home.tags = [...new Set([...(home.tags ?? []), "lead-swap"])];
+      touched.add(home);
+      continue;
+    }
     // The movement's own outlet carrying a statement a sympathetic paper
     // reported first: the statement is the movement's, and the paper was
     // relaying it. The card keeps its place in the feed and its identity, and
@@ -3270,4 +3287,9 @@ export function iranLeanOfSource(name: string): IranLean {
 /** A catalogue outlet's declared lean, by its published name ("" if unknown). */
 export function sourceLean(name: string): string {
   return TG.find((c) => c.name === name)?.lean ?? "";
+}
+
+/** A card the reader marked as its outlet's own exclusive. */
+export function isExclusiveCard(r: LiveReport): boolean {
+  return !!r.flags?.includes("exclusive") || !!r.tags?.includes("exclusive");
 }

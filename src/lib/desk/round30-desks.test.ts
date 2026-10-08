@@ -278,7 +278,7 @@ test("a headline that names its speaker gets no second name in front (8 Oct, 'Ma
     "opposition",
   );
   assert.equal(v.kind, "publish");
-  if (v.kind === "publish") assert.equal(v.report.summary, "US Secretary of State Rubio says the US can carry out any operation against Iran");
+  if (v.kind === "publish") assert.equal(v.report.summary, "US Secretary of State Rubio: the US can carry out any operation against Iran");
 });
 
 test("a headline that is only its speaker and a colon is not published (8 Oct)", () => {
@@ -286,7 +286,7 @@ test("a headline that is only its speaker and a colon is not published (8 Oct)",
   assert.equal(v.kind, "reject");
 });
 
-test("a speaker headline may be a quote or 'says', on both desks (8 Oct)", async () => {
+test("anyone who speaks gets the colon, on both desks (user, 8 Oct evening)", async () => {
   const quote = decideIranForTest(
     reading({ speaker_lead: "Rubio", actor: "Rubio", actor_side: "us", headline: 'Rubio: "Iran will never have a nuclear weapon"', arenas: ["nuclear"] }),
     "Rubio: Iran will never have a nuclear weapon.",
@@ -300,11 +300,16 @@ test("a speaker headline may be a quote or 'says', on both desks (8 Oct)", async
     "عراقجي: إيران لن تتفاوض تحت التهديد",
   );
   assert.equal(says.kind, "publish");
-  if (says.kind === "publish") assert.equal(says.report.summary, "Araghchi says Iran will not negotiate under threat");
+  if (says.kind === "publish") assert.equal(says.report.summary, "Araghchi: Iran will not negotiate under threat");
   const empty = decideIranForTest(reading({ speaker_lead: "Rubio", headline: 'Rubio: ""' }), "Rubio spoke to reporters.");
   assert.equal(empty.kind, "reject");
   const { fixHeadline } = await import("./reader.ts");
-  assert.equal(fixHeadline("Houthi spokesperson says Saudi jets carried out strikes"), "Houthi spokesperson says Saudi jets carried out strikes");
+  assert.equal(fixHeadline("Houthi spokesperson says Saudi jets carried out strikes"), "Houthi spokesperson: Saudi jets carried out strikes");
+  assert.equal(fixHeadline("White House official tells Al Jazeera all options are open on Iran"), "White House official: all options are open on Iran");
+  assert.equal(fixHeadline("US source tells Al Hadath: Trump's tone change is no breakthrough"), "US source: Trump's tone change is no breakthrough");
+  assert.equal(fixHeadline("Trump weighed strikes on Iran, US officials say"), "US officials: Trump weighed strikes on Iran");
+  assert.equal(fixHeadline("Hormuz transits fall as attacks increase, Kpler data show"), "Hormuz transits fall as attacks increase, Kpler data show");
+  assert.equal(fixHeadline("Brent falls after Trump says Iran talks are productive"), "Brent falls after Trump says Iran talks are productive");
 });
 
 test("the Iran feed starts on 8 Oct: no older card is read on that desk (8 Oct)", async () => {
@@ -356,14 +361,14 @@ test("a relay in Persian is traced to who said it (8 Oct: VOA Farsi on CENTCOM, 
 
 test("the outlet that carries a quote is not in the Iran card (8 Oct: \"Khabari Plus quotes Trump\")", () => {
   const v = decideIranForTest(
-    reading({ speaker_lead: "", actor: "Trump", actor_side: "us", headline: "Khabari Plus quotes Trump: the problem is Iran hitting Los Angeles", body: "", arenas: ["military"] }),
-    "ترامپ: مشکل این است که ایران با موشک به لس‌آنجلس بزند",
+    reading({ speaker_lead: "", actor: "Trump", actor_side: "us", headline: "Khabari Plus quotes Araghchi: the problem is the US blockade", body: "", arenas: ["military"] }),
+    "عراقچی: مشکل محاصره آمریکا است",
     "Khabari Plus",
   );
   assert.equal(v.kind, "publish");
   if (v.kind !== "publish") return;
   assert.ok(!/Khabari/i.test(v.report.summary), v.report.summary);
-  assert.match(v.report.summary, /^Trump: /);
+  assert.match(v.report.summary, /^Araghchi: /);
 });
 
 test("the Iran reader is told the site's general rules; Yemen's combine prompt is unchanged", () => {

@@ -188,7 +188,7 @@ test("no outlet opens a headline, and a report about someone is no quote", async
   assert.equal(fixHeadline("Mufie Damaj: Yemeni culture minister: Sanaa is the primary target"), "Yemen's culture minister: Sanaa is the primary target");
   // "said that our" is his words without the quote: the colon form.
   assert.equal(fixHeadline("Houthi leader said that our demands are legitimate rights"), "Houthi leader: our demands are legitimate rights");
-  assert.equal(fixHeadline("Houthi leader says the Houthis' demands are legitimate"), "Houthi leader says the Houthis' demands are legitimate");
+  assert.equal(fixHeadline("Houthi leader says the Houthis' demands are legitimate"), "Houthi leader: the Houthis' demands are legitimate");
   // Real quotes keep their colon.
   assert.equal(fixHeadline("Houthi leader: Saudi Arabia will pay a price"), "Houthi leader: Saudi Arabia will pay a price");
   assert.equal(fixHeadline("Abdul Malik al-Houthi: Saudi regime committed crimes"), "Houthi leader: Saudi regime committed crimes");
@@ -263,11 +263,11 @@ test("a daily 429 rests the model until midnight in California", () => {
 
 test("a spokesman's statement keeps its form; Saree speaks for the military", async () => {
   const { fixHeadline } = await import("./reader.ts");
-  // Either form is kept as written (8 Oct).
-  assert.equal(fixHeadline("UN spokesman says talks on Yemen will resume next week"), "UN spokesman says talks on Yemen will resume next week");
+  // Anyone who speaks gets the colon (user, 8 Oct evening).
+  assert.equal(fixHeadline("UN spokesman says talks on Yemen will resume next week"), "UN spokesman: talks on Yemen will resume next week");
   assert.equal(fixHeadline("Yemen's government spokesman warns that the Houthis are preparing an offensive"), "Yemen's government spokesman warns that the Houthis are preparing an offensive");
   assert.equal(fixHeadline("Yahya Saree: Houthi forces fired missiles at Jizan"), "Houthi Armed Forces spokesperson: Houthi forces fired missiles at Jizan");
-  assert.equal(fixHeadline("Houthi military spokesman Yahya Saree says drones hit Abha airport"), "Houthi Armed Forces spokesperson says drones hit Abha airport");
+  assert.equal(fixHeadline("Houthi military spokesman Yahya Saree says drones hit Abha airport"), "Houthi Armed Forces spokesperson: drones hit Abha airport");
   assert.equal(fixHeadline("Trump says he spoke with Bin Salman"), "Trump says he spoke with Bin Salman");
 });
 

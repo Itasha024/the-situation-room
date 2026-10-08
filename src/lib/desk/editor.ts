@@ -57,6 +57,8 @@ import { type DeskStore, migrateBlob } from "./store.ts";
 import type { DeskId } from "../desks.ts";
 import { deskKey } from "./desk-route.ts";
 import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash, iranCopyProblem, iranReword } from "./iran-reader.ts";
+import { isExclusive } from "./exclusive.ts";
+import { rivalRelay } from "./speaker-press.ts";
 import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
@@ -1087,6 +1089,9 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // The rules the free models kept breaking (audit of 8 Oct), in code.
   const own = r.publish ? iranCopyProblem(r, c.text) : null;
   if (own) return { kind: "reject", reason: /^(?:commentary|yemen desk|not iran)/.test(own) ? "reader" : "reader-check", note: sentence(own) };
+  // One side's outlet relaying the other side's voice: that side's own sources tell it (user, 8 Oct).
+  const rival = r.publish ? rivalRelay(r.headline, c.source, c.lean ?? "", isExclusive(c.text, c.source)) : null;
+  if (rival) return { kind: "reject", reason: "reader", note: sentence(rival) };
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);

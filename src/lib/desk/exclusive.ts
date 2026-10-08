@@ -111,7 +111,7 @@ export function isExclusive(text: string, source: string): boolean {
     .split(/\s+/)
     .map((w) => w.replace(/^al-?/i, ""))
     .filter((w) => w.length >= 4);
-  const ar: Record<string, string> = { akhbar: "الأخبار", suhail: "سهيل", sheba: "شبا", araby: "العربي", arabiya: "العربية", hadath: "الحدث", almashhad: "المشهد", erem: "إرم" };
+  const ar: Record<string, string> = { akhbar: "الأخبار", suhail: "سهيل", sheba: "شبا", araby: "العربي", arabiya: "العربية", hadath: "الحدث", almashhad: "المشهد", erem: "إرم", jazeera: "الجزيرة", mayadeen: "الميادين", masirah: "المسيرة" };
   const names = [...words, ...words.map((w) => ar[w.toLowerCase()]).filter(Boolean)];
   for (const n of names) {
     const name = esc(n);
@@ -125,6 +125,10 @@ export function isExclusive(text: string, source: string): boolean {
     // "أفادت مصادر استخباراتية في صنعاء، «الأخبار»، بأن": the verb takes the
     // outlet with no "لـ". The quote marks keep الأخبار "the news" out.
     if (new RegExp(String.raw`(?:أفاد|أفادت|أبلغ|أبلغت|أخبر|أخبرت)\s+(?:مصادر|مصدر|مسؤول|مسؤولون|قيادي|ضابط)[^.\n]{0,60}[«"“]\s*${name}\s*[»"”]`).test(t)) return true;
+    // A teller and the outlet before the colon: "مسؤول أمريكي للجزيرة:", "مصدر أميركي للحدث:" (user, 8 Oct: Al Jazeera's US official is its own).
+    const stem = n.replace(/^ال/, "");
+    const head = t.replace(/^[\s‎‏|]*(?:عاجل|خاص|🔴|⭕️)?\s*\|?\s*/u, "").slice(0, 120);
+    if (/^ال/.test(n) && new RegExp(String.raw`^[^:\n]{2,80}\s(?:لل|لـ\s*ال|ل\s*ال)${esc(stem)}\s*:`).test(head)) return true;
   }
   return false;
 }

@@ -14,7 +14,7 @@ import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 8;
+export const IRAN_PROMPT_VERSION = 9;
 
 export function iranContentHash(text: string): string {
   return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
@@ -100,12 +100,13 @@ ISRAELI MEDIA
 - Items whose source is an Israeli outlet or reporter (N12, Kan, Channel 13, Channel 14, i24 News, Walla, Ynet, Haaretz, Israel Hayom, the Jerusalem Post, Amit Segal, and the Israeli Telegram channels) are published only for Israel's OWN reporting on this war: its reporters, Israeli officials and Israeli sources.
 - Israeli outlets relaying what a foreign government, official or outlet said or did (US Treasury sanctions, a Trump post, an Iranian minister, a "foreign desk" post) are relays too, reject_reason "relay": the original is read directly. Kept: Israeli officials, the IDF, Israeli security sources, the outlet's own correspondents, and exclusives.
 - An item that only repeats a foreign outlet's report ("according to Reuters", "Al Jazeera reports", "a report in the New York Times", "Iranian media say") is rejected, reject_reason "relay": the original is read directly. An Israeli outlet's exclusive ("פרסום ראשון", "exclusive", "revealed") is kept.
-- What Israeli officials or sources told the outlet ends the headline: ", Israeli officials say", ", Israeli sources say".
+- What Israeli officials or sources told the outlet is theirs: "Israeli officials: ...", "Israeli sources: ...".
 
 WHO SPEAKS
 - A post that opens with a teller and a colon is that teller's words: "الخارجية الأميركية للحدث: ..." (the US State Department told Al Hadath) is "US State Department: ...", "IRGC: ..." is the IRGC's. The teller is the speaker_lead and opens the headline; never drop it, and never write their words as a plain fact.
 - What one party says ABOUT another stays the first party's: "US State Department: Hezbollah is spreading reports it got $200 million from Iran" is never "Hezbollah says it received $200 million".
 - A channel that relays someone else (#إعلام_العدو, "وسائل إعلام عبرية", "قناة كان العبرية:", a post signed with another channel's link, such as the Houthi army's t.me/army21ye) is not the speaker or the actor: the one it quotes is. The Axis military relay (C_Military1) reposts the Houthi army's statements; those are the Houthis', and Houthi fire on Saudi Arabia is the yemen desk's.
+- One side's outlet carrying the other side's voice is a relay, reject_reason "relay": Iranian and Axis outlets (Al-Alam, Tasnim, Fars, Press TV, Al Mayadeen, Unews, Akhbar-e Fori) on what the Israeli army, Israeli officials, Hebrew media or US officials said; Israeli outlets on what Iran or the US said. The desk reads the IDF, Israeli media and the US's own sources directly. Kept: what the outlet itself reports, its correspondent, and an official speaking to it.
 - In Persian, انگلیس and انگلیسی mean Britain and British (UKMTO is "UKMTO" or "the UK's maritime agency"), never "English".
 
 WHO DID WHAT TO WHOM: never infer, never assume
@@ -136,10 +137,10 @@ ${PERSIAN_SPELLING_RULES}
 
 STATEMENTS (event_type statement or diplomacy)
 - speaker_lead is REQUIRED: the person or body the report is about, as the headline opens with it.
-- A statement leads with its speaker, in either form, whichever fits the report: "Araghchi says Iran will not negotiate under threat", "IRGC: ...", or a short exact quote, 'Rubio: "Iran will never have a nuclear weapon"'. A colon ONLY when the item carries that person's own words (a quote, speech, post, interview, statement). The speaker is named once; a quote is never empty.
-- A report ABOUT someone (what they did, decided or discussed, or what officials, sources or an outlet say about them) is a plain sentence with no colon: "Trump weighed strikes on Iran before the midterms, US officials say". A state or institution may lead with a verb: "Qatar condemns the attack on Ras Laffan".
-- A person a general reader would not know (an MP, a provincial official, a commander, a deputy minister) is named by job and side only in the headline: "An Iranian MP says ...", "Iran's deputy defence minister: ...". The name goes in the body only when the report needs it ("The MP, Ahmad Naderi, said ..."). Known figures by surname: Trump, Vance, Rubio, Hegseth, Witkoff, Netanyahu, Katz, Khamenei, Pezeshkian, Araghchi, Ghalibaf, Larijani, Grossi, Guterres.
-- The IDF's spokespeople speak for the IDF: posts by the IDF, IDF Farsi, IDF Arabic, Lt. Col. Ella Waweya (its Arabic spokesperson) and Avichay Adraee are "IDF: ..." or "IDF says ...", unless the post is about the spokesperson herself or himself.
+- A statement leads with its speaker and a colon, ALWAYS, never "X says": "Araghchi: Iran will not negotiate under threat", "IRGC: ...", a short exact quote 'Rubio: "Iran will never have a nuclear weapon"', and what an official or source told an outlet, "US official: ..." (Al Jazeera's US official is "US official: ...", not "US official tells Al Jazeera ..."). The speaker is named once; a quote is never empty.
+- A report ABOUT someone (what they did, decided or discussed, or what officials, sources or an outlet say about them) is a plain sentence with no colon: "Trump held a call with Putin"; when officials or sources tell it, they speak: "US officials: Trump weighed strikes on Iran before the midterms". A state or institution may lead with a verb: "Qatar condemns the attack on Ras Laffan".
+- A person a general reader would not know (an MP, a provincial official, a commander, a deputy minister) is named by job and side only in the headline: "An Iranian MP: ...", "Iran's deputy defence minister: ...". The name goes in the body only when the report needs it ("The MP, Ahmad Naderi, said ..."). Known figures by surname: Trump, Vance, Rubio, Hegseth, Witkoff, Netanyahu, Katz, Khamenei, Pezeshkian, Araghchi, Ghalibaf, Larijani, Grossi, Guterres.
+- The IDF's spokespeople speak for the IDF: posts by the IDF, IDF Farsi, IDF Arabic, Lt. Col. Ella Waweya (its Arabic spokesperson) and Avichay Adraee are "IDF: ...", unless the post is about the spokesperson herself or himself.
 - A side's report of its own attack or of the other side's losses leads with that side: "IDF says it struck ...", "IRGC says it downed ...". Never add the word "claim" or "alleged": the name does that job.
 - An organisation or body a general reader would not know (the PGSA, a monitoring group, a provincial council) is said once, in the body only, with what it is. Never for the ones readers know (the UN, the IAEA, the IRGC, the EU, CENTCOM), and never explained in the headline.
 - A diplomat's title says where he or she is posted: "Iran's ambassador to Pakistan", never "Iranian ambassador" alone.

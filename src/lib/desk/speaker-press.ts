@@ -24,7 +24,7 @@ export type Nation =
 const NATION_WORDS: [Nation, RegExp][] = [
   ["us", /\b(?:US|U\.S\.|USA|American|Americans|Washington|Trump|Vance|Rubio|Hegseth|Witkoff|Leavitt|Bessent|Waltz|Kushner|White House|Pentagon|State Department|Treasury|CENTCOM|Central Command)\b/],
   ["iran", /\b(?:Iran|Iranian|Iranians|Tehran|IRGC|Revolutionary Guards?|Basij|Khamenei|Pezeshkian|Araghchi|Baghaei|Ghalibaf|Larijani|Vahidi|Hatami|Mohajerani|Gharibabadi|Velayati|Jalili|Eslami|Isfahan|Bandar Abbas|Bushehr|Natanz|Fordow|Mashhad|Tabriz|Shiraz|Kharg|Sistan|Baluchestan|Khuzestan)\b/i],
-  ["israel", /\b(?:Israel|Israeli|Israelis|IDF|Netanyahu|Katz|Saar|Zamir|Mossad|Tel Aviv|Jerusalem|Haifa|Eilat|Dimona)\b/i],
+  ["israel", /\b(?:Israel|Israeli|Israelis|Hebrew|IDF|Netanyahu|Katz|Saar|Zamir|Mossad|Tel Aviv|Jerusalem|Haifa|Eilat|Dimona)\b/i],
   ["saudi", /\b(?:Saudi|Saudis|Riyadh|Jeddah|Aramco|Najran|Jizan|Jazan|Khamis Mushait|Abha)\b/i],
   ["uae", /\b(?:UAE|Emirati|Emirates|Abu Dhabi|Dubai|Fujairah|Ras al-Khaimah)\b/i],
   ["qatar", /\b(?:Qatar|Qatari|Doha|Ras Laffan)\b/i],
@@ -130,4 +130,29 @@ export function nearerSource(
 ): boolean {
   const n = subjectNation(headline);
   return nearness(r.source, n, r.lean, r.side) > nearness(home.source, n, home.lean, home.side);
+}
+
+/** Who speaks in a headline: the words before its colon, or before "says". */
+function speakerOf(headline: string): string {
+  const h = String(headline || "").trim();
+  return /^([^:"“]{2,70}):\s/.exec(h)?.[1] ?? /^([^:,"“]{2,70}?)\s+(?:says|say|said|tells|told)\b/.exec(h)?.[1] ?? "";
+}
+
+/**
+ * One side's outlet carrying the other side's voice (user, 8 Oct: "Israeli
+ * army says" went out from Al-Alam; the IDF, else Israeli media, tells it).
+ * Iran's and its allies' outlets on what Israel or the US said, and Israeli
+ * outlets on what Iran or the US said, are relays: the desk reads that side
+ * directly. What the outlet reports itself is not a relay (`own`).
+ */
+export function rivalRelay(headline: string, source: string, lean = "", own = false): string | null {
+  const s = String(source || "").trim();
+  if (own || find(OFFICIAL, s) || WIRE.test(s) || AGGREGATOR.test(s)) return null;
+  const who = subjectNation(speakerOf(headline));
+  if (!who) return null;
+  const axis = lean === "axis" || find(AGENCY, s) === "iran";
+  const israeli = lean === "israel" || find(OUTLET_NATION, s) === "israel";
+  if (axis && (who === "israel" || who === "us")) return `relay: ${who === "us" ? "the US" : "Israel"} is told from its own sources, not ${s}'s relay`;
+  if (israeli && (who === "iran" || who === "us")) return `relay: ${who === "us" ? "the US" : "Iran"} is told from its own sources, not ${s}'s relay`;
+  return null;
 }

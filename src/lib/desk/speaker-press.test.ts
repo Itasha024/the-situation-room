@@ -29,3 +29,22 @@ test("the Yemen desk: Yemeni sources stay ahead of wires and Saudi outlets", () 
   assert.equal(nearness("Akhbar-e Fori", "iran", "axis"), 11, "an Iranian outlet is Iran's");
   assert.equal(nearness("Al Mayadeen", "iran", "axis"), 1, "Beirut relays Tehran");
 });
+
+test("one side's outlet relaying the other side is a relay (8 Oct: Al-Alam on the Israeli army)", async () => {
+  const { rivalRelay } = await import("./speaker-press.ts");
+  assert.ok(rivalRelay("Israeli army: officer killed in south Lebanon", "Al-Alam", "axis"));
+  assert.ok(rivalRelay("Hebrew media: two Israeli soldiers wounded", "Unews", "axis"));
+  assert.ok(rivalRelay("Hegseth: US does not intend nation-building in Iran", "Akhbar-e Fori", "axis"));
+  assert.ok(rivalRelay("Araghchi: Iran will respond within days", "N12", "israel"));
+  assert.equal(rivalRelay("Araghchi: Iran will respond within days", "Al-Alam", "axis"), null);
+  assert.equal(rivalRelay("Israeli forces shell Zawtar in south Lebanon", "Unews", "axis"), null);
+  assert.equal(rivalRelay("US official: aid routes are being checked", "Al Mayadeen", "axis", true), null);
+  assert.equal(rivalRelay("IDF: strike on Beirut", "IDF", "israel"), null);
+});
+
+test("an official speaking to the outlet is its own (8 Oct: 'US official told Al Jazeera')", async () => {
+  const { isExclusive } = await import("./exclusive.ts");
+  assert.ok(isExclusive("عاجل | مسؤول أمريكي للجزيرة: النفط الإيراني خارج الحصار", "Al Jazeera"));
+  assert.ok(isExclusive("مصدر أميركي للحدث: تغير نبرة ترمب", "Al Hadath"));
+  assert.ok(!isExclusive("عاجل | الجيش الإسرائيلي: مقتل ضابط في جنوب لبنان", "Al Jazeera"));
+});

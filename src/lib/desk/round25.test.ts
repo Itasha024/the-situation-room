@@ -127,7 +127,7 @@ import { fixHeadline } from "./reader.ts";
 
 test("a minister warning of something keeps the verb", () => {
   assert.equal(fixHeadline("Yemen human rights minister warns of Houthi escalation and migrant recruitment"), "Yemen human rights minister warns of Houthi escalation and migrant recruitment");
-  assert.equal(fixHeadline("UN spokesman says talks will resume"), "UN spokesman says talks will resume");
+  assert.equal(fixHeadline("UN spokesman says talks will resume"), "UN spokesman: talks will resume");
 });
 
 import { sideWords } from "./editor.ts";

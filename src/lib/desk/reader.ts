@@ -467,20 +467,20 @@ STATEMENTS (event_type statement or diplomacy)
 - speaker_lead is REQUIRED: the person or body the report is about.
 - A colon ONLY when the item carries that person's own words (a quote, speech,
   post, interview, statement, remarks): "Houthi spokesperson: Saudi jets
-  carried out 28 strikes in 24 hours". With the person's own words, either
-  form, whichever fits the report: "UN spokesman: talks will resume next
+  carried out 28 strikes in 24 hours". Anyone who speaks, to anyone, always
+  gets the colon, never "X says": "UN spokesman: talks will resume next
   week", "Rubio: \"We will not let the Houthis close the Red Sea\"" (a short
-  exact quote), or "UN spokesman says talks will resume next week". The
+  exact quote), "US official: …" for what an official told an outlet. The
   speaker is named once, and a quote is never empty.
   A report ABOUT someone (what they did, decided or discussed, or what
   officials, sources or an outlet say about them) is a plain sentence with no
   colon: "Trump held a phone call with Yemen's Presidential Council head
-  al-Alimi", "Trump weighed strikes on the Houthis before holding off, US
-  officials say". A state or institution may lead with a verb: "Qatar
+  al-Alimi"; told by officials or sources, they speak: "US officials: Trump
+  weighed strikes on the Houthis before holding off". A state or institution may lead with a verb: "Qatar
   condemns Houthi missile attack on Riyadh".
 - An outlet (Reuters, Axios, NYT, Al Jazeera, a TV channel) is NEVER the
   speaker_lead and never opens the headline. What officials tell an outlet
-  ends the headline: ", officials say", ", sources say".
+  is theirs: "US officials: …", "Saudi sources: …".
 - speaker_lead: a bare surname only for a figure an international reader knows
   (Trump, Rubio, Bin Salman, Grundberg). Abdul Malik
   al-Houthi (السيد القائد, قائد الثورة) is always "Houthi leader"; Yahya Saree
@@ -516,8 +516,7 @@ STATEMENTS (event_type statement or diplomacy)
   organisation: a UN official's "we fear famine" is "the UN fears famine" in the
   body. One person is never "they": "Fletcher told Al Arabiya the UN fears …".
 - Words of the speaker in the first person (our, we, us) only after the colon,
-  never "X said that our …": either "Houthi leader: our demands are legitimate"
-  or "Houthi leader says the Houthis' demands are legitimate".
+  never "X said that our …": "Houthi leader: our demands are legitimate".
   Otherwise the title alone ("Yemen's defence minister", "The Houthis' chief
   negotiator") or the affiliation alone ("A Houthi official", "A Saudi
   military analyst"). Never an unfamiliar personal name in the headline; in
@@ -703,9 +702,8 @@ export function fixHeadline(headline: string): string {
   h = h.replace(/^Yemen(?:i)? ((?:culture|information|foreign|defen[cs]e|interior|oil|finance|prime|youth) minister):/i, "Yemen's $1:");
   // "X said that our …" is his own words without the quote: the colon form.
   h = h.replace(/^([^:]{2,60}?) (?:said|says|stated|stressed|affirmed|declared|added) (?:that )?((?:our|we|us|my|I)\b.*)$/, "$1: $2");
-  // "UN spokesman says talks will resume" and "UN spokesman: talks will
-  // resume" are both kept as written (the user, 8 Oct): whichever fits.
-  const m = /^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);
+  // A colon before a reported verb is no quote: "Trump: held a call" is "Trump held a call".
+  const m =/^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);
   if (m && (REPORTED_VERB.test(m[2]) || /ed$/.test(m[2]))) h = `${m[1]} ${h.slice(m[0].length - m[2].length)}`;
   // A colon after a name that is then reported on is no quote: "Al-Alimi:
   // Trump made no pledge to al-Alimi, sources say".
@@ -715,7 +713,49 @@ export function fixHeadline(headline: string): string {
     const about = !!key && c[2].toLowerCase().includes(key);
     if (about || /,? (?:\S+ ){0,2}(?:sources?|officials?|diplomats?|people familiar[^,]*) (?:say|said)$/i.test(c[2])) h = c[2];
   }
+  h = colonSpeaker(h);
   return h ? h[0].toUpperCase() + h.slice(1) : h;
+}
+
+/** Words a speaker's name or title is made of; any other small word means the phrase is not a speaker. */
+const SPEAKER_WORD =
+  /^(?:of|the|and|for|to|in|on|at|a|an|with|senior|top|deputy|vice|acting|former|chief|head|leader|official|officials|source|sources|spokes(?:man|person|woman)|minister|ministry|commander|army|military|forces|navy|government|bloc|authorities|embassy|council|parliamentary|parliament|general|secretary|ambassador|envoy|president|prime|foreign|defen[cs]e|security|diplomatic|diplomats?|intelligence|state|media|lawmakers?|MP|advis[eo]rs?|aides?|director|police|judiciary|office|agency|organi[sz]ation|guards|corps|affairs|legal|economic|energy|oil|atomic|nuclear|maritime|authority|people|familiar|matter|officers?|mission|delegation|negotiators?|team|group|members?|movement|front|staff|cabinet|speaker|governor|chairman|regime|administration|department|treasury|press|close|informed|knowledgeable)$/i;
+const NOT_A_SPEAKER = /\b(?:data|figures|report|reports|investigation|study|survey|footage|video|images|pictures|analysis|records|documents|tracking|estimates?)\b/i;
+/** Outlets officials talk to, beyond the ones that open headlines. */
+const MORE_OUTLETS =
+  "Al[- ]Hadath|Al[- ]Mayadeen|Al[- ]Akhbar|Asharq(?: News)?|Sky News Arabia|Al[- ]Monitor|Al[- ]Jazeera Mubasher|Iran International|Tasnim|Fars|IRNA|ISNA|Mehr|Press TV|CBS(?: News)?|NBC(?: News)?|ABC(?: News)?|Fox|N12|Kan|Channel 1[234]|i24(?: News)?|Ynet|Walla|Haaretz|Israel Hayom|The National|Arab News|Erem News|Okaz";
+const TELLS = new RegExp(`\\s+(?:tells|told)\\s+(?:${OUTLET_NAMES}|${MORE_OUTLETS}|reporters|journalists|the press)\\b(?:\\s+(?:that|in an interview))?\\s*:?\\s+`, "i");
+
+function isSpeakerPhrase(s: string): boolean {
+  const words = s.trim().split(/\s+/);
+  if (!words.length || words.length > 9 || NOT_A_SPEAKER.test(s)) return false;
+  // An outlet never speaks, and "sources" alone are nobody.
+  if (OUTLET_LEAD.test(`${s.trim()}:`) || new RegExp(`^(?:${MORE_OUTLETS}|Iran International|Tasnim|Fars|IRNA|ISNA|Mehr|Press TV)$`, "i").test(s.trim())) return false;
+  if (words.every((w) => /^(?:sources?|officials?|people|familiar|with|the|matter|diplomats?|a|an|informed|close)$/i.test(w))) return false;
+  return words.every((w) => /^[A-Z0-9"“'(]/.test(w) || /^[A-Z][\w'-]*'s$/.test(w) || SPEAKER_WORD.test(w.replace(/'s$|[,()]/g, "")));
+}
+
+/**
+ * Anyone who speaks gets the colon, on every desk (user, 8 Oct, in place of
+ * that morning's "either form"): "US official says X", "X, US officials say"
+ * and "White House official tells Al Jazeera X" are "US official: X",
+ * "US officials: X" and "White House official: X". Data, reports and footage
+ * are not speakers ("…, Kpler data show" stays).
+ */
+export function colonSpeaker(headline: string): string {
+  const h = String(headline || "").trim();
+  const told = TELLS.exec(h);
+  if (told && told.index > 1 && isSpeakerPhrase(h.slice(0, told.index))) return `${h.slice(0, told.index)}: ${h.slice(told.index + told[0].length)}`;
+  if (/^[^:"“]{2,70}:\s/.test(h)) return h;
+  const says = /^([^:,"“]{2,70}?)\s+(?:says|say|said)\s+(?:that\s+)?(.{8,})$/.exec(h);
+  // "Trump says he spoke with Bin Salman" is about him: "Trump: he spoke" would be no quote.
+  if (says && isSpeakerPhrase(says[1]) && !/^(?:he|she|they|his|her|their|it)\b/i.test(says[2])) return `${says[1]}: ${says[2]}`;
+  const after = /^(.{8,}?),\s+([^,:]{2,60}?)\s+(?:says|say|said)\.?$/.exec(h);
+  if (after && isSpeakerPhrase(after[2])) {
+    const who = after[2][0].toUpperCase() + after[2].slice(1);
+    return `${who}: ${after[1]}`;
+  }
+  return h;
 }
 const ROLE_NAMES: [RegExp, string][] = [
   // Two al-Alimis: Abdullah is a council member, only Rashad is the president.

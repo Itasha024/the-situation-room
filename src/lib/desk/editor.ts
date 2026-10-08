@@ -56,7 +56,7 @@ import {
 import { type DeskStore, migrateBlob } from "./store.ts";
 import type { DeskId } from "../desks.ts";
 import { deskKey } from "./desk-route.ts";
-import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash } from "./iran-reader.ts";
+import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash, iranCopyProblem, iranReword } from "./iran-reader.ts";
 import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
@@ -266,6 +266,8 @@ export type DeskReader = {
   geocode: boolean;
   /** The most items kept waiting, newest first; unset, no limit. */
   queueMax?: number;
+  /** Published cards the reader sees to mark copies and follow-ups; unset, RECENT_MAX. */
+  recentMax?: number;
 };
 
 export const YEMEN_READER: DeskReader = {
@@ -370,7 +372,7 @@ export async function editCandidates(
   const fixes: { c: Queued; note: string }[] = [];
   if (unread.length && anyReader) {
     try {
-      const { reports } = await store.recentDesk(RECENT_MAX, undefined, { events: false, desk: cfg.desk });
+      const { reports } = await store.recentDesk(cfg.recentMax ?? RECENT_MAX, undefined, { events: false, desk: cfg.desk });
       for (const r of reports) {
         if (now - Date.parse(String(r.at)) > RECENT_MS || !r.fp) continue;
         const ref = "r" + (recent.length + 1);
@@ -1056,7 +1058,7 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // The site's general copy rules, as on the Yemen desk (user, 8 Oct): Iran's
   // calendar out, one spelling per name, the outlet off its own copy, no
   // role the text did not give.
-  const fix = (s: string) => westernDates(reword(respell(anglicise(s))));
+  const fix = (s: string) => westernDates(iranReword(reword(respell(anglicise(s)))));
   const r: Reading = { ...raw, headline: firstEvent(fixHeadline(fix(raw.headline))), body: fix(raw.body) };
   r.headline = dropInventedRole(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.text);
   r.body = stripOwnOutlet(r.body, c.source);
@@ -1082,6 +1084,9 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   if (redundantBody(r.headline, r.body, c.text)) r.body = "";
   // A speaker and a colon with nothing after it says nothing (8 Oct, "… deputy executive to Masoud Pezeshkian:").
   if (r.publish && /:\s*$/.test(r.headline.trim())) return { kind: "reject", reason: "reader-check", note: "Headline is only its speaker: say what they said." };
+  // The rules the free models kept breaking (audit of 8 Oct), in code.
+  const own = r.publish ? iranCopyProblem(r, c.text) : null;
+  if (own) return { kind: "reject", reason: /^(?:commentary|yemen desk)/.test(own) ? "reader" : "reader-check", note: sentence(own) };
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);
@@ -1108,6 +1113,9 @@ export const IRAN_READER: DeskReader = {
   // NVIDIA reads five items a call in a few seconds (8 Oct): six calls a cycle.
   maxCalls: 6,
   queueMax: 200,
+  // A busy hour is 30 cards: the reader sees the day's last few hours, so a
+  // story retold all afternoon is one card (audit of 8 Oct: ten for Araghchi's reply).
+  recentMax: 60,
   secondLook: false,
   geocode: false,
 };

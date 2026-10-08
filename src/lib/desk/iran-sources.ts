@@ -22,7 +22,12 @@ export const IRAN_LEAN_LABELS: Record<IranLean, string> = {
   intl: "International",
 };
 
-export type IranSource = { id: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; note?: string };
+/**
+ * `israeliMedia`: an Israeli outlet or reporter (stage 4c). Israel's own
+ * reporting on the Iran war is kept; a report that only repeats a foreign
+ * outlet is dropped (the original is read directly), and exclusives are kept.
+ */
+export type IranSource = { id: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; note?: string; israeliMedia?: true };
 
 /** Telegram channels the Yemen desk reads that the Iran desk reads too (t.me ids). */
 export const SHARED_TG: Record<string, IranLean> = {
@@ -89,6 +94,15 @@ export const IRAN_TG: IranSource[] = [
   { id: "farsivoa", name: "VOA Farsi", lean: "us", every: 5 },
   { id: "bbcpersian", name: "BBC Persian", lean: "intl", every: 5 },
   { id: "netblocks", name: "NetBlocks", lean: "intl", every: 15 },
+  // Israeli media (stage 4c): reporters' and newsrooms' channels.
+  { id: "amitsegal", name: "Amit Segal", lean: "israel", every: 5, israeliMedia: true },
+  { id: "N12chat", name: "N12", lean: "israel", every: 5, israeliMedia: true },
+  { id: "kanarab", name: "Kan (Arab affairs)", lean: "israel", every: 10, israeliMedia: true },
+  { id: "US2020US", name: "US2020US", lean: "israel", every: 10, israeliMedia: true },
+  { id: "israel1", name: "Israel 1", lean: "israel", every: 10, israeliMedia: true },
+  { id: "hazfon1", name: "Hazfon 1", lean: "israel", every: 10, israeliMedia: true },
+  // i24's Hebrew site serves only its own app; its channel is public.
+  { id: "i24news_he", name: "i24 News", lean: "israel", every: 10, israeliMedia: true },
 ];
 
 /** X accounts the Yemen desk reads that the Iran desk reads too (handles). */
@@ -314,8 +328,26 @@ export const SHARED_RSS: Record<string, IranLean> = {
  * minutes after it is posted: Truth Social itself shows nothing to an
  * automated reader. It feeds the pinned Trump card (stage 4).
  */
-export const IRAN_RSS: { id: string; url: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30 }[] = [
+/** Google News's public listing of one site's last hour, in Hebrew. */
+const gnSite = (site: string) => `https://news.google.com/rss/search?q=${encodeURIComponent(`site:${site} when:1h`)}&hl=iw&gl=IL&ceid=IL:he`;
+
+export const IRAN_RSS: { id: string; url: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; israeliMedia?: true }[] = [
   { id: "trumpstruth", url: "https://trumpstruth.org/feed", name: "Truth Social (Trump)", lean: "us", every: 5 },
+  { id: "iaea", url: "https://www.iaea.org/feeds/topnews", name: "IAEA", lean: "intl", every: 30 },
+  // Israeli media (stage 4c), each site's own feed.
+  { id: "walla", url: "https://rss.walla.co.il/feed/1", name: "Walla", lean: "israel", every: 10, israeliMedia: true },
+  { id: "ynet", url: "https://www.ynet.co.il/Integration/StoryRss2.xml", name: "Ynet", lean: "israel", every: 10, israeliMedia: true },
+  { id: "jpost-iran", url: "https://www.jpost.com/rss/rssfeedsiran", name: "Jerusalem Post", lean: "israel", every: 15, israeliMedia: true },
+  { id: "jpost-mideast", url: "https://www.jpost.com/rss/rssfeedsmiddleeastnews.aspx", name: "Jerusalem Post", lean: "israel", every: 15, israeliMedia: true },
+  { id: "haaretz-he", url: "https://www.haaretz.co.il/srv/rss---feedly", name: "Haaretz", lean: "israel", every: 10, israeliMedia: true },
+  { id: "haaretz-en", url: "https://www.haaretz.com/srv/haaretz-latest-headlines", name: "Haaretz", lean: "israel", every: 15, israeliMedia: true },
+  { id: "n12", url: "https://rcs.mako.co.il/rss/31750a2610f26110VgnVCM1000005201000aRCRD.xml", name: "N12", lean: "israel", every: 10, israeliMedia: true },
+  { id: "c14", url: "https://www.c14.co.il/feed/", name: "Channel 14", lean: "israel", every: 10, israeliMedia: true },
+  // Their own sites turn the server away (403, Cloudflare): Google News's
+  // public listing of each site stands in, as for Asharq Al-Awsat on Yemen.
+  { id: "israelhayom", url: gnSite("israelhayom.co.il"), name: "Israel Hayom", lean: "israel", every: 15, israeliMedia: true },
+  { id: "kan", url: gnSite("kan.org.il"), name: "Kan", lean: "israel", every: 15, israeliMedia: true },
+  { id: "c13", url: gnSite("13tv.co.il"), name: "Channel 13", lean: "israel", every: 15, israeliMedia: true },
 ];
 
 /**
@@ -329,7 +361,16 @@ export const IRAN_NOT_READ: { what: string; why: string }[] = [
   { what: "archive.md / archive.ph", why: "answers the server with a CAPTCHA (429)" },
   { what: "YouTube transcripts", why: "the caption files come back empty to a server; titles and descriptions only" },
   { what: "whitehouse.gov/remarks", why: "transcripts posted days late (latest 28 Sep on 8 Oct)" },
+  { what: "israelhayom.co.il, kan.org.il, 13tv.co.il (their own feeds)", why: "turn the server away (403, Cloudflare); read through Google News's listing of each site" },
+  { what: "now14.co.il", why: "Cloudflare; Channel 14 is read from c14.co.il's feed" },
+  { what: "i24news.tv in Hebrew", why: "an app with no public feed; read from its Telegram channel" },
+  { what: "ukmto.org", why: "answers with a CAPTCHA; UKMTO is read from its X account (UK_MTO)" },
+  { what: "the IAEA's Iran page", why: "Cloudflare; the IAEA is read from its news feed" },
+  { what: "Telegram channels of Kan, Israel Hayom, Channel 13 and Channel 14", why: "none found that still posts" },
 ];
+
+/** The display names of the Israeli outlets and reporters (stage 4c). */
+export const ISRAELI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG, ...IRAN_RSS].filter((s) => s.israeliMedia).map((s) => s.name));
 
 /** Every Iran-desk source's filter group, by the source's display name. */
 export function iranLeanOf(name: string): IranLean | undefined {

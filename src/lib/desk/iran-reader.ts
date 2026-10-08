@@ -14,7 +14,7 @@ import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 4;
+export const IRAN_PROMPT_VERSION = 5;
 
 export function iranContentHash(text: string): string {
   return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
@@ -84,6 +84,8 @@ WHAT TO PUBLISH (publish: true)
 
 WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 - The Houthis' own war in Yemen (Houthis against the Yemeni government or Saudi Arabia, fronts inside Yemen): reject_reason "yemen desk". A Houthi act in Iran's cause (fire on Israel or US ships, tied to Iran) is published.
+- Houthi missiles or drones on Saudi Arabia, Saudi interceptions over Riyadh or other Saudi cities, debris falling there, and flights to Saudi cities stopped over them: reject_reason "yemen desk".
+- An incident the text dates days back (a UKMTO report of 6 October relayed on the 8th) is not new: duplicate_of the recent report that told it, else publish=false, reject_reason "old".
 - Gaza and the West Bank, unless Iran or Hezbollah act in it. Other wars (Ukraine, Sudan) unless Iran is a party.
 - Commentary, reject_reason "commentary": explainers, opinion, columns, analysis, and the views of writers, media figures, researchers, analysts, experts, think tanks and FORMER officials ("Atwan: Trump seeks to shift the costs", "an Iran International analyst says", "former US envoy Hochstein says"), whoever carries them. A poll is not commentary.
 - Recaps, reject_reason "recap": a post that sums up events already reported one by one, a channel's round-up or news package ("بسته خبری", "مرور اخبار", "حصاد", "أبرز الأحداث", "ملخص"), a programme title, a documentary, an anniversary, a battle map. Old events retold as new.
@@ -92,6 +94,17 @@ WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 - Domestic news with no tie to the war, the economy or politics: sport, weather, culture, crime, traffic, religious occasions; a headline or a post with no fact; "a spokesman said something" with no content.
 - Pictures of damage already done are not a new attack: unless a source reports a NEW strike, the event_type is statement and the headline says it is imagery of earlier damage.
 - A terse alert ("explosions heard in Isfahan", "sirens in the north") IS a report: publish it as exactly that, no more.
+
+ISRAELI MEDIA
+- Items whose source is an Israeli outlet or reporter (N12, Kan, Channel 13, Channel 14, i24 News, Walla, Ynet, Haaretz, Israel Hayom, the Jerusalem Post, Amit Segal, and the Israeli Telegram channels) are published only for Israel's OWN reporting on this war: its reporters, Israeli officials and Israeli sources.
+- An item that only repeats a foreign outlet's report ("according to Reuters", "Al Jazeera reports", "a report in the New York Times", "Iranian media say") is rejected, reject_reason "relay": the original is read directly. An Israeli outlet's exclusive ("פרסום ראשון", "exclusive", "revealed") is kept.
+- What Israeli officials or sources told the outlet ends the headline: ", Israeli officials say", ", Israeli sources say".
+
+WHO SPEAKS
+- A post that opens with a teller and a colon is that teller's words: "الخارجية الأميركية للحدث: ..." (the US State Department told Al Hadath) is "US State Department: ...", "IRGC: ..." is the IRGC's. The teller is the speaker_lead and opens the headline; never drop it, and never write their words as a plain fact.
+- What one party says ABOUT another stays the first party's: "US State Department: Hezbollah is spreading reports it got $200 million from Iran" is never "Hezbollah says it received $200 million".
+- A channel that relays someone else (#إعلام_العدو, "وسائل إعلام عبرية", "قناة كان العبرية:", a post signed with another channel's link, such as the Houthi army's t.me/army21ye) is not the speaker or the actor: the one it quotes is. Hezbollah military media relays the Houthi army's statements; those are the Houthis'.
+- In Persian, انگلیس and انگلیسی mean Britain and British (UKMTO is "UKMTO" or "the UK's maritime agency"), never "English".
 
 WHO DID WHAT TO WHOM: never infer, never assume
 - The actor is who the TEXT says acted. Never assign an attack to a side because the outlet is aligned with it or because it fits.
@@ -106,7 +119,7 @@ HOW TO WRITE
 - NEVER shorten an interesting item to fit. A statement, interview or report that makes several newsworthy points keeps EVERY one of them: the strongest in the headline, all the others in the body, one sentence each, as long as the body needs. Write it as a wire story, not a list: vary the attribution ("warned", "accused", "urged", "he added", or none where the sentence is plainly the speaker's) and join related points. Never open sentence after sentence with "He said".
 - Keep the text's own WHY: when the item says why the event matters, that clause goes in. One clause of the text's context, never one you add.
 - Do not compress: keep who, what, where, casualties (killed and wounded, with their figures), weapon and unit.
-- Every number, name, place and date you write must be in the item's text. Add nothing: no background, no cause, no casualties, no attribution, no role or title the text does not give.
+- Every number, name, place and date you write must be in the item's text, as the text gives it: "22 barrels" is never "22 million barrels"; a name you cannot read is left out, never guessed ("لتونی" is Latvia, not Luton). Add nothing: no background, no cause, no casualties, no attribution, no role or title the text does not give.
 - Wounded is not killed. Write "kill" only when the text says people died.
 - NEVER write about what is missing or unverified: no "no casualties were reported", "details were not given", "could not be independently verified", "it was unclear".
 - Never name the outlet that carries the item, its correspondent, or that anyone "told" it something: the card shows the source. Not "Khabari Plus quotes Trump", not "Iran International reported that", not "a source told Tasnim": write Trump's words, the fact, "a source said". What officials or sources told an outlet ends the headline: ", US officials say", ", sources say". An outlet is NEVER the speaker_lead and never opens the headline.
@@ -176,3 +189,114 @@ export const IRAN_OWN_GATE = new RegExp(
 /** "Iran-backed Houthis" is a label on the Houthis, not Iran's war: it does not pass. */
 export const isIranWar = (text: string): boolean => IRAN_GATE.test(String(text || "").replace(IRAN_LABEL, " "));
 export const passesIranOwnGate = (text: string): boolean => IRAN_OWN_GATE.test(String(text || ""));
+
+/**
+ * Israeli media (stage 4c) post about everything in Israel: only the Iran war,
+ * narrowly or widely (Iran, its allies' fronts, Hormuz, the nuclear file, the
+ * talks), passes. Hebrew has no word edges and joins its prefixes (ב, ה, ו, ל,
+ * מ, ש) to the word, so its words match inside longer ones.
+ */
+const IRAN_WAR_HE = /איראנ|אירנ|טהרן|משמרות המהפכה|חמינאי|פזשכיאן|עראקצ'י|לאריג'אני|קאליבאף|הורמוז|המפרץ הפרסי|בנדר עבאס|נתנז|פורדו|איספהאן|אספהאן|בושהר|אורניום|סבא"א|גרוסי|חיזבאללה|נסראללה|נעים קאסם|המיליציות (?:בעיראק|השיעיות|העיראקיות)|ויטקוף|גרעיני|תוכנית הגרעין|מתקני הגרעין|הסכם הגרעין/;
+
+/** An outlet another newsroom relays: the original is read directly. */
+const FOREIGN_OUTLETS = "רויטרס|רוייטרס|AP|אי[- ]?פי|CNN|סי[- ]?אן[- ]?אן|אל[- ]?ג'זירה|אל[- ]?ג׳זירה|אל[- ]?ערבייה|אל[- ]?מיאדין|אל[- ]?אח'באר|א-?שרק אל-?אווסט|ניו[- ]יורק טיימס|וול[- ]סטריט ג'ורנל|וושינגטון פוסט|אקסיוס|פוקס|בלומברג|BBC|בי[- ]בי[- ]סי|פייננשל טיימס|טלגרף|סקיי ניוז|תסנים|פארס|אירנ\"?א|פרס[- ]?TV|פרס טי[- ]?וי|איראן אינטרנשיונל|Reuters|Axios|Al Jazeera|Al Arabiya|Al Mayadeen|New York Times|NYT|Wall Street Journal|WSJ|Washington Post|Bloomberg|Fox News|Financial Times|Telegraph|Sky News|Tasnim|Fars|IRNA|Press TV|Iran International";
+
+/** An outlet's name standing alone: "AP" is not the end of "map". */
+const OUTLET = `(?<![A-Za-z])(?:${FOREIGN_OUTLETS})(?![A-Za-z])`;
+
+/** The lead (headline and first words) says the report is another outlet's. */
+const FOREIGN_RELAY = new RegExp(
+  `(?:לפי|על פי|ע"פ|כך (?:דיווח|דווח|מדווח|נמסר|פורסם)|דיווח(?:ים)? ב|מדווח(?:ים)? ב|פרסום ב|פורסם ב|דיווח של|according to|reported by|told)[\\s\\-־]*(?:ה|ב|ברשת|בעיתון|באתר|בערוץ|סוכנות(?: הידיעות)?)?[\\s\\-־]*${OUTLET}|^${OUTLET}\\s*(?::|reports|says|reported)|${OUTLET}\\s*(?:reports|reported|מדווח|דיווח|דיווחה|מדווחת)`,
+  "i",
+);
+
+/** The outlet's own scoop: kept even when the story is also elsewhere. */
+const EXCLUSIVE = /פרסום ראשון|בלעדי|חשיפת|נחשף ב|exclusive|first reported by (?:N12|Kan|Channel 1[234]|i24|Ynet|Walla|Haaretz|Israel Hayom|the Jerusalem Post)/i;
+
+/**
+ * An Israeli outlet's item: about the Iran war, and Israel's own reporting.
+ * A lead that only relays a foreign outlet is dropped unless it is marked
+ * as the outlet's exclusive.
+ */
+export function passesIsraeliMediaGate(text: string): boolean {
+  const t = String(text || "");
+  if (!isIranWar(t) && !IRAN_WAR_HE.test(t)) return false;
+  if (EXCLUSIVE.test(t)) return true;
+  return !FOREIGN_RELAY.test(t.slice(0, 220));
+}
+
+/**
+ * The sources' loaded words for Iran and Israel, reworded on the Iran desk's
+ * copy (audit of 8 Oct: "linked to the Iranian regime", "Islamic Iran's
+ * capability", "the Israel regime" went out).
+ */
+const IRAN_REWORD: [RegExp, string][] = [
+  [/\b(?:Iran's|the Iranian|Iranian) (?:clerical |Islamic )?regime\b/g, "the Iranian government"],
+  [/\bThe Iranian (?:clerical |Islamic )?regime\b/g, "The Iranian government"],
+  [/\b(?:the )?(?:Israel|Israeli|Zionist) regime\b/gi, "Israel"],
+  [/\bIslamic Iran\b/g, "Iran"],
+  [/\bthe (?:Islamic Republic's |mullahs' )?regime\b/g, "the Iranian government"],
+];
+
+export function iranReword(s: string): string {
+  let out = String(s || "");
+  for (const [re, to] of IRAN_REWORD) out = out.replace(re, to);
+  return out.replace(/^the /, "The ").replace(/\bthe the\b/gi, "the");
+}
+
+/** An outlet, a magazine or "a report" opening the headline as its teller. */
+const OUTLET_OPENS = new RegExp(
+  `^(?:${[
+    "Reuters", "AP", "AFP", "Axios", "CNN", "CBS", "NBC", "ABC", "BBC(?: Persian)?", "Fox News", "Bloomberg", "Politico",
+    "(?:The )?New York Times", "NYT", "(?:The )?Wall Street Journal", "WSJ", "(?:The )?Washington Post", "Financial Times", "FT",
+    "(?:The )?Guardian", "(?:The )?Telegraph", "Sky News(?: Arabia)?", "Al[- ]Jazeera", "Al[- ]Arabiya", "Al[- ]Hadath", "Al[- ]Mayadeen",
+    "Al[- ]Akhbar", "Asharq Al-Awsat", "Iran International", "Tasnim", "Fars(?: News)?", "IRNA", "ISNA", "Mehr(?: News)?", "Press TV",
+    "Nour News", "Akhbar-e Fori", "Khabar Fori", "Khabari Plus", "Radio Farda", "VOA(?: Farsi)?", "Manoto", "WiWo", "WirtschaftsWoche",
+    "(?:A |The )?German (?:magazine|newspaper)", "(?:A |The )?(?:US|British|Israeli) (?:newspaper|outlet|channel)",
+    "N12", "Kan", "Channel 1[234]", "Ynet", "Walla", "Haaretz", "Israel Hayom", "(?:The )?Jerusalem Post", "i24(?: News)?",
+  ].join("|")})(?:'s)?(?:\\s+(?:analyst|correspondent|reporter|poll|investigation|report|survey|sources?))?\\s*(?::|\\bsays\\b|\\bsaid\\b|\\breports?\\b|\\breported\\b|\\bcites\\b|\\bcited\\b|\\bposts\\b|\\bfinds\\b|\\bquotes\\b)`,
+  "i",
+);
+
+/** Commentary by role: analysts, experts and former officials (the prompt's rule, kept in code). */
+const COMMENTARY =
+  /\b(?:analysts?|commentators?|columnists?|pundits?|(?<!UN |panel of |IAEA )experts?|think[- ]tank|former (?:\w+ ){0,2}?(?:envoy|official|ambassador|minister|diplomat|negotiator|advis[eo]r|general|commander|president|prime minister|spy chief|intelligence chief)|Atwan|Hochstein)\b/i;
+
+/** The Houthis' war with Saudi Arabia: the Yemen desk's, not this one. */
+const YEMEN_THEATRE_WORDS =
+  /\b(?:Houthis?|Saudi-led coalition|King Khalid|Khamis Mushait|Jizan|Jazan|Najran|Abha|Saudi civil defen[cs]e|Ansar Allah)\b/i;
+/** Missiles over Saudi cities with no attacker named ("Saudi Arabia intercepted two ballistic missiles over Riyadh"). */
+const SAUDI_INTERCEPT = /\b(?:Saudi|Riyadh|Jeddah)\b.{0,60}\bintercept\w*|\bintercept\w*.{0,60}\b(?:Saudi|Riyadh|Jeddah)\b/i;
+const YEMEN_THEATRE = { test: (s: string) => YEMEN_THEATRE_WORDS.test(s) || SAUDI_INTERCEPT.test(s) };
+const IRAN_IN_YEMEN_STORY = /\b(?:Israel\w*|Eilat|US (?:warship|ship|Navy|base|forces)|American (?:warship|ship)|Red Sea shipping)\b/i;
+
+/** "22 million" where the text says 22: a multiplier the text never gave. */
+const MULTIPLIER = /\b\d[\d.,]*\s*(?:million|billion|bn|trillion)\b|\$\d[\d.,]*\s*(?:m|bn)\b/i;
+const MULTIPLIER_SRC = /million|billion|trillion|\bbn\b|\d\s*m\b|مليون|ملايين|مليار|ملیون|میلیون|میلیارد|مليارات|מיליון|מיליארד/i;
+
+/** A post that opens with its teller: "الخارجية الأميركية للحدث: …", "IRGC: …". */
+const OPENS_WITH_SPEAKER = /^[\s‏‎"«]*(?:(?:🔴|⭕️|♦️|🔻|🔺|▪️|عاجل|فوری|#\S+|\|)\s*)*([^:\n|]{2,60}?)\s*:/u;
+const SAY_VERB =
+  /\b(?:says?|said|warns?|vows?|urges?|calls?|announces?|denies|rejects?|accuses?|condemns?|threatens?|confirms?|claims?|insists?|stresses|tells?|adds|welcomes?|demands?|pledges?|asks?|orders?|signals?|agrees?|insists|argues?|praises?|blames?|declares?|reports?)\b|:/i;
+
+/**
+ * The Iran desk's copy rules that the free models kept breaking (audit of
+ * 8 Oct): an outlet as the teller, commentary, the Yemen desk's war, a
+ * multiplier added to a figure, and a statement stripped of the speaker its
+ * text opens with ("Hezbollah has brought only misery to Lebanon" was the US
+ * State Department's words to Al Hadath).
+ */
+export function iranCopyProblem(r: { headline: string; body?: string; speaker_lead?: string | null; event_type?: string }, sourceText: string): string | null {
+  const h = String(r.headline || "").trim();
+  const copy = `${h} ${r.body ?? ""}`;
+  if (COMMENTARY.test(`${h} ${r.speaker_lead ?? ""}`)) return "commentary: analysts, experts and former officials are not reports";
+  if (OUTLET_OPENS.test(h)) return "leads with outlet: an outlet is never the teller; lead with the fact, or with the official or source who said it";
+  if (YEMEN_THEATRE.test(copy) && !isIranWar(copy) && !IRAN_IN_YEMEN_STORY.test(copy)) return "yemen desk: the Houthis' war with Saudi Arabia is the Yemen desk's";
+  const src = String(sourceText || "");
+  if (MULTIPLIER.test(h) && !MULTIPLIER_SRC.test(src)) return "figure not in source: the text gives no million or billion";
+  if (r.event_type === "statement" && !r.speaker_lead && !SAY_VERB.test(h)) {
+    const who = OPENS_WITH_SPEAKER.exec(src)?.[1]?.trim();
+    if (who) return `does not lead with its speaker: the text opens with its teller ("${who}"); the headline says who said it`;
+  }
+  return null;
+}

@@ -14,8 +14,8 @@
  * services before Gemini, and Gemini's lite models only while today's use of
  * them leaves the Yemen reader its share.
  */
-import { IRAN_RSS, IRAN_TG, IRAN_X, type IranLean } from "./desk/iran-sources.ts";
-import { passesIranOwnGate } from "./desk/iran-reader.ts";
+import { IRAN_RSS, IRAN_TG, IRAN_X, ISRAELI_MEDIA, type IranLean } from "./desk/iran-sources.ts";
+import { isIranWar, passesIranOwnGate, passesIsraeliMediaGate } from "./desk/iran-reader.ts";
 import { type Candidate, IRAN_READER, USAGE_KEY, type Usage, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { combineSystem } from "./desk/combine.ts";
@@ -203,7 +203,20 @@ export async function fetchIranSources(state: FetchState, now: number): Promise<
   for (const f of [...IRAN_RSS, ...SEARCHES]) run(`web:${f.id}`, f.name, "web", f.every, () => readFeed(f));
   await Promise.allSettled(jobs);
 
-  return { hits: own.filter((h) => passesIranOwnGate(`${h.title ?? ""} ${h.text}`)), status };
+  return { hits: own.filter((h) => passesOwnSourceGate(h)), status };
+}
+
+/**
+ * Most of the Iran desk's own sources post about Iran and little else. Israeli
+ * media post about everything in Israel and the IAEA about every country's
+ * nuclear file: theirs pass on the war itself only, and Israeli media's
+ * relays of foreign outlets do not pass (stage 4c).
+ */
+export function passesOwnSourceGate(h: Pick<RawHit, "source" | "title" | "text">): boolean {
+  const text = `${h.title ?? ""} ${h.text}`;
+  if (ISRAELI_MEDIA.has(h.source)) return passesIsraeliMediaGate(text);
+  if (h.source === "IAEA") return isIranWar(text);
+  return passesIranOwnGate(text);
 }
 
 /** The site scan's part for the Iran desk: its own sources read, into its inbox. */
@@ -230,6 +243,9 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   const store = await getStore();
   const state: IranState = { lastScanAt: {}, lastTgPost: {}, lastXPost: {}, seen: {}, ...((await store.getJson<IranState>(STATE_KEY)) ?? {}) };
   const prev = await store.getJson<ScanPayload>(IRAN_PAYLOAD);
+  // A card taken off the desk (json:dropped) is not carried forward and saved again.
+  const dropped = (await store.getJson<Record<string, number>>("dropped")) ?? {};
+  if (prev && Array.isArray(prev.reports)) prev.reports = prev.reports.filter((r) => !(r.fp in dropped));
   const seenAt = jerusalemIso(new Date(now));
 
   // 1. The Iran desk's own sources: read here in the old path (site-scan

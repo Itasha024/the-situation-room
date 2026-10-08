@@ -1379,7 +1379,9 @@ export async function readBatch(
       if (skip.has(tag) || exhausted.includes(tag) || minute.includes(tag)) continue;
       const started = Date.now();
       const n = Math.min(items.length, p.batch);
-      const r = await callOpenAI(items.slice(0, p.batch), pk, recent.slice(0, 15), p, gm, prompt);
+      // The Iran desk reads these first, and tells one story for hours: 15
+      // recent cards (half an hour) let the same story be carded ten times (8 Oct).
+      const r = await callOpenAI(items.slice(0, p.batch), pk, recent.slice(0, fallbacksFirst ? 60 : 15), p, gm, prompt);
       if ("readings" in r) {
         logCall(tag, n, started);
         const byId = new Map<string, Reading>();

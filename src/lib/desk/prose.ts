@@ -338,14 +338,35 @@ export async function writeProse(
  */
 export function cleanPoints(raw: unknown, max: number, noVague = false): string[] {
   const out: string[] = [];
-  for (const p of pointList(raw)) {
-    const sentences = (p.match(/(?:[^.!?]|\.(?=\d))+[.!?]+(?:\s*\[[^\]]*\])*/g) || [p]).map((x) => x.trim());
+  for (const p of pointList(raw).map(tidyPoint)) {
+    // The last sentence may have no full stop: it is kept, never cut at the "1." of "1.5" or at "Maj." (9 Oct).
+    const sentences = (p.match(/(?:[^.!?]|\.(?=\d))+(?:[.!?]+|$)(?:\s*\[[^\]]*\])*/g) || [p]).map((x) => x.trim()).filter(Boolean);
     const kept = sentences.filter((x) => !ABSENCE.test(x) && !BANNED.test(stripRefs(x)) && !(noVague && VAGUE.test(x)));
-    const t = roleNamesInProse(kept.join(" ").trim());
+    let t = roleNamesInProse(kept.join(" ").trim());
+    if (t && !/[.!?]["”’)]?(?:\s*\[[^\]]*\])*$/.test(t)) t += ".";
     if (stripRefs(t).length >= 12) out.push(t);
     if (out.length >= max) break;
   }
   return out;
+}
+
+/** Who opens a point and stays: a speaker, not an outlet. */
+const SPEAKER_OPEN = /^(?:Trump|CENTCOM|UKMTO|Iran|Israel|The|US|IRGC|Saudi|Houthi|Hezbollah|Araghchi|Pezeshkian|Netanyahu|Vance|Rubio|Hegseth|Khamenei|Qalibaf|Government|Coalition)\b/;
+
+/**
+ * What a weaker writer leaves in a point: an outlet opening it ("Press TV
+ * reported …": the reference shows the outlet), and a card's headline and body
+ * glued with " — " (the headline stays, with the point's marks).
+ */
+export function tidyPoint(p: string): string {
+  let t = String(p || "").trim();
+  t = t.replace(/^[A-Z][\w'’.&-]*(?:\s+(?:al-|Al-|of |the )?[A-Z][\w'’.&-]*){0,4}\s+(?:reported|reports)(?: that)?:?\s+(?=[A-Za-z])/, (m) => (SPEAKER_OPEN.test(m) ? m : ""));
+  const dash = t.indexOf(" — ");
+  if (dash > 30 && stripRefs(t.slice(dash)).length > 40) {
+    const marks = (t.slice(dash).match(/\[[^\]]*\]/g) || []).join("");
+    t = t.slice(0, dash).replace(/[.\s]+$/, "") + marks + ".";
+  }
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 /**

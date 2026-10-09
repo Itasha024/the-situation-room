@@ -35,3 +35,14 @@ test("the Iran writer gets cards and Trump's statements by id; an arena keeps on
   assert.deepEqual(Object.keys(got.arenas), ["hormuz"]);
   assert.equal(got.arenas.hormuz.points[0], "The IRGC Navy seized a tanker off Fujairah[[1]].");
 });
+
+test("a point is never cut at a decimal or an abbreviation; an outlet opening it and a glued body go; a repeat goes", async () => {
+  const { tidyPoint } = await import("./prose.ts");
+  const { oncePer } = await import("./iran-brief.ts");
+  assert.deepEqual(cleanPoints(["CENTCOM said US forces helped move about 1.5 million barrels [r3]"], 8), ["CENTCOM said US forces helped move about 1.5 million barrels [r3]."]);
+  assert.deepEqual(cleanPoints(["The IDF confirmed Maj. Gen. Cohen was killed [r2]."], 8), ["The IDF confirmed Maj. Gen. Cohen was killed [r2]."]);
+  assert.equal(tidyPoint("Press TV reported Araghchi said talks are ongoing [r2]"), "Araghchi said talks are ongoing [r2]");
+  assert.equal(tidyPoint("Trump said the blockade stays [t1]"), "Trump said the blockade stays [t1]");
+  assert.equal(tidyPoint("Iran's atomic chief said inspections are impossible — Iran's atomic energy chief, Mohammad Eslami, said inspections of the sites cannot happen [r3]"), "Iran's atomic chief said inspections are impossible[r3].");
+  assert.equal(oncePer(["US Treasury imposed new sanctions on 17 tankers of Iran's shadow fleet [r3].", "US Treasury sanctioned 17 tankers of Iran's shadow fleet [r4]."]).length, 1);
+});

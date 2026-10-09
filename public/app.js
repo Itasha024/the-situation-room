@@ -6599,8 +6599,15 @@ function desksShown() {
   } catch (e) {}
   return DESKS.filter((d) => all || !d.soon);
 }
-/** A small flag: its stripes, top to bottom, with a hairline so the white shows on either theme. */
-const flagSvg = (d) => `<svg class="flag" viewBox="0 0 18 12" aria-hidden="true">${d.flag.map((c, i) => `<rect y="${i * 4}" width="18" height="4" fill="${c}"/>`).join('')}<rect x=".25" y=".25" width="17.5" height="11.5" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width=".5"/></svg>`;
+/*
+ * Iran's flag as its official design draws it (ISIRI 1, as Wikimedia's Flag_of_Iran.svg): 7:4,
+ * the red emblem at the exact centre, the takbir 11 times on each edge of the white band (user, 9 Oct:
+ * the plain stripes were not the flag). Its own ids only point inside one copy.
+ */
+const IRAN_FLAG = '<rect width="630" height="360" fill="#da0000"/><rect width="630" height="240" fill="#fff"/><rect width="630" height="120" fill="#239f40"/><g transform="translate(8.4,100.4)"><g id="irf-tb4"><g id="irf-tb1" fill="none" stroke="#fff" stroke-width="2"><path id="irf-tbp1" d="M0,1H26M1,10V5H9V9H17V5H12M4,9H6M26,9H21V5H29M29,0V9H37V0M33,0V9" transform="scale(1.4)"/><path id="irf-tbp2" d="M0,7H9M10,7H19" transform="scale(2.8)"/><use href="#irf-tbp2" y="120"/><use href="#irf-tbp1" y="145.2"/></g><g id="irf-tb3"><use href="#irf-tb1" x="56"/><use href="#irf-tb1" x="112"/><use href="#irf-tb1" x="168"/></g></g><use href="#irf-tb3" x="168"/><use href="#irf-tb4" x="392"/></g><g fill="#da0000" transform="matrix(45,0,0,45,315,180)"><g id="irf-emblem_half"><path d="M 1.0156,-0.0155 A 0.7752,0.7752 0 0 1 0.6019,0.6705 1.0040,1.0040 0 0 0 0.4443,-0.7406 q -0.0221,-0.0177 -0.0452,-0.0341 A 0.7757,0.7757 0 0 1 1.0156,-0.0155 Z"/><path d="m 0.6559,-0.0468 a 0.9268,0.9268 0 0 1 -1.2130,0.8810 q 0.0245,0.0011 0.0492,0.0011 a 1.0158,1.0158 0 0 0 0.8418,-1.5841 0.9242,0.9242 0 0 1 0.3218,0.7019 z"/><path d="M 0.2615,-0.9439 A 0.1415,0.1415 0 0 1 1.7299e-6,-0.8688 L -0.0170,-0.8860 1.7299e-6,-0.9693 A 0.1321,0.1321 0 0 0 0.2498,-1.0002 a 0.1402,0.1402 0 0 1 0.0117,0.0562 z"/><path d="M 0.1199,-0.7144 A 0.3147,0.3147 0 0 1 1.2855e-6,-0.8102 L -0.0506,-0.0164 1.2855e-6,1.0001 0.0788,0.8916 0.0891,0.6414 0.0999,0.3809 l 0.0014,-0.0334 4.7111e-4,-0.0124 0.0022,-0.0541 0.0067,-0.1640 0.0055,-0.1324 0.0015,-0.0382 0.0020,-0.0487 V -0.7144 Z M 1.2855e-6,-0.5496 9.0174e-5,-0.5494 1.2855e-6,-0.5493 Z m 0,0.8644 V 0.3145 L 3.9461e-4,0.3146 Z"/></g><use href="#irf-emblem_half" transform="scale(-1,1)"/></g>';
+const FLAG_ART = { iran: () => IRAN_FLAG };
+/** A small flag: its drawing, or its stripes top to bottom; a hairline so the white shows on either theme. */
+const flagSvg = (d) => FLAG_ART[d.id] ? `<svg class="flag flag-${d.id}" viewBox="0 0 630 360" aria-hidden="true">${FLAG_ART[d.id]()}<rect x="6" y="6" width="618" height="348" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="12"/></svg>` : `<svg class="flag" viewBox="0 0 18 12" aria-hidden="true">${d.flag.map((c, i) => `<rect y="${i * 4}" width="18" height="4" fill="${c}"/>`).join('')}<rect x=".25" y=".25" width="17.5" height="11.5" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width=".5"/></svg>`;
 /** The same stripes as a strip, for the side menu's line by each desk. */
 const flagStrip = (d) => `linear-gradient(${d.flag.map((c, i) => `${c} ${(i * 100 / d.flag.length).toFixed(2)}% ${((i + 1) * 100 / d.flag.length).toFixed(2)}%`).join(',')})`;
 const SITE_PAGES = () => desksShown().map((d) => [d.href, d.name, d.sub, d.kids, d]);

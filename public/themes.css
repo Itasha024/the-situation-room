@@ -718,6 +718,7 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 .desk-list a[aria-current="page"]{color:var(--t-strong,#fff)}
 .desk-list a[aria-current="page"]::after{content:"";margin-inline-start:auto;width:6px;height:6px;border-radius:50%;background:var(--accent-ui,#7eb6ff)}
 .desk-list .flag{flex:none;width:21px;height:14px;color:var(--t-text,#e2e8f0)}
+.desk-list .flag-iran{height:12px}
 html.desk-leaving body{opacity:0;transition:opacity .18s ease-out}
 @media (prefers-reduced-motion:reduce){html.desk-leaving body{transition:none}}
 /* A desk's parts still being built */

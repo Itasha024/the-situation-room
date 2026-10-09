@@ -1205,6 +1205,38 @@ export function protocolOnly(headline: string, body = ""): boolean {
  * `strict` adds the checks a repair may still fail on a good card (casualties,
  * side words); a card that failed them twice goes out rather than be lost.
  */
+/** A post that opens with its teller: "قطر: …", "الخارجية الأميركية للحدث: …", "IRGC: …". */
+export const OPENS_WITH_SPEAKER = /^[\s‏‎"«]*(?:(?:🔴|⭕️|♦️|🔻|🔺|▪️|🚨|⚡️?|عاجل|فوری|#\S+|\|)\s*[:|-]?\s*)*([^:\n|]{2,60}?)\s*:/u;
+/** A headline that says who says it: a verb of saying, "according to", a speaker and a colon. */
+const SAID = /\b(?:says?|said|warns?|vows?|urges?|calls?|announces?|denies|rejects?|accuses?|condemns?|threatens?|confirms?|claims?|claimed|insists?|stresses|tells?|told|adds|welcomes?|demands?|pledges?|asks?|orders?|signals?|agrees?|argues?|praises?|blames?|declares?|reports?|reported|reportedly|according|quoted|affirms?|reiterates?|expresses|voices?|hails?|denounces?|dismisses?|admits?|promises?|believes?|thanks?|offers?|proposes?|assures?|notes?|stated?|statement)\b/i;
+/** Words that only someone's view or stand carries: the desk never says them itself. */
+const STANCE =
+  /\b(?:inseparable|indivisible|integral part|part and parcel|stands? (?:with|by|firmly|alongside)|in solidarity|full support|fully supports?|must|should|ought|will not (?:allow|accept|tolerate|hesitate|stand)|won't (?:allow|accept|tolerate)|unacceptable|red lines?|we|our|us all|the enemy|aggressors?|heroic|terrorist regime|martyrs?)\b/i;
+const NOT_A_TELLER = /^(?:breaking|urgent|update|watch|video|photos?|now|live|exclusive|عاجل|خاص|فيديو|بالفيديو|متابعة|فوری|اختصاصی|\d[\d:.\s]*)$/i;
+
+/**
+ * The desk never states what someone said as its own fact (user, 9 Oct:
+ * "Saudi security is an inseparable part of Qatar's security" went out bare;
+ * the post opened "قطر:"). One rule for every desk and every model: a
+ * headline that names no speaker is sent back when the text opens with its
+ * teller ("X: …") on a statement, or when its words are a stand or a view
+ * that only someone can hold (inseparable, must, stands with, red line, we).
+ */
+export function unattributed(headline: string, type: string | undefined, sourceText: string): string | null {
+  const h = headline.trim();
+  if (/^[^:]{2,70}:\s/.test(h) || SAID.test(h)) return null;
+  const said = type === "statement" || type === "diplomacy";
+  const who = OPENS_WITH_SPEAKER.exec(String(sourceText || ""))?.[1]?.trim() ?? "";
+  if (said && who && !NOT_A_TELLER.test(who) && !OUTLET_LEAD.test(`${who}:`)) {
+    return `does not lead with its speaker: the text opens with its teller ("${who}"); the headline says who said it ("Qatar: …", "Qatar says …")`;
+  }
+  const stance = STANCE.exec(h)?.[0];
+  if (stance && (said || !/\b(?:killed|wounded|struck|hit|fired|launched|seized|sank|downed|intercepted)\b/i.test(h))) {
+    return `does not lead with its speaker: "${stance}" is someone's stand or view, never the desk's fact; the headline says who holds it`;
+  }
+  return null;
+}
+
 export function checkReading(r: Reading, sourceText: string, strict = true): string | null {
   if (!r.publish) return r.reject_reason || "not publishable";
   const h = String(r.headline || "").trim();
@@ -1232,7 +1264,9 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
     if (lead && !h.toLowerCase().startsWith(lead.toLowerCase())) return "statement does not lead with its speaker";
   }
   if (OUTLET_LEAD.test(h)) return "headline leads with outlet";
-  const added = SAUDI_SITES.find(([en, src]) => en.test(`${h} ${b}`) && !src.test(sourceText));
+  const unsaid = unattributed(h, r.event_type, sourceText);
+  if (unsaid) return unsaid;
+  const added =SAUDI_SITES.find(([en, src]) => en.test(`${h} ${b}`) && !src.test(sourceText));
   if (added) return `place not in source: ${added[0].source.split("|")[0].replace(/\\b/g, "")} — name only the places the text names`;
   // Never let pass: a card that puts the other side's leader's words in his mouth.
   const who = wrongSpeaker(`${h} ${b}`, sourceText);

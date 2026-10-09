@@ -9,7 +9,7 @@ import { desksOf } from "./desk-route.ts";
 import { outletFromHost } from "./gnews.ts";
 import { rivalRelay } from "./speaker-press.ts";
 import { iranCopyProblem } from "./iran-reader.ts";
-import { tidySpeaker } from "./reader.ts";
+import { tidySpeaker, unattributed } from "./reader.ts";
 import { oneEventTwoTypes, ownRetelling, sameRareFigure, sameStrikeAbroad } from "./copies.ts";
 import type { LiveReport } from "./types.ts";
 
@@ -195,4 +195,15 @@ test("a relay of UKMTO is matched to UKMTO's own post the site already read, by 
   const hit = ownRead({ names: ["UKMTO"], x: "UK_MTO", site: "ukmto.org" }, ["vessel", "struck", "projectile", "Fujairah", "east"], Date.parse("2026-10-09T12:20:00Z"), "https://x.com/IranIntl_En/status/9", now);
   assert.equal(hit?.url, "https://x.com/UK_MTO/status/2");
   forgetAll();
+});
+
+test("someone's words are never the desk's fact: a statement opening with its teller, or a stand, leads with who said it (user, 9 Oct)", () => {
+  const qatar = "قطر:\n\n•أمن السعودية جزء لا يتجزأ من أمن قطر.\n\n•أمن السعودية جزء لا يتجزأ من أمن الخليج.";
+  assert.match(unattributed("Saudi security is an inseparable part of Qatar's security and of Gulf security", "diplomacy", qatar) ?? "", /teller \("قطر"\)/);
+  assert.match(unattributed("Saudi security is an inseparable part of Gulf security", "diplomacy", "Saudi security…") ?? "", /stand or view/);
+  assert.match(unattributed("Iran must pay for its crimes", "news", "") ?? "", /stand or view/);
+  assert.equal(unattributed("Qatar: Saudi security is an inseparable part of Qatar's security", "diplomacy", qatar), null);
+  assert.equal(unattributed("Qatar says Saudi security is part of its own", "diplomacy", qatar), null);
+  assert.equal(unattributed("Trump administration imposed sanctions on International Criminal Court", "statement", ""), null);
+  assert.equal(unattributed("Saudi air defences intercept two drones over Jazan", "strike", "عاجل: اعتراض مسيرتين"), null);
 });

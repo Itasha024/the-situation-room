@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home page, round two</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#1b1918;--panel:#24201e;--ink:#ece6df;--strong:#fff;--dim:#a39a90;--line:#3a3430;--accent:#e58f74;--page:#141211}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 "Libre Franklin",system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 60px}
+h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
+.note{color:var(--dim);max-width:800px;margin:0 0 12px}
+.note b{color:var(--ink)}
+.research{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:10px;margin:14px 0 34px}
+.research div{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px;color:var(--dim);font-size:13px}
+.research b{display:block;color:var(--strong);font:600 16px/1.2 Newsreader,serif;margin-bottom:4px}
+.opt{margin:0 0 50px;padding-top:16px;border-top:1px solid var(--line)}
+.opt>h2{font:700 13px/1 "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+.opt>p{color:var(--dim);margin:0 0 14px;max-width:800px}
+.views{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:16px;align-items:start}
+@media (max-width:1000px){.views{grid-template-columns:1fr}}
+.cap{font:700 10px/1 "Libre Franklin";letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 6px}
+
+.frame{container-type:inline-size;background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.mast{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;text-align:center;padding:16px 14px 12px;border-bottom:1px solid var(--line)}
+.burger{width:22px;height:16px;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);position:relative}
+.burger::after{content:"";position:absolute;left:0;right:0;top:5px;height:2px;background:var(--ink)}
+.mn{font:600 34px/1 Newsreader,serif;color:var(--strong)}
+.ml{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:7px;font:600 9.5px/1 "Libre Franklin";letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+.ml::before,.ml::after{content:"";width:2.3em;height:1.5px;background:var(--accent)}
+@container (max-width:600px){.mn{font-size:26px}}
+
+.kicker{font:700 10px/1 "Libre Franklin";letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.pill{display:inline-flex;align-items:center;gap:6px;font:700 9.5px/1 "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.pill i{width:7px;height:7px;border-radius:50%;background:#2dd4bf;box-shadow:0 0 0 3px #2dd4bf33}
+.pill.soon i{background:#f59e0b;box-shadow:0 0 0 3px #f59e0b33}
+.clock{font:600 13px/1 "Libre Franklin";color:var(--strong);font-variant-numeric:tabular-nums}
+.clock small{font:600 9.5px "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-right:6px}
+.go{display:inline-flex;align-items:center;gap:6px;font:700 10.5px/1 "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:var(--accent);text-decoration:none}
+.about{padding:18px 18px 4px;text-align:center}
+.about p{margin:0 auto;max-width:640px;font:500 17px/1.45 Newsreader,serif;color:var(--ink)}
+.about a{color:var(--accent);text-decoration:none;font:600 12px "Libre Franklin";letter-spacing:.04em;white-space:nowrap}
+.lead{font:500 17px/1.4 Newsreader,serif;color:var(--strong);margin:0}
+.scope{font-size:13px;color:var(--dim);margin:6px 0 0}
+
+/* the band of the flag (A3), drawn from the official design */
+.band{position:relative;height:30px;margin:0 -16px 0;overflow:hidden}
+.band svg{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:.5;-webkit-mask:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+
+/* Method, in three short lines */
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line)}
+.how div{padding:14px 16px;border-right:1px solid var(--line);font-size:13px;color:var(--dim)}
+.how div:last-child{border-right:0}
+.how b{display:block;font:600 15px/1.25 Newsreader,serif;color:var(--strong);margin-bottom:3px}
+.how-foot{padding:10px 16px 14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--dim);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.how-foot a{color:var(--accent);text-decoration:none;font-weight:600}
+@container (max-width:600px){.how{grid-template-columns:1fr}.how div{border-right:0;border-bottom:1px solid var(--line)}.how div:last-child{border-bottom:0}}
+
+/* H1 · The desks first */
+.decks{display:grid;grid-template-columns:repeat(2,1fr)}
+.deck{padding:0 16px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.deck:last-child{border-right:0}
+.deck .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px}
+.deck .nm{font:600 22px/1.15 Newsreader,serif;letter-spacing:.06em;text-transform:uppercase;color:var(--strong)}
+.deck .ft{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}
+.deck.soonish{opacity:.6}
+.next{grid-column:1/-1;padding:12px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--dim)}
+@container (max-width:600px){.decks{grid-template-columns:1fr}.deck{border-right:0;border-bottom:1px solid var(--line)}.deck .nm{font-size:19px}}
+
+/* H2 · One map */
+.mapwrap{display:grid;grid-template-columns:1.5fr 1fr;min-height:430px}
+.map{min-height:430px;background:#111;border-right:1px solid var(--line)}
+.side{display:flex;flex-direction:column}
+.dc{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px;text-decoration:none;color:inherit}
+.dc .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dc .nm{font:600 18px/1.15 Newsreader,serif;letter-spacing:.06em;text-transform:uppercase;color:var(--strong)}
+.dc .lead{font-size:15.5px}
+.dc:hover{background:#ffffff08}
+.key{padding:10px 16px;font-size:12px;color:var(--dim);display:flex;gap:14px;flex-wrap:wrap}
+.key i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+@container (max-width:600px){.mapwrap{grid-template-columns:1fr}.map{min-height:280px;border-right:0;border-bottom:1px solid var(--line)}}
+.leaflet-container{background:#121a20;font:inherit}
+.lbl{font:700 10px/1 "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+
+/* H3 · The index */
+.idx .row{display:grid;grid-template-columns:200px 1fr 120px;gap:18px;padding:16px;border-bottom:1px solid var(--line);align-items:start}
+.idx .nm{font:600 20px/1.15 Newsreader,serif;letter-spacing:.06em;text-transform:uppercase;color:var(--strong)}
+.idx ul{margin:0;padding-left:1.1em;font:500 15.5px/1.4 Newsreader,serif;color:var(--strong)}
+.idx li+li{margin-top:5px}
+.idx .r{text-align:right;display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.idx .mini{height:6px;border-radius:2px;margin-top:10px;overflow:hidden}
+.idx .mini svg{width:100%;height:100%;display:block}
+@container (max-width:600px){.idx .row{grid-template-columns:1fr;gap:10px}.idx .r{flex-direction:row;justify-content:space-between;text-align:left}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Home page: round two</h1>
+  <p class="note">As you asked, the desks come first. There are no counts, and one short line on what the site is and how it works, with a link to the full methodology. The side menu and its button stay as they are now, and there is no date. Each option is shown at PC width and at phone width. The map is real; its pins here are examples.</p>
+  <p class="note"><b>What similar sites do.</b></p>
+  <div class="research">
+    <div><b>ISW</b>A one-sentence mission at the top, then its "teams" as large map shapes of each region (Russia and Ukraine, the Middle East, China and Taiwan). The regions are the way in.</div>
+    <div><b>ACLED</b>One line on what ACLED is, beside a world map of recent events with a small filter. Below that, a card per crisis ("Iran war updates").</div>
+    <div><b>Liveuamap</b>The map is the whole page, with a live news column on the right. Fast, but nothing tells a new reader what the site is.</div>
+    <div><b>Crisis Group's CrisisWatch</b>One entry per conflict: a bold summary line, then short notes. Plain, and quick to scan.</div>
+    <div><b>Bellingcat</b>A magazine front page of investigations. It fits stories more than live desks, so I took little from it.</div>
+    <div><b>Critical Threats</b>Behind a bot check; not viewed.</div>
+  </div>
+  <p class="note">From these I took the desk as the way in (ISW), one map of the region (ACLED, Liveuamap), and a short line per desk (CrisisWatch). <b>My pick: H2.</b> The map shows at once where each desk works, and the desks sit beside it. H1 is the calmest, and H3 the quickest to read.</p>
+  <div id="opts"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+const EMB = ["M 1.015679,-0.01556 A 0.77528237,0.7752862 0 0 1 0.60199011,0.67052066 1.0040699,1.0040749 0 0 0 0.44435035,-0.74067818 q -0.0221518,-0.0177005 -0.0452767,-0.0341288 A 0.77575926,0.7757631 0 0 1 1.015679,-0.01556 Z","m 0.65590144,-0.04683837 a 0.92689013,0.92689472 0 0 1 -1.21301321,0.88105983 q 0.0245198,0.00118 0.0492749,0.001178 a 1.0158759,1.0158809 0 0 0 0.84183925,-1.58419413 0.92423346,0.92423804 0 0 1 0.32189906,0.7019563 z","M 0.26154437,-0.94393072 A 0.14154065,0.14154135 0 0 1 1.7299476e-6,-0.86887791 L -0.01707249,-0.88602911 1.7299476e-6,-0.96931462 A 0.1321491,0.13214975 0 0 0 0.24983482,-1.0002001 a 0.14021999,0.14022068 0 0 1 0.0117096,0.0562694 z","M 0.11992727,-0.71445117 A 0.31475286,0.31475442 0 0 1 1.2855032e-6,-0.81025163 L -0.0506876,-0.01642556 1.2855032e-6,1.0001998 0.07882572,0.89166862 0.0891995,0.64144186 0.09996594,0.3809197 l 0.0014156,-0.0334002 4.7111e-4,-0.0124172 0.002279,-0.0541474 0.006758,-0.1640148 0.005501,-0.13242286 0.001571,-0.03827263 0.002042,-0.04872535 V -0.71445117 Z M 1.2855032e-6,-0.54965037 9.0174383e-5,-0.54949481 1.2855032e-6,-0.54933925 Z m 0,0.86447753 V 0.3145916 L 3.946188e-4,0.31468049 Z"];
+const emblem = () => `<g fill="#da0000" transform="matrix(45,0,0,45,315,180)">${EMB.map((d) => `<path d="${d}"/>`).join('')}<g transform="scale(-1,1)">${EMB.map((d) => `<path d="${d}"/>`).join('')}</g></g>`;
+const P1 = 'M0,1H26M1,10V5H9V9H17V5H12M4,9H6M26,9H21V5H29M29,0V9H37V0M33,0V9', P2 = 'M0,7H9M10,7H19';
+const unit = (x) => `<g transform="translate(${8.4 + x},100.4)" fill="none" stroke="#fff" stroke-width="2"><path d="${P1}" transform="scale(1.4)"/><path d="${P2}" transform="scale(2.8)"/><path d="${P2}" transform="translate(0,120) scale(2.8)"/><path d="${P1}" transform="translate(0,145.2) scale(1.4)"/></g>`;
+const FLAG = (ir, ext = 40) => {
+  const x0 = -56 * ext, W = 630 + 112 * ext;
+  if (!ir) return `<svg viewBox="${x0} 0 ${W} 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect x="${x0}" width="${W}" height="120" fill="#ce1126"/><rect x="${x0}" y="120" width="${W}" height="120" fill="#fff"/><rect x="${x0}" y="240" width="${W}" height="120" fill="#000"/></svg>`;
+  let u = '';
+  for (let i = -ext; i <= 10 + ext; i++) u += unit(56 * i);
+  return `<svg viewBox="${x0} 0 ${W} 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect x="${x0}" width="${W}" height="360" fill="#da0000"/><rect x="${x0}" width="${W}" height="240" fill="#fff"/><rect x="${x0}" width="${W}" height="120" fill="#239f40"/>${u}${emblem()}</svg>`;
+};
+
+const DESKS = [
+  { ir: true, name: 'Iran conflict', scope: 'The war between Iran and the US and Israel: strikes, Hormuz and the Gulf\'s waters, Iran\'s allies\' fronts, the talks.', city: 'Tehran', live: false, lead: 'Trump said the US will not attack Iran before the midterms, and the blockade stays in force.', more: ['The IRGC Navy said it hit the LPG carrier NV Sunshine in the southern Strait of Hormuz.', 'UKMTO: a vessel was hit by an unknown projectile 13 nautical miles east of Fujairah.'] },
+  { ir: false, name: 'Yemen conflict', scope: 'The war in Yemen and around it: the fronts, the Houthis\' attacks on Saudi Arabia, the Red Sea and Bab al-Mandab.', city: 'Sanaa', live: true, lead: 'Government forces said they took full control of Mayun Island and Bab al-Mandab.', more: ['Three people were killed in a Houthi attack on Riyadh\'s King Khalid airport, Saudi authorities said.', 'Air strikes hit communications sites in Belad al-Rus and Arhab, Al Mayadeen reported.'] },
+];
+const MAST = `<div class="mast"><span class="burger"></span><div><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div><span></span></div>`;
+const ABOUT = `<div class="about"><p>Live desks on the region's wars, written from open sources: what each side says, in its own words, and where it was said. <a href="#">How we work →</a></p></div>`;
+const HOW = `<div class="how"><div><b>Every side, named</b>Each report says who reports it: government, Houthi, Iranian, Israeli, Gulf, US or international.</div><div><b>The original first</b>A statement comes from whoever made it, and news from the country it happened in. Another outlet's retelling is used only when the original cannot be found.</div><div><b>Claims are claims</b>Nothing is stated as fact on one side's word. The desk says who said it.</div></div><div class="how-foot"><span>Free, with no account. Sources are read every few minutes.</span><a href="#">Methodology and sources →</a></div>`;
+const status = (d) => `<span class="pill ${d.live ? '' : 'soon'}"><i></i>${d.live ? 'Live' : 'Being built'}</span>`;
+const clock = (d) => `<span class="clock"><small>${d.city}</small>16:16</span>`;
+
+const H1 = () => `${MAST}${ABOUT}<div class="decks" style="margin-top:14px;border-top:1px solid var(--line)">${DESKS.map((d) => `<article class="deck"><div class="band">${FLAG(d.ir)}</div>
+  <div class="hd"><span class="nm">${d.name}</span>${status(d)}</div>
+  <p class="scope" style="margin:0">${d.scope}</p>
+  <p class="lead">${d.lead}</p>
+  <div class="ft">${clock(d)}<a class="go" href="#">Open the desk →</a></div></article>`).join('')}
+  <div class="next">Next desks: Lebanon, Gaza. Each opens here when it is ready.</div></div>${HOW}`;
+
+const H2 = (id) => `${MAST}${ABOUT}<div class="mapwrap" style="margin-top:14px;border-top:1px solid var(--line)"><div class="map" id="${id}"></div><div class="side">${DESKS.map((d) => `<a class="dc" href="#"><div class="band" style="height:22px">${FLAG(d.ir)}</div>
+  <div class="hd"><span class="nm">${d.name}</span>${status(d)}</div><p class="lead">${d.lead}</p><div class="hd">${clock(d)}<span class="go">Open →</span></div></a>`).join('')}
+  <div class="key"><span><i style="background:#2fbf55"></i>Iran desk</span><span><i style="background:#e0313f"></i>Yemen desk</span><span>Latest attacks, last 24 hours. A tap opens the desk on that place.</span></div></div></div>${HOW}`;
+
+const H3 = () => `${MAST}${ABOUT}<div class="idx" style="margin-top:14px;border-top:1px solid var(--line)">${DESKS.map((d) => `<div class="row"><div><div class="nm">${d.name}</div><div class="mini">${FLAG(d.ir)}</div><p class="scope">${d.scope}</p></div>
+  <ul><li>${d.lead}</li>${d.more.map((m) => `<li>${m}</li>`).join('')}</ul>
+  <div class="r">${status(d)}${clock(d)}<a class="go" href="#">Open →</a></div></div>`).join('')}</div>${HOW}`;
+
+const OPTS = [
+  ['H1', 'H1 · The desks first', 'Under the masthead, one line on what the site is. Then the desks side by side, as large cards. Each card has its flag band (A3), the desk\'s name, a line on what it covers, its latest development, and the capital\'s clock. The coming desks are named underneath. At the foot, three lines on how the site works, and a link to the methodology.', H1],
+  ['H2', 'H2 · One map, the desks beside it (my pick)', 'The same line on what the site is. Then one map of the region: each desk\'s country is tinted in its flag\'s colour, and the latest attacks show as pins in the desk\'s colour. A pin or a country opens that desk there. The desks are listed beside the map, each with its latest development. On a phone, the map sits above the desks.', H2],
+  ['H3', 'H3 · The index', 'Text only, quickest to read: one row per desk with its latest three developments, its clock and a link. CrisisWatch\'s plain style, but live.', H3],
+];
+let html = '';
+for (const [k, t, d] of OPTS) {
+  html += `<section class="opt" id="${k}"><h2>${t}</h2><p>${d}</p><div class="views">
+    <div><div class="cap">PC</div><div class="frame">${OPTS.find((o) => o[0] === k)[3](`${k}-pc`)}</div></div>
+    <div><div class="cap">Phone</div><div class="frame">${OPTS.find((o) => o[0] === k)[3](`${k}-ph`)}</div></div></div></section>`;
+}
+document.getElementById('opts').innerHTML = html;
+
+// The map: real countries (world-atlas), the desks' countries tinted, example pins.
+const PINS = [
+  [26.57, 56.25, 'ir', 'Strait of Hormuz'], [25.12, 56.6, 'ir', 'East of Fujairah'], [27.18, 56.27, 'ir', 'Bandar Abbas'], [35.69, 51.39, 'ir', 'Tehran'], [32.65, 51.67, 'ir', 'Isfahan'], [33.27, 35.2, 'ir', 'Tyre'],
+  [15.35, 44.2, 'ye', 'Sanaa'], [14.8, 42.95, 'ye', 'Hodeidah'], [15.46, 45.33, 'ye', 'Marib'], [12.58, 43.33, 'ye', 'Bab al-Mandab'], [24.96, 46.7, 'ye', 'Riyadh airport'], [12.79, 45.03, 'ye', 'Aden'],
+];
+const COL = { ir: '#2fbf55', ye: '#e0313f' };
+fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json').then((r) => r.json()).then((topo) => {
+  const geo = topojson.feature(topo, topo.objects.countries);
+  for (const id of ['H2-pc', 'H2-ph']) {
+    const el = document.getElementById(id);
+    const map = L.map(el, { zoomControl: false, attributionControl: false, scrollWheelZoom: false }).setView([24, 47], id.endsWith('ph') ? 4 : 5);
+    L.geoJSON(geo, {
+      style: (f) => {
+        const n = f.properties.name;
+        if (n === 'Iran') return { color: '#2fbf55', weight: 1.4, fillColor: '#239f40', fillOpacity: 0.22 };
+        if (n === 'Yemen') return { color: '#e0313f', weight: 1.4, fillColor: '#ce1126', fillOpacity: 0.22 };
+        return { color: '#4a423d', weight: 0.7, fillColor: '#2a2522', fillOpacity: 1 };
+      },
+    }).addTo(map);
+    for (const [lat, lng, desk, name] of PINS) L.circleMarker([lat, lng], { radius: 5.5, color: '#000', weight: 1, fillColor: COL[desk], fillOpacity: 0.95 }).bindTooltip(name).addTo(map);
+    L.marker([32.4, 54.2], { icon: L.divIcon({ className: '', html: '<span class="lbl">Iran desk →</span>' }) }).addTo(map);
+    L.marker([16.2, 47.2], { icon: L.divIcon({ className: '', html: '<span class="lbl">Yemen desk →</span>' }) }).addTo(map);
+    if (id.endsWith('pc')) map.fitBounds([[11.5, 34], [38.5, 61]]);
+    else map.fitBounds([[11.5, 38], [38.5, 60]]);
+  }
+});
+</script>
+</body>
+</html>

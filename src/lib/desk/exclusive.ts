@@ -100,8 +100,16 @@ const PUBLIC = /\b(?:(?:said|says|added|stated|announced|noted) in (?:a|an|its|h
 /** Words given to the outlet itself: an interview, a statement made to it. */
 const TO_OUTLET = /\b(?:(?:exclusive|phone|telephone) interview|in an interview|interviewed by|(?:told|tells|telling|spoke to|speaking to|spoke with|speaking with|said to|exclusively to)\s+(?!reporters|journalists|a news|a press|lawmakers|parliament)(?:the\s+)?[A-Z])|(?:حديث|حديثه|حديثها|تصريح|تصريحات|تصريحه|تصريحاتها?)\s+(?:خاص(?:ة)?\s+)?(?:لـ|ل\s*«|مع)|(?:مقابلة|حوار|لقاء)\s+(?:خاص(?:ة)?\s+)?(?:مع|لـ|أجرته|أجرتها)|خاص(?:ة)?\s+(?:لـ|ب)\s*[«"“]|حصري(?:اً|ا)?\s+لـ|(?:أبلغ|أبلغت|أخبر|أخبرت)\s/;
 
+/**
+ * Channels that pass on what others post: what they carry is never their own
+ * exclusive, whatever the post says (9 Oct: Ali Bk's "Saudi sources:" and
+ * Clash Report's posts went out labelled exclusive).
+ */
+const PASSERS_ON = /^(?:Ali Bk|Clash Report|OSINT Hexagone|Megatron|Sentdefender|Visegrad24|Faytuks(?: News)?)$/i;
+
 /** Is this the outlet's own exclusive? `source` is the outlet carrying it. */
 export function isExclusive(text: string, source: string): boolean {
+  if (PASSERS_ON.test(String(source || "").trim())) return false;
   // "Exclusive footage" is a clip, not the outlet's own reporting: Alfaqaar's
   // "مشاهد حصرية" of the Khurais fire went out as an exclusive (7 Oct 10:30).
   const t = String(text || "")

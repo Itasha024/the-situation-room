@@ -64,3 +64,9 @@ test("Al-Akhbar's morning exclusive on Telegram, with the outlet as the verb's o
   // "the news" as a plain word is not the outlet.
   assert.equal(isExclusive("أفادت مصادر محلية بأن الأخبار الواردة من صعدة تتحدث عن غارات", "Al-Akhbar"), false);
 });
+
+test("a channel that passes on others' posts never has an exclusive of its own (9 Oct: Ali Bk's 'Saudi sources')", () => {
+  assert.equal(isExclusive("خاص | مصادر سعودية: السعودية لن توقف وقف إطلاق النار حتى تستعيد الحكومة كل المناطق", "Ali Bk"), false);
+  assert.equal(isExclusive("EXCLUSIVE: Saudi sources say the kingdom will not halt", "Clash Report"), false);
+  assert.equal(isExclusive("خاص | مصادر سعودية: السعودية لن توقف وقف إطلاق النار", "Sky News Arabia"), true);
+});

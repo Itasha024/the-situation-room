@@ -217,3 +217,38 @@ const TALLY =
 export function tallyNotEvent(headline: string): boolean {
   return TALLY.test(headline);
 }
+
+/**
+ * Which attacks the Iran desk's map carries (user, 9 Oct), by who acted and
+ * where it landed:
+ * - Iran and its axis (Hezbollah, the Iraqi and Syrian militias): anywhere
+ *   outside Iran, Kurdish Iraq and Israel from Syria too. Inside Iran it is
+ *   Iran's own unrest, never this map, save its air defence at work.
+ * - The US, Israel and the Gulf states: in Iran, Iraq and the seas; Israel in
+ *   Lebanon too. Israel in Syria and Gaza is not this war's map.
+ * - The Houthis: the Yemen desk's map.
+ * - Not told who: at sea, or a strike or blast that is no police matter.
+ * Never a fly-over, a round-up of attacks, a count of the dead with no attack,
+ * or a tally over days.
+ */
+const NOT_AN_ATTACK =
+  /\b(?:fl(?:y|ies|ew|ying)\s+(?:low\s+)?over|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?)\b/i;
+const ROUNDUP =
+  /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)/i;
+const INTERNAL =
+  /\b(?:police|roadside|gunmen|militants?|Jaish al-Adl|PJAK|PKK|Komala|protest(?:s|ers)?|riots?|unrest|clash(?:es)?|security forces|border guards?|assassinat\w*|executed|arrest(?:s|ed)?)\b/i;
+const AIR_DEFENCE = /\b(?:intercept\w*|air defen[cs]es?|shot down|shoots down|downed|downs)\b/i;
+const AXIS = new Set(["iran", "hezbollah", "iraqi_militias"]);
+const PURSUERS: Record<string, Set<string>> = {
+  us: new Set(["Iran", "Iraq", "sea"]),
+  gulf: new Set(["Iran", "Iraq", "sea"]),
+  israel: new Set(["Iran", "Iraq", "Lebanon", "sea"]),
+};
+export function iranPinAllowed(actor: string | null | undefined, place: Pick<IranPlace, "country">, headline: string): boolean {
+  const a = String(actor || "unclear");
+  if (a === "houthi" || NOT_AN_ATTACK.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
+  if (place.country === "Yemen" || place.country === "Gaza" || place.country === "Palestine") return false;
+  if (AXIS.has(a)) return place.country !== "Iran" || (a === "iran" && AIR_DEFENCE.test(headline) && !INTERNAL.test(headline));
+  if (PURSUERS[a]) return PURSUERS[a].has(place.country);
+  return place.country !== "Syria" && !INTERNAL.test(headline);
+}

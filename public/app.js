@@ -7112,6 +7112,7 @@ function bootOtherDesk(el) {
   if (document.readyState === 'complete') setTimeout(again, 400);
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
   iranPins.drawn = '';
+  renderIranLegend();
   loadIranPins();
 }
 
@@ -7147,16 +7148,28 @@ function startIranFeed() {
 }
 /*
  * The Iran desk's map (Round 30 stage 6): a pin for every attack card, in the
- * colour of who acted (the legend's six groups; anyone else grey), its note
- * the card's. The Houthis' own war is the Yemen desk's map. "Show on map" on
- * a card flies the map to its pin and opens the note.
+ * colour of who acted (the legend's groups; anyone else grey), its note the
+ * card's. The Houthis' own war is the Yemen desk's map. "Show on map" on a
+ * card flies the map to its pin and opens the note.
+ * User, 9 Oct: a plain dot in its side's colour (no ship or strike symbol;
+ * this is not the Yemen desk), Iran red, the legend ticked on and off as the
+ * Yemen desk's, the note only the report, one pin per event.
  */
-const IRAN_PIN_INK = { iran: '#16a34a', hezbollah: '#eab308', iraqi_militias: '#f97316', us: '#2563eb', israel: '#60a5fa', gulf: '#a855f7' };
+const IRAN_PIN_SIDES = [
+  ['iran', '#dc2626', 'Iran'],
+  ['hezbollah', '#eab308', 'Hezbollah'],
+  ['iraqi_militias', '#f97316', 'Iraqi and Syrian militias'],
+  ['us', '#2563eb', 'US'],
+  ['israel', '#60a5fa', 'Israel'],
+  ['gulf', '#a855f7', 'Gulf states'],
+  ['other', '#94a3b8', 'Not stated'],
+];
+const IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));
 const IRAN_MAP_FROM = '2026-02-28';
-const iranPins = { layer: null, byFp: new Map(), drawn: '' };
+const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), collapsed: false };
+const iranSideOf = (ev) => (IRAN_PIN_INK[ev.actor] ? ev.actor : 'other');
 function iranPinShown(ev) {
   if (ev.actor === 'houthi') return false;
-  if (IRAN_PIN_INK[ev.actor]) return true;
   return !(Array.isArray(ev.desks) && ev.desks.includes('yemen'));
 }
 async function loadIranPins() {
@@ -7165,36 +7178,96 @@ async function loadIranPins() {
     const res = await fetch(`/api/desk?desk=iran&since=${IRAN_MAP_FROM}`, { cache: 'no-cache' });
     if (!res.ok) return;
     const d = await res.json();
-    drawIranPins((d.events || []).filter(iranPinShown));
+    iranPins.events = (d.events || []).filter(iranPinShown);
+    drawIranPins();
   } catch (e) { console.warn('iran pins', e); }
 }
-function drawIranPins(events) {
-  const key = events.map((e) => e.fp).join('|');
+function renderIranLegend() {
+  const legend = document.getElementById('legend');
+  if (!legend) return;
+  const counts = {};
+  for (const ev of iranPins.events) counts[iranSideOf(ev)] = (counts[iranSideOf(ev)] || 0) + 1;
+  // A white tick, or a near-black one on a light swatch, as on the Yemen legend.
+  const ink = (hex) => {
+    const h = hex.replace('#', '');
+    const lin = (i) => { const c = parseInt(h.slice(i, i + 2), 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+    const lum = 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
+    return (lum + 0.05) / 0.0625 > 1.05 / (lum + 0.05) ? ' ink-dark' : '';
+  };
+  const rows = IRAN_PIN_SIDES.filter(([k]) => k !== 'other' || counts.other).map(([k, c, n]) =>
+    `<button type="button" class="leg-item${iranPins.on[k] ? ' on' : ''}" data-side="${k}" aria-pressed="${iranPins.on[k] ? 'true' : 'false'}"><span class="sw${ink(c)}" style="background:${c}"><span class="tick">✓</span></span>${escapeHtml(n)}</button>`).join('');
+  legend.classList.toggle('collapsed', iranPins.collapsed);
+  legend.innerHTML = `
+    <div class="leg-head">
+      <span class="leg-title">Attacks legend</span>
+      <button type="button" class="leg-collapse" aria-label="${iranPins.collapsed ? 'Expand legend' : 'Collapse legend'}" aria-expanded="${iranPins.collapsed ? 'false' : 'true'}">${iranPins.collapsed ? '▸' : '▾'}</button>
+    </div>
+    <div class="leg-body">
+      <p class="leg-hint">Tick to show, untick to hide.</p>
+      ${rows}
+    </div>`;
+  legend.querySelector('.leg-collapse').onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); iranPins.collapsed = !iranPins.collapsed; renderIranLegend(); };
+  legend.querySelectorAll('.leg-item').forEach((b) => {
+    b.onclick = (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      iranPins.on[b.dataset.side] = !iranPins.on[b.dataset.side];
+      drawIranPins();
+    };
+  });
+  try { L.DomEvent.disableClickPropagation(legend); L.DomEvent.disableScrollPropagation(legend); } catch (e) {}
+}
+/** The note: the report as the card tells it, its time and place, its source. Nothing more to open. */
+function iranPopupHtml(ev) {
+  const head = String(ev.label || '').trim() || headlineFrom(ev.text || '');
+  const body = cleanBody(ev.text || '');
+  let anchors = sourceAnchors(ev.source || ev.sources || '', ev.url || '');
+  if (!anchors && ev.url && !isHomepageOrSectionUrl(ev.url)) {
+    anchors = `<a class="src-link" href="${escapeHtml(ev.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(sourceOf(ev)) || hostLabelFromUrl(ev.url) || 'Read the report')}</a>`;
+  }
+  const extra = body && body.length > head.length + 24 && !body.startsWith(head.slice(0, 60)) ? `<p class="pop-body">${escapeHtml(body)}</p>` : '';
+  return `<p class="pop-h">${escapeHtml(head)}</p>
+    <p class="pop-meta">${escapeHtml(fmtStamp(ev.at))}${ev.place ? ' · ' + escapeHtml(T(ev.place)) : ''}</p>
+    ${extra}
+    ${anchors ? `<p class="pop-src">Source: ${anchors}</p>` : ''}
+    ${mediaBlock(ev.media, true)}`;
+}
+function drawIranPins() {
+  renderIranLegend();
+  const shown = iranPins.events.filter((ev) => iranPins.on[iranSideOf(ev)] !== false);
+  const key = shown.map((e) => e.fp).join('|');
   if (!map || key === iranPins.drawn) return;
   iranPins.drawn = key;
   if (iranPins.layer) { try { map.removeLayer(iranPins.layer); } catch (e) {} }
   iranPins.layer = L.layerGroup().addTo(map);
   iranPins.byFp = new Map();
-  for (const ev of events) {
-    const cat = ['strike', 'combat', 'vessel', 'port'].includes(ev.type) ? ev.type : 'strike';
+  // One event, one pin: the Yemen desk's rule (same kind, 25 km, 6 hours, most telling words shared).
+  const all = shown.map((ev) => ({ ...ev, mapCat: ['strike', 'combat', 'vessel', 'port'].includes(ev.type) ? ev.type : 'strike' }))
+    .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  const kept = oneEventOnePin(all);
+  for (const ev of kept) {
     const ageH = (Date.now() - new Date(ev.at).getTime()) / 3600000;
-    const ink = IRAN_PIN_INK[ev.actor] || '#94a3b8';
     const icon = L.divIcon({
-      className: 'ev-wrap',
-      html: eventIconHtml(cat, ageH <= 6 ? ' fresh' : '', escapeHtml(ev.label || '')).replace('<div class="ev ', `<div style="--ev-ink:${ink}" class="ev `),
-      iconSize: [34, 42],
-      iconAnchor: [17, 40],
+      className: 'ir-dot-wrap',
+      html: `<span class="ir-dot${ageH <= 6 ? ' fresh' : ''}" style="--ink:${IRAN_PIN_INK[iranSideOf(ev)]}" title="${escapeHtml(ev.label || '')}"></span>`,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
     });
     const m = L.marker([ev.lat, ev.lng], { icon, zIndexOffset: Math.round(1000 - ageH), riseOnHover: true })
-      .bindPopup(popupHtml({ ...ev, mapCat: cat }), { maxWidth: 300, maxHeight: 360, autoPan: true });
+      .bindPopup(iranPopupHtml(ev), { maxWidth: 300, maxHeight: 360, autoPan: true });
     m.addTo(iranPins.layer);
-    if (!ev.mapOnly) {
-      iranPins.byFp.set(ev.fp, m);
-      mappableByFp.set(ev.fp, { ...ev, mapCat: cat });
+    iranPins.byFp.set(String(ev.fp).split('-pin-')[0], m);
+  }
+  // A card whose pin was folded into its twin's shows that pin.
+  for (const ev of all) {
+    const base = String(ev.fp).split('-pin-')[0];
+    if (!iranPins.byFp.has(base)) {
+      const twin = kept.find((p) => p.mapCat === ev.mapCat && Math.abs(Date.parse(p.at) - Date.parse(ev.at)) <= 6 * 3600e3 && twinKm(p, ev) <= 25);
+      if (twin) iranPins.byFp.set(base, iranPins.byFp.get(String(twin.fp).split('-pin-')[0]));
     }
+    if (!ev.mapOnly && iranPins.byFp.has(base)) mappableByFp.set(ev.fp, ev);
   }
   const chip = document.getElementById('map-chip');
-  if (chip) chip.textContent = events.length ? `${events.length} attacks on the map. Earlier ones, back to 28 Feb 2026, are being added.` : 'Every attack since 28 Feb 2026: coming soon';
+  if (chip) chip.textContent = kept.length ? `${kept.length} attacks on the map. Earlier ones, back to 28 Feb 2026, are being added.` : 'Every attack since 28 Feb 2026: coming soon';
   renderIranFeed();
 }
 function showIranPin(fp) {

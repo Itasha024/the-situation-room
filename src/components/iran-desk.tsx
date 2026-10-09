@@ -83,7 +83,7 @@ const IRAN_HTML = `
       <div class="leg-head"><span class="leg-title">Attacks legend</span></div>
       <div class="leg-body">
         ${[
-          ["#16a34a", "Iran"],
+          ["#dc2626", "Iran"],
           ["#eab308", "Hezbollah"],
           ["#f97316", "Iraqi and Syrian militias"],
           ["#2563eb", "US"],

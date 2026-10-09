@@ -35,3 +35,28 @@ test("a province is no pin, and a count over days is no one attack (9 Oct dry ru
   assert.equal(tallyNotEvent("Record attacks on tankers and gas carriers in Strait of Hormuz since war began"), true);
   assert.equal(tallyNotEvent("Ship targeted in Strait of Hormuz, fire breaks out on board"), false);
 });
+
+test("the map's scope (user, 9 Oct): who acted, where it landed, and never a fly-over, a round-up or Iran's own unrest", async () => {
+  const { iranPinAllowed } = await import("./iran-places.ts");
+  const at = (country: string) => ({ country });
+  // The axis anywhere outside Iran, the Kurds in Iraq and Israel from Syria too.
+  assert.equal(iranPinAllowed("iran", at("Iraq"), "Iranian drones strike terrorist targets in Rizgary, Erbil, Iraqi Kurdistan"), true);
+  assert.equal(iranPinAllowed("iraqi_militias", at("Israel"), "Militia drone from Syria hits Eilat"), true);
+  assert.equal(iranPinAllowed("hezbollah", at("Lebanon"), "Hezbollah rockets hit Israeli troops in Khiam"), true);
+  // Inside Iran: no internal clash; its air defence at work, yes.
+  assert.equal(iranPinAllowed("iran", at("Iran"), "IRGC kills militants in clash near Zahedan"), false);
+  assert.equal(iranPinAllowed("iran", at("Iran"), "Iran's air defence intercepts drones over Tabriz"), true);
+  assert.equal(iranPinAllowed("unclear", at("Iran"), "Roadside bomb explodes on police vehicle route in Zahedan"), false);
+  assert.equal(iranPinAllowed("unclear", at("Iran"), "Explosions heard in Bandar Abbas between 0900 and 0910 local time"), true);
+  // The US, Israel and the Gulf: Iran, Iraq, the seas; Israel in Lebanon too, never Syria or Gaza.
+  assert.equal(iranPinAllowed("israel", at("Lebanon"), "Israeli strike hits Mansouri in Tyre district, south Lebanon"), true);
+  assert.equal(iranPinAllowed("israel", at("Syria"), "Israeli strike hits Damascus"), false);
+  assert.equal(iranPinAllowed("us", at("Iraq"), "US strike hits Kataib Hezbollah at Jurf al-Sakhar"), true);
+  assert.equal(iranPinAllowed("houthi", at("sea"), "Houthis strike a tanker"), false);
+  // Not an attack, or no one attack.
+  assert.equal(iranPinAllowed("israel", at("Lebanon"), "Israeli drones fly low over Beirut and suburbs"), false);
+  assert.equal(iranPinAllowed("unclear", at("Iran"), "Jet activity reported over western Tehran"), false);
+  assert.equal(iranPinAllowed("unclear", at("sea"), "Multiple tanker attacks reported in Strait of Hormuz and Red Sea"), false);
+  assert.equal(iranPinAllowed("iran", at("Iran"), "Tehran emergency says 10 wounded in air incidents on 8 October"), false);
+  assert.equal(iranPinAllowed("unclear", at("sea"), "Ship targeted in Strait of Hormuz, fire breaks out on board"), true);
+});

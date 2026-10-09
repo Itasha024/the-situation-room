@@ -1134,3 +1134,9 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 /* A group picked: its × clears the filter, unturned and a touch larger to hit. */
 .lf-btn.on svg{transform:none!important;width:12px;height:12px;padding:2px;margin:-2px -4px -2px 0;box-sizing:content-box;border-radius:50%}
 .lf-btn.on svg:hover{background:var(--t-line-strong,#2a3a4e)}
+/* The Iran desk's pins (user, 9 Oct): a plain dot in its side's colour, no symbol. */
+.ir-dot-wrap{background:none;border:0}
+.ir-dot{display:block;width:14px;height:14px;margin:1px;border-radius:50%;background:var(--ink,#94a3b8);border:2px solid #fff;box-shadow:0 0 0 1px #0008,0 1px 3px #0006;box-sizing:border-box}
+.ir-dot.fresh{animation:ir-dot-pulse 1.8s ease-out infinite}
+@keyframes ir-dot-pulse{0%{box-shadow:0 0 0 1px #0008,0 0 0 0 var(--ink)}100%{box-shadow:0 0 0 1px #0008,0 0 0 9px transparent}}
+.leaflet-popup-content .pop-body{margin:.4rem 0 0;font-size:.76rem;line-height:1.4;color:var(--t-on-light,#1a2330);max-height:180px;overflow:auto}

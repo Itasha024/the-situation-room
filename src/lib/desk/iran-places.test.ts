@@ -24,6 +24,10 @@ test("common words and the Quds Force are no places; a longer name is not also i
   assert.deepEqual(iranPlacesIn("نشر صور الهجوم، فيلق القدس").map((p) => p.name), []);
   assert.deepEqual(iranPlacesIn("Kharg Island oil terminal").map((p) => p.name), ["Kharg Island"]);
   assert.deepEqual(iranPlacesIn("Kermanshah base hit").map((p) => p.name), ["Kermanshah"]);
+  // "العديد من" is "many of" (IDF Arabic, 9 Oct research): the base only by name.
+  assert.deepEqual(iranPlacesIn("دمرت قوات الفرقة العديد من البنى التحتية في جنوب لبنان").map((p) => p.name), []);
+  assert.deepEqual(iranPlacesIn("صواريخ نحو قاعدة العديد في قطر").map((p) => p.name), ["Al Udeid Air Base"]);
+  assert.deepEqual(iranPlacesIn("الذي شغل منصب القائم بأعمال قائد فيلق لبنان").map((p) => p.name), []);
 });
 
 test("a province is no pin, and a count over days is no one attack (9 Oct dry run)", async () => {

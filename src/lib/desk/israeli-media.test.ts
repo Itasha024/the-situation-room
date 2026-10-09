@@ -57,3 +57,14 @@ test("Israeli media: a foreign government's words or acts are a relay; Israel's 
   assert.ok(passesIsraeliMediaGate("גורמים ביטחוניים: איראן מעבירה טילים לעיראק"));
   assert.ok(passesIsraeliMediaGate("נתניהו כינס את הקבינט לדיון על איראן"));
 });
+
+test("Lebanese media (user, 9 Oct): Lebanon's war with Israel passes, the rest of Lebanon's news does not", async () => {
+  const { passesLebaneseMediaGate } = await import("./iran-reader.ts");
+  const { LEBANESE_MEDIA } = await import("./iran-sources.ts");
+  for (const n of ["Al Jadeed", "MTV Lebanon", "LBCI", "NBN", "Al-Manar", "Bint Jbeil News", "Ali Shoaib's page"]) assert.ok(LEBANESE_MEDIA.has(n), n);
+  assert.equal(passesLebaneseMediaGate("آخر الاعتداءات: قصف مدفعي معادٍ استهدف بلدة المنصوري ووادي السلوقي"), true);
+  assert.equal(passesLebaneseMediaGate("غارة من مسيّرة إسرائيلية على سيارة في بلدة عيترون"), true);
+  assert.equal(passesLebaneseMediaGate("الوفد اللبناني إلى مفاوضات الناقورة يلتقي الموفدة الأميركية"), true);
+  assert.equal(passesLebaneseMediaGate("أطلس بطلاً للدرجة الثانية بكرة السلة بعد حسم السلسلة النهائية 3-1 أمام الليدرز"), false);
+  assert.equal(passesLebaneseMediaGate("أوعز رئيس المحكمة العسكرية إلى الشرطة العسكرية بمواصلة التحقيقات"), false);
+});

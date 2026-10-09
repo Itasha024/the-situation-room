@@ -289,6 +289,18 @@ export function passesIsraeliMediaGate(text: string): boolean {
 }
 
 /**
+ * Lebanon's war with Israel in Lebanese outlets' words (user, 9 Oct): Israel's
+ * strikes and raids, Hezbollah, the talks, the ceasefire and its monitors.
+ */
+const LEBANON_WAR = /إسرائيل|اسرائيل|الاحتلال|العدو|معادي|معادٍ|معادية|غارة|غارات|مسيّرة|مسيرة|محلقة|قصف|قذائف|قنابل|توغل|تفجير|المقاومة|حزب الله|مفاوضات|التفاوض|الميكانيزم|الناقورة|اليونيفيل|وقف إطلاق النار|وقف النار|الخط الأزرق|أورتاغوس|إيران|طهران/;
+
+/** A Lebanese outlet's item: about the Iran war, or Lebanon's war with Israel, never the rest of Lebanon's news. */
+export function passesLebaneseMediaGate(text: string): boolean {
+  const t = String(text || "");
+  return isIranWar(t) || LEBANON_WAR.test(t);
+}
+
+/**
  * The sources' loaded words for Israel and Iran, reworded on the Iran desk's
  * copy (audit of 8 Oct: "Islamic Iran's capability", "the Israel regime" went
  * out). "The Iranian regime" is the site's own wording and stays (user, 8 Oct).

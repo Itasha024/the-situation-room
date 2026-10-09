@@ -8,7 +8,8 @@
  * A pin goes only on a place the source's own text names (grounded), never on
  * a country or a province, and never on a word that is also a common word in
  * the source's language ("صور" is "pictures", "القدس" is the Quds Force too):
- * those places are matched by their English name only.
+ * those places are matched by their English name only, or with the word that
+ * makes them a place ("العديد" is "many", "القائم" is "the acting": only "قاعدة العديد", "مدينة القائم").
  *
  * Coordinates checked against OpenStreetMap's Nominatim (9 Oct 2026).
  */
@@ -120,7 +121,7 @@ export const IRAN_PLACES: IranPlace[] = [
   P("Sulaymaniyah", 35.5613, 45.4374, "Iraq", "city", ["السليمانية", "سلیمانیه"]),
   P("Kirkuk", 35.4681, 44.3922, "Iraq", "city", ["كركوك", "کرکوک"]),
   P("Jurf al-Sakhar", 32.87, 44.11, "Iraq", "site", ["Jurf al-Nasr", "جرف الصخر", "جرف النصر"]),
-  P("Al-Qaim", 34.37, 41.09, "Iraq", "city", ["القائم"]),
+  P("Al-Qaim", 34.37, 41.09, "Iraq", "city", ["Qaim", "مدينة القائم", "قضاء القائم", "منفذ القائم"]),
   // Syria and Jordan.
   P("Damascus", 33.5138, 36.2765, "Syria", "city", ["دمشق"]),
   P("Deir ez-Zor", 35.3359, 40.1408, "Syria", "city", ["Deir ez-Zur", "Deir al-Zour", "دير الزور"]),
@@ -138,7 +139,7 @@ export const IRAN_PLACES: IranPlace[] = [
   P("Al Dhafra Air Base", 24.2482, 54.5475, "UAE", "base", ["Al Dhafra", "الظفرة"]),
   P("Ruwais", 24.11, 52.73, "UAE", "site", ["الرويس"]),
   P("Doha", 25.2854, 51.531, "Qatar", "city", ["الدوحة", "دوحه"]),
-  P("Al Udeid Air Base", 25.1173, 51.315, "Qatar", "base", ["Al Udeid", "Al-Udeid", "العديد", "العدید"]),
+  P("Al Udeid Air Base", 25.1173, 51.315, "Qatar", "base", ["Al Udeid", "Al-Udeid", "قاعدة العديد", "پایگاه العدید", "پایگاه العديد"]),
   P("Ras Laffan", 25.914, 51.538, "Qatar", "site", ["راس لفان", "رأس لفان"]),
   P("Manama", 26.2285, 50.586, "Bahrain", "city", ["المنامة"]),
   P("Kuwait City", 29.3759, 47.9774, "Kuwait", "city", ["مدينة الكويت"]),

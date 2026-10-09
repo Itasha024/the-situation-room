@@ -14,8 +14,8 @@
  * services before Gemini, and Gemini's lite models only while today's use of
  * them leaves the Yemen reader its share.
  */
-import { IRAN_RSS, IRAN_TG, IRAN_X, ISRAELI_MEDIA, type IranLean } from "./desk/iran-sources.ts";
-import { isIranWar, passesIranOwnGate, passesIsraeliMediaGate } from "./desk/iran-reader.ts";
+import { IRAN_RSS, IRAN_TG, IRAN_X, ISRAELI_MEDIA, LEBANESE_MEDIA, type IranLean } from "./desk/iran-sources.ts";
+import { isIranWar, passesIranOwnGate, passesIsraeliMediaGate, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
 import { type Candidate, IRAN_READER, USAGE_KEY, type Usage, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { remember } from "./desk/recent-reads.ts";
@@ -230,11 +230,13 @@ export function toYemen(rows: RawHit[]): RawHit[] {
  * Most of the Iran desk's own sources post about Iran and little else. Israeli
  * media post about everything in Israel and the IAEA about every country's
  * nuclear file: theirs pass on the war itself only, and Israeli media's
- * relays of foreign outlets do not pass (stage 4c).
+ * relays of foreign outlets do not pass (stage 4c). Lebanese media pass on
+ * Lebanon's war with Israel and on Iran's.
  */
 export function passesOwnSourceGate(h: Pick<RawHit, "source" | "title" | "text">): boolean {
   const text = `${h.title ?? ""} ${h.text}`;
   if (ISRAELI_MEDIA.has(h.source)) return passesIsraeliMediaGate(text);
+  if (LEBANESE_MEDIA.has(h.source)) return passesLebaneseMediaGate(text);
   if (h.source === "IAEA") return isIranWar(text);
   return passesIranOwnGate(text);
 }

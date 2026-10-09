@@ -30,7 +30,7 @@ export const IRAN_LEAN_LABELS: Record<IranLean, string> = {
  * reporting on the Iran war is kept; a report that only repeats a foreign
  * outlet is dropped (the original is read directly), and exclusives are kept.
  */
-export type IranSource = { id: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; note?: string; israeliMedia?: true };
+export type IranSource = { id: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; note?: string; israeliMedia?: true; lebaneseMedia?: true };
 
 /** Telegram channels the Yemen desk reads that the Iran desk reads too (t.me ids). */
 export const SHARED_TG: Record<string, IranLean> = {
@@ -115,6 +115,17 @@ export const IRAN_TG: IranSource[] = [
   { id: "hazfon1", name: "Hazfon 1", lean: "israel", every: 10, israeliMedia: true },
   // i24's Hebrew site serves only its own app; its channel is public.
   { id: "i24news_he", name: "i24 News", lean: "israel", every: 10, israeliMedia: true },
+  // Lebanese media (user, 9 Oct): Israel's strikes in Lebanon, Hezbollah and the
+  // Israeli-Lebanese talks from Lebanon's own outlets. They post on all of
+  // Lebanon, so only their items on that war pass (passesLebaneseMediaGate).
+  { id: "ALJADEED_NEWS", name: "Al Jadeed", lean: "gulf", every: 5, lebaneseMedia: true },
+  { id: "MTVLebanoNews", name: "MTV Lebanon", lean: "gulf", every: 5, lebaneseMedia: true },
+  { id: "LBCI_NEWS", name: "LBCI", lean: "gulf", every: 5, lebaneseMedia: true },
+  { id: "nbnlive", name: "NBN", lean: "gulf", every: 10, lebaneseMedia: true },
+  { id: "manarbreaking", name: "Al-Manar", lean: "axis", every: 5, lebaneseMedia: true },
+  { id: "bintjbeilnews", name: "Bint Jbeil News", lean: "axis", every: 5, lebaneseMedia: true },
+  // The page kept in the name of Al-Manar's south Lebanon reporter, killed in the war: the day's attacks village by village.
+  { id: "alichoeib1970", name: "Ali Shoaib's page", lean: "axis", every: 10, lebaneseMedia: true },
 ];
 
 /** X accounts the Yemen desk reads that the Iran desk reads too (handles). */
@@ -406,6 +417,7 @@ export const IRAN_NOT_READ: { what: string; why: string }[] = [
 
 /** The display names of the Israeli outlets and reporters (stage 4c). */
 export const ISRAELI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG, ...IRAN_RSS].filter((s) => s.israeliMedia).map((s) => s.name));
+export const LEBANESE_MEDIA: ReadonlySet<string> = new Set(IRAN_TG.filter((s) => s.lebaneseMedia).map((s) => s.name));
 
 /** Every Iran-desk source's filter group, by the source's display name. */
 export function iranLeanOf(name: string): IranLean | undefined {

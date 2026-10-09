@@ -13,6 +13,7 @@
  */
 
 import type { DevMark } from "./prose.ts";
+import type { Ref } from "./refs.ts";
 import type { LiveReport } from "../yemen-scan.server.ts";
 import { alertCities } from "./copies.ts";
 import {
@@ -146,6 +147,9 @@ export type FrontActivity = {
   wounded: number;
   /** One sentence of derived activity, or "" when the window was quiet. */
   line: string;
+  /** The front as numbered points with "[[n]]" marks, and the reports they stand for (refs.ts; user, 9 Oct). */
+  points?: string[];
+  refs?: Ref[];
   /** A front opened for a new cluster of fighting (new-fronts.ts): its map spot. */
   extra?: boolean;
   /** Where an opened front is, under its name (the hand-written fronts carry their own). */
@@ -168,7 +172,7 @@ export type Brief = {
   /** Start of the window the counts cover. */
   windowStart: string;
   windowLabel: string;
-  situation: { line: string; /** The fuller account behind "Read more". */ more?: string; quiet: boolean; /** The model that wrote the prose, when one did. */ model?: string };
+  situation: { line: string; /** The fuller account behind "Read more". */ more?: string; quiet: boolean; /** The model that wrote the prose, when one did. */ model?: string; /** Latest developments as numbered points with "[[n]]" marks, and their reports (refs.ts). */ points?: string[]; refs?: Ref[] };
   /** Where each place the prose names lies, for the page to light it: name -> [lat, lng] (prose-places.ts). */
   places?: Record<string, [number, number]>;
   /** The main developments that happened at a place, for the animated map; only those found. */

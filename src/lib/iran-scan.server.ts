@@ -24,6 +24,7 @@ import { hearable, listenToVideos } from "./desk/listen.ts";
 import { cleanUrl, isGnews, outletFromHost, resolveGoogleNews } from "./desk/gnews.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 import { scanTrump } from "./trump-feed.server.ts";
+import { refreshIranBrief } from "./desk/iran-brief.ts";
 import {
   type DeskPipe,
   shapeCards,
@@ -393,6 +394,8 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   };
   await store.putJson(IRAN_PAYLOAD, payload);
   await store.putJson(STATE_KEY, state);
+  // The 3-hour brief (stage 6): built once its window closes, never held for by the cycle.
+  void refreshIranBrief(store).catch((err) => console.error("[iran-brief]", err instanceof Error ? err.message : err));
   await trump;
   const tookMs = Date.now() - started;
   try {

@@ -31,6 +31,7 @@ import { refreshTimelineNow } from "./timeline-now.ts";
 import { placeKey, placeProse } from "./prose-places.ts";
 import { placesIn } from "./gazetteer.ts";
 import { addMark, cardMarks, type Launch, launchFor, nearAny } from "./dev-marks.ts";
+import { headlinePoints, numberRefs, type Ref } from "./refs.ts";
 
 export const BRIEF_KEY = "brief";
 
@@ -183,6 +184,7 @@ async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof bri
   const proseArgs = {
     previousSituation: saved?.brief.situation?.line || "",
     previousFront: (id: string) => saved?.brief.fronts?.find((p) => p.id === id)?.line || "",
+    previousPoints: (id: string) => pointsOf(saved?.brief.fronts?.find((p) => p.id === id)),
     previousNewsAt: (id: string) => saved?.brief.fronts?.find((p) => p.id === id)?.lastNewsAt || saved?.brief.updatedAt,
     frontsOf: (r: LiveReport) => frontIdsOf(r, extraFronts),
     inArea: (ll: [number, number], id: string) => inFrontArea(ll, id, extraFronts),
@@ -313,6 +315,7 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
   const model = await proseInto(store, next, inWindow, all, {
     previousSituation: brief.situation?.line || "",
     previousFront: (id) => (saved.history?.prevFronts as Record<string, { line?: string }> | undefined)?.[id]?.line || "",
+    previousPoints: (id) => pointsOf((saved.history?.prevFronts as Record<string, { points?: string[]; refs?: Ref[] }> | undefined)?.[id]),
     previousNewsAt: (id) => (saved.history?.prevFronts as Record<string, { lastNewsAt?: string }> | undefined)?.[id]?.lastNewsAt || brief.windowStart,
     frontsOf: (r) => frontIdsOf(r, extraFronts),
     inArea: (ll, id) => inFrontArea(ll, id, extraFronts),
@@ -329,7 +332,7 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
         ...brief,
         // Nobody wrote the overview before: it takes this round's (the headlines when no model answered).
         ...(!brief.situation?.model && next.situation?.line ? { situation: next.situation } : {}),
-        fronts: brief.fronts.map((f) => (isCountedLine(f.line) && better.get(f.id)?.line && !isCountedLine(better.get(f.id)!.line) ? { ...f, line: better.get(f.id)!.line, ...(better.get(f.id)!.map ? { map: better.get(f.id)!.map } : {}) } : f)),
+        fronts: brief.fronts.map((f) => (isCountedLine(f.line) && better.get(f.id)?.line && !isCountedLine(better.get(f.id)!.line) ? { ...f, line: better.get(f.id)!.line, ...pointsOf(better.get(f.id)), ...(better.get(f.id)!.map ? { map: better.get(f.id)!.map } : {}) } : f)),
       };
   if (!keep) {
     // The old maps still follow today's rules: a ship or energy mark no card of the window now draws goes (2 Oct: a round-up's Medina hit at Taiz).
@@ -377,13 +380,23 @@ export function headlinesLine(own: LiveReport[], max = 3): string {
   return topHeadlines(own, max).join(" ");
 }
 
+/** A front's or the overview's points and references, when it has them. */
+function pointsOf(x: { points?: string[]; refs?: Ref[] } | undefined): { points?: string[]; refs?: Ref[] } {
+  return x?.points?.length ? { points: x.points, refs: x.refs ?? [] } : {};
+}
+
 /** The strongest headlines, two that say the same thing kept once. */
 function topHeadlines(reports: LiveReport[], max: number): string[] {
+  return topReports(reports, max).map((r) => `${String(r.summary || "").trim().replace(/[.\s]+$/, "")}.`);
+}
+
+/** The cards behind the strongest headlines. */
+export function topReports(reports: LiveReport[], max: number): LiveReport[] {
   // Events only: a reaction ("Kuwait and Bahrain condemn the attack") is not the news of the update (user, 2 Oct).
   const events = reports.filter((r) => !NOT_EVENT.has(r.type) && !isOther(String(r.summary || "")));
   if (events.length) reports = events;
   const words = (h: string) => new Set(h.toLowerCase().match(/[a-z؀-ۿ]{4,}/g) || []);
-  const kept: { h: string; w: Set<string> }[] = [];
+  const kept: { h: string; w: Set<string>; r: LiveReport }[] = [];
   for (const r of [...reports].sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || b.at.localeCompare(a.at))) {
     const h = String(r.summary || "").trim().replace(/[.\s]+$/, "");
     if (!h) continue;
@@ -393,10 +406,10 @@ function topHeadlines(reports: LiveReport[], max: number): string[] {
       return h.toLowerCase() === k.h.toLowerCase() || shared / Math.max(1, Math.min(w.size, k.w.size)) >= 0.6;
     });
     if (same) continue;
-    kept.push({ h, w });
+    kept.push({ h, w, r });
     if (kept.length >= max) break;
   }
-  return kept.map((k) => `${k.h}.`);
+  return kept.map((k) => k.r);
 }
 
 /**
@@ -418,7 +431,7 @@ async function proseInto(
   brief: Brief,
   inWindow: LiveReport[],
   all: LiveReport[],
-  o: { previousSituation: string; previousFront: (id: string) => string; previousNewsAt: (id: string) => string | undefined; frontsOf: (r: LiveReport) => string[]; inArea: (ll: [number, number], id: string) => boolean; controlLines: string[]; models?: ChainModel[] },
+  o: { previousSituation: string; previousFront: (id: string) => string; previousPoints?: (id: string) => { points?: string[]; refs?: Ref[] }; previousNewsAt: (id: string) => string | undefined; frontsOf: (r: LiveReport) => string[]; inArea: (ll: [number, number], id: string) => boolean; controlLines: string[]; models?: ChainModel[] },
   /** Prose already written (before the hour): only its places and maps are done here. */
   given: Prose | null = null,
 ): Promise<string | null> {
@@ -443,11 +456,14 @@ async function proseInto(
     // Only an answer with the overview counts as written: one without it is asked again.
     if (prose?.situation) model = prose.model || null;
     if (prose?.situation) {
-      brief.situation = { ...brief.situation, line: prose.situation, more: prose.more || undefined, model: prose.model };
+      const refOf = prose.refOf ?? {};
+      const numbered = prose.points?.length ? numberRefs(prose.points, (id) => refOf[id]) : null;
+      brief.situation = { ...brief.situation, line: prose.situation, more: prose.more || undefined, model: prose.model, points: numbered?.points, refs: numbered?.refs };
       devMap = prose.devMap;
     } else {
       const line = headlinesSituation(inWindow);
-      if (line) brief.situation = { ...brief.situation, line, more: undefined, model: undefined };
+      // No writer: the strongest headlines as the points, each with its own card.
+      if (line) brief.situation = { ...brief.situation, line, more: undefined, model: undefined, ...headlinePoints(topReports(inWindow, 4)) };
     }
     for (const f of brief.fronts) {
       const own = inWindow.filter((r) => o.frontsOf(r).includes(f.id));
@@ -457,14 +473,23 @@ async function proseInto(
         // restate it padded it ("air defences remain on alert").
         const prev = o.previousFront(f.id);
         f.line = prev ? keepReported(prev, []) || prev : "";
+        Object.assign(f, o.previousPoints?.(f.id) ?? {});
         f.lastNewsAt = o.previousNewsAt(f.id);
         continue;
       }
       f.lastNewsAt = brief.updatedAt;
+      delete f.points;
+      delete f.refs;
       if (prose?.fronts[f.id]) {
         f.line = keepReported(prose.fronts[f.id], own) || prose.fronts[f.id];
+        const refOf = prose.refOf ?? {};
+        const pts = (prose.frontPoints?.[f.id] ?? []).map((p) => keepReported(p, own)).filter(Boolean);
+        if (pts.length) Object.assign(f, numberRefs(pts, (id) => refOf[id]));
         if (prose.frontMaps[f.id]) frontMaps[f.id] = prose.frontMaps[f.id];
-      } else f.line = headlinesLine(own) || f.line;
+      } else if (own.length) {
+        f.line = headlinesLine(own) || f.line;
+        Object.assign(f, headlinePoints(topReports(own, 3)));
+      }
     }
   } catch (err) {
     console.error("[desk] prose failed:", err instanceof Error ? err.message : err);

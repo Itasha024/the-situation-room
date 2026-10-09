@@ -17,6 +17,7 @@ import { repelAttacker } from "./dev-marks.ts";
 import { outletSide } from "./digest.ts";
 import { CONTROL, CONTROL_AS_OF } from "./control-data.ts";
 import { CADENCE_HOURS } from "./brief.ts";
+import { pointList, type Ref, refOfReport, stripRefs } from "./refs.ts";
 
 const GOV_NAME: Record<string, string> = {
   "YE-TA": "Taiz", "YE-LA": "Lahj", "YE-DA": "Al-Dhale", "YE-MA": "Marib", "YE-JA": "Al-Jawf", "YE-BA": "Al-Bayda",
@@ -55,25 +56,36 @@ export type DevKind = (typeof DEV_KINDS)[number];
 export const DEV_SIDES = ["houthi", "government", "southern", "saudi", "us"] as const;
 export type DevSide = (typeof DEV_SIDES)[number];
 
-export type Prose = { situation: string; /** The fuller account behind "Read more". */ more: string; fronts: Record<string, string>; model?: string; devMap: DevMark[]; frontMaps: Record<string, DevMark[]> };
+export type Prose = {
+  /** The points as plain text, a blank line between them: for the places, the map and the next writer. */
+  situation: string;
+  /** The fuller account behind "Read more" (the old form; the points have none). */
+  more: string;
+  fronts: Record<string, string>;
+  /** The points with the writer's report ids ("[r12]"), for refs.ts to number (user, 9 Oct). */
+  points?: string[];
+  frontPoints?: Record<string, string[]>;
+  /** The report each id stands for. */
+  refOf?: Record<string, Ref>;
+  model?: string;
+  devMap: DevMark[];
+  frontMaps: Record<string, DevMark[]>;
+};
 
 const H = `${CADENCE_HOURS} hours`;
 const SYSTEM = `You are the editor of a live news desk on the current round of the Yemen war (from 13 July 2026, the strike on Sanaa airport: the Houthis against the Yemeni government and the Saudi-led coalition).
-You get the reports published in the last ${H} and the text that stood before. Each report line is: outlet [whose word it is, if only one side reports it] {the front ids it belongs to}: headline — body.
+You get the reports published in the last ${H} and the text that stood before. Each report line is: [its id] outlet [whose word it is, if only one side reports it] {the front ids it belongs to}: headline — body.
 Write in English wire style (Reuters/AP):
-- "situation": the whole conflict in these ${H} SEEN FROM ABOVE, as an editor's overview for a reader with ten seconds: 2-4 short sentences, at most 70 words, most important first within each part (see Order). Say where the war moved and which way: which fronts were active and who gained or lost ground (by front or governorate: "the Marib front", "western Taiz", "the Saudi border"), escalations (attacks on Saudi Arabia, on shipping, big strikes with their deaths), and the big political or military facts (a leader's threat, a mobilisation, talks). Always include the Saudi front when anything happened there.
-  Not tactical: no villages, hills, positions or units, and no list of incidents; fold many incidents into one line about the picture they make ("Houthi forces pressed on the Marib and western Taiz fronts and took ground north of Hays"). Integrate everything important of the ${H}; leave the detail to "situation_more" and the fronts.
-  Never vague either: every sentence names its fronts or regions and who acted; no "multiple fronts", "several fronts", "various areas", "remain targeted", "across several areas", "intense fighting continued".
-  Order: the battle first, seen from above: the ground fronts, then strikes, missiles and drones (on Saudi Arabia and at sea too, and on oil and energy sites). Then, when the reports have them, the sea and energy: attacks on ships and warnings to shipping (UKMTO, naval missions), traffic through Bab al-Mandab and the Red Sea, Saudi oil exports and pipelines, energy sites hit or repaired and what they can do now, with the figure and who gives it. Then, in a paragraph of their own after it, the political, diplomatic and economic facts (threats, mobilisations, talks, statements, the economy). Never mix the two in one paragraph, unless a political fact belongs to a battle sentence (a mobilisation call with the offensive it launched).
-  Split it into short paragraphs by topic, 1-2 sentences each, with a blank line ("\\n\\n") between them.
-- "situation_more": what a reader gets from "Read more" under "situation": the same bird's-eye view one level closer, with the key figures (deaths, what was hit) and the other notable developments "situation" left out, including statements, talks and meetings on the war. 2-5 sentences, at most 120 words, no tactical detail, never repeating a sentence of "situation". "" when there is nothing more. The same order: battle first, then the political, diplomatic and economic facts in their own paragraph. Short paragraphs by topic, with a blank line ("\\n\\n") between them.
-- "fronts": for each front id given, the MAIN DEVELOPMENTS on that front in these ${H}, most important first, in the same way: concrete places and who did what, 2-4 short sentences, never vague. A front is a governorate (or the Bab al-Mandab strait, the Red Sea coast from Mocha to Hodeidah, or Saudi Arabia): say where inside it each thing happened ("in western Taiz, at Al-Wazi'iyah", "north of Marib city"). A front with nothing new gets its current state from the previous text, stated positively.
-- "map": one entry per main development of these ${H} (the ones "situation" sums up) that happened AT a named place, taken from the REPORTS: {"place": the place exactly as written in the report (village, town, district, mountain, Saudi city), "kind": one of capture|advance|fighting|repelled|airstrike|shelling|missile|drone|interception|naval|energy|alert, "side": who acted (the taker, the attacker, the one who struck or fired): houthi|government|southern|saudi|us, "from": for a missile or drone, where it was launched from if the reports say (a place name), else omit}.
+- "points": the latest developments of these ${H}, as a numbered list for a reader with a minute: 3-8 points, each ONE development in 1-2 short sentences (at most 40 words), ordered from the most important to the least. Importance is what changes the war most: a front moving, a big strike and its deaths, attacks on Saudi Arabia, on shipping or on oil and energy sites, a leader's decision or threat, talks. What a leader or government actually said or decided outranks reports of what they might do. Minor or local items come last or are left out. Two reports of one event are one point.
+  Bird's-eye but concrete: every point names its front, governorate or region and who acted ("Houthi forces pressed on the Marib front and took ground north of Hays"); no villages or units unless the point is about that place; never vague ("multiple fronts", "several fronts", "various areas", "remain targeted", "across several areas", "intense fighting continued").
+  After the words each report supports, put that report's id in square brackets, before the full stop: "Saudi airstrikes hit Sanaa airport [r4][r9]." Every point carries at least one id, and only ids from the REPORTS.
+- "fronts": for each front id given, a list of 1-4 points: the main developments on that front in these ${H}, most important first, each 1-2 short sentences with the same ids in square brackets. Concrete places and who did what, never vague. A front is a governorate (or the Bab al-Mandab strait, the Red Sea coast from Mocha to Hodeidah, or Saudi Arabia): say where inside it each thing happened ("in western Taiz, at Al-Wazi'iyah", "north of Marib city"). A front with nothing new gets one point with its current state from the previous text, stated positively, with no id.
+- "map": one entry per main development of these ${H} (the ones "points" give) that happened AT a named place, taken from the REPORTS: {"place": the place exactly as written in the report (village, town, district, mountain, Saudi city), "kind": one of capture|advance|fighting|repelled|airstrike|shelling|missile|drone|interception|naval|energy|alert, "side": who acted (the taker, the attacker, the one who struck or fired): houthi|government|southern|saudi|us, "from": for a missile or drone, where it was launched from if the reports say (a place name), else omit}.
   capture = ground taken; advance = forces moved forward without taking a named place; fighting = clashes with no side gaining; repelled = an attack beaten back (side = the attacker); interception = a missile or drone shot down (place = the target area); naval = an attack on or by a ship; energy = an oil, gas or power site hit (a refinery, pipeline or pump station, oil field, fuel depot, oil terminal; side = the attacker); alert = sirens or an air-raid alert sounded there (side = the side whose attack was feared). Statements, decisions and meetings get no entry. No entry without a named place.
-- "front_maps": the same kind of list for each front id, from that front's paragraph (places as written there).
+- "front_maps": the same kind of list for each front id, from that front's points (places as written there).
 Rules:
 - Only facts in the reports. Never invent a place, number, unit or claim.
-- A front's paragraph uses ONLY reports tagged with that front's id.
+- A front's points use ONLY reports tagged with that front's id.
 - No outlets or spokespeople by name. A report marked [Houthi side only] or [Gov/Saudi side only] is that side's word, not a fact: write it as theirs, naming the side: "the Houthis say they struck...", "the Houthis said a ship was sunk...", "government forces say they repelled...", "the coalition says it intercepted...", "Saudi media say...". Never "it was reported", never as plain fact. This covers casualties, what a strike hit, strike counts and advances. When the other side, a wire agency or an official body reports the same event too, it is a fact. Keep it light: name the side once per sentence or run of claims ("the Houthis say they struck two ships and downed a drone"), not on every clause, and vary the verb (say, claim, report).
 - A statement by an official body (a ministry, the UN, the coalition command, a government) is written as plain fact, with no speaker.
 - Never write about what was NOT reported or did not change ("no fighting was reported", "no new clashes", "remained unchanged", "no reports"). A front with nothing new gets its current state from the previous text, stated positively.
@@ -83,7 +95,7 @@ Rules:
 - Never mention the desk, reports, cards, logging, counts of reports or "the window". No hype.
 - CONTROL lists who holds the contested districts and what changed hands this round. It is background: use it to place a front's fighting correctly (who holds the town, where the line runs), never as news of its own, and never contradict a newer report with it.
 - Past tense for events, present for the state of play.
-Return ONLY JSON {"situation":"...","situation_more":"...","fronts":{"<id>":"..."},"map":[...],"front_maps":{"<id>":[...]}}.`;
+Return ONLY JSON {"points":["..."],"fronts":{"<id>":["..."]},"map":[...],"front_maps":{"<id>":[...]}}.`;
 
 const BANNED = /\b(?:desk|logged|log|cards?|in the window|this window)\b/i;
 /** Writing about absence: the panels state what is, not what was not reported. */
@@ -129,11 +141,11 @@ export function wordOf(r: Pick<LiveReport, "source"> & { alsoReportedBy?: { sour
   return side === "Houthi-aligned" ? "Houthi side only" : side === "Gov/Saudi-aligned" ? "Gov/Saudi side only" : "";
 }
 
-function cardLine(r: LiveReport, frontsOf: (r: LiveReport) => string[]): string {
+function cardLine(r: LiveReport, frontsOf: (r: LiveReport) => string[], id = ""): string {
   const word = wordOf(r as LiveReport & { alsoReportedBy?: { source: string }[] });
   const ids = frontsOf(r);
   const body = String(r.text || "").replace(/\s+/g, " ").slice(0, 160);
-  return `${r.source}${word ? ` [${word}]` : ""}${ids.length ? ` {${ids.join(",")}}` : ""}: ${r.summary}${body ? ` — ${body}` : ""}`;
+  return `${id ? `[${id}] ` : ""}${r.source}${word ? ` [${word}]` : ""}${ids.length ? ` {${ids.join(",")}}` : ""}: ${r.summary}${body ? ` — ${body}` : ""}`;
 }
 
 /** Drop a paragraph that breaks the rules; the composed text stands in for it. */
@@ -285,7 +297,7 @@ export async function writeProse(
       `CONTROL (as of ${CONTROL_AS_OF}):`,
       ...control.map((l) => `- ${l}`),
       "REPORTS:",
-      ...sorted.slice(-cap).map((r) => cardLine(r, frontsOf)),
+      ...sorted.slice(-cap).map((r, i) => cardLine(r, frontsOf, `r${i + 1}`)),
     ].join("\n");
     // Only Groq refuses a long prompt: Gemini had the whole window once, and asking it again shorter spent its day for nothing.
     const chain = want === 400 ? models : models.filter((m) => m.provider !== "gemini");
@@ -295,28 +307,17 @@ export async function writeProse(
   }
   if (!got) return null;
   const j = got.json;
-  const out: Prose = { situation: cleanProse(j.situation, 4, true, 700), more: "", fronts: {}, model: got.model, devMap: [], frontMaps: {} };
-  const moreText = cleanProse(j.situation_more, 5, true, 1000);
-  if (!out.situation) {
-    console.warn(`[prose] ${got.model}: overview unusable (${String(j.situation ?? "").length} chars)${moreText ? ", taken from Read more" : ""}`);
-    out.situation = moreText;
-  }
-  if (out.situation) {
-    // Ordered over both parts together: the fighting from the overview and "Read more" first, then the sea, then politics.
-    const [first, ...rest] = battleFirst([out.situation, out.situation === moreText ? "" : moreText].filter(Boolean).join("\n\n")).split("\n\n");
-    out.situation = first;
-    out.more = rest.join("\n\n");
-  }
-  // Over 75 words the overview is not short: its last sentences open "Read more" instead, so nothing is lost.
-  const [top, moved] = fitWords(out.situation, 75);
-  if (moved) {
-    out.situation = top;
-    out.more = [moved, out.more].filter(Boolean).join("\n\n");
-  }
+  const given = sorted.slice(-last);
+  const refOf: Record<string, Ref> = Object.fromEntries(given.map((r, i) => [`r${i + 1}`, refOfReport(r)]));
+  const points = cleanPoints(j.points, 8, true);
+  const out: Prose = { situation: points.map(stripRefs).join("\n\n"), more: "", fronts: {}, points, frontPoints: {}, refOf, model: got.model, devMap: [], frontMaps: {} };
+  if (!out.situation) console.warn(`[prose] ${got.model}: no usable points (${JSON.stringify(j.points ?? null).length} chars)`);
   const fj = (j.fronts && typeof j.fronts === "object" ? j.fronts : {}) as Record<string, unknown>;
   const fm = (j.front_maps && typeof j.front_maps === "object" ? j.front_maps : {}) as Record<string, unknown>;
   for (const f of fronts) {
-    out.fronts[f.id] = cleanProse(fj[f.id], 4);
+    const fp = cleanPoints(fj[f.id], 4);
+    out.frontPoints![f.id] = fp;
+    out.fronts[f.id] = fp.map(stripRefs).join(" ");
     const marks = cleanDevMap(fm[f.id], out.fronts[f.id]);
     if (marks.length) out.frontMaps[f.id] = marks;
   }
@@ -324,8 +325,25 @@ export async function writeProse(
   // against everything written and the reports themselves, so the map keeps
   // every place it had.
   if (out.situation) {
-    const written = [out.situation, out.more, ...Object.values(out.fronts), ...sorted.slice(-last).map((r) => `${r.summary}. ${String(r.text || "")}`)].join("\n");
+    const written = [out.situation, ...Object.values(out.fronts), ...given.map((r) => `${r.summary}. ${String(r.text || "")}`)].join("\n");
     out.devMap = cleanDevMap(j.map, written, 14);
+  }
+  return out;
+}
+
+/**
+ * The writer's points, each checked as the paragraphs were: a sentence about
+ * absence, about the desk or (`noVague`) vague filler is dropped, and a point
+ * left with nothing goes. At most `max`.
+ */
+export function cleanPoints(raw: unknown, max: number, noVague = false): string[] {
+  const out: string[] = [];
+  for (const p of pointList(raw)) {
+    const sentences = (p.match(/(?:[^.!?]|\.(?=\d))+[.!?]+(?:\s*\[[^\]]*\])*/g) || [p]).map((x) => x.trim());
+    const kept = sentences.filter((x) => !ABSENCE.test(x) && !BANNED.test(stripRefs(x)) && !(noVague && VAGUE.test(x)));
+    const t = roleNamesInProse(kept.join(" ").trim());
+    if (stripRefs(t).length >= 12) out.push(t);
+    if (out.length >= max) break;
   }
   return out;
 }

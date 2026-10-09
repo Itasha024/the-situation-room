@@ -66,7 +66,7 @@ const IRAN_HTML = `
 </header>
 <section class="situation" id="situation" tabindex="-1">
   <h2>Latest developments</h2>
-  ${SOON("the latest military actions first, then the rest, every 3 hours.")}
+  ${SOON("the main developments, most important first, every 3 hours.")}
 </section>
 <section class="live-scan" id="live-scan-box">
   <details id="live-scan-details">

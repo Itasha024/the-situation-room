@@ -750,3 +750,19 @@ html.tp-open{overflow:hidden}
 /* Trump's latest: his words open on Read more only; a pin opposite the title (user, 9 Oct) */
 .trump-st:not(.open) .lead{display:none}
 .trump-pin .tp-head .tp-pin-ico{margin-inline-start:auto;width:15px;height:15px;fill:#b91c1c;transform:rotate(35deg);flex:none;align-self:center}
+/* Numbered points with references (user, 9 Oct): Latest developments, fronts, arenas */
+.pts{list-style:decimal outside;margin:.15rem 0 0;padding-inline-start:1.4em;font-size:.8rem;line-height:1.5;color:var(--t-text,#c9d4e0)}
+.pts li{display:list-item;margin:0;padding-inline-start:.2em}
+.pts li+li{margin-top:.5em}
+.pts li::marker{font-weight:700;color:var(--t-muted,#8b98a8)}
+html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:1.02rem;line-height:1.55;color:var(--t-text)}
+.situation:not(.sit-open) .pt-rest,.front-card:not(.open) .pt-rest{display:none}
+.ref-n{font-size:.66em;line-height:0;vertical-align:super;margin-inline-start:.1em;white-space:nowrap;color:var(--t-link,#60a5fa)}
+.ref-n .ref-btn{all:unset;cursor:pointer;color:var(--t-link,#60a5fa);font-weight:700;font-family:var(--f-body,system-ui,sans-serif);padding:0 .08em}
+.ref-n .ref-btn:hover,.ref-n .ref-btn:focus-visible{text-decoration:underline}
+.refs{list-style:none;margin:.7rem 0 0;padding:.5rem 0 0;border-top:1px solid var(--t-line,#2a3442);display:flex;flex-direction:column;gap:.2rem}
+.refs .ref-line{all:unset;cursor:pointer;font:400 .7rem/1.35 var(--f-body,system-ui,sans-serif);color:var(--t-muted,#8b98a8)}
+.refs .ref-line:hover,.refs .ref-line:focus-visible{color:var(--t-text,#c9d4e0);text-decoration:underline}
+.refs .ref-num{display:inline-block;min-width:1.5em;font-weight:700;color:var(--t-link,#60a5fa)}
+.front-card .front-pts{margin-top:.35rem}
+.ref-sheet{border-top-color:var(--t-line-strong,#334155)}

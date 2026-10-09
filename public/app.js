@@ -1899,12 +1899,12 @@ let briefTried = false;
  * "refresh due", no yellow): the update simply appears on the hour (user, 2 Oct).
  * `top`: the stamp sits under a column's heading rather than at its foot.
  */
-function cadenceStamp(top = false) {
+function cadenceStamp(top = false, b = brief) {
   const cls = top ? 'cadence at-head' : 'cadence';
-  if (!brief || !brief.nextUpdateAt) return `<p class="${cls}">${T('Based on latest reports')}</p>`;
-  const at = new Date(brief.nextUpdateAt);
+  if (!b || !b.nextUpdateAt) return `<p class="${cls}">${T('Based on latest reports')}</p>`;
+  const at = new Date(b.nextUpdateAt);
   const day = at.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: 'numeric', month: 'short' });
-  return `<p class="${cls}">${T('Based on latest reports · Updates {t}', { t: escapeHtml(`${fmtClock(brief.nextUpdateAt)}, ${day}`) })}</p>`;
+  return `<p class="${cls}">${T('Based on latest reports · Updates {t}', { t: escapeHtml(`${fmtClock(b.nextUpdateAt)}, ${day}`) })}</p>`;
 }
 
 function frontActivity(id) {
@@ -2963,11 +2963,14 @@ function renderSituation(d) {
   const moreParas = more ? paragraphsOf(more, { min: 200, target: 200 }) : [];
   const para = (x, cls) => `<p class="situation-window${cls ? ` ${cls}` : ''}">${linkPlacesAll(x)}</p>`;
   const open = el.classList.contains('sit-open');
-  const btnNeeded = moreParas.length || lineParas.length > 1;
+  // Numbered points with references (user, 9 Oct): the first four, the rest on Read more.
+  const pts = derived && Array.isArray(brief.situation.points) && brief.situation.points.length ? brief.situation : null;
+  const btnNeeded = pts ? pts.points.length > 4 : moreParas.length || lineParas.length > 1;
   el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2>${mapBtn}</div>${cadenceStamp(true)}
-    <div class="sit-body">${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}</div>${btnNeeded ? `
+    <div class="sit-body">${pts ? pointsHtml(pts.points, pts.refs, { show: 4, link: true }) : `${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}`}</div>${btnNeeded ? `
     <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}`;
   wirePlaceLinks(el);
+  if (pts) wireRefs(el, pts.refs);
   const tog = el.querySelector('.toggle-sit');
   if (tog) {
     tog.onclick = () => {
@@ -4576,18 +4579,20 @@ function renderFronts(d) {
       ${plain ? `<p class="front-plain">${linkPlacesAll(plain)}</p>` : ''}
       ${showSum ? `<p class="front-sum">${linkPlacesAll(sum)}</p>` : ''}
       ${showDir ? `<p class="front-dir">${linkPlacesAll(dir)}</p>` : ''}
-      ${composed ? `<p class="front-composed">${linkPlacesAll(composed)}</p>` : ''}
+      ${composed && act.points && act.points.length ? `<div class="front-pts">${pointsHtml(act.points, act.refs, { show: 2, link: true })}</div>` : composed ? `<p class="front-composed">${linkPlacesAll(composed)}</p>` : ''}
       ${composed && frontAsOf(act) ? `<p class="front-asof">${frontAsOf(act)}</p>` : ''}
       ${!composed && act ? `<p class="front-activity">${linkPlacesAll(act.line)}</p>` : ''}
       ${composed ? '' : `<div class="srcs">Source: ${sourceAnchors(f.sources || [], '')}</div>`}
       ${showDetail ? `<div class="full">${linkPlacesAll(detail)}</div>
       <button type="button" class="toggle-front">Read more</button>` : ''}
+      ${composed && act.points && act.points.length > 2 ? '<button type="button" class="toggle-front">Read more</button>' : ''}
     </article>`;
   });
   const box = document.getElementById('fronts');
   box.classList.add('one-front');
   box.innerHTML = pagerHtml('fronts', cards, frontIdx, fronts.map((f) => f.name));
   wirePlaceLinks(box);
+  box.querySelectorAll('.front-card').forEach((c, i) => { const act = frontActivity(fronts[i].id); if (act && act.refs) wireRefs(c, act.refs); });
   wirePager(box, frontIdx, (i) => {
     frontIdx = i;
     closeReadMore(box, '.front-card', '.toggle-front');
@@ -7126,7 +7131,7 @@ function startIranFeed() {
   wireLeanMenu();
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
-  const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); };
+  const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
@@ -7284,6 +7289,181 @@ function openTrumpPop(from) {
   renderTrumpList();
   pop.querySelector('.tp-list').scrollTop = 0;
   pop.querySelector('.rel-x').focus();
+}
+
+/*
+ * Numbered points with references (user, 9 Oct): Latest developments, each
+ * Yemen front and each Iran arena, most important first. A small number after
+ * the words a report supports, as in an academic text; the box ends with the
+ * list of those reports (source, date, hour). A click on either opens the
+ * report in a pop-up, so the reader stays where they were reading.
+ * The server stores each mark as "[[n]]" (src/lib/desk/refs.ts).
+ */
+function pointText(text, link) {
+  // A mark before the full stop is shown after it.
+  const t = String(text || '').replace(/((?:\[\[\d+\]\])+)([.,;:!?])/g, '$2$1').replace(/\[\[(\d+)\]\]/g, '$1');
+  const html = link ? linkPlacesAll(t) : escapeHtml(t);
+  return html.replace(/(?:\d+)+/g, (run) => `<sup class="ref-n">${[...run.matchAll(/(\d+)/g)].map((m) => `<button type="button" class="ref-btn" data-ref="${m[1]}" aria-label="Reference ${m[1]}">${m[1]}</button>`).join('<span aria-hidden="true">,</span>')}</sup>`);
+}
+function refWhen(at) {
+  const d = new Date(at);
+  if (!Number.isFinite(d.getTime())) return '';
+  return `${d.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString(LOC, { timeZone: VIEW_TZ, hour: '2-digit', minute: '2-digit', hour12: false })}`;
+}
+/** The points, the first `show` of them before "Read more", then the references; a reference only a hidden point uses waits with it. */
+function pointsHtml(points, refs, opts) {
+  const show = (opts && opts.show) || 99;
+  const link = !!(opts && opts.link);
+  const seen = new Set();
+  const items = points.map((p, i) => {
+    if (i < show) for (const m of String(p).matchAll(/\[\[(\d+)\]\]/g)) seen.add(m[1]);
+    return `<li${i >= show ? ' class="pt-rest"' : ''}>${pointText(p, link)}</li>`;
+  }).join('');
+  const list = (refs || []).map((r, i) => `<li${seen.has(String(i + 1)) ? '' : ' class="pt-rest"'}><button type="button" class="ref-btn ref-line" data-ref="${i + 1}"><span class="ref-num">${i + 1}</span>${escapeHtml(r.trump ? `Trump, ${r.source}` : canonicalSourceName(r.source))}, ${escapeHtml(refWhen(r.at))}</button></li>`).join('');
+  return `<ol class="pts">${items}</ol>${list ? `<ol class="refs" aria-label="References">${list}</ol>` : ''}`;
+}
+function wireRefs(root, refs) {
+  if (!root || !refs) return;
+  root.querySelectorAll('.ref-btn').forEach((b) => {
+    b.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const r = refs[Number(b.dataset.ref) - 1];
+      if (r) openRefPop(r, b);
+    };
+  });
+}
+/** The report as its card in the column: the page's own copy when it has it, else what the reference carries. */
+function refCardHtml(ref) {
+  if (ref.trump) {
+    const s = trumpFeed.list.find((x) => x.id === ref.fp) || { id: ref.fp, at: ref.at, source: ref.source, url: ref.url, headline: ref.headline, body: ref.body };
+    return trumpCardHtml(s);
+  }
+  const r = reportByFp.get(String(ref.fp));
+  if (r) {
+    const html = feedCardHtml(r, 0);
+    return deskOf().id === 'iran' ? html.replace(/\blean-\S+(?=[ "])/, `ir-${r.lean || 'intl'}`) : html;
+  }
+  return `<article class="card" data-fp="${escapeHtml(ref.fp)}">
+      <div class="meta"><time datetime="${escapeHtml(ref.at)}">${escapeHtml(fmtStamp(ref.at))}</time><span class="src-wrap">${sourceAnchors(ref.source, ref.url)}</span></div>
+      <p class="headline">${escapeHtml(ref.headline)}</p>
+    </article>`;
+}
+function openRefPop(ref, from) {
+  let pop = document.getElementById('ref-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'ref-pop';
+    pop.className = 'tp-pop';
+    pop.hidden = true;
+    pop.innerHTML = `<div class="tp-back" data-close></div>
+      <div class="tp-sheet ref-sheet" role="dialog" aria-modal="true" aria-labelledby="ref-h">
+        <div class="tp-sheet-head">
+          <h3 id="ref-h">Report</h3>
+          <button type="button" class="rel-x" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <div class="tp-list feed"></div>
+      </div>`;
+    document.body.appendChild(pop);
+    const close = () => {
+      pop.hidden = true;
+      document.documentElement.classList.remove('tp-open');
+      if (pop.from && pop.from.isConnected) pop.from.focus();
+    };
+    pop.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) close(); });
+  }
+  pop.from = from;
+  const box = pop.querySelector('.tp-list');
+  box.innerHTML = refCardHtml(ref);
+  const card = box.querySelector('.card');
+  if (card) {
+    wireFeedCard(card);
+    // Opened in full: the reader asked for this report.
+    card.classList.add('open');
+    const tog = card.querySelector('.toggle');
+    if (tog) tog.textContent = 'Show less';
+  }
+  wireMediaClicks(box);
+  pop.hidden = false;
+  document.documentElement.classList.add('tp-open');
+  box.scrollTop = 0;
+  pop.querySelector('.rel-x').focus();
+}
+
+/*
+ * The Iran desk's 3-hour brief (Round 30 stage 6; user, 9 Oct): Latest
+ * developments, and the arenas one at a time in the Fronts pager, as on the
+ * Yemen desk, with no line under an arena's name.
+ */
+const iranBrief = { b: null, sig: '', idx: 0 };
+async function loadIranBrief() {
+  try {
+    const res = await fetch('/api/brief?desk=iran', { cache: 'no-cache' });
+    if (!res.ok) return;
+    const b = await res.json();
+    if (!b || !b.ok || b.pending) return;
+    const sig = `${b.updatedAt}|${b.proseTriedAt || ''}`;
+    if (sig === iranBrief.sig) return;
+    iranBrief.b = b;
+    iranBrief.sig = sig;
+    renderIranBrief();
+  } catch (e) { console.warn('iran brief', e); }
+}
+/** Read more on a box: the button, or a click anywhere in it that is not a link or a button. */
+function wireBoxToggle(box, btn, cls) {
+  if (!btn) return;
+  const toggle = () => {
+    const open = box.classList.toggle(cls);
+    btn.textContent = open ? 'Show less' : 'Read more';
+    btn.setAttribute('aria-expanded', String(open));
+  };
+  btn.onclick = (ev) => { ev.stopPropagation(); toggle(); };
+  box.classList.add(cls === 'sit-open' ? 'sit-click' : 'expandable');
+  box.onclick = (ev) => {
+    if (ev.target.closest('a, button, .place-link, [data-place]')) return;
+    if (window.getSelection && String(window.getSelection() || '')) return;
+    toggle();
+  };
+}
+function renderIranBrief() {
+  const b = iranBrief.b;
+  if (!b) return;
+  const el = document.getElementById('situation');
+  const s = b.situation || {};
+  if (el && Array.isArray(s.points) && s.points.length) {
+    const open = el.classList.contains('sit-open');
+    el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2></div>${cadenceStamp(true, b)}
+      <div class="sit-body">${pointsHtml(s.points, s.refs, { show: 4 })}</div>${s.points.length > 4 ? `
+      <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}`;
+    wireBoxToggle(el, el.querySelector('.toggle-sit'), 'sit-open');
+    wireRefs(el, s.refs);
+  }
+  const wrap = document.getElementById('fronts-wrap');
+  const arenas = Array.isArray(b.arenas) ? b.arenas : [];
+  if (!wrap || !arenas.length) return;
+  const cards = arenas.map((a) => {
+    const pts = Array.isArray(a.points) ? a.points : [];
+    const old = pts.length && a.lastNewsAt && a.lastNewsAt !== b.updatedAt;
+    return `<article class="front-card">
+      <div class="front-head"><strong>${escapeHtml(a.name)}</strong></div>
+      ${pts.length ? `<div class="front-pts">${pointsHtml(pts, a.refs, { show: 2 })}</div>` : '<p class="front-asof">Nothing reported here yet.</p>'}
+      ${old ? `<p class="front-asof">${escapeHtml(T('As of {t}, {d}', { t: fmtClock(a.lastNewsAt), d: new Date(a.lastNewsAt).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ }) }))}</p>` : ''}
+      ${pts.length > 2 ? '<button type="button" class="toggle-front">Read more</button>' : ''}
+    </article>`;
+  });
+  wrap.innerHTML = `<h2>Arenas</h2><div id="fronts-stamp">${cadenceStamp(true, b)}</div><div id="fronts" class="one-front"></div>`;
+  const box = document.getElementById('fronts');
+  if (iranBrief.idx >= arenas.length) iranBrief.idx = 0;
+  box.innerHTML = pagerHtml('fronts', cards, iranBrief.idx, arenas.map((a) => a.name));
+  wirePager(box, iranBrief.idx, (i) => {
+    iranBrief.idx = i;
+    closeReadMore(box, '.front-card', '.toggle-front');
+  });
+  box.querySelectorAll('.front-card').forEach((card, i) => {
+    wireBoxToggle(card, card.querySelector('.toggle-front'), 'open');
+    wireRefs(card, arenas[i].refs);
+  });
 }
 
 window.startYemenDesk = startYemenDesk;

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { Brief } from "@/lib/desk/brief";
 import { briefWindow } from "@/lib/desk/brief";
 import { refreshBrief } from "@/lib/desk/brief-store";
+import { IRAN_BRIEF_KEY, type IranBrief } from "@/lib/desk/iran-brief";
 import { metered } from "@/lib/desk/cpu-meter";
 import { deskParam } from "@/lib/desk/desk-route";
 import { deskById } from "@/lib/desks";
@@ -27,7 +28,11 @@ export const Route = createFileRoute("/api/brief")({
         try {
           // The Iran desk's brief is built from stage 4 of Round 30; until then it has none.
           const desk = deskParam(new URL(request.url).searchParams.get("desk"));
-          if (desk !== "yemen") return json({ ok: true, desk, pending: true, ...briefWindow(new Date(), deskById(desk).cadenceHours) }, 200, "public, max-age=60", "public, s-maxage=300");
+          if (desk !== "yemen") {
+            const ib = desk === "iran" ? await (await getStore()).getJson<IranBrief>(IRAN_BRIEF_KEY) : null;
+            if (ib) return json(ib, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=60");
+            return json({ ok: true, desk, pending: true, ...briefWindow(new Date(), deskById(desk).cadenceHours) }, 200, "public, max-age=60", "public, s-maxage=300");
+          }
           const store = await getStore();
           const { brief } = await refreshBrief(store);
           const timelineNow = (await store.getJson<TimelineNow>(TIMELINE_NOW_KEY)) ?? null;

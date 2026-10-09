@@ -1,0 +1,35 @@
+1201|iran||Doha|Qatar||Bulk carrier Safesea Neha hit by drone at Doha anchorage
+1206|iran||Strait of Hormuz|sea||Container ship GFS Galaxy disabled in Strait of Hormuz, one killed
+1209|us|Jask||Iran||US jet fires into rudder of tanker Hasna off Jask
+1210|us|Jask||Iran||US strikes tankers Sevda and Sea Star III off Jask, setting Sevda on fire
+1222|us|Konarak||Iran||Corvettes IRIS Bayandor and IRIS Naghdi sunk at Konarak naval base
+1224|us|Chabahar||Iran||US sinks IRIS Jamaran in port at Chabahar
+1227|us|Bandar Abbas||Iran||US destroys forward base ship IRIS Makran at Bandar Abbas naval base
+1221|us|Bandar Abbas||Iran||Kilo-class submarine at Bandar Abbas naval harbour struck and disabled, CENTCOM says
+1231|iran|Doha|Qatar|Qatar|2026-02-28|Shrapnel from intercepted Iranian missiles wounds 16 in Qatar
+1237|iran||Ras Laffan|Qatar|2026-03-02|Two Iranian drones strike Ras Laffan and Mesaieed industrial areas
+1239|iran||Al Udeid Air Base|Qatar|2026-03-03|Iranian missile strikes Al Udeid Air Base, no casualties
+1263|iran|Erbil||Iraq|2026-03-12|Missile hits Italian military base in Erbil
+1265|iran|Erbil||Iraq|2026-03-15|Three IRGC missiles hit a Komala camp in the Kurdistan Region
+1266|iran|Erbil||Iraq|2026-03-24|Rocket attack on Peshmerga base in Erbil kills six fighters
+1269|iran|Erbil||Iraq|2026-04-01|Three Iranian drones strike Castrol-linked facilities near Erbil
+1270|iran||Sarsang|Iraq|2026-04-01|Drone attack targets Sarsang oilfield in Duhok
+1271|iran|Erbil||Iraq|2026-04-02|Two drones destroy a charcoal factory in Erbil
+1272|iran|Sulaymaniyah||Iraq|2026-04-05|Two drones strike Bakhtiyari neighbourhood of Sulaymaniyah
+1273|iran|Darashakran||Iraq|2026-04-07|Iranian drone kills a married couple in Darashakran
+1274|iran|Koya||Iraq|2026-04-14|Iranian drones hit PDKI camp near Koya and Komala camps, wounding two
+1277|iran|Balisan||Iraq|2026-04-17|Iranian drones hit PDKI camp in Balisan, killing three
+1281|iran|Darashakran||Iraq|2026-07-13|Three drones strike Iranian Kurdish refugee camp in Darashakran
+1283|iran|Sulaymaniyah||Iraq|2026-07-17|Iranian strikes on Komala camp near Sulaymaniyah kill 10
+1284|iran|Tasluja||Iraq|2026-07-17|Strike on weapons depot in Tasluja causes major explosion
+1292|iran|Koya||Iraq|2026-07-31|Iranian drones target Komala and KDPI positions near Koya, Topzawa and Bashiqa
+1293|iran|Dokan||Iraq|2026-08-01|Two Iranian drones target Komala headquarters in Dokan
+1294|iran|Tasluja||Iraq|2026-08-02|Two drones target PUK Peshmerga bases in Tasluja
+1295|iran||Alana Valley|Iraq|2026-08-11|Iranian strikes target Komala in Erbil's Alana Valley, wounding two
+1297|iran|Soran||Iraq|2026-08-12|Four drones crash in Soran, one hitting a house
+1299|iran|Pirmam||Iraq|2026-08-17|Iranian Hadid-110 drones target Masrour Barzani's office in Pirmam
+1301|iran|Sulaymaniyah||Iraq|2026-09-14|Five missiles strike three areas in Sulaymaniyah governorate
+1302|iran|Koya||Iraq|2026-09-28|Iranian drones target KDPI camps in Koya
+1317|iran|Zarqa||Jordan|2026-03-12|Shrapnel falls in Zarqa, damaging a water line
+1318|iran||Subiya Power Station|Kuwait|2026-03-09|Drone debris sets fuel tank at Subiya Power Station on fire
+1366|iran|Dubai||UAE||Iranian drone sets Kuwaiti crude tanker on fire off Dubai

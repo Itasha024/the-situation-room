@@ -1,0 +1,46 @@
+6|israel|Qom||Iran||Explosions reported in Qom as US and Israeli strikes widen across Iran
+6|israel|Kermanshah||Iran||Explosions reported in Kermanshah as US and Israeli strikes widen across Iran
+6|israel|Isfahan||Iran||Explosions reported in Isfahan as US and Israeli strikes widen across Iran
+6|israel|Karaj||Iran||Explosions reported in Karaj as US and Israeli strikes widen across Iran
+7|israel|Tehran||Iran||Missile strikes hit University Street, the Jomhouri area and Seyed Khandan in Tehran
+8|israel|Minab||Iran||Missile strikes Shajareh Tayyebeh girls' school in Minab; Iranian media report 180 killed
+9|israel|Lamerd||Iran||Sports hall in Lamerd bombed during girls' practice, at least 18 civilians killed
+10|israel|Bushehr||Iran||IRGC says the port city of Bushehr was struck
+14|unclear||Jurf al-Sakhar|Iraq||Strikes on Jurf al-Sakhar kill two PMF fighters and wound three, PMF says
+20|iran|Tel Aviv||Israel||Iranian missile hits residential area in Tel Aviv, killing a woman and wounding 27
+19|iran|Haifa||Israel||Iranian missile strikes reported in Haifa
+21|iran||Al Udeid Air Base|Qatar||IRGC says it targeted Al Udeid Air Base in Qatar
+21|iran||Ali Al Salem Air Base|Kuwait||IRGC says it targeted Ali Al Salem Air Base in Kuwait
+22|iran|Manama||Bahrain||Explosions and smoke seen in Manama during Iranian attack on US bases
+23|iran||Kuwait International Airport|Kuwait||Explosions reported at Kuwait International Airport
+23|iran|Abu Dhabi||UAE||Explosions reported in Abu Dhabi during Iranian attack
+25|iran|Riyadh||Saudi Arabia||Saudi Arabia says Iranian attacks on Riyadh intercepted
+27|iran|Dubai||UAE||Iranian strikes hit residential areas of Dubai, setting Fairmont The Palm hotel on fire
+28|iran|Doha||Qatar||Iranian strike hits residential building on outskirts of Doha
+34|iran||Erbil International Airport|Iraq||Iranian missiles and drones target Erbil airport and US consulate in Erbil
+44|israel|Tehran||Iran||Strikes destroy Tehran Revolutionary Court; blasts near Azadi Square and Milad Tower
+42|israel|Sanandaj||Iran||Israeli and US strikes hit command centres and missile sites in Sanandaj
+53|iran|Beit Shemesh||Israel||Iranian missile hits synagogue and homes in Beit Shemesh, killing nine and wounding 65
+54|iran|Jerusalem||Israel||Iranian ballistic missile hits area of Jerusalem, wounding six
+56|iran|Manama||Bahrain||Iranian drone hits Crowne Plaza Hotel in Manama, causing fire
+57|iran||Jebel Ali|UAE||Plumes rise from Port of Jebel Ali as missiles intercepted over Dubai
+58|iran|Abu Dhabi||UAE||Intercepted drone's debris damages Etihad Towers in Abu Dhabi, wounding a woman and child
+60|iran||Al-Salam Naval Base|UAE||Two Iranian drones hit warehouse at Al-Salam Naval Base, setting containers on fire
+62|iran|Duqm||Oman||Two drones hit port of Duqm, wounding a foreign worker
+63|iran|Khasab||Oman||Tanker Skylight hit 5 nautical miles north of Khasab, four crew wounded
+68|iran|Riyadh||Saudi Arabia||Riyadh hit by direct Iranian strikes
+70|iran||Prince Sultan Airbase|Saudi Arabia||Saudi Arabia says it shot down missiles fired at Prince Sultan Air Base
+71|iraqi_militias||Erbil Airport|Iraq||Iraqi militia drone attack causes explosion near Erbil airport
+73|unclear||Akrotiri|Cyprus||Drone hits RAF Akrotiri airfield in Cyprus, causing minor damage
+82|israel|Tehran||Iran||Strikes hit Khatam al-Anbia and Gandhi hospitals and IRIB headquarters in Tehran
+82|israel|Sanandaj||Iran||Israeli strikes hit command centres and missile sites in Sanandaj
+83|israel||Natanz|Iran||Satellite images show damage to entrance buildings at Natanz nuclear site
+89|iran|Dubai||UAE||Explosions in Dubai as Iran launches new strikes on Gulf states
+89|iran|Abu Dhabi||UAE||Explosions in Abu Dhabi as Iran launches new strikes on Gulf states
+91|iran||Al Udeid Air Base|Qatar||Iranian missiles and drones fired at Al Udeid Air Base and industrial sites in Qatar
+94|iran||Mina Salman|Bahrain||Iranian strike sets Mina Salman port on fire
+96|iran||Ras Tanura|Saudi Arabia||Debris from intercepted Iranian missile damages Aramco refinery at Ras Tanura
+98|iraqi_militias|Baghdad||Iraq||Drones target US Victory Base near Baghdad International Airport
+101|iraqi_militias|Erbil||Iraq||Islamic Resistance in Iraq claims more than 23 drone strikes on US assets in Erbil
+105|iran||Strait of Hormuz|sea||IRGC claims drone strike on tanker Athe Nova in Strait of Hormuz
+106|iran|Beersheba||Israel||Iranian missile hits neighbourhood in Beersheba, wounding 19

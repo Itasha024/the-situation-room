@@ -1,0 +1,93 @@
+380|iran|Salalah||Oman||Two drones hit port installations in Salalah, wounding a worker
+381|iran|Dubai||UAE||Iran says it targeted a Ukrainian anti-drone depot in Dubai
+382|iran||Kuwait International Airport|Kuwait||Iranian drones hit Kuwait airport and damage its radar
+383|israel|Tehran||Iran||IDF strikes Marine Industries Organization headquarters and arms factories in Tehran
+384|iraqi_militias|Duhok||Iraq||Drone attack targets home of Kurdistan Region president Nechirvan Barzani in Duhok
+386|israel|Haftkel||Iran||Israeli strike hits a water reservoir in Haftkel
+386|israel|Borujerd||Iran||Israeli strike kills a defence research chief and his family in Borujerd
+387|iran|Eshtaol||Israel||Iranian ballistic missile wounds 19 in Eshtaol
+389|iran|Abu Dhabi||UAE||Iranian attack damages Emirates Global Aluminium's Al Taweelah site in Abu Dhabi
+394|iraqi_militias|Erbil||Iraq||Drones target Masoud Barzani's home, Iranian opposition offices and a US base in Erbil
+396|israel|Tehran||Iran||Israel strikes mobile command centres and weapons sites in Tehran
+397|iran|Ne'ot Hovav||Israel||Iranian missile hits ADAMA chemical plant in Ne'ot Hovav
+400|iran|Kuwait City||Kuwait||Iranian drones hit a Kuwaiti military site, wounding 10 soldiers
+401|israel||Kish Island|Iran||Explosions and strikes reported on Kish Island
+401|israel|Qeshm||Iran||Explosions and strikes reported on Qeshm Island
+401|israel|Bandar Abbas||Iran||Explosions and strikes reported in Bandar Abbas
+401|israel|Babol||Iran||Explosions and strikes reported in Babol
+401|israel|Dehgolan||Iran||Explosions and strikes reported in Dehgolan
+401|israel|Tabriz||Iran||Explosions and strikes reported in Tabriz
+404|iran|Haifa||Israel||Interception debris hits BAZAN refinery in Haifa
+405|israel|Tehran||Iran||IDF strikes IRGC weapons research site at Imam Hossein University in Tehran
+409|israel|Tehran||Iran||Heavy airstrikes in Vardavard neighbourhood of western Tehran
+410|us|Isfahan||Iran||US drops bunker busters on underground ammunition depot in Isfahan
+411|iran|Dubai||UAE||Loaded crude tanker Al Salmi hit by drone near Dubai Port and catches fire
+412|iran|Bnei Brak||Israel||Iranian cluster munitions hit Bnei Brak, Ramat Gan and Petah Tikva, eight wounded
+416|israel|Mahallat||Iran||IDF kills a Quds Force engineering commander in airstrike in Mahallat
+418|iran||Kuwait International Airport|Kuwait||Iranian drones hit fuel storage at Kuwait airport, causing major fire
+419|iran|Bnei Brak||Israel||Iranian cluster munitions hit Bnei Brak and Tel Aviv, 14 wounded
+419|iran|Tel Aviv||Israel||Iranian cluster munitions hit Tel Aviv and Bnei Brak, 14 wounded
+421|iraqi_militias|Erbil||Iraq||Drone waves hit a motor oil factory in Erbil, causing major fire
+422|us|Tehran||Iran||US strike damages the former US embassy museum and St. Nicholas church in Tehran
+424|iran|Isfahan||Iran||Iran shoots down two US MQ-9 Reaper drones near Isfahan
+428|israel|Tehran||Iran||IDF strikes IRGC ground forces base and command centres in Tehran
+429|us|Karaj||Iran||US strikes collapse the Karaj B1 bridge, killing eight
+430|israel||Mashhad International Airport|Iran||Projectile hits fuel tank near Mashhad airport, sparking fire
+431|iran|Manama||Bahrain||Iranian strike sets an Amazon cloud facility in Bahrain on fire
+432|iran||Muwaffaq Salti Air Base|Jordan||Iran says it attacked US jets at Jordan's Azraq air base with drones
+434|israel|Kermanshah||Iran||IDF says it killed Iran's ballistic missile unit commander in Kermanshah
+435|iran||Mina Al-Ahmadi|Kuwait||Iranian drones set Mina al-Ahmadi refinery on fire
+438|iran|Habshan||UAE||Interception debris sets fire at Habshan gas facility, killing an Egyptian
+442|iran|Kiryat Ata||Israel||Iranian cluster munitions damage Kiryat Ata, one wounded
+444|iran|Abu Dhabi||UAE||Iranian attack heavily damages Emirates Global Aluminium plant in Abu Dhabi
+447|iran|Tel Aviv||Israel||Iranian cluster munition lands near IDF Kirya headquarters in Tel Aviv
+449|iran|Bnei Brak||Israel||Iranian cluster munition hits home of Moshe Gafni in Bnei Brak
+450|israel|Bandar Khamir||Iran||Air attack hits a cement factory in Bandar Khamir
+451|israel||Bushehr Nuclear Power Plant|Iran||Strike near Bushehr nuclear plant kills a security guard
+454|israel|Mahshahr||Iran||US-Israeli strikes on Mahshahr petrochemical zones kill five, wound 170
+455|iran||Strait of Hormuz|sea||Iran claims drone strike on container ship MSC Ishyka in Strait of Hormuz
+456|israel|Shalamcheh||Iran||Airstrike on Shalamcheh border crossing kills an Iraqi
+459|iran|Sitra||Bahrain||Iranian drones set BAPCO oil storage in Bahrain on fire
+459|iran||Shuwaikh|Kuwait||Iranian drones hit Shuwaikh oil complex and a desalination plant in Kuwait
+461|iran|Haifa||Israel||Iranian missile hits residential building in Haifa, killing four
+462|iran|Petah Tikva||Israel||Iranian missile barrage seriously wounds a woman in Petah Tikva
+463|iran|Haifa||Israel||Iranian cluster bomb wounds four in Haifa
+464|israel|Baharestan||Iran||Airstrike hits two homes in Baharestan, killing 23
+465|israel|Bandar Lengeh||Iran||Overnight strikes in Bandar Lengeh kill six
+465|israel|Kong||Iran||Overnight strikes hit Kong
+466|israel|Qom||Iran||Strikes kill five in Qom
+466|israel|Tehran||Iran||Strike hits Sharif University of Technology in Tehran
+467|iran|Mussafah||UAE||Interception debris hits a building in Mussafah, wounding a Ghanaian
+468|israel|Khorramshahr||Iran||Explosions and attacks reported in Khorramshahr
+471|iran||Bubiyan Island|Kuwait||Iran says its drones targeted US equipment on Bubiyan Island
+473|israel|Asaluyeh||Iran||IDF strikes Iran's biggest petrochemical plant in Asaluyeh
+474|israel||Mehrabad International Airport|Iran||IDF strikes Mehrabad airport, destroying dozens of aircraft
+475|iran|Darashakran||Iraq||Iranian drone strike on Zarka Zoy village in Darashakran kills two
+476|iran||Ali Al Salem Air Base|Kuwait||Iranian drone strike on Ali Al Salem Air Base wounds 15 Americans
+477|iran|Jubail||Saudi Arabia||Iranian drones set SABIC petrochemical complex in Jubail on fire
+478|israel|Ahvaz||Iran||Overnight strikes reported in Ahvaz
+478|israel|Chabahar||Iran||Overnight strikes reported in Chabahar
+478|israel|Jask||Iran||Overnight strikes reported in Jask
+478|israel|Shiraz||Iran||Overnight strikes reported in Shiraz
+478|israel|Yazd||Iran||Overnight strikes reported in Yazd
+479|israel|Tehran||Iran||Israeli strike targeting a commander destroys Rafi'-Nia synagogue in Tehran
+481|us||Kharg Island|Iran||US strikes military sites on Kharg Island
+482|israel|Kashan||Iran||Airstrike hits a rail bridge in Kashan
+482|israel|Hashtrud||Iran||Airstrike hits highway bridge between Hashtrud and Tabriz
+486|gulf||Lavan Island|Iran||Strike hits Lavan Island, later attributed to the UAE
+485|unclear||Sirri Island|Iran||Explosions of unknown origin reported on Sirri Island
+487|iran|Sitra||Bahrain||Shrapnel wounds two in Sitra, Bahrain
+488|israel|Beirut||Lebanon||Israel's biggest wave of strikes on Lebanon hits more than 100 sites, killing 254
+496|iraqi_militias||Baghdad International Airport|Iraq||Militia drones attack near Baghdad Diplomatic Support Center and airport
+501|us||Strait of Hormuz|sea||US intercepts an Iranian cargo ship in the Strait of Hormuz
+503|iran||Strait of Hormuz|sea||IRGC gunboats seize Epaminodes and MSC Francesca and fire on Euphoria in Strait of Hormuz
+508|iran|Umm Al Quwain||UAE||South Korean container ship HMM Namu damaged near Umm Al Quwain
+510|us||Strait of Hormuz|sea||US forces destroy six or seven Iranian small boats in Strait of Hormuz clash
+511|iran|Fujairah||UAE||Iranian drones set storage tanks on fire in Fujairah oil zone, wounding workers
+513|iran||Strait of Hormuz|sea||Freighter CMA CGM San Antonio attacked in Strait of Hormuz, crew wounded
+514|us|Bandar Abbas||Iran||US strikes Iranian military sites in Bandar Abbas
+514|us|Qeshm||Iran||US strikes Iranian military sites on Qeshm Island
+517|us|Khasab||Oman||Iran says US strikes hit Iranian fishing and cargo vessels near Khasab
+520|iran|Doha||Qatar||Fire breaks out on a ship off Qatar after drone strike
+523|iran||Barakah|UAE||Drone strike causes fire at edge of UAE's Barakah nuclear plant
+528|israel|Zawtar al-Sharqiyah||Lebanon||Israeli troops cross north of the Litani; fighting in Zawtar al-Sharqiyah

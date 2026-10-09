@@ -34,3 +34,6 @@ public/desk-tick-lock.json
 .output/
 public/desk-cpu-meter.json
 public/desk-site-seen.json
+scripts/data/iran-backfill/segments.tsv
+scripts/data/iran-backfill/view.tsv
+scripts/data/iran-backfill/pins.json

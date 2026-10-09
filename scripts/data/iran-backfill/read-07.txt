@@ -1,0 +1,46 @@
+851|hezbollah|Tyre||Lebanon||Hezbollah shoots down an Israeli drone over Tyre with an anti-aircraft missile
+852|israel|Kounin||Lebanon||IDF strikes Hezbollah rocket site equipment in Kounin
+855|hezbollah|Al-Qantara||Lebanon||Hezbollah hits an Israeli Humvee in Al-Qantara
+854|israel|Bint Jbeil||Lebanon||IDF kills six Hezbollah fighters in clashes in Bint Jbeil
+857|israel|Yatar||Lebanon||IDF strikes Hezbollah rocket launchers in Yatar
+857|israel|Kafra||Lebanon||IDF strikes Hezbollah rocket launchers in Kafra
+874|israel|Nabi Chit||Lebanon||Israeli strikes reach eastern Lebanon near Nabi Chit
+880|israel|Bint Jbeil||Lebanon||Israeli attack in Bint Jbeil kills a Lebanese soldier and his brother
+884|hezbollah|Shomera||Israel||Hezbollah drone strike in Shomera wounds 12 Israeli soldiers
+893|israel|Beirut||Lebanon||Israeli strike in Ghobeiry kills Radwan Force commander Ahmed Ghaleb Balout
+897|israel|Ain Baal||Lebanon||Israeli strike hits a home in Ain Baal
+898|israel|Dibbin||Lebanon||Three Israeli strikes hit Dibbin
+899|israel|Nabatieh||Lebanon||Israeli jets carry out three attacks in Nabatieh
+904|israel|Toura||Lebanon||Israeli strike in Toura kills four, including two women
+908|israel|Tyre||Lebanon||Israeli strike on a motorcycle in Tyre's Hamadieh area kills a Syrian man
+911|israel|Baalbek||Lebanon||Israeli strike on an apartment outside Baalbek kills a PIJ commander and his daughter
+918|israel|Tyre||Lebanon||IDF strikes two buildings in and around Tyre
+920|hezbollah|Iskandarounah||Lebanon||Hezbollah drone strike kills an Israeli soldier near Iskandarounah
+929|hezbollah|Nahariya||Israel||Hezbollah fires rockets at Nahariya for the first time in three weeks
+930|hezbollah|Karmiel||Israel||Hezbollah rocket reaches Karmiel
+931|hezbollah|Kiryat Shmona||Israel||Hezbollah barrage damages Kiryat Shmona
+934|israel||Beaufort Castle|Lebanon||IDF seizes Beaufort Castle
+948|israel|Kfar Tebnit||Lebanon||IDF fire kills three Lebanese soldiers in their car near Kfar Tebnit
+951|israel|Beirut||Lebanon||Israeli strike on Beirut's southern suburbs kills two
+954|israel|Tyre||Lebanon||Israeli strikes on Tyre kill eight
+954|israel|Nabatieh||Lebanon||Israeli strikes kill four in Nabatieh
+956|israel|Tayr Debba||Lebanon||Israeli strikes kill nine in Tayr Debba
+956|israel|Deir Qanoun an-Naher||Lebanon||Israeli strikes kill three in Deir Qanoun an-Naher
+956|israel|Seddiqin||Lebanon||Israeli strikes kill two in Seddiqin
+956|israel|Sidon||Lebanon||Israeli strike on a car in central Sidon kills two
+961|israel|Beirut||Lebanon||Israeli strike hits apartment building in Beirut's southern suburbs, killing three
+970|israel|Mansouri||Lebanon||Conservationist Mona Khalil dies after strike on her house in Mansouri
+971|hezbollah|Kfar Tebnit||Lebanon||Hezbollah drone kills four Israeli soldiers in a tank in Kfar Tebnit
+976|hezbollah|Ali al-Taher||Lebanon||Hezbollah attacks Israeli forces advancing on Ali al-Taher with rockets
+983|hezbollah|Beit Yahoun||Lebanon||Hezbollah grenade wounds four Israeli soldiers in Beit Yahoun
+990|israel|Mayfadoun||Lebanon||IDF strikes Hezbollah command centres in Mayfadoun and Nabatieh
+992|israel|Deir Seryan||Lebanon||Israeli jets bomb the area between Qantara and Deir Seryan
+1000|israel|Nabatieh al-Fawqa||Lebanon||Israeli strike on a vehicle in Nabatieh al-Fawqa kills four
+1007|israel|Kfar Tebnit||Lebanon||Large-scale Israeli attack on Kfar Tebnit
+1013|hezbollah|Majdal Zoun||Lebanon||Bomb in Majdal Zoun kills two Israeli reservists
+1013|israel|Mansouri||Lebanon||Israeli strikes hit al-Mansouri
+1019|israel|Ansar||Lebanon||Israeli attack in Ansar kills seven of one family
+1022|israel|Deir ez-Zahrani||Lebanon||Israeli strike in Deir ez-Zahrani kills four, including a Hezbollah commander
+1025|israel|Baraashit||Lebanon||IDF strikes a building in Baraashit
+1027|israel|Arabsalim||Lebanon||Israeli attack in Arabsalim kills a woman
+1029|israel|Nabatieh al-Fawqa||Lebanon||Israeli attack in Nabatieh al-Fawqa

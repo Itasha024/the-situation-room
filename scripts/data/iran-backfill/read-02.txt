@@ -1,0 +1,108 @@
+111|hezbollah|Haifa||Israel||Hezbollah says it attacked an IDF base in Haifa
+112|israel|Beirut||Lebanon||Israeli airstrikes hit Beirut after Hezbollah's first attack
+114|israel||Dahieh|Lebanon||IDF says it struck more than 70 targets in Dahieh and south Lebanon
+115|israel|Haris||Lebanon||Israeli strikes hit Haris in south Lebanon
+115|israel|Nabatieh al-Fawqa||Lebanon||Israeli strikes hit Nabatieh al-Fawqa in south Lebanon
+115|israel|Mayfadoun||Lebanon||Israeli strikes hit Mayfadoun in south Lebanon
+119|israel|Isfahan||Iran||US and Israeli strikes bomb Isfahan
+119|israel|Shiraz||Iran||US and Israeli strikes bomb Shiraz
+120|israel|Tehran||Iran||Strikes hit Imam Hossein University, IRIB headquarters and Supreme National Security Council in Tehran
+120|israel|Kermanshah||Iran||Strike hits military headquarters in Kermanshah
+120|israel|Marivan||Iran||Strikes hit a garrison and the Criminal Investigation Department in Marivan
+120|israel|Najafabad||Iran||Strike hits a garrison in Najafabad
+120|israel|Sarpol-e Zahab||Iran||Strike hits Shohada Hospital in Sarpol-e Zahab
+120|israel|Salas-e Babajani||Iran||Strike hits a field hospital in Salas-e Babajani
+120|israel||Natanz|Iran||Nuclear facilities at Natanz struck again
+120|israel|Dezful||Iran||Strike hits the Dezful Radio building
+128|israel||Bushehr Airport|Iran||Strike on Bushehr Airport destroys an Iran Air Airbus A319 and damages the terminal
+133|iran|Bnei Brak||Israel||Iranian missile strike on Bnei Brak wounds civilians
+133|iran|Rosh HaAyin||Israel||Iranian missile strike on Rosh HaAyin wounds civilians
+137|iran|Fujairah||UAE||Iranian attack on Fujairah Oil Industry Zone starts a fire
+138|iran|Dubai||UAE||Drones strike US Consulate in Al Seef, Dubai, setting it on fire
+139|iran||Hamad International Airport|Qatar||Qatar stops an Iranian attack on Hamad International Airport
+140|iran|Riyadh||Saudi Arabia||Two Iranian drones strike US embassy in Riyadh, causing a fire
+142|iran|Erbil||Iraq||Iran launches strikes on Erbil; Islamic Resistance in Iraq also claims blasts there
+146|hezbollah|Nabatieh||Lebanon||Hezbollah says it downed an Israeli drone over Nabatieh
+152|israel|Tehran||Iran||Joint US-Israeli strike hits Azadi Square, military sites and a metro station in Tehran
+156|us|Bandar Abbas||Iran||Iranian Soleimani-class corvette sunk in port of Bandar Abbas
+159|iran|Muscat||Oman||IRGC Navy says a vessel was hit by a bomb near Muscat
+160|iran|Fujairah||UAE||IRGC fires ballistic missiles at the Port of Fujairah
+161|iran|Sulaymaniyah||Iraq||Drones attack Sulaymaniyah in Iraqi Kurdistan
+162|iran|Erbil||Iraq||IRGC ground forces attack Erbil with drones
+164|iran|Manama||Bahrain||Iranian missiles hit Bahrain
+165|iran||Al Udeid Air Base|Qatar||Qatar says Al Udeid Air Base hit, no casualties
+166|iran||Ras Tanura|Saudi Arabia||Projectile hits Aramco's Ras Tanura refinery
+167|iraqi_militias||Baghdad International Airport|Iraq||Drone downed near Baghdad International Airport
+171|hezbollah|Kiryat Shmona||Israel||Hezbollah fires rocket barrages at Israeli troops in Kiryat Shmona
+171|hezbollah|Khiam||Lebanon||Hezbollah says it clashed with Israeli forces advancing in Khiam
+172|hezbollah|Houla||Lebanon||Hezbollah says it struck an Israeli tank in Houla
+174|iran|Dörtyol||Turkey||NATO intercepts Iranian ballistic missile over Dörtyol, Turkey
+180|israel|Sardasht||Iran||Strike hits Ministry of Intelligence office in Sardasht
+180|israel|Sanandaj||Iran||Strike hits an IRGC garrison in Sanandaj
+180|israel|Malayer||Iran||Strike hits a paper factory in Malayer
+181|israel|Tehran||Iran||US-Israeli strike destroys Azadi Indoor Stadium; school, police station and homes hit in Tehran
+184|iran|Al-Kharj||Saudi Arabia||Saudi Arabia intercepts three cruise missiles outside Al-Kharj
+186|iran|Petah Tikva||Israel||Debris of intercepted Iranian missile sets fire in Petah Tikva
+188|iran||Nakhchivan International Airport|Azerbaijan||Iranian drone hits the terminal of Nakhchivan International Airport
+194|israel|Tehran||Iran||Heavy US and Israeli strikes on Tehran hit Mehrabad airport, an IRGC base and homes
+195|israel|Kermanshah||Iran||US and Israeli strikes hit Kermanshah
+195|israel|Salmas||Iran||US and Israeli strikes hit Salmas
+195|israel|Maku||Iran||US and Israeli strikes hit Maku
+195|israel|Saqqez||Iran||US and Israeli strikes hit Saqqez
+197|israel|Sarpol-e Zahab||Iran||Strike hits Ministry of Intelligence office in Sarpol-e Zahab
+197|israel|Shiraz||Iran||Strikes hit Fars governorate building and an emergency base in Shiraz
+197|israel|Mahabad||Iran||Strike hits the Red Crescent in Mahabad
+197|israel|Miandoab||Iran||Strike hits a National Iranian Oil Company facility in Miandoab
+198|iran||Prince Sultan Air Base|Saudi Arabia||Three Iranian missiles intercepted at Prince Sultan Air Base
+199|iraqi_militias|Basra||Iraq||Drones hit compound of foreign oil firms in Basra, setting it on fire
+203|israel|Tehran||Iran||IDF says it destroyed 16 Quds Force aircraft at Mehrabad airport in Tehran
+203|israel|Isfahan||Iran||US and Israeli strikes hit Isfahan and its airbase
+205|israel|Ahvaz||Iran||Strike hits airbase in Ahvaz
+205|israel|Khomein||Iran||Strike hits a girls' school in Khomein
+205|israel|Eslamshahr||Iran||Strike hits a home in Eslamshahr
+206|iran||Strait of Hormuz|sea||IRGC says it hit Malta-flagged tanker Prima with a drone in Strait of Hormuz
+207|iran|Basra||Iraq||Iranian strikes hit Halliburton compounds and refinery structures in Basra
+210|israel|Isfahan||Iran||Strikes hit Kamal Esmail Basij base, army garrison and a swimming complex in Isfahan
+210|israel|Shahin Shahr||Iran||Strikes hit an IRGC brigade and a stadium in Shahin Shahr
+210|israel|Paveh||Iran||Strike hits a border guard regiment in Paveh
+210|israel|Kermanshah||Iran||Strike hits Border Guard Command headquarters in Kermanshah
+210|israel|Qom||Iran||Strike hits a seminary building in Qom
+210|israel|Zarrin Shahr||Iran||Strike hits a judiciary building in Zarrin Shahr
+209|israel|Tehran||Iran||Israeli airstrikes hit Iran's oil facilities for the first time
+214|iran|Tel Aviv||Israel||IRGC says its missiles hit military targets in Tel Aviv
+214|iran|Beersheba||Israel||IRGC says its missiles hit military targets in Beersheba
+214|iran||Muwaffaq Salti Air Base|Jordan||IRGC says it hit Muwaffaq Salti Air Base in Azraq, Jordan
+215|iran|Kuwait City||Kuwait||Iranian drone sets fire to Public Institution for Social Security tower in Kuwait City
+219|israel|Isfahan||Iran||Strikes hit Optical Defense Industries and damage Chehel Sotoun and Ali Qapu palaces in Isfahan
+219|israel|Bandar Abbas||Iran||Strike hits Soru Pier in Bandar Abbas
+219|israel|Mobarakeh||Iran||Strike hits a police building in Mobarakeh
+219|israel|Shahriar||Iran||Strike hits Shahid Montazeri camp in Shahriar
+219|israel|Tehran||Iran||Strikes hit Tehran, including Sahab Pardaz company building
+220|iran|Manama||Bahrain||Blast near Manama sets fire near refinery, wounding 32; Patriot interception likely involved
+222|iran||Shaybah|Saudi Arabia||Saudi Arabia destroys four drones targeting Shaybah oil field
+224|iran|Yehud||Israel||Iranian cluster-bomb missile kills two workers in Yehud
+224|iran|Or Yehuda||Israel||Iranian cluster munition wounds a worker in Or Yehuda
+226|israel|Tehran||Iran||Strike at Resalat Highway intersection in Tehran causes heavy civilian casualties
+226|israel|Bandar Abbas||Iran||Strike hits airbase in Bandar Abbas
+226|israel|Qom||Iran||Strike hits IRGC intelligence headquarters in Qom
+226|israel|Kerman||Iran||Strike hits Kerman Airport fuel depot
+226|israel|Azarshahr||Iran||Strike hits a police building in Azarshahr
+226|israel|Najafabad||Iran||Strike hits Najafabad courthouse
+226|israel|Isfahan||Iran||Strike hits airbase in Isfahan
+229|iran||Ruwais|UAE||Drone strike sets fire at Ruwais refinery, ADNOC shuts it down
+230|iran|Al-Zulfi||Saudi Arabia||Drone falls in Al-Zulfi, causing damage
+231|iran||Harir Air Base|Iraq||Iran targets US military at Harir Air Base in Iraqi Kurdistan
+234|israel|Chabahar||Iran||Strikes hit army and IRGC bases in Chabahar
+234|israel|Isfahan||Iran||Strikes hit army and IRGC bases in Isfahan
+234|israel|Khomeinishahr||Iran||Strike hits a missile site in Khomeinishahr
+234|israel|Saqqez||Iran||Strike hits a police station in Saqqez
+234|israel|Birjand||Iran||Strike hits a training garrison in Birjand
+234|israel|Bushehr||Iran||Strike hits Persian Gulf Martyrs Hospital in Bushehr
+234|israel|Khomein||Iran||Strike hits Shaqayeq girls' school in Khomein
+234|israel|Bandar Lengeh||Iran||Strike hits two homes in Bandar Lengeh
+235|israel|Tehran||Iran||Israeli drone strikes hit checkpoints in Tehran, killing at least ten
+237|iran||Camp Buehring|Kuwait||IRGC says it attacked Camp Buehring in Kuwait with missiles
+237|iran||Mina Salman|Bahrain||IRGC says it hit US Naval Support Activity at Mina Salman, Bahrain
+237|iran||Ali Al Salem Air Base|Kuwait||IRGC says it attacked Ali Al Salem Air Base in Kuwait
+238|iran||Dubai International Airport|UAE||Two drones fall near Dubai International Airport, wounding four
+239|iran|Salalah||Oman||Drones strike fuel tanks at the Port of Salalah, halting operations

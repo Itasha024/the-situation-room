@@ -1,0 +1,52 @@
+531|iran||Ali Al Salem Air Base|Kuwait||Debris of downed Iranian missile falls on Ali Al Salem Air Base, wounding about five Americans
+534|us||Kharg Island|Iran||US missile disables tanker M/T Lexie heading to Kharg Island
+535|iran||Kuwait International Airport|Kuwait||Iranian drone hits Kuwait International Airport, killing one and wounding 63
+537|israel|Beirut||Lebanon||Israeli strike on Beirut's southern suburbs kills two, wounds 11
+541|iran||Ramat David|Israel||Iran fires ballistic missiles at Israel, says it targeted Ramat David airbase
+542|israel|Tehran||Iran||IDF strikes military sites in central and western Iran; explosions in Tehran
+542|israel|Isfahan||Iran||IDF strikes military sites; explosions in Isfahan
+542|israel|Tabriz||Iran||IDF strikes military sites; explosions in Tabriz
+555|us|Bemani||Iran||US strikes near the Strait damage drinking water facilities in Bemani
+557|iran||Jabal al Dukhan|Bahrain||Iranian attack damages radar station on Jabal al Dukhan, Bahrain
+558|israel||Dahiyeh|Lebanon||Israel strikes Dahiyeh in Beirut after drone attack on Israel
+563|iran||Ali Al Salem Air Base|Kuwait||Iran fires missiles and drones at Ali Al Salem Air Base
+565|iran||Strait of Hormuz|sea||Iranian missiles badly damage Qatari LNG tanker Al Rekayyat in the Strait of Hormuz
+577|us|Bandar Abbas||Iran||US strikes kill Iranian air force and navy personnel in Bandar Abbas
+577|us|Bushehr||Iran||US strikes kill Iranian service members in Bushehr
+584|us|Bushehr||Iran||Explosions in Bushehr, near the nuclear plant, during US strikes
+585|iran||Muwaffaq Salti Air Base|Jordan||Iran says it targeted Muwaffaq Salti Air Base
+586|iran|Erbil||Iraq||Iranian drones strike Iranian Kurdish rebel group near Erbil
+591|us|Chabahar||Iran||US hits military targets in Chabahar
+591|us|Jask||Iran||US hits military targets in Jask
+591|us|Konarak||Iran||US hits military targets in Konarak
+591|us||Abu Musa|Iran||US hits military targets on Abu Musa
+591|us|Bandar Abbas||Iran||US hits military targets in Bandar Abbas
+591|us|Bushehr||Iran||US hits military targets in Bushehr
+592|iran||Strait of Hormuz|sea||Iranian cruise missiles hit two Emirati tankers in Omani waters of the Strait, killing an Indian sailor
+594|us|Ahvaz||Iran||Explosions reported in Ahvaz during US strikes
+594|us||Kish Island|Iran||Explosions reported on Kish Island during US strikes
+597|us|Bandar Khamir||Iran||US strike hits a bridge and a truck in Bandar Khamir, killing the driver
+597|us|Qeshm||Iran||Explosions reported on Qeshm Island during US strikes
+597|us|Bandar Abbas||Iran||Explosions reported in Bandar Abbas during US strikes
+598|us||Iranshahr Airport|Iran||US jets attack Iranshahr Airport, Tasnim says
+600|iran||Muwaffaq Salti Air Base|Jordan||Iranian missiles kill two American soldiers in Jordan
+607|us||Larak Island|Iran||US missile strikes hit Larak Island, Tasnim says
+609|us|Shalamcheh||Iran||US strike on Shalamcheh area kills two, IRNA says
+610|us|Ahvaz||Iran||Explosions reported in Ahvaz on 13th night of US strikes
+610|us|Bandar Abbas||Iran||Explosions reported in Bandar Abbas on 13th night of US strikes
+610|us|Qeshm||Iran||Explosions reported on Qeshm Island on 13th night of US strikes
+626|iran|Erbil||Iraq||Iranian drones reportedly target Kurdistan Region prime minister's office in Erbil
+634|us||Larak Island|Iran||US strikes two Iranian mine-rocket launchers on Larak Island
+636|iran||Strait of Hormuz|sea||Iran says it shot down a US MQ-9 drone over the Strait of Hormuz
+639|unclear||Strait of Hormuz|sea||Tanker hit by three projectiles leaving the Strait of Hormuz
+643|us|Jiroft||Iran||US strikes hit Jiroft Airport, Iranian state media say
+644|us|Kuhestak||Iran||US strike in Kuhestak kills five at a wedding, including two children
+647|iran||Prince Hassan Air Base|Jordan||Iran fires missiles at Prince Hassan Air Base and Camp Titin in Jordan
+651|us||Lavan Island|Iran||US attack on Lavan Island kills Basij members
+653|iran||Ahmad al-Jaber Air Base|Kuwait||Iran says it targeted Ahmad al-Jaber Air Base
+653|iran||Al Minhad Air Base|UAE||Iran says it targeted Al Minhad Air Base
+663|iran|Bandar Abbas||Iran||Iranian air defences down a US MQ-1 Predator over Bandar Abbas
+668|iran||Al-Faw|Iraq||Tanker New Andros attacked by drone in Iraqi waters
+669|unclear|Dubai||UAE||Crew member killed on tanker Hercules Star near Dubai
+670|iran||Muwaffaq Salti Air Base|Jordan||Iranian strike on Muwaffaq Salti Air Base hits an A-10 and damages F-15s
+674|iran|Sulaymaniyah||Iraq||Missiles hit three Iranian Kurdish opposition camps in Sulaymaniyah

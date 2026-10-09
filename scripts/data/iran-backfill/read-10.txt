@@ -1,0 +1,45 @@
+1371|iran|Dubai||UAE|2026-04-02|IRGC says it targeted an Oracle data centre in Dubai
+1372|iran|Ajban||UAE|2026-04-03|Interception debris wounds 12 in Ajban and damages KEZAD
+1376|iran|Fujairah||UAE|2026-04-04|Drones hit a du telecom building in Fujairah, causing a small fire
+1378|iran|Ruwais||UAE|2026-04-05|Interception debris causes fires at Borouge petrochemical plant
+1384|iran|Fujairah||UAE|2026-04-08|Drones and missiles hit an oil terminal in Fujairah despite the ceasefire
+1384|iran|Habshan||UAE|2026-04-08|Interception debris wounds three at Habshan gas complex
+1388|iran|Fujairah||UAE|2026-05-04|Iranian attack wounds three Indians in Fujairah
+1390|iran||Dubai International Airport|UAE|2026-03-01|Missile debris hits Dubai International Airport, wounding several
+1400|iran||Bubiyan Island|Kuwait|2026-05-12|IRGC raiding party exchanges fire with Kuwaiti troops on Bubiyan Island
+1401|iran|Kuwait City||Kuwait|2026-07-18|Iranian military targets a desalination plant in Kuwait after US strike on Jask
+1401|us|Jask||Iran|2026-07-18|US airstrike hits a desalination plant in Jask
+1402|iran||Camp Buehring|Kuwait|2026-07-22|Iranian drones attack US depot at al-Doha base in Kuwait
+1407|iraqi_militias||Baghdad International Airport|Iraq|2026-03-10|Militia drone hits near guard tower at Baghdad Diplomatic Support Center
+1410|iraqi_militias|Baghdad||Iraq|2026-03-14|Missile hits helipad at US embassy in Baghdad's Green Zone
+1412|us|Baghdad||Iraq|2026-03-16|Air raid on a house used by an Iran-backed group in Baghdad's Jadriyah kills four
+1413|iraqi_militias|Baghdad||Iraq|2026-03-17|Drone attack on Al Rasheed Hotel in Baghdad's Green Zone
+1415|iraqi_militias|Baghdad||Iraq|2026-03-18|Drone hits the US embassy in Baghdad
+1417|iraqi_militias||Baghdad International Airport|Iraq|2026-03-20|Drone attack targets US diplomatic site near Baghdad airport
+1418|unclear|Baghdad||Iraq|2026-03-21|Drone strike on Iraqi intelligence headquarters in Mansour, Baghdad, kills a police officer
+1419|iraqi_militias||Baghdad International Airport|Iraq|2026-03-22|Rockets and drones aimed at US hub at Baghdad International Airport
+1420|unclear|Baghdad||Iraq|2026-03-30|Rockets hit Martyr Mohammed Alaa air base in Baghdad, destroying a plane
+1422|iraqi_militias|Baghdad||Iraq|2026-04-08|Iran-backed groups launch drones at a US diplomatic site in Baghdad
+1423|us|Dibis||Iraq|2026-03-10|Airstrike kills four Kata'ib al-Imam Ali fighters in Dibis near Kirkuk
+1428|iraqi_militias||Umm Qasr|Iraq|2026-03-19|Drones strike radar at Umm Qasr naval base
+1429|us|Tuz Khurmatu||Iraq|2026-03-20|Strike in Tuz Khurmatu kills a PMF fighter
+1431|us|Habbaniyah||Iraq|2026-03-23|US airstrike on PMF base in Habbaniyah kills 15
+1434|us|Kirkuk||Iraq|2026-03-28|Airstrikes on PMF headquarters near Kirkuk airport kill three
+1436|us|Rutba||Iraq|2026-03-31|Strikes on PMF base in Rutba kill two
+1437|us|Tel Afar||Iraq|2026-04-01|Shelling of Al-Hussein Brigade headquarters in Tel Afar kills four
+1438|unclear|Basra||Iraq|2026-04-04|Drone strikes oil facilities near Basra, causing a fire
+1442|us|Baghdad||Iraq|2026-07-29|US and Saudi airstrikes hit PMF bases in Baghdad and six other provinces, killing 20
+1443|gulf||Bartella|Iraq|2026-07-29|US-Saudi strikes hit PMF positions in Bartella
+1448|us|Al-Qa'im||Iraq|2026-03-16|Airstrike kills four PMF fighters at a checkpoint near Al-Qa'im
+1451|us|Kirkuk||Iraq|2026-03-18|Airstrikes on a command headquarters in Kirkuk kill three PMF fighters
+1458|unclear||Akrotiri|Cyprus|2026-03-02|Shahed-type drone hits a hangar at RAF Akrotiri, Cyprus
+1482|israel|Bandar Lengeh||Iran|2026-03-20|US-Israeli strikes burn 16 commercial boats in Bandar Lengeh port, Iran says
+1489|israel||Hengam Island|Iran|2026-04-01|Airstrikes on Hengam Island wound seven
+1513|us||Kharg Island|Iran|2026-07-17|US missiles strike tanker Belma docked at Kharg Island
+1522|us|Konarak||Iran|2026-09-01|US strikes hit Konarak, Tasnim reports
+1522|us|Bandar Abbas||Iran|2026-09-01|US strikes hit Bandar Abbas, Tasnim reports
+1522|us|Qeshm||Iran|2026-09-01|US strikes hit Qeshm Island, Tasnim reports
+1526|us|Jask||Iran|2026-09-01|US strikes hit Jask
+1526|us|Asaluyeh||Iran|2026-09-01|US strikes hit Asaluyeh
+1526|us|Ahvaz||Iran|2026-09-01|US strikes hit Ahvaz
+1532|gulf||Lavan Island|Iran|2026-04-08|Strike on Lavan Island refinery causes heavy damage; later reported to be the UAE's

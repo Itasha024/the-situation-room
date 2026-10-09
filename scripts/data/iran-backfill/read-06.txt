@@ -1,0 +1,58 @@
+682|unclear||Strait of Hormuz|sea||Liberia-flagged Al Maryah attacked leaving the Strait of Hormuz
+685|unclear||Strait of Hormuz|sea||Indian sailor killed in attack on cargo ship Cape Dao in Strait of Hormuz
+693|unclear|Doha||Qatar||Tanker attacked by multiple projectiles near Qatar, UKMTO says
+695|iran||Strait of Hormuz|sea||IRGC says it hit a vessel using an "illegal route" through Hormuz
+697|hezbollah|Haifa||Israel||Hezbollah says it targeted Mishmar HaCarmel missile defence site near Haifa
+702|israel|Beirut||Lebanon||Israeli airstrikes hit Beirut
+702|hezbollah||Ramat David|Israel||Hezbollah says it attacked Ramat David airbase and Meron base with drones and missiles
+704|israel|Baalbek||Lebanon||Israeli airstrikes hit Baalbek
+704|israel|Khiam||Lebanon||Israeli airstrikes hit Khiam
+704|israel|Beirut||Lebanon||Israeli airstrikes hit Beirut
+704|hezbollah|Metula||Israel||Hezbollah says it attacked IDF bases near Metula
+704|hezbollah|Safed||Israel||Hezbollah says it attacked an IDF base near Safed
+711|israel|Al-Nabi Shayth||Lebanon||Israeli commando raid and airstrikes in Al-Nabi Shayth kill 41
+715|israel|Beirut||Lebanon||Israeli strike on a hotel room in central Beirut kills four; IDF says it targeted Quds Force members
+718|israel|Al-Qlayaa||Lebanon||Israeli tank fire kills a Catholic priest in Al-Qlayaa
+720|hezbollah|Ramla||Israel||Hezbollah rockets hit a kindergarten in Ramla; 18 lightly wounded in central Israel
+726|israel|Beirut||Lebanon||Israeli strike on a car in Ramlet al-Baida, Beirut, kills eight
+731|israel|Burj Qalaouiyah||Lebanon||Israeli strike on a health centre in Burj Qalaouiyah kills 12 medics
+732|israel|Zrarieh||Lebanon||Israel destroys the Zrarieh bridge over the Litani
+735|hezbollah|Metula||Israel||Hezbollah fires a cluster rocket at Metula
+739|israel|Sidon||Lebanon||Israeli strike in Sidon kills a Hamas official
+740|israel|al-Qatrani||Lebanon||Israeli attack on al-Qatrani kills three
+742|hezbollah|Nahariya||Israel||Hezbollah rockets wound six in Nahariya
+744|israel|Nabatieh||Lebanon||Israeli strike in Nabatieh kills a Lebanese soldier
+746|israel|Beirut||Lebanon||Israeli airstrike on a building in Bashoura, central Beirut, kills six
+746|israel|Sahmar||Lebanon||Israeli airstrike on a house in Sahmar kills four
+752|israel|Qasmiyeh||Lebanon||Israeli missile strike on Al-Qasmiya bridge wounds two RT crew
+754|israel|Majdal Selem||Lebanon||IDF strike in Majdal Selem kills a Radwan commander
+757|hezbollah|Nahariya||Israel||Hezbollah rockets on Nahariya kill a man and wound 14
+760|israel|Beirut||Lebanon||IDF says it killed two Hezbollah communications commanders in Beirut
+763|unclear|Aadshit al-Qusayr||Lebanon||Projectile hits UNIFIL base near Aadshit al-Qusayr, killing two Indonesian peacekeepers
+768|unclear|Bani Haiyyan||Lebanon||Blast hits UNIFIL vehicle near Bani Haiyyan, killing two peacekeepers
+772|israel|Beirut||Lebanon||Israeli strikes in Jnah, Beirut, kill seven including Hezbollah southern front commander
+789|israel|Kfar Hatta||Lebanon||Israeli strike in Kfar Hatta kills seven, including a four-year-old
+790|israel|Beirut||Lebanon||Israeli strike in Beirut's Jnah kills four and wounds 39
+791|israel|Ain Saadeh||Lebanon||Israeli strike in Ain Saadeh kills three
+796|hezbollah|Nahariya||Israel||Hezbollah fires 10 rockets at Nahariya, wounding two
+801|israel|Beirut||Lebanon||Israeli strikes kill at least 92 in Beirut in the war's biggest wave on Lebanon
+804|israel|Beirut||Lebanon||IDF kills Naim Qassem's secretary Ali Yusuf Harshi in Beirut strike
+805|israel|Sidon||Lebanon||IDF strike in Sidon kills Lebanese Resistance Brigades commander and eight others
+809|israel|Nabatieh||Lebanon||Israeli strike in Nabatieh kills 19, including 13 State Security personnel
+810|hezbollah|Ashdod||Israel||Hezbollah fires a missile at Ashdod, saying it targeted the naval base
+812|hezbollah|Nahariya||Israel||Hezbollah rocket damages a 1,500-year-old church in Nahariya
+814|hezbollah|Karmiel||Israel||Hezbollah fires 10 rockets at Karmiel
+817|israel|Bint Jbeil||Lebanon||IDF raid on a hospital in Bint Jbeil kills 20 Hezbollah fighters, IDF says
+820|hezbollah|Nahariya||Israel||Hezbollah rocket lightly wounds a woman in Nahariya
+826|hezbollah|Tamra||Israel||Hezbollah rocket wounds one in Tamra
+827|israel|Mayfadoun||Lebanon||Israeli strike in Mayfadoun kills four paramedics
+832|hezbollah|Karmiel||Israel||Hezbollah rockets seriously wound two near Karmiel
+833|israel|Tyre||Lebanon||Israeli strike on a building in Tyre kills 13 of one family
+834|israel|Qasmiyeh||Lebanon||Israel destroys the Qasmieh bridge hours before the ceasefire
+836|hezbollah|Al-Jibbain||Lebanon||Hezbollah bomb kills an Israeli reservist searching a building in Al-Jibbain
+841|hezbollah|Rab Thalathin||Lebanon||Hezbollah fires rockets at an Israeli position in Rab Thalathin
+843|hezbollah|Al-Bayyada||Lebanon||Hezbollah drone attacks Israeli position in Al-Bayyada
+844|hezbollah|al-Qantara||Lebanon||Hezbollah drone attacks Israeli troops in al-Qantara
+846|hezbollah|Aynata||Lebanon||Hezbollah fires rockets at an IDF position in Aynata
+847|israel|Nabatieh||Lebanon||Israeli strike on a car in Nabatieh kills three
+849|hezbollah|Shtula||Israel||Hezbollah fires four rockets at Shtula

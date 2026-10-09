@@ -1,0 +1,63 @@
+1030|israel|Yohmor||Lebanon||Israeli strikes hit Yohmor
+1032|israel|Nabatieh||Lebanon||Israeli strike in Nabatieh kills two on a motorbike
+1035|israel|Nabatieh||Lebanon||Israeli strike in Nabatieh kills three
+1034|israel|Arabsalim||Lebanon||Israeli strikes on Arabsalim kill four; hospital destroyed near Ali al-Taher
+1036|israel|Deir al-Zahrani||Lebanon||Israeli strikes hit Deir al-Zahrani
+1041|israel|Tel al-Dabsha||Lebanon||Israeli strikes near Tel al-Dabsha
+1041|israel|Nabatieh al-Fawqa||Lebanon||Israeli strikes near Nabatieh al-Fawqa
+1050|unclear|Kfar Shouba||Lebanon||Gunfire hits UNIFIL base near Kfar Shouba
+1052|israel|Tehran||Iran||At least seven missiles strike the Pasteur district, home of Khamenei's compound and the presidency
+1066|israel|Mahallati||Iran||Airstrike hits Mahallati town in Tehran province
+1077|israel|Bandar Abbas||Iran||US-Israeli airstrikes set Bandar Abbas port ablaze
+1078|israel|Eyvan||Iran||Airstrike destroys a police station in Eyvan
+1076|israel|Urmia||Iran||Airstrikes hit Urmia
+1079|israel|Sanandaj||Iran||Airstrikes hit Sanandaj
+1080|israel|Bushehr||Iran||US-Israeli airstrikes blow up an ammunition depot in Bushehr
+1081|israel|Tabriz||Iran||Airstrike destroys the Ashura Brigade headquarters in Tabriz
+1082|israel|Isfahan||Iran||Airstrikes hit Isfahan
+1068|israel|Tehran||Iran||Airstrikes hit Khamenei's compound in Tehran again
+1090|israel|Nabatieh||Lebanon||Israeli airstrikes destroy a Hezbollah command centre in Nabatieh
+1091|israel|Mayfadoun||Lebanon||Israeli airstrike hits Mayfadoun
+1092|israel|Zibqin||Lebanon||Israeli airstrike hits Zibqin
+1093|israel|Roumine||Lebanon||Israeli airstrikes hit Roumine and Ghandouriyeh
+1094|israel|Qalila||Lebanon||Israeli airstrikes hit targets around Qalila
+1095|israel|Al-Housh||Lebanon||Israeli drone strike near Al-Housh
+1096|israel||Dahieh|Lebanon||Israeli airstrikes hit Dahieh
+1097|israel|Aita al-Shaab||Lebanon||Israeli airstrike hits Aita al-Shaab
+1105|iran|Tel Aviv||Israel||Iranian missiles fired at Tel Aviv
+1115|iran|Tel Aviv||Israel||Iranian missile hits a Tel Aviv building for the second time, killing a man
+1111|iran|Jerusalem||Israel||Missile and interceptor fragments fall in Jerusalem's Old City
+1117|iran|Manama||Bahrain||Iranian strikes damage US Fifth Fleet headquarters buildings in Bahrain
+1119|iran||Bahrain International Airport|Bahrain||Iranian drone strikes Bahrain International Airport, minor damage
+1123|iran||Port Shuaiba|Kuwait||Iranian drone attack on Port Shuaiba kills six US servicemen
+1124|iran|Kuwait City||Kuwait||Iranian missile hits the US embassy in Kuwait City
+1130|iran|Doha||Qatar||Missile shot down over Doha, fragments cause minor damage
+1134|iran||Al Dhafra Air Base|UAE||Iran targets Al Dhafra Air Base
+1135|iran||Al Minhad Air Base|UAE||Iran targets Al Minhad Air Base
+1137|iran|Abu Dhabi||UAE||Iran strikes French naval base Camp de la Paix in Abu Dhabi
+1144|iran|Riyadh||Saudi Arabia||Two drones hit US embassy in Riyadh, causing a limited fire
+1150|iran|Yanbu||Saudi Arabia||Iranian drone hits SAMREF refinery in Yanbu, briefly halting loadings
+1158|iran|Gaziantep||Turkey||Ballistic missile downed over Gaziantep
+1159|iran||Incirlik Air Base|Turkey||Ballistic missile intercepted near Incirlik Air Base
+1162|iran|Shakarabad||Azerbaijan||Iranian drone falls near a school in Shakarabad, Nakhchivan
+1165|unclear|Ras Al Khaimah||UAE||Tanker JV Innovation hit by unidentified munition near Mina Saqr
+1167|unclear|Muscat||Oman||Tanker Olympic Life damaged by explosion 60 nautical miles off Muscat
+1168|unclear|Doha||Qatar||Qatari killed by shrapnel aboard a vessel off Qatar
+1169|iran|Ras Al Khaimah||UAE||Bunkering tanker Hercules Star hit by projectile near Ras al-Khaimah, one killed
+1171|iran|Sharjah||UAE||Ocean Electra near-missed 35 nautical miles from Sharjah
+1174|iran|Muscat||Oman||Bulk carrier Pelagia attacked 137 nautical miles east of Muscat
+1175|iran|Fujairah||UAE||Bulk carrier Gold Oak and tanker Libra Trader hit off Fujairah
+1178|iran|Dubai||UAE||Near miss on container ship MSC Grace west of Dubai
+1179|iran||Strait of Hormuz|sea||Container ship Safeen Prestige hit and set ablaze in the Strait of Hormuz, crew abandon ship
+1180|iran|Mubarak Al-Kabeer||Kuwait||Uncrewed boat blast breaches hull of tanker Sonangol Namibe off Kuwait
+1181|iran||Strait of Hormuz|sea||Tug Mussafah 2 sunk aiding Safeen Prestige, four killed
+1182|iran|Jubail||Saudi Arabia||Tanker Louise P attacked near Jubail
+1184|iran|Dubai||UAE||Container ship One Majesty hit north of Dubai
+1186|iran|Ruus Al Jibal||Oman||IRGC fires on container ship Express Rome near Ruus al-Jibal
+1187|iran|Ras Tanura||Saudi Arabia||Two near misses on Express Rome northeast of Ras Tanura
+1189|iran||Jebel Ali|UAE||Container ship Source Blessing hit by projectile north of Jebel Ali
+1192|iran|Fujairah||UAE||Projectile damages tanker Gas Al Ahmadiah east of Fujairah
+1193|iran|Khor Fakkan||UAE||Vessel set on fire east of Khor Fakkan, crew abandon ship
+1194|iran||Ras Laffan|Qatar||Offshore vessel Halul 50 hit by debris of Iranian strikes on Ras Laffan
+1195|iran|Sharjah||UAE||Vessel hit north of Sharjah
+1197|iran|Dubai||UAE||IRGC claims ballistic missile strike on Haiphong Express near Dubai

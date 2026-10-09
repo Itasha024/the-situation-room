@@ -5,9 +5,9 @@
  *
  * The record: Wikipedia's timelines of the 2026 Iran war, the 2026 Lebanon war
  * and the Iraqi insurgency, read line by line with each line's own citations.
- * Wikipedia is the list; the pin's source is the outlet it cites. A free model
- * marks which lines tell one attack at a named place, who acted and where it
- * landed; code keeps a pin only when
+ * Wikipedia is the list; the pin's source is the outlet it cites. Which lines
+ * tell one attack at a named place, who acted and where it landed was read by
+ * hand (no model quota); code keeps a pin only when
  * - the place is written in the line itself (grounded),
  * - OpenStreetMap finds it as a town, site, base, port or island in the named
  *   country, never a province or a country (or it is on the desk's own list),
@@ -16,11 +16,10 @@
  * - and the line cites an outlet.
  * One pin per actor, place and day.
  *
- *   node iran-backfill.mjs [--from 2026-02-28] [--to 2026-03-31] [--out file.json]
- * Needs the reader's free model keys (NVIDIA first; Gemini is left to the live desk).
+ *   node iran-backfill.mjs --dump segments.tsv
+ *   node iran-backfill.mjs --events events.jsonl [--from …] [--to …] [--out file.json]
  */
 import fs from "node:fs";
-import { askChain, type ChainModel } from "../src/lib/desk/models.ts";
 import { iranPinAllowed, iranPlacesIn, tallyNotEvent } from "../src/lib/desk/iran-places.ts";
 
 const arg = (k: string, d: string) => {
@@ -62,13 +61,6 @@ const PAGES: [string, "timeline" | "table" | "prose"][] = [
 ];
 // Sections of a front's page that tell no attack.
 const NOT_ATTACKS = /background|prelude|reaction|response by|impact|see also|reference|notes|analysis|aftermath|international|domestic|econom|legal|casualties|number of|arrest|airspace|evacuation|diplomac|relations|disruption|market|aviation|travel|media|propaganda|misinformation|cyber|protest/i;
-const MODELS: ChainModel[] = [
-  { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
-  { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
-  { provider: "cerebras", id: "gpt-oss-120b" },
-  { provider: "groq", id: "openai/gpt-oss-120b" },
-  { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
-];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 type Ref = { url: string; title: string; site: string; date: string };
@@ -94,7 +86,8 @@ function field(t: string, names: string[]): string {
 function parseRef(body: string): Ref | null {
   const url = field(body, ["url"]).replace(/\s+/g, "");
   if (!/^https?:\/\//.test(url) || /wikipedia\.org|archive\.org|archive\.ph|archive\.today/.test(url)) return null;
-  const site = clean(field(body, ["website", "work", "newspaper", "publisher", "agency", "magazine"])) || new URL(url).hostname.replace(/^www\./, "");
+  // "[[Liveuamap|…]]" is cut at its bar by field(): the name without the link's brackets.
+  const site = clean(field(body, ["website", "work", "newspaper", "publisher", "agency", "magazine"]).replace(/^\[\[/, "")) || new URL(url).hostname.replace(/^www\./, "");
   return { url, title: clean(field(body, ["title", "trans-title", "script-title"])).replace(/^[a-z]{2}:/, ""), site, date: field(body, ["date"]) };
 }
 function clean(s: string): string {
@@ -226,16 +219,13 @@ function paragraphs(page: string, wt: string, kind: "timeline" | "table" | "pros
   return out;
 }
 
-/* ---------- The model's reading ---------- */
-const SYSTEM = `You read lines of a day-by-day war record (the 2026 Iran war: the US and Israel against Iran, Iran and its allies against Israel, the US, the Gulf states and shipping, and the Israel-Hezbollah front). Each segment has an id. Return JSON {"events":[...]}, one object per single attack the text tells at a named place:
-{"seg":"<segment id where the place is named>","actor":"iran|hezbollah|iraqi_militias|us|israel|gulf|houthi|other|unclear","town":"<only the name of the city, town or village hit, exactly as written, e.g. 'Tel Aviv', or '' if none is written>","site":"<only the proper name of the base, airport, port, island, nuclear or oil site, neighbourhood or sea hit, exactly as written, e.g. 'Al Udeid', 'Natanz', 'Strait of Hormuz', or ''>","country":"<the country it is in, or 'sea'>","day":"<YYYY-MM-DD: the segment's day when it has one, else the date the text gives for this attack (the year is 2026), else ''>","headline":"<one line, at most 16 words, plain English, who did what where, e.g. 'Israeli strikes hit IRGC headquarters in Sanandaj'>"}
-Rules:
-- Only real attacks that happened: an air or missile strike, a drone or missile hitting or being intercepted over a place, shelling, a raid, a ship attacked or seized. Not threats, statements, sirens alone, warnings, evacuations, deployments, flights over, or diplomacy.
-- Not a count or round-up across many places or days ("72 strikes in 20 provinces", "attacks across the Gulf"). A strike on a province or a whole country with no town named is not an event.
-- town and site are bare proper names, never descriptions ("residential area in Tel Aviv" is town "Tel Aviv"; "Al Udeid Air Base in Qatar" is site "Al Udeid Air Base"). Never a country, a province or a region ("southern Lebanon", "Eastern Province", "Beqaa Valley" alone are not places). If several places are hit in one sentence, one object per place.
-- actor: who carried out the attack. iraqi_militias covers Iraqi and Syrian Iran-aligned militias. Joint US-Israeli strikes: use the one the text names first; if it says "US-Israeli" use "israel" for strikes in Lebanon and "us" otherwise only when the US alone is named; else "israel".
-- Do not invent anything not in the text. If nothing qualifies, return {"events":[]}.`;
-
+/* ---------- The reading ----------
+ * Done by hand, once (user, 9 Oct: the site's models are for the live
+ * reports): --dump writes every cited line, one per row; the attacks read
+ * from them go in a JSON-lines file, one per attack:
+ *   {"k":"<page>:<segment id>","actor":"israel","town":"Sanandaj","site":"","country":"Iran","day":"","headline":"…"}
+ * and --events reads them back through the checks below.
+ */
 /** The text writes this day ("3 March", "March 3", "2026-03-03"). */
 function mentions(text: string, day: string): boolean {
   const [, m, d] = day.split("-").map(Number);
@@ -244,36 +234,18 @@ function mentions(text: string, day: string): boolean {
 }
 type AiEvent = { seg: string; actor: string; day?: string; town?: string; site?: string; country: string; headline: string };
 /** "Tehran", "Al Udeid Air Base", "Nabatieh al-Fawqa": a name, never "oil refinery" or "southern Lebanon". */
-const SMALL = new Set(["al", "el", "ad", "as", "ash", "az", "of", "the", "de", "bin", "bint", "ibn", "abu", "and"]);
+const SMALL = new Set(["al", "el", "an", "ar", "ad", "as", "ash", "az", "ez", "es", "ed", "of", "the", "de", "bin", "bint", "ibn", "abu", "and"]);
 function properName(x: string): boolean {
   if (/^(?:southern|northern|eastern|western|central|south|north|east|west|greater|upper|lower)\b/i.test(x)) return false;
   if (/\b(?:province|governorate|region|district|valley|airspace|coast|border|areas?)\b/i.test(x) && !/\bisland\b/i.test(x)) return false;
   const words = x.split(/[\s-]+/).filter((w) => w.length > 1 && !SMALL.has(w.toLowerCase()));
   return words.length > 0 && words.every((w) => /^[\p{Lu}\d'’]/u.test(w));
 }
-async function readBatch(paras: Para[]): Promise<AiEvent[]> {
-  const items = paras.flatMap((p) => p.segs.map((s) => ({ id: s.id, day: p.day, section: p.theatre, text: s.text.slice(0, 1500) })));
-  const key = SYSTEM.length + ":" + items.map((i) => i.id + i.text.length).join(",");
-  if (cache.ai[key]) return cache.ai[key] as AiEvent[];
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const got = await askChain("backfill", SYSTEM, JSON.stringify({ segments: items }), { models: MODELS, timeoutMs: 150_000, temperature: 0 });
-    const ev = got && Array.isArray(got.json.events) ? (got.json.events as AiEvent[]) : null;
-    if (ev) {
-      cache.ai[key] = ev;
-      save();
-      return ev;
-    }
-    await new Promise((r) => setTimeout(r, 20_000));
-  }
-  console.error("batch unread:", items[0]?.day, items.length);
-  return [];
-}
-
 /* ---------- Where ---------- */
 type Geo = { lat: number; lng: number; country: string; kind: string; name: string } | null;
 const COUNTRY: Record<string, string> = { "United Arab Emirates": "UAE", "Palestinian Territory": "Palestine", "State of Palestine": "Palestine", "Palestinian Territories": "Palestine" };
 const ISO: Record<string, string> = { Iran: "ir", Israel: "il", Lebanon: "lb", Iraq: "iq", Syria: "sy", Jordan: "jo", UAE: "ae", "United Arab Emirates": "ae", Qatar: "qa", Bahrain: "bh", Kuwait: "kw", Oman: "om", "Saudi Arabia": "sa", Cyprus: "cy", Yemen: "ye", Azerbaijan: "az", Turkey: "tr", Pakistan: "pk", Palestine: "ps" };
-const OK_TYPE = /^(city|town|village|hamlet|suburb|neighbourhood|quarter|city_district|borough|municipality|island|islet|aerodrome|military|industrial|port|harbour|man_made|amenity|building|landuse|place|locality|isolated_dwelling|square|district)$/;
+const OK_TYPE = /^(city|town|village|hamlet|suburb|neighbourhood|quarter|city_district|borough|municipality|island|islet|aerodrome|military|industrial|port|harbour|man_made|amenity|building|aeroway|locality|isolated_dwelling|square|district)$/;
 let lastCall = 0;
 async function geocode(place: string, country: string): Promise<Geo> {
   const own = iranPlacesIn(place)[0];
@@ -286,11 +258,12 @@ async function geocode(place: string, country: string): Promise<Geo> {
   const wait = 1100 - (Date.now() - lastCall);
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   lastCall = Date.now();
-  const u = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=en&addressdetails=1&countrycodes=${cc}&q=${encodeURIComponent(place)}`;
+  const u = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=en&addressdetails=1&countrycodes=${cc}&q=${encodeURIComponent(place)}`;
   let g: Geo = null;
   try {
     const j = (await (await fetch(u, { headers: { "user-agent": UA } })).json()) as { lat: string; lon: string; addresstype?: string; name?: string; address?: { country?: string } }[];
-    const r = j[0];
+    // The first answer that is a town or a site, never the province or county of the same name.
+    const r = j.find((x) => OK_TYPE.test(String(x.addresstype || "")));
     if (r && OK_TYPE.test(String(r.addresstype || ""))) {
       const c = String(r.address?.country || country);
       g = { lat: +(+r.lat).toFixed(4), lng: +(+r.lon).toFixed(4), country: COUNTRY[c] ?? c, kind: String(r.addresstype), name: place };
@@ -331,41 +304,23 @@ if (process.argv.includes("--parse-only")) {
 const segById = new Map<string, { seg: Seg; para: Para }>();
 for (const p of all) for (const s of p.segs) segById.set(`${p.page}:${s.id}`, { seg: s, para: p });
 
-// Batches of about 9,000 characters, never across a page.
-const batches: Para[][] = [];
-let cur: Para[] = [];
-let size = 0;
-for (const p of all) {
-  const len = p.segs.reduce((a, s) => a + s.text.length, 0);
-  if (cur.length && (size + len > 3500 || cur[0].page !== p.page)) { batches.push(cur); cur = []; size = 0; }
-  cur.push(p);
-  size += len;
+if (process.argv.includes("--dump")) {
+  const rows = all.flatMap((p) => p.segs.map((x) => `${p.page}:${x.id}\t${p.day}\t${p.theatre}\t${x.text.slice(0, 1800)}`));
+  fs.writeFileSync(arg("--dump", "segments.tsv"), rows.join("\n"));
+  console.log(`${rows.length} cited lines written`);
+  process.exit(0);
 }
-if (cur.length) batches.push(cur);
-console.log(`${batches.length} batches`);
+const events: (AiEvent & { k: string })[] = fs.readFileSync(arg("--events", "events.jsonl"), "utf8").split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l));
 
 type Pin = { fp: string; day: string; actor: string; place: string; lat: number; lng: number; country: string; label: string; text: string; source: string; url: string; also: { source: string; url: string }[] };
 const pins = new Map<string, Pin>();
 const dropped: Record<string, number> = {};
-const drop = (why: string) => { dropped[why] = (dropped[why] ?? 0) + 1; };
-// Three batches read at a time (the free services' rate allows it); the places found one by one after.
-const read: AiEvent[][] = new Array(batches.length);
-let next = 0;
-let done = 0;
-await Promise.all([0, 1, 2].map(async () => {
-  while (next < batches.length) {
-    const i = next++;
-    read[i] = await readBatch(batches[i]);
-    if (++done % 10 === 0) console.log(`${done}/${batches.length} batches read`);
-  }
-}));
-let b = 0;
-for (const batch of batches) {
-  b++;
-  const page = batch[0].page;
-  const evs = read[b - 1] ?? [];
-  for (const e of evs) {
-    const hit = segById.get(`${page}:${e.seg}`);
+const drop = (why: string) => { dropped[why] = (dropped[why] ?? 0) + 1; if (process.env.BF_DEBUG) console.log(`drop: ${why} | ${JSON.stringify(current)}`); };
+let current: unknown = null;
+for (const e of events) {
+  current = e;
+  {
+    const hit = segById.get(e.k);
     if (!hit || !(e.site || e.town) || !e.headline) { drop("no segment"); continue; }
     const { seg, para } = hit;
     // The day: the timeline's heading, a table row's date, or a date the line itself writes.
@@ -404,7 +359,6 @@ for (const batch of batches) {
       also: [],
     });
   }
-  if (b % 10 === 0) console.log(`${b}/${batches.length} batches, ${pins.size} pins`);
 }
 const out = [...pins.values()].sort((a, b) => a.day.localeCompare(b.day));
 fs.writeFileSync(OUT, JSON.stringify(out, null, 1));

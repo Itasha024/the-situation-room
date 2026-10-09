@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arenas mockup</title>
+<style>
+:root{--bg:#1b1918;--s1:#211e1c;--s2:#2a2623;--s3:#332e2a;--line:#3a3430;--line2:#4a433d;--text:#efe6dd;--muted:#a99d93;--strong:#fff;--acc:#f4a58a;--new:#22c55e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
+h1{font:600 1.5rem/1.2 Georgia,serif;color:var(--strong);margin:0 0 .3rem}
+.intro{color:var(--muted);margin:0 0 1.6rem;max-width:62ch}
+.opt{border:1px solid var(--line2);border-radius:12px;margin:0 0 2rem;overflow:hidden}
+.opt-h{display:flex;gap:.6rem;align-items:baseline;padding:.6rem 1rem;background:var(--s2);border-bottom:1px solid var(--line)}
+.opt-h b{font:700 .72rem/1 system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.opt-h span{color:var(--muted);font-size:.85rem}
+.sec{padding:.9rem 1rem 1.1rem;background:var(--s1)}
+.sec h2{margin:0 0 .2rem;font:600 1.15rem/1.2 Georgia,serif;color:var(--strong)}
+.sub{margin:0 0 .7rem;color:var(--muted);font-size:.78rem}
+/* the overview panel shared by all three */
+.panel{border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:.8rem .9rem}
+.panel h3{margin:0 0 .15rem;font:600 1rem/1.25 Georgia,serif;color:var(--strong)}
+.panel .when{margin:0 0 .5rem;color:var(--muted);font-size:.74rem}
+.panel ul{margin:0;padding-inline-start:1.1rem}
+.panel li{margin:.25rem 0;font-size:.88rem}
+.panel .src{color:var(--acc);font-size:.76rem;white-space:nowrap}
+.panel .more{margin-top:.6rem;display:inline-block;color:var(--acc);font-size:.8rem;text-decoration:none}
+.n{display:inline-grid;place-items:center;min-width:1.35rem;height:1.2rem;padding:0 .3rem;border-radius:999px;background:var(--s3);color:var(--text);font:600 .68rem/1 system-ui}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--new);display:inline-block;flex:none}
+/* A: grid */
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:.7rem}
+.grid button{display:flex;flex-direction:column;align-items:flex-start;gap:.3rem;padding:.5rem .6rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;font-size:.82rem;text-align:start;cursor:pointer;min-height:58px}
+.grid button .row{display:flex;gap:.35rem;align-items:center;width:100%;justify-content:space-between}
+.grid button[aria-pressed=true]{border-color:var(--acc);background:var(--s3);color:var(--strong)}
+.grid button.quiet{color:var(--muted)}
+@media (max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
+/* B: chips */
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:.6rem;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+.chips button{flex:none;display:inline-flex;gap:.4rem;align-items:center;padding:.38rem .7rem;border:1px solid var(--line2);border-radius:999px;background:transparent;color:var(--text);font:inherit;font-size:.82rem;cursor:pointer;white-space:nowrap}
+.chips button[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.chips button[aria-pressed=true] .n{background:var(--bg);color:var(--text)}
+/* C: list beside panel */
+.split{display:grid;grid-template-columns:240px 1fr;gap:10px}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.list button{display:flex;align-items:center;gap:.45rem;justify-content:space-between;padding:.48rem .7rem;border:0;border-bottom:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;font-size:.84rem;text-align:start;cursor:pointer}
+.list button:last-child{border-bottom:0}
+.list button[aria-pressed=true]{background:var(--s3);color:var(--strong);box-shadow:inset 3px 0 0 var(--acc)}
+.list .l{display:flex;align-items:center;gap:.45rem}
+@media (max-width:760px){.split{grid-template-columns:1fr}.list{flex-direction:row;overflow-x:auto}.list button{flex:none;border-bottom:0;border-inline-end:1px solid var(--line)}}
+.note{margin:.6rem 0 0;color:var(--muted);font-size:.8rem}
+.note b{color:var(--text)}
+.top{border:1px dashed var(--line2);border-radius:10px;padding:.8rem .9rem;margin:0 0 2rem;background:var(--s1)}
+.top h2{margin:0 0 .3rem;font:600 1.1rem/1.2 Georgia,serif;color:var(--strong)}
+.top ol{margin:.2rem 0 0;padding-inline-start:1.2rem}
+.top li{margin:.25rem 0;font-size:.88rem}
+.top .tag{font:700 .62rem/1 system-ui;letter-spacing:.1em;text-transform:uppercase;color:#ef4444;margin-inline-end:.35rem}
+</style>
+</head>
+<body>
+<main>
+<h1>Iran desk: arenas</h1>
+<p class="intro">Three ways to lay out the ten arenas. In each, picking an arena shows its overview, written every 3 hours from that arena's cards, each point with its source. The text below is a sample made from today's real cards; it is not live. Below them is how "Latest developments" at the top of the page would read.</p>
+
+<div class="top">
+  <h2>Latest developments <span class="sub" style="font-family:system-ui">(top of the page, every 3 hours, military actions first)</span></h2>
+  <ol>
+    <li><span class="tag">Military</span>US officials say the Pentagon is preparing plans for wide strikes on Iran, with three aircraft carriers expected in the region.</li>
+    <li><span class="tag">Military</span>A US military source told Al Hadath that options to strike Iran's coastal military capabilities to a depth of 50–80 km were put to Trump.</li>
+    <li>At least five Iranian security personnel were killed in four attacks across Sistan and Baluchestan.</li>
+    <li>Trump says the US will not attack Iran before the 3 November midterms; the blockade stays.</li>
+  </ol>
+</div>
+
+<!-- A -->
+<section class="opt" id="a">
+  <div class="opt-h"><b>Option A</b><span>Two rows of buttons, each with its number of new cards in the last 3 hours</span></div>
+  <div class="sec">
+    <h2>Arenas</h2>
+    <p class="sub">Updated 09:00 · next 12:00 (Israel time)</p>
+    <div class="grid" role="group" aria-label="Arenas">
+      <button aria-pressed="true"><span class="row">Military campaign <span class="n">14</span></span></button>
+      <button><span class="row">Talks <span class="n">6</span></span></button>
+      <button><span class="row">Strait of Hormuz <span class="n">11</span></span></button>
+      <button><span class="row">Nuclear file <span class="n">2</span></span></button>
+      <button><span class="row">Inside Iran <span class="n">9</span></span></button>
+      <button><span class="row">Sanctions <span class="n">5</span></span></button>
+      <button><span class="row">Axis of Resistance <span class="n">8</span></span></button>
+      <button><span class="row">US in the region <span class="n">3</span></span></button>
+      <button><span class="row">Inside the US <span class="n">4</span></span></button>
+      <button class="quiet"><span class="row">Israel home front <span class="n">0</span></span></button>
+    </div>
+    <div class="panel">
+      <h3>Military campaign</h3>
+      <p class="when">06:00–09:00 · 14 reports</p>
+      <ul>
+        <li>The Pentagon is preparing plans for wide strikes on Iran; three aircraft carriers are expected in the Middle East. <span class="src">Sky News Arabia</span></li>
+        <li>Options to strike Iran's coastal military capabilities to a depth of 50–80 km were put to Trump, a US military source says. <span class="src">Al Hadath</span></li>
+        <li>Iran's acting defence minister warns the US against miscalculation. <span class="src">Press TV</span></li>
+        <li>The IRGC tested an "air mine" on an Iranian island, meant against helicopter landings. <span class="src">Akhbar-e Fori</span></li>
+      </ul>
+      <a class="more" href="#">The 14 reports →</a>
+    </div>
+    <p class="note"><b>For:</b> every arena and its activity seen at once. <b>Against:</b> takes two rows; on a phone, five rows of two.</p>
+  </div>
+</section>
+
+<!-- B -->
+<section class="opt" id="b">
+  <div class="opt-h"><b>Option B</b><span>One row of chips that scrolls sideways; a green dot where there is news since the last overview</span></div>
+  <div class="sec">
+    <h2>Arenas</h2>
+    <p class="sub">Updated 09:00 · next 12:00 (Israel time)</p>
+    <div class="chips" role="group" aria-label="Arenas">
+      <button aria-pressed="true"><span class="dot"></span>Military campaign <span class="n">14</span></button>
+      <button><span class="dot"></span>Strait of Hormuz <span class="n">11</span></button>
+      <button><span class="dot"></span>Inside Iran <span class="n">9</span></button>
+      <button><span class="dot"></span>Axis of Resistance <span class="n">8</span></button>
+      <button>Talks <span class="n">6</span></button>
+      <button>Sanctions <span class="n">5</span></button>
+      <button>Inside the US <span class="n">4</span></button>
+      <button>US in the region <span class="n">3</span></button>
+      <button>Nuclear file <span class="n">2</span></button>
+      <button>Israel home front <span class="n">0</span></button>
+    </div>
+    <div class="panel">
+      <h3>Strait of Hormuz</h3>
+      <p class="when">06:00–09:00 · 11 reports</p>
+      <ul>
+        <li>The IRGC Navy says it has full control of the Strait and hits "non-compliant" ships every night. <span class="src">Fars News</span></li>
+        <li>The tanker Acers was hit by three drones off the Musandam Peninsula. <span class="src">The Maritime Executive</span></li>
+        <li>Tanker traffic through Hormuz is at a two-month low; Brent holds above $100. <span class="src">OilPrice.com</span></li>
+      </ul>
+      <a class="more" href="#">The 11 reports →</a>
+    </div>
+    <p class="note"><b>For:</b> one slim line; busiest arenas first. <b>Against:</b> the order changes every 3 hours, and some arenas are off-screen until you scroll.</p>
+  </div>
+</section>
+
+<!-- C -->
+<section class="opt" id="c">
+  <div class="opt-h"><b>Option C</b><span>A fixed list on the left, the overview on the right (on a phone the list becomes a row)</span></div>
+  <div class="sec">
+    <h2>Arenas</h2>
+    <p class="sub">Updated 09:00 · next 12:00 (Israel time)</p>
+    <div class="split">
+      <div class="list" role="group" aria-label="Arenas">
+        <button><span class="l">Military campaign</span><span class="n">14</span></button>
+        <button><span class="l">Talks</span><span class="n">6</span></button>
+        <button><span class="l">Strait of Hormuz</span><span class="n">11</span></button>
+        <button><span class="l">Nuclear file</span><span class="n">2</span></button>
+        <button aria-pressed="true"><span class="l">Inside Iran</span><span class="n">9</span></button>
+        <button><span class="l">Sanctions</span><span class="n">5</span></button>
+        <button><span class="l">Axis of Resistance</span><span class="n">8</span></button>
+        <button><span class="l">US in the region</span><span class="n">3</span></button>
+        <button><span class="l">Inside the US</span><span class="n">4</span></button>
+        <button><span class="l">Israel home front</span><span class="n">0</span></button>
+      </div>
+      <div class="panel">
+        <h3>Inside Iran</h3>
+        <p class="when">06:00–09:00 · 9 reports</p>
+        <ul>
+          <li>At least five security personnel were killed in four attacks across Sistan and Baluchestan. <span class="src">Iran International</span></li>
+          <li>Cement plants get under 5 million cubic metres of gas a day against 28 million needed. <span class="src">ISNA</span></li>
+          <li>Rights groups warn of the execution of Hadi Abbassian, a protester from Shirvan. <span class="src">Iran International</span></li>
+        </ul>
+        <a class="more" href="#">The 9 reports →</a>
+      </div>
+    </div>
+    <p class="note"><b>For:</b> the order never moves; easy to scan on a computer. <b>Against:</b> takes more height, and on a phone it falls back to a row like B.</p>
+  </div>
+</section>
+
+<p class="note">My pick: <b>A</b>. All ten arenas stay in one fixed place, and the numbers show where the news is without the order changing.</p>
+</main>
+</body>
+</html>

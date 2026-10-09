@@ -974,6 +974,22 @@ html{scroll-behavior:smooth}
 .feed-search input:focus{outline:2px solid var(--t-link,#7eb6ff);outline-offset:1px}
 .feed-search .fs-go{flex:none;height:36px;padding:0 .85rem;border:0;border-radius:var(--r-btn,6px);background:#1d4ed8;color:#fff;font:600 .72rem/1 var(--f-body,inherit);cursor:pointer}
 .feed-search .fs-go:hover{filter:brightness(1.12)}
+/* The source groups behind one button (user, 9 Oct: six chips were heavy on the eye) */
+.feed-legend.lf{position:relative;display:block}
+.lf-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.32rem .6rem;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.lf-btn:hover,.lf-btn[aria-expanded="true"]{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
+.lf-btn.on{border-color:currentColor;color:var(--t-strong,#fff)}
+.lf-sws{display:inline-flex;gap:2px}
+.lf-sws .sw,.lf-menu .sw{width:8px;height:8px;border-radius:50%;flex:none}
+.lf-menu{color:var(--t-text,#e2e8f0);font-size:.8rem}
+.lf-btn svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.lf-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.lf-menu{position:absolute;z-index:40;top:calc(100% + 4px);inset-inline-start:0;min-width:220px;display:flex;flex-direction:column;padding:.3rem;background:var(--t-surface-1,#0f1822);border:1px solid var(--t-line-strong,#2a3a4e);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.lf-menu[hidden]{display:none}
+.feed-legend .lf-menu :is(.lean-f,.lf-all){display:flex;align-items:center;gap:.5rem;width:100%;padding:.45rem .55rem;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;text-align:start;cursor:pointer;white-space:nowrap}
+.feed-legend .lf-menu :is(.lean-f,.lf-all):hover{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
+.feed-legend .lf-menu :is(.lean-f,.lf-all)[aria-pressed="true"]{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff);font-weight:600;border:0}
+.feed-legend.lf.filtering .lean-f[aria-pressed="false"]{opacity:1}
 .feed-legend .lean-f{display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap;padding:.3rem .6rem;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
 .feed-legend .lean-f:hover{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
 .feed-legend .lean-f[aria-pressed="true"]{background:var(--t-surface-3,#17273a);border-color:currentColor;color:var(--t-strong,#fff);font-weight:600}
@@ -985,7 +1001,7 @@ html{scroll-behavior:smooth}
 .feed-note .fs-spin{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:fsSpin .8s linear infinite}
 @keyframes fsSpin{to{transform:rotate(360deg)}}
 .fs-empty{margin:.4rem 0;font-size:.8rem;line-height:1.45;color:var(--t-text-2,#b8c4d2)}
-@media (max-width:720px){.feed-legend .lean-f{padding:.42rem .7rem}.feed-search input,.feed-search .fs-go{height:40px;font-size:16px}.feed-search .fs-go{font-size:.78rem}}
+@media (max-width:720px){.feed-legend .lean-f{padding:.42rem .7rem}.lf-btn{padding:.42rem .7rem}.feed-legend .lf-menu :is(.lean-f,.lf-all){padding:.6rem .6rem}.feed-search input,.feed-search .fs-go{height:40px;font-size:16px}.feed-search .fs-go{font-size:.78rem}}
 @media (prefers-reduced-motion:reduce){.feed-note .fs-spin{animation:none}}
 
 /* The Yemen clock at the head of the top line: a small label, then the time to the second */
@@ -1110,11 +1126,11 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 @media (max-width:520px){.tally-box.ledger table.list td.w,.tally-box.ledger table.list th.w{font-size:.85em}}
 
 /* The Iran desk's six source groups (Round 30 stage 3b): the colours of its filter buttons. */
-.card.ir-axis{border-inline-start-color:#c45c26}
-.card.ir-opposition{border-inline-start-color:#a855f7}
-.card.ir-israel{border-inline-start-color:#3b82f6}
-.card.ir-us{border-inline-start-color:#ef4444}
-.card.ir-gulf{border-inline-start-color:#22c55e}
-.card.ir-intl{border-inline-start-color:#94a3b8}
+.card.ir-axis,.card.ir-axis:hover,.card.ir-axis.open{border-inline-start-color:#c45c26!important}
+.card.ir-opposition,.card.ir-opposition:hover,.card.ir-opposition.open{border-inline-start-color:#a855f7!important}
+.card.ir-israel,.card.ir-israel:hover,.card.ir-israel.open{border-inline-start-color:#3b82f6!important}
+.card.ir-us,.card.ir-us:hover,.card.ir-us.open{border-inline-start-color:#ef4444!important}
+.card.ir-gulf,.card.ir-gulf:hover,.card.ir-gulf.open{border-inline-start-color:#22c55e!important}
+.card.ir-intl,.card.ir-intl:hover,.card.ir-intl.open{border-inline-start-color:#94a3b8!important}
 .ls-note{margin:0 0 8px;font-size:12px;opacity:.75}
 .ls-verdict{margin-inline-start:auto;font-size:11px;opacity:.7}

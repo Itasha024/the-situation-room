@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { clipStatement, israelDay, mergeStatements, parseTruthFeed, postText, truthTime } from "./trump.ts";
+import { checkWritten, clipStatement, israelDay, mergeStatements, parseTruthFeed, plainCard, postText, truthTime } from "./trump.ts";
 
 const item = (id: string, html: string, pub = "Fri, 09 Oct 2026 04:02:21 +0000") => `<item>
   <title><![CDATA[x]]></title>
@@ -65,4 +65,30 @@ test("the list: each statement once, newest first, nothing before the feed's fir
 test("a statement's day is Israel's: a minute after midnight there is the next day", () => {
   assert.equal(israelDay("2026-10-08T20:59:00Z"), "2026-10-08");
   assert.equal(israelDay("2026-10-08T21:01:00Z"), "2026-10-09");
+});
+
+test("each statement is a card: 'Trump: “…”' as the headline, only his relevant words below, each in quotes", () => {
+  const got = checkWritten({ relevant: true, headline: "Trump: We will not attack Iran before the midterms", body: '"We are having productive discussions with Iran." "The blockade stays."' });
+  assert.equal(got?.headline, "Trump: “We will not attack Iran before the midterms”");
+  assert.equal(got?.body, "“We are having productive discussions with Iran.”\n\n“The blockade stays.”");
+  // A body that only repeats the headline is no body.
+  assert.equal(checkWritten({ relevant: true, headline: "Trump: “Iran will not have a nuclear weapon!”", body: "Iran will not have a nuclear weapon!" })?.body, undefined);
+  assert.equal(checkWritten({ relevant: true, headline: "Iran will not have a nuclear weapon" }), null);
+  assert.deepEqual(checkWritten({ relevant: false }), { headline: "", off: true });
+});
+
+test("without a writer the card is his first sentence and his words, without his sign-off", () => {
+  const s = { id: "ts-1", at: "2026-10-08T16:17:11Z", url: "u", source: "Truth Social", text: "We are having productive discussions with Iran. The blockade will remain in full force and effect, with oil flowing in record numbers. President DONALD J. TRUMP" };
+  const c = plainCard(s);
+  assert.equal(c.headline, "Trump: “We are having productive discussions with Iran.”");
+  assert.ok(c.body && !/DONALD/.test(c.body) && c.body.startsWith("“We are"));
+  assert.equal(plainCard({ ...s, id: "rr-2", text: 'President Trump on Iran: "They want to make a deal so badly."' }).headline, "Trump: “They want to make a deal so badly.”");
+});
+
+test("a written card survives the next read; an edited post is written again", () => {
+  const from = "2026-10-08T00:00:00+03:00";
+  const s = { id: "ts-9", at: "2026-10-08T16:17:00Z", text: "Iran", url: "u", source: "Truth Social" };
+  const written = [{ ...s, headline: "Trump: “Iran”" }];
+  assert.equal(mergeStatements(written, [s], from)[0].headline, "Trump: “Iran”");
+  assert.equal(mergeStatements(written, [{ ...s, text: "Iran, edited" }], from)[0].headline, undefined);
 });

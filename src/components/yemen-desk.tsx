@@ -60,10 +60,14 @@ const DESK_HTML = `
     <div class="rail-head"><h2>Latest reports</h2><button type="button" class="feed-search-btn" id="btn-feed-search" aria-label="Search all reports" aria-expanded="false" aria-controls="feed-search" title="Search all reports"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.6"/><path d="M12.8 12.8l4.6 4.6"/></svg></button></div>
     <form class="feed-search" id="feed-search" role="search" hidden><input type="search" id="feed-q" placeholder="Search all reports: a place, a person, a weapon" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search all reports" maxlength="120"/><button type="submit" class="fs-go">Search</button></form>
     <div class="feed-fresh" id="feed-fresh" aria-live="polite"></div>
-    <div class="feed-legend" id="feed-legend" role="group" aria-label="Show only reports from">
+    <div class="feed-legend lf" id="feed-legend">
+      <button type="button" class="lf-btn" aria-expanded="false" aria-haspopup="true" aria-controls="lf-menu"><span class="lf-sws" aria-hidden="true"></span><span class="lf-label">All sources</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5l3.5 3.5 3.5-3.5"/></svg></button>
+      <div class="lf-menu" id="lf-menu" role="group" aria-label="Show only reports from" hidden>
+      <button type="button" class="lf-all" aria-pressed="true">All sources</button>
       <button type="button" class="lean-f" data-lean="houthi" aria-pressed="false" title="Show only Houthi-aligned outlets"><span class="sw" style="background:#c45c26"></span>Houthi-aligned outlet</button>
       <button type="button" class="lean-f" data-lean="gov" aria-pressed="false" title="Show only government or Saudi-aligned outlets"><span class="sw" style="background:#22c55e"></span>Government or Saudi-aligned</button>
       <button type="button" class="lean-f" data-lean="indep" aria-pressed="false" title="Show only outlets with no declared alignment"><span class="sw" style="background:#94a3b8"></span>No declared alignment</button>
+      </div>
     </div>
     <div class="feed-rel"><button type="button" class="rel-btn" id="btn-rel" aria-expanded="false" aria-controls="rel-pop" aria-haspopup="dialog">Sources reliability methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div>
     <div class="feed-note" id="feed-note" aria-live="polite" hidden></div>

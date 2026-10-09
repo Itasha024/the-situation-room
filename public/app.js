@@ -3594,7 +3594,7 @@ function feedCardHtml(r, i) {
   return `<article class="card lean-${lean}${isOpen ? ' open' : ''}" data-i="${i}" data-fp="${escapeHtml(fp)}" title="${escapeHtml(LEAN_LABEL[lean] || '')}">
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
-        <span class="src-wrap">${srcHtml}${r.citing ? `<span class="citing">${T(', citing {s}', { s: escapeHtml(r.citing) })}</span>` : ''}</span>
+        <span class="src-wrap">${srcHtml}</span>
         ${mappableByFp.has(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
       </div>
       ${replyQuote(r)}
@@ -3944,6 +3944,43 @@ function clearFeedSearch(closeBar) {
   renderFeed(data);
 }
 
+/*
+ * The source groups behind one button (user, 9 Oct): the button names the
+ * group shown ("All sources" or one), its dots the groups' colours; the menu
+ * holds the groups' own buttons, which each desk wires to its filter.
+ */
+function wireLeanMenu() {
+  const box = document.getElementById('feed-legend');
+  const btn = box && box.querySelector('.lf-btn');
+  const menu = box && box.querySelector('.lf-menu');
+  if (!btn || !menu || box.dataset.lf) return;
+  box.dataset.lf = '1';
+  const open = (on) => { menu.hidden = !on; btn.setAttribute('aria-expanded', String(on)); };
+  btn.addEventListener('click', () => open(menu.hidden));
+  menu.addEventListener('click', (e) => {
+    const all = e.target.closest('.lf-all');
+    if (all) { const on = menu.querySelector('.lean-f[aria-pressed="true"]'); if (on) on.click(); }
+    if (e.target.closest('.lean-f, .lf-all')) { setTimeout(syncLeanMenu, 0); open(false); btn.focus(); }
+  });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !box.contains(e.target)) open(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { open(false); btn.focus(); } });
+  syncLeanMenu();
+}
+function syncLeanMenu() {
+  const box = document.getElementById('feed-legend');
+  if (!box || !box.querySelector('.lf-btn')) return;
+  const on = box.querySelector('.lean-f[aria-pressed="true"]');
+  box.querySelector('.lf-label').textContent = on ? on.textContent.trim() : 'All sources';
+  box.querySelector('.lf-btn').classList.toggle('on', !!on);
+  const all = box.querySelector('.lf-all');
+  if (all) all.setAttribute('aria-pressed', String(!on));
+  const dots = (on ? [on] : [...box.querySelectorAll('.lean-f')]).map((b) => {
+    const sw = b.querySelector('.sw');
+    return `<span class="sw" style="background:${sw ? getComputedStyle(sw).backgroundColor : '#94a3b8'}"></span>`;
+  });
+  box.querySelector('.lf-sws').innerHTML = dots.join('');
+}
+
 function setFeedLean(lean) {
   feedLean = lean && lean !== feedLean ? lean : null;
   const box = document.getElementById('feed-legend');
@@ -3984,6 +4021,7 @@ function wireFeedSearch() {
     b.dataset.wired = '1';
     b.onclick = () => setFeedLean(b.dataset.lean);
   });
+  wireLeanMenu();
 }
 
 function renderFeed(d) {
@@ -6501,6 +6539,7 @@ async function setTheme(t, keep = true) {
       setFavicon(t);
       if (tiles) { tiles.setOpacity(1); try { map.removeLayer(baseTiles); } catch (e) {} baseTiles = tiles; }
       try { closePinSheet(); } catch (e) {}
+      try { syncLeanMenu(); } catch (e) {}
       if (data) {
         try { applyMapFilters(); } catch (e) { console.error(e); }
         try { renderLegend(data); } catch (e) { console.error(e); }
@@ -7093,6 +7132,7 @@ function startIranFeed() {
       renderIranFeed();
     });
   });
+  wireLeanMenu();
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
   const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); };
@@ -7168,10 +7208,10 @@ function renderIranScan() {
 }
 
 /*
- * Trump today (Round 30 stage 5; user, 9 Oct): his own words on Iran and the
- * war, his posts and his words on camera, never a report about him. The
+ * Trump's latest (Round 30 stage 5; user, 9 Oct): his own words on Iran and
+ * the war, his posts and his words on camera, never a report about him. The
  * column shows the latest; "All his statements" opens every one since the
- * feed began, in boxes like the reports', with day headings in Israel time.
+ * feed began, in boxes like the reports' (the time on each, no day headings).
  */
 const trumpFeed = { list: [], shown: 30, drawn: false };
 async function loadTrump() {
@@ -7187,13 +7227,15 @@ async function loadTrump() {
   } catch (e) { console.warn('trump feed', e); }
 }
 function trumpCardHtml(s) {
-  return `<article class="card ir-us trump-st" data-fp="${escapeHtml(s.id)}">
+  // As a report card (user, 9 Oct): "Trump: “…”" as the headline, his relevant words as the body.
+  const head = s.headline || `Trump: “${s.text}”`;
+  return `<article class="card ir-us trump-st${openFeedFps.has(s.id) ? ' open' : ''}" data-fp="${escapeHtml(s.id)}">
       <div class="meta">
         <time datetime="${escapeHtml(s.at)}">${escapeHtml(fmtStamp(s.at))}</time>
         <span class="src-wrap">${sourceAnchors(s.source, s.url)}</span>
       </div>
-      ${leadHtml(s.text)}
-      <div class="actions"><button type="button" class="toggle" hidden>${openFeedFps.has(s.id) ? 'Show less' : 'Read more'}</button></div>
+      <p class="headline">${escapeHtml(head)}</p>
+      ${s.body ? `${leadHtml(s.body)}<div class="actions"><button type="button" class="toggle" hidden>${openFeedFps.has(s.id) ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
 }
 function renderTrumpPin() {
@@ -7202,29 +7244,18 @@ function renderTrumpPin() {
   trumpFeed.drawn = true;
   const list = trumpFeed.list;
   const n = list.length;
-  el.innerHTML = `<div class="tp-head"><b>Trump today</b><span class="tp-note">His own words on Iran and the war</span></div>
+  el.innerHTML = `<div class="tp-head"><b>Trump's latest</b></div>
     ${n ? trumpCardHtml(list[0]) : '<p class="soon">Nothing yet: what he posts or says on Iran appears here within five minutes.</p>'}
     ${n ? `<button type="button" class="tp-all" aria-haspopup="dialog">All his statements (${n}) <span aria-hidden="true">→</span></button>` : ''}`;
   el.querySelectorAll('.card').forEach(wireFeedCard);
   const all = el.querySelector('.tp-all');
   if (all) all.addEventListener('click', () => openTrumpPop(all));
 }
-function trumpDay(at) {
-  const day = (t) => new Date(t).toLocaleDateString('en-CA', { timeZone: VIEW_TZ });
-  const name = new Date(at).toLocaleDateString(LOC, { timeZone: VIEW_TZ, weekday: 'short', day: 'numeric', month: 'short' });
-  return { key: day(at), label: day(at) === day(Date.now()) ? `Today · ${name}` : name };
-}
 function renderTrumpList() {
   const box = document.querySelector('#trump-pop .tp-list');
   if (!box) return;
   const list = trumpFeed.list.slice(0, trumpFeed.shown);
-  let last = '';
-  box.innerHTML = list.map((s) => {
-    const d = trumpDay(s.at);
-    const head = d.key !== last ? `<h4 class="tp-day">${escapeHtml(d.label)}</h4>` : '';
-    last = d.key;
-    return head + trumpCardHtml(s);
-  }).join('') + (trumpFeed.list.length > list.length ? `<button type="button" class="more" id="tp-more">Show earlier statements (+${Math.min(30, trumpFeed.list.length - list.length)})</button>` : '');
+  box.innerHTML = list.map(trumpCardHtml).join('') + (trumpFeed.list.length > list.length ? `<button type="button" class="more" id="tp-more">Show earlier statements (+${Math.min(30, trumpFeed.list.length - list.length)})</button>` : '');
   box.querySelectorAll('.card').forEach(wireFeedCard);
   const more = document.getElementById('tp-more');
   if (more) more.addEventListener('click', () => { trumpFeed.shown += 30; renderTrumpList(); });
@@ -7239,7 +7270,7 @@ function openTrumpPop(from) {
     pop.innerHTML = `<div class="tp-back" data-close></div>
       <div class="tp-sheet" role="dialog" aria-modal="true" aria-labelledby="tp-h">
         <div class="tp-sheet-head">
-          <div><h3 id="tp-h">Trump today</h3><p class="tp-note">His own words on Iran and the war since 8 Oct: his posts on Truth Social and his words on camera.</p></div>
+          <h3 id="tp-h">Trump's latest</h3>
           <button type="button" class="rel-x" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </div>
         <div class="tp-list feed"></div>

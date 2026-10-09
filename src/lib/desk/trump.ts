@@ -19,6 +19,14 @@ export type TrumpStatement = {
   url: string;
   /** "Truth Social", or the account that posted the clip. */
   source: string;
+  /** `Trump: "…"`: his main points, in his voice (9 Oct). Written once per text. */
+  headline?: string;
+  /** Only the parts of what he said that bear on Iran and the war, in quotes; none when the headline holds it all. */
+  body?: string;
+  /** The writer found nothing in it on Iran or the war: not shown. */
+  off?: boolean;
+  /** Times the writer was asked and gave nothing usable. */
+  tries?: number;
 };
 
 export type TrumpFeed = { statements: TrumpStatement[]; checkedAt?: string; down?: string[]; lastClipId?: string };
@@ -118,8 +126,11 @@ export function mergeStatements(old: TrumpStatement[], fresh: TrumpStatement[], 
   const floor = Date.parse(from);
   const byId = new Map<string, TrumpStatement>();
   for (const s of old) byId.set(s.id, s);
-  // A post edited since keeps its id: the newest words stand.
-  for (const s of fresh) byId.set(s.id, s);
+  // A post edited since keeps its id: the newest words stand, and are written again.
+  for (const s of fresh) {
+    const was = byId.get(s.id);
+    byId.set(s.id, was && was.text === s.text ? { ...was, ...s, headline: was.headline, body: was.body, off: was.off, tries: was.tries } : s);
+  }
   return [...byId.values()]
     .filter((s) => !(Date.parse(s.at) < floor))
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || b.id.localeCompare(a.id))
@@ -130,3 +141,49 @@ export function mergeStatements(old: TrumpStatement[], fresh: TrumpStatement[], 
 export function israelDay(at: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(at));
 }
+
+/** His sign-off ("President DONALD J. TRUMP", "DJT") is not part of what he said. */
+export const withoutSignOff = (text: string) =>
+  text.replace(/\s*(?:Thank you for your attention to this matter!\s*)?(?:President\s+)?(?:DONALD\s+J\.?\s+TRUMP|DJT)\s*$/i, "").trim();
+
+/** His words in quotes, once: quotes already round them are not doubled. */
+export const quoted = (words: string) => {
+  const w = words.trim().replace(/^["“]+|["”]+$/g, "").trim();
+  return w ? `“${w}”` : "";
+};
+
+/** A clip's words: what follows 'President Trump on Iran:'. */
+export const clipWords = (text: string) => text.replace(/^[^"“]*["“]/, "").replace(/["”]\s*$/, "").trim();
+
+/** Without a writer: his first sentence as the headline, all his words as the body. */
+export function plainCard(s: TrumpStatement): { headline: string; body?: string } {
+  const words = s.id.startsWith("rr-") ? clipWords(s.text) : withoutSignOff(s.text);
+  const first = /^[\s\S]{20,220}?[.!?](?=\s|$)/.exec(words)?.[0] ?? words.slice(0, 200).replace(/\s+\S*$/, "…");
+  const rest = words.slice(first.length).trim();
+  return { headline: `Trump: ${quoted(first)}`, ...(rest.length > 40 ? { body: words.split(/\n\n+/).map(quoted).join("\n\n") } : {}) };
+}
+
+export const TRUMP_SYSTEM = `You edit a news desk's feed of Donald Trump's own words on Iran and the war with Iran.
+You get one thing he said (a Truth Social post or his words on camera). Return JSON only:
+{"relevant": true|false, "headline": "...", "body": "..."}
+
+- relevant: false only when nothing in it bears on Iran, the war, the Strait of Hormuz, the blockade, Iran's nuclear programme, the talks with Iran or the war's effects (gasoline and oil prices because of the war count).
+- headline: "Trump: " then his main points on Iran and the war, inside quotation marks, as if he is speaking, in the first person. Build it from his own sentences, shortened; rephrase only where needed to join them or make the point clear. Lead with the hardest news in it (a decision, a threat, a deadline, a deal, a number). One or two sentences, at most 220 characters. No outlet, no "said", no "posted".
+- body: only the parts of what he said that bear on Iran and the war, in his own words, inside quotation marks, a paragraph per point. Leave out every part on other subjects (elections, rivals, the media) unless it explains his point on Iran. Keep his facts and numbers. Put the capital letters he uses for emphasis in normal case. "" when the headline already holds everything relevant.
+- Keep his meaning exactly: a question, a comparison or a "what if" stays one, and is never turned into a claim or a threat he did not make.
+- Each body paragraph is a whole sentence of his, starting with a capital letter.
+- Never add facts, context or comment of your own.`;
+
+/** The writer's answer, checked: a headline in his voice, a body in quotes, or "off" when nothing bears on Iran. */
+export function checkWritten(json: Record<string, unknown>): { headline: string; body?: string; off?: boolean } | null {
+  if (json.relevant === false) return { headline: "", off: true };
+  const h = typeof json.headline === "string" ? json.headline.replace(/\s+/g, " ").trim() : "";
+  if (!/^Trump:\s*\S/.test(h) || h.length > 300) return null;
+  const words = h.replace(/^Trump:\s*/, "");
+  const raw = typeof json.body === "string" ? json.body.trim() : "";
+  // '"One." "Two."' in one paragraph is two of his sentences: a paragraph each.
+  const body = raw ? raw.replace(/\\"/g, '"').replace(/["”]\s+["“]/g, "\n").split(/\n+/).map((x) => x.trim()).filter(Boolean).map(quoted).join("\n\n") : "";
+  const bare = (x: string) => x.replace(/[“”"\s]/g, "");
+  return { headline: `Trump: ${quoted(words)}`, ...(body && bare(body) !== bare(words) ? { body } : {}) };
+}
+

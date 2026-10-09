@@ -99,9 +99,13 @@ const IRAN_HTML = `
   <div class="rail-splitter" id="rail-splitter" role="separator" aria-orientation="vertical" aria-label="Resize the report column" title="Drag to widen the report column"></div>
   <aside class="rail" id="rail">
     <div class="rail-head"><h2>Latest reports</h2></div>
-    <div class="trump-pin" id="trump-pin"><div class="tp-head"><b>Trump today</b><span class="tp-note">His own words on Iran and the war</span></div></div>
-    <div class="feed-legend" id="feed-legend" role="group" aria-label="Show only reports from">
+    <div class="trump-pin" id="trump-pin"><div class="tp-head"><b>Trump's latest</b></div></div>
+    <div class="feed-legend lf" id="feed-legend">
+      <button type="button" class="lf-btn" aria-expanded="false" aria-haspopup="true" aria-controls="lf-menu"><span class="lf-sws" aria-hidden="true"></span><span class="lf-label">All sources</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5l3.5 3.5 3.5-3.5"/></svg></button>
+      <div class="lf-menu" id="lf-menu" role="group" aria-label="Show only reports from" hidden>
+      <button type="button" class="lf-all" aria-pressed="true">All sources</button>
       ${LEANS.map(([k, c, n]) => `<button type="button" class="lean-f" data-lean="${k}" aria-pressed="false" disabled><span class="sw" style="background:${c}"></span>${n}</button>`).join("\n      ")}
+      </div>
     </div>
     <div id="feed" class="feed">${SOON("reports from every side, each with its source's rating.")}</div>
   </aside>

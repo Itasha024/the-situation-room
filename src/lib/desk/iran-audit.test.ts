@@ -11,6 +11,8 @@ import { repairable, type Reading } from "./reader.ts";
 const reading = (o: Partial<Reading>): Reading =>
   ({ id: "a", publish: true, event_type: "statement", headline: "", body: "", speaker_lead: "", actor_side: "iran", arenas: [], targets: [], origins: [], has_time: false, confident_roles: true, follows_up: "", duplicate_of: "", reject_reason: "", interest: "neutral", ...o }) as Reading;
 const verdict = (headline: string, text: string, o: Partial<Reading> = {}) => decideIranForTest(reading({ headline, ...o }), text, "Vahid Online", "opposition");
+/** America's words from America's own press: an opposition outlet retelling them is a relay (user, 9 Oct). */
+const usVerdict = (headline: string, text: string, o: Partial<Reading> = {}) => decideIranForTest(reading({ headline, ...o }), text, "Fox News", "us");
 
 test("an outlet never tells the story", () => {
   for (const h of [
@@ -47,14 +49,14 @@ test("the Houthis' war with Saudi Arabia goes to the Yemen desk", () => {
 test("no million the text never gave", () => {
   const v = verdict("Trump says 22 million barrels of oil passed through Hormuz last night", "ترمب: 22 برميل من النفط عبر مضيق هرمز الليلة الماضية وحدها");
   assert.equal(v.kind, "reject");
-  assert.equal(verdict("Trump says 22 million barrels of oil passed through Hormuz last night", "ترمب: 22 مليون برميل من النفط عبر مضيق هرمز").kind, "publish");
+  assert.equal(usVerdict("Trump says 22 million barrels of oil passed through Hormuz last night", "ترمب: 22 مليون برميل من النفط عبر مضيق هرمز").kind, "publish");
 });
 
 test("a statement keeps the teller its text opens with", () => {
   const v = verdict("Hezbollah has brought only misery to Lebanon", "‏الخارجية الأميركية للحدث:  حزب الله لم يجلب سوى البؤس للبنان");
   assert.equal(v.kind, "reject");
   assert.ok(v.kind === "reject" && /does not lead with its speaker/i.test(v.note) && /الخارجية الأميركية للحدث/.test(v.note));
-  assert.equal(verdict("US State Department: Hezbollah has brought only misery to Lebanon", "‏الخارجية الأميركية للحدث:  حزب الله لم يجلب سوى البؤس للبنان", { speaker_lead: "US State Department" }).kind, "publish");
+  assert.equal(usVerdict("US State Department: Hezbollah has brought only misery to Lebanon", "‏الخارجية الأميركية للحدث:  حزب الله لم يجلب سوى البؤس للبنان", { speaker_lead: "US State Department" }).kind, "publish");
 });
 
 test("the sources' loaded words are reworded; \"Iranian regime\" stays", () => {

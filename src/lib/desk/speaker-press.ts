@@ -183,7 +183,9 @@ export function rivalRelay(headline: string, source: string, lean = "", own = fa
   if (MEDIA_SPEAKER.test(speaker) && mine !== who) return `relay: ${NAME[who]}'s media are read directly, not ${s}'s retelling`;
   // Israel's words from Israel's own sources only, whoever retells them (user, 9 Oct: "for the 100th time").
   if (who === "israel" && mine !== "israel") return `relay: Israel is told from its own sources (the IDF, Israeli officials, Israeli media), not ${s}`;
-  const axis = lean === "axis" || find(AGENCY, s) === "iran";
+  // Iran's opposition outlets too (user, 9 Oct): Iran International and VOA Farsi
+  // retelling Bessent and UKMTO while America's press and UKMTO's own post had them.
+  const axis = lean === "axis" || lean === "opposition" || find(AGENCY, s) === "iran";
   const israeli = lean === "israel" || find(OUTLET_NATION, s) === "israel";
   // Britain's too: UKMTO's word on the Gulf's ships was Fars' card (9 Oct).
   if (axis && (who === "israel" || who === "us" || who === "uk")) return `relay: ${who === "us" ? "the US" : who === "uk" ? "Britain" : "Israel"} is told from its own sources, not ${s}'s relay`;

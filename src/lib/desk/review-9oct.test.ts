@@ -135,3 +135,31 @@ test("a card already saved is never folded again, so its headline never lands on
   assert.equal((home as { summary: string }).summary, "Harib tribes declare mobilisation against the Saudi blockade");
   assert.equal(reports.length, 2);
 });
+
+test("the Iran desk's share of the site scan: Gulf sea incidents, America's officials traced at home, a third country's aside out (user, 9 Oct evening)", async () => {
+  const { isIranDeskItem, thirdCountryAside } = await import("./iran-reader.ts");
+  const { speakerOf, speakerByName } = await import("./speakers.ts");
+  // UKMTO's Hormuz-side warnings, as read off their pictures.
+  assert.equal(isIranDeskItem("UKMTO WARNING 150-26 - ATTACK. UKMTO has received a report of an incident 13NM east of Fujairah, UAE. A vessel has been hit by an unknown projectile."), true);
+  assert.equal(isIranDeskItem("UKMTO WARNING 151-26. The master reports a small craft approached the vessel 20NM north of Musandam, Oman."), true);
+  assert.equal(isIranDeskItem("UKMTO WARNING 147-26 - ATTACK. UKMTO has received a report of an incident 40NM west of Hodeidah, Yemen."), false);
+  // Bessent's words are looked for in America's own press; an unlisted official by his title too.
+  assert.equal(speakerOf("Bessent: US running 'absolute isolation campaign' against Iran")?.name, "Scott Bessent");
+  const sen = speakerOf("US Senator Jim Risch said Iran must end its blockade of Hormuz");
+  assert.equal(sen?.name, "Jim Risch");
+  assert.equal(sen?.country, "US");
+  assert.equal(speakerByName("Jim Risch")?.name, "Jim Risch");
+  // Erdogan on Israel, nothing of this war: out. His words on Iran: in.
+  const erd = "Erdogan: Israel sees peace and regional security as a threat to itself";
+  assert.equal(thirdCountryAside(erd, `${erd} Turkish President Recep Tayyip Erdogan said Israel sees peace as a threat.`), true);
+  const erd2 = "Erdogan: Turkey will not allow an attack on Iran from its soil";
+  assert.equal(thirdCountryAside(erd2, erd2), false);
+  assert.equal(thirdCountryAside("Araghchi: talks are over", "Araghchi: talks are over"), false);
+});
+
+test("Iran's opposition outlets retelling America or Britain are relays; Al Mayadeen on Iran is not (user, 9 Oct evening)", () => {
+  assert.match(rivalRelay("Bessent: US running 'absolute isolation campaign' against Iran", "Iran International", "opposition") ?? "", /relay/);
+  assert.match(rivalRelay("UKMTO: vessel hit by unknown projectile 13 miles off UAE", "Iran International", "opposition") ?? "", /relay/);
+  assert.equal(rivalRelay("IRGC: a tanker was seized in the Gulf of Oman", "Al Mayadeen", "axis"), null);
+  assert.equal(rivalRelay("Araghchi: no talks under the blockade", "Al Mayadeen", "axis"), null);
+});

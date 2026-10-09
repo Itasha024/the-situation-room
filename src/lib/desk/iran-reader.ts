@@ -13,6 +13,7 @@ import { RESPONSE_SCHEMA, type ReaderPrompt } from "./reader.ts";
 import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
 import { subjectNation } from "./speaker-press.ts";
+import { leadSpeaker } from "./speakers.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
 export const IRAN_PROMPT_VERSION = 9;
@@ -212,7 +213,22 @@ const ISRAEL_ABROAD = new RegExp(
 );
 export const israelAbroad = (text: string): boolean => ISRAEL_ABROAD.test(String(text || ""));
 /** A shared source's item for the Iran desk: its war, or Israel's war beyond its borders. */
-export const isIranDeskItem = (text: string): boolean => isIranWar(text) || israelAbroad(text);
+/**
+ * A ship attacked, hit or seized in the Gulf's waters, off the UAE or Oman,
+ * is this war's though it names no word of Iran's: UKMTO's warnings say only
+ * "13NM east of Fujairah" (user, 9 Oct: its Hormuz warnings never reached the
+ * Iran desk, which went out from Iran International relaying them).
+ */
+export const GULF_SEA = new RegExp(
+  [
+    String.raw`\b(?:Fujairah|Khor ?Fakkan|Ras Al[- ]?Khaimah|Musandam|Khasab|Gulf of Oman|Arabian Gulf|Persian Gulf|Jebel Ali|Jask|Qeshm|Larak|Chabahar|Sohar|Hormuz|Dubai|Abu Dhabi|Ajman|Sharjah|Umm Al[- ]?Quwain|Ras Laffan|Kuwait|Bahrain|Qatar|Dammam|Jubail)\b`,
+    "الفجيرة|خورفكان|خور فكان|رأس الخيمة|مسندم|خليج عمان|بحر عمان|الخليج العربي|الخليج الفارسي|هرمز",
+  ].join("|"),
+  "i",
+);
+const SEA_INCIDENT = /\b(?:vessels?|ships?|tankers?|carriers?|boats?|dhows?|merchant|master|crew)\b[^]{0,200}\b(?:incident|attack\w*|projectiles?|struck|hit|boarded|seized|hijack\w*|explosions?|fire|missiles?|drones?|approach\w*|harass\w*|damage\w*)\b|\b(?:incident|attack|projectile|explosion)\b[^]{0,200}\b(?:vessels?|ships?|tankers?)\b|سفينة|ناقلة|سفن/i;
+export const gulfSeaIncident = (text: string): boolean => GULF_SEA.test(text) && SEA_INCIDENT.test(text);
+export const isIranDeskItem = (text: string): boolean => isIranWar(text) || israelAbroad(text) || gulfSeaIncident(text);
 
 /**
  * Israeli media (stage 4c) post about everything in Israel: only the Iran war,
@@ -346,6 +362,16 @@ const OPENS_WITH_SPEAKER = /^[\s‏‎"«]*(?:(?:🔴|⭕️|♦️|🔻|🔺|�
 const SAY_VERB =
   /\b(?:says?|said|warns?|vows?|urges?|calls?|announces?|denies|rejects?|accuses?|condemns?|threatens?|confirms?|claims?|insists?|stresses|tells?|adds|welcomes?|demands?|pledges?|asks?|orders?|signals?|agrees?|insists|argues?|praises?|blames?|declares?|reports?)\b|:/i;
 
+const THIRD_COUNTRY = /^(?:Turk\w*|Erdo[gğ]an|Fidan|Egypt\w*|Sisi|Pakistan\w*|Sharif|Chin\w*|Russia\w*|Putin|Lavrov|Peskov|Zakharova|EU|European|France|French|Macron|Germany|German|Merz|UK|British|Britain|Starmer|Italy|Italian|Meloni|UN|Guterres|Spain|Spanish|Indonesia\w*|Malaysia\w*|Jordan\w*|King Abdullah|Syria\w*|al-Sharaa|Sharaa|Azerbaijan\w*|Aliyev|Armenia\w*|Afghan\w*|Taliban|India\w*|Modi|Japan\w*|Brazil\w*|Lula|Venezuela\w*|Cuba\w*|North Korea\w*)\b/i;
+/** A third country's speaker opening the headline, and nothing of this war in the copy. */
+export function thirdCountryAside(headline: string, copy: string): boolean {
+  const lead = /^([^:"“]{2,70}):\s/.exec(headline)?.[1] ?? /^((?:\S+\s+){0,3}?\S+)\s+(?:says|said|tells|told|warns|calls)\b/.exec(headline)?.[1] ?? "";
+  if (!lead) return false;
+  const sp = leadSpeaker(headline);
+  const third = sp ? !["US", "IR"].includes(sp.country) : THIRD_COUNTRY.test(lead.trim());
+  return third && !isIranDeskItem(copy) && !IRAN_PARTY.test(copy) && !/\b(?:Hormuz|blockade|ceasefire|truce|strikes? on|war on)\b/i.test(copy);
+}
+
 /**
  * The Iran desk's copy rules that the free models kept breaking (audit of
  * 8 Oct): an outlet as the teller, commentary, the Yemen desk's war, a
@@ -360,6 +386,10 @@ export function iranCopyProblem(r: { headline: string; body?: string; speaker_le
   if (OUTLET_OPENS.test(h)) return "leads with outlet: an outlet is never the teller; lead with the fact, or with the official or source who said it";
   if (YEMEN_THEATRE.test(copy) && !IRAN_ACTOR.test(copy) && !IRAN_IN_YEMEN_STORY.test(copy)) return "yemen desk: the Houthis' war with Saudi Arabia is the Yemen desk's";
   if (SYRIA_THEATRE.test(copy) && !IRAN_PARTY.test(copy) && !israelAbroad(copy)) return "not iran: Syria is not this desk's";
+  // A third country's leader on Israel or the region, with nothing of this
+  // war in it (user, 9 Oct: Erdogan's "Israel sees peace as a threat", from
+  // Tehran Times): not this desk's. His words on Iran, Hormuz or the strikes are.
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && thirdCountryAside(h, copy)) return "not iran: a third country's words that name nothing of this war (Iran, Hormuz, the strikes, the talks)";
   if (OTHER_WAR.test(h) && !IRAN_PARTY.test(copy) && !/\b(?:Hormuz|Shahed)\b/i.test(copy)) return "not iran: the Ukraine war is not this desk's";
   if (r.event_type === "economy" && !WAR_ECON.test(h)) return "not iran: an economy story is this desk's only through the war, Hormuz, shipping, oil, sanctions or the prices the war moves";
   // Someone not widely known is named by job, the name in the body (user, 8 Oct).

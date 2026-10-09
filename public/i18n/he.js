@@ -294,6 +294,7 @@ window.DESK_I18N = {
     'Al-Jawf': 'אל־ג׳וף',
     'Hadramawt': 'חדרמות',
     'Sanaa': 'צנעא',
+    'Tehran': 'טהרן',
     'Aden': 'עדן',
     'Saada': 'צעדה',
 

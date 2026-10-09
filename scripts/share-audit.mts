@@ -1,0 +1,12 @@
+import { yemenSourceKeys } from "../src/lib/yemen-scan.server.ts";
+import { SHARED_RSS, SHARED_TG, SHARED_X } from "../src/lib/desk/iran-sources.ts";
+const k = yemenSourceKeys();
+const miss = (list: { id: string; name: string }[], map: Record<string, unknown>) => list.filter((s) => !(s.id in map)).map((s) => `${s.id} (${s.name})`);
+console.log("TG not shared:", miss(k.tg, SHARED_TG).join(", "));
+console.log("X not shared:", miss(k.x, SHARED_X).join(", "));
+console.log("RSS not shared:", [...new Set(miss(k.rss, SHARED_RSS))].join(", "));
+const names = new Set(k.rss.map((r) => r.id));
+console.log("SHARED_RSS keys with no feed:", Object.keys(SHARED_RSS).filter((n) => !names.has(n)).join(", "));
+const xs = new Set(k.x.map((r) => r.id));
+console.log("SHARED_X keys with no account:", Object.keys(SHARED_X).filter((n) => !xs.has(n)).join(", "));
+process.exit(0);

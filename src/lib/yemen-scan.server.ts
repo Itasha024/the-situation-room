@@ -2188,8 +2188,9 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
             const idOf = (r: RawHit) => /\/status\/(\d+)/.exec(r.xPost ?? r.url)?.[1] ?? "";
             rows = all.filter((r) => newerX(idOf(r), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS));
             // The Iran desk takes this account's posts on its war, whatever the Yemen filter keeps.
+            // A picture account's posts go on once their words are read (below).
             const ixLean = SHARED_X[acct.handle];
-            if (ixLean) {
+            if (ixLean && !acct.picture) {
               const every = acct.only ? parseFxStatuses(page, { ...acct, only: undefined }) : all;
               toIran(every.filter((r) => newerX(idOf(r), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS)), ixLean);
             }
@@ -2228,6 +2229,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
             let unread = false;
             if (acct.picture) {
               const read: RawHit[] = [];
+              const worded: RawHit[] = [];
               for (const r of rows) {
                 const pic = r.media?.kind === "photo" ? r.media.thumb : undefined;
                 const words = pic ? await readNotice(pic) : null;
@@ -2236,10 +2238,16 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
                   break;
                 }
                 const text = words ?? r.text;
+                worded.push({ ...r, text });
                 if (!acct.only || acct.only.test(text)) read.push({ ...r, text });
               }
               if (unread) console.log(`[x] ${acct.handle}: a warning's picture went unread; again next tick`);
               rows = unread ? [] : read;
+              // The Iran desk gets every warning by its words, not by the Yemen
+              // filter: UKMTO's Hormuz warnings were read off their pictures and
+              // dropped as "not the Red Sea", and never reached the Iran desk
+              // (user, 9 Oct).
+              if (!unread && ixLean) toIran(worded, ixLean);
             }
             // A newspaper's short link (reut.rs, wapo.st) is followed to its
             // article, so the site's own listing of it is the same item.
@@ -3341,4 +3349,13 @@ function retoldInAlso(home: LiveReport, r: LiveReport): boolean {
 /** A card the reader marked as its outlet's own exclusive. */
 export function isExclusiveCard(r: LiveReport): boolean {
   return !!r.flags?.includes("exclusive") || !!r.tags?.includes("exclusive");
+}
+
+/** The Yemen scan's sources by the key the Iran routing looks them up by (SHARED_TG, SHARED_X, SHARED_RSS): the share audit's list. */
+export function yemenSourceKeys(): { tg: { id: string; name: string }[]; x: { id: string; name: string }[]; rss: { id: string; name: string }[] } {
+  return {
+    tg: TG.map((c) => ({ id: c.id, name: c.name })),
+    x: X_ACCOUNTS.map((a) => ({ id: a.handle, name: a.name })),
+    rss: RSS.map((f) => ({ id: f.name, name: f.id })),
+  };
 }

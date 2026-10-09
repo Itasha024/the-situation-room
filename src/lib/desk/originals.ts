@@ -17,7 +17,7 @@
 import { type Edition, type GnewsItem, resolveGoogleNews, searchGoogleNews } from "./gnews.ts";
 import { askChain } from "./models.ts";
 import type { Listed } from "./sitemap.ts";
-import { SPEAKERS, type Speaker } from "./speakers.ts";
+import { type Speaker, speakerByName } from "./speakers.ts";
 import type { DeskStore } from "./store.ts";
 import { TRIAGE_MODELS } from "./triage.ts";
 import { findVenue } from "./venue.ts";
@@ -27,7 +27,7 @@ export type Hit = { url: string; source: string; title?: string; /** An intervie
 /** Each country's press, where its leaders' words are first reported. */
 export const SPEAKER_PRESS: Record<string, string[]> = {
   FR: ["lemonde.fr", "lefigaro.fr", "francetvinfo.fr", "bfmtv.com", "tf1info.fr", "leparisien.fr", "lci.fr", "europe1.fr", "radiofrance.fr", "lesechos.fr", "france24.com", "rfi.fr", "ouest-france.fr", "afp.com", "liberation.fr"],
-  US: ["apnews.com", "reuters.com", "nytimes.com", "washingtonpost.com", "wsj.com", "cnn.com", "foxnews.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "politico.com", "axios.com", "bloomberg.com"],
+  US: ["apnews.com", "reuters.com", "nytimes.com", "washingtonpost.com", "wsj.com", "cnn.com", "foxnews.com", "foxbusiness.com", "cnbc.com", "bloomberg.com", "axios.com", "politico.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "newsmax.com"],
   UK: ["bbc.com", "bbc.co.uk", "theguardian.com", "thetimes.com", "telegraph.co.uk", "news.sky.com", "ft.com", "independent.co.uk", "reuters.com"],
   IR: ["irna.ir", "tasnimnews.ir", "presstv.ir", "mehrnews.com", "farsnews.ir", "isna.ir"],
   EG: ["ahram.org.eg", "youm7.com", "almasryalyoum.com", "sis.gov.eg"],
@@ -203,10 +203,10 @@ export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[
     tries.push({ q: `"${to}" ${name} ${k3(keys)} when:3d`, ed: "en", ks: keys });
     if (trKeys.length) tries.push({ q: `"${to}" ${name} ${k3(trKeys)} when:3d`, ed: sp.edition, ks: trKeys });
   }
-  tries.push({ q: `(${or(press.slice(0, 12))}) ${name} ${k3(own)} when:2d`, ed: sp.edition, ks: own });
+  tries.push({ q: `(${or(press.slice(0, 16))}) ${name} ${k3(own)} when:2d`, ed: sp.edition, ks: own });
   // His language's edition at large, kept to his country's outlets.
   tries.push({ q: `${name} ${k3(own)} when:2d`, ed: sp.edition, ks: own });
-  if (trKeys.length) tries.push({ q: `(${or(press.slice(0, 12))}) ${name} ${k3(keys)} when:2d`, ed: "en", ks: keys });
+  if (trKeys.length) tries.push({ q: `(${or(press.slice(0, 16))}) ${name} ${k3(keys)} when:2d`, ed: "en", ks: keys });
   const toldHere = (outlet: string) => spokeTo.some((to) => sameOutlet(outlet, to));
   for (const t of tries) {
     const items = await searchGoogleNews(t.q, t.ed);
@@ -249,7 +249,7 @@ const hostOfSite = (u: string) => {
 
 /** The speaker a Cited stands for, when it is one. */
 export function speakerNamed(name: string): Speaker | null {
-  return SPEAKERS.find((s) => s.name === name) ?? null;
+  return speakerByName(name);
 }
 
 /**

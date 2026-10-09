@@ -36,6 +36,16 @@ export const SPEAKERS: Speaker[] = [
   S("JD Vance", /\bVance\b|فانس/, "US", "English", "en", "JDVance", "whitehouse.gov"),
   S("Steve Witkoff", /\bWitkoff\b|ويتكوف/, "US", "English", "en"),
   S("Karoline Leavitt", /\bLeavitt\b|ليفيت/, "US", "English", "en", "PressSec", "whitehouse.gov"),
+  // The Iran war's American voices (user, 9 Oct: Bessent's words went out
+  // from Iran International, never looked for in America's own press).
+  S("Scott Bessent", /\bBessent\b|بيسنت|بسنت/, "US", "English", "en", "SecScottBessent", "home.treasury.gov"),
+  S("Dan Caine", /\b(?:Dan|Gen\.?|General) Caine\b/, "US", "English", "en", undefined, "war.gov"),
+  S("Brad Cooper", /\b(?:Brad|Adm\.?|Admiral) Cooper\b/, "US", "English", "en", "CENTCOM", "centcom.mil"),
+  S("Mike Waltz", /\bWaltz\b|والتز/, "US", "English", "en", undefined, "usun.usmission.gov"),
+  S("Chris Wright", /\bChris Wright\b|\bEnergy Secretary Wright\b/, "US", "English", "en", "SecretaryWright", "energy.gov"),
+  S("Tulsi Gabbard", /\bGabbard\b|غابارد/, "US", "English", "en", "DNIGabbard", "dni.gov"),
+  S("John Ratcliffe", /\bRatcliffe\b|راتكليف/, "US", "English", "en", undefined, "cia.gov"),
+  S("Howard Lutnick", /\bLutnick\b|لوتنيك/, "US", "English", "en", "howardlutnick", "commerce.gov"),
   S("Keir Starmer", /\bStarmer\b|ستارمر/, "UK", "English", "gb", "Keir_Starmer", "gov.uk"),
   S("Yvette Cooper", /\bYvette Cooper\b|إيفيت كوبر/, "UK", "English", "gb", "YvetteCooperMP", "gov.uk"),
   S("John Healey", /\bHealey\b|هيلي/, "UK", "English", "gb", "JohnHealey_MP", "gov.uk"),
@@ -65,6 +75,29 @@ export const SPEAKERS: Speaker[] = [
   S("Friedrich Merz", /\bMerz\b|ميرتس/, "DE", "German", "de", "bundeskanzler", "bundesregierung.de"),
 ];
 
+/**
+ * An American official the list does not name, by the title the copy gives
+ * him: "US Senator Jim Risch said", "US Navy Admiral X told". His words are
+ * looked for in America's own press as a listed speaker's are (user, 9 Oct).
+ */
+const US_TITLED = /\b(?:US|U\.S\.|American|Pentagon|White House|Treasury|State Department|CENTCOM)\b[^.:\n]{0,30}?\b(?:Secretary|spokes(?:man|woman|person)|Senator|Sen\.|Representative|Rep\.|Congress(?:man|woman)|envoy|ambassador|General|Gen\.|Admiral|Adm\.|commander|press secretary)\s+((?:[A-Z][a-z'-]+\.? ){0,2}[A-Z][a-z'-]{2,})/;
+const made = new Map<string, Speaker>();
+export function titledSpeaker(text: string): Speaker | null {
+  const m = US_TITLED.exec(text);
+  if (!m) return null;
+  const name = m[1].trim();
+  const known = SPEAKERS.find((sp) => sp.re.test(name));
+  if (known) return known;
+  const last = name.split(" ").pop() as string;
+  const sp = made.get(name) ?? { name, re: new RegExp(`\\b${last}\\b`), country: "US", lang: "English", edition: "en" as Edition };
+  made.set(name, sp);
+  return sp;
+}
+/** A speaker by name: the list's, or an official met by his title. */
+export function speakerByName(name: string): Speaker | null {
+  return SPEAKERS.find((s) => s.name === name) ?? made.get(name) ?? null;
+}
+
 /** Where a speaker's words are said: "Macron:", "Macron said", "قال ماكرون". */
 const SPEECH_EN = /\b(?:said|says|told|tells|announced|announces|stated|declared|warned|warns|pledged|vowed|added|confirmed|stressed|called|urged|:)/i;
 const SPEECH_AR = /(?:قال|أعلن|صرح|أكد|حذر|تعهد|أضاف|دعا|:)/;
@@ -89,7 +122,10 @@ export function speakerOf(summary: string, text = ""): Speaker | null {
       at = m.index;
     }
   }
-  return best;
+  if (best) return best;
+  const titled = titledSpeaker(t);
+  const at2 = titled ? t.search(titled.re) : -1;
+  return titled && at2 >= 0 && (SPEECH_EN.test(t.slice(at2, at2 + 60)) || SPEECH_AR.test(t.slice(at2, at2 + 60))) ? titled : null;
 }
 
 /** The known figure who speaks in a headline: the one before its colon, or before "says". */

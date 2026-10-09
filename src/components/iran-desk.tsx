@@ -59,7 +59,7 @@ const IRAN_HTML = `
     <h1 class="desk-label"><span class="dl-pre">Desk:</span> <span class="dl-name">Iran conflict</span></h1>
   </div>
   <div class="stamp">
-    <span class="ye-clock" title="The time in Iran (Tehran)"><span class="yc-label">Iran</span><time id="ye-clock">--:--:--</time></span>
+    <span class="ye-clock" title="The time in Iran (Tehran)"><span class="yc-label">Tehran</span><time id="ye-clock">--:--:--</time></span>
     <span class="pulse" aria-hidden="true"></span>
     <span id="updated">Being built</span>
   </div>

@@ -56,6 +56,38 @@ export const SHARED_TG: Record<string, IranLean> = {
   presstv: "axis",
   Alfaqaar313: "axis",
   clashreport: "intl",
+  // The Houthis' own voices on their war with the US and Israel, and Iran's
+  // (share audit, user 9 Oct): only what names this war goes on.
+  almasirah2: "axis",
+  SabaNewsyeMedia: "axis",
+  army21ye: "axis",
+  abdulsalamsalah: "axis",
+  // Hamas's channel: Israel's war in Gaza is the Iran desk's (user, 9 Oct).
+  alagsa3agel: "axis",
+};
+
+/**
+ * The Yemen scan's sources that stay the Yemen desk's alone, each with its
+ * reason (share audit, user 9 Oct: "make sure Iran stuff that comes up from
+ * a source goes to the Iran desk"). Every other Yemen source is in SHARED_TG,
+ * SHARED_X or SHARED_RSS, and a test fails on a source in neither: a new
+ * source is never silently the Yemen desk's alone.
+ */
+export const YEMEN_ONLY: Record<string, string> = {
+  // Yemen's local press and channels: Yemen's fronts and politics.
+  marebpress: "Yemen local", almasdaronline: "Yemen local", sabanew_: "Yemen government agency", spokespersonyem: "Yemeni army", Yem_army_media: "Yemeni army",
+  YemenMOD: "Yemeni army", CJFCSpox: "the coalition in Yemen", maldhabyani: "Yemen reporter", BashaReport: "Yemen reporter", "2decnews": "Yemen local",
+  South24_net: "Yemen's south", yementvyem: "Yemen local", ALyemennow: "Yemen local", TVyemenshabab: "Yemen local", defenseliney: "Yemen fronts",
+  PresidentRashad: "Yemen government", AbuZar3a: "Yemen fronts", ALalimiBawzer: "Yemen government", Shaya_Zindani: "Yemen government", afrah_alzouba: "Yemen government",
+  tarikyemen: "Yemen fronts", yemen_mofa: "Yemen government", mohr_yemen: "Yemen government", nrfyemen: "Yemen fronts", P_B_N_R: "Yemen fronts",
+  diralwatan: "Yemen fronts", STCSouthArabia: "Yemen's south", AidrosAlzubidi: "Yemen's south", Alsakaniali: "Yemen's south", South24E: "Yemen's south",
+  FaresALhemyari: "Yemen reporter", hezamalasad: "Houthi politburo on Yemen", UNinYE: "UN in Yemen", MOFASomalia: "the Horn of Africa", USEmbassyYemen: "US in Yemen",
+  SuezAuthorityEG: "the Red Sea route", EUinYemen: "EU in Yemen", UNOCHA: "Yemen's aid", axistaiz: "Yemen fronts", d74054: "Yemen's coast", mashdal: "Yemen government",
+  "Sawt al-Asima": "Yemen local", Yemenat: "Yemen local", "Aden al-Ghad": "Yemen local", "Yemen Press Agency": "Yemen local", "Al-Thawrah": "Yemen local",
+  "Sheba Intelligence": "Yemen research", "Yemen Future": "Yemen local", "Crater Sky": "Yemen local", "Al-Ayyam": "Yemen local", "Yemen Monitor": "Yemen local",
+  "Khabar Agency": "Yemen local", "Saba (government)": "Yemen government agency",
+  // Searches the Yemen scan builds from Yemen's own words: they find nothing else.
+  "Arabic press": "a Yemen-word search", "US media": "a Yemen-word search",
 };
 
 /** New Telegram channels, the Iran desk's alone. */
@@ -141,6 +173,13 @@ export const SHARED_X: Record<string, IranLean> = {
   UN: "intl",
   SDoughtyMP: "intl",
   UK_MTO: "intl",
+  Yah_Saree: "axis",
+  abdusalamsalah: "axis",
+  hussinalezzi5: "axis",
+  Moh_Alhouthi: "axis",
+  yemenmofa2025: "axis",
+  ERYANIM: "gulf",
+  SaudiNews50: "gulf",
   MoEnergy_Saudi: "gulf",
   Kpler: "intl",
   TankerTrackers: "intl",
@@ -277,6 +316,9 @@ export const IRAN_X: IranSource[] = [
 /** Websites and feeds the Yemen desk reads that the Iran desk reads too (by their names in the scanner). */
 export const SHARED_RSS: Record<string, IranLean> = {
   "Clearwater Dynamics": "intl",
+  Almashhad: "gulf",
+  "Saudi Gazette": "gulf",
+  "The Guardian": "intl",
   "Arab News": "gulf",
   "The National": "gulf",
   "Al-Araby Al-Jadeed": "gulf",

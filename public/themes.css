@@ -766,6 +766,8 @@ html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","No
 .ref-sheet{border-top-color:var(--t-line-strong,#334155)}
 /* References (user, 9 Oct): the first one, an arrow for the rest; the pop-up turns through them */
 .refs-box:not(.open) .ref-rest{display:none}
+/* Closed, a box shows its first point and Read more only; the references come with the rest (user, 9 Oct) */
+.situation:not(.sit-open):has(.toggle-sit) .refs-box,.front-card:not(.open):has(.toggle-front) .refs-box{display:none}
 .refs li:first-child{display:flex;align-items:center;gap:.35rem}
 .ref-more{all:unset;cursor:pointer;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;color:var(--t-muted,#8b98a8);border:1px solid var(--t-line,#2a3442)}
 .ref-more svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}

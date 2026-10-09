@@ -274,8 +274,8 @@ test("a headline that names its speaker gets no second name in front (8 Oct, 'Ma
   const v = decideIranForTest(
     reading({ speaker_lead: "Marco Rubio:", actor: "Rubio", actor_side: "us", headline: "US Secretary of State Rubio says the US can carry out any operation against Iran", arenas: ["military"] }),
     "Rubio said in Portugal that the United States can carry out any operation against Iran.",
-    "Iran International",
-    "opposition",
+    "Fox News",
+    "us",
   );
   assert.equal(v.kind, "publish");
   if (v.kind === "publish") assert.equal(v.report.summary, "US Secretary of State Rubio: the US can carry out any operation against Iran");

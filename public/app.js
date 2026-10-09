@@ -7315,7 +7315,8 @@ function refWhen(at) {
 }
 /**
  * The points, the first `show` of them before "Read more"; the box's Read more
- * right under them (`toggle`), then the first reference, always shown, and an
+ * right under them (`toggle`), then the references, shown once the box is
+ * open (CSS hides them while it is closed), the first one with an
  * arrow that opens the rest (user, 9 Oct).
  */
 function pointsHtml(points, refs, opts) {

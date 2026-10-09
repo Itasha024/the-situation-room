@@ -53,3 +53,15 @@ test("site scan: reads left in the inbox by a failed reader join the next", () =
   assert.equal(m.hits.find((h) => h.url === "b")?.text, "two, longer");
   assert.deepEqual(m.status.map((s) => s.id).sort(), ["x1", "x2"]);
 });
+
+test("every Yemen source is shared with the Iran desk or kept the Yemen desk's with a reason (share audit, user 9 Oct)", async () => {
+  const { yemenSourceKeys } = await import("./yemen-scan.server.ts");
+  const { SHARED_RSS, SHARED_TG, SHARED_X, YEMEN_ONLY } = await import("./desk/iran-sources.ts");
+  const k = yemenSourceKeys();
+  const loose = [
+    ...k.tg.filter((s) => !(s.id in SHARED_TG) && !(s.id in YEMEN_ONLY)),
+    ...k.x.filter((s) => !(s.id in SHARED_X) && !(s.id in YEMEN_ONLY)),
+    ...k.rss.filter((s) => !(s.id in SHARED_RSS) && !(s.id in YEMEN_ONLY)),
+  ].map((s) => s.id);
+  assert.deepEqual(loose, []);
+});

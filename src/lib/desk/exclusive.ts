@@ -95,6 +95,11 @@ function ownSourcing(text: string, source: string): boolean {
   return true;
 }
 
+/** Said in public: a statement, a speech, a post, a press conference. */
+const PUBLIC = /\b(?:(?:said|says|added|stated|announced|noted) in (?:a|an|its|his|her|their) (?:written |joint |official )?statement|(?:issued|released|published) (?:a |an )?(?:joint |official )?statement|statement (?:issued|released|published|posted)|(?:press|news) (?:conference|briefing)|told (?:reporters|journalists|a news conference|a press conference|lawmakers|parliament)|(?:posted|wrote|said) on (?:X|Twitter|Telegram|Truth Social|Facebook|Instagram)|in a (?:post|tweet|speech|televised (?:address|speech)|video (?:message|address))|addressing (?:a|the) (?:rally|crowd|conference|summit|parliament))\b|بيان|بلاغ\s+صحفي|في\s+كلمة|خلال\s+كلمة|في\s+خطاب|خلال\s+خطاب|مؤتمرا?\s+صحفيا?|في\s+تغريدة|في\s+تدوينة|في\s+منشور|(?:عبر|على)\s+(?:حسابه|حسابها|صفحته|صفحتها|منصة)/i;
+/** Words given to the outlet itself: an interview, a statement made to it. */
+const TO_OUTLET = /\b(?:(?:exclusive|phone|telephone) interview|in an interview|interviewed by|(?:told|tells|telling|spoke to|speaking to|spoke with|speaking with|said to|exclusively to)\s+(?!reporters|journalists|a news|a press|lawmakers|parliament)(?:the\s+)?[A-Z])|(?:حديث|حديثه|حديثها|تصريح|تصريحات|تصريحه|تصريحاتها?)\s+(?:خاص(?:ة)?\s+)?(?:لـ|ل\s*«|مع)|(?:مقابلة|حوار|لقاء)\s+(?:خاص(?:ة)?\s+)?(?:مع|لـ|أجرته|أجرتها)|خاص(?:ة)?\s+(?:لـ|ب)\s*[«"“]|حصري(?:اً|ا)?\s+لـ|(?:أبلغ|أبلغت|أخبر|أخبرت)\s/;
+
 /** Is this the outlet's own exclusive? `source` is the outlet carrying it. */
 export function isExclusive(text: string, source: string): boolean {
   // "Exclusive footage" is a clip, not the outlet's own reporting: Alfaqaar's
@@ -104,7 +109,13 @@ export function isExclusive(text: string, source: string): boolean {
     .replace(/(?:مشاهد|صور|لقطات|فيديو|مقطع|تصوير)\s+(?:جديدة\s+)?حصري(?:اً|ا|ة)?|\bexclusive(?:ly)?\s+(?:footage|video|images?|pictures?|photos?|scenes|clip)\b|\b(?:footage|video|images?|pictures?|photos?|scenes|clip)\s+(?:obtained\s+)?exclusively\b/gi, " ");
   // A site's terms ("a non-exclusive licence", SPA's "ترخيصا غير حصريا", 6 Oct) are not a label.
   const u = t.replace(/\bnon-?\s?exclusive\b|غير\s+حصري(?:اً|ا|ة)?/gi, " ");
-  if (GENERIC.some((re) => re.test(u))) return true;
+  // "عدن الغد /خاص", "كريتر سكاي/خاص:" is the site's byline (its own staff),
+  // not a label: Aden al-Ghad's Sanaa explosions and Crater Sky's camp blasts
+  // went out as exclusives (8 Oct).
+  const v = u.replace(/\/\s*خاص(?:ة)?(?=[\s:.\-–—|]|$)\s*:?/g, " ");
+  // A public statement is everyone's, whatever label the site puts on it,
+  // unless it was given to this outlet alone (user, 9 Oct).
+  if (GENERIC.some((re) => re.test(v))) return !PUBLIC.test(v) || TO_OUTLET.test(v);
   if (MAJORS.test(String(source || "").trim()) && ownSourcing(t, source)) return true;
   // The outlet's own name after "told", "learned", "علمت", "مصادر لـ".
   const words = String(source || "")

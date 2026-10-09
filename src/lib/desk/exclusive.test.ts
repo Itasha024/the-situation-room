@@ -11,6 +11,17 @@ test("an outlet's own exclusive is known, in English and Arabic", () => {
   assert.equal(isExclusive("Sheba Intelligence has learned that a senior commander was flown out", "Sheba Intelligence"), true);
 });
 
+test("a public statement a site labels its own is not an exclusive; one given to it alone is (user, 9 Oct)", () => {
+  assert.equal(isExclusive("خاص | وزارة الخارجية السورية في بيان: سوريا تدين الهجمات الحوثية على السعودية", "Aden al-Ghad"), false);
+  assert.equal(isExclusive("Exclusive: Trump posted on Truth Social that Iran must surrender", "Human Events"), false);
+  assert.equal(isExclusive("خاص | قال وزير الدفاع في حديث خاص لـ«عدن الغد» إن البيان الحكومي جاهز", "Aden al-Ghad"), true);
+  assert.equal(isExclusive("Exclusive: Hegseth tells Jack Posobiec the US is not nation-building in Iran", "Human Events"), true);
+  // "Outlet/خاص" is a staff byline, not a label.
+  assert.equal(isExclusive("المصدر: عدن الغد /خاص هزت انفجارات عنيفة، مساء الخميس، العاصمة صنعاء", "Aden al-Ghad"), false);
+  assert.equal(isExclusive("كريتر سكاي/خاص: هزّت ثلاثة انفجارات متتالية معسكر الأمن والمخابرات", "Crater Sky"), false);
+  assert.equal(isExclusive("حصري | وثائق تكشف شحنات أسلحة إلى الحديدة", "Almashhad"), true);
+});
+
 test("an ordinary report is not an exclusive", () => {
   assert.equal(isExclusive("Houthi drone hits government positions in Al-Dhale", "Suhail"), false);
   assert.equal(isExclusive("وأكد بشكل خاص على أهمية دعم القوات", "Suhail"), false);

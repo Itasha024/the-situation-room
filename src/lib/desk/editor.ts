@@ -32,6 +32,7 @@ import {
   SECOND_LOOK_MODELS,
   OUTLET_LEAD,
   checkReading,
+  colonAfterLead,
   nextPacificMidnight,
   pacificDay,
   repairable,
@@ -823,6 +824,7 @@ ${raw.body}`, c.text) : null;
   // An official body's own post is its statement: it leads (user, 8 Oct: the
   // Sanaa foreign ministry's "Saudi Arabia continues crimes against Yemen" went out with no speaker).
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
+  if (r.event_type === "statement" || r.event_type === "diplomacy") r.headline = colonAfterLead(r.headline, r.speaker_lead);
   // The name went to its role, or the colon was no quote: the lead follows.
   if (lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
     const role = fixHeadline(lead);
@@ -1084,6 +1086,7 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
     r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
   }
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
+  if (r.event_type === "statement" || r.event_type === "diplomacy") r.headline = colonAfterLead(r.headline, r.speaker_lead);
   r.headline = stripSpellingNotes(r.headline);
   r.body = stripSpellingNotes(r.body);
   // A short report is its headline, its dead and wounded too.

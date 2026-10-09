@@ -234,7 +234,7 @@ export function tallyNotEvent(headline: string): boolean {
 const NOT_AN_ATTACK =
   /\b(?:fl(?:y|ies|ew|ying)\s+(?:low\s+)?over|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?|evacuat\w*|sirens?|unidentified (?:object|aircraft|drone))\b/i;
 const ROUNDUP =
-  /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)/i;
+  /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)|\bas\s+(?:Tehran|Iran|Washington|the US|Israel)\s+(?:tries|seeks|aims|moves|looks|struggles|presses)\b|\bin\s+(?:recent|past|the past)\s+(?:days|weeks|months)\b/i;
 const INTERNAL =
   /\b(?:police|roadside|gunmen|militants?|Jaish al-Adl|PJAK|PKK|Komala|protest(?:s|ers)?|riots?|unrest|clash(?:es)?|security forces|border guards?|assassinat\w*|executed|arrest(?:s|ed)?)\b/i;
 const AIR_DEFENCE = /\b(?:intercept\w*|air defen[cs]es?|shot down|shoots down|downed|downs)\b/i;
@@ -251,4 +251,16 @@ export function iranPinAllowed(actor: string | null | undefined, place: Pick<Ira
   if (AXIS.has(a)) return place.country !== "Iran" || (a === "iran" && AIR_DEFENCE.test(headline) && !INTERNAL.test(headline));
   if (PURSUERS[a]) return PURSUERS[a].has(place.country);
   return place.country !== "Syria" && !INTERNAL.test(headline);
+}
+
+const PLACE_BY_NAME = new Map(IRAN_PLACES.map((p) => [p.name, p]));
+
+/**
+ * A stored Iran pin the map may show, checked again as it is served (user,
+ * 9 Oct: the Red Sea round-up stayed after the rules changed): its place on
+ * the region's list and within the map's scope. Rows stay as they are.
+ */
+export function iranEventAllowed(e: { actor?: string | null; place?: string | null; label?: string | null }): boolean {
+  const p = PLACE_BY_NAME.get(String(e.place ?? ""));
+  return !!p && iranPinAllowed(e.actor ?? null, p, String(e.label ?? ""));
 }

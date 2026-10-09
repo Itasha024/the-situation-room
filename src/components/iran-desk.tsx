@@ -19,16 +19,14 @@ const LEANS: [string, string, string][] = [
 ];
 
 const ARENAS: [string, string][] = [
-  ["Military campaign", "Strikes and interceptions by any side, force moves, losses."],
+  ["Strait of Hormuz", "The war at sea and around the Gulf: ship attacks, seizures, the US blockade, Iran's rules for passage, mines, transits, escorts, insurance."],
   ["Talks", "Iran–US, Oman, Qatar and any other channel; the MoU's terms; mediators' statements."],
-  ["Strait of Hormuz", "Ship incidents, seizures, mines, transits, escorts, insurance."],
   ["Nuclear file", "The IAEA, enrichment, the sites, inspections, NPT moves."],
   ["Inside Iran", "Fuel and gas, the economy and the rial, imports and exports, protests, arrests, executions, power struggles."],
   ["Sanctions", "New US, EU and UN sanctions, waivers, enforcement, shadow-fleet seizures."],
-  ["Axis of Resistance", "Hezbollah, the Iraqi and Syrian militias, the Houthis' Iran side."],
-  ["US in the region", "What the US itself does in the region: its forces, bases, deployments and arms deals, its dealings with the Gulf states, Iraq and Israel."],
-  ["Inside the US", "Congress, war powers, polls, gasoline prices, voices for and against the war."],
-  ["Israel", "Israel's war beyond its borders: its strikes in Lebanon, Gaza, Syria and elsewhere, attacks on Israel and their dead and wounded, the cabinet's war decisions."],
+  ["Lebanon", "Israel's strikes and ground war in Lebanon, Hezbollah, the Lebanese dead and wounded, Israeli–Lebanese talks."],
+  ["Axis of Resistance", "The Iraqi and Syrian militias, the Houthis' Iran side."],
+  ["The U.S.", "What the US itself does and says on the war, in the region and at home: forces, the blockade, Congress, polls, gasoline prices."],
 ];
 
 const NUMBERS = [
@@ -76,9 +74,21 @@ const IRAN_HTML = `
     <div class="ls-list" id="live-scan-list">${SOON("the sources the desk reads, as it reads them.")}</div>
   </details>
 </section>
+<div class="toolbar">
+  <div class="time-filter" id="time-filter" title="Pick a day, or show the whole war">
+    <span class="tf-label">Map:</span>
+    <button type="button" id="btn-day-prev" class="day-nav" aria-label="Previous day"><span class="day-nav-arr" aria-hidden="true">←</span><span class="day-nav-txt">Back</span></button>
+    <input type="date" id="map-date" min="2026-02-28" aria-label="Day" />
+    <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day"><span class="day-nav-txt">Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
+    <button type="button" id="btn-day-today">Today</button>
+    <span class="tf-sep" aria-hidden="true"></span>
+    <button type="button" id="btn-conflict-all" class="on" aria-label="The whole war, since 28 Feb 2026"><span class="tf-long">Whole war</span><span class="tf-short">All</span></button>
+  </div>
+</div>
 <main class="stage" id="stage">
   <section class="map-wrap" id="map-wrap">
     <div id="map"></div>
+    <button type="button" class="map-full" id="btn-focus-map" aria-pressed="false" aria-label="Full screen map" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="mf-open" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path class="mf-close" d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button>
     <div class="legend" id="legend">
       <div class="leg-head"><span class="leg-title">Attacks legend</span></div>
       <div class="leg-body">

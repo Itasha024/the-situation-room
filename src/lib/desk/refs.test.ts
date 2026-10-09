@@ -66,9 +66,9 @@ test("several reports of one fact: one number, the speaker's own account or the 
 
 test("arenas: the Yemen desk's war goes nowhere, US in the region is the US's doing, Israel's arena cites Israel's own sources", async () => {
   const { fits, israelRef } = await import("./iran-brief.ts");
-  assert.equal(fits("us-region", "Turkey, Pakistan and Saudi Arabia pledged deployments to help Riyadh against Houthi attacks."), false);
-  assert.equal(fits("us-region", "UAE and British naval commanders met on a Gulf coalition."), false);
-  assert.equal(fits("us-region", "The Pentagon sent a third carrier to the Gulf."), true);
+  assert.equal(fits("us", "Turkey, Pakistan and Saudi Arabia pledged deployments to help Riyadh against Houthi attacks."), false);
+  assert.equal(fits("us", "UAE and British naval commanders met on a Gulf coalition."), false);
+  assert.equal(fits("us", "The Pentagon sent a third carrier to the Gulf."), true);
   assert.equal(fits("sanctions", "A US military source said US forces are focused on a complete blockade of Iranian ships and ports."), false);
   assert.equal(fits("sanctions", "The US Treasury sanctioned 17 vessels of Iran's shadow fleet."), true);
   assert.equal(fits("nuclear", "Trump said Iran will never have a nuclear weapon."), true);
@@ -91,4 +91,29 @@ test("America's and Israel's words are never cited from Iran's outlets; a strike
   assert.ok(ownRef("Israeli jets struck a missile site near Isfahan [r1].", r("Tasnim", "axis")));
   assert.ok(ownRef("US Representative Ro Khanna called on Congress to vote [r2].", r("Reuters")));
   assert.ok(ownRef("Iranian drones struck opposition sites in Erbil [r1].", r("Press TV", "axis")));
+});
+
+test("one point per event and per speaker; no outlet opens a point; a speaker gets the colon (user, 9 Oct)", async () => {
+  const { onePointEach } = await import("./prose.ts");
+  const got = onePointEach([
+    "IRGC Navy says LPG carriers NV Sunshine and Golpeyker were hit and caught fire south of Hormuz, blames US forces [r1].",
+    "IRGC Navy: targeting caused a widespread fire in the engine room of NV Sunshine [r2].",
+    "IRGC: responsibility for these incidents lies with US forces [r3].",
+    "Bessent: the US blockade of Iran aims to halt all Iranian oil exports [r4].",
+    "Bessent: the US runs an absolute isolation campaign against Iran [r5].",
+    "Vahid Online: gunmen killed a police chief in Faryab, Kerman province [r6].",
+  ], ["Vahid Online"]);
+  assert.equal(got.length, 3);
+  assert.match(got[0], /^IRGC Navy: LPG carriers/);
+  assert.match(got[1], /^Bessent: the US blockade .*\[r4\]\. The US runs .*\[r5\]\.$/);
+  assert.equal(got[2], "Gunmen killed a police chief in Faryab, Kerman province [r6].");
+});
+
+test("a statement's speaker gets the colon; first-person words with no speaker are refused (9 Oct)", async () => {
+  const { colonAfterLead, fixHeadline } = await import("./reader.ts");
+  assert.equal(colonAfterLead("IRGC Navy continued US interventions will lead to more incidents", "IRGC Navy"), "IRGC Navy: continued US interventions will lead to more incidents");
+  assert.equal(colonAfterLead("IRGC Navy seized a tanker that will be taken to Bandar Abbas", "IRGC Navy"), "IRGC Navy seized a tanker that will be taken to Bandar Abbas");
+  assert.equal(colonAfterLead("Hezbollah fighters will not disarm", "Hezbollah"), "Hezbollah fighters will not disarm");
+  assert.equal(fixHeadline("IRGC Navy: continued US interventions will lead to more incidents"), "IRGC Navy: continued US interventions will lead to more incidents");
+  assert.equal(fixHeadline("Trump: held a call with Putin"), "Trump held a call with Putin");
 });

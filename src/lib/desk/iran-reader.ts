@@ -16,7 +16,7 @@ import { subjectNation } from "./speaker-press.ts";
 import { leadSpeaker } from "./speakers.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 9;
+export const IRAN_PROMPT_VERSION = 10;
 
 export function iranContentHash(text: string): string {
   return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
@@ -24,16 +24,14 @@ export function iranContentHash(text: string): string {
 
 /** The arenas (the section's boxes), by id. */
 export const IRAN_ARENAS = {
-  military: "Military campaign",
-  talks: "Talks",
   hormuz: "Strait of Hormuz",
+  talks: "Talks",
   nuclear: "Nuclear file",
   inside_iran: "Inside Iran",
   sanctions: "Sanctions",
+  lebanon: "Lebanon",
   axis: "Axis of Resistance",
-  us_region: "US in the region",
-  inside_us: "Inside the US",
-  israel_home: "Israel",
+  us: "The U.S.",
 } as const;
 export type IranArena = keyof typeof IRAN_ARENAS;
 
@@ -95,6 +93,7 @@ WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 - Recaps, reject_reason "recap": a post that sums up events already reported one by one, a channel's round-up or news package ("بسته خبری", "مرور اخبار", "حصاد", "أبرز الأحداث", "ملخص"), a programme title, a documentary, an anniversary, a battle map. Old events retold as new.
 - Clerics, reject_reason "cleric": a cleric, Friday-prayer leader, preacher, marja or body of clerics preaching, praising or condemning. The exceptions: a cleric who holds an office in this war (the Supreme Leader, the judiciary chief, a minister, a commander), and a party's official religious leadership calling to fight, declaring jihad or ruling on this war.
 - Protocol, reject_reason "protocol": an official visiting, touring, receiving a delegation, attending a ceremony, opening a project, unless the item carries a new fact (a figure, a decision, words with content).
+- Asides, reject_reason "protocol": a light moment between officials (a gesture, a gift, a badge or pin, clothing, a joke, a handshake, a photo) and the words said about it, when they carry no decision or position on the war. An adviser posting such a clip does not make it news.
 - Domestic news with no tie to the war, the economy or politics: sport, weather, culture, crime, traffic, religious occasions; a headline or a post with no fact; "a spokesman said something" with no content.
 - Pictures of damage already done are not a new attack: unless a source reports a NEW strike, the event_type is statement and the headline says it is imagery of earlier damage.
 - A terse alert ("explosions heard in Isfahan", "sirens in the north") IS a report: publish it as exactly that, no more.
@@ -118,6 +117,7 @@ WHO DID WHAT TO WHOM: never infer, never assume
 - Distinguish where a weapon came FROM (origins) from where it was AIMED or LANDED (targets). If you cannot tell the roles apart, confident_roles=false and targets=[].
 
 HOW TO WRITE
+- A headline is clear on its own: a quote that names something only insiders know says what it is ("the three Gulf islands Iran holds and the UAE claims", not "three Iranian islands").
 - English wire style. headline <= 110 characters, sentence case, no full stop; it says the one main fact and keeps what makes the item news. No adjectives of praise or blame.
 - A short item (four sentences or fewer) is its headline: the whole report goes in the headline (the place, the target, the weapon, the dead and wounded) and body is "". Never a body that says the headline again in more words, and never a body just to add a little: a place, a detail or a figure belongs in the headline.
 - A longer item, as a wire story: the headline carries the most important facts; the body adds the next ones (detail, figures, names, places, a quote), never a rephrasing of the headline. A body earns its place with at least two new facts; otherwise body is "".
@@ -163,7 +163,7 @@ maritime_attack is any event that happens TO a named vessel at sea or in port: h
 FIELDS
 - event_type: air_strike, missile_launch, drone_attack, interception, air_raid_alert, shelling, ground_clash, advance_or_capture, maritime_attack, statement, diplomacy, economy.
 - actor_side: who acted or spoke: iran, hezbollah, iraqi_militias (Iraqi and Syrian militias), us, israel, gulf (any Gulf state), houthi, other, unclear.
-- arenas: one or two arena ids, by SUBJECT, not by speaker (the US Treasury Secretary on Iran's oil is "sanctions"; a Qatari minister on the talks is "talks"; a threat or a vow to strike or to fight back is "military"; a blockade of Iran's ports or shipping is "hormuz"). "inside_iran" is only for life and politics inside Iran (shortages, prices, protests, arrests, executions, internet, rifts at the top), never for what Iran's officials say about the war: military, talks, hormuz, nuclear, inside_iran, sanctions, axis (Hezbollah, the Iraqi and Syrian militias, the Houthis' Iran side), us_region, inside_us, israel_home.
+- arenas: one or two arena ids, by SUBJECT, not by speaker (the US Treasury Secretary on Iran's oil is "sanctions"; a Qatari minister on the talks is "talks"; the war at sea, the blockade, ship attacks and strikes or threats around the Gulf are "hormuz"). "inside_iran" is only for life and politics inside Iran (shortages, prices, protests, arrests, executions, internet, rifts at the top), never for what Iran's officials say about the war. "lebanon" is Israel's strikes and ground war in Lebanon, everything Hezbollah does, and Israeli–Lebanese talks. "us" is what the US itself does and says on the war, abroad and at home (Congress, polls, gasoline prices). The ids: hormuz, talks, nuclear, inside_iran, sanctions, lebanon, axis (the Iraqi and Syrian militias, the Houthis' Iran side), us.
 - targets: English names of places struck or where the event happened, as the text names them. origins: places a weapon or aircraft came from. Statements: both [].
 - interest: "for" if the report favours the side of the outlet carrying it, "against" if it harms it (an outlet admitting its own side's losses), else "neutral".
 - has_time: the text gives the time of the event.

@@ -7112,7 +7112,10 @@ function bootOtherDesk(el) {
   if (document.readyState === 'complete') setTimeout(again, 400);
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
   iranPins.drawn = '';
+  iranPins.countries = null;
   renderIranLegend();
+  wireIranMapTools();
+  drawIranCountries();
   loadIranPins();
 }
 
@@ -7166,7 +7169,83 @@ const IRAN_PIN_SIDES = [
 ];
 const IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));
 const IRAN_MAP_FROM = '2026-02-28';
-const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), collapsed: false };
+const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), collapsed: false, day: null, countries: null, focus: false };
+/** The day an attack belongs to, in Israel and Iran's part of the world: the researched ones carry only their day. */
+const iranDayOf = (ev) => (ev.dayOnly ? String(ev.at).slice(0, 10) : new Date(ev.at).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }));
+const iranToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+/**
+ * The map's day controls, as the Yemen desk's (user, 9 Oct): back and forward
+ * a day, any day from 28 Feb 2026 to today, today, or the whole war; and the
+ * full-screen button.
+ */
+function wireIranMapTools() {
+  const inp = document.getElementById('map-date');
+  const prev = document.getElementById('btn-day-prev');
+  const next = document.getElementById('btn-day-next');
+  const today = document.getElementById('btn-day-today');
+  const all = document.getElementById('btn-conflict-all');
+  const shift = (ymd, n) => { const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const sync = () => {
+    const max = iranToday();
+    if (inp) { inp.min = IRAN_MAP_FROM; inp.max = max; inp.value = iranPins.day || max; }
+    if (prev) prev.disabled = !!iranPins.day && iranPins.day <= IRAN_MAP_FROM;
+    if (next) next.disabled = !iranPins.day || iranPins.day >= max;
+    if (today) today.classList.toggle('on', iranPins.day === max);
+    if (all) all.classList.toggle('on', !iranPins.day);
+  };
+  const go = (ymd) => {
+    const max = iranToday();
+    iranPins.day = ymd ? (ymd < IRAN_MAP_FROM ? IRAN_MAP_FROM : ymd > max ? max : ymd) : null;
+    sync();
+    drawIranPins();
+  };
+  if (inp) inp.onchange = () => go(inp.value || null);
+  if (prev) prev.onclick = () => go(shift(iranPins.day || iranToday(), iranPins.day ? -1 : 0));
+  if (next) next.onclick = () => { if (iranPins.day) go(shift(iranPins.day, 1)); };
+  if (today) today.onclick = (ev) => { ev.preventDefault(); go(iranToday()); };
+  if (all) all.onclick = (ev) => { ev.preventDefault(); go(null); };
+  sync();
+  const fb = document.getElementById('btn-focus-map');
+  if (fb && fb.dataset.wired !== '1') {
+    fb.dataset.wired = '1';
+    const toggle = () => {
+      iranPins.focus = !iranPins.focus;
+      document.body.classList.toggle('map-focus', iranPins.focus);
+      fb.setAttribute('aria-pressed', String(iranPins.focus));
+      fb.setAttribute('aria-label', iranPins.focus ? 'Exit full screen' : 'Full screen map');
+      fb.title = iranPins.focus ? 'Exit full screen' : 'Full screen';
+      if (iranPins.focus) document.getElementById('map-wrap').scrollIntoView({ block: 'start' });
+      setTimeout(() => { if (map) map.invalidateSize(); }, 50);
+    };
+    fb.onclick = toggle;
+    try { L.DomEvent.disableClickPropagation(fb); } catch (e) {}
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && iranPins.focus && !document.querySelector('.leaflet-popup')) toggle(); });
+  }
+}
+/** The countries at war lit in their side's colour, borders and a light fill (user, 9 Oct); a side ticked off goes dark. */
+async function drawIranCountries() {
+  if (!map) return;
+  try {
+    if (!iranPins.countryGeo) {
+      const res = await fetch('/iran-countries.geojson');
+      if (!res.ok) return;
+      iranPins.countryGeo = await res.json();
+    }
+    if (!map.getPane('irCountries')) {
+      map.createPane('irCountries');
+      map.getPane('irCountries').style.zIndex = 350;
+      map.getPane('irCountries').style.pointerEvents = 'none';
+    }
+    if (iranPins.countries) { try { map.removeLayer(iranPins.countries); } catch (e) {} }
+    iranPins.countries = L.geoJSON(iranPins.countryGeo, { pane: 'irCountries', interactive: false, style: iranCountryStyle }).addTo(map);
+  } catch (e) { console.warn('iran countries', e); }
+}
+function iranCountryStyle(f) {
+  const side = f && f.properties && f.properties.side;
+  const ink = IRAN_PIN_INK[side] || '#94a3b8';
+  const on = iranPins.on[side] !== false;
+  return { color: ink, weight: on ? 1.6 : 0, opacity: on ? 0.9 : 0, fillColor: ink, fillOpacity: on ? 0.1 : 0 };
+}
 const iranSideOf = (ev) => (IRAN_PIN_INK[ev.actor] ? ev.actor : 'other');
 function iranPinShown(ev) {
   if (ev.actor === 'houthi') return false;
@@ -7253,7 +7332,8 @@ function iranPopupHtml(ev) {
 }
 function drawIranPins() {
   renderIranLegend();
-  const shown = iranPins.events.filter((ev) => iranPins.on[iranSideOf(ev)] !== false);
+  if (iranPins.countries) { try { iranPins.countries.setStyle(iranCountryStyle); } catch (e) {} }
+  const shown = iranPins.events.filter((ev) => iranPins.on[iranSideOf(ev)] !== false && (!iranPins.day || iranDayOf(ev) === iranPins.day));
   const key = shown.map((e) => e.fp).join('|');
   if (!map || key === iranPins.drawn) return;
   iranPins.drawn = key;
@@ -7287,7 +7367,12 @@ function drawIranPins() {
     if (!ev.mapOnly && iranPins.byFp.has(base)) mappableByFp.set(ev.fp, ev);
   }
   const chip = document.getElementById('map-chip');
-  if (chip) chip.textContent = kept.length ? `${kept.length} attacks on the map since 28 Feb 2026` : 'Every attack since 28 Feb 2026: coming soon';
+  if (chip) {
+    const n = `${kept.length} attack${kept.length === 1 ? '' : 's'}`;
+    chip.textContent = iranPins.day
+      ? (kept.length ? `${n} on the map on ${fmtDay(iranPins.day)}` : `No attack on the map on ${fmtDay(iranPins.day)}`)
+      : `${n} on the map since 28 Feb 2026`;
+  }
   renderIranFeed();
 }
 function showIranPin(fp) {

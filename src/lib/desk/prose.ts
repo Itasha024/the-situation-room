@@ -11,7 +11,7 @@
  */
 
 import type { LiveReport } from "./types.ts";
-import { roleNamesInProse } from "./reader.ts";
+import { colonSpeaker, OUTLET_LEAD, roleNamesInProse } from "./reader.ts";
 import { type ChainModel, askChain, WRITER_MODELS } from "./models.ts";
 import { repelAttacker } from "./dev-marks.ts";
 import { outletSide } from "./digest.ts";
@@ -309,13 +309,14 @@ export async function writeProse(
   const j = got.json;
   const given = sorted.slice(-last);
   const refOf: Record<string, Ref> = Object.fromEntries(given.map((r, i) => [`r${i + 1}`, refOfReport(r)]));
-  const points = cleanPoints(j.points, 8, true);
+  const outlets = given.map((r) => r.source);
+  const points = onePointEach(cleanPoints(j.points, 8, true), outlets);
   const out: Prose = { situation: points.map(stripRefs).join("\n\n"), more: "", fronts: {}, points, frontPoints: {}, refOf, model: got.model, devMap: [], frontMaps: {} };
   if (!out.situation) console.warn(`[prose] ${got.model}: no usable points (${JSON.stringify(j.points ?? null).length} chars)`);
   const fj = (j.fronts && typeof j.fronts === "object" ? j.fronts : {}) as Record<string, unknown>;
   const fm = (j.front_maps && typeof j.front_maps === "object" ? j.front_maps : {}) as Record<string, unknown>;
   for (const f of fronts) {
-    const fp = cleanPoints(fj[f.id], 4);
+    const fp = onePointEach(cleanPoints(fj[f.id], 4), outlets);
     out.frontPoints![f.id] = fp;
     out.fronts[f.id] = fp.map(stripRefs).join(" ");
     const marks = cleanDevMap(fm[f.id], out.fronts[f.id]);
@@ -381,4 +382,59 @@ export function fitWords(text: string, max: number): [string, string] {
   let i = 0;
   while (i < sentences.length && (i === 0 || words(keep + sentences[i]) <= max)) keep += sentences[i++];
   return [keep.replace(/\s+$/, "").replace(/\n{3,}/g, "\n\n"), sentences.slice(i).join("").trim()];
+}
+
+/** Two points that tell one event are one: the later goes (the same sanctions twice, 9 Oct). */
+export function oncePer(points: string[]): string[] {
+  const words = (p: string) => new Set(stripRefs(p).toLowerCase().match(/[a-z0-9]{4,}/g) ?? []);
+  const kept: { p: string; w: Set<string> }[] = [];
+  for (const p of points) {
+    const w = words(p);
+    if (kept.some((k) => [...w].filter((x) => k.w.has(x)).length / Math.max(1, Math.min(w.size, k.w.size)) >= 0.6)) continue;
+    kept.push({ p, w });
+  }
+  return kept.map((k) => k.p);
+}
+
+/** Words that name no one speaker: "US official" and "US Treasury" are not one voice. */
+const NO_VOICE = /^(?:US|U\.S\.|The|Iran|Iran's|Iranian|Israel|Israel's|Israeli|Saudi|Gulf|Lebanon|Lebanon's|Lebanese|Yemen|Yemen's|Yemeni|Houthi|Houthis|Arab|UN|EU|Gaza|Iraq|Iraqi|Qatar|Qatari|Oman|Omani|Russia|Russian|China|Chinese)$/;
+
+/** Who speaks in a point: the name words before its colon. */
+function voiceOf(p: string): Set<string> {
+  const lead = /^([^:]{2,70}):\s/.exec(stripRefs(p))?.[1] ?? "";
+  return new Set((lead.match(/[A-Z][\w'’.-]*/g) ?? []).filter((w) => !NO_VOICE.test(w)));
+}
+
+/**
+ * A point in the desk's form (user, 9 Oct): no outlet opening it ("Vahid
+ * Online: gunmen kill …", the reference shows the outlet), and anyone who
+ * speaks gets the colon ("Pezeshkian says …" is "Pezeshkian: …").
+ */
+export function pointVoice(p: string, outlets: string[] = []): string {
+  let t = String(p || "").trim();
+  const lead = /^([^:]{2,60}):\s+/.exec(t);
+  if (lead && (OUTLET_LEAD.test(`${lead[1]}:`) || outlets.some((o) => o && o.toLowerCase() === lead[1].trim().toLowerCase()))) t = t.slice(lead[0].length);
+  t = colonSpeaker(t);
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/**
+ * One point per event and per speaker (user, 9 Oct: four points on one IRGC
+ * statement, two on Bessent's blockade words). A later point by the same
+ * speaker joins the first while both fit in 55 words, else it goes.
+ */
+export function onePointEach(points: string[], outlets: string[] = []): string[] {
+  const kept: string[] = [];
+  for (const p of oncePer(points.map((x) => pointVoice(x, outlets)))) {
+    const v = voiceOf(p);
+    const at = v.size ? kept.findIndex((k) => [...voiceOf(k)].some((w) => v.has(w))) : -1;
+    if (at < 0) {
+      kept.push(p);
+      continue;
+    }
+    const rest = p.replace(/^[^:]{2,70}:\s+/, "");
+    const joined = `${kept[at].replace(/\s+$/, "")} ${rest.charAt(0).toUpperCase()}${rest.slice(1)}`;
+    if (stripRefs(joined).split(/\s+/).length <= 55) kept[at] = joined;
+  }
+  return kept;
 }

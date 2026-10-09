@@ -8,6 +8,7 @@ import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
 import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
+import { iranEventAllowed } from "@/lib/desk/iran-places";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -53,6 +54,11 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     if (r.text) r.text = respell(String(r.text));
     // The Iran desk's filter buttons go by the source's group.
     if (desk === "iran") (r as Record<string, unknown>).lean = iranLeanOfSource(String(r.source ?? ""));
+  }
+  // The Iran map's own pins pass its scope as they are served, so a pin stored under older rules never shows.
+  if (desk === "iran" && Array.isArray((slice as { events?: unknown[] }).events)) {
+    const s = slice as unknown as { events: { desks?: string[]; actor?: string | null; place?: string | null; label?: string | null }[] };
+    s.events = s.events.filter((e) => (e.desks ?? []).includes("yemen") || iranEventAllowed(e));
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }

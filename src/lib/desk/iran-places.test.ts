@@ -60,4 +60,8 @@ test("the map's scope (user, 9 Oct): who acted, where it landed, and never a fly
   assert.equal(iranPinAllowed("iran", at("Iran"), "Tehran emergency says 10 wounded in air incidents on 8 October"), false);
   assert.equal(iranPinAllowed("iran", at("Cyprus"), "Paphos International Airport evacuated upon detection of unidentified object"), false);
   assert.equal(iranPinAllowed("unclear", at("sea"), "Ship targeted in Strait of Hormuz, fire breaks out on board"), true);
+  assert.equal(iranPinAllowed("iran", at("sea"), "Iran attacks tankers beyond Strait of Hormuz as Tehran tries to maintain leverage over strait"), false);
+  const { iranEventAllowed } = await import("./iran-places.ts");
+  assert.equal(iranEventAllowed({ actor: "unclear", place: "the Red Sea", label: "Tanker hit in the Red Sea" }), false);
+  assert.equal(iranEventAllowed({ actor: "iran", place: "Strait of Hormuz", label: "IRGC Navy targets a non-compliant vessel in the Strait of Hormuz" }), true);
 });

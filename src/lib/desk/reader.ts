@@ -704,7 +704,7 @@ export function fixHeadline(headline: string): string {
   h = h.replace(/^([^:]{2,60}?) (?:said|says|stated|stressed|affirmed|declared|added) (?:that )?((?:our|we|us|my|I)\b.*)$/, "$1: $2");
   // A colon before a reported verb is no quote: "Trump: held a call" is "Trump held a call".
   const m =/^([^:]{2,60}):\s+([a-z][a-z'-]*)\b/.exec(h);
-  if (m && (REPORTED_VERB.test(m[2]) || /ed$/.test(m[2]))) h = `${m[1]} ${h.slice(m[0].length - m[2].length)}`;
+  if (m && (REPORTED_VERB.test(m[2]) || /ed$/.test(m[2])) && !ownClause(h.slice(m[0].length - m[2].length))) h = `${m[1]} ${h.slice(m[0].length - m[2].length)}`;
   // A colon after a name that is then reported on is no quote: "Al-Alimi:
   // Trump made no pledge to al-Alimi, sources say".
   const c = /^([^:]{2,60}):\s+(.+)$/.exec(h);
@@ -715,6 +715,29 @@ export function fixHeadline(headline: string): string {
   }
   h = colonSpeaker(h);
   return h ? h[0].toUpperCase() + h.slice(1) : h;
+}
+
+/**
+ * Words that make their own sentence, a subject then "will", "must"…:
+ * "continued US interventions will lead to more incidents" is a quote, not a
+ * report on its speaker ("held a call that will …" is).
+ */
+export function ownClause(rest: string): boolean {
+  return /^\S+\s+(?:(?!(?:that|which|who|and|or|to|after|as|when|if|because|while|but)\b)[\w'’-]+\s+){1,4}(?:will|would|must|cannot|can't|won't|should)\b/.test(String(rest || "").trim());
+}
+
+/**
+ * A statement whose headline opens with its speaker and then their own words
+ * gets the colon (user, 9 Oct: "IRGC Navy continued US interventions will
+ * lead to …"). A saying verb after the speaker is left to `colonSpeaker`.
+ */
+export function colonAfterLead(headline: string, lead: string | null | undefined): string {
+  const h = String(headline || "").trim();
+  const l = String(lead || "").trim();
+  if (!l || !h.toLowerCase().startsWith(l.toLowerCase())) return h;
+  const rest = h.slice(l.length);
+  if (!/^\s+[a-z]/.test(rest) || REPORTED_VERB.test(rest.trim().split(/\s+/)[0]) || /^\s+(?:says?|said|tells?|told|warns?|vows?|urges?|calls?)\b/.test(rest)) return h;
+  return ownClause(rest) ? `${h.slice(0, l.length)}: ${rest.trim()}` : h;
 }
 
 /** Words a speaker's name or title is made of; any other small word means the phrase is not a speaker. */
@@ -1255,6 +1278,8 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
     if (!have.has(n)) return `figure not in source: ${n}`;
   }
 
+  // First-person words with no one named are nobody's (9 Oct: "We are cutting off the Iranian regime's remaining financial lifeline").
+  if (/^(?:We|I|Our|My|Us)\b/.test(h)) return "no speaker: first-person words open the headline; lead with who said them and a colon";
   // A speaker with nothing after the colon, or an empty quote, says nothing.
   if (/:\s*(?:["“”'‘’]\s*["“”'‘’]\s*)?$/.test(h.trim())) return "headline is only its speaker: say what they said";
   if (r.event_type === "statement" || r.event_type === "diplomacy") {

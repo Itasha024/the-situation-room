@@ -86,8 +86,8 @@ function field(t: string, names: string[]): string {
 function parseRef(body: string): Ref | null {
   const url = field(body, ["url"]).replace(/\s+/g, "");
   if (!/^https?:\/\//.test(url) || /wikipedia\.org|archive\.org|archive\.ph|archive\.today/.test(url)) return null;
-  // "[[Liveuamap|…]]" is cut at its bar by field(): the name without the link's brackets.
-  const site = clean(field(body, ["website", "work", "newspaper", "publisher", "agency", "magazine"]).replace(/^\[\[/, "")) || new URL(url).hostname.replace(/^www\./, "");
+  // "[[Liveuamap|…]]" is cut at its bar by field(), and "[[Reuters]]" kept its closing brackets (user, 9 Oct: "Reuters]]"): the name alone.
+  const site = clean(field(body, ["website", "work", "newspaper", "publisher", "agency", "magazine"])).replace(/\[\[|\]\]/g, "").trim() || new URL(url).hostname.replace(/^www\./, "");
   return { url, title: clean(field(body, ["title", "trans-title", "script-title"])).replace(/^[a-z]{2}:/, ""), site, date: field(body, ["date"]) };
 }
 function clean(s: string): string {

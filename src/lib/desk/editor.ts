@@ -1117,10 +1117,16 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
 /**
  * An Iran attack card's pins (Round 30 stage 6): the region's places its
  * targets and copy name that the source names too (iran-places.ts), the
- * first the card's own pin and the rest pins of their own. The Yemen
- * gazetteer's place stays only when the region's list names none.
+ * first the card's own pin and the rest pins of their own, each within the
+ * map's scope (iranPinAllowed).
  */
 function pinIran(report: LiveReport, r: Reading, sourceText: string): void {
+  // The Yemen gazetteer's place is never the Iran map's (9 Oct: a Red Sea pin
+  // on a round-up of tanker attacks): only the region's list, within the map's scope.
+  delete report.place;
+  delete report.lat;
+  delete report.lng;
+  delete report.places;
   if (!mapsAsPin(report.type) || tallyNotEvent(report.summary)) return;
   // Where it was fired from is not where it landed.
   const from = new Set(iranPins((r.origins ?? []).join(", "), sourceText, false).map((p) => p.name));

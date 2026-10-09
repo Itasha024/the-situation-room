@@ -7234,7 +7234,7 @@ async function drawIranCountries() {
   if (!map) return;
   try {
     if (!iranPins.countryGeo) {
-      const res = await fetch('/iran-countries.geojson');
+      const res = await fetch('/iran-countries.geojson', { cache: 'no-cache' }); // asked again each load, as the baseline: a border change shows at once
       if (!res.ok) return;
       iranPins.countryGeo = await res.json();
     }

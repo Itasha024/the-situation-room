@@ -2137,6 +2137,8 @@ export type YemenFetch = {
   learnedIds: string[];
   /** For the Iran desk, after the Yemen reader has read them. */
   iranShared: RawHit[];
+  /** Another desk's sources' items on Yemen's war (site-scan): items only, no status of the Yemen read. */
+  extra?: boolean;
 };
 
 /** One cycle in one go: the old path (site-scan mode "off"). */
@@ -2169,8 +2171,9 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   // handed to the Iran desk's scan (iran-scan.server.ts), which reads them
   // with its own reader. Each source is still fetched once (Round 30).
   const iranInbox: RawHit[] = [];
-  const toIran = (rows: RawHit[], lean: IranLean | undefined) => {
-    if (!lean) return;
+  // Every source's items on that war go there, a source with no group listed (a learned outlet) as International.
+  const toIran = (rows: RawHit[], group: IranLean | undefined) => {
+    const lean = group ?? "intl";
     for (const r of rows) if (isIranDeskItem(`${r.title ?? ""} ${r.text}`)) iranInbox.push({ ...r, lean, picked: undefined });
   };
   const status: SourceStatus[] = [];
@@ -2193,8 +2196,8 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
             rows = all.filter((r) => newerX(idOf(r), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS));
             // The Iran desk takes this account's posts on its war, whatever the Yemen filter keeps.
             // A picture account's posts go on once their words are read (below).
-            const ixLean = SHARED_X[acct.handle];
-            if (ixLean && !acct.picture) {
+            const ixLean = SHARED_X[acct.handle] ?? "intl";
+            if (!acct.picture) {
               const every = acct.only ? parseFxStatuses(page, { ...acct, only: undefined }) : all;
               toIran(every.filter((r) => newerX(idOf(r), seenId) && (seenId || Date.parse(r.at) > now - FIRST_SIGHT_MS)), ixLean);
             }
@@ -2251,7 +2254,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
               // filter: UKMTO's Hormuz warnings were read off their pictures and
               // dropped as "not the Red Sea", and never reached the Iran desk
               // (user, 9 Oct).
-              if (!unread && ixLean) toIran(worded, ixLean);
+              if (!unread) toIran(worded, SHARED_X[acct.handle]);
             }
             // A newspaper's short link (reut.rs, wapo.st) is followed to its
             // article, so the site's own listing of it is the same item.

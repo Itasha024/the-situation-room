@@ -42,6 +42,7 @@ import {
   parseFxStatuses,
   parseRss,
   parseTelegram,
+  WAR_ONLY,
 } from "./yemen-scan.server.ts";
 
 const STATE_KEY = "iran:scan-state";
@@ -179,7 +180,7 @@ export const IRAN_PIPE: DeskPipe = {
  * about the war or its economy (the desk's own gate). The site scan calls it
  * with the scan's store of how far each source was read.
  */
-export async function fetchIranSources(state: FetchState, now: number): Promise<{ hits: RawHit[]; status: SourceStatus[] }> {
+export async function fetchIranSources(state: FetchState, now: number): Promise<{ hits: RawHit[]; status: SourceStatus[]; yemen: RawHit[] }> {
   const iState = state as IranState;
   const status: SourceStatus[] = [];
   const own: RawHit[] = [];
@@ -205,7 +206,22 @@ export async function fetchIranSources(state: FetchState, now: number): Promise<
   for (const f of [...IRAN_RSS, ...SEARCHES]) run(`web:${f.id}`, f.name, "web", f.every, () => readFeed(f));
   await Promise.allSettled(jobs);
 
-  return { hits: own.filter((h) => passesOwnSourceGate(h)), status };
+  return { hits: own.filter((h) => passesOwnSourceGate(h)), status, yemen: toYemen(own) };
+}
+
+/** The Yemen desk's filter group for a source of this desk's: Iran's side is the Houthis' side there. */
+const YEMEN_LEAN: Partial<Record<IranLean, string>> = { axis: "houthi", gulf: "gov" };
+
+/**
+ * The sources are the site's (user, 9 Oct): what of this desk's sources names
+ * Yemen's war (WAR_ONLY, the words the Yemen scan keeps its wide accounts to)
+ * goes to the Yemen desk too, through its own gate and reader. Israeli media
+ * stay off it: the Yemen desk does not take Israeli outlets.
+ */
+export function toYemen(rows: RawHit[]): RawHit[] {
+  return rows
+    .filter((h) => !ISRAELI_MEDIA.has(h.source) && WAR_ONLY.test(`${h.title ?? ""} ${h.text}`))
+    .map((h) => ({ ...h, lean: YEMEN_LEAN[h.lean as IranLean] ?? "intl" }));
 }
 
 /**
@@ -222,18 +238,18 @@ export function passesOwnSourceGate(h: Pick<RawHit, "source" | "title" | "text">
 }
 
 /** The site scan's part for the Iran desk: its own sources read, into its inbox. */
-export async function scanIranSources(store: Awaited<ReturnType<typeof getStore>>, now: number): Promise<number> {
+export async function scanIranSources(store: Awaited<ReturnType<typeof getStore>>, now: number): Promise<{ n: number; yemen: RawHit[] }> {
   const state: FetchState = { lastScanAt: {}, lastTgPost: {}, lastXPost: {}, ...((await store.getJson<FetchState>(FETCH_STATE_KEY)) ?? {}) };
   // First run: how far the Iran cycle had read each source itself.
   if (!Object.keys(state.lastScanAt).length) {
     const old = await store.getJson<IranState>(STATE_KEY);
     if (old) Object.assign(state, { lastScanAt: { ...old.lastScanAt }, lastTgPost: { ...old.lastTgPost }, lastXPost: { ...old.lastXPost } });
   }
-  const { hits, status } = await fetchIranSources(state, now);
+  const { hits, status, yemen } = await fetchIranSources(state, now);
   const row: IranInboxRow = { hits, status, own: true };
   await store.putMany(IRAN_INBOX, { [`own-${now}`]: row });
   await store.putJson(FETCH_STATE_KEY, { lastScanAt: state.lastScanAt, lastTgPost: state.lastTgPost, lastXPost: state.lastXPost });
-  return hits.length;
+  return { n: hits.length, yemen };
 }
 
 export type IranTickResult = { ok: boolean; scannedAt: string; sourcesTried: number; sourcesOk: number; fromInbox: number; candidates: number; reportsAdded: number; note: string; tookMs: number; error?: string };

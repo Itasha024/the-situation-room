@@ -54,14 +54,31 @@ test("site scan: reads left in the inbox by a failed reader join the next", () =
   assert.deepEqual(m.status.map((s) => s.id).sort(), ["x1", "x2"]);
 });
 
-test("every Yemen source is shared with the Iran desk or kept the Yemen desk's with a reason (share audit, user 9 Oct)", async () => {
+test("every source first read for Yemen has its group on the Iran desk: the sources are the site's (user, 9 Oct)", async () => {
   const { yemenSourceKeys } = await import("./yemen-scan.server.ts");
-  const { SHARED_RSS, SHARED_TG, SHARED_X, YEMEN_ONLY } = await import("./desk/iran-sources.ts");
+  const { SHARED_RSS, SHARED_TG, SHARED_X } = await import("./desk/iran-sources.ts");
   const k = yemenSourceKeys();
-  const loose = [
-    ...k.tg.filter((s) => !(s.id in SHARED_TG) && !(s.id in YEMEN_ONLY)),
-    ...k.x.filter((s) => !(s.id in SHARED_X) && !(s.id in YEMEN_ONLY)),
-    ...k.rss.filter((s) => !(s.id in SHARED_RSS) && !(s.id in YEMEN_ONLY)),
-  ].map((s) => s.id);
+  const loose = [...k.tg.filter((s) => !(s.id in SHARED_TG)), ...k.x.filter((s) => !(s.id in SHARED_X)), ...k.rss.filter((s) => !(s.id in SHARED_RSS))].map((s) => s.id);
   assert.deepEqual(loose, []);
+});
+
+test("the Iran desk's own sources' items on Yemen's war go to the Yemen desk, Israeli media's do not", async () => {
+  const { toYemen } = await import("./iran-scan.server.ts");
+  const out = toYemen([
+    { source: "Tasnim", url: "t1", text: "Ansarullah leader says Yemen will answer any aggression on Sanaa", at: "2026-10-09T10:00:00Z", lean: "axis" },
+    { source: "Tasnim", url: "t2", text: "Araghchi meets Omani counterpart in Muscat", at: "2026-10-09T10:00:00Z", lean: "axis" },
+    { source: "Kan", url: "k1", text: "Houthi missile launched from Yemen toward Eilat", at: "2026-10-09T10:00:00Z", lean: "israel" },
+  ] as never);
+  assert.deepEqual(out.map((h) => [h.url, h.lean]), [["t1", "houthi"]]);
+});
+
+test("a row of the Iran sources' Yemen items brings its items, never the cycle's time or status", () => {
+  const main: YemenFetch = { at: 5, hits: [{ source: "S", url: "a", text: "x", at: "" } as never], status: [{ id: "x1" } as never], sourcesOk: 3, learnedIds: [], iranShared: [] };
+  const extra: YemenFetch = { at: 9, hits: [{ source: "Tasnim", url: "t", text: "y", at: "" } as never], status: [], sourcesOk: 0, learnedIds: [], iranShared: [], extra: true };
+  const m = mergeFetches([main, extra]) as YemenFetch;
+  assert.equal(m.at, 5);
+  assert.equal(m.sourcesOk, 3);
+  assert.equal(m.extra, undefined);
+  assert.deepEqual(m.hits.map((h) => h.url).sort(), ["a", "t"]);
+  assert.equal(mergeFetches([extra]), null);
 });

@@ -36,9 +36,10 @@ export function deskKey(desk: DeskId, key: string): string {
   return desk === DEFAULT_DESK ? key : `${desk}:${key}`;
 }
 
-// "Iran-backed", "Iranian-made", "المدعومة من إيران": a label on someone else, not Iran acting.
+// "Iran-backed", "Iranian-made", "المدعومة من إيران", "Iran's proxy", "ميليشيا الحوثي الإيرانية": a label on someone
+// else, not Iran acting (9 Oct: every Yemen source now reaches the Iran gate, and Yemen's press labels the Houthis so).
 export const IRAN_LABEL =
-  /\bIran(?:ian)?[- ](?:backed|aligned|allied|supported|sponsored|made|built|supplied|designed|funded|armed|linked)\b|(?:ال)?(?:مدعوم|موال|متحالف)\S*\s+(?:من\s+|مع\s+)?ل?[إا]يران|(?:ال)?مدعوم[ةه]?\s+(?:ایران|از\s+ایران)/gi;
+  /\bIran(?:ian)?[- ](?:backed|aligned|allied|supported|sponsored|made|built|supplied|designed|funded|armed|linked)\b|(?:ال)?(?:مدعوم|موال|متحالف)\S*\s+(?:من\s+|مع\s+)?ل?[إا]يران|(?:ال)?مدعوم[ةه]?\s+(?:ایران|از\s+ایران)|\bIranian (?=Houthi)|\b(?:Iran's|Tehran's) (?:proxy|proxies|arm|militia)\b|(?<=(?:الحوثي|الحوثية|الحوثيين|ميليشيا|مليشيا|الميليشيا|المليشيا|الميليشيات|المليشيات)\S*\s+)(?:ال)?[إا]يراني(?:ة|ه)?|(?:ذراع|أذرع|اذرع|وكلاء|وكيل|أدوات|ادوات)\s+[إا]يران|(?:التابع[ةه]?|الموالي[ةه]?)\s+ل[إا]يران/gi;
 const IRAN_ACTS =
   /\b(?:Iran|Iranian|Iranians|Tehran|IRGC|Revolutionary Guards?|Khamenei|Pezeshkian|Araghchi|Hormuz|Bandar Abbas|Kharg|Natanz|Fordow|Isfahan)\b|[إا]يران|الإيراني|طهران|الحرس الثوري|خامنئي|بزشكيان|عراقجي|هرمز|ایران|تهران|سپاه|خامنه‌ای|پزشکیان|عراقچی/i;
 

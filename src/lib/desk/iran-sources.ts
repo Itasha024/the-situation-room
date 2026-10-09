@@ -1,9 +1,12 @@
 /**
  * The Iran desk's sources (Round 30 stage 3), from the user's list of 8 Oct.
  *
- * One scanner reads every source once (desk-route.ts). A source the Yemen desk
- * already reads is named here by its id and is read for both desks; a source
- * new with the Iran desk is listed in full and is read for the Iran desk only.
+ * The sources are the site's, not a desk's (user, 9 Oct). One scan reads every
+ * source once (site-scan.server.ts) and each item goes to every desk whose gate
+ * it passes. The sources first read for Yemen are named here by id with their
+ * group on this desk (SHARED_*: every one of them, a test holds it); the ones
+ * added with this desk are listed in full, and what of theirs is on Yemen's
+ * war goes to the Yemen desk (iran-scan's toYemen).
  *
  * Every source sits in one of the Iran desk's six filter groups (`IranLean`),
  * the buttons above its Latest reports. Each was test-read from the server on
@@ -64,30 +67,6 @@ export const SHARED_TG: Record<string, IranLean> = {
   abdulsalamsalah: "axis",
   // Hamas's channel: Israel's war in Gaza is the Iran desk's (user, 9 Oct).
   alagsa3agel: "axis",
-};
-
-/**
- * The Yemen scan's sources that stay the Yemen desk's alone, each with its
- * reason (share audit, user 9 Oct: "make sure Iran stuff that comes up from
- * a source goes to the Iran desk"). Every other Yemen source is in SHARED_TG,
- * SHARED_X or SHARED_RSS, and a test fails on a source in neither: a new
- * source is never silently the Yemen desk's alone.
- */
-export const YEMEN_ONLY: Record<string, string> = {
-  // Yemen's local press and channels: Yemen's fronts and politics.
-  marebpress: "Yemen local", almasdaronline: "Yemen local", sabanew_: "Yemen government agency", spokespersonyem: "Yemeni army", Yem_army_media: "Yemeni army",
-  YemenMOD: "Yemeni army", CJFCSpox: "the coalition in Yemen", maldhabyani: "Yemen reporter", BashaReport: "Yemen reporter", "2decnews": "Yemen local",
-  South24_net: "Yemen's south", yementvyem: "Yemen local", ALyemennow: "Yemen local", TVyemenshabab: "Yemen local", defenseliney: "Yemen fronts",
-  PresidentRashad: "Yemen government", AbuZar3a: "Yemen fronts", ALalimiBawzer: "Yemen government", Shaya_Zindani: "Yemen government", afrah_alzouba: "Yemen government",
-  tarikyemen: "Yemen fronts", yemen_mofa: "Yemen government", mohr_yemen: "Yemen government", nrfyemen: "Yemen fronts", P_B_N_R: "Yemen fronts",
-  diralwatan: "Yemen fronts", STCSouthArabia: "Yemen's south", AidrosAlzubidi: "Yemen's south", Alsakaniali: "Yemen's south", South24E: "Yemen's south",
-  FaresALhemyari: "Yemen reporter", hezamalasad: "Houthi politburo on Yemen", UNinYE: "UN in Yemen", MOFASomalia: "the Horn of Africa", USEmbassyYemen: "US in Yemen",
-  SuezAuthorityEG: "the Red Sea route", EUinYemen: "EU in Yemen", UNOCHA: "Yemen's aid", axistaiz: "Yemen fronts", d74054: "Yemen's coast", mashdal: "Yemen government",
-  "Sawt al-Asima": "Yemen local", Yemenat: "Yemen local", "Aden al-Ghad": "Yemen local", "Yemen Press Agency": "Yemen local", "Al-Thawrah": "Yemen local",
-  "Sheba Intelligence": "Yemen research", "Yemen Future": "Yemen local", "Crater Sky": "Yemen local", "Al-Ayyam": "Yemen local", "Yemen Monitor": "Yemen local",
-  "Khabar Agency": "Yemen local", "Saba (government)": "Yemen government agency",
-  // Searches the Yemen scan builds from Yemen's own words: they find nothing else.
-  "Arabic press": "a Yemen-word search", "US media": "a Yemen-word search",
 };
 
 /** New Telegram channels, the Iran desk's alone. */
@@ -225,6 +204,15 @@ export const SHARED_X: Record<string, IranLean> = {
   alaraby_ar: "gulf",
   // US-funded, as VOA and Radio Farda.
   alhurranews: "us",
+  // Sources first read for Yemen (user, 9 Oct: the sources are the site's, not a desk's): what of theirs is on this war goes to the Iran desk too, by its gate.
+  marebpress: "gulf", almasdaronline: "gulf", sabanew_: "gulf", spokespersonyem: "gulf", Yem_army_media: "gulf",
+  YemenMOD: "gulf", CJFCSpox: "gulf", maldhabyani: "gulf", BashaReport: "gulf", "2decnews": "gulf",
+  South24_net: "gulf", yementvyem: "gulf", ALyemennow: "gulf", TVyemenshabab: "gulf", defenseliney: "gulf",
+  PresidentRashad: "gulf", AbuZar3a: "gulf", ALalimiBawzer: "gulf", Shaya_Zindani: "gulf", afrah_alzouba: "gulf",
+  tarikyemen: "gulf", yemen_mofa: "gulf", mohr_yemen: "gulf", nrfyemen: "gulf", P_B_N_R: "gulf",
+  diralwatan: "gulf", STCSouthArabia: "gulf", AidrosAlzubidi: "gulf", Alsakaniali: "gulf", South24E: "gulf",
+  FaresALhemyari: "gulf", hezamalasad: "axis", UNinYE: "intl", MOFASomalia: "intl", USEmbassyYemen: "us",
+  SuezAuthorityEG: "gulf", EUinYemen: "intl", UNOCHA: "intl", axistaiz: "gulf", d74054: "gulf", mashdal: "gulf",
 };
 
 /** New X accounts, the Iran desk's alone. */
@@ -362,6 +350,10 @@ export const SHARED_RSS: Record<string, IranLean> = {
   "Seatrade Maritime": "intl",
   "Hellenic Shipping News": "intl",
   Kpler: "intl",
+  // Sources first read for Yemen (user, 9 Oct: the sources are the site's, not a desk's): what of theirs is on this war goes to the Iran desk too, by its gate.
+  "Sawt al-Asima": "gulf", Yemenat: "gulf", "Aden al-Ghad": "gulf", "Yemen Press Agency": "axis", "Al-Thawrah": "axis",
+  "Sheba Intelligence": "intl", "Yemen Future": "gulf", "Crater Sky": "gulf", "Al-Ayyam": "gulf", "Yemen Monitor": "gulf",
+  "Khabar Agency": "gulf", "Saba (government)": "gulf", "Arabic press": "gulf", "US media": "us",
 };
 
 /**

@@ -5,12 +5,14 @@
  * source of every desk, each once, and hands each item to the desks it is
  * about, through each desk's inbox:
  *
- *   - the Yemen desk's sources and the sources both desks share
- *     (yemen-scan's fetchYemenSources) → the Yemen inbox; their items about
- *     the war with Iran go on to the Iran inbox once the Yemen reader has read
- *     them, so one post is not written up on both desks;
- *   - the Iran desk's own sources (iran-scan's scanIranSources), through the
- *     Iran desk's own gate → the Iran inbox.
+ *   - the sources first read for Yemen (yemen-scan's fetchYemenSources) →
+ *     the Yemen inbox; every one of their items about the war with Iran
+ *     (the Iran gate) goes on to the Iran inbox once the Yemen reader has
+ *     read them, so one post is not written up on both desks;
+ *   - the sources added with the Iran desk (iran-scan's scanIranSources),
+ *     through the Iran desk's own gate → the Iran inbox; what of theirs names
+ *     Yemen's war → the Yemen inbox (user, 9 Oct: "make the sources belong
+ *     to the site and not to the desk").
  *
  * Each desk's reader then reads only its inbox: the Yemen reader straight
  * after the scan, in the same 5-minute cycle (so Yemen's cards come no later
@@ -60,9 +62,11 @@ export async function runSiteCycle(): Promise<TickResult> {
  * this cycle's; a read whose reader failed leaves its items for the next.
  */
 export function mergeFetches(rows: YemenFetch[]): YemenFetch | null {
-  if (!rows.length) return null;
-  const sorted = [...rows].sort((a, b) => a.at - b.at);
-  const last = sorted[sorted.length - 1];
+  // A row of another desk's sources' items (`extra`) brings its items only: the cycle's time and status are the Yemen read's.
+  const main = rows.filter((r) => !r.extra);
+  if (!main.length) return null;
+  const sorted = [...main, ...rows.filter((r) => r.extra)].sort((a, b) => a.at - b.at);
+  const last = [...main].sort((a, b) => a.at - b.at)[main.length - 1];
   const hits = new Map<string, RawHit>();
   const status = new Map<string, SourceStatus>();
   const shared = new Map<string, RawHit>();
@@ -71,14 +75,18 @@ export function mergeFetches(rows: YemenFetch[]): YemenFetch | null {
     for (const st of r.status) status.set(st.id, st);
     for (const h of r.iranShared) shared.set(h.url, h);
   }
-  return { ...last, hits: [...hits.values()], status: [...status.values()], iranShared: [...shared.values()] };
+  return { ...last, extra: undefined, hits: [...hits.values()], status: [...status.values()], iranShared: [...shared.values()] };
 }
 
 async function scanThenReadYemen(state: ScanState, prev: ScanPayload | null): Promise<ScanPayload> {
   const store = await getStore();
   // The Iran desk's own sources are read beside Yemen's; Yemen's reader never waits for them.
+  // What of theirs is on Yemen's war joins the Yemen inbox, read by the next cycle's Yemen reader.
   const iran = scanIranSources(store, Date.now())
-    .then((n) => console.log(`[site] Iran sources: ${n} item(s) to the Iran inbox`))
+    .then(async ({ n, yemen }) => {
+      if (yemen.length) await store.putMany(YEMEN_INBOX, { [`iran-${Date.now()}`]: { at: Date.now(), hits: yemen, status: [], sourcesOk: 0, learnedIds: [], iranShared: [], extra: true } satisfies YemenFetch });
+      console.log(`[site] Iran sources: ${n} item(s) to the Iran inbox, ${yemen.length} to the Yemen inbox`);
+    })
     .catch((err) => console.error("[site] Iran sources:", err instanceof Error ? err.message : err));
   const got = await fetchYemenSources(state, prev);
   let mine: YemenFetch = got;

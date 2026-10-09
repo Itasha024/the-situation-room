@@ -43,7 +43,6 @@ export const SPEAKERS: Speaker[] = [
   S("Brad Cooper", /\b(?:Brad|Adm\.?|Admiral) Cooper\b/, "US", "English", "en", "CENTCOM", "centcom.mil"),
   S("Mike Waltz", /\bWaltz\b|والتز/, "US", "English", "en", undefined, "usun.usmission.gov"),
   S("Chris Wright", /\bChris Wright\b|\bEnergy Secretary Wright\b/, "US", "English", "en", "SecretaryWright", "energy.gov"),
-  S("Tulsi Gabbard", /\bGabbard\b|غابارد/, "US", "English", "en", "DNIGabbard", "dni.gov"),
   S("John Ratcliffe", /\bRatcliffe\b|راتكليف/, "US", "English", "en", undefined, "cia.gov"),
   S("Howard Lutnick", /\bLutnick\b|لوتنيك/, "US", "English", "en", "howardlutnick", "commerce.gov"),
   S("Keir Starmer", /\bStarmer\b|ستارمر/, "UK", "English", "gb", "Keir_Starmer", "gov.uk"),

@@ -4,6 +4,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { isIranDeskItem as _gate } from "./iran-reader.ts";
 import { desksOf } from "./desk-route.ts";
 import { outletFromHost } from "./gnews.ts";
 import { rivalRelay } from "./speaker-press.ts";
@@ -170,4 +171,9 @@ test("a verdict on a claim names its teller, never the desk's (user, 9 Oct: Jaba
   assert.equal(attributeVerdict("Army spokesman: Houthi claims of controlling Jabal Habashi are false", "gov"), "Army spokesman: Houthi claims of controlling Jabal Habashi are false");
   assert.equal(attributeVerdict("Government denies Houthi claims of controlling Jabal Habashi", "gov"), "Government denies Houthi claims of controlling Jabal Habashi");
   assert.equal(attributeVerdict("Houthi forces take Jabal Habashi", "houthi"), "Houthi forces take Jabal Habashi");
+});
+
+test("Yemen's press labelling the Houthis Iran's is not the Iran desk's news (sources are the site's, 9 Oct)", () => {
+  for (const t of ["ميليشيا الحوثي الإيرانية تقصف الأحياء السكنية في تعز", "Houthi militia, Iran's proxy, kill civilians in Hodeidah", "مليشيا الحوثي المدعومة من إيران تستهدف مواقع الجيش في مأرب", "ذراع إيران في اليمن تقصف مأرب"]) assert.equal(_gate(t), false, t);
+  assert.equal(_gate("Iranian experts help Houthis assemble drones in Sanaa, sources say"), true);
 });

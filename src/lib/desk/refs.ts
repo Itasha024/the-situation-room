@@ -37,12 +37,15 @@ export function numberRefs(points: string[], refOf: (id: string) => Ref | null |
   const numOf = new Map<string, number>();
   const out: string[] = [];
   for (const p of points) {
+    // Three references a point at most: the list stays short, and three are enough to read more (9 Oct).
+    let left = 3;
     const text = p.replace(ID_MARK, (_m, list: string) => {
       const ids = list.split(/\s*[,;]\s*/).map((x, i, all) => (/^\d+$/.test(x) ? `${(all[0].match(/^[rt]/i) || ["r"])[0]}${x}` : x).toLowerCase());
       let marks = "";
       for (const id of ids) {
         const ref = refOf(id);
-        if (!ref) continue;
+        if (!ref || left <= 0) continue;
+        left -= 1;
         const key = ref.fp;
         let n = numOf.get(key);
         if (n === undefined) {

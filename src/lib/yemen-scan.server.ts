@@ -43,7 +43,7 @@ import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
 import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranDeskItem } from "./desk/iran-reader.ts";
-import { colonSpeaker, tidySpeaker } from "./desk/reader.ts";
+import { attributeVerdict, colonSpeaker, tidySpeaker } from "./desk/reader.ts";
 
 export { checkLinks, namedSpeaker, speakerKey };
 
@@ -1394,6 +1394,10 @@ function hourOfIso(iso: string): number {
 }
 
 /** A channel's side by its name; outlets not on the list are international. */
+/** A channel's or an account's side, by its name. */
+function leanOfSource(name: string): string {
+  return TG.find((c) => c.name === name)?.lean ?? X_ACCOUNTS.find((a) => a.name === name)?.lean ?? "";
+}
 function sideOfSource(name: string): OutletSide {
   return outletSide(name, TG.find((c) => c.name === name)?.lean ?? "intl");
 }
@@ -2825,6 +2829,8 @@ export async function shapeCards(
   // card went out "Trump says …").
   // The speaker named once, by job when not widely known, and on the right side (tidySpeaker).
   for (const r of reports) r.summary = colonSpeaker(tidySpeaker(stripAttribution(r.summary, [r.source, r.citing])));
+  // A verdict on a claim ("… are false") is its teller's, never the desk's.
+  for (const r of reports) r.summary = attributeVerdict(r.summary, (r as { lean?: string }).lean ?? leanOfSource(r.source));
   // A card written from its original replaces the relay's version of it.
   const fromOriginal = new Set(reports.filter((r) => r.tags?.includes("original")).map((r) => r.fp));
   for (let i = reports.length - 1; i >= 0; i -= 1) {

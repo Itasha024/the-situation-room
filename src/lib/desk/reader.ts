@@ -1613,3 +1613,28 @@ export function tidySpeaker(headline: string): string {
   if (job) return `${job[1]}: ${said}`;
   return h;
 }
+
+/**
+ * A verdict on someone's claim is the teller's, never the desk's (user, 9 Oct:
+ * "Houthi claims of controlling Jabal Habashi are false", from a pro-government
+ * reporter, went out as a fact). A headline calling a claim false, baseless or
+ * fabricated, with no one named saying so, is given its teller by side.
+ */
+const VERDICT = /\b(?:(?:is|are|was|were)\s+(?:false|untrue|baseless|fabricated|lies|a lie|fake|unfounded|groundless|incorrect|inaccurate|propaganda)|(?:no|not) true|have no basis|has no basis|no truth to)\b/i;
+const NAMED_TELLER = /^[^:]{2,70}:\s|\b(?:says?|said|denies|denied|deny|rejects?|rejected|dismiss\w*|calls?|called|insists?|claimed|according to|told)\b/i;
+export const VERDICT_TELLER: Record<string, string> = {
+  gov: "Pro-government source",
+  south: "Southern source",
+  houthi: "Houthi-aligned source",
+  axis: "Iran-aligned source",
+  opposition: "Iranian opposition source",
+  israel: "Israeli source",
+  gulf: "Gulf source",
+  us: "US source",
+};
+export function attributeVerdict(headline: string, lean = ""): string {
+  const h = String(headline || "").trim();
+  if (!VERDICT.test(h) || NAMED_TELLER.test(h)) return h;
+  const who = VERDICT_TELLER[lean] ?? "A source";
+  return `${who}: ${h.charAt(0).toUpperCase()}${h.slice(1)}`;
+}

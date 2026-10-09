@@ -163,3 +163,11 @@ test("Iran's opposition outlets retelling America or Britain are relays; Al Maya
   assert.equal(rivalRelay("IRGC: a tanker was seized in the Gulf of Oman", "Al Mayadeen", "axis"), null);
   assert.equal(rivalRelay("Araghchi: no talks under the blockade", "Al Mayadeen", "axis"), null);
 });
+
+test("a verdict on a claim names its teller, never the desk's (user, 9 Oct: Jabal Habashi)", async () => {
+  const { attributeVerdict } = await import("./reader.ts");
+  assert.equal(attributeVerdict("Houthi claims of controlling Jabal Habashi are false", "gov"), "Pro-government source: Houthi claims of controlling Jabal Habashi are false");
+  assert.equal(attributeVerdict("Army spokesman: Houthi claims of controlling Jabal Habashi are false", "gov"), "Army spokesman: Houthi claims of controlling Jabal Habashi are false");
+  assert.equal(attributeVerdict("Government denies Houthi claims of controlling Jabal Habashi", "gov"), "Government denies Houthi claims of controlling Jabal Habashi");
+  assert.equal(attributeVerdict("Houthi forces take Jabal Habashi", "houthi"), "Houthi forces take Jabal Habashi");
+});

@@ -652,12 +652,12 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 @media (max-width:700px){.toolbar .map-meth{align-self:flex-start;margin-top:-.3rem}}
 
 /* The report column's scroll bar: thin, in the theme's own lines (2 Oct); the methodology pop-ups use the same (user, 3 Oct) */
-.rail,.rel-pop{scrollbar-width:thin;scrollbar-color:var(--t-line-strong,#4a433d) transparent}
-.rail:hover,.rel-pop:hover{scrollbar-color:var(--t-muted,#a99d93) transparent}
-.rail::-webkit-scrollbar,.rel-pop::-webkit-scrollbar{width:10px}
-.rail::-webkit-scrollbar-track,.rel-pop::-webkit-scrollbar-track{background:transparent}
-.rail::-webkit-scrollbar-thumb,.rel-pop::-webkit-scrollbar-thumb{background:var(--t-line-strong,#4a433d);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
-.rail::-webkit-scrollbar-thumb:hover,.rel-pop::-webkit-scrollbar-thumb:hover{background-color:var(--t-muted,#a99d93)}
+.rail,.rel-pop,.tp-list{scrollbar-width:thin;scrollbar-color:var(--t-line-strong,#4a433d) transparent}
+.rail:hover,.rel-pop:hover,.tp-list:hover{scrollbar-color:var(--t-muted,#a99d93) transparent}
+.rail::-webkit-scrollbar,.rel-pop::-webkit-scrollbar,.tp-list::-webkit-scrollbar{width:10px}
+.rail::-webkit-scrollbar-track,.rel-pop::-webkit-scrollbar-track,.tp-list::-webkit-scrollbar-track{background:transparent}
+.rail::-webkit-scrollbar-thumb,.rel-pop::-webkit-scrollbar-thumb,.tp-list::-webkit-scrollbar-thumb{background:var(--t-line-strong,#4a433d);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+.rail::-webkit-scrollbar-thumb:hover,.rel-pop::-webkit-scrollbar-thumb:hover,.tp-list::-webkit-scrollbar-thumb:hover{background-color:var(--t-muted,#a99d93)}
 
 /* The desk's own pages (the Sources list) */
 .doc-root{min-height:100vh;background:var(--t-bg,var(--bg));color:var(--t-text,var(--text))}
@@ -747,3 +747,6 @@ html.tp-open{overflow:hidden}
 .tp-list .more{align-self:center}
 @media (max-width:720px){.tp-pop{place-items:end stretch}.tp-sheet{width:100%;max-height:92vh;border-radius:12px 12px 0 0}}
 .lean-f[disabled]{cursor:default}
+/* Trump's latest: his words open on Read more only; a pin opposite the title (user, 9 Oct) */
+.trump-st:not(.open) .lead{display:none}
+.trump-pin .tp-head .tp-pin-ico{margin-inline-start:auto;width:15px;height:15px;fill:#b91c1c;transform:rotate(35deg);flex:none;align-self:center}

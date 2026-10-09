@@ -152,6 +152,27 @@ export const quoted = (words: string) => {
   return w ? `“${w}”` : "";
 };
 
+const unquote = (w: string) => w.trim().replace(/^["“]+|["”]+$/g, "").trim();
+
+/** "Trump: …" with no quotes round his words: the colon says he is speaking (user, 9 Oct). */
+export const headlineWords = (h: string) => `Trump: ${unquote(h.replace(/^Trump:\s*/, ""))}`;
+
+/** His words below the headline: one quote before the first word, one at the end before the full stop (user, 9 Oct). */
+export function quoteBody(paras: string[]): string {
+  const ps = paras.map(unquote).filter(Boolean);
+  if (!ps.length) return "";
+  const last = ps.length - 1;
+  ps[0] = `“${ps[0]}`;
+  ps[last] = /\.$/.test(ps[last]) ? `${ps[last].slice(0, -1)}”.` : `${ps[last]}”`;
+  return ps.join("\n\n");
+}
+
+/** A card as the page shows it, whichever form it was written in. */
+export const shownCard = (c: { headline: string; body?: string }) => {
+  const body = c.body ? quoteBody(c.body.split(/\n\n+/)) : "";
+  return { headline: headlineWords(c.headline), ...(body ? { body } : {}) };
+};
+
 /** A clip's words: what follows 'President Trump on Iran:'. */
 export const clipWords = (text: string) => text.replace(/^[^"“]*["“]/, "").replace(/["”]\s*$/, "").trim();
 
@@ -160,7 +181,7 @@ export function plainCard(s: TrumpStatement): { headline: string; body?: string 
   const words = s.id.startsWith("rr-") ? clipWords(s.text) : withoutSignOff(s.text);
   const first = /^[\s\S]{20,220}?[.!?](?=\s|$)/.exec(words)?.[0] ?? words.slice(0, 200).replace(/\s+\S*$/, "…");
   const rest = words.slice(first.length).trim();
-  return { headline: `Trump: ${quoted(first)}`, ...(rest.length > 40 ? { body: words.split(/\n\n+/).map(quoted).join("\n\n") } : {}) };
+  return shownCard({ headline: `Trump: ${first}`, ...(rest.length > 40 ? { body: words } : {}) });
 }
 
 export const TRUMP_SYSTEM = `You edit a news desk's feed of Donald Trump's own words on Iran and the war with Iran.
@@ -168,8 +189,8 @@ You get one thing he said (a Truth Social post or his words on camera). Return J
 {"relevant": true|false, "headline": "...", "body": "..."}
 
 - relevant: false only when nothing in it bears on Iran, the war, the Strait of Hormuz, the blockade, Iran's nuclear programme, the talks with Iran or the war's effects (gasoline and oil prices because of the war count).
-- headline: "Trump: " then his main points on Iran and the war, inside quotation marks, as if he is speaking, in the first person. Build it from his own sentences, shortened; rephrase only where needed to join them or make the point clear. Lead with the hardest news in it (a decision, a threat, a deadline, a deal, a number). One or two sentences, at most 220 characters. No outlet, no "said", no "posted".
-- body: only the parts of what he said that bear on Iran and the war, in his own words, inside quotation marks, a paragraph per point. Leave out every part on other subjects (elections, rivals, the media) unless it explains his point on Iran. Keep his facts and numbers. Put the capital letters he uses for emphasis in normal case. "" when the headline already holds everything relevant.
+- headline: "Trump: " then his main points on Iran and the war, without quotation marks, as if he is speaking, in the first person. Build it from his own sentences, shortened; rephrase only where needed to join them or make the point clear. Lead with the hardest news in it (a decision, a threat, a deadline, a deal, a number). One or two sentences, at most 220 characters. No outlet, no "said", no "posted".
+- body: only the parts of what he said that bear on Iran and the war, in his own words, without quotation marks, a paragraph per point, separated by a blank line. Leave out every part on other subjects (elections, rivals, the media) unless it explains his point on Iran. Keep his facts and numbers. Put the capital letters he uses for emphasis in normal case. "" when the headline already holds everything relevant.
 - Keep his meaning exactly: a question, a comparison or a "what if" stays one, and is never turned into a claim or a threat he did not make.
 - Each body paragraph is a whole sentence of his, starting with a capital letter.
 - Never add facts, context or comment of your own.`;
@@ -182,8 +203,8 @@ export function checkWritten(json: Record<string, unknown>): { headline: string;
   const words = h.replace(/^Trump:\s*/, "");
   const raw = typeof json.body === "string" ? json.body.trim() : "";
   // '"One." "Two."' in one paragraph is two of his sentences: a paragraph each.
-  const body = raw ? raw.replace(/\\"/g, '"').replace(/["”]\s+["“]/g, "\n").split(/\n+/).map((x) => x.trim()).filter(Boolean).map(quoted).join("\n\n") : "";
+  const body = raw ? raw.replace(/\\"/g, '"').replace(/["”]\s+["“]/g, "\n").split(/\n+/).map((x) => x.trim()).filter(Boolean).join("\n\n") : "";
   const bare = (x: string) => x.replace(/[“”"\s]/g, "");
-  return { headline: `Trump: ${quoted(words)}`, ...(body && bare(body) !== bare(words) ? { body } : {}) };
+  return shownCard({ headline: `Trump: ${words}`, ...(body && bare(body) !== bare(words) ? { body } : {}) });
 }
 

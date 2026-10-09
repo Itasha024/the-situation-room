@@ -3627,6 +3627,7 @@ function replyQuote(r) {
 function leadOverflows(card) {
   const lead = card.querySelector('.lead');
   if (!lead) return false;
+  if (card.classList.contains('trump-st')) return true;
   if (lead.classList.contains('lead-multi')) return true;
   if (card.classList.contains('open') || !lead.clientHeight) return lead.textContent.length > 200;
   return lead.scrollHeight > lead.clientHeight + 2;
@@ -3856,10 +3857,9 @@ function renderFeedNote() {
       const wider = feedSearch.refining;
       note.innerHTML = `${wider ? '<span class="fs-spin" aria-hidden="true"></span>' : ''}<span>${T('{n} for {q}', { n: n ? N('report', n).replace(/^(\d+)/, '<b>$1</b>') : T(wider ? 'Nothing yet' : 'No reports'), q })}${only}${wider ? T(' · looking wider…') : ''}</span><button type="button" data-act="clear">${T('Clear search')}</button>`;
     }
-  } else if (feedLean) {
-    note.innerHTML = `<span>${T('Showing only {s}', { s: T(LEAN_NOTE[feedLean]) })}</span><button type="button" data-act="all">${T('Show all')}</button>`;
   }
-  note.hidden = !feedSearch && !feedLean;
+  // A group picked needs no line: the button names it, and its × clears it (user, 9 Oct).
+  note.hidden = !feedSearch;
   const clear = note.querySelector('[data-act="clear"]');
   if (clear) clear.onclick = () => clearFeedSearch(true);
   const all = note.querySelector('[data-act="all"]');
@@ -3956,7 +3956,12 @@ function wireLeanMenu() {
   if (!btn || !menu || box.dataset.lf) return;
   box.dataset.lf = '1';
   const open = (on) => { menu.hidden = !on; btn.setAttribute('aria-expanded', String(on)); };
-  btn.addEventListener('click', () => open(menu.hidden));
+  btn.addEventListener('click', (e) => {
+    // With a group picked the arrow is an ×: it clears the filter.
+    const on = menu.querySelector('.lean-f[aria-pressed="true"]');
+    if (on && e.target.closest('svg')) { on.click(); setTimeout(syncLeanMenu, 0); open(false); return; }
+    open(menu.hidden);
+  });
   menu.addEventListener('click', (e) => {
     const all = e.target.closest('.lf-all');
     if (all) { const on = menu.querySelector('.lean-f[aria-pressed="true"]'); if (on) on.click(); }
@@ -3971,7 +3976,11 @@ function syncLeanMenu() {
   if (!box || !box.querySelector('.lf-btn')) return;
   const on = box.querySelector('.lean-f[aria-pressed="true"]');
   box.querySelector('.lf-label').textContent = on ? on.textContent.trim() : 'All sources';
-  box.querySelector('.lf-btn').classList.toggle('on', !!on);
+  const btn = box.querySelector('.lf-btn');
+  btn.classList.toggle('on', !!on);
+  const ico = btn.querySelector('svg path');
+  if (ico) ico.setAttribute('d', on ? 'M3 3l6 6M9 3l-6 6' : 'M2.5 4.5l3.5 3.5 3.5-3.5');
+  btn.setAttribute('aria-label', on ? `${on.textContent.trim()}: press the × for all sources` : 'All sources');
   const all = box.querySelector('.lf-all');
   if (all) all.setAttribute('aria-pressed', String(!on));
   const dots = (on ? [on] : [...box.querySelectorAll('.lean-f')]).map((b) => {
@@ -5251,11 +5260,10 @@ function placeMapPin(ev) {
       maxHeight: 360,
       autoPan: false,
       keepInView: false,
-      autoClose: false,
       closeOnClick: false,
     });
-  // Several notes stay open side by side; each closes with its ×, its pin, or
-  // "Close all" (a click on the note itself expands it).
+  // One note open at a time (user, 9 Oct): opening a pin closes the note open
+  // before it; a click on the note itself expands it.
   m.addTo(map);
   if (ev.fp) markerByFp.set(ev.fp, m);
   eventLayers.push(m);
@@ -5361,6 +5369,7 @@ function ensureMap(d) {
     attribution: TILE_ATTR || baseAttr,
   }).addTo(map);
   map.on('popupopen', (e) => {
+    openNotes().forEach((l) => { if ((l instanceof L.Popup ? l : l.getPopup()) !== e.popup) closeNote(l); });
     syncOpenNotes();
     const root = e.popup.getElement();
     if (!root) return;
@@ -5417,28 +5426,10 @@ function closeNote(l) {
   else l.closePopup();
 }
 
-/** Keeps the map's state in step with its open notes: the class, and "Close all (N)" when 2+. */
+/** Keeps the map's state in step with its open note. */
 function syncOpenNotes() {
   const wrap = document.getElementById('map-wrap');
-  if (!wrap) return;
-  const n = openNotes().length;
-  wrap.classList.toggle('popup-open', n > 0);
-  let btn = document.getElementById('close-notes');
-  if (!btn) {
-    btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'close-notes';
-    btn.className = 'close-notes';
-    btn.onclick = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      openNotes().forEach(closeNote);
-      syncOpenNotes();
-    };
-    wrap.appendChild(btn);
-  }
-  btn.textContent = T('Close all ({n})', { n });
-  btn.hidden = n < 2;
+  if (wrap) wrap.classList.toggle('popup-open', openNotes().length > 0);
 }
 
 /** An element's box in map-container pixels. */
@@ -7226,9 +7217,11 @@ async function loadTrump() {
     if (changed && document.getElementById('trump-pop') && !document.getElementById('trump-pop').hidden) renderTrumpList();
   } catch (e) { console.warn('trump feed', e); }
 }
+const PIN_ICON = '<svg class="tp-pin-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5a3 3 0 0 1-3 3v2h5.97v7l1 1 1-1v-7H19v-2a3 3 0 0 1-3-3z"/></svg>';
 function trumpCardHtml(s) {
-  // As a report card (user, 9 Oct): "Trump: “…”" as the headline, his relevant words as the body.
-  const head = s.headline || `Trump: “${s.text}”`;
+  // As a report card (user, 9 Oct): "Trump: …" as the headline; his relevant words,
+  // in one pair of quotes, only on Read more, so the reports below keep the room.
+  const head = s.headline || `Trump: ${s.text}`;
   return `<article class="card ir-us trump-st${openFeedFps.has(s.id) ? ' open' : ''}" data-fp="${escapeHtml(s.id)}">
       <div class="meta">
         <time datetime="${escapeHtml(s.at)}">${escapeHtml(fmtStamp(s.at))}</time>
@@ -7244,7 +7237,7 @@ function renderTrumpPin() {
   trumpFeed.drawn = true;
   const list = trumpFeed.list;
   const n = list.length;
-  el.innerHTML = `<div class="tp-head"><b>Trump's latest</b></div>
+  el.innerHTML = `<div class="tp-head"><b>Trump's latest</b>${PIN_ICON}</div>
     ${n ? trumpCardHtml(list[0]) : '<p class="soon">Nothing yet: what he posts or says on Iran appears here within five minutes.</p>'}
     ${n ? `<button type="button" class="tp-all" aria-haspopup="dialog">All his statements (${n}) <span aria-hidden="true">→</span></button>` : ''}`;
   el.querySelectorAll('.card').forEach(wireFeedCard);

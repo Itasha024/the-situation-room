@@ -840,12 +840,9 @@ html{scroll-behavior:smooth}
 .jump-back:hover{background:var(--t-surface-4,#243447)}
 .jump-back[hidden]{display:none}
 
-/* Map notes: a larger close ×, and "Close all" when two or more are open. */
+/* Map notes: a larger close ×. */
 .leaflet-container a.leaflet-popup-close-button{width:26px;height:26px;font:20px/24px Tahoma,Verdana,sans-serif;color:var(--t-faint,#475569);right:2px;top:2px}
 .leaflet-container a.leaflet-popup-close-button:hover{color:var(--t-on-light,#111827)}
-.close-notes{position:absolute;z-index:600;top:8px;left:50%;transform:translateX(-50%);background:var(--t-glass,rgba(8,12,18,.94));color:var(--t-text,#e5edf5);border:1px solid var(--line);border-radius:6px;padding:.28rem .6rem;font-size:.72rem;cursor:pointer}
-.close-notes:hover{background:var(--t-surface-3,#1a2433)}
-.close-notes[hidden]{display:none}
 /* A phone has no room for both: the legend steps aside while notes are open. */
 @media (max-width:720px){.map-wrap.popup-open .legend{display:none}}
 /* The "Updated" line under a column's heading. */
@@ -1134,3 +1131,6 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .card.ir-intl,.card.ir-intl:hover,.card.ir-intl.open{border-inline-start-color:#94a3b8!important}
 .ls-note{margin:0 0 8px;font-size:12px;opacity:.75}
 .ls-verdict{margin-inline-start:auto;font-size:11px;opacity:.7}
+/* A group picked: its × clears the filter, unturned and a touch larger to hit. */
+.lf-btn.on svg{transform:none!important;width:12px;height:12px;padding:2px;margin:-2px -4px -2px 0;box-sizing:content-box;border-radius:50%}
+.lf-btn.on svg:hover{background:var(--t-line-strong,#2a3a4e)}

@@ -17,11 +17,19 @@ for (const r of rows) r.t = Date.parse(r.iso + (r.iso < '2026-03-27T02:00' ? '+0
 rows.sort((a, b) => a.t - b.t);
 const warn = rows.filter((r) => r.cat === 14);
 const alerts = rows.filter((r) => r.cat === 1 || r.cat === 2);
+// A salvo ends with a quiet of 5 minutes, or sooner when a place already alerted in it is warned or alerted
+// again 3 minutes or more later, or after its "event over": that is the next launch (two salvos minutes apart
+// are two attacks).
 const salvos = [];
 for (const kind of [1, 2]) {
   let cur = null;
-  for (const r of alerts.filter((x) => x.cat === kind)) {
-    if (!cur || r.t - cur.last > 5 * 60e3) { cur = { kind, start: r.t, last: r.t, names: new Map() }; salvos.push(cur); }
+  const ended = new Set();
+  for (const r of rows) {
+    if (r.cat === 13) { if (cur?.names.has(r.name)) ended.add(r.name); continue; }
+    const again = cur && cur.names.has(r.name) && (ended.has(r.name) || r.t - cur.names.get(r.name) >= 3 * 60e3);
+    if (r.cat === 14) { if (again) cur.split = true; continue; }
+    if (r.cat !== kind) continue;
+    if (!cur || r.t - cur.last > 5 * 60e3 || again || cur.split) { cur = { kind, start: r.t, last: r.t, names: new Map() }; salvos.push(cur); ended.clear(); }
     cur.last = r.t; if (!cur.names.has(r.name)) cur.names.set(r.name, r.t);
   }
 }

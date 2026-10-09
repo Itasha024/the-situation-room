@@ -7157,7 +7157,8 @@ function startIranFeed() {
 /*
  * The Iran desk's map (Round 30 stage 6): a pin for every attack card, in the
  * colour of who acted (the legend's groups; anyone else grey), its note the
- * card's. The Houthis' own war is the Yemen desk's map. "Show on map" on a
+ * card's. The Houthis' launches at Israel show here (user, 9 Oct); their war at
+ * sea and in Yemen is the Yemen desk's map. "Show on map" on a
  * card flies the map to its pin and opens the note.
  * User, 9 Oct: a plain dot in its side's colour (no ship or strike symbol;
  * this is not the Yemen desk), Iran red, the legend ticked on and off as the
@@ -7167,6 +7168,7 @@ const IRAN_PIN_SIDES = [
   ['iran', '#dc2626', 'Iran'],
   ['hezbollah', '#eab308', 'Hezbollah'],
   ['iraqi_militias', '#f97316', 'Iraqi and Syrian militias'],
+  ['houthi', '#16a34a', 'Houthis'],
   ['us', '#2563eb', 'US'],
   ['israel', '#60a5fa', 'Israel'],
   ['gulf', '#a855f7', 'Gulf states'],

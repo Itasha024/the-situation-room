@@ -99,3 +99,6 @@
 160|2026-10-09T12:46|Al Jazirah Al Hamra|13|W|vessel struck by a projectile, fire|unclear|25.783,55.567
 081|2026-07-07T12:00|Hormuz|0|N|tanker struck by a projectile in the Strait of Hormuz, structural damage|unclear|26.45,56.45|https://x.com/UK_MTO/status/2074483890576592960
 082|2026-07-07T13:05|Hormuz|0|N|second tanker struck by a drone in the Strait of Hormuz|unclear|26.45,56.45|https://x.com/UK_MTO/status/2074492705451733369
+042|2026-04-22T05:05|Hormuz|5|W|incident reported amid IRGC fire on ships, details withheld at the owner's request|unclear|26.5,56.2|https://x.com/UK_MTO/status/2046983811750101381
+057|2026-05-14T05:45|Fujairah|38|NE|vessel at anchor boarded and seized by unauthorised personnel, now bound for Iranian waters|iran||https://x.com/UK_MTO/status/2054819091525824985
+096|2026-07-24T12:00|Fujairah|30|E|tanker in an incident with military forces|us|25.15,56.85|https://x.com/UK_MTO/status/2080938084967878892

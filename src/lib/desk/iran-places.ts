@@ -227,7 +227,8 @@ export function tallyNotEvent(headline: string): boolean {
  *   Iran's own unrest, never this map, save its air defence at work.
  * - The US, Israel and the Gulf states: in Iran, Iraq and the seas; Israel in
  *   Lebanon too. Israel in Syria and Gaza is not this war's map.
- * - The Houthis: the Yemen desk's map.
+ * - The Houthis: their launches at Israel (user, 9 Oct); their war at sea and
+ *   in Yemen is the Yemen desk's map.
  * - Not told who: at sea, or a strike or blast that is no police matter.
  * Never a fly-over, a round-up of attacks, a count of the dead with no attack,
  * or a tally over days.
@@ -247,7 +248,7 @@ const PURSUERS: Record<string, Set<string>> = {
 };
 export function iranPinAllowed(actor: string | null | undefined, place: Pick<IranPlace, "country">, headline: string): boolean {
   const a = String(actor || "unclear");
-  if (a === "houthi" || NOT_AN_ATTACK.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
+  if ((a === "houthi" && place.country !== "Israel") || NOT_AN_ATTACK.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
   if (place.country === "Yemen" || place.country === "Gaza" || place.country === "Palestine") return false;
   if (AXIS.has(a)) return place.country !== "Iran" || (a === "iran" && AIR_DEFENCE.test(headline) && !INTERNAL.test(headline));
   if (PURSUERS[a]) return PURSUERS[a].has(place.country);

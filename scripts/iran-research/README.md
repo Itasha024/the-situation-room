@@ -31,7 +31,7 @@ Each reader's output was read in samples by hand against its posts before mergin
     - Only short posts count. Hedged posts don't, and neither do posts about launches at another country.
     - The posts in the window vote.
     - Lebanon's own warning counts. A short-range attack on the north with no long-range warning is Lebanon's.
-    - Yemen's and Gaza's are left off this map.
+    - Gaza's are left off this map (Yemen's are on it since the second pass).
 - **UKMTO:** the 2026 warnings (PDFs) found through the site's own archive search, read in a browser (the
   site's protection blocks plain downloads), plus its incident list (positions for 104 on) and two warnings
   posted only as pictures on X.
@@ -45,3 +45,31 @@ Each reader's output was read in samples by hand against its posts before mergin
 - Pins can carry `at` (their own time) and `lat`/`lng` (the source's position). One attack, one pin:
   - Two timed reports from one source are two attacks.
   - A ship attack reported a day apart is one attack when within 25 km, or at the same distance off the same town.
+
+## Round 2, second pass (9 Oct, user's corrections)
+
+- **Salvos minutes apart are separate pins.** `oref-salvos.cjs` also ends a salvo when a place already
+  alerted in it is warned or alerted again 3 minutes or more later, or after its "event over" message.
+  Checked against the Israeli flashes per day: 2,029 salvos instead of 1,817.
+- **Who fired** (`oref.cjs`):
+  - A flash naming both the alerted area and the weapon decides alone (a drone from Yemen at Eilat amid
+    flashes about Iran's missiles).
+  - The IDF's or the Home Front Command's own word ("צה"ל: ...", with the colon) weighs most, and its
+    word on alerts after them counts up to an hour later.
+  - Where the long-range warning sounded, flashes about Lebanon don't count; Yemen never reaches the north;
+    a short-range alert on the Gaza border is Gaza's unless a flash names the south and the weapon.
+- **Yemen's launches at Israel are on the map** (user: since 28 Feb). Iran-places scope: the Houthis in
+  Israel only; their war at sea and in Yemen stays the Yemen desk's.
+- **CENTCOM again** (`centcom2.cjs`): an area it names counts ("Iran's coastline near the Strait of Hormuz",
+  "eastern Iraq"). Its posts link to press releases on centcom.mil, which refuses readers; the releases
+  are read in full on DVIDS (dvidshub.net, the US military's media site), and one from late May on the
+  Wayback Machine. Still out: strikes with no place, tallies, redirected ships.
+- **UKMTO's missing numbers**, from its own daily summaries (pictures on X): 027 was never issued, 058 is
+  "not in the public domain", 042 was an incident with no warning at the owner's request. 033 and 040 are
+  in no Gulf or Gulf of Oman summary. 095, 097 and 098 are in the Red Sea (the Yemen desk's), 096 is the
+  US disabling the tanker Lavine, 125 is an advisory. 099 and 100 are not posted; the IRGC's own claim of
+  three tankers attacked that night is pinned.
+- **`hand.cjs`**: attacks read by hand from any dumped Telegram channel, one line each, the post's text
+  kept with it (`hand-a2.txt`: the F-15E shot down over south-west Iran and the rescue fighting,
+  Yemen's drone at Eilat stopped before alerts).
+- `scripts/iran-countries.mjs`: Judea and Samaria (the West Bank) joined to Israel's shape in its colour.

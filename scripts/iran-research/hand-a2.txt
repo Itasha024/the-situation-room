@@ -1,0 +1,9 @@
+# Round 2 additions to stage A (user, 9 Oct): Yemen's launches at Israel, the F-15E shot down over Iran.
+N12chat/199447|2026-04-04|houthi|אילת|29.5577,34.9519|Drone from Yemen at Eilat, shot down before alerts were set off|Israel|Eilat|2026-04-04T08:56:00Z
+israel1/10095|2026-04-03|iran|דרום מערב איראן|30.75,50.85|Iranian air defence shoots down a US F-15E over south-west Iran; one crewman rescued, the other hunted for two days|Iran|south-west Iran
+israel1/10149|2026-04-03|iran|מצר הורמוז|26.5667,56.25|US A-10 attack jet goes down near the Strait of Hormuz, its pilot rescued; Iran says its air defence shot it down|sea|Strait of Hormuz
+SabrenNewss/199418|2026-04-04|iran|ياسوج|30.6682,51.588|Iranian air defence fire hits US Black Hawk helicopters trying to land near Yasuj in the hunt for the F-15E crew|Iran|Yasuj
+N12chat/199611|2026-04-05|us|כהגלויה ובויראחמד|30.79,50.56|US air strikes in Kohgiluyeh and Boyer-Ahmad on Iranian forces hunting the F-15E crewman, several reported killed|Iran|Kohgiluyeh and Boyer-Ahmad
+SabrenNewss/200108|2026-04-05|iran|جنوب أصفهان|32.3,51.8|US rescue raid at a disused airfield south of Isfahan: Iran says its air defence hit two C-130s and two Black Hawks, which US forces then bombed on the ground|Iran|south of Isfahan
+N12chat/219710|2026-07-28|iran|מצר הורמוז|26.5667,56.25|IRGC says it attacked and stopped three oil tankers that ignored its warnings in the Strait of Hormuz|sea|Strait of Hormuz
+Alomhoar/108694|2026-07-29|unclear|دمياط|31.47,31.76|Egypt says a drone hit a US LNG tanker at Damietta port|Egypt|Damietta

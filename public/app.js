@@ -5180,7 +5180,7 @@ function twinKm(a, b) {
   const s = Math.sin(((b.lat - a.lat) * rad) / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(((b.lng - a.lng) * rad) / 2) ** 2;
   return 12742 * Math.asin(Math.sqrt(s));
 }
-function oneEventOnePin(pins) {
+function oneEventOnePin(pins, sorted = false) {
   const out = [];
   const info = new Map();
   const of = (p) => {
@@ -5196,8 +5196,12 @@ function oneEventOnePin(pins) {
     let twin = -1;
     for (let i = out.length - 1; i >= 0; i--) {
       const b = of(out[i]);
+      // Pins in time order (the Iran map's): nothing further back can be a twin.
+      if (sorted && a.t - b.t > 12 * 3600e3) break;
       if (Math.abs(a.t - b.t) > 6 * 3600e3) continue;
       if (a.cat !== b.cat || a.base === b.base || !a.w.size || !b.w.size) continue;
+      // Researched pins are one per place and day already: two villages struck the same day are two attacks.
+      if (p.dayOnly && out[i].dayOnly && p.place && out[i].place && p.place !== out[i].place) continue;
       if (twinKm(p, out[i]) > 25) continue;
       let shared = 0;
       for (const w of a.w) if (b.w.has(w)) shared++;
@@ -7344,7 +7348,7 @@ function drawIranPins() {
   // One event, one pin: the Yemen desk's rule (same kind, 25 km, 6 hours, most telling words shared).
   const all = shown.map((ev) => ({ ...ev, mapCat: ['strike', 'combat', 'vessel', 'port'].includes(ev.type) ? ev.type : 'strike' }))
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-  const kept = oneEventOnePin(all);
+  const kept = oneEventOnePin(all, true);
   for (const ev of kept) {
     const ageH = (Date.now() - new Date(ev.at).getTime()) / 3600000;
     const icon = L.divIcon({
@@ -7354,7 +7358,8 @@ function drawIranPins() {
       iconAnchor: [8, 8],
     });
     const m = L.marker([ev.lat, ev.lng], { icon, zIndexOffset: Math.round(1000 - ageH), riseOnHover: true })
-      .bindPopup(iranPopupHtml(ev), { maxWidth: 300, maxHeight: 360, autoPan: true });
+      // The note is written when it opens: thousands of researched pins draw at once.
+      .bindPopup(() => iranPopupHtml(ev), { maxWidth: 300, maxHeight: 360, autoPan: true });
     m.addTo(iranPins.layer);
     iranPins.byFp.set(String(ev.fp).split('-pin-')[0], m);
   }

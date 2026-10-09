@@ -58,5 +58,6 @@ test("the map's scope (user, 9 Oct): who acted, where it landed, and never a fly
   assert.equal(iranPinAllowed("unclear", at("Iran"), "Jet activity reported over western Tehran"), false);
   assert.equal(iranPinAllowed("unclear", at("sea"), "Multiple tanker attacks reported in Strait of Hormuz and Red Sea"), false);
   assert.equal(iranPinAllowed("iran", at("Iran"), "Tehran emergency says 10 wounded in air incidents on 8 October"), false);
+  assert.equal(iranPinAllowed("iran", at("Cyprus"), "Paphos International Airport evacuated upon detection of unidentified object"), false);
   assert.equal(iranPinAllowed("unclear", at("sea"), "Ship targeted in Strait of Hormuz, fire breaks out on board"), true);
 });

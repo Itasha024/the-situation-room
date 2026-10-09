@@ -232,7 +232,7 @@ export function tallyNotEvent(headline: string): boolean {
  * or a tally over days.
  */
 const NOT_AN_ATTACK =
-  /\b(?:fl(?:y|ies|ew|ying)\s+(?:low\s+)?over|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?)\b/i;
+  /\b(?:fl(?:y|ies|ew|ying)\s+(?:low\s+)?over|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?|evacuat\w*|sirens?|unidentified (?:object|aircraft|drone))\b/i;
 const ROUNDUP =
   /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)/i;
 const INTERNAL =

@@ -7178,9 +7178,29 @@ async function loadIranPins() {
     const res = await fetch(`/api/desk?desk=iran&since=${IRAN_MAP_FROM}`, { cache: 'no-cache' });
     if (!res.ok) return;
     const d = await res.json();
-    iranPins.events = (d.events || []).filter(iranPinShown);
+    if (!iranPins.past) iranPins.past = await loadIranPast();
+    // The desk's own pins from the day it began reading; the researched ones before it.
+    const live = (d.events || []).filter(iranPinShown);
+    const first = live.reduce((m, e) => Math.min(m, Date.parse(e.at) || Infinity), Infinity);
+    iranPins.events = [...iranPins.past.filter((e) => Date.parse(e.at) < first), ...live];
     drawIranPins();
   } catch (e) { console.warn('iran pins', e); }
+}
+/**
+ * The attacks from 28 Feb 2026 to the desk's first day (Round 30 stage 8),
+ * researched from the war's day-by-day record: each on its cited outlet's
+ * report, its day only (the record seldom gives the hour).
+ */
+async function loadIranPast() {
+  try {
+    const res = await fetch('/iran-strikes-baseline.json', { cache: 'no-cache' });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return (Array.isArray(rows) ? rows : []).map((p) => ({
+      fp: p.fp, at: `${p.day}T12:00:00+03:00`, dayOnly: true, actor: p.actor, type: 'strike', mapOnly: true,
+      place: p.place, lat: p.lat, lng: p.lng, label: p.label, text: '', source: p.source, url: p.url, also: p.also || [],
+    }));
+  } catch (e) { return []; }
 }
 function renderIranLegend() {
   const legend = document.getElementById('legend');
@@ -7226,9 +7246,9 @@ function iranPopupHtml(ev) {
   }
   const extra = body && body.length > head.length + 24 && !body.startsWith(head.slice(0, 60)) ? `<p class="pop-body">${escapeHtml(body)}</p>` : '';
   return `<p class="pop-h">${escapeHtml(head)}</p>
-    <p class="pop-meta">${escapeHtml(fmtStamp(ev.at))}${ev.place ? ' · ' + escapeHtml(T(ev.place)) : ''}</p>
+    <p class="pop-meta">${escapeHtml(ev.dayOnly ? fmtDay(String(ev.at).slice(0, 10)) : fmtStamp(ev.at))}${ev.place ? ' · ' + escapeHtml(T(ev.place)) : ''}</p>
     ${extra}
-    ${anchors ? `<p class="pop-src">Source: ${anchors}</p>` : ''}
+    ${anchors ? `<p class="pop-src">Source: ${anchors}${(ev.also || []).slice(0, 3).map((x) => ` · <a class="src-link" href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${escapeHtml(x.source)}</a>`).join('')}</p>` : ''}
     ${mediaBlock(ev.media, true)}`;
 }
 function drawIranPins() {
@@ -7267,7 +7287,7 @@ function drawIranPins() {
     if (!ev.mapOnly && iranPins.byFp.has(base)) mappableByFp.set(ev.fp, ev);
   }
   const chip = document.getElementById('map-chip');
-  if (chip) chip.textContent = kept.length ? `${kept.length} attacks on the map. Earlier ones, back to 28 Feb 2026, are being added.` : 'Every attack since 28 Feb 2026: coming soon';
+  if (chip) chip.textContent = kept.length ? `${kept.length} attacks on the map since 28 Feb 2026` : 'Every attack since 28 Feb 2026: coming soon';
   renderIranFeed();
 }
 function showIranPin(fp) {

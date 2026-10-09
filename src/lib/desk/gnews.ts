@@ -151,3 +151,44 @@ export async function searchGoogleNews(query: string, lang: Edition = "en"): Pro
     return [];
   }
 }
+
+/** Hosts whose outlet's name is not its domain's. */
+const HOST_NAMES: Record<string, string> = {
+  "shafaq.com": "Shafaq News",
+  "moneycontrol.com": "Moneycontrol",
+  "malaymail.com": "Malay Mail",
+  "indiatoday.in": "India Today",
+  "news.cn": "Xinhua",
+  "xinhuanet.com": "Xinhua",
+  "aa.com.tr": "Anadolu Ajansı",
+  "timesofindia.indiatimes.com": "Times of India",
+  "thehindu.com": "The Hindu",
+  "dawn.com": "Dawn",
+  "rudaw.net": "Rudaw",
+  "kurdistan24.net": "Kurdistan24",
+  "presstv.ir": "Press TV",
+  "tehrantimes.com": "Tehran Times",
+  "irna.ir": "IRNA",
+  "al-monitor.com": "Al-Monitor",
+  "timesofisrael.com": "Times of Israel",
+  "jpost.com": "Jerusalem Post",
+  "bostonglobe.com": "The Boston Globe",
+};
+
+/**
+ * The outlet behind a Google News item whose title named none (9 Oct: Shafaq
+ * News' Parvizkhan story went out under "Google News"). Google is never the
+ * teller: the article's own site is.
+ */
+export function outletFromHost(url: string): string {
+  let host = "";
+  try {
+    host = new URL(url).hostname.toLowerCase().replace(/^(?:www|en|english|m|amp|news)\./, "");
+  } catch {
+    return "";
+  }
+  if (!host || /(?:^|\.)google\./.test(host)) return "";
+  for (const [h, name] of Object.entries(HOST_NAMES)) if (host === h || host.endsWith(`.${h}`)) return name;
+  const stem = host.split(".").slice(-2)[0] ?? "";
+  return stem.length >= 3 ? stem[0].toUpperCase() + stem.slice(1) : "";
+}

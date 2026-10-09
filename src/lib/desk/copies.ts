@@ -195,9 +195,11 @@ function speakerNames(summary: string): { lead: string; names: string[] } | null
   return { lead: m[1].toLowerCase(), names };
 }
 
+// Iran by name, not "Iranian": on the Iran desk "an Iranian police commander"
+// is no counterpart (9 Oct: the Faryab killing went out three times).
 const PARTNERS: [RegExp, string][] = [
   [/\bQatar(?:i)?\b/i, "qatar"], [/\b(?:UAE|Emirat(?:i|es))\b/i, "uae"], [/\bOman(?:i)?\b/i, "oman"], [/\bKuwait(?:i)?\b/i, "kuwait"],
-  [/\bBahrain(?:i)?\b/i, "bahrain"], [/\bEgypt(?:ian)?\b/i, "egypt"], [/\bJordan(?:ian)?\b/i, "jordan"], [/\bIran(?:ian)?\b/i, "iran"],
+  [/\bBahrain(?:i)?\b/i, "bahrain"], [/\bEgypt(?:ian)?\b/i, "egypt"], [/\bJordan(?:ian)?\b/i, "jordan"], [/\b(?:Iran|Tehran)\b/i, "iran"],
   [/\bTurk(?:ey|ish|iye)\b/i, "turkey"], [/\bPakistan(?:i)?\b/i, "pakistan"], [/\b(?:US|U\.S\.|American|Washington|Trump|Rubio)\b/, "us"],
   [/\b(?:Russia|Russian|Putin)\b/i, "russia"], [/\b(?:China|Chinese)\b/i, "china"], [/\b(?:UK|British|Britain)\b/, "uk"],
   [/\b(?:France|French|Macron)\b/i, "france"], [/\b(?:UN|United Nations|Grundberg|Guterres)\b/, "un"], [/\bIraq(?:i)?\b/i, "iraq"],
@@ -645,4 +647,144 @@ export function speakerIs(source: string, headline: string): boolean {
   if (!own.length) return false;
   const lead = String(headline || "").toLowerCase().split(/[^a-z]+/).filter(Boolean).slice(0, 3);
   return own.every((w) => lead.some((x) => x.startsWith(w.slice(0, Math.max(4, w.length - 1)))));
+}
+
+/**
+ * One strike abroad told by many outlets (9 Oct review): the drones on the
+ * Iranian Kurdish camps in Erbil went out as some fifteen cards between 22:29
+ * and 02:07, from Akhbar-e Fori, Khabari Plus, Al Hadath, Press TV, IRNA,
+ * Tasnim, Al Arabiya, Asharq Al-Awsat… Field reports on the same city of the
+ * Iran war's theatre within four hours are one event, unless one is a "new"
+ * strike, the strikers named differ, or the figures disagree. Yemen's own
+ * cities keep their own, stricter rules (sameWave, sameTarget).
+ */
+export const STRIKE_ABROAD_MS = 4 * 3600_000;
+const ABROAD_CITY =
+  /\b(Erbil|Sulaymaniyah|Kirkuk|Baghdad|Basra|Tehran|Isfahan|Shiraz|Tabriz|Mashhad|Bandar Abbas|Bushehr|Kharg|Ahvaz|Kermanshah|Karaj|Qom|Natanz|Fordow|Arak|Zahedan|Chabahar|Faryab|Haifa|Tel Aviv|Beersheba|Eilat|Dimona|Doha|Manama|Kuwait City|Dubai|Abu Dhabi|Fujairah|Muscat|Beirut|Dahiyeh)\b/;
+function strikerAbroad(s: string): string {
+  const t = String(s || "").replace(/^[^:]{2,60}:\s*/, "");
+  if (/^(?:the )?(?:Iranian|Iran's|IRGC)\b/.test(t) || /\bIranian (?:drones?|missiles?|strikes?)\b/.test(t)) return "iran";
+  if (/^(?:the )?Israeli\b|\bIsraeli (?:air)?strikes?\b|\bIDF\b/.test(t)) return "israel";
+  if (/^(?:the )?(?:US|U\.S\.|American)\b|\bUS (?:air)?strikes?\b/.test(t)) return "us";
+  return "";
+}
+export function sameStrikeAbroad(a: { type: string; summary: string; text?: string }, b: { type: string; summary: string; text?: string }): boolean {
+  const field = (t: string) => t === "strike" || t === "combat";
+  if (!field(a.type) || !field(b.type)) return false;
+  if (alertCities(a) || alertCities(b) || NEW_STRIKE.test(b.summary)) return false;
+  const ca = ABROAD_CITY.exec(a.summary)?.[1];
+  if (!ca || ca !== ABROAD_CITY.exec(b.summary)?.[1]) return false;
+  const sa = strikerAbroad(a.summary);
+  const sb = strikerAbroad(b.summary);
+  if (sa && sb && sa !== sb) return false;
+  return !numbersClash(`${a.summary} ${a.text ?? ""}`, `${b.summary} ${b.text ?? ""}`);
+}
+
+/** Who tells, not what: two statements by one spokesperson share these whatever they say. */
+const ROLE_STOP = /^(?:government|spokesperson|spokesman|minister|ministry|official|forces|force|army|military|armed|council|leader|commander|navigation|security|media|office|agency|group|organi[sz]ation|report|warn|urge|announce|call|declare|confirm|deny)$/;
+function eventWords(s: string): Set<string> {
+  return new Set([...storyWords(s)].filter((w) => !ROLE_STOP.test(w)));
+}
+/** The places a headline puts its event at: "in Faryab", "near Hays", "of Kahbub". */
+function headPlaces(s: string): Set<string> {
+  const out = new Set<string>();
+  for (const m of String(s || "").matchAll(/\b(?:in|near|at|on|over|off|of|outside)\s+(?:the\s+)?((?:Al-|al-)?[A-Z][\w'’-]+)/g)) {
+    const k = m[1].toLowerCase().replace(/^al-/, "");
+    if (!STORY_STOP.has(k) && !/^(?:yemen|iran|saudi|houthi|israel|us|the)$/.test(k)) out.add(k);
+  }
+  return out;
+}
+/** Each names a place the other does not: two events ("near Hays" and "in Jabal Ras"). */
+function placesApart(a: string, b: string): boolean {
+  const pa = headPlaces(a);
+  const pb = headPlaces(b);
+  return [...pa].some((p) => !pb.has(p)) || [...pb].some((p) => !pa.has(p));
+}
+
+/** How much of the shorter headline's story words the other carries. */
+function headOverlap(a: string, b: string): { share: number; size: number } {
+  const x = eventWords(a);
+  const y = eventWords(b);
+  const size = Math.min(x.size, y.size);
+  if (!size) return { share: 0, size };
+  let both = 0;
+  for (const w of x) if (y.has(w)) both += 1;
+  return { share: both / size, size };
+}
+
+/**
+ * One outlet telling its own story again (9 Oct): Iran International's PMF
+ * drones unit at 09:05 and 10:21 (it posts from three accounts), The
+ * National's UAE food retailers at 06:30 and 08:13, Bloomberg's "no strike
+ * before the midterms" at 23:57 and 05:00. Statements, diplomacy and economy
+ * within twelve hours whose headlines share most words; a field report only
+ * within half an hour (a channel's two strikes on one district hours apart
+ * are two strikes), and never an alert.
+ */
+export const OWN_RETELL_MS = 12 * 3600_000;
+export const OWN_RETELL_FIELD_MS = 30 * 60_000;
+export function ownRetelling(a: { type: string; summary: string; at?: string }, b: { type: string; summary: string; at?: string }): boolean {
+  if (alertCities(a) || alertCities(b) || NEW_STRIKE.test(b.summary)) return false;
+  const gap = a.at && b.at ? Math.abs(Date.parse(a.at) - Date.parse(b.at)) : 0;
+  const talky = (t: string) => t === "statement" || t === "diplomacy" || t === "economy";
+  const field = !talky(a.type) || !talky(b.type);
+  if (gap > (field ? OWN_RETELL_FIELD_MS : OWN_RETELL_MS)) return false;
+  if (numbersClash(a.summary, b.summary) || differentSpeakers(a, b) || placesApart(a.summary, b.summary)) return false;
+  if (REACTION.test(a.summary) !== REACTION.test(b.summary)) return false;
+  // A later post with a new figure brings something new: "356 operations"
+  // then "356 operations neutralise 476 fighters" are two posts.
+  const figs = (t: string) => (t.replace(/\b\d+\s*(?:hours?|hrs?|days?|weeks?)\b/gi, " ").match(/\d[\d,.]*/g) ?? []).map((n) => n.replace(/,/g, ""));
+  const had = new Set(figs(a.summary));
+  if (figs(b.summary).some((n) => !had.has(n))) return false;
+  const { share, size } = headOverlap(a.summary, b.summary);
+  // Half the words hold for a statement when there are enough of them.
+  return (size >= 3 && share >= 0.6) || (!field && size >= 5 && share >= 0.5);
+}
+
+/**
+ * One event that two readers typed apart (9 Oct): the Faryab police
+ * commander's killing as MEK's "combat" and Al-Alam's "statement"; the
+ * Hormuz mine blasts from Al-Alam and Khabari Plus a minute apart. Headlines
+ * sharing nearly all their words and a name, within ninety minutes.
+ */
+export const ONE_EVENT_MS = 90 * 60_000;
+export function oneEventTwoTypes(a: { type?: string; summary: string }, b: { type?: string; summary: string }): boolean {
+  // The market's move on a statement is its own story ("oil eases after Trump rules out a strike").
+  if ((a.type === "economy") !== (b.type === "economy")) return false;
+  if (alertCities(a) || alertCities(b) || NEW_STRIKE.test(b.summary)) return false;
+  if (numbersClash(a.summary, b.summary) || differentSpeakers(a, b) || placesApart(a.summary, b.summary)) return false;
+  // A reaction is not the event it reacts to: Algeria's condemnation of the Abha attack.
+  if (REACTION.test(a.summary) !== REACTION.test(b.summary)) return false;
+  const { share, size } = headOverlap(a.summary, b.summary);
+  if (size < 4 || share < 0.6) return false;
+  const na = storyNames(a.summary);
+  return [...storyNames(b.summary)].some((n) => na.has(n));
+}
+
+/**
+ * One claim told twice with its rare figure (9 Oct): the government forces'
+ * "1,729 precision strikes" went out from Sheba Intelligence at 00:36 and
+ * Yemen Future at 03:20. A figure of a hundred or more, the same in both
+ * headlines, with two more story words shared, within twelve hours: one story.
+ * Years and clock times are not figures.
+ */
+export const RARE_FIGURE_MS = 12 * 3600_000;
+function rareFigures(s: string): Set<string> {
+  const out = new Set<string>();
+  const t = String(s || "").replace(/\b\d{1,2}:\d{2}\b/g, " ");
+  for (const m of t.matchAll(/\b\d{1,3}(?:,\d{3})+\b|\b\d{3,}\b/g)) {
+    const n = Number(m[0].replace(/,/g, ""));
+    if (n >= 100 && !(n >= 1990 && n <= 2035)) out.add(String(n));
+  }
+  return out;
+}
+export function sameRareFigure(a: { summary: string }, b: { summary: string }): boolean {
+  if (alertCities(a) || alertCities(b)) return false;
+  const fa = rareFigures(a.summary);
+  if (![...rareFigures(b.summary)].some((n) => fa.has(n))) return false;
+  if (numbersClash(a.summary, b.summary) || differentSpeakers(a, b)) return false;
+  const x = eventWords(a.summary);
+  let shared = 0;
+  for (const w of eventWords(b.summary)) if (x.has(w)) shared += 1;
+  return shared >= 2;
 }

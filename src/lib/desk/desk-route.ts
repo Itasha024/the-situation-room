@@ -53,12 +53,23 @@ export function isIranCard(r: Pick<LiveReport, "summary" | "text">): boolean {
   return IRAN_ACTS.test(text);
 }
 
-/** The desks a newly kept card is shown on. A card that already has its desks keeps them. */
+// Any word of Yemen's war: its land, its seas, its sides, the Saudi front.
+const YEMEN_WORD = new RegExp(`${YEMEN_SEA.source}|${/\b(?:Sanaa|Saada|Marib|Taiz|Lahj|Abyan|Shabwa|Hadram[ae]wt|Al-Jawf|Dhale|Ibb|Dhamar|Amran|Hajjah|Mahra|Saudi|Riyadh|Jizan|Najran|Abha|Khamis Mushait|Grundberg|Alimi|Saree|Giants Brigades|Southern Transitional Council|STC)\b|صنعاء|مأرب|تعز|السعودي/.source}`, "i");
+
+/**
+ * The desks a newly kept card is shown on. A card that already has its desks keeps them.
+ * An empty list means neither: the Yemen reader kept a card on Iran's war
+ * alone (9 Oct: "US preparing to resume strikes on Iran" on the Yemen desk),
+ * which the Iran desk's own reader reads under its own rules.
+ */
 export function desksOf(r: LiveReport): DeskId[] {
   if (r.desks?.length) return r.desks;
   // A ship hit in the Gulf, Hormuz or the Gulf of Oman with no word of Yemen
   // is the Iran war's alone (8 Oct: the tanker Acers off Qatar on the Yemen desk).
   const all = `${r.summary}\n${r.text ?? ""}\n${r.place ?? ""}`;
   if (r.type === "vessel" && OFF_YEMEN_SEA.test(all) && !YEMEN_SEA.test(all)) return ["iran"];
-  return isIranCard(r) ? ["yemen", "iran"] : ["yemen"];
+  if (!isIranCard(r)) return ["yemen"];
+  if (!YEMEN_WORD.test(all)) return [];
+  // Iran named only in the body ("…amid Iran tensions") does not take a Yemen card to the Iran desk.
+  return isIranCard({ summary: r.summary, text: "" }) ? ["yemen", "iran"] : ["yemen"];
 }

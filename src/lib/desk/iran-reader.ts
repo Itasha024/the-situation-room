@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { RESPONSE_SCHEMA, type ReaderPrompt } from "./reader.ts";
 import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
+import { subjectNation } from "./speaker-press.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
 export const IRAN_PROMPT_VERSION = 9;
@@ -297,6 +298,17 @@ const IRAN_PARTY = /\b(?:Iran\w*|IRGC|Quds Force|Hezbollah|Revolutionary Guards?
 const IRAN_ACTOR = /\b(?:Iran\w*|IRGC|Revolutionary Guards?|Quds Force)\b/i;
 const IRAN_IN_YEMEN_STORY = /\b(?:Israel\w*|Eilat|US (?:warship|ship|Navy|base|forces)|American (?:warship|ship)|Red Sea shipping)\b/i;
 
+/**
+ * An economy story is the desk's only through the war (9 Oct: French power
+ * prices, China's refined-product exports after Golden Week, Iran's wheat
+ * subsidies and gold auctions all went out): the headline names Hormuz,
+ * shipping, oil or gas, sanctions, the blockade, the war, or a price the war moves.
+ */
+const WAR_ECON =
+  /\b(?:Hormuz|Strait|Gulf|blockade\w*|sanction\w*|siege|war|wars|strikes?|attacks?|tankers?|ship\w*|vessels?|freight|insur\w*|VLCC|LNG|crude|oil|gas|gasoline|diesel|fuel|energy|refiner\w*|petro\w*|rial|currency|dollar|inflation|exports?|imports?|stockpil\w*|supply|supplies|bypass\w*|shortage\w*|rationing)\b/i;
+/** A speaker named by a bare full name: "Meade McLoughlin:", "Sadegh Bigdeli:" (9 Oct). */
+const BARE_NAME = /^((?:[A-Z][a-z][A-Za-z'’]*(?:-[A-Z]?[a-z'’]+)?)(?:\s+(?:al-|Al-)?[A-Z][a-z]*[A-Z]?[a-z'’]+(?:-[A-Z]?[a-z'’]+)?){1,2}):\s/;
+
 /** "22 million" where the text says 22: a multiplier the text never gave. */
 const MULTIPLIER = /\b\d[\d.,]*\s*(?:million|billion|bn|trillion)\b|\$\d[\d.,]*\s*(?:m|bn)\b/i;
 const MULTIPLIER_SRC = /million|billion|trillion|\bbn\b|\d\s*m\b|مليون|ملايين|مليار|ملیون|میلیون|میلیارد|مليارات|מיליון|מיליארד/i;
@@ -321,6 +333,11 @@ export function iranCopyProblem(r: { headline: string; body?: string; speaker_le
   if (YEMEN_THEATRE.test(copy) && !IRAN_ACTOR.test(copy) && !IRAN_IN_YEMEN_STORY.test(copy)) return "yemen desk: the Houthis' war with Saudi Arabia is the Yemen desk's";
   if (SYRIA_THEATRE.test(copy) && !IRAN_PARTY.test(copy)) return "not iran: Syria is not this desk's";
   if (OTHER_WAR.test(h) && !IRAN_PARTY.test(copy) && !/\b(?:Hormuz|Shahed)\b/i.test(copy)) return "not iran: the Ukraine war is not this desk's";
+  if (r.event_type === "economy" && !WAR_ECON.test(h)) return "not iran: an economy story is this desk's only through the war, Hormuz, shipping, oil, sanctions or the prices the war moves";
+  // Someone not widely known is named by job, the name in the body (user, 8 Oct).
+  // The desk's known figures are the ones its country lists name.
+  const bare = BARE_NAME.exec(h)?.[1];
+  if (bare && !subjectNation(bare)) return `unfamiliar name: "${bare}" is not widely known; name the speaker by job or role (an Iranian MP, a protester's cousin), the name in the body. An analyst's or commentator's view is commentary`;
   const src = String(sourceText || "");
   if (MULTIPLIER.test(h) && !MULTIPLIER_SRC.test(src)) return "figure not in source: the text gives no million or billion";
   if (r.event_type === "statement" && !r.speaker_lead && !SAY_VERB.test(h)) {

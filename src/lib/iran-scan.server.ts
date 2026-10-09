@@ -21,7 +21,7 @@ import { getStore } from "./desk/store.ts";
 import { combineSystem } from "./desk/combine.ts";
 import { isExclusive } from "./desk/exclusive.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
-import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
+import { cleanUrl, isGnews, outletFromHost, resolveGoogleNews } from "./desk/gnews.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 import {
   type DeskPipe,
@@ -296,6 +296,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
           const real = await resolveGoogleNews(h.url);
           if (!real) return;
           h.url = cleanUrl(real);
+          if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
         }
         const html = await fetchText(h.url, 6000);
         const lead = html ? extractLead(html) : "";
@@ -305,6 +306,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   );
   // A Google item still on Google's redirect waits for the next tick.
   const readable = hits.filter((h) => !isGnews(h.url));
+  for (const h of readable) if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
   state.pending = hits.filter((h) => isGnews(h.url)).slice(0, 60);
 
   // 5. A video's spoken words join its post before the reader sees it, as on

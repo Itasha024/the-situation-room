@@ -136,8 +136,16 @@ export function nearerSource(
 /** Who speaks in a headline: the words before its colon, or before "says". */
 function speakerOf(headline: string): string {
   const h = String(headline || "").trim();
-  return /^([^:"“]{2,70}):\s/.exec(h)?.[1] ?? /^([^:,"“]{2,70}?)\s+(?:says|say|said|tells|told)\b/.exec(h)?.[1] ?? "";
+  return /^([^:"“]{2,70}):\s/.exec(h)?.[1] ?? /^([^:,"“]{2,70}?)\s+(?:says|say|said|tells|told)\b/.exec(h)?.[1] ?? TELLER.exec(h)?.[1] ?? "";
 }
+/**
+ * A body or person that speaks by another verb (9 Oct: Tasnim's "US Embassy
+ * in Israel warns Americans", Al-Alam's "IDF confirms major killed", Press
+ * TV's "US Democratic lawmaker asks Congress"). Only a teller: an army,
+ * embassy, ministry, spokesperson or lawmaker, never "Israeli shelling".
+ */
+const TELLER =
+  /^((?:the )?(?:US|U\.S\.|American|Israeli|Israel's|British|UK)?\s?(?:Embassy|Mission|State Department|Treasury|Pentagon|Defense Department|CENTCOM|Central Command|Navy|military|army|IDF|Israel Defense Forces|Rep\.|Senator|Sen\.|Congressman|Congresswoman|lawmaker|Democratic lawmaker|Republican lawmaker|official|officials|spokes(?:man|person|woman)|minister|ministry|UKMTO|UK Maritime Trade Operations)\b[^:,"“]{0,50}?)\s+(?:warns|warned|urges|urged|asks|asked|calls|called|confirms|confirmed|announces|announced|denies|denied|claims|claimed|says|said|vows|threatens|demands|reports|reported)\b/i;
 
 /**
  * One side's outlet carrying the other side's voice (user, 8 Oct: "Israeli
@@ -153,7 +161,8 @@ export function rivalRelay(headline: string, source: string, lean = "", own = fa
   if (!who) return null;
   const axis = lean === "axis" || find(AGENCY, s) === "iran";
   const israeli = lean === "israel" || find(OUTLET_NATION, s) === "israel";
-  if (axis && (who === "israel" || who === "us")) return `relay: ${who === "us" ? "the US" : "Israel"} is told from its own sources, not ${s}'s relay`;
+  // Britain's too: UKMTO's word on the Gulf's ships was Fars' card (9 Oct).
+  if (axis && (who === "israel" || who === "us" || who === "uk")) return `relay: ${who === "us" ? "the US" : who === "uk" ? "Britain" : "Israel"} is told from its own sources, not ${s}'s relay`;
   if (israeli && (who === "iran" || who === "us")) return `relay: ${who === "us" ? "the US" : "Iran"} is told from its own sources, not ${s}'s relay`;
   return null;
 }

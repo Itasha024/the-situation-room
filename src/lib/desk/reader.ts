@@ -1573,3 +1573,43 @@ export function readerKey(): string {
 export function groqKey(): string {
   return (typeof process !== "undefined" && process.env.GROQ_API_KEY?.trim()) || "";
 }
+
+/** Jobs whose holders are not widely known: the job names them, not their name (user, 8 Oct). */
+const BY_JOB =
+  /^((?:[\w'’-]+\s+){0,4}?(?:journalist|reporter|analyst|expert|researcher|activist|writer|commentator|academic|professor|blogger|resident|witness|lawyer|military attach[eé]|attach[eé]|MP|cousin|brother|sister|mother|father|relative)(?:\s+(?:in|to|for|at|of)\s+[A-Z][\w'’-]+)?)\s+(?:(?:Brig(?:adier)?\.?|Gen(?:eral)?\.?|Col(?:onel)?\.?|Maj(?:or)?\.?|Dr\.?|Sheikh)\s+)*(?:al-|Al-)?[A-Z][\w'’-]+(?:\s+(?:al-|Al-|Abu\s+|bin\s+)?[A-Z][\w'’-]+){0,3}$/;
+/** A speech verb after the subject the colon already named. */
+const SAID_AGAIN = /^((?:[\w'’.-]+\s+){1,4}?)(?:says?|said|urges?|warns?|rejects?|condemns?|calls?|announces?|reports?|demands?|stresses|confirms?|denies|deny|vows?|accuses?)\b/;
+const NATIONISH = /^(?:iran|iranian|us|israel|israeli|yemen|yemeni|saudi|houthi|houthis|uk|british|american|iraqi|lebanese)$/;
+const leadWords = (s: string) => new Set((s.toLowerCase().match(/[a-z]{2,}/g) ?? []).filter((w) => !/^(?:the|of|in|for|and|to|on|at|dr)$/.test(w)));
+/** The coalition's interception told under the Houthis' name, or the reverse (9 Oct, Yemen Future). */
+const INTERCEPTS = /\b(?:intercept\w*|shoots? down|shot down|downs?|destroy\w*)\b/i;
+const OPENS_COALITION = /^(?:the )?(?:Saudi-led |Arab )?coalition\b|^Saudi (?:air )?defen[cs]es?\b|^(?:Yemeni )?government forces\b/i;
+const OPENS_HOUTHI = /^(?:the )?Houthis?\b|^Houthi (?:forces|air defen[cs]es?)\b/i;
+
+/**
+ * The speaker before the colon, set right on every desk (9 Oct review):
+ * - named twice, "Iran MP Zanganeh: Iran MP rejects…", "WHO representative…:
+ *   WHO warns…" — the second telling stands alone;
+ * - someone not widely known, by job only: "Iraqi journalist Mustafa Kamil:"
+ *   is "Iraqi journalist:", the name in the body if needed;
+ * - the other side's act under one side's name: "Houthi Armed Forces
+ *   spokesperson: Coalition intercepts three Houthi ballistic missiles" was
+ *   the coalition's word, not the Houthis'.
+ */
+export function tidySpeaker(headline: string): string {
+  const h = String(headline || "").trim();
+  const c = /^([^:"“]{2,90}):\s+(.+)$/.exec(h);
+  if (!c) return h;
+  const [, lead, said] = c;
+  if (/\bHouthi/i.test(lead) && OPENS_COALITION.test(said) && INTERCEPTS.test(said)) return said[0].toUpperCase() + said.slice(1);
+  if (/\b(?:coalition|Saudi|government)\b/i.test(lead) && OPENS_HOUTHI.test(said) && INTERCEPTS.test(said)) return said[0].toUpperCase() + said.slice(1);
+  const again = SAID_AGAIN.exec(said);
+  if (again) {
+    const a = leadWords(lead);
+    const shared = [...leadWords(again[1])].filter((w) => a.has(w));
+    if (shared.length >= 2 || shared.some((w) => !NATIONISH.test(w))) return said[0].toUpperCase() + said.slice(1);
+  }
+  const job = BY_JOB.exec(lead);
+  if (job) return `${job[1]}: ${said}`;
+  return h;
+}

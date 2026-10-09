@@ -24,7 +24,7 @@ import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
 import { leadSpeaker } from "./desk/speakers.ts";
-import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS } from "./desk/copies.ts";
+import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS, STRIKE_ABROAD_MS, sameStrikeAbroad, OWN_RETELL_MS, ownRetelling, ONE_EVENT_MS, oneEventTwoTypes, RARE_FIGURE_MS, sameRareFigure } from "./desk/copies.ts";
 import { type OutletSide, homeOutlet, isAggregator, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -43,7 +43,7 @@ import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
 import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranWar } from "./desk/iran-reader.ts";
-import { colonSpeaker } from "./desk/reader.ts";
+import { colonSpeaker, tidySpeaker } from "./desk/reader.ts";
 
 export { checkLinks, namedSpeaker, speakerKey };
 
@@ -1672,6 +1672,19 @@ export function foldIntoPublished(
     // One attack on a Yemeni city's site told as it unfolded (Aden airport, 7 Oct).
     const site = !home ? homes.find((o) => same(o) && before(o, SITE_ATTACK_MS) && sameSiteAttack(o, r)) : undefined;
     if (site) home = site;
+    // One strike abroad, many outlets: the drones on Erbil's Iranian Kurdish
+    // camps went out as some fifteen cards in four hours (9 Oct).
+    if (!home) home = homes.find((o) => open(o) && o.source !== r.source && before(o, STRIKE_ABROAD_MS) && sameStrikeAbroad(o, r));
+    // An outlet telling its own story again, from another of its accounts or
+    // hours later (Iran International's PMF drones unit at 09:05 and 10:21).
+    if (!home) {
+      home = homes.find((o) => same(o) && o.source === r.source && !(talk(r) && otherPartners(o, r)) && before(o, OWN_RETELL_MS) && ownRetelling(o, r));
+    }
+    // One event two readers typed apart: a "combat" and a "statement" on the
+    // Faryab police commander's killing.
+    if (!home) home = homes.find((o) => open(o) && o.source !== r.source && before(o, ONE_EVENT_MS) && oneEventTwoTypes(o, r));
+    // One claim with its rare figure told again hours later: "1,729 precision strikes" (9 Oct).
+    if (!home) home = homes.find((o) => open(o) && o.source !== r.source && before(o, RARE_FIGURE_MS) && sameRareFigure(o, r));
     // A speech's line from another outlet when the speaker's own outlet is
     // carrying the speech: a copy, not a card (user, 21 Sep; on 4 Oct the
     // president's speech went out as some 45 cards from a dozen outlets).
@@ -2793,7 +2806,8 @@ export async function shapeCards(
   // source line says who reported it. Only after tracing, which reads the name.
   // Anyone who speaks gets the colon, after every rewrite too (8 Oct: a traced
   // card went out "Trump says …").
-  for (const r of reports) r.summary = colonSpeaker(stripAttribution(r.summary, [r.source, r.citing]));
+  // The speaker named once, by job when not widely known, and on the right side (tidySpeaker).
+  for (const r of reports) r.summary = colonSpeaker(tidySpeaker(stripAttribution(r.summary, [r.source, r.citing])));
   // A card written from its original replaces the relay's version of it.
   const fromOriginal = new Set(reports.filter((r) => r.tags?.includes("original")).map((r) => r.fp));
   for (let i = reports.length - 1; i >= 0; i -= 1) {
@@ -2884,7 +2898,8 @@ export async function shapeCards(
     // Distinct outlets only: three posts from one channel is one account.
     const outlets = new Map<string, { source: string; url: string }>();
     for (const o of others) if (o.source !== lead.source && o.citing !== lead.source) outlets.set(o.source, { source: o.source, url: o.url });
-    if (isOriginal(lead)) outlets.clear();
+    // An exclusive leads with no "Also" (user, 8 Oct): 9 Oct's Middle East Eye card carried BBC.
+    if (isOriginal(lead) || isExclusiveCard(lead)) outlets.clear();
     if (outlets.size) {
       lead.alsoReportedBy = [...outlets.values()].slice(0, 6);
     }
@@ -3186,6 +3201,8 @@ export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | 
   const payload = await scan(state, prev);
   // Which desks each card is shown on (Round 30): one read, every desk it concerns.
   for (const r of [...payload.reports, ...(payload.touched ?? [])]) r.desks = desksOf(r);
+  // Iran's war alone is the Iran desk's reader's: not kept here at all.
+  payload.reports = payload.reports.filter((r) => r.desks?.length);
   // A post the Iran desk's reader wrote up first: this card joins that one (store.pg.ts).
   try {
     const iran = await store.getJson<{ reports?: { url: string }[] }>(IRAN_PAYLOAD);

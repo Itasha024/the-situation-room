@@ -448,6 +448,10 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                    where fp = ${r.fp} and ((media is null and ${!!r.media}) or (flags is null and ${!!r.flags?.length}))
                 `;
               }
+              // An exclusive leads with no "Also" (user, 8 Oct), whenever it was found to be one.
+              if (r.flags?.includes("exclusive")) {
+                await sql`update desk_report set also_reported_by = null where fp = ${r.fp} and also_reported_by is not null`;
+              }
               // Another outlet's take on this story arrived after it was stored.
               if (r.alsoReportedBy?.length) {
                 const also = pgJson(r.alsoReportedBy);

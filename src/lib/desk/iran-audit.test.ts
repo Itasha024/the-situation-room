@@ -70,13 +70,17 @@ test("missiles intercepted over Riyadh with no attacker named are the Yemen desk
   assert.equal(verdict("Saudi Arabia intercepts Iranian missiles over Riyadh", "اعتراض صواريخ إيرانية في سماء الرياض", { event_type: "interception" }).kind, "publish");
 });
 
-test("Syria is not this desk's, unless Iran or Hezbollah is a party", () => {
-  for (const h of ["Israeli forces advance in southern Syria, close road between Jaba and Umm Batna in Quneitra countryside", "Israeli artillery strikes abandoned military base in Suweiseh area, Quneitra province, Syria"]) {
+test("Syria's own affairs are not this desk's; Israel's strikes there are, never from an Iranian outlet (user, 9 Oct)", () => {
+  const strike = "Israeli artillery strikes abandoned military base in Suweiseh area, Quneitra province, Syria";
+  assert.equal(decideIranForTest(reading({ headline: strike, event_type: "shelling" }), "القنيطرة السويسة قصف مدفعي إسرائيلي", "Reuters", "intl").kind, "publish");
+  for (const h of ["Israeli forces advance in southern Syria, close road between Jaba and Umm Batna in Quneitra countryside", strike]) {
     const v = verdict(h, "القنيطرة جباتا أم باطنة السويسة", { event_type: "ground_clash" });
     assert.equal(v.kind, "reject", h);
     assert.equal(v.kind === "reject" && v.reason, "reader", "a rejection, not a rewrite");
   }
-  assert.equal(verdict("Israel strikes IRGC weapons depot near Damascus, Syria", "الحرس الثوري دمشق", { event_type: "air_strike" }).kind, "publish");
+  assert.equal(decideIranForTest(reading({ headline: "Israel strikes IRGC weapons depot near Damascus, Syria", event_type: "air_strike" }), "الحرس الثوري دمشق", "Reuters", "intl").kind, "publish");
+  // An Iranian outlet, either side, never tells Israel's attacks.
+  assert.equal(verdict("Israel strikes IRGC weapons depot near Damascus, Syria", "الحرس الثوري دمشق", { event_type: "air_strike" }).kind, "reject");
 });
 
 test("Houthi fire on Saudi airports is the Yemen desk's, whoever relays it", () => {

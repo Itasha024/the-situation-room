@@ -42,7 +42,7 @@ import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } 
 import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
 import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
-import { isIranWar } from "./desk/iran-reader.ts";
+import { isIranDeskItem } from "./desk/iran-reader.ts";
 import { colonSpeaker, tidySpeaker } from "./desk/reader.ts";
 
 export { checkLinks, namedSpeaker, speakerKey };
@@ -2167,7 +2167,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   const iranInbox: RawHit[] = [];
   const toIran = (rows: RawHit[], lean: IranLean | undefined) => {
     if (!lean) return;
-    for (const r of rows) if (isIranWar(`${r.title ?? ""} ${r.text}`)) iranInbox.push({ ...r, lean, picked: undefined });
+    for (const r of rows) if (isIranDeskItem(`${r.title ?? ""} ${r.text}`)) iranInbox.push({ ...r, lean, picked: undefined });
   };
   const status: SourceStatus[] = [];
   const jobs: Promise<void>[] = [];

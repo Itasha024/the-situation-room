@@ -26,9 +26,9 @@ const ARENAS: [string, string][] = [
   ["Inside Iran", "Fuel and gas, the economy and the rial, imports and exports, protests, arrests, executions, power struggles."],
   ["Sanctions", "New US, EU and UN sanctions, waivers, enforcement, shadow-fleet seizures."],
   ["Axis of Resistance", "Hezbollah, the Iraqi and Syrian militias, the Houthis' Iran side."],
-  ["US in the region", "US ties with the Gulf states, Iraq and Israel; bases, deployments, arms deals."],
+  ["US in the region", "What the US itself does in the region: its forces, bases, deployments and arms deals, its dealings with the Gulf states, Iraq and Israel."],
   ["Inside the US", "Congress, war powers, polls, gasoline prices, voices for and against the war."],
-  ["Israel home front", "Sirens, the home front, the cabinet's war decisions."],
+  ["Israel", "Israel's war beyond its borders: its strikes in Lebanon, Gaza, Syria and elsewhere, attacks on Israel and their dead and wounded, the cabinet's war decisions."],
 ];
 
 const NUMBERS = [

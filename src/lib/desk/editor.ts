@@ -56,7 +56,7 @@ import {
 import { type DeskStore, migrateBlob } from "./store.ts";
 import type { DeskId } from "../desks.ts";
 import { deskKey } from "./desk-route.ts";
-import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash, iranCopyProblem, iranReword, isIranWar } from "./iran-reader.ts";
+import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash, iranCopyProblem, iranReword, isIranWar, israelAbroad } from "./iran-reader.ts";
 import { isExclusive } from "./exclusive.ts";
 import { attackTeller, officialVoice, rivalRelay } from "./speaker-press.ts";
 import type { DeskType } from "./digest.ts";
@@ -1102,8 +1102,8 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);
-  // Israel's attacks in Lebanon from Lebanon's own sources only (user, 8 Oct).
-  const teller = attackTeller(report.summary, c.source, String(r.actor_side ?? ""), report.type === "combat");
+  // Israel's attacks in Lebanon from Lebanon's own sources only (user, 8 Oct), air strikes too (9 Oct: only ground fire was checked).
+  const teller = attackTeller(report.summary, c.source, israelAbroad(report.summary) ? "israel" : String(r.actor_side ?? ""), report.type === "combat" || report.type === "strike", c.lean ?? "");
   if (teller) return { kind: "reject", reason: "reader", note: sentence(teller) };
   // The arenas and who acted travel as the card's labels (the store keeps them).
   const arenas = (r.arenas ?? []).filter((a) => a in IRAN_ARENAS).slice(0, 2);

@@ -14,7 +14,9 @@
 import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
 import { briefWindow } from "./brief.ts";
 import { cleanPoints } from "./prose.ts";
-import { headlinePoints, numberRefs, type Ref, refOfReport, stripRefs } from "./refs.ts";
+import { headlinePoints, NUM_MARK, numberRefs, type Ref, refOfReport, stripRefs } from "./refs.ts";
+import { isWireSource, namesNation, sourceNation } from "./speaker-press.ts";
+import { yemenOnly } from "./iran-reader.ts";
 import type { DeskStore } from "./store.ts";
 import { shownCard, TRUMP_KEY, type TrumpFeed, type TrumpStatement } from "./trump.ts";
 import type { LiveReport } from "./types.ts";
@@ -32,9 +34,9 @@ export const ARENAS: { id: string; name: string; about: string }[] = [
   { id: "inside-iran", name: "Inside Iran", about: "Fuel and gas, the economy and the rial, imports and exports, protests, arrests, executions, power struggles." },
   { id: "sanctions", name: "Sanctions", about: "New US, EU and UN sanctions, waivers, enforcement, shadow-fleet seizures." },
   { id: "axis", name: "Axis of Resistance", about: "Hezbollah, the Iraqi and Syrian militias, the Houthis' Iran side." },
-  { id: "us-region", name: "US in the region", about: "US ties with the Gulf states, Iraq and Israel; bases, deployments, arms deals." },
+  { id: "us-region", name: "US in the region", about: "Only what the US itself does or says in the region: its forces, bases, warships and deployments, its arms deals, its own dealings with the Gulf states, Iraq and Israel. Not other countries' moves, and not the Houthis' war with Saudi Arabia." },
   { id: "inside-us", name: "Inside the US", about: "Congress, war powers, polls, gasoline prices, voices for and against the war." },
-  { id: "israel", name: "Israel home front", about: "Sirens, the home front, the cabinet's war decisions." },
+  { id: "israel", name: "Israel", about: "Israel's war beyond its borders: its strikes in Lebanon, Gaza, Syria, Iraq, Iran or anywhere else; attacks on Israel and its forces, and the Israeli dead and wounded from them; the cabinet's and the army's war decisions; Israeli exclusives. Not Israel's home affairs (politics, courts, the economy, daily life)." },
 ];
 
 export type ArenaBrief = { id: string; name: string; points: string[]; refs: Ref[]; lastNewsAt?: string };
@@ -64,10 +66,12 @@ Write in English wire style (Reuters/AP):
 - "arenas": for each arena id below, a list of 0-4 points on that arena from these ${HOURS} hours, most important first, written the same way. Only reports that belong to that arena; [] when none does. A report goes in the one arena it is most about (two at most): Trump's words go where their subject is, not in every arena. Commentary and analysis go nowhere.
 ARENAS:
 ${ARENAS.map((a) => `- ${a.id} = ${a.name}: ${a.about}`).join("\n")}
-In every point, after the words each report supports, put that report's id in square brackets, before the full stop: "The IRGC Navy seized a tanker off Fujairah [r4][r9]." Every point carries at least one id, and only ids from the lines given.
+In every point, after the words each report supports, put that report's id in square brackets, before the full stop: "The IRGC Navy seized a tanker off Fujairah [r4]." Every point carries at least one id, and only ids from the lines given. When several reports tell the same fact, give the id of ONE: the speaker's or the country's own account first (Trump's own post for his words, the US Treasury for its sanctions, the IDF for Israel's army, Iran's own agencies for Iran's officials), then a wire agency, then the fullest report. Two ids in a point only when it joins two different facts.
 Rules:
 - Only facts in the reports. Never invent a place, number, name or claim.
 - Name no outlet and never open a point with "X reported": the reference shows the source. Write the point in your own words, never a headline and body glued together. Every point ends with a full stop. At most 40 words. A side's claim is written as that side's ("the IRGC says it hit…", "Israel's military says…", "a US official says…"), never as plain fact; a fact reported by both sides, a wire agency or an official body is plain fact. A statement keeps its speaker ("Iran's foreign ministry said…").
+- Each country's words and acts are cited from its own sources or a wire: the IDF, Israeli officials and Israeli media for Israel; Lebanese sources for Israel's strikes in Lebanon; Trump's own post and US officials for the US; Iran's officials and agencies for Iran. Another country's outlet retelling them is never cited, unless it is that outlet's own exclusive. A point with no such report is left out.
+- The Houthis' war with Saudi Arabia and Yemen's own fronts go nowhere: they are the Yemen desk's.
 - Never write about what was NOT reported or did not change. Neutral wording, no side's labels ("Zionist regime", "martyrs", "aggression", "terrorists" for a state's forces).
 - No clock times. Keep every figure exact. Never mention the desk, reports, cards or "the window". No hype.
 - Past tense for events, present for the state of play.
@@ -97,23 +101,44 @@ export function writerInput(reports: LiveReport[], trump: TrumpStatement[]): { l
 /** The writer's answer as the brief's lists; null parts mean the writer gave nothing usable. */
 export function fromAnswer(j: Record<string, unknown>, refOf: Record<string, Ref>): { situation: { points: string[]; refs: Ref[] } | null; arenas: Record<string, { points: string[]; refs: Ref[] }> } {
   const look = (id: string) => refOf[id];
-  const pts = numberRefs(oncePer(cleanPoints(j.points, 10)).slice(0, 8), look);
+  const pts = marked(numberRefs(oncePer(cleanPoints(j.points, 10).filter((p) => !yemenOnly(stripRefs(p)))).slice(0, 8), look));
   const aj = (j.arenas && typeof j.arenas === "object" ? j.arenas : {}) as Record<string, unknown>;
   const arenas: Record<string, { points: string[]; refs: Ref[] }> = {};
   // A report serves two arenas at most: Trump's one post was in five (9 Oct).
   const uses = new Map<string, number>();
   for (const a of ARENAS) {
-    const own = oncePer(cleanPoints(aj[a.id], 6)).filter((p) => {
+    const own = oncePer(cleanPoints(aj[a.id], 6)).filter((p) => fits(a.id, stripRefs(p))).filter((p) => {
       const ids = [...p.matchAll(/[rt]\d+/gi)].map((m) => m[0].toLowerCase());
       if (ids.length && ids.every((id) => (uses.get(id) ?? 0) >= 2)) return false;
       for (const id of ids) uses.set(id, (uses.get(id) ?? 0) + 1);
       return true;
     });
-    const got = numberRefs(own.slice(0, 4), look);
+    // Israel's arena cites Israel's own sources, Lebanon's for its strikes there, a wire, or an exclusive (user, 9 Oct).
+    const got = marked(numberRefs(own.slice(0, 4), a.id === "israel" ? (id) => israelRef(look(id)) : look));
     // A point with no reference the writer could show is not kept in an arena.
     if (got.points.length && got.refs.length) arenas[a.id] = got;
   }
   return { situation: pts.points.length ? pts : null, arenas };
+}
+
+/** What each arena takes, in code (first-brief review, 9 Oct): the Yemen desk's war goes nowhere; "US in the region" is the US's own doing. */
+export function fits(arena: string, point: string): boolean {
+  if (yemenOnly(point)) return false;
+  if (arena === "us-region") return namesNation("us", point);
+  return true;
+}
+
+/** A report Israel's arena may cite: Israel's own sources, Lebanon's, a wire, or any outlet's exclusive. Never Iran's outlets retelling Israel. */
+export function israelRef(ref: Ref | undefined): Ref | undefined {
+  if (!ref) return undefined;
+  if (ref.excl || isWireSource(ref.source)) return ref;
+  const n = sourceNation(ref.source, ref.lean ?? "");
+  return n === "israel" || n === "lebanon" || n === "us" ? ref : undefined;
+}
+
+/** Only points that kept a reference. */
+function marked(x: { points: string[]; refs: Ref[] }): { points: string[]; refs: Ref[] } {
+  return { points: x.points.filter((p) => new RegExp(NUM_MARK.source).test(p)), refs: x.refs };
 }
 
 /** Two points that tell one event are one: the later goes (the same sanctions twice, 9 Oct). */

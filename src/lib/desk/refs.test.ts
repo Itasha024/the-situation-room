@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { headlinePoints, numberRefs, pointList, stripRefs } from "./refs.ts";
+import { headlinePoints, numberRefs, pointList, type Ref, stripRefs } from "./refs.ts";
 import { cleanPoints } from "./prose.ts";
 import { fromAnswer, writerInput } from "./iran-brief.ts";
 
@@ -10,8 +10,8 @@ test("the writer's ids become the box's own numbers, in order of first use; a ma
   const refs: Record<string, { fp: string }> = { r1: { fp: "a" }, r2: { fp: "b" }, t1: { fp: "ts-1" } };
   const look = (id: string) => (refs[id] ? { ...refs[id], source: "S", at: "", url: "", headline: "" } : null);
   const got = numberRefs(["Trump said the blockade stays [t1].", "Saudi jets hit Sanaa [r2, r1][r9].", "The IRGC seized a tanker. [r2]"], look);
-  assert.deepEqual(got.points, ["Trump said the blockade stays[[1]].", "Saudi jets hit Sanaa[[2]][[3]].", "The IRGC seized a tanker[[2]]."]);
-  assert.deepEqual(got.refs.map((r) => r.fp), ["ts-1", "b", "a"]);
+  assert.deepEqual(got.points, ["Trump said the blockade stays[[1]].", "Saudi jets hit Sanaa[[2]].", "The IRGC seized a tanker[[2]]."]);
+  assert.deepEqual(got.refs.map((r) => r.fp), ["ts-1", "b"]);
   assert.equal(stripRefs(got.points[1]), "Saudi jets hit Sanaa.");
 });
 
@@ -45,4 +45,35 @@ test("a point is never cut at a decimal or an abbreviation; an outlet opening it
   assert.equal(tidyPoint("Trump said the blockade stays [t1]"), "Trump said the blockade stays [t1]");
   assert.equal(tidyPoint("Iran's atomic chief said inspections are impossible — Iran's atomic energy chief, Mohammad Eslami, said inspections of the sites cannot happen [r3]"), "Iran's atomic chief said inspections are impossible[r3].");
   assert.equal(oncePer(["US Treasury imposed new sanctions on 17 tankers of Iran's shadow fleet [r3].", "US Treasury sanctioned 17 tankers of Iran's shadow fleet [r4]."]).length, 1);
+});
+
+test("several reports of one fact: one number, the speaker's own account or the country's own source first", () => {
+  const refs: Record<string, Ref> = {
+    r1: { fp: "bl", source: "Bloomberg", at: "", url: "", headline: "Trump says US will not attack Iran before the midterms" },
+    r2: { fp: "hd", source: "Al Hadath", at: "", url: "", headline: "Trump: No US attack on Iran before midterms" },
+    t1: { fp: "ts", source: "Truth Social", at: "", url: "", headline: "Trump: I will not attack Iran before the midterms", trump: true },
+    r3: { fp: "rt", source: "Reuters", at: "", url: "", headline: "US Treasury sanctions 17 tankers" },
+    r4: { fp: "tr", source: "US Treasury", at: "", url: "", headline: "Treasury sanctions 17 vessels of Iran's shadow fleet" },
+    r5: { fp: "od", source: "OSINTdefender", at: "", url: "", headline: "UKMTO: tanker struck" },
+    r6: { fp: "uk", source: "UKMTO", at: "", url: "", headline: "UKMTO: a tanker was struck by a projectile" },
+  };
+  const got = numberRefs(["Trump said the US will not attack Iran before the midterms [r1][r2][t1].", "The US Treasury sanctioned 17 tankers [r3, r4].", "A tanker was struck, UKMTO said [r5][r6]."], (id) => refs[id]);
+  assert.deepEqual(got.refs.map((r) => r.fp), ["ts", "tr", "uk"]);
+  assert.equal(got.points[0], "Trump said the US will not attack Iran before the midterms[[1]].");
+});
+
+test("arenas: the Yemen desk's war goes nowhere, US in the region is the US's doing, Israel's arena cites Israel's own sources", async () => {
+  const { fits, israelRef } = await import("./iran-brief.ts");
+  assert.equal(fits("us-region", "Turkey, Pakistan and Saudi Arabia pledged deployments to help Riyadh against Houthi attacks."), false);
+  assert.equal(fits("us-region", "UAE and British naval commanders met on a Gulf coalition."), false);
+  assert.equal(fits("us-region", "The Pentagon sent a third carrier to the Gulf."), true);
+  assert.equal(fits("axis", "The US Mission to the UAE warned of Iranian-supported Houthi attacks."), true);
+  const r = (source: string, lean?: string) => ({ fp: "x", source, at: "", url: "", headline: "h", ...(lean ? { lean } : {}) });
+  assert.equal(israelRef(r("Tasnim", "axis")), undefined);
+  assert.equal(israelRef(r("Al-Alam", "axis")), undefined);
+  assert.ok(israelRef(r("Unews", "axis")));
+  assert.ok(israelRef(r("N12", "israel")));
+  assert.ok(israelRef(r("IDF")));
+  assert.ok(israelRef(r("Reuters")));
+  assert.ok(israelRef({ ...r("Tasnim", "axis"), excl: true }));
 });

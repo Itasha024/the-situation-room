@@ -2963,11 +2963,11 @@ function renderSituation(d) {
   const moreParas = more ? paragraphsOf(more, { min: 200, target: 200 }) : [];
   const para = (x, cls) => `<p class="situation-window${cls ? ` ${cls}` : ''}">${linkPlacesAll(x)}</p>`;
   const open = el.classList.contains('sit-open');
-  // Numbered points with references (user, 9 Oct): the first four, the rest on Read more.
+  // Numbered points with references (user, 9 Oct): the first one, the rest on Read more.
   const pts = derived && Array.isArray(brief.situation.points) && brief.situation.points.length ? brief.situation : null;
-  const btnNeeded = pts ? pts.points.length > 4 : moreParas.length || lineParas.length > 1;
+  const btnNeeded = pts ? pts.points.length > 1 : moreParas.length || lineParas.length > 1;
   el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2>${mapBtn}</div>${cadenceStamp(true)}
-    <div class="sit-body">${pts ? pointsHtml(pts.points, pts.refs, { show: 4, link: true }) : `${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}`}</div>${btnNeeded ? `
+    <div class="sit-body">${pts ? pointsHtml(pts.points, pts.refs, { show: 1, link: true }) : `${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}`}</div>${btnNeeded ? `
     <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}`;
   wirePlaceLinks(el);
   if (pts) wireRefs(el, pts.refs);
@@ -4579,13 +4579,13 @@ function renderFronts(d) {
       ${plain ? `<p class="front-plain">${linkPlacesAll(plain)}</p>` : ''}
       ${showSum ? `<p class="front-sum">${linkPlacesAll(sum)}</p>` : ''}
       ${showDir ? `<p class="front-dir">${linkPlacesAll(dir)}</p>` : ''}
-      ${composed && act.points && act.points.length ? `<div class="front-pts">${pointsHtml(act.points, act.refs, { show: 2, link: true })}</div>` : composed ? `<p class="front-composed">${linkPlacesAll(composed)}</p>` : ''}
+      ${composed && act.points && act.points.length ? `<div class="front-pts">${pointsHtml(act.points, act.refs, { show: 1, link: true })}</div>` : composed ? `<p class="front-composed">${linkPlacesAll(composed)}</p>` : ''}
       ${composed && frontAsOf(act) ? `<p class="front-asof">${frontAsOf(act)}</p>` : ''}
       ${!composed && act ? `<p class="front-activity">${linkPlacesAll(act.line)}</p>` : ''}
       ${composed ? '' : `<div class="srcs">Source: ${sourceAnchors(f.sources || [], '')}</div>`}
       ${showDetail ? `<div class="full">${linkPlacesAll(detail)}</div>
       <button type="button" class="toggle-front">Read more</button>` : ''}
-      ${composed && act.points && act.points.length > 2 ? '<button type="button" class="toggle-front">Read more</button>' : ''}
+      ${composed && act.points && act.points.length > 1 ? '<button type="button" class="toggle-front">Read more</button>' : ''}
     </article>`;
   });
   const box = document.getElementById('fronts');
@@ -7114,7 +7114,8 @@ function bootOtherDesk(el) {
  */
 const IRAN_GROUPS = { iran: 'axis', opp: 'opposition', il: 'israel', us: 'us', gulf: 'gulf', intl: 'intl' };
 const IRAN_GROUP_NAMES = { axis: 'Iran and Axis-aligned', opposition: 'Iranian opposition', israel: 'Israeli', us: 'US', gulf: 'Gulf and Arab', intl: 'International' };
-const iranDesk = { reports: [], lean: '', scan: null, timer: 0, shown: 60 };
+// As many cards at first as the Yemen desk shows, and as many more a click (user, 9 Oct).
+const iranDesk = { reports: [], lean: '', scan: null, timer: 0, shown: INITIAL_REPORTS };
 function startIranFeed() {
   if (iranDesk.timer) return;
   const buttons = document.querySelectorAll('#feed-legend .lean-f');
@@ -7124,7 +7125,7 @@ function startIranFeed() {
       const lean = IRAN_GROUPS[b.dataset.lean] || '';
       iranDesk.lean = iranDesk.lean === lean ? '' : lean;
       buttons.forEach((x) => x.setAttribute('aria-pressed', String(IRAN_GROUPS[x.dataset.lean] === iranDesk.lean)));
-      iranDesk.shown = 60;
+      iranDesk.shown = INITIAL_REPORTS;
       renderIranFeed();
     });
   });
@@ -7166,7 +7167,7 @@ function renderIranFeed() {
     card.insertAdjacentHTML('beforeend', `<a class="x-desk" href="/yemen-conflict-desk#r=${encodeURIComponent(r.fp)}">Full report on the Yemen desk →</a>`);
     return box.innerHTML;
   }).join('') +
-    (all.length > list.length ? `<button type="button" class="more" id="iran-more">Show earlier reports (+${Math.min(60, all.length - list.length)})</button>` : '');
+    (all.length > list.length ? `<button type="button" class="more" id="iran-more">Show earlier reports (+${Math.min(MORE_STEP, all.length - list.length)})</button>` : '');
   el.querySelectorAll('.card').forEach((card) => {
     const r = list[Number(card.dataset.i)];
     const lean = (r && r.lean) || 'intl';
@@ -7175,7 +7176,7 @@ function renderIranFeed() {
     wireFeedCard(card);
   });
   const more = document.getElementById('iran-more');
-  if (more) more.addEventListener('click', () => { iranDesk.shown += 60; renderIranFeed(); });
+  if (more) more.addEventListener('click', () => { iranDesk.shown += MORE_STEP; renderIranFeed(); });
   wireMediaClicks(el);
   const up = document.getElementById('updated');
   if (up && iranDesk.scan && iranDesk.scan.scannedAt) up.textContent = 'UPDATED ' + fmtClock(iranDesk.scan.scannedAt);
@@ -7310,17 +7311,16 @@ function refWhen(at) {
   if (!Number.isFinite(d.getTime())) return '';
   return `${d.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString(LOC, { timeZone: VIEW_TZ, hour: '2-digit', minute: '2-digit', hour12: false })}`;
 }
-/** The points, the first `show` of them before "Read more", then the references; a reference only a hidden point uses waits with it. */
+/** The points, the first `show` of them before "Read more"; under them the first reference, and an arrow that opens the rest (user, 9 Oct). */
 function pointsHtml(points, refs, opts) {
-  const show = (opts && opts.show) || 99;
+  const show = (opts && opts.show) || 1;
   const link = !!(opts && opts.link);
-  const seen = new Set();
-  const items = points.map((p, i) => {
-    if (i < show) for (const m of String(p).matchAll(/\[\[(\d+)\]\]/g)) seen.add(m[1]);
-    return `<li${i >= show ? ' class="pt-rest"' : ''}>${pointText(p, link)}</li>`;
-  }).join('');
-  const list = (refs || []).map((r, i) => `<li${seen.has(String(i + 1)) ? '' : ' class="pt-rest"'}><button type="button" class="ref-btn ref-line" data-ref="${i + 1}"><span class="ref-num">${i + 1}</span>${escapeHtml(r.trump ? `Trump, ${r.source}` : canonicalSourceName(r.source))}, ${escapeHtml(refWhen(r.at))}</button></li>`).join('');
-  return `<ol class="pts">${items}</ol>${list ? `<ol class="refs" aria-label="References">${list}</ol>` : ''}`;
+  const items = points.map((p, i) => `<li${i >= show ? ' class="pt-rest"' : ''}>${pointText(p, link)}</li>`).join('');
+  const line = (r, i) => `<li><button type="button" class="ref-btn ref-line" data-ref="${i + 1}"><span class="ref-num">${i + 1}</span>${escapeHtml(r.trump ? `Trump, ${r.source}` : canonicalSourceName(r.source))}, ${escapeHtml(refWhen(r.at))}</button></li>`;
+  const rs = refs || [];
+  if (!rs.length) return `<ol class="pts">${items}</ol>`;
+  const more = rs.length > 1 ? `<button type="button" class="ref-more" aria-expanded="false" aria-label="All ${rs.length} references"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>` : '';
+  return `<ol class="pts">${items}</ol><div class="refs-box"><ol class="refs" aria-label="References">${line(rs[0], 0).replace('</li>', `${more}</li>`)}${rs.slice(1).map((r, i) => line(r, i + 1).replace('<li>', '<li class="ref-rest">')).join('')}</ol></div>`;
 }
 function wireRefs(root, refs) {
   if (!root || !refs) return;
@@ -7328,8 +7328,16 @@ function wireRefs(root, refs) {
     b.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      const r = refs[Number(b.dataset.ref) - 1];
-      if (r) openRefPop(r, b);
+      const i = Number(b.dataset.ref) - 1;
+      if (refs[i]) openRefPop(refs, i, b);
+    };
+  });
+  root.querySelectorAll('.ref-more').forEach((b) => {
+    b.onclick = (ev) => {
+      ev.stopPropagation();
+      const box = b.closest('.refs-box');
+      const open = box.classList.toggle('open');
+      b.setAttribute('aria-expanded', String(open));
     };
   });
 }
@@ -7349,7 +7357,12 @@ function refCardHtml(ref) {
       <p class="headline">${escapeHtml(ref.headline)}</p>
     </article>`;
 }
-function openRefPop(ref, from) {
+/**
+ * The reports a box cites, in a pop-up, one at a time: the one clicked first,
+ * the others a swipe or an arrow away, as the Fronts box turns (user, 9 Oct).
+ * Each opens as its card in the column does, Read more closed.
+ */
+function openRefPop(refs, idx, from) {
   let pop = document.getElementById('ref-pop');
   if (!pop) {
     pop = document.createElement('div');
@@ -7362,7 +7375,7 @@ function openRefPop(ref, from) {
           <h3 id="ref-h">Report</h3>
           <button type="button" class="rel-x" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </div>
-        <div class="tp-list feed"></div>
+        <div class="tp-list feed ref-list"></div>
       </div>`;
     document.body.appendChild(pop);
     const close = () => {
@@ -7375,15 +7388,16 @@ function openRefPop(ref, from) {
   }
   pop.from = from;
   const box = pop.querySelector('.tp-list');
-  box.innerHTML = refCardHtml(ref);
-  const card = box.querySelector('.card');
-  if (card) {
-    wireFeedCard(card);
-    // Opened in full: the reader asked for this report.
-    card.classList.add('open');
-    const tog = card.querySelector('.toggle');
-    if (tog) tog.textContent = 'Show less';
-  }
+  const head = pop.querySelector('#ref-h');
+  const title = (i) => { head.textContent = refs.length > 1 ? `Report ${i + 1} of ${refs.length}` : 'Report'; };
+  box.innerHTML = pagerHtml('refs', refs.map(refCardHtml), idx, refs.map((r, i) => `Report ${i + 1}`));
+  box.querySelectorAll('.card').forEach(wireFeedCard);
+  wirePager(box, idx, (i) => {
+    title(i);
+    closeReadMore(box, '.card', '.toggle');
+    box.scrollTop = 0;
+  }, { wrap: false });
+  title(idx);
   wireMediaClicks(box);
   pop.hidden = false;
   document.documentElement.classList.add('tp-open');
@@ -7434,7 +7448,7 @@ function renderIranBrief() {
   if (el && Array.isArray(s.points) && s.points.length) {
     const open = el.classList.contains('sit-open');
     el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2></div>${cadenceStamp(true, b)}
-      <div class="sit-body">${pointsHtml(s.points, s.refs, { show: 4 })}</div>${s.points.length > 4 ? `
+      <div class="sit-body">${pointsHtml(s.points, s.refs, { show: 1 })}</div>${s.points.length > 1 ? `
       <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}`;
     wireBoxToggle(el, el.querySelector('.toggle-sit'), 'sit-open');
     wireRefs(el, s.refs);
@@ -7447,9 +7461,9 @@ function renderIranBrief() {
     const old = pts.length && a.lastNewsAt && a.lastNewsAt !== b.updatedAt;
     return `<article class="front-card">
       <div class="front-head"><strong>${escapeHtml(a.name)}</strong></div>
-      ${pts.length ? `<div class="front-pts">${pointsHtml(pts, a.refs, { show: 2 })}</div>` : '<p class="front-asof">Nothing reported here yet.</p>'}
+      ${pts.length ? `<div class="front-pts">${pointsHtml(pts, a.refs, { show: 1 })}</div>` : '<p class="front-asof">Nothing reported here yet.</p>'}
       ${old ? `<p class="front-asof">${escapeHtml(T('As of {t}, {d}', { t: fmtClock(a.lastNewsAt), d: new Date(a.lastNewsAt).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ }) }))}</p>` : ''}
-      ${pts.length > 2 ? '<button type="button" class="toggle-front">Read more</button>' : ''}
+      ${pts.length > 1 ? '<button type="button" class="toggle-front">Read more</button>' : ''}
     </article>`;
   });
   wrap.innerHTML = `<h2>Arenas</h2><div id="fronts-stamp">${cadenceStamp(true, b)}</div><div id="fronts" class="one-front"></div>`;

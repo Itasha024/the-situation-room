@@ -32,7 +32,7 @@ export const IRAN_ARENAS = {
   axis: "Axis of Resistance",
   us_region: "US in the region",
   inside_us: "Inside the US",
-  israel_home: "Israel home front",
+  israel_home: "Israel",
 } as const;
 export type IranArena = keyof typeof IRAN_ARENAS;
 
@@ -78,8 +78,9 @@ WHAT TO PUBLISH (publish: true)
 - The nuclear file: the IAEA, enrichment, the sites (Natanz, Fordow, Isfahan, Arak, Bushehr), inspections, NPT moves.
 - Inside Iran: fuel, power and water shortages, the rial and prices, imports and exports, protests, strikes, arrests, executions, internet blackouts, rifts at the top.
 - Sanctions: new US, EU and UN sanctions, waivers, enforcement, shadow-fleet seizures.
-- The US in the region (bases, deployments, arms deals, ties with the Gulf, Iraq and Israel) and inside the US when it is about this war (Congress, war powers, polls, gasoline prices).
-- Israel's home front: sirens, alerts, the cabinet's war decisions.
+- The US in the region: what the US itself does or says there (its forces, bases, warships, deployments, arms deals, its own dealings with the Gulf, Iraq and Israel) and inside the US when it is about this war (Congress, war powers, polls, gasoline prices).
+- Israel's war beyond its borders: its strikes and raids in Lebanon, Gaza, Syria, Iraq, Iran or anywhere else; attacks on Israel and its forces, and the Israeli dead and wounded from them; the cabinet's and the army's war decisions. Israel's home affairs (politics, courts, the economy, daily life) are not published, reject_reason "not iran".
+- Israel's own words and acts come from Israel's own sources (the IDF, Israeli officials, Israeli media), and its strikes in Lebanon from Lebanon's own sources. Iran's and other countries' outlets retelling them are relays, reject_reason "relay", unless it is that outlet's own exclusive.
 - News reports that rest on officials or sources ("the White House asked the Pentagon for strike options, US officials say"), an investigation's findings, a leak, a first figure: something newly FOUND about an earlier event is current.
 - An open-source (OSINT) analyst's OWN finding is a report: satellite imagery it read, footage it geolocated, ships it tracked. Say how it was seen only when the post says so.
 
@@ -87,8 +88,8 @@ WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 - The Houthis' own war in Yemen (Houthis against the Yemeni government or Saudi Arabia, fronts inside Yemen): reject_reason "yemen desk". A Houthi act in Iran's cause (fire on Israel or US ships, tied to Iran) is published.
 - Houthi missiles or drones on Saudi Arabia, Saudi interceptions over Riyadh or other Saudi cities, debris falling there, and flights to Saudi cities stopped over them: reject_reason "yemen desk".
 - An incident the text dates days back (a UKMTO report of 6 October relayed on the 8th) is not new: duplicate_of the recent report that told it, else publish=false, reject_reason "old".
-- Gaza and the West Bank, unless Iran or Hezbollah act in it.
-- Syria: Israel's operations there (Quneitra, Daraa, southern Syria, the Golan buffer zone) and Syria's own affairs, reject_reason "not iran", unless Iran, the IRGC or Hezbollah is a party. Syria is not this desk's, and an Iranian outlet is never the source for it. Other wars (Ukraine, Sudan) unless Iran is a party.
+- Gaza and the West Bank: only Israel's strikes and raids there and attacks on Israel from there; their politics, aid and daily life are not this desk's, unless Iran or Hezbollah act in it.
+- Syria: Israel's strikes and raids there are published, from Israeli or Syrian sources or a wire; Syria's own affairs are not, reject_reason "not iran", unless Iran, the IRGC or Hezbollah is a party. An Iranian outlet is never the source for Syria. Other wars (Ukraine, Sudan) unless Iran is a party.
 - Commentary, reject_reason "commentary": explainers, opinion, columns, analysis, and the views of writers, media figures, researchers, analysts, experts, think tanks and FORMER officials ("Atwan: Trump seeks to shift the costs", "an Iran International analyst says", "former US envoy Hochstein says"), whoever carries them. A poll is not commentary.
 - Recaps, reject_reason "recap": a post that sums up events already reported one by one, a channel's round-up or news package ("بسته خبری", "مرور اخبار", "حصاد", "أبرز الأحداث", "ملخص"), a programme title, a documentary, an anniversary, a battle map. Old events retold as new.
 - Clerics, reject_reason "cleric": a cleric, Friday-prayer leader, preacher, marja or body of clerics preaching, praising or condemning. The exceptions: a cleric who holds an office in this war (the Supreme Leader, the judiciary chief, a minister, a commander), and a party's official religious leadership calling to fight, declaring jihad or ruling on this war.
@@ -195,12 +196,34 @@ export const isIranWar = (text: string): boolean => IRAN_GATE.test(String(text |
 export const passesIranOwnGate = (text: string): boolean => IRAN_OWN_GATE.test(String(text || ""));
 
 /**
+ * Israel's war beyond its borders (user, 9 Oct): its strikes in Gaza,
+ * Lebanon, Syria, Iraq and anywhere else, and attacks on it from there, are
+ * the Iran desk's, though they name no word of Iran's.
+ */
+const ISRAEL_ABROAD = new RegExp(
+  [
+    String.raw`\b(?:Israel\w*|IDF)\b[^.\n]{0,90}\b(?:strikes?|struck|airstrikes?|air strikes?|raids?|shell\w*|bomb\w*|kill\w*|attack\w*|demolish\w*|blew up|drone)\b[^.\n]{0,90}\b(?:Gaza|Khan Younis|Rafah|Jabalia|Deir al-Balah|Lebanon|Lebanese|Beirut|Dahiyeh|Nabatieh|Tyre|Bint Jbeil|Bekaa|Syria\w*|Damascus|Iraq\w*)\b`,
+    String.raw`\b(?:Gaza|Lebanon|Lebanese|Syria\w*|Iraq\w*)\b[^.\n]{0,90}\b(?:Israeli (?:strikes?|airstrikes?|air strikes?|raids?|shelling|drone|army|forces|troops|soldiers?))\b`,
+    String.raw`\b(?:Israeli (?:soldiers?|troops|officers?|reservists?|forces))\b[^.\n]{0,60}\b(?:killed|wounded|injured)\b`,
+    "(?:غارة|غارات|قصف|استهداف|توغل|تفجير)[^.\\n]{0,40}(?:إسرائيلي|إسرائيلية|الاحتلال|العدو)[^.\\n]{0,80}(?:غزة|خان يونس|رفح|جباليا|لبنان|الجنوب اللبناني|بيروت|الضاحية|النبطية|صور|بنت جبيل|البقاع|سوريا|دمشق)",
+    "(?:غزة|خان يونس|رفح|لبنان|الجنوب|النبطية|صور|بنت جبيل|سوريا)[^.\\n]{0,60}(?:غارة|غارات|قصف)[^.\\n]{0,30}(?:إسرائيلي|إسرائيلية|الاحتلال|العدو)",
+  ].join("|"),
+  "i",
+);
+export const israelAbroad = (text: string): boolean => ISRAEL_ABROAD.test(String(text || ""));
+/** A shared source's item for the Iran desk: its war, or Israel's war beyond its borders. */
+export const isIranDeskItem = (text: string): boolean => isIranWar(text) || israelAbroad(text);
+
+/**
  * Israeli media (stage 4c) post about everything in Israel: only the Iran war,
  * narrowly or widely (Iran, its allies' fronts, Hormuz, the nuclear file, the
  * talks), passes. Hebrew has no word edges and joins its prefixes (ב, ה, ו, ל,
  * מ, ש) to the word, so its words match inside longer ones.
  */
 const IRAN_WAR_HE = /איראנ|אירנ|טהרן|משמרות המהפכה|חמינאי|פזשכיאן|עראקצ'י|לאריג'אני|קאליבאף|הורמוז|המפרץ הפרסי|בנדר עבאס|נתנז|פורדו|איספהאן|אספהאן|בושהר|אורניום|סבא"א|גרוסי|חיזבאללה|נסראללה|נעים קאסם|המיליציות (?:בעיראק|השיעיות|העיראקיות)|ויטקוף|גרעיני|תוכנית הגרעין|מתקני הגרעין|הסכם הגרעין/;
+
+/** Israel's war beyond its borders, in Hebrew (user, 9 Oct): Gaza, Lebanon, Syria, Iraq, the Houthis. */
+const ISRAEL_ABROAD_HE = /עזה|רצועת|חמאס|ג'יהאד האסלאמי|לבנון|ביירות|דאחיה|ליטני|סוריה|דמשק|עיראק|חות'י|תימן/;
 
 /** An outlet another newsroom relays: the original is read directly. */
 const FOREIGN_OUTLETS = "רויטרס|רוייטרס|AP|אי[- ]?פי|CNN|סי[- ]?אן[- ]?אן|אל[- ]?ג'זירה|אל[- ]?ג׳זירה|אל[- ]?ערבייה|אל[- ]?מיאדין|אל[- ]?אח'באר|א-?שרק אל-?אווסט|ניו[- ]יורק טיימס|וול[- ]סטריט ג'ורנל|וושינגטון פוסט|אקסיוס|פוקס|בלומברג|BBC|בי[- ]בי[- ]סי|פייננשל טיימס|טלגרף|סקיי ניוז|תסנים|פארס|אירנ\"?א|פרס[- ]?TV|פרס טי[- ]?וי|איראן אינטרנשיונל|Reuters|Axios|Al Jazeera|Al Arabiya|Al Mayadeen|New York Times|NYT|Wall Street Journal|WSJ|Washington Post|Bloomberg|Fox News|Financial Times|Telegraph|Sky News|Tasnim|Fars|IRNA|Press TV|Iran International";
@@ -243,7 +266,7 @@ const EXCLUSIVE = /פרסום ראשון|בלעדי|חשיפת|נחשף ב|exclu
  */
 export function passesIsraeliMediaGate(text: string): boolean {
   const t = String(text || "");
-  if (!isIranWar(t) && !IRAN_WAR_HE.test(t)) return false;
+  if (!isIranWar(t) && !IRAN_WAR_HE.test(t) && !ISRAEL_ABROAD_HE.test(t) && !israelAbroad(t)) return false;
   if (EXCLUSIVE.test(t)) return true;
   if (FOREIGN_DESK.test(t) || FOREIGN_RELAY.test(t.slice(0, 220))) return false;
   return ISRAELI_SIDE.test(t.slice(0, 400));
@@ -297,6 +320,11 @@ const IRAN_PARTY = /\b(?:Iran\w*|IRGC|Quds Force|Hezbollah|Revolutionary Guards?
 /** Iran itself in a story: Hezbollah's name alone does not make the Houthis' fire on Saudi Arabia Iran's. */
 const IRAN_ACTOR = /\b(?:Iran\w*|IRGC|Revolutionary Guards?|Quds Force)\b/i;
 const IRAN_IN_YEMEN_STORY = /\b(?:Israel\w*|Eilat|US (?:warship|ship|Navy|base|forces)|American (?:warship|ship)|Red Sea shipping)\b/i;
+/** The Yemen desk's war, with no part of Iran's in it: the Houthis and Saudi Arabia (9 Oct: a Saudi defence pact in "US in the region"). */
+export function yemenOnly(text: string): boolean {
+  const t = String(text || "");
+  return (YEMEN_THEATRE.test(t) || /\bHouthi\w*\b/i.test(t)) && !IRAN_ACTOR.test(t) && !IRAN_IN_YEMEN_STORY.test(t);
+}
 
 /**
  * An economy story is the desk's only through the war (9 Oct: French power
@@ -331,7 +359,7 @@ export function iranCopyProblem(r: { headline: string; body?: string; speaker_le
   if (COMMENTARY.test(`${h} ${r.speaker_lead ?? ""}`)) return "commentary: analysts, experts and former officials are not reports";
   if (OUTLET_OPENS.test(h)) return "leads with outlet: an outlet is never the teller; lead with the fact, or with the official or source who said it";
   if (YEMEN_THEATRE.test(copy) && !IRAN_ACTOR.test(copy) && !IRAN_IN_YEMEN_STORY.test(copy)) return "yemen desk: the Houthis' war with Saudi Arabia is the Yemen desk's";
-  if (SYRIA_THEATRE.test(copy) && !IRAN_PARTY.test(copy)) return "not iran: Syria is not this desk's";
+  if (SYRIA_THEATRE.test(copy) && !IRAN_PARTY.test(copy) && !israelAbroad(copy)) return "not iran: Syria is not this desk's";
   if (OTHER_WAR.test(h) && !IRAN_PARTY.test(copy) && !/\b(?:Hormuz|Shahed)\b/i.test(copy)) return "not iran: the Ukraine war is not this desk's";
   if (r.event_type === "economy" && !WAR_ECON.test(h)) return "not iran: an economy story is this desk's only through the war, Hormuz, shipping, oil, sanctions or the prices the war moves";
   // Someone not widely known is named by job, the name in the body (user, 8 Oct).

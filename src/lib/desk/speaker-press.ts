@@ -51,6 +51,24 @@ export function subjectNation(headline: string): Nation | null {
   return best;
 }
 
+/** Does the text name this country (its name, people, places, bodies)? */
+export function namesNation(nation: Nation, text: string): boolean {
+  const re = NATION_WORDS.find(([n]) => n === nation)?.[1];
+  return !!re && re.test(String(text || ""));
+}
+
+/** The country an outlet or account belongs to: its government, state agency or own press. */
+export function sourceNation(source: string, lean = ""): Nation | null {
+  const s = String(source || "").trim();
+  if (FOREIGN_SERVICE.test(s)) return null;
+  return find(OFFICIAL, s) ?? find(AGENCY, s) ?? find(OUTLET_NATION, s) ?? leanNation(lean, "");
+}
+
+/** A wire every desk trusts for any country's story. */
+export function isWireSource(source: string): boolean {
+  return WIRE.test(String(source || "").trim());
+}
+
 /** A country's own official voices: its government's accounts and bodies. */
 const OFFICIAL: [Nation, RegExp][] = [
   ["us", /^(?:CENTCOM|Truth Social|Donald J\. Trump|White House|US Embassy|US Mission|State Department|Department of|US Treasury|Pentagon|US Navy|NAVCENT|Rapid Response 47)/i],
@@ -157,8 +175,14 @@ const TELLER =
 export function rivalRelay(headline: string, source: string, lean = "", own = false): string | null {
   const s = String(source || "").trim();
   if (own || find(OFFICIAL, s) || WIRE.test(s) || AGGREGATOR.test(s)) return null;
-  const who = subjectNation(speakerOf(headline));
+  const speaker = speakerOf(headline);
+  const who = subjectNation(speaker);
   if (!who) return null;
+  const mine = sourceNation(s, lean);
+  // A country's media retold by another country's outlet ("Israeli Channel 12: …" from Iran International, 9 Oct).
+  if (MEDIA_SPEAKER.test(speaker) && mine !== who) return `relay: ${NAME[who]}'s media are read directly, not ${s}'s retelling`;
+  // Israel's words from Israel's own sources only, whoever retells them (user, 9 Oct: "for the 100th time").
+  if (who === "israel" && mine !== "israel") return `relay: Israel is told from its own sources (the IDF, Israeli officials, Israeli media), not ${s}`;
   const axis = lean === "axis" || find(AGENCY, s) === "iran";
   const israeli = lean === "israel" || find(OUTLET_NATION, s) === "israel";
   // Britain's too: UKMTO's word on the Gulf's ships was Fars' card (9 Oct).
@@ -172,6 +196,10 @@ export function officialVoice(source: string): Nation | null {
   return find(OFFICIAL, String(source || "").trim());
 }
 
+/** A speaker that is an outlet: "Israeli Channel 12", "Hebrew media", "Iranian state TV". */
+const MEDIA_SPEAKER = /(?:media|channel|newspaper|daily|TV|television|radio|outlet|press|broadcaster|Channel d+|Kan|Ynet|Haaretz|Maariv|Walla)/i;
+const NAME: Record<Nation, string> = { us: "the US", iran: "Iran", israel: "Israel", saudi: "Saudi Arabia", uae: "the UAE", qatar: "Qatar", oman: "Oman", iraq: "Iraq", lebanon: "Lebanon", yemen: "Yemen", russia: "Russia", uk: "Britain" };
+
 /** Where in Lebanon a strike lands. */
 const LEBANON_PLACE = /\b(?:Lebanon|Lebanese|Beirut|Dahiyeh|Dahieh|Bint Jbeil|Tyre|Sidon|Nabatieh|Nabatiyeh|Marjayoun|Bekaa|Baalbek|Hermel|Khiam|Naqoura|Litani)\b/i;
 
@@ -181,9 +209,14 @@ const LEBANON_PLACE = /\b(?:Lebanon|Lebanese|Beirut|Dahiyeh|Dahieh|Bint Jbeil|Ty
  * The IDF's own word on its own strike stays: that is Israel's side, told by
  * Israel. Any other country's outlet only relays what Lebanon reports.
  */
-export function attackTeller(headline: string, source: string, actor: string, combat: boolean): string | null {
-  if (!combat || actor !== "israel" || !LEBANON_PLACE.test(String(headline || ""))) return null;
+export function attackTeller(headline: string, source: string, actor: string, combat: boolean, lean = ""): string | null {
+  if (!combat || actor !== "israel") return null;
   const s = String(source || "").trim();
+  // Anywhere else (Gaza, Syria, Iraq): never from Iran's outlets (user, 9 Oct).
+  if (!LEBANON_PLACE.test(String(headline || ""))) {
+    const iranian = !find(OFFICIAL, s) && (sourceNation(s, lean) === "iran" || lean === "opposition");
+    return iranian ? `relay: Israel's attacks are told by the place's own sources, Israel's or a wire, not ${s}` : null;
+  }
   const n = find(OFFICIAL, s) ?? find(AGENCY, s) ?? find(OUTLET_NATION, s);
   if (n === "lebanon" || find(OFFICIAL, s) === "israel") return null;
   return `relay: Israel's attacks in Lebanon are told by Lebanon's own sources, not ${s}`;

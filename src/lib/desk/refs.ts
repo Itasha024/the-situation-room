@@ -11,8 +11,26 @@
  * first use, stored in the text as "[[n]]"; an id the writer made up is dropped.
  */
 
+import { isAggregator } from "./credibility.ts";
+import { nearness, subjectNation } from "./speaker-press.ts";
+
 /** A report a point rests on: enough for the list and for a pop-up when the page does not hold the card. */
-export type Ref = { fp: string; source: string; at: string; url: string; headline: string; body?: string; trump?: boolean };
+export type Ref = { fp: string; source: string; at: string; url: string; headline: string; body?: string; trump?: boolean; lean?: string; excl?: true };
+
+/**
+ * Which of several reports of one fact the point cites (user, 9 Oct: three
+ * numbers for one Trump post, "only one number, the most official, credible
+ * and full"): the speaker's or the country's own account first (Truth Social
+ * for Trump, the US Treasury for its sanctions, the IDF for Israel's army),
+ * then its state agency and its own outlets, then a wire; an aggregator last;
+ * the fuller report breaks a tie.
+ */
+export function refRank(ref: Ref, point: string): number {
+  if (ref.trump) return /\bTrump\b/i.test(point) ? 100 : 20;
+  if (isAggregator(ref.source)) return 0;
+  const near = nearness(ref.source, subjectNation(point), ref.lean ?? "");
+  return near * 4 + Math.min(3, (ref.headline.length + (ref.body?.length ?? 0)) / 150);
+}
 
 /** The writer's marks: "[r3]", "[r3, r7]", "[r3][t1]". */
 const ID_MARK = /\s*\[((?:[rt]\d+)(?:\s*[,;]\s*[rt]?\d+)*)\]/gi;
@@ -36,15 +54,19 @@ export function numberRefs(points: string[], refOf: (id: string) => Ref | null |
   const refs: Ref[] = [];
   const numOf = new Map<string, number>();
   const out: string[] = [];
-  for (const p of points) {
-    // Three references a point at most: the list stays short, and three are enough to read more (9 Oct).
-    let left = 3;
+  for (const raw of points) {
+    // Marks side by side are one group: "[r1][r2][r3]" is "[r1, r2, r3]".
+    const p = raw.replace(/\]\s*\[(?=[rt]\d)/gi, ", ");
+    // Two references a point at most, one for each fact it joins (user, 9 Oct).
+    let left = 2;
     const text = p.replace(ID_MARK, (_m, list: string) => {
       const ids = list.split(/\s*[,;]\s*/).map((x, i, all) => (/^\d+$/.test(x) ? `${(all[0].match(/^[rt]/i) || ["r"])[0]}${x}` : x).toLowerCase());
+      // Several reports of one fact: the best one only.
+      const known = ids.map((id) => refOf(id)).filter((r): r is Ref => !!r);
+      const best = known.reduce<Ref | null>((a, r) => (!a || refRank(r, raw) > refRank(a, raw) ? r : a), null);
       let marks = "";
-      for (const id of ids) {
-        const ref = refOf(id);
-        if (!ref || left <= 0) continue;
+      for (const ref of best ? [best] : []) {
+        if (left <= 0) continue;
         left -= 1;
         const key = ref.fp;
         let n = numOf.get(key);
@@ -70,8 +92,10 @@ export function stripRefs(text: string): string {
 }
 
 /** A card as a reference. */
-export function refOfReport(r: { fp: string; source: string; at: string; url: string; summary: string }): Ref {
-  return { fp: String(r.fp), source: String(r.source || ""), at: String(r.at || ""), url: String(r.url || ""), headline: String(r.summary || "") };
+export function refOfReport(r: { fp: string; source: string; at: string; url: string; summary: string; lean?: string; flags?: string[] }): Ref {
+  const lean = String(r.lean || "");
+  const excl = Array.isArray(r.flags) && r.flags.includes("exclusive");
+  return { fp: String(r.fp), source: String(r.source || ""), at: String(r.at || ""), url: String(r.url || ""), headline: String(r.summary || ""), ...(lean ? { lean } : {}), ...(excl ? { excl: true as const } : {}) };
 }
 
 /** Headlines as points, each with its own card as its one reference. */

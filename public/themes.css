@@ -766,3 +766,13 @@ html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","No
 .refs .ref-num{display:inline-block;min-width:1.5em;font-weight:700;color:var(--t-link,#60a5fa)}
 .front-card .front-pts{margin-top:.35rem}
 .ref-sheet{border-top-color:var(--t-line-strong,#334155)}
+/* References (user, 9 Oct): the first one, an arrow for the rest; the pop-up turns through them */
+.refs-box:not(.open) .ref-rest{display:none}
+.refs li:first-child{display:flex;align-items:center;gap:.35rem}
+.ref-more{all:unset;cursor:pointer;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;color:var(--t-muted,#8b98a8);border:1px solid var(--t-line,#2a3442)}
+.ref-more svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.ref-more:hover,.ref-more:focus-visible{color:var(--t-text,#c9d4e0);border-color:var(--t-line-strong,#334155)}
+.refs-box.open .ref-more svg{transform:rotate(180deg)}
+.ref-list .pager{border:0;background:transparent;overflow:visible}
+.ref-list .pager .card{margin:0}
+@media (hover:hover) and (min-width:721px){.ref-list .pager.many{padding:0 2.3rem}.ref-list .pg-prev{left:0}.ref-list .pg-next{right:0}}

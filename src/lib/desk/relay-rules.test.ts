@@ -59,3 +59,26 @@ test("another war is not the Iran desk's", () => {
   assert.equal(v.kind, "reject");
   assert.match((v as { note: string }).note, /Ukraine/);
 });
+
+test("Israel is told from its own sources, whoever retells it; air strikes in Lebanon too (live cards, 9 Oct)", async () => {
+  const { rivalRelay } = await import("./speaker-press.ts");
+  const { israelAbroad, isIranDeskItem, passesIsraeliMediaGate } = await import("./iran-reader.ts");
+  // Tasnim's air strike on Al-Mansouri: a strike, not shelling, went past the Lebanon rule.
+  const v = decideIranForTest(
+    { publish: true, headline: "Israeli airstrike reported on Al-Mansouri in southern Lebanon", body: "", event_type: "air_strike", actor_side: "israel", targets: ["Al-Mansouri"], confident_roles: true } as never,
+    "غارة إسرائيلية على بلدة المنصوري جنوب لبنان",
+    "Tasnim",
+  );
+  assert.equal(v.kind, "reject");
+  assert.match(rivalRelay("IDF confirms Maj. Elyav Haim Tzlafmos killed in helicopter crash in south Lebanon", "Al-Alam", "axis") ?? "", /relay/);
+  assert.match(rivalRelay("Israeli Channel 12: US officials told Eyal Zamir the White House issued a prepare-to-strike order", "Iran International", "opposition") ?? "", /relay/);
+  assert.match(rivalRelay("Israeli army: struck Hezbollah sites", "Al Arabiya", "gulf") ?? "", /relay/);
+  assert.equal(rivalRelay("IDF: struck Hezbollah launchers in south Lebanon", "N12", "israel"), null);
+  assert.equal(rivalRelay("Israeli officials: Iran is rebuilding its launchers", "Al Arabiya", "gulf", true), null);
+  // Israel's war beyond its borders is the Iran desk's; its home affairs are not.
+  assert.ok(israelAbroad("Israeli airstrike kills four in Khan Younis, Gaza"));
+  assert.ok(isIranDeskItem("غارة إسرائيلية تستهدف سيارة في النبطية جنوب لبنان"));
+  assert.ok(!isIranDeskItem("Israeli court delays Netanyahu testimony"));
+  assert.ok(passesIsraeliMediaGate("צה\"ל תקף מטרות של חמאס ברצועת עזה"));
+  assert.ok(!passesIsraeliMediaGate("צה\"ל: גיוס חרדים יורחב בשנה הבאה"));
+});

@@ -177,3 +177,22 @@ test("Yemen's press labelling the Houthis Iran's is not the Iran desk's news (so
   for (const t of ["ميليشيا الحوثي الإيرانية تقصف الأحياء السكنية في تعز", "Houthi militia, Iran's proxy, kill civilians in Hodeidah", "مليشيا الحوثي المدعومة من إيران تستهدف مواقع الجيش في مأرب", "ذراع إيران في اليمن تقصف مأرب"]) assert.equal(_gate(t), false, t);
   assert.equal(_gate("Iranian experts help Houthis assemble drones in Sanaa, sources say"), true);
 });
+
+test("a relay of UKMTO is matched to UKMTO's own post the site already read, by its picture's words (user, 9 Oct)", async () => {
+  const { remember, ownRead, forgetAll } = await import("./recent-reads.ts");
+  forgetAll();
+  const now = Date.parse("2026-10-09T12:30:00Z");
+  const ukmto = (n: number, text: string, at: string) => ({ source: "UKMTO", url: `https://x.com/UK_MTO/status/${n}`, text, at });
+  remember(
+    [
+      ukmto(1, "UKMTO WARNING 160-26. Incident. A vessel reported a suspicious approach 40NM south of Aden. Vessel and crew safe.", "2026-10-09T06:00:00Z"),
+      ukmto(2, "UKMTO WARNING 161-26. Incident. A vessel was struck by an unknown projectile 13NM east of Fujairah. Vessel and crew safe.", "2026-10-09T12:00:00Z"),
+      ukmto(3, "UKMTO WARNING 159-26. Incident update. Vessel transited safely past Hodeidah.", "2026-10-08T20:00:00Z"),
+      { source: "Iran International", url: "https://x.com/IranIntl_En/status/9", text: "UKMTO: vessel struck by projectile east of Fujairah", at: "2026-10-09T12:20:00Z" },
+    ],
+    now,
+  );
+  const hit = ownRead({ names: ["UKMTO"], x: "UK_MTO", site: "ukmto.org" }, ["vessel", "struck", "projectile", "Fujairah", "east"], Date.parse("2026-10-09T12:20:00Z"), "https://x.com/IranIntl_En/status/9", now);
+  assert.equal(hit?.url, "https://x.com/UK_MTO/status/2");
+  forgetAll();
+});

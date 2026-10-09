@@ -46,6 +46,7 @@ import {
   whichCarries,
 } from "./originals.ts";
 import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
+import { ownRead } from "./recent-reads.ts";
 
 export type Cited = {
   name: string;
@@ -151,10 +152,10 @@ const CITABLE: [RegExp, Cited][] = [
   [/الخارجية السعودية|Saudi (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Saudi Foreign Ministry", "spa.gov.sa", "SA")],
   [/وكالة الأنباء السعودية|\(واس\)|\bواس\b|Saudi Press Agency/i, B("SPA", "spa.gov.sa", "SA")],
   [/سنتکام|فرماندهی مرکزی (?:ارتش )?(?:آمریکا|ایالات متحده)|سنتكوم|القيادة المركزية الأمريكية|CENTCOM|Central Command/i, B("CENTCOM", "centcom.mil", "US", { x: "CENTCOM" })],
-  [/وزارت خارجه (?:آمریکا|ایالات متحده)|الخارجية الأمريكية|الخارجية الأميركية|State Department/i, B("State Department", "state.gov", "US")],
+  [/وزارت خارجه (?:آمریکا|ایالات متحده)|الخارجية الأمريكية|الخارجية الأميركية|State Department/i, B("State Department", "state.gov", "US", { x: "StateDept" })],
   [/المبعوث الأممي|غروندبرغ|UN envoy|Grundberg/i, B("UN envoy's office", "osesgy.unmissions.org", "UN", { x: "OSE_Yemen" })],
   [/مجلس الأمن الدولي|Security Council/i, B("UN Security Council", "press.un.org")],
-  [/عمليات التجارة البحرية البريطانية|\bUKMTO\b/i, B("UKMTO", "ukmto.org", "UK")],
+  [/عمليات التجارة البحرية البريطانية|\bUKMTO\b/i, B("UKMTO", "ukmto.org", "UK", { x: "UK_MTO" })],
   [/وزارة الدفاع البريطانية|\bUK (?:Defen[cs]e Ministry|Ministry of Defen[cs]e)\b|\bMoD\b/, B("UK Ministry of Defence", "gov.uk", "UK")],
   [/الاتحاد الأوروبي|\bEEAS\b|European Union/i, B("EU", "eeas.europa.eu")],
   // Wires and broadcasters the channels relay by name.
@@ -601,6 +602,8 @@ export type Found = {
   carrier?: boolean;
   /** The interview the speaker gave this outlet: its exclusive, with no "Also". */
   exclusive?: boolean;
+  /** Found in what the site already read: its text is in hand (a post's, a picture's words), and is not fetched again. */
+  text?: string;
 };
 
 /** The original, read in full and queued for the reader to write the card from. */
@@ -1068,11 +1071,11 @@ export async function traceOrigins(
     reads -= 1;
     dirty = true;
     const cover = e.keys && covers > 0 ? { name: f.source, keys: e.keys, at: Date.parse(r.at) } : undefined;
-    const text = await readOriginal(f, e.cited ? editionOf(hostOf(f.url), e.cited.lang) : "en", (route) => {
+    const text = f.text ?? (await readOriginal(f, e.cited ? editionOf(hostOf(f.url), e.cited.lang) : "en", (route) => {
       logRoute((routes ??= {}), f.url, route, now);
       if (route === "coverage") covers -= 1;
-    }, cover);
-    if (text.length < 400) {
+    }, cover));
+    if (text.length < (f.text ? 40 : 400)) {
       if (resolverResting()) return; // not the page's fault: tried again next tick
       f.fails = (f.fails ?? 0) + 1;
       f.nextReadAt = now + RETRY_MS * 2 ** (f.fails - 1);
@@ -1121,13 +1124,21 @@ ${text}`.trim(),
   };
 
   /**
-   * Look for the original: a leader's words as he said them; otherwise the
-   * outlet's site, its name elsewhere, its country's press; last, the outlet's
-   * own recent articles, read and matched by a model.
+   * Look for the original: first in what the site itself read in the last two
+   * days (the body's or the speaker's own post, already in hand); then a
+   * leader's words as he said them; otherwise the outlet's site, its name
+   * elsewhere, its country's press; last, the outlet's own recent articles,
+   * read and matched by a model.
    */
   const find = async (e: Waiting, firstHand = false): Promise<Found | null> => {
     const at = Date.parse(e.report.at);
     const sp = e.cited.speaker ? speakerNamed(e.cited.speaker) : null;
+    const owner = sp ? { names: [sp.name], x: sp.x, site: sp.official } : { names: [e.cited.name], x: e.cited.x, site: e.cited.site };
+    const read = e.cited.kind === "group" ? null : ownRead(owner, e.keys, at, e.report.url);
+    if (read && read.source !== e.report.source) {
+      console.log(`[origin] ${e.report.fp}: the original was in the site's own reads: ${read.source}`);
+      return { url: read.url, source: read.source, title: read.text.split("\n")[0].slice(0, 140), text: read.text };
+    }
     if (sp) {
       if (!e.trKeys) e.trKeys = await translateKeys(e.keys, sp.lang);
       const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o), e.cited.spokeTo ?? []);
@@ -1157,7 +1168,8 @@ ${text}`.trim(),
 
   /** A found original at an outlet the desk does not read becomes one of its sources. */
   const learn = async (f: Found, e: { cited?: Cited }, fp: string) => {
-    if (!opts.knownHost || f.carrier) return;
+    // Found in the site's own reads: a source the site reads already.
+    if (!opts.knownHost || f.carrier || f.text) return;
     learned ??= await loadLearned(store);
     const sp = e.cited?.speaker ? speakerNamed(e.cited.speaker) : null;
     const hit: Hit = { url: f.url, source: f.source, title: f.title };

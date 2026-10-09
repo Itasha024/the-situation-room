@@ -43,6 +43,7 @@ import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
 import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranDeskItem } from "./desk/iran-reader.ts";
+import { remember } from "./desk/recent-reads.ts";
 import { attributeVerdict, colonSpeaker, tidySpeaker } from "./desk/reader.ts";
 
 export { checkLinks, namedSpeaker, speakerKey };
@@ -2173,6 +2174,8 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   const iranInbox: RawHit[] = [];
   // Every source's items on that war go there, a source with no group listed (a learned outlet) as International.
   const toIran = (rows: RawHit[], group: IranLean | undefined) => {
+    // Every item read is kept in memory for two days: where a relay's original is looked for first (recent-reads.ts).
+    remember(rows);
     const lean = group ?? "intl";
     for (const r of rows) if (isIranDeskItem(`${r.title ?? ""} ${r.text}`)) iranInbox.push({ ...r, lean, picked: undefined });
   };

@@ -18,6 +18,7 @@ import { IRAN_RSS, IRAN_TG, IRAN_X, ISRAELI_MEDIA, type IranLean } from "./desk/
 import { isIranWar, passesIranOwnGate, passesIsraeliMediaGate } from "./desk/iran-reader.ts";
 import { type Candidate, IRAN_READER, USAGE_KEY, type Usage, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
+import { remember } from "./desk/recent-reads.ts";
 import { combineSystem } from "./desk/combine.ts";
 import { isExclusive } from "./desk/exclusive.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
@@ -205,6 +206,7 @@ export async function fetchIranSources(state: FetchState, now: number): Promise<
   for (const s of IRAN_X) run(`x:${s.id}`, s.name, "x", s.every, () => readX(s, iState, now));
   for (const f of [...IRAN_RSS, ...SEARCHES]) run(`web:${f.id}`, f.name, "web", f.every, () => readFeed(f));
   await Promise.allSettled(jobs);
+  remember(own);
 
   return { hits: own.filter((h) => passesOwnSourceGate(h)), status, yemen: toYemen(own) };
 }

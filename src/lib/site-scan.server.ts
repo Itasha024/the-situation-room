@@ -27,6 +27,7 @@
  *            on the side, to check the reader would get the same items.
  *   on     — this scan.
  */
+import { remember } from "./desk/recent-reads.ts";
 import { getStore } from "./desk/store.ts";
 import type { ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { scanIranSources } from "./iran-scan.server.ts";
@@ -89,6 +90,7 @@ async function scanThenReadYemen(state: ScanState, prev: ScanPayload | null): Pr
     })
     .catch((err) => console.error("[site] Iran sources:", err instanceof Error ? err.message : err));
   const got = await fetchYemenSources(state, prev);
+  remember(got.hits);
   let mine: YemenFetch = got;
   try {
     await store.putMany(YEMEN_INBOX, { [String(got.at)]: got });

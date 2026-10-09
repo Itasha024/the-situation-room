@@ -7095,7 +7095,7 @@ function startIranFeed() {
   });
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
-  const pull = () => { loadIranFeed(); loadIranScan(); };
+  const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
@@ -7165,6 +7165,101 @@ function renderIranScan() {
   list.innerHTML = (s.cycleNote ? `<p class="ls-note">${escapeHtml(s.cycleNote)}</p>` : '') + (rows.length
     ? rows.map((h) => `<div class="ls-row"><div class="ls-top"><span class="ls-src">${escapeHtml(canonicalSourceName(h.source))}</span><span class="ls-at">${escapeHtml(h.at ? fmtStamp(h.at) : '')}</span><span class="ls-verdict">${h.kept ? 'Published' : h.outcome === 'tray' ? 'Waiting for the reader' : 'Not published'}</span></div><a class="ls-snip" href="${escapeHtml(h.url)}" target="_blank" rel="noopener">${escapeHtml((h.snippet || '').slice(0, 240))}</a></div>`).join('')
     : '<p class="soon">Nothing read yet.</p>');
+}
+
+/*
+ * Trump today (Round 30 stage 5; user, 9 Oct): his own words on Iran and the
+ * war, his posts and his words on camera, never a report about him. The
+ * column shows the latest; "All his statements" opens every one since the
+ * feed began, in boxes like the reports', with day headings in Israel time.
+ */
+const trumpFeed = { list: [], shown: 30, drawn: false };
+async function loadTrump() {
+  try {
+    const res = await fetch('/api/trump', { cache: 'no-cache' });
+    if (!res.ok) return;
+    const d = await res.json();
+    const list = Array.isArray(d.statements) ? d.statements : [];
+    const changed = list.length !== trumpFeed.list.length || (list[0] && trumpFeed.list[0] && list[0].id !== trumpFeed.list[0].id);
+    trumpFeed.list = list;
+    if (changed || !trumpFeed.drawn) renderTrumpPin();
+    if (changed && document.getElementById('trump-pop') && !document.getElementById('trump-pop').hidden) renderTrumpList();
+  } catch (e) { console.warn('trump feed', e); }
+}
+function trumpCardHtml(s) {
+  return `<article class="card ir-us trump-st" data-fp="${escapeHtml(s.id)}">
+      <div class="meta">
+        <time datetime="${escapeHtml(s.at)}">${escapeHtml(fmtStamp(s.at))}</time>
+        <span class="src-wrap">${sourceAnchors(s.source, s.url)}</span>
+      </div>
+      ${leadHtml(s.text)}
+      <div class="actions"><button type="button" class="toggle" hidden>${openFeedFps.has(s.id) ? 'Show less' : 'Read more'}</button></div>
+    </article>`;
+}
+function renderTrumpPin() {
+  const el = document.getElementById('trump-pin');
+  if (!el) return;
+  trumpFeed.drawn = true;
+  const list = trumpFeed.list;
+  const n = list.length;
+  el.innerHTML = `<div class="tp-head"><b>Trump today</b><span class="tp-note">His own words on Iran and the war</span></div>
+    ${n ? trumpCardHtml(list[0]) : '<p class="soon">Nothing yet: what he posts or says on Iran appears here within five minutes.</p>'}
+    ${n ? `<button type="button" class="tp-all" aria-haspopup="dialog">All his statements (${n}) <span aria-hidden="true">→</span></button>` : ''}`;
+  el.querySelectorAll('.card').forEach(wireFeedCard);
+  const all = el.querySelector('.tp-all');
+  if (all) all.addEventListener('click', () => openTrumpPop(all));
+}
+function trumpDay(at) {
+  const day = (t) => new Date(t).toLocaleDateString('en-CA', { timeZone: VIEW_TZ });
+  const name = new Date(at).toLocaleDateString(LOC, { timeZone: VIEW_TZ, weekday: 'short', day: 'numeric', month: 'short' });
+  return { key: day(at), label: day(at) === day(Date.now()) ? `Today · ${name}` : name };
+}
+function renderTrumpList() {
+  const box = document.querySelector('#trump-pop .tp-list');
+  if (!box) return;
+  const list = trumpFeed.list.slice(0, trumpFeed.shown);
+  let last = '';
+  box.innerHTML = list.map((s) => {
+    const d = trumpDay(s.at);
+    const head = d.key !== last ? `<h4 class="tp-day">${escapeHtml(d.label)}</h4>` : '';
+    last = d.key;
+    return head + trumpCardHtml(s);
+  }).join('') + (trumpFeed.list.length > list.length ? `<button type="button" class="more" id="tp-more">Show earlier statements (+${Math.min(30, trumpFeed.list.length - list.length)})</button>` : '');
+  box.querySelectorAll('.card').forEach(wireFeedCard);
+  const more = document.getElementById('tp-more');
+  if (more) more.addEventListener('click', () => { trumpFeed.shown += 30; renderTrumpList(); });
+}
+function openTrumpPop(from) {
+  let pop = document.getElementById('trump-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'trump-pop';
+    pop.className = 'tp-pop';
+    pop.hidden = true;
+    pop.innerHTML = `<div class="tp-back" data-close></div>
+      <div class="tp-sheet" role="dialog" aria-modal="true" aria-labelledby="tp-h">
+        <div class="tp-sheet-head">
+          <div><h3 id="tp-h">Trump today</h3><p class="tp-note">His own words on Iran and the war since 8 Oct: his posts on Truth Social and his words on camera.</p></div>
+          <button type="button" class="rel-x" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <div class="tp-list feed"></div>
+      </div>`;
+    document.body.appendChild(pop);
+    const close = () => {
+      pop.hidden = true;
+      document.documentElement.classList.remove('tp-open');
+      if (pop.from) pop.from.focus();
+    };
+    pop.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) close(); });
+  }
+  pop.from = from;
+  trumpFeed.shown = 30;
+  pop.hidden = false;
+  document.documentElement.classList.add('tp-open');
+  renderTrumpList();
+  pop.querySelector('.tp-list').scrollTop = 0;
+  pop.querySelector('.rel-x').focus();
 }
 
 window.startYemenDesk = startYemenDesk;

@@ -23,6 +23,7 @@ import { isExclusive } from "./desk/exclusive.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
 import { cleanUrl, isGnews, outletFromHost, resolveGoogleNews } from "./desk/gnews.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
+import { scanTrump } from "./trump-feed.server.ts";
 import {
   type DeskPipe,
   shapeCards,
@@ -247,6 +248,8 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   const dropped = (await store.getJson<Record<string, number>>("dropped")) ?? {};
   if (prev && Array.isArray(prev.reports)) prev.reports = prev.reports.filter((r) => !(r.fp in dropped));
   const seenAt = jerusalemIso(new Date(now));
+  // The Trump feed (stage 5) is read beside the cycle; the cycle never waits on it.
+  const trump = scanTrump(store, now).catch((err) => console.error("[trump]", err instanceof Error ? err.message : err));
 
   // 1. The Iran desk's own sources: read here in the old path (site-scan
   //    mode "off"), else by the site scan, which leaves them in the inbox.
@@ -390,6 +393,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   };
   await store.putJson(IRAN_PAYLOAD, payload);
   await store.putJson(STATE_KEY, state);
+  await trump;
   const tookMs = Date.now() - started;
   try {
     const log = (await store.getJson<{ at: string; tookMs: number; cards: number; read: number }[]>(IRAN_TICK_USAGE_KEY)) ?? [];

@@ -114,3 +114,13 @@ test("one claim told again with its rare figure is one card", () => {
   assert.ok(!sameRareFigure({ summary: "86 flights cancelled at Riyadh airport" }, { summary: "86 flights cancelled at Jeddah airport" }));
   assert.ok(!sameRareFigure({ summary: "Brent closes at $104 as Hormuz traffic falls" }, { summary: "Gold rises to $2026 an ounce" }));
 });
+
+test("the reader's word that a report is a duplicate holds only when the words or the spot agree", async () => {
+  const { foldIntoPublished } = await import("../yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const home = { ...base, fp: "a", url: "https://almashhad.news/1", source: "Almashhad", at: "2026-10-09T04:00:00Z", type: "statement", summary: "Yemeni government forces report 1,729 operations against Houthi targets" };
+  const other = { ...base, fp: "b", url: "https://yemenmonitor.com/2", source: "Yemen Monitor", at: "2026-10-09T05:00:00Z", type: "combat", summary: "Houthi forces execute teacher in Jabal Habashi district of Taiz", duplicateOf: "a" };
+  const reports = [home, other] as never[];
+  foldIntoPublished(reports, new Set(["a"]));
+  assert.equal(reports.length, 2);
+});

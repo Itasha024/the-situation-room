@@ -1561,6 +1561,9 @@ export function foldIntoPublished(
       ? homes.find(
           (o) =>
             open(o) && o.fp === r.duplicateOf && Math.abs(t - Date.parse(o.at)) <= DUPLICATE_WINDOW_MS && !differentSpeakers(o, r) &&
+            // The same story in words too, or the same spot: "Houthi forces execute a
+            // teacher in Taiz" was folded into "1,729 operations" on the reader's word (9 Oct).
+            (wordsInCommon(o.summary, r.summary) >= 2 || sameGround(o, r)) &&
             !numbersClash(`${o.summary} ${o.text ?? ""}`, `${r.summary} ${r.text ?? ""}`),
         )
       : undefined;

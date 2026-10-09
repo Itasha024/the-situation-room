@@ -7222,7 +7222,7 @@ function wireIranMapTools() {
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && iranPins.focus && !document.querySelector('.leaflet-popup')) toggle(); });
   }
 }
-/** The countries at war lit in their side's colour, borders and a light fill (user, 9 Oct); a side ticked off goes dark. */
+/** The countries at war filled in their side's colour as the Yemen map fills its areas (user, 9 Oct); a side ticked off goes clear. */
 async function drawIranCountries() {
   if (!map) return;
   try {
@@ -7244,7 +7244,8 @@ function iranCountryStyle(f) {
   const side = f && f.properties && f.properties.side;
   const ink = IRAN_PIN_INK[side] || '#94a3b8';
   const on = iranPins.on[side] !== false;
-  return { color: ink, weight: on ? 1.6 : 0, opacity: on ? 0.9 : 0, fillColor: ink, fillOpacity: on ? 0.1 : 0 };
+  // The Yemen map's look (user, 9 Oct: one style across the site): a solid fill under dark borders.
+  return { fillColor: ink, fillOpacity: on ? 0.38 : 0, color: EDGE, weight: 0.8, opacity: on ? 0.75 : 0.15 };
 }
 const iranSideOf = (ev) => (IRAN_PIN_INK[ev.actor] ? ev.actor : 'other');
 function iranPinShown(ev) {

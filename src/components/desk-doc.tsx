@@ -39,7 +39,7 @@ export function DeskDoc({ title, lede, children }: { title: string; lede?: React
       <header className="top doc-top">
         <div className="brand">
           <a className="desk-label-link" href="/yemen-conflict-desk">
-            <h1 className="desk-label">Yemen Conflict Desk</h1>
+            <h1 className="desk-label"><span className="dl-pre">Desk:</span> <span className="dl-name">Yemen conflict</span></h1>
           </a>
         </div>
       </header>

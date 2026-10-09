@@ -18,7 +18,7 @@ const DESK_HTML = `
 </div>
 <header class="top">
   <div class="brand">
-    <h1 class="desk-label">Yemen Conflict Desk</h1>
+    <h1 class="desk-label"><span class="dl-pre">Desk:</span> <span class="dl-name">Yemen conflict</span></h1>
   </div>
   <div class="stamp">
     <span class="ye-clock" title="The time in Yemen (Sanaa and Aden)"><span class="yc-label">Yemen</span><time id="ye-clock">--:--:--</time></span>

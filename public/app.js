@@ -2967,8 +2967,7 @@ function renderSituation(d) {
   const pts = derived && Array.isArray(brief.situation.points) && brief.situation.points.length ? brief.situation : null;
   const btnNeeded = pts ? pts.points.length > 1 : moreParas.length || lineParas.length > 1;
   el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2>${mapBtn}</div>${cadenceStamp(true)}
-    <div class="sit-body">${pts ? pointsHtml(pts.points, pts.refs, { show: 1, link: true }) : `${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}`}</div>${btnNeeded ? `
-    <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}`;
+    <div class="sit-body">${pts ? pointsHtml(pts.points, pts.refs, { show: 1, link: true, toggle: btnNeeded ? sitBtn(open) : '' }) : `${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}`}</div>${btnNeeded && !pts ? sitBtn(open) : ''}`;
   wirePlaceLinks(el);
   if (pts) wireRefs(el, pts.refs);
   const tog = el.querySelector('.toggle-sit');
@@ -4579,13 +4578,12 @@ function renderFronts(d) {
       ${plain ? `<p class="front-plain">${linkPlacesAll(plain)}</p>` : ''}
       ${showSum ? `<p class="front-sum">${linkPlacesAll(sum)}</p>` : ''}
       ${showDir ? `<p class="front-dir">${linkPlacesAll(dir)}</p>` : ''}
-      ${composed && act.points && act.points.length ? `<div class="front-pts">${pointsHtml(act.points, act.refs, { show: 1, link: true })}</div>` : composed ? `<p class="front-composed">${linkPlacesAll(composed)}</p>` : ''}
+      ${composed && act.points && act.points.length ? `<div class="front-pts">${pointsHtml(act.points, act.refs, { show: 1, link: true, toggle: act.points.length > 1 ? FRONT_BTN : '' })}</div>` : composed ? `<p class="front-composed">${linkPlacesAll(composed)}</p>` : ''}
       ${composed && frontAsOf(act) ? `<p class="front-asof">${frontAsOf(act)}</p>` : ''}
       ${!composed && act ? `<p class="front-activity">${linkPlacesAll(act.line)}</p>` : ''}
       ${composed ? '' : `<div class="srcs">Source: ${sourceAnchors(f.sources || [], '')}</div>`}
       ${showDetail ? `<div class="full">${linkPlacesAll(detail)}</div>
       <button type="button" class="toggle-front">Read more</button>` : ''}
-      ${composed && act.points && act.points.length > 1 ? '<button type="button" class="toggle-front">Read more</button>' : ''}
     </article>`;
   });
   const box = document.getElementById('fronts');
@@ -6585,8 +6583,8 @@ try { setFavicon(THEME); } catch (e) {}
  * page once with ?desks=1.
  */
 const DESKS = [
-  { id: 'yemen', name: 'Yemen Conflict Desk', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden', kids: [['/yemen-conflict-desk/methodology', 'Methodology']] },
-  { id: 'iran', name: 'Iran Conflict Desk', href: '/iran-conflict-desk', sub: 'Being built', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran', soon: true, kids: [] },
+  { id: 'yemen', name: 'Yemen Conflict Desk', short: 'Yemen conflict', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden', kids: [['/yemen-conflict-desk/methodology', 'Methodology']] },
+  { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Being built', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran', soon: true, kids: [] },
 ];
 function deskOf() {
   const el = document.querySelector('[data-desk]');
@@ -6608,21 +6606,23 @@ const flagStrip = (d) => `linear-gradient(${d.flag.map((c, i) => `${c} ${(i * 10
 const SITE_PAGES = () => desksShown().map((d) => [d.href, d.name, d.sub, d.kids, d]);
 
 /*
- * The desk's name in the header opens a list of the desks (user, 8 Oct): a
- * small flag, then the name; picking one fades this page out and opens that
- * desk. Only once there is more than one desk to show.
+ * The header reads "Desk: Iran conflict" (user, 9 Oct): "Desk:" stays, the
+ * conflict's name opens a list of the desks, each with a small flag; picking
+ * one fades this page out and opens that desk. Only once there is more than
+ * one desk to show.
  */
 function installDeskPicker() {
   const h = document.querySelector('.top h1.desk-label');
   const desks = desksShown();
   if (!h || h.querySelector('.desk-pick') || desks.length < 2) return;
   const here = deskOf();
-  h.innerHTML = `<button type="button" class="desk-pick" aria-haspopup="true" aria-expanded="false" aria-controls="desk-list">${escapeHtml(h.textContent.trim())}<svg class="dp-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>`;
+  const name = h.querySelector('.dl-name') || h;
+  name.innerHTML = `<button type="button" class="desk-pick" aria-haspopup="true" aria-expanded="false" aria-controls="desk-list">${escapeHtml(name.textContent.trim())}<svg class="dp-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>`;
   const list = document.createElement('ul');
   list.id = 'desk-list';
   list.className = 'desk-list';
   list.hidden = true;
-  list.innerHTML = desks.map((d) => `<li><a href="${d.href}"${d.id === here.id ? ' aria-current="page"' : ''}>${flagSvg(d)}<span>${escapeHtml(d.name)}</span></a></li>`).join('');
+  list.innerHTML = desks.map((d) => `<li><a href="${d.href}"${d.id === here.id ? ' aria-current="page"' : ''}>${flagSvg(d)}<span>${escapeHtml(T(d.short || d.name))}</span></a></li>`).join('');
   h.parentElement.appendChild(list);
   const btn = h.querySelector('.desk-pick');
   const open = (on) => { list.hidden = !on; btn.setAttribute('aria-expanded', String(on)); };
@@ -7306,21 +7306,28 @@ function pointText(text, link) {
   const html = link ? linkPlacesAll(t) : escapeHtml(t);
   return html.replace(/(?:\d+)+/g, (run) => `<sup class="ref-n">${[...run.matchAll(/(\d+)/g)].map((m) => `<button type="button" class="ref-btn" data-ref="${m[1]}" aria-label="Reference ${m[1]}">${m[1]}</button>`).join('<span aria-hidden="true">,</span>')}</sup>`);
 }
+const sitBtn = (open) => `<button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>`;
+const FRONT_BTN = '<button type="button" class="toggle-front">Read more</button>';
 function refWhen(at) {
   const d = new Date(at);
   if (!Number.isFinite(d.getTime())) return '';
   return `${d.toLocaleDateString(LOC, { timeZone: VIEW_TZ, day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString(LOC, { timeZone: VIEW_TZ, hour: '2-digit', minute: '2-digit', hour12: false })}`;
 }
-/** The points, the first `show` of them before "Read more"; under them the first reference, and an arrow that opens the rest (user, 9 Oct). */
+/**
+ * The points, the first `show` of them before "Read more"; the box's Read more
+ * right under them (`toggle`), then the first reference, always shown, and an
+ * arrow that opens the rest (user, 9 Oct).
+ */
 function pointsHtml(points, refs, opts) {
   const show = (opts && opts.show) || 1;
   const link = !!(opts && opts.link);
+  const toggle = (opts && opts.toggle) || '';
   const items = points.map((p, i) => `<li${i >= show ? ' class="pt-rest"' : ''}>${pointText(p, link)}</li>`).join('');
   const line = (r, i) => `<li><button type="button" class="ref-btn ref-line" data-ref="${i + 1}"><span class="ref-num">${i + 1}</span>${escapeHtml(r.trump ? `Trump, ${r.source}` : canonicalSourceName(r.source))}, ${escapeHtml(refWhen(r.at))}</button></li>`;
   const rs = refs || [];
-  if (!rs.length) return `<ol class="pts">${items}</ol>`;
+  if (!rs.length) return `<ol class="pts">${items}</ol>${toggle}`;
   const more = rs.length > 1 ? `<button type="button" class="ref-more" aria-expanded="false" aria-label="All ${rs.length} references"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>` : '';
-  return `<ol class="pts">${items}</ol><div class="refs-box"><ol class="refs" aria-label="References">${line(rs[0], 0).replace('</li>', `${more}</li>`)}${rs.slice(1).map((r, i) => line(r, i + 1).replace('<li>', '<li class="ref-rest">')).join('')}</ol></div>`;
+  return `<ol class="pts">${items}</ol>${toggle}<div class="refs-box"><ol class="refs" aria-label="References">${line(rs[0], 0).replace('</li>', `${more}</li>`)}${rs.slice(1).map((r, i) => line(r, i + 1).replace('<li>', '<li class="ref-rest">')).join('')}</ol></div>`;
 }
 function wireRefs(root, refs) {
   if (!root || !refs) return;
@@ -7448,8 +7455,7 @@ function renderIranBrief() {
   if (el && Array.isArray(s.points) && s.points.length) {
     const open = el.classList.contains('sit-open');
     el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2></div>${cadenceStamp(true, b)}
-      <div class="sit-body">${pointsHtml(s.points, s.refs, { show: 1 })}</div>${s.points.length > 1 ? `
-      <button type="button" class="toggle-sit" aria-expanded="${open}">${open ? 'Show less' : 'Read more'}</button>` : ''}`;
+      <div class="sit-body">${pointsHtml(s.points, s.refs, { show: 1, toggle: s.points.length > 1 ? sitBtn(open) : '' })}</div>`;
     wireBoxToggle(el, el.querySelector('.toggle-sit'), 'sit-open');
     wireRefs(el, s.refs);
   }
@@ -7461,9 +7467,8 @@ function renderIranBrief() {
     const old = pts.length && a.lastNewsAt && a.lastNewsAt !== b.updatedAt;
     return `<article class="front-card">
       <div class="front-head"><strong>${escapeHtml(a.name)}</strong></div>
-      ${pts.length ? `<div class="front-pts">${pointsHtml(pts, a.refs, { show: 1 })}</div>` : '<p class="front-asof">Nothing reported here yet.</p>'}
+      ${pts.length ? `<div class="front-pts">${pointsHtml(pts, a.refs, { show: 1, toggle: pts.length > 1 ? FRONT_BTN : '' })}</div>` : '<p class="front-asof">Nothing reported here yet.</p>'}
       ${old ? `<p class="front-asof">${escapeHtml(T('As of {t}, {d}', { t: fmtClock(a.lastNewsAt), d: new Date(a.lastNewsAt).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ }) }))}</p>` : ''}
-      ${pts.length > 1 ? '<button type="button" class="toggle-front">Read more</button>' : ''}
     </article>`;
   });
   wrap.innerHTML = `<h2>Arenas</h2><div id="fronts-stamp">${cadenceStamp(true, b)}</div><div id="fronts" class="one-front"></div>`;

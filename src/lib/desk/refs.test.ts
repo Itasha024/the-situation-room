@@ -77,3 +77,13 @@ test("arenas: the Yemen desk's war goes nowhere, US in the region is the US's do
   assert.ok(israelRef(r("Reuters")));
   assert.ok(israelRef({ ...r("Tasnim", "axis"), excl: true }));
 });
+
+test("America's and Israel's words are never cited from Iran's outlets; a strike on Iran's own ground may be", async () => {
+  const { ownRef } = await import("./iran-brief.ts");
+  const r = (source: string, lean?: string) => ({ fp: "x", source, at: "", url: "", headline: "h", ...(lean ? { lean } : {}) });
+  assert.equal(ownRef("US Representative Ro Khanna called on Congress to vote to end the war [r2].", r("Al-Alam", "axis")), undefined);
+  assert.equal(ownRef("A US Navy official said 12 ships enforce the blockade on Iran [r1].", r("Tasnim", "axis")), undefined);
+  assert.ok(ownRef("Israeli jets struck a missile site near Isfahan [r1].", r("Tasnim", "axis")));
+  assert.ok(ownRef("US Representative Ro Khanna called on Congress to vote [r2].", r("Reuters")));
+  assert.ok(ownRef("Iranian drones struck opposition sites in Erbil [r1].", r("Press TV", "axis")));
+});

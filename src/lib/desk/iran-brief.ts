@@ -15,7 +15,7 @@ import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
 import { briefWindow } from "./brief.ts";
 import { cleanPoints } from "./prose.ts";
 import { headlinePoints, NUM_MARK, numberRefs, type Ref, refOfReport, stripRefs } from "./refs.ts";
-import { isWireSource, namesNation, sourceNation } from "./speaker-press.ts";
+import { isWireSource, namesNation, sourceNation, subjectNation } from "./speaker-press.ts";
 import { yemenOnly } from "./iran-reader.ts";
 import type { DeskStore } from "./store.ts";
 import { shownCard, TRUMP_KEY, type TrumpFeed, type TrumpStatement } from "./trump.ts";
@@ -100,7 +100,8 @@ export function writerInput(reports: LiveReport[], trump: TrumpStatement[]): { l
 
 /** The writer's answer as the brief's lists; null parts mean the writer gave nothing usable. */
 export function fromAnswer(j: Record<string, unknown>, refOf: Record<string, Ref>): { situation: { points: string[]; refs: Ref[] } | null; arenas: Record<string, { points: string[]; refs: Ref[] }> } {
-  const look = (id: string) => refOf[id];
+  // Each country's words and acts from its own sources (user, 9 Oct): never Iran's outlets retelling America or Israel.
+  const look = (id: string, point = "") => ownRef(point, refOf[id]);
   const pts = marked(numberRefs(oncePer(cleanPoints(j.points, 10).filter((p) => !yemenOnly(stripRefs(p)))).slice(0, 8), look));
   const aj = (j.arenas && typeof j.arenas === "object" ? j.arenas : {}) as Record<string, unknown>;
   const arenas: Record<string, { points: string[]; refs: Ref[] }> = {};
@@ -114,7 +115,7 @@ export function fromAnswer(j: Record<string, unknown>, refOf: Record<string, Ref
       return true;
     });
     // Israel's arena cites Israel's own sources, Lebanon's for its strikes there, a wire, or an exclusive (user, 9 Oct).
-    const got = marked(numberRefs(own.slice(0, 4), a.id === "israel" ? (id) => israelRef(look(id)) : look));
+    const got = marked(numberRefs(own.slice(0, 4), a.id === "israel" ? (id, p) => israelRef(look(id, p)) : look));
     // A point with no reference the writer could show is not kept in an arena.
     if (got.points.length && got.refs.length) arenas[a.id] = got;
   }
@@ -134,6 +135,22 @@ export function israelRef(ref: Ref | undefined): Ref | undefined {
   if (ref.excl || isWireSource(ref.source)) return ref;
   const n = sourceNation(ref.source, ref.lean ?? "");
   return n === "israel" || n === "lebanon" || n === "us" ? ref : undefined;
+}
+
+/**
+ * A report a point may cite: America's and Israel's words and acts are never
+ * cited from Iran's outlets (Al-Alam telling a US congressman's call, 9 Oct),
+ * unless the point is about Iran's own ground (a strike on Isfahan) and no one
+ * is quoted; a wire or an exclusive always may.
+ */
+export function ownRef(point: string, ref: Ref | undefined): Ref | undefined {
+  if (!ref || ref.trump || ref.excl || isWireSource(ref.source)) return ref;
+  const text = stripRefs(point);
+  const subj = subjectNation(text);
+  if (subj !== "us" && subj !== "israel") return ref;
+  if (sourceNation(ref.source, ref.lean ?? "") !== "iran") return ref;
+  const quoted = /\b(?:said|says|told|stated|called|calls|warned|announced|confirmed|claimed|added|urged|pledged|vowed|denied)\b/i.test(text);
+  return !quoted && namesNation("iran", text) ? ref : undefined;
 }
 
 /** Only points that kept a reference. */

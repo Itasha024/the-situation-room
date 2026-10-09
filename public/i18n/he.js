@@ -14,6 +14,9 @@ window.DESK_I18N = {
     // Masthead, header, menus
     'Open-source intelligence': 'מודיעין ממקורות גלויים',
     'Yemen Conflict Desk': 'דסק העימות בתימן',
+    'Desk:': 'דסק:',
+    'Yemen conflict': 'העימות בתימן',
+    'Iran conflict': 'העימות עם איראן',
     'Yemen': 'תימן',
     'The time in Yemen (Sanaa and Aden)': 'השעה בתימן (צנעא ועדן)',
     'Connecting…': 'מתחבר…',

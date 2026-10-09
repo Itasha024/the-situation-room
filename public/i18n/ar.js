@@ -24,6 +24,9 @@
       // Masthead, header, menus
       'Open-source intelligence': 'استخبارات المصادر المفتوحة',
       'Yemen Conflict Desk': 'مرصد النزاع في اليمن',
+      'Desk:': 'المرصد:',
+      'Yemen conflict': 'النزاع في اليمن',
+      'Iran conflict': 'النزاع مع إيران',
       'Yemen': 'اليمن',
       'The time in Yemen (Sanaa and Aden)': 'التوقيت في اليمن (صنعاء وعدن)',
       'Connecting…': 'جارٍ الاتصال…',

@@ -28,8 +28,6 @@ html[dir="rtl"] :is(p, li, .headline, .lead, .pop-full, .front-composed, .phase-
 html[dir="rtl"] .day-nav-arr { display: inline-block; transform: scaleX(-1); }
 
 /* Masthead flag bar and section headings' accent rule. */
-html[dir="rtl"] .top h1.desk-label { padding: .14em calc(.6rem + 4px) .14em 0; }
-html[dir="rtl"] .top h1.desk-label::before { left: auto; right: 0; }
 html[dir="rtl"][data-set="broadsheet"] :is(.rail-head h2,.sit-head>h2,.situation>h2,.fronts-wrap>h2,.cas-wrap>h2,.timeline-wrap>h2)::before { left: auto; right: 0; }
 html[dir="rtl"] .sit-map-btn { margin-left: 0; margin-right: auto; }
 

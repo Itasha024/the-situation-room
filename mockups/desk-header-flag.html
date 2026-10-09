@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk header flag</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&display=swap">
+<style>
+:root{--bg:#1b1918;--ink:#ece6df;--strong:#fff;--dim:#a39a90;--line:#3a3430;--accent:#e58f74;--page:#141211}
+.day{--bg:#fff1e5;--ink:#33302e;--strong:#1a1817;--dim:#6f6863;--line:#d9cbbd;--accent:#990f3d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:#ece6df;font:15px/1.45 "Libre Franklin",system-ui,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
+h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
+.note{color:#a39a90;max-width:760px;margin:0 0 26px}
+.opt{margin:0 0 40px}
+.opt h2{font:700 13px/1 "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:#e58f74;margin:0 0 6px}
+.opt p{color:#a39a90;margin:0 0 12px;max-width:760px}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(470px,100%),1fr));gap:16px}
+
+/* A replica of the top of the page */
+.frame{background:var(--bg);color:var(--ink);border:1px solid #3a3430;border-radius:6px;overflow:hidden}
+.mast{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;padding:14px 14px 10px}
+.burger{width:22px;height:16px;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);position:relative}
+.burger::after{content:"";position:absolute;left:0;right:0;top:5px;height:2px;background:var(--ink)}
+.mn{text-align:center;font:600 30px/1 Newsreader,serif;color:var(--strong)}
+.ml{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px;font:600 9.5px/1 "Libre Franklin";letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
+.ml::before,.ml::after{content:"";width:2.3em;height:1.5px;background:var(--accent)}
+.top{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);isolation:isolate}
+.dl{font:600 16px/1.2 Newsreader,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--strong);white-space:nowrap}
+.dl .pre{color:var(--dim);font-weight:500}
+.dl svg{width:.7em;height:.7em;margin-inline-start:.35em;fill:none;stroke:currentColor;stroke-width:1.8;vertical-align:.05em}
+.stamp{display:flex;align-items:center;gap:8px;font:600 10px/1 "Libre Franklin";letter-spacing:.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.stamp time{font:600 14px/1 "Libre Franklin";color:var(--strong);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.stamp i{width:7px;height:7px;border-radius:50%;background:#2dd4bf}
+.body{padding:14px;font:500 13.5px/1.5 Newsreader,serif}
+.body b{display:block;font:600 19px/1.2 Newsreader,serif;color:var(--strong);margin-bottom:6px}
+.body b::before{content:"";display:block;width:28px;height:3px;background:var(--accent);margin-bottom:8px}
+
+/* The flags as layers behind the header row; text always sits above them */
+.top>.fl{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.ir{--c1:#239f40;--c2:#ffffff;--c3:#da0000}
+.ye{--c1:#ce1126;--c2:#ffffff;--c3:#000000}
+.day .ye{--c3:#3b3b3b}
+
+/* A: the flag's stripes, washed, fading in from the clock side */
+.A .fl{background:linear-gradient(var(--c1) 0 33.4%,var(--c2) 0 66.7%,var(--c3) 0);opacity:.2;-webkit-mask:linear-gradient(90deg,transparent 30%,#000 100%);mask:linear-gradient(90deg,transparent 30%,#000 100%)}
+.day.A .fl{opacity:.22}
+/* B: a waving cloth at the right end, very soft, gone before the middle */
+.B .fl{-webkit-mask:linear-gradient(90deg,transparent 42%,#000 92%);mask:linear-gradient(90deg,transparent 42%,#000 92%);opacity:.28}
+.B .fl svg{width:100%;height:100%;display:block}
+.day.B .fl{opacity:.3}
+/* C: three hairlines along the foot of the row, fading out at both ends */
+.C .fl{top:auto;height:9px;background:linear-gradient(var(--c1) 0 33.4%,var(--c2) 0 66.7%,var(--c3) 0);-webkit-mask:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent);mask:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent);opacity:.95}
+/* D: the flag as a colour light falling from behind the title, a glow, not stripes */
+.D .fl{background:radial-gradient(60% 180% at 0% 0%,color-mix(in srgb,var(--c1) 34%,transparent),transparent 70%),radial-gradient(45% 160% at 0% 100%,color-mix(in srgb,var(--c3) 30%,transparent),transparent 70%)}
+.day.D .fl{background:radial-gradient(60% 180% at 0% 0%,color-mix(in srgb,var(--c1) 22%,transparent),transparent 70%),radial-gradient(45% 160% at 0% 100%,color-mix(in srgb,var(--c3) 18%,transparent),transparent 70%)}
+.phone{max-width:390px}
+.phone .mn{font-size:24px}.phone .dl{font-size:13.5px}.phone .stamp{gap:6px}.phone .stamp .lbl2{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Desk header: the flag in the row</h1>
+  <p class="note">The little flag before the name is gone. The header reads "Desk: Iran conflict", where "Desk:" stays and the arrow switches desks. Each option below puts the desk's flag in the row you marked, behind the text, so no letter sits on a strong colour. Each is shown for both desks in dark and light, and on a phone at the end. I'd go with A, or C if you want it quieter.</p>
+
+  <section class="opt" id="A"></section>
+  <section class="opt" id="B"></section>
+  <section class="opt" id="C"></section>
+  <section class="opt" id="D"></section>
+</div>
+<script>
+const OPTS = {
+  A: ['A · Washed stripes', "The flag's three stripes fill the row, very faint, fading in from the clock side and gone before the title. The flag is easy to tell at a glance."],
+  B: ['B · Waving cloth', 'A softly waving flag at the right end, under the clock, fading out toward the middle. More alive, a little more decorative.'],
+  C: ['C · Hairline stripes', "Three thin lines in the flag's colours run along the foot of the row, fading out at both ends. The quietest option, and nothing sits behind the words."],
+  D: ['D · Colour glow', "No stripes: the flag's two outer colours fall as a soft light from behind the title. The most atmospheric, but the least clear about which flag it is."],
+};
+const WAVE = (c) => `<svg viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true">${[0,1,2].map((i) => {
+  const y = i * 20, w = (yy) => `M0 ${yy} C150 ${yy - 7} 300 ${yy + 7} 450 ${yy} S600 ${yy - 5} 600 ${yy - 5}`;
+  return `<path d="${w(y)} L600 ${y + 15} C450 ${y + 27} 300 ${y + 13} 150 ${y + 27} S0 ${y + 20} 0 ${y + 20} Z" fill="var(--c${i + 1})"/>`;
+}).join('')}</svg>`;
+const frame = (opt, desk, day, phone) => {
+  const ir = desk === 'ir';
+  return `<div class="frame ${opt} ${day ? 'day' : ''} ${phone ? 'phone' : ''}">
+    <div class="mast"><span class="burger"></span><div><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div><span></span></div>
+    <div class="top ${desk}"><div class="fl">${opt === 'B' ? WAVE() : ''}</div>
+      <span class="dl"><span class="pre">Desk:</span> ${ir ? 'Iran' : 'Yemen'} conflict<svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></span>
+      <span class="stamp"><span>${ir ? 'Iran' : 'Yemen'}</span><time>16:16:29</time><i></i><span class="lbl2">Updated 15:42</span></span>
+    </div>
+    <div class="body"><b>Latest developments</b>1. ${ir ? 'Trump said the US is holding productive discussions with Iran and will not attack before the midterms.' : 'Saudi-led jets struck Houthi positions east of Sanaa overnight, local sources said.'}</div>
+  </div>`;
+};
+for (const [k, [t, d]] of Object.entries(OPTS)) {
+  document.getElementById(k).innerHTML = `<h2>${t}</h2><p>${d}</p>
+    <div class="pair">${frame(k, 'ir', false)}${frame(k, 'ye', false)}${frame(k, 'ir', true)}${frame(k, 'ye', true)}</div>
+    <div class="pair" style="margin-top:16px">${frame(k, 'ir', false, true)}${frame(k, 'ye', true, true)}</div>`;
+}
+</script>
+</body>
+</html>

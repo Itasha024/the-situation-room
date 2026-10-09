@@ -50,7 +50,7 @@ export function pointList(raw: unknown): string[] {
  * The points with the writer's ids turned into the box's numbers, and the
  * list of references those numbers stand for. A point left with no words is dropped.
  */
-export function numberRefs(points: string[], refOf: (id: string) => Ref | null | undefined): { points: string[]; refs: Ref[] } {
+export function numberRefs(points: string[], refOf: (id: string, point: string) => Ref | null | undefined): { points: string[]; refs: Ref[] } {
   const refs: Ref[] = [];
   const numOf = new Map<string, number>();
   const out: string[] = [];
@@ -62,7 +62,7 @@ export function numberRefs(points: string[], refOf: (id: string) => Ref | null |
     const text = p.replace(ID_MARK, (_m, list: string) => {
       const ids = list.split(/\s*[,;]\s*/).map((x, i, all) => (/^\d+$/.test(x) ? `${(all[0].match(/^[rt]/i) || ["r"])[0]}${x}` : x).toLowerCase());
       // Several reports of one fact: the best one only.
-      const known = ids.map((id) => refOf(id)).filter((r): r is Ref => !!r);
+      const known = ids.map((id) => refOf(id, raw)).filter((r): r is Ref => !!r);
       const best = known.reduce<Ref | null>((a, r) => (!a || refRank(r, raw) > refRank(a, raw) ? r : a), null);
       let marks = "";
       for (const ref of best ? [best] : []) {

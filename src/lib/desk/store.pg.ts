@@ -415,6 +415,8 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                          citing = null,
                          also_reported_by = ${r.alsoReportedBy?.length ? pgJson(r.alsoReportedBy) : null}::jsonb
                    where fp = ${r.fp} and source is distinct from ${r.source}
+                     -- The lead's own link is another card: no half swap of the headline alone (9 Oct clones).
+                     and not exists (select 1 from desk_report d where d.url = ${r.url} and d.fp <> ${r.fp})
                 `;
               }
               // The card rewritten from its original's full text replaces the

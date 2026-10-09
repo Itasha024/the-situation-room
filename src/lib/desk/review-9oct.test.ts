@@ -124,3 +124,14 @@ test("the reader's word that a report is a duplicate holds only when the words o
   foldIntoPublished(reports, new Set(["a"]));
   assert.equal(reports.length, 2);
 });
+
+test("a card already saved is never folded again, so its headline never lands on another card", async () => {
+  const { foldIntoPublished } = await import("../yemen-scan.server.ts");
+  const base = { live: true, text: "", score: 1, tags: [] } as const;
+  const home = { ...base, fp: "a", url: "https://t.me/almasirah2/302281", source: "Al-Masirah", at: "2026-10-08T14:00:00Z", type: "statement", summary: "Harib tribes declare mobilisation against the Saudi blockade" };
+  const saved = { ...base, fp: "b", url: "https://www.adngad.net/news/887370", source: "Aden al-Ghad", at: "2026-10-08T14:10:00Z", type: "statement", summary: "Arhab tribal leaders declare mobilisation to support government forces", flags: ["exclusive"] };
+  const reports = [home, { ...saved }] as never[];
+  foldIntoPublished(reports, new Set(["a"]), [saved] as never[]);
+  assert.equal((home as { summary: string }).summary, "Harib tribes declare mobilisation against the Saudi blockade");
+  assert.equal(reports.length, 2);
+});

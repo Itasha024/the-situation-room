@@ -1512,10 +1512,16 @@ export function foldIntoPublished(
   // Cards already on the desk that this cycle's payload no longer carries.
   const inPayload = new Set(reports.map((r) => r.fp));
   const homes = [...byTime, ...stored.filter((s) => !inPayload.has(s.fp))];
+  const savedFp = new Set(stored.map((s) => s.fp));
+  const savedUrl = new Set(stored.map((s) => linkKey(s.url)));
   const gone = new Set<LiveReport>();
   const touched = new Set<LiveReport>();
   for (const r of byTime) {
-    if (published.has(r.fp)) continue;
+    // A card already saved was judged when it was new: it is never folded
+    // again. An "exclusive" seen again that way swapped its headline into
+    // another card each tick, and the Syrian foreign ministry's statement
+    // ended up on seven cards under seven outlets' names (9 Oct).
+    if (published.has(r.fp) || savedFp.has(r.fp) || savedUrl.has(linkKey(r.url))) continue;
     const t = Date.parse(r.at);
     const same = (o: LiveReport) => o !== r && !gone.has(o) && o.fp !== r.fp;
     // A post already in a card's "Also" is that card's, whatever the reader

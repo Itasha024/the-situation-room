@@ -12,11 +12,15 @@
 body{margin:0;background:var(--page);color:#ece6df;font:15px/1.45 "Libre Franklin",system-ui,sans-serif}
 .wrap{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
 h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
-.note{color:#a39a90;max-width:760px;margin:0 0 26px}
-.opt{margin:0 0 40px}
+.note{color:#a39a90;max-width:780px;margin:0 0 10px}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 28px}
+.toc a{font:600 12px/1 "Libre Franklin";letter-spacing:.06em;color:#ece6df;text-decoration:none;border:1px solid #3a3430;border-radius:999px;padding:7px 10px}
+.toc a:hover{border-color:#e58f74;color:#e58f74}
+.fam{font:700 12px/1 "Libre Franklin";letter-spacing:.18em;text-transform:uppercase;color:#8b98a8;margin:34px 0 14px;padding-top:14px;border-top:1px solid #3a3430}
+.opt{margin:0 0 36px}
 .opt h2{font:700 13px/1 "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:#e58f74;margin:0 0 6px}
-.opt p{color:#a39a90;margin:0 0 12px;max-width:760px}
-.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(470px,100%),1fr));gap:16px}
+.opt p{color:#a39a90;margin:0 0 12px;max-width:780px}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(470px,100%),1fr));gap:14px}
 
 /* A replica of the top of the page */
 .frame{background:var(--bg);color:var(--ink);border:1px solid #3a3430;border-radius:6px;overflow:hidden}
@@ -26,7 +30,7 @@ h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
 .mn{text-align:center;font:600 30px/1 Newsreader,serif;color:var(--strong)}
 .ml{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px;font:600 9.5px/1 "Libre Franklin";letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
 .ml::before,.ml::after{content:"";width:2.3em;height:1.5px;background:var(--accent)}
-.top{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);isolation:isolate}
+.top{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px;padding:11px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);isolation:isolate;overflow:hidden}
 .dl{font:600 16px/1.2 Newsreader,serif;letter-spacing:.09em;text-transform:uppercase;color:var(--strong);white-space:nowrap}
 .dl .pre{color:var(--dim);font-weight:500}
 .dl svg{width:.7em;height:.7em;margin-inline-start:.35em;fill:none;stroke:currentColor;stroke-width:1.8;vertical-align:.05em}
@@ -36,66 +40,172 @@ h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
 .body{padding:14px;font:500 13.5px/1.5 Newsreader,serif}
 .body b{display:block;font:600 19px/1.2 Newsreader,serif;color:var(--strong);margin-bottom:6px}
 .body b::before{content:"";display:block;width:28px;height:3px;background:var(--accent);margin-bottom:8px}
-
-/* The flags as layers behind the header row; text always sits above them */
-.top>.fl{position:absolute;inset:0;z-index:-1;pointer-events:none}
-.ir{--c1:#239f40;--c2:#ffffff;--c3:#da0000}
-.ye{--c1:#ce1126;--c2:#ffffff;--c3:#000000}
-.day .ye{--c3:#3b3b3b}
-
-/* A: the flag's stripes, washed, fading in from the clock side */
-.A .fl{background:linear-gradient(var(--c1) 0 33.4%,var(--c2) 0 66.7%,var(--c3) 0);opacity:.2;-webkit-mask:linear-gradient(90deg,transparent 30%,#000 100%);mask:linear-gradient(90deg,transparent 30%,#000 100%)}
-.day.A .fl{opacity:.22}
-/* B: a waving cloth at the right end, very soft, gone before the middle */
-.B .fl{-webkit-mask:linear-gradient(90deg,transparent 42%,#000 92%);mask:linear-gradient(90deg,transparent 42%,#000 92%);opacity:.28}
-.B .fl svg{width:100%;height:100%;display:block}
-.day.B .fl{opacity:.3}
-/* C: three hairlines along the foot of the row, fading out at both ends */
-.C .fl{top:auto;height:9px;background:linear-gradient(var(--c1) 0 33.4%,var(--c2) 0 66.7%,var(--c3) 0);-webkit-mask:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent);mask:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent);opacity:.95}
-/* D: the flag as a colour light falling from behind the title, a glow, not stripes */
-.D .fl{background:radial-gradient(60% 180% at 0% 0%,color-mix(in srgb,var(--c1) 34%,transparent),transparent 70%),radial-gradient(45% 160% at 0% 100%,color-mix(in srgb,var(--c3) 30%,transparent),transparent 70%)}
-.day.D .fl{background:radial-gradient(60% 180% at 0% 0%,color-mix(in srgb,var(--c1) 22%,transparent),transparent 70%),radial-gradient(45% 160% at 0% 100%,color-mix(in srgb,var(--c3) 18%,transparent),transparent 70%)}
 .phone{max-width:390px}
 .phone .mn{font-size:24px}.phone .dl{font-size:13.5px}.phone .stamp{gap:6px}.phone .stamp .lbl2{display:none}
+
+/* The flag layer: always behind the words */
+.top>.fl{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.fl svg{display:block}
+
+/* A family: the stripes, washed */
+.A1 .fl{opacity:.2;-webkit-mask:linear-gradient(90deg,transparent 30%,#000 100%);mask:linear-gradient(90deg,transparent 30%,#000 100%)}
+.A2 .fl{opacity:.2;-webkit-mask:linear-gradient(90deg,#000 0,transparent 55%);mask:linear-gradient(90deg,#000 0,transparent 55%)}
+.A3 .fl{opacity:.24;-webkit-mask:linear-gradient(90deg,transparent 22%,#000 45%,#000 55%,transparent 78%);mask:linear-gradient(90deg,transparent 22%,#000 45%,#000 55%,transparent 78%)}
+.A4 .fl{opacity:.22;-webkit-mask:linear-gradient(100deg,transparent 40%,#000 62%,#000 80%,transparent 100%);mask:linear-gradient(100deg,transparent 40%,#000 62%,#000 80%,transparent 100%)}
+.A5 .fl{opacity:.16}
+.A5 .fl::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,var(--bg) 0 3px,transparent 3px 7px)}
+.day .A1 .fl,.day.A1 .fl,.day.A2 .fl,.day.A3 .fl,.day.A4 .fl{opacity:.26}
+/* D family: the full flag, as a light */
+.mid{flex:1;align-self:stretch;position:relative;min-width:0;margin:-11px 0;pointer-events:none}
+.mid svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.D1 .mid svg{height:150%;width:auto;filter:blur(7px);opacity:.42}
+
+.day.D1 .mid svg{opacity:.5}
+.D2 .fl{display:flex;justify-content:flex-start;align-items:center;padding-left:2%}
+.D2 .fl svg{height:180%;width:auto;filter:blur(10px);opacity:.38}
+.day.D2 .fl svg{opacity:.48}
+.D3 .mid svg{height:28px;width:auto;opacity:.5;border-radius:2px;-webkit-mask:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);mask:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)}
+.phone.D3 .mid svg{height:22px}
+.day.D3 .mid svg{opacity:.6}
+.D4 .fl{display:flex;justify-content:center;align-items:center}
+.D4 .fl svg{height:260%;width:auto;filter:blur(14px) saturate(1.2);opacity:.3}
+.day.D4 .fl svg{opacity:.42}
+/* New ideas */
+.E1 .fl{inset:auto 0 0 0;height:3px;opacity:.95;-webkit-mask:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent)}
+.E1 .fl.tp{inset:0 0 auto 0}
+.E1.top{border-color:transparent}
+.F1 .mid svg{height:150%;width:auto;opacity:.14;filter:grayscale(.35)}
+
+.day.F1 .mid svg{opacity:.2}
+.G1 .fl{display:flex;justify-content:flex-end}
+.G1 .fl svg{height:100%;width:auto;opacity:.85;-webkit-mask:linear-gradient(90deg,transparent,#000 80%);mask:linear-gradient(90deg,transparent,#000 80%)}
+.G1 .stamp{padding-right:70px}
+.phone.G1 .stamp{padding-right:58px}
+
+/* The side menu */
+.menus{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:14px}
+.menu{background:var(--bg);color:var(--ink);border:1px solid #3a3430;border-radius:6px;padding:16px 0;font:500 14px/1.3 "Libre Franklin"}
+.menu h3{margin:0 18px 10px;font:700 10px/1 "Libre Franklin";letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+.menu a{display:flex;align-items:center;gap:12px;padding:10px 18px;color:var(--strong);text-decoration:none}
+.menu a small{display:block;color:var(--dim);font-size:11px;margin-top:2px}
+.menu .now{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.m1 .mf{width:6px;align-self:stretch;border-radius:2px;overflow:hidden;flex:none}
+.m1 .mf svg{width:100%;height:100%}
+.m2 .mf{width:12px;align-self:stretch;border-radius:2px;overflow:hidden;flex:none}
+.m2 .mf svg{width:100%;height:100%}
+.m3 .mf{width:26px;height:16px;border-radius:2px;overflow:hidden;flex:none;box-shadow:0 0 0 .5px color-mix(in srgb,var(--ink) 40%,transparent)}
+.m3 .mf svg{width:100%;height:100%}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Desk header: the flag in the row</h1>
-  <p class="note">The little flag before the name is gone. The header reads "Desk: Iran conflict", where "Desk:" stays and the arrow switches desks. Each option below puts the desk's flag in the row you marked, behind the text, so no letter sits on a strong colour. Each is shown for both desks in dark and light, and on a phone at the end. I'd go with A, or C if you want it quieter.</p>
+  <p class="note">More designs, as you asked. The A family is more washed stripes. The D family is the whole flag, Iran's emblem and the takbir bands included, as a soft light. E–G are new ideas. Each is shown for both desks, dark and light, and on a phone. The clock names the capital, which is already live. The side menu's flag is at the end, with the emblem.</p>
+  <p class="note">I'd go with <b style="color:#ece6df">D3</b> (the whole flag, small and faded, between the title and the clock). For the stripes, A4.</p>
+  <div class="toc" id="toc"></div>
+  <div id="opts"></div>
 
-  <section class="opt" id="A"></section>
-  <section class="opt" id="B"></section>
-  <section class="opt" id="C"></section>
-  <section class="opt" id="D"></section>
+  <div class="fam" id="menu">The side menu's flag</div>
+  <p class="note">Today a 3px stripe that shows on hover and on the desk you are on, too thin for the emblem. Three ways, each with the emblem drawn in:</p>
+  <div class="menus" id="menus"></div>
 </div>
 <script>
-const OPTS = {
-  A: ['A · Washed stripes', "The flag's three stripes fill the row, very faint, fading in from the clock side and gone before the title. The flag is easy to tell at a glance."],
-  B: ['B · Waving cloth', 'A softly waving flag at the right end, under the clock, fading out toward the middle. More alive, a little more decorative.'],
-  C: ['C · Hairline stripes', "Three thin lines in the flag's colours run along the foot of the row, fading out at both ends. The quietest option, and nothing sits behind the words."],
-  D: ['D · Colour glow', "No stripes: the flag's two outer colours fall as a soft light from behind the title. The most atmospheric, but the least clear about which flag it is."],
+/*
+ * The flags, drawn whole. Iran: green, white, red; the red emblem in the
+ * middle; the takbir in white along the edges of the green and the red, 11
+ * times each (drawn here as its rhythm, small Kufic-like marks).
+ */
+const EMBLEM = (cx, cy, s, col) => `<g transform="translate(${cx} ${cy}) scale(${s})" fill="none" stroke="${col}" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M0 -7.2v14.4"/><path d="M-1.4 -8.2 0 -9.2 1.4 -8.2"/>
+  <path d="M-2.2 -5.4c-2.9 1.8-3.3 7.4.4 10.5"/><path d="M2.2 -5.4c2.9 1.8 3.3 7.4-.4 10.5"/>
+  <path d="M-4.6 -7c-5.2 3-5.6 12 .9 15.6"/><path d="M4.6 -7c5.2 3 5.6 12-.9 15.6"/>
+  <path d="M-3.6 8.4c2.2 1.2 5 1.2 7.2 0"/></g>`;
+const TAKBIR = (y, n, w) => Array.from({ length: n }, (_, i) => {
+  const x = (w / n) * i + (w / n) * 0.18, bw = (w / n) * 0.64;
+  return `<path d="M${x} ${y}h${bw}M${x + bw * 0.2} ${y}v-1.1M${x + bw * 0.55} ${y}v-1.4M${x + bw * 0.85} ${y}v-.9" stroke="#fff" stroke-width=".55" fill="none" opacity=".9"/>`;
+}).join('');
+const IRAN = (w = 70, h = 40) => `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  <rect width="${w}" height="${h / 3}" fill="#239f40"/><rect y="${h / 3}" width="${w}" height="${h / 3}" fill="#fff"/><rect y="${(2 * h) / 3}" width="${w}" height="${h / 3}" fill="#da0000"/>
+  ${TAKBIR(h / 3 - 0.9, 11, w)}${TAKBIR((2 * h) / 3 + 2.2, 11, w)}${EMBLEM(w / 2, h / 2, h / 40, '#da0000')}</svg>`;
+const YEMEN = (w = 60, h = 40) => `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  <rect width="${w}" height="${h / 3}" fill="#ce1126"/><rect y="${h / 3}" width="${w}" height="${h / 3}" fill="#fff"/><rect y="${(2 * h) / 3}" width="${w}" height="${h / 3}" fill="#000"/></svg>`;
+/** The stripes stretched across the row, Iran's emblem and bands kept at their own size. */
+const STRIPES = (ir, emblemAt = 0.82) => {
+  const W = 600, H = 46;
+  const cols = ir ? ['#239f40', '#fff', '#da0000'] : ['#ce1126', '#fff', '#000'];
+  const bands = ir ? `${TAKBIR(H / 3 - 0.9, 44, W)}${TAKBIR((2 * H) / 3 + 2.2, 44, W)}${EMBLEM(W * emblemAt, H / 2, 0.95, '#da0000')}` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true">${cols.map((c, i) => `<rect y="${(i * H) / 3}" width="${W}" height="${H / 3 + .2}" fill="${c}"/>`).join('')}${bands}</svg>`;
 };
-const WAVE = (c) => `<svg viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true">${[0,1,2].map((i) => {
-  const y = i * 20, w = (yy) => `M0 ${yy} C150 ${yy - 7} 300 ${yy + 7} 450 ${yy} S600 ${yy - 5} 600 ${yy - 5}`;
-  return `<path d="${w(y)} L600 ${y + 15} C450 ${y + 27} 300 ${y + 13} 150 ${y + 27} S0 ${y + 20} 0 ${y + 20} Z" fill="var(--c${i + 1})"/>`;
-}).join('')}</svg>`;
-const frame = (opt, desk, day, phone) => {
+const FLAG = (ir) => (ir ? IRAN() : YEMEN());
+
+const FAMS = [
+  ['The A family: washed stripes', [
+    ['A1', 'A1 · Stripes from the clock side', 'The first A: the stripes fill the row, faint, fading in from the clock and gone before the title. Iran\'s emblem sits near the clock.', (ir) => STRIPES(ir, 0.86)],
+    ['A2', 'A2 · Stripes from the title side', 'The mirror of A1: the flag starts behind "Desk:" and fades out before the middle. The flag reads first, with the desk\'s name.', (ir) => STRIPES(ir, 0.14)],
+    ['A3', 'A3 · A band in the middle', 'Only the gap between the title and the clock carries the stripes, fading out to both sides, the emblem in the centre. Nothing sits behind a letter.', (ir) => STRIPES(ir, 0.5)],
+    ['A4', 'A4 · A slanted band', 'The stripes in a slanted band before the clock, soft on both edges, like a flag seen through glass. My pick of the stripes.', (ir) => STRIPES(ir, 0.71)],
+    ['A5', 'A5 · Stripes as a fine screen', 'The whole row in the flag\'s colours, broken by fine vertical lines like a printed screen. Quiet, but the whole width.', (ir) => STRIPES(ir, 0.5)],
+  ]],
+  ['The D family: the whole flag, as a light', [
+    ['D1', 'D1 · The flag glowing by the clock', 'The whole flag, emblem and all, blurred into a soft light just before the clock.', FLAG],
+    ['D2', 'D2 · The flag glowing behind the title', 'The same light, behind "Desk:", as if the flag hung behind the words.', FLAG],
+    ['D3', 'D3 · The flag itself, small and faded', 'The real flag, sharp enough to tell, small, faded at its edges, in the empty space between the title and the clock. My pick.', FLAG],
+    ['D4', 'D4 · A wide wash of the flag', 'The flag blown up and blurred across the whole row: the colours only, but in the flag\'s own order and place.', FLAG],
+  ]],
+  ['New ideas', [
+    ['E1', 'E1 · The rules in the flag\'s colours', 'The row\'s own top and bottom lines take the flag\'s outer colours, fading at the ends. Nothing behind the words at all.', (ir) => STRIPES(ir)],
+    ['F1', 'F1 · A watermark', 'Only a faint print of the flag, like a watermark in paper, between the title and the clock.', FLAG],
+    ['G1', 'G1 · A pennant by the clock', 'The flag as a small sharp pennant at the row\'s right end, fading into the row. The clearest at a glance; a little more decorative.', FLAG],
+  ]],
+];
+const frame = (opt, desk, day, phone, draw) => {
   const ir = desk === 'ir';
+  const inMid = ['D1', 'D3', 'F1'].includes(opt);
+  const layer = inMid ? '' : opt === 'E1'
+    ? `<div class="fl tp" style="height:3px">${draw(ir).replace(/<rect y="[^"]*" width="600" height="[^"]*" fill="#(?:fff|ffffff)"\/>/, '')}</div><div class="fl">${draw(ir)}</div>`
+    : `<div class="fl">${draw(ir)}</div>`;
   return `<div class="frame ${opt} ${day ? 'day' : ''} ${phone ? 'phone' : ''}">
     <div class="mast"><span class="burger"></span><div><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div><span></span></div>
-    <div class="top ${desk}"><div class="fl">${opt === 'B' ? WAVE() : ''}</div>
-      <span class="dl"><span class="pre">Desk:</span> ${ir ? 'Iran' : 'Yemen'} conflict<svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></span>
-      <span class="stamp"><span>${ir ? 'Iran' : 'Yemen'}</span><time>16:16:29</time><i></i><span class="lbl2">Updated 15:42</span></span>
+    <div class="top ${opt}">${layer}
+      <span class="dl"><span class="pre">Desk:</span> ${ir ? 'Iran' : 'Yemen'} conflict<svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></span>${inMid ? `<span class="mid">${draw(ir)}</span>` : ''}
+      <span class="stamp"><span>${ir ? 'Tehran' : 'Sanaa'}</span><time>16:16:29</time><i></i><span class="lbl2">Updated 15:42</span></span>
     </div>
-    <div class="body"><b>Latest developments</b>1. ${ir ? 'Trump said the US is holding productive discussions with Iran and will not attack before the midterms.' : 'Saudi-led jets struck Houthi positions east of Sanaa overnight, local sources said.'}</div>
+    <div class="body"><b>Latest developments</b>1. ${ir ? 'Trump said the US will not attack Iran before the midterms, and the blockade stays in force.' : 'Government forces said they took full control of Mayun Island.'}</div>
   </div>`;
 };
-for (const [k, [t, d]] of Object.entries(OPTS)) {
-  document.getElementById(k).innerHTML = `<h2>${t}</h2><p>${d}</p>
-    <div class="pair">${frame(k, 'ir', false)}${frame(k, 'ye', false)}${frame(k, 'ir', true)}${frame(k, 'ye', true)}</div>
-    <div class="pair" style="margin-top:16px">${frame(k, 'ir', false, true)}${frame(k, 'ye', true, true)}</div>`;
+let html = '', toc = '';
+for (const [fam, opts] of FAMS) {
+  html += `<div class="fam">${fam}</div>`;
+  for (const [k, t, d, draw] of opts) {
+    toc += `<a href="#${k}">${k}</a>`;
+    html += `<section class="opt" id="${k}"><h2>${t}</h2><p>${d}</p>
+      <div class="pair">${frame(k, 'ir', false, false, draw)}${frame(k, 'ye', false, false, draw)}${frame(k, 'ir', true, false, draw)}${frame(k, 'ye', true, false, draw)}</div>
+      <div class="pair" style="margin-top:14px">${frame(k, 'ir', false, true, draw)}${frame(k, 'ye', true, true, draw)}</div></section>`;
+  }
 }
+document.getElementById('opts').innerHTML = html;
+document.getElementById('toc').innerHTML = toc + '<a href="#menu">Side menu</a>';
+// E1's lines: the top in the flag's first colour, the foot in its last.
+document.querySelectorAll('.E1 .fl.tp svg rect').forEach((r, i, a) => { if (i > 0) r.remove(); });
+document.querySelectorAll('.E1 .fl.tp svg rect').forEach((r) => { r.setAttribute('height', '46'); r.setAttribute('y', '0'); });
+document.querySelectorAll('.E1 .fl:not(.tp) svg').forEach((s) => { const rs = s.querySelectorAll('rect'); rs[0].remove(); rs[1].remove(); rs[2].setAttribute('y', '0'); rs[2].setAttribute('height', '46'); s.querySelectorAll('path,g').forEach((p) => p.remove()); });
+document.querySelectorAll('.E1 .fl.tp svg').forEach((s) => s.querySelectorAll('path,g').forEach((p) => p.remove()));
+
+// The side menu: three widths of the flag by each desk.
+const tall = (ir) => {
+  // The flag stood on its side would put the stripes the wrong way: the strip keeps them across, the emblem at its middle.
+  const W = 12, H = 40;
+  const cols = ir ? ['#239f40', '#fff', '#da0000'] : ['#ce1126', '#fff', '#000'];
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${cols.map((c, i) => `<rect y="${(i * H) / 3}" width="${W}" height="${H / 3 + .2}" fill="${c}"/>`).join('')}${ir ? EMBLEM(W / 2, H / 2, 0.42, '#da0000') : ''}</svg>`;
+};
+const menu = (cls, title, day, mf) => `<div class="menu ${cls} ${day ? 'day' : ''}"><h3>${title}</h3>
+  <a class="now" href="#"><span class="mf">${mf(false)}</span><span>Yemen Conflict Desk<small>Live</small></span></a>
+  <a href="#"><span class="mf">${mf(true)}</span><span>Iran Conflict Desk<small>Being built</small></span></a></div>`;
+const small = (ir) => (ir ? IRAN() : YEMEN()).replace('preserveAspectRatio="xMidYMid meet"', 'preserveAspectRatio="xMidYMid slice"');
+document.getElementById('menus').innerHTML = [
+  menu('m1', 'About as now, 6px', false, tall), menu('m2', 'Wider, 12px, the emblem shows', false, tall), menu('m3', 'A small whole flag', false, small),
+  menu('m1', 'About as now, 6px', true, tall), menu('m2', 'Wider, 12px, the emblem shows', true, tall), menu('m3', 'A small whole flag', true, small),
+].join('');
 </script>
 </body>
 </html>

@@ -16,7 +16,9 @@ h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
 .opt>h2{font:700 13px/1 "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
 .opt>p{color:var(--dim);margin:0 0 12px;max-width:780px}
 .frame{background:var(--bg);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.mast{text-align:center;padding:18px 14px 12px;border-bottom:1px solid var(--line)}
+.mast{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;text-align:center;padding:16px 14px 12px;border-bottom:1px solid var(--line)}
+.burger{width:22px;height:16px;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);position:relative}
+.burger::after{content:"";position:absolute;left:0;right:0;top:5px;height:2px;background:var(--ink)}
 .mn{font:600 34px/1 Newsreader,serif;color:var(--strong)}
 .ml{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:7px;font:600 9.5px/1 "Libre Franklin";letter-spacing:.2em;text-transform:uppercase;color:var(--accent)}
 .ml::before,.ml::after{content:"";width:2.3em;height:1.5px;background:var(--accent)}
@@ -81,18 +83,69 @@ h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
 .top{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)}
 .ghost{padding:16px;color:var(--dim)}
 .ghost .bar{height:10px;background:#2a2522;border-radius:3px;margin:9px 0}
+/* 4 · Briefing */
+.brief{padding:16px;border-bottom:1px solid var(--line)}
+.brief-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brief h3{font:600 21px/1.2 Newsreader,serif;margin:0;color:var(--strong)}
+.brief h3::before{content:"";display:block;width:28px;height:3px;background:var(--accent);margin-bottom:8px}
+.bpts{margin:12px 0 0;padding-left:1.3em;font:500 16px/1.45 Newsreader,serif;color:var(--strong)}
+.bpts li+li{margin-top:7px}
+.bpts sup{color:#f0a58a;font:700 10px "Libre Franklin";margin-left:2px}
+.tag{display:inline-block;font:700 9px/1 "Libre Franklin";letter-spacing:.12em;text-transform:uppercase;padding:3px 6px;border-radius:2px;margin-right:7px;vertical-align:2px;color:#fff}
+.tag.ir{background:#1d7a34}.tag.ye{background:#a30e1e}
+.more-b{all:unset;cursor:pointer;margin-top:10px;font:700 10.5px/1 "Libre Franklin";letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}
+.mc{display:flex;align-items:center;gap:12px;padding:14px 16px;border-right:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.mc b{display:block;font:600 16px/1.2 Newsreader,serif;letter-spacing:.06em;text-transform:uppercase;color:var(--strong)}
+.mc small{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:11px;margin-top:3px}
+.mc em{margin-left:auto;font:600 11px "Libre Franklin";font-style:normal;color:var(--dim);white-space:nowrap}
+.fsvg{width:34px;height:20px;flex:none;border-radius:2px;box-shadow:0 0 0 .5px #ffffff44}
+.dot{width:7px;height:7px;border-radius:50%;background:#2dd4bf;display:inline-block}.dot.soon{background:#f59e0b}
+/* 5 · Pulse */
+.clk{display:flex;align-items:center;gap:10px}.clk .fsvg{opacity:.55;width:30px;height:18px}
+.pulse svg{width:100%;height:46px;display:block}
+.pulse-l{display:flex;justify-content:space-between;font:600 9px "Libre Franklin";letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-top:3px}
+.since{margin-top:10px;font:500 12px "Libre Franklin";color:var(--dim)}.since b{color:var(--strong)}
+.feed-h{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;margin-bottom:12px}.chips b{font:700 10px/1 "Libre Franklin";letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--dim)}.chips b.on{color:var(--strong);border-color:var(--accent)}
+.wire{display:flex;flex-direction:column}
+.w{display:grid;grid-template-columns:44px 52px 1fr auto;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line)}
+.w time{font:600 12px "Libre Franklin";color:var(--strong);font-variant-numeric:tabular-nums}
+.w em{font:700 9px/1 "Libre Franklin";font-style:normal;letter-spacing:.12em;text-transform:uppercase}
+.w.ir em{color:#4ade80}.w.ye em{color:#f87171}
+.w span{font:500 15px/1.35 Newsreader,serif;color:var(--strong)}
+.w small{color:var(--dim);font-size:11px;white-space:nowrap}
+@media (max-width:640px){.w{grid-template-columns:40px 1fr}.w em{grid-column:2}.w span{grid-column:1/-1}.w small{grid-column:1/-1}}
+/* 6 · Live wire */
+.banner{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#3a1512,transparent)}
+.banner .bk{font:700 9.5px/1 "Libre Franklin";letter-spacing:.16em;text-transform:uppercase;color:#fff;background:#b91c1c;padding:4px 7px;border-radius:2px}
+.banner span{font:600 11px "Libre Franklin";color:var(--dim)}
+.banner b{font:600 17px/1.3 Newsreader,serif;color:var(--strong)}
+.lw{display:grid;grid-template-columns:1fr 250px}
+.lw .wire{padding:4px 16px 12px}
+.rail{border-left:1px solid var(--line);display:flex;flex-direction:column}
+.rd{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:14px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.rd .fsvg{grid-row:1/4}
+.rd b{font:600 15px/1.2 Newsreader,serif;letter-spacing:.06em;text-transform:uppercase;color:var(--strong)}
+.rd small{display:flex;gap:6px;align-items:center;color:var(--dim);font-size:11px}
+.rd .n{font-size:11px;color:var(--dim)}.rd .n b{font:700 12px "Libre Franklin";letter-spacing:0;text-transform:none}
+@media (max-width:760px){.lw{grid-template-columns:1fr}.rail{order:-1;flex-direction:row;overflow-x:auto;border-left:0;border-bottom:1px solid var(--line)}.rd{min-width:220px;border-bottom:0;border-right:1px solid var(--line)}}
+/* Features */
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:10px}
+.feats div{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:12px;color:var(--dim);font-size:13px}
+.feats b{display:block;color:var(--strong);font:600 16px/1.2 Newsreader,serif;margin-bottom:4px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>The home page: three options</h1>
-  <p class="note">What a reader sees on thesituationroom.live. Options 1 and 2 are a real front page that leads to the desks. Option 3 opens a desk straight away, with a thin strip of desks above it. All three use the same masthead and the faded flags from the header mockup. I'd go with 1: it reads like a newspaper's front page, shows that the site is live, and adding a third desk is just one more column.</p>
+  <h1>The home page: more options</h1>
+  <p class="note">What a reader sees on thesituationroom.live. As you asked: no date under the masthead, the menu button on the left as now, option 3 gone. 1 and 2 stay; 4, 5 and 6 are new, and the features they carry can be mixed into any of them (listed at the end). I'd go with <b style="color:var(--strong)">5</b>: the desks side by side like 1, with the day's pulse of each desk, a combined live feed and a short "since your last visit" line.</p>
 
   <section class="opt">
     <h2>1 · Front page</h2>
     <p>One column per desk, with its flag faded in the header, its status and its local clock. Under that: the first point of its Latest developments with its source, and the day's counts. Below the columns, "Across the desks" lists the newest reports from every desk, each marked with its desk's colour. A desk being built carries an amber dot. The next desk shows as a quiet placeholder until it opens.</p>
     <div class="frame">
-      <div class="mast"><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div><div class="date">Friday, 9 October 2026</div></div>
+      <div class="mast"><span class="burger"></span><div><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div><span></span></div>
       <div class="fp">
         <article class="desk ir"><div class="desk-top wash"><span class="desk-name"><span>Desk:</span> Iran conflict</span><span class="clock">16:16 <span class="kicker">Tehran</span></span></div>
           <span class="pill soon"><i></i>Being built · updated 15:42</span>
@@ -123,7 +176,7 @@ h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
     <h2>2 · Situation board</h2>
     <p>A dark map of the region leads, with each desk's area lit in its flag colours. Clicking an area opens that desk. Beside the map, one row per desk gives its status, clock and first point. It is the most "situation room" of the three, but on a phone the map takes the first screen.</p>
     <div class="frame">
-      <div class="mast"><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div><div class="date">Friday, 9 October 2026</div></div>
+      <div class="mast"><span class="burger"></span><div><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div><span></span></div>
       <div class="board">
         <div class="mapbox">
           <svg viewBox="0 0 600 420" aria-hidden="true">
@@ -145,15 +198,91 @@ h1{font:600 28px/1.2 Newsreader,serif;margin:0 0 6px}
   </section>
 
   <section class="opt">
-    <h2>3 · A desk as the home page</h2>
-    <p>No front page: the site opens the desk the reader used last, or the busiest desk for a first visit. A thin "Desks" strip above the header switches between them in one tap. It is the quickest way into the news, but there is no overview of the desks side by side.</p>
+    <h2>4 · The morning briefing</h2>
+    <p>The page opens on one short briefing across every desk, refreshed every 3 hours: four or five numbered points, each tagged with its desk and its source, the way Latest developments works. Under it, one compact card per desk. It answers "what happened today in the region" in ten seconds, before the reader picks a desk.</p>
     <div class="frame">
-      <div class="mast" style="padding-bottom:10px"><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div>
-      <nav class="strip"><span class="k">Desks</span><a class="on" href="#"><i class="s"></i>Iran conflict</a><a href="#"><i></i>Yemen conflict</a></nav>
-      <div class="top ir wash"><span class="desk-name" style="font-size:16px"><span>Desk:</span> Iran conflict</span><span class="clock">16:16:29</span></div>
-      <div class="ghost"><b class="serif" style="font-size:19px;color:var(--strong)">Latest developments</b><div class="bar" style="width:92%"></div><div class="bar" style="width:70%"></div><div class="bar" style="width:40%;margin-top:18px"></div></div>
+      <div class="mast"><span class="burger"></span><div><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div><span></span></div>
+      <div class="brief">
+        <div class="brief-h"><h3>Across the region today</h3><span class="kicker">Updated 15:00 · next 18:00</span></div>
+        <ol class="bpts">
+          <li><span class="tag ir">Iran</span>Trump said the US will not attack Iran before the midterms, and the blockade stays in force.<sup>1</sup></li>
+          <li><span class="tag ir">Iran</span>The IRGC Navy said it hit the LPG carrier NV Sunshine in the southern Strait of Hormuz.<sup>2</sup></li>
+          <li><span class="tag ye">Yemen</span>Government forces said they took full control of Mayun Island and Bab al-Mandab.<sup>3</sup></li>
+          <li><span class="tag ye">Yemen</span>Three people were killed in a Houthi attack on Riyadh's King Khalid airport, Saudi authorities said.<sup>4</sup></li>
+        </ol>
+        <button class="more-b">Read more</button>
+      </div>
+      <div class="mini">
+        <a class="mc ir" href="#"><svg class="fsvg" viewBox="0 0 70 40" preserveAspectRatio="xMidYMid slice"><rect width="70" height="13.4" fill="#239f40"/><rect y="13.3" width="70" height="13.4" fill="#fff"/><rect y="26.6" width="70" height="13.4" fill="#da0000"/><g transform="translate(35 20) scale(1)" fill="none" stroke="#da0000" stroke-width="1.35" stroke-linecap="round"><path d="M0 -7.2v14.4"/><path d="M-2.2 -5.4c-2.9 1.8-3.3 7.4.4 10.5"/><path d="M2.2 -5.4c2.9 1.8 3.3 7.4-.4 10.5"/><path d="M-4.6 -7c-5.2 3-5.6 12 .9 15.6"/><path d="M4.6 -7c5.2 3 5.6 12-.9 15.6"/></g></svg><span><b>Iran conflict</b><small><i class="dot soon"></i>Being built · Tehran 16:16</small></span><em>142 reports today</em></a>
+        <a class="mc ye" href="#"><svg class="fsvg" viewBox="0 0 60 40" preserveAspectRatio="xMidYMid slice"><rect width="60" height="13.4" fill="#ce1126"/><rect y="13.3" width="60" height="13.4" fill="#fff"/><rect y="26.6" width="60" height="13.4" fill="#000"/></svg><span><b>Yemen conflict</b><small><i class="dot"></i>Live · Sanaa 16:16</small></span><em>96 reports today</em></a>
+      </div>
     </div>
   </section>
+
+  <section class="opt">
+    <h2>5 · Desks with their pulse (my pick)</h2>
+    <p>Like 1, a column per desk, with three things added. A 24-hour pulse under each desk's name: reports per hour, attacks marked in the desk's colour, so a busy night shows at a glance. A "since your last visit" line (12 new reports, 3 attacks), kept in the reader's own browser, no account. And one live feed below, from every desk, with a button per desk to filter it.</p>
+    <div class="frame">
+      <div class="mast"><span class="burger"></span><div><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div><span></span></div>
+      <div class="fp">
+        <article class="desk ir"><div class="desk-top"><span class="desk-name"><span>Desk:</span> Iran conflict</span><span class="clk"><svg class="fsvg" viewBox="0 0 70 40" preserveAspectRatio="xMidYMid slice"><rect width="70" height="13.4" fill="#239f40"/><rect y="13.3" width="70" height="13.4" fill="#fff"/><rect y="26.6" width="70" height="13.4" fill="#da0000"/><g transform="translate(35 20) scale(1)" fill="none" stroke="#da0000" stroke-width="1.35" stroke-linecap="round"><path d="M0 -7.2v14.4"/><path d="M-2.2 -5.4c-2.9 1.8-3.3 7.4.4 10.5"/><path d="M2.2 -5.4c2.9 1.8 3.3 7.4-.4 10.5"/><path d="M-4.6 -7c-5.2 3-5.6 12 .9 15.6"/><path d="M4.6 -7c5.2 3 5.6 12-.9 15.6"/></g></svg><span class="clock">16:16 <span class="kicker">Tehran</span></span></span></div>
+          <div class="pulse"><svg viewBox="0 0 300 46" preserveAspectRatio="none"><rect x="1" y="23.325891632373114" width="9" height="22.674108367626886" rx="1.5" fill="#4a423d"/><rect x="13.5" y="36.0738511659808" width="9" height="9.926148834019205" rx="1.5" fill="#4a423d"/><rect x="26" y="24.930864197530866" width="9" height="21.069135802469134" rx="1.5" fill="#4a423d"/><rect x="38.5" y="37.32902949245542" width="9" height="8.670970507544581" rx="1.5" fill="#2fbf55"/><rect x="51" y="19.959705075445818" width="9" height="26.040294924554182" rx="1.5" fill="#4a423d"/><rect x="63.5" y="30.32906378600823" width="9" height="15.67093621399177" rx="1.5" fill="#2fbf55"/><rect x="76" y="17.646982167352537" width="9" height="28.353017832647463" rx="1.5" fill="#4a423d"/><rect x="88.5" y="23.04926268861454" width="9" height="22.95073731138546" rx="1.5" fill="#4a423d"/><rect x="101" y="17.153189300411523" width="9" height="28.846810699588477" rx="1.5" fill="#4a423d"/><rect x="113.5" y="20.94641632373114" width="9" height="25.05358367626886" rx="1.5" fill="#4a423d"/><rect x="126" y="34.009190672153636" width="9" height="11.990809327846364" rx="1.5" fill="#4a423d"/><rect x="138.5" y="8.069907407407413" width="9" height="37.93009259259259" rx="1.5" fill="#2fbf55"/><rect x="151" y="35.89399862825789" width="9" height="10.106001371742114" rx="1.5" fill="#4a423d"/><rect x="163.5" y="7.506155692729763" width="9" height="38.49384430727024" rx="1.5" fill="#4a423d"/><rect x="176" y="25.745884773662553" width="9" height="20.254115226337447" rx="1.5" fill="#4a423d"/><rect x="188.5" y="17.15639574759945" width="9" height="28.84360425240055" rx="1.5" fill="#4a423d"/><rect x="201" y="34.2068244170096" width="9" height="11.793175582990397" rx="1.5" fill="#2fbf55"/><rect x="213.5" y="24.847788065843623" width="9" height="21.152211934156377" rx="1.5" fill="#4a423d"/><rect x="226" y="21.400274348422496" width="9" height="24.599725651577504" rx="1.5" fill="#4a423d"/><rect x="238.5" y="34.77786351165981" width="9" height="11.222136488340192" rx="1.5" fill="#2fbf55"/><rect x="251" y="28.042283950617282" width="9" height="17.957716049382718" rx="1.5" fill="#4a423d"/><rect x="263.5" y="37.29230109739369" width="9" height="8.70769890260631" rx="1.5" fill="#2fbf55"/><rect x="276" y="31.88593964334705" width="9" height="14.11406035665295" rx="1.5" fill="#2fbf55"/><rect x="288.5" y="23.996039094650207" width="9" height="22.003960905349793" rx="1.5" fill="#4a423d"/></svg><div class="pulse-l"><span>24 hours ago</span><span><i style="display:inline-block;width:8px;height:8px;background:#2fbf55;border-radius:1px;vertical-align:-1px"></i> attacks</span><span>now</span></div></div>
+          <div class="since">Since your last visit: <b>12</b> reports, <b>3</b> attacks</div>
+          <p class="lead" style="margin:10px 0 0">Trump said the US will not attack Iran before the midterms, and the blockade stays in force.</p>
+          <a class="go" href="#">Open the desk →</a></article>
+        <article class="desk ye"><div class="desk-top"><span class="desk-name"><span>Desk:</span> Yemen conflict</span><span class="clk"><svg class="fsvg" viewBox="0 0 60 40" preserveAspectRatio="xMidYMid slice"><rect width="60" height="13.4" fill="#ce1126"/><rect y="13.3" width="60" height="13.4" fill="#fff"/><rect y="26.6" width="60" height="13.4" fill="#000"/></svg><span class="clock">16:16 <span class="kicker">Sanaa</span></span></span></div>
+          <div class="pulse"><svg viewBox="0 0 300 46" preserveAspectRatio="none"><rect x="1" y="9.879946844993142" width="9" height="36.12005315500686" rx="1.5" fill="#e0313f"/><rect x="13.5" y="7.394367283950615" width="9" height="38.605632716049385" rx="1.5" fill="#e0313f"/><rect x="26" y="20.894384430727023" width="9" height="25.105615569272977" rx="1.5" fill="#e0313f"/><rect x="38.5" y="19.738022976680387" width="9" height="26.261977023319613" rx="1.5" fill="#4a423d"/><rect x="51" y="16.098122427983537" width="9" height="29.901877572016463" rx="1.5" fill="#e0313f"/><rect x="63.5" y="15.851225994513033" width="9" height="30.148774005486967" rx="1.5" fill="#4a423d"/><rect x="76" y="14.79980281207133" width="9" height="31.20019718792867" rx="1.5" fill="#e0313f"/><rect x="88.5" y="6.227803497942389" width="9" height="39.77219650205761" rx="1.5" fill="#e0313f"/><rect x="101" y="33.789549039780525" width="9" height="12.210450960219479" rx="1.5" fill="#4a423d"/><rect x="113.5" y="17.731953017832648" width="9" height="28.268046982167352" rx="1.5" fill="#e0313f"/><rect x="126" y="34.45007716049383" width="9" height="11.549922839506173" rx="1.5" fill="#4a423d"/><rect x="138.5" y="29.376020233196158" width="9" height="16.623979766803842" rx="1.5" fill="#4a423d"/><rect x="151" y="17.201140260631" width="9" height="28.798859739369" rx="1.5" fill="#4a423d"/><rect x="163.5" y="21.431610082304527" width="9" height="24.568389917695473" rx="1.5" fill="#e0313f"/><rect x="176" y="25.277306241426615" width="9" height="20.722693758573385" rx="1.5" fill="#e0313f"/><rect x="188.5" y="35.87403120713306" width="9" height="10.12596879286694" rx="1.5" fill="#e0313f"/><rect x="201" y="23.839068930041154" width="9" height="22.160931069958846" rx="1.5" fill="#4a423d"/><rect x="213.5" y="10.160073731138546" width="9" height="35.839926268861454" rx="1.5" fill="#4a423d"/><rect x="226" y="28.41729252400549" width="9" height="17.58270747599451" rx="1.5" fill="#e0313f"/><rect x="238.5" y="30.33912037037037" width="9" height="15.66087962962963" rx="1.5" fill="#4a423d"/><rect x="251" y="6.690989368998629" width="9" height="39.30901063100137" rx="1.5" fill="#4a423d"/><rect x="263.5" y="17.497590877914952" width="9" height="28.502409122085048" rx="1.5" fill="#e0313f"/><rect x="276" y="29.59843106995885" width="9" height="16.40156893004115" rx="1.5" fill="#4a423d"/><rect x="288.5" y="37.53671982167353" width="9" height="8.463280178326475" rx="1.5" fill="#4a423d"/></svg><div class="pulse-l"><span>24 hours ago</span><span><i style="display:inline-block;width:8px;height:8px;background:#e0313f;border-radius:1px;vertical-align:-1px"></i> attacks</span><span>now</span></div></div>
+          <div class="since">Since your last visit: <b>31</b> reports, <b>9</b> strikes</div>
+          <p class="lead" style="margin:10px 0 0">Government forces said they took full control of Mayun Island and Bab al-Mandab.</p>
+          <a class="go" href="#">Open the desk →</a></article>
+      </div>
+      <div class="across"><div class="feed-h"><h3>Live from every desk</h3><span class="chips"><b class="on">All</b><b>Iran</b><b>Yemen</b></span></div>
+        <div class="wire">
+          <div class="w ir"><time>16:09</time><em>Iran</em><span>Roadside bomb hits a police vehicle in Sistan and Baluchestan</span><small>Khabari Plus</small></div>
+          <div class="w ye"><time>16:07</time><em>Yemen</em><span>Government forces take full control of Mayun Island</span><small>Saudi News</small></div>
+          <div class="w ir"><time>15:54</time><em>Iran</em><span>UKMTO: a vessel was hit by an unknown projectile 13 miles east of Fujairah</span><small>UKMTO</small></div>
+          <div class="w ye"><time>15:49</time><em>Yemen</em><span>Southern Giants Brigades say they control the Bab al-Mandab front</span><small>Yemen TV</small></div>
+        </div></div>
+    </div>
+  </section>
+
+  <section class="opt">
+    <h2>6 · The live wire</h2>
+    <p>For the reader who wants the news now: the page is one live feed from every desk, newest first, the latest big event as a banner on top. A narrow column on the right holds each desk with its clock and counts, and leads into it. On a phone the desks become a row above the feed.</p>
+    <div class="frame">
+      <div class="mast"><span class="burger"></span><div><div class="mn">The Situation Room</div><div class="ml">Open-source intelligence</div></div><span></span></div>
+      <div class="banner"><span class="bk">Latest</span><span>Iran · 15:35</span><b>IRGC Navy says it hit the LPG carrier NV Sunshine in the southern Strait of Hormuz</b></div>
+      <div class="lw">
+        <div class="wire big">
+          <div class="w ir"><time>16:09</time><em>Iran</em><span>Roadside bomb hits a police vehicle in Sistan and Baluchestan</span><small>Khabari Plus</small></div>
+          <div class="w ye"><time>16:07</time><em>Yemen</em><span>Government forces take full control of Mayun Island</span><small>Saudi News</small></div>
+          <div class="w ir"><time>16:02</time><em>Iran</em><span>Bessent: the US is running an "absolute isolation campaign" against Iran</span><small>Fox Business</small></div>
+          <div class="w ye"><time>15:59</time><em>Yemen</em><span>Air strikes hit communications sites in Belad al-Rus and Arhab</span><small>Al Mayadeen</small></div>
+          <div class="w ir"><time>15:54</time><em>Iran</em><span>UKMTO: a vessel was hit by an unknown projectile 13 miles east of Fujairah</span><small>UKMTO</small></div>
+        </div>
+        <aside class="rail">
+          <a class="rd ir" href="#"><svg class="fsvg" viewBox="0 0 70 40" preserveAspectRatio="xMidYMid slice"><rect width="70" height="13.4" fill="#239f40"/><rect y="13.3" width="70" height="13.4" fill="#fff"/><rect y="26.6" width="70" height="13.4" fill="#da0000"/><g transform="translate(35 20) scale(1)" fill="none" stroke="#da0000" stroke-width="1.35" stroke-linecap="round"><path d="M0 -7.2v14.4"/><path d="M-2.2 -5.4c-2.9 1.8-3.3 7.4.4 10.5"/><path d="M2.2 -5.4c2.9 1.8 3.3 7.4-.4 10.5"/><path d="M-4.6 -7c-5.2 3-5.6 12 .9 15.6"/><path d="M4.6 -7c5.2 3 5.6 12-.9 15.6"/></g></svg><b>Iran conflict</b><small><i class="dot soon"></i>Tehran 16:16</small><span class="n"><b>142</b> today · <b>11</b> attacks</span></a>
+          <a class="rd ye" href="#"><svg class="fsvg" viewBox="0 0 60 40" preserveAspectRatio="xMidYMid slice"><rect width="60" height="13.4" fill="#ce1126"/><rect y="13.3" width="60" height="13.4" fill="#fff"/><rect y="26.6" width="60" height="13.4" fill="#000"/></svg><b>Yemen conflict</b><small><i class="dot"></i>Sanaa 16:16</small><span class="n"><b>96</b> today · <b>23</b> strikes</span></a>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="opt">
+    <h2>Features any option can carry</h2>
+    <p>Pick the ones you want; each is free to run.</p>
+    <div class="feats">
+      <div><b>Search every desk</b>One box on the home page, the same smart search as the desks, across all of them.</div>
+      <div><b>Since your last visit</b>New reports and attacks per desk since the reader last came, kept in their browser only.</div>
+      <div><b>The 24-hour pulse</b>Reports per hour per desk, attacks marked: how busy each war was overnight.</div>
+      <div><b>One map</b>A small map of the region with each desk's latest pins; a tap opens the desk on that pin.</div>
+      <div><b>Key numbers</b>A strip of each desk's headline figures (ships hit, strikes today, Hormuz traffic), each with its source.</div>
+      <div><b>Remember my desk</b>A returning reader is offered "Back to the Iran desk" at the top, one tap.</div>
+      <div><b>Languages and themes</b>English, Hebrew and Arabic, and the same themes as the desks, from the menu.</div>
+      <div><b>About and method</b>A short line on what the site is and how it works, leading to each desk's methodology.</div>
+    </div>
+  </section>
+
 </div>
 </body>
 </html>

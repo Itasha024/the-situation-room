@@ -23,6 +23,8 @@ const notYemenAlone = (d: unknown): d is string[] => Array.isArray(d) && d.lengt
 const PAYLOAD_KEY = "payload";
 /** fp → when a card was deleted by hand; a scan running meanwhile cannot bring it back. */
 const DROPPED_KEY = "json:dropped";
+/** Desks taken off a card by hand ({fp: ["iran"]}): seeing the card again does not put it back (9 Oct). */
+const UNDESK_KEY = "json:undesk";
 
 /**
  * The SQL client is injected so the driver can be exercised against an embedded
@@ -367,14 +369,14 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               // the card stored first stays, and joins the other desk.
               if (r.fp.startsWith("ir-") || r.tags?.includes("iran-url")) {
                 const joined = await sql<{ fp: string }>`
-                  update desk_report set desks = array(select distinct unnest(desks || ${desks}::text[]) order by 1)
+                  update desk_report set desks = array(select distinct d from unnest(desks || ${desks}::text[]) d where d = any(desks) or not exists (select 1 from desk_state s where s.key = ${UNDESK_KEY} and coalesce(s.value -> desk_report.fp, '[]'::jsonb) ? d) order by 1)
                    where url = ${r.url} and fp <> ${r.fp} and (${r.fp.startsWith("ir-")} or fp like 'ir-%')
                      and not (desks @> ${desks}::text[])
                   returning fp
                 `;
                 for (const j of joined) {
                   await sql`
-                    update desk_event set desks = array(select distinct unnest(desks || ${desks}::text[]) order by 1)
+                    update desk_event set desks = array(select distinct d from unnest(desks || ${desks}::text[]) d where d = any(desks) or not exists (select 1 from desk_state s where s.key = ${UNDESK_KEY} and coalesce(s.value -> ${j.fp}::text, '[]'::jsonb) ? d) order by 1)
                      where (fp = ${j.fp} or fp like ${j.fp + "-%"}) and not (desks @> ${desks}::text[])
                   `;
                 }
@@ -382,11 +384,11 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               // Seen again as another desk's too: it joins that desk, and so do its pins.
               if (notYemenAlone(desks)) {
                 await sql`
-                  update desk_report set desks = array(select distinct unnest(desks || ${desks}::text[]) order by 1)
+                  update desk_report set desks = array(select distinct d from unnest(desks || ${desks}::text[]) d where d = any(desks) or not exists (select 1 from desk_state s where s.key = ${UNDESK_KEY} and coalesce(s.value -> desk_report.fp, '[]'::jsonb) ? d) order by 1)
                    where fp = ${r.fp} and not (desks @> ${desks}::text[])
                 `;
                 await sql`
-                  update desk_event set desks = array(select distinct unnest(desks || ${desks}::text[]) order by 1)
+                  update desk_event set desks = array(select distinct d from unnest(desks || ${desks}::text[]) d where d = any(desks) or not exists (select 1 from desk_state s where s.key = ${UNDESK_KEY} and coalesce(s.value -> ${r.fp}::text, '[]'::jsonb) ? d) order by 1)
                    where (fp = ${r.fp} or fp like ${r.fp + "-%"}) and not (desks @> ${desks}::text[])
                 `;
               }

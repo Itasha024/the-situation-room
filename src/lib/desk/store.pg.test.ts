@@ -273,7 +273,7 @@ test("a row held in memory is re-read when another instance changes it, and not 
   assert.equal(await a.getJson("ver-test"), null, "and so is a delete");
 });
 
-test("a card rewritten to a link another card holds keeps its own link, and the cards after it are still saved", async () => {
+test("a card rewritten to a link another card holds goes as that card's copy, and the cards after it are still saved", async () => {
   const store = createPgStore(provider);
   await store.mergeIntoDesk([
     report({ fp: "live-clash-a", url: "https://t.me/alhadath/1", source: "Al Hadath" }),
@@ -285,7 +285,8 @@ test("a card rewritten to a link another card holds keeps its own link, and the 
   ]);
   assert.equal(res.error, undefined);
   assert.equal(res.reportsAdded, 1, "the card after the clash is saved");
-  const rows = await sql<{ url: string; summary: string }>`select url, summary from desk_report where fp = ${"live-clash-b"}`;
-  assert.equal(rows[0].url, "https://t.me/alarabiya/2");
-  assert.equal(rows[0].summary, "Rewritten from the original");
+  // The original's own card holds the link: the relay's card was its copy (9 Oct clones).
+  const rows = await sql<{ url: string }>`select url from desk_report where fp = ${"live-clash-b"}`;
+  assert.equal(rows.length, 0);
+  assert.equal((await sql<{ url: string }>`select url from desk_report where fp = ${"live-clash-a"}`)[0].url, "https://t.me/alhadath/1");
 });

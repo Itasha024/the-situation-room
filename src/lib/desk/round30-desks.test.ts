@@ -379,3 +379,17 @@ test("the Iran reader is told the site's general rules; Yemen's combine prompt i
   assert.match(combineSystem(), /\("the Houthis said", "Saudi media\n  said"\)/);
   assert.match(combineSystem("the war with Iran", '("the IRGC said")'), /covering the war with Iran\. [\s\S]*\("the IRGC said"\)/);
 });
+
+test("a relay's card traced to an original that has its own card goes, rather than taking its headline (9 Oct)", async () => {
+  const store = createPgStore(provider);
+  await store.mergeIntoDesk([
+    card(41, { at: "2026-10-08T15:00:00+03:00", source: "Yahya Saree", url: "https://t.me/army21ye/4000", summary: "Houthi forces say they shot down a Bayraktar Akinci" }),
+    card(42, { at: "2026-10-08T15:10:00+03:00", source: "Press TV", url: "https://t.me/presstv/9000", summary: "Yemen's army downs Turkish drone", citing: "Yahya Saree" }),
+  ]);
+  await store.mergeIntoDesk([card(42, { at: "2026-10-08T15:10:00+03:00", source: "Yahya Saree", url: "https://t.me/army21ye/4000", summary: "Houthi forces say they shot down a Bayraktar Akinci", tags: ["original"] })]);
+  const fps = (await store.recentDesk(50)).reports.map((r) => r.fp);
+  assert.ok(fps.includes("r30-41"));
+  assert.ok(!fps.includes("r30-42"), "the relay's copy is gone");
+  const dropped = await sql<{ v: boolean }>`select value ? 'r30-42' as v from desk_state where key = 'json:dropped'`;
+  assert.equal(dropped[0]?.v, true);
+});

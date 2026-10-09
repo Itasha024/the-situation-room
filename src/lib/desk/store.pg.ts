@@ -421,7 +421,22 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               }
               // The card rewritten from its original's full text replaces the
               // relay's version: headline, body, source and link.
-              if (r.tags?.includes("original")) {
+              // The original already has a card of its own: this relay's card is
+              // a copy of it, and goes (9 Oct: Saree's "two operations" on five
+              // cards, the Bayraktar shoot-down on three, each a relay's card
+              // given the original's headline under the relay's own link).
+              const holder = r.tags?.includes("original")
+                ? await sql<{ fp: string }>`select fp from desk_report where url = ${r.url} and fp <> ${r.fp} limit 1`
+                : [];
+              if (holder.length) {
+                await sql`delete from desk_event where fp = ${r.fp} or fp like ${r.fp + "-%"}`;
+                await sql`delete from desk_report where fp = ${r.fp}`;
+                await sql`
+                  insert into desk_state (key, value, updated_at)
+                  values (${DROPPED_KEY}, jsonb_build_object(${r.fp}::text, ${Date.now()}::bigint), now())
+                  on conflict (key) do update set value = desk_state.value || excluded.value, updated_at = now()
+                `;
+              } else if (r.tags?.includes("original")) {
                 await sql`
                   update desk_report set summary = ${pgSafe(r.summary)}, body = ${r.text == null ? null : pgSafe(r.text)},
                          -- Another card already holds the original's link: keep this one's.

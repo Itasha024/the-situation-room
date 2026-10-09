@@ -7111,6 +7111,8 @@ function bootOtherDesk(el) {
   const again = () => { if (map && !touched) { map.invalidateSize(); map.fitBounds(START, FIT); } };
   if (document.readyState === 'complete') setTimeout(again, 400);
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
+  iranPins.drawn = '';
+  loadIranPins();
 }
 
 /*
@@ -7139,10 +7141,73 @@ function startIranFeed() {
   wireLeanMenu();
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
-  const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); };
+  const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
+/*
+ * The Iran desk's map (Round 30 stage 6): a pin for every attack card, in the
+ * colour of who acted (the legend's six groups; anyone else grey), its note
+ * the card's. The Houthis' own war is the Yemen desk's map. "Show on map" on
+ * a card flies the map to its pin and opens the note.
+ */
+const IRAN_PIN_INK = { iran: '#16a34a', hezbollah: '#eab308', iraqi_militias: '#f97316', us: '#2563eb', israel: '#60a5fa', gulf: '#a855f7' };
+const IRAN_MAP_FROM = '2026-02-28';
+const iranPins = { layer: null, byFp: new Map(), drawn: '' };
+function iranPinShown(ev) {
+  if (ev.actor === 'houthi') return false;
+  if (IRAN_PIN_INK[ev.actor]) return true;
+  return !(Array.isArray(ev.desks) && ev.desks.includes('yemen'));
+}
+async function loadIranPins() {
+  if (!map) return;
+  try {
+    const res = await fetch(`/api/desk?desk=iran&since=${IRAN_MAP_FROM}`, { cache: 'no-cache' });
+    if (!res.ok) return;
+    const d = await res.json();
+    drawIranPins((d.events || []).filter(iranPinShown));
+  } catch (e) { console.warn('iran pins', e); }
+}
+function drawIranPins(events) {
+  const key = events.map((e) => e.fp).join('|');
+  if (!map || key === iranPins.drawn) return;
+  iranPins.drawn = key;
+  if (iranPins.layer) { try { map.removeLayer(iranPins.layer); } catch (e) {} }
+  iranPins.layer = L.layerGroup().addTo(map);
+  iranPins.byFp = new Map();
+  for (const ev of events) {
+    const cat = ['strike', 'combat', 'vessel', 'port'].includes(ev.type) ? ev.type : 'strike';
+    const ageH = (Date.now() - new Date(ev.at).getTime()) / 3600000;
+    const ink = IRAN_PIN_INK[ev.actor] || '#94a3b8';
+    const icon = L.divIcon({
+      className: 'ev-wrap',
+      html: eventIconHtml(cat, ageH <= 6 ? ' fresh' : '', escapeHtml(ev.label || '')).replace('<div class="ev ', `<div style="--ev-ink:${ink}" class="ev `),
+      iconSize: [34, 42],
+      iconAnchor: [17, 40],
+    });
+    const m = L.marker([ev.lat, ev.lng], { icon, zIndexOffset: Math.round(1000 - ageH), riseOnHover: true })
+      .bindPopup(popupHtml({ ...ev, mapCat: cat }), { maxWidth: 300, maxHeight: 360, autoPan: true });
+    m.addTo(iranPins.layer);
+    if (!ev.mapOnly) {
+      iranPins.byFp.set(ev.fp, m);
+      mappableByFp.set(ev.fp, { ...ev, mapCat: cat });
+    }
+  }
+  const chip = document.getElementById('map-chip');
+  if (chip) chip.textContent = events.length ? `${events.length} attacks on the map. Earlier ones, back to 28 Feb 2026, are being added.` : 'Every attack since 28 Feb 2026: coming soon';
+  renderIranFeed();
+}
+function showIranPin(fp) {
+  const m = iranPins.byFp.get(fp);
+  if (!m || !map) return;
+  scrollToMap();
+  setTimeout(() => {
+    try { map.invalidateSize(); } catch (e) {}
+    map.once('moveend', () => { try { m.openPopup(); } catch (e) {} pulsePin(m.getElement()); });
+    try { map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 7), { duration: 0.8 }); } catch (e) { m.openPopup(); }
+  }, 380);
+}
+
 async function loadIranFeed() {
   try {
     const res = await fetch('/api/desk?desk=iran&limit=300', { cache: 'no-cache' });
@@ -7181,6 +7246,8 @@ function renderIranFeed() {
     card.className = card.className.replace(/\blean-\S+/, 'ir-' + lean);
     card.title = IRAN_GROUP_NAMES[lean] || '';
     wireFeedCard(card);
+    const mb = card.querySelector('.card-map');
+    if (mb) { mb.onmouseenter = null; mb.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); showIranPin(card.dataset.fp); }; }
   });
   const more = document.getElementById('iran-more');
   if (more) more.addEventListener('click', () => { iranDesk.shown += MORE_STEP; renderIranFeed(); });

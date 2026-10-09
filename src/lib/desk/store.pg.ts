@@ -257,12 +257,15 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       `;
       // The tick's own look-backs want the cards only: the pins are not read.
       const events = opts.events === false ? [] : await sql<Record<string, unknown>>`
-        select fp, at, type, lat, lng, place, label, body, source, url, map_only, desks
-          from desk_event
-         where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
-           and (${since}::timestamptz is null or at >= ${since}::timestamptz)
-           and (${desk}::text is null or ${desk}::text = any(desks))
-         order by at desc
+        select e.fp, e.at, e.type, e.lat, e.lng, e.place, e.label, e.body, e.source, e.url, e.map_only, e.desks,
+               -- Who acted, from its card: the Iran desk colours each pin by it.
+               (select substr(f, 7) from desk_report r, jsonb_array_elements_text(coalesce(r.flags, '[]'::jsonb)) f
+                 where r.fp = regexp_replace(e.fp, '-pin-.*$', '') and f like 'actor:%' limit 1) as actor
+          from desk_event e
+         where (${cursor}::timestamptz is null or e.at < ${cursor}::timestamptz)
+           and (${since}::timestamptz is null or e.at >= ${since}::timestamptz)
+           and (${desk}::text is null or ${desk}::text = any(e.desks))
+         order by e.at desc
          limit ${limit}
       `;
       dbMeter.queries += 2;
@@ -314,6 +317,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
               source: e.source ?? undefined,
               url: e.url ?? undefined,
               mapOnly: !!e.map_only,
+              ...(e.actor ? { actor: String(e.actor) } : {}),
               ...(notYemenAlone(e.desks) ? { desks: e.desks as string[] } : {}),
             }) as DeskEventRow,
         ),

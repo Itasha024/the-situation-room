@@ -62,7 +62,8 @@ import { attackTeller, officialVoice, rivalRelay } from "./speaker-press.ts";
 import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
-import { normaliseArabic } from "./relevance.ts";
+import { mapsAsPin, normaliseArabic } from "./relevance.ts";
+import { iranPins, tallyNotEvent } from "./iran-places.ts";
 import { copyKey } from "./copies.ts";
 
 export type Candidate = {
@@ -1102,6 +1103,7 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);
+  pinIran(report, r, c.text);
   // Israel's attacks in Lebanon from Lebanon's own sources only (user, 8 Oct), air strikes too (9 Oct: only ground fire was checked).
   const teller = attackTeller(report.summary, c.source, israelAbroad(report.summary) ? "israel" : String(r.actor_side ?? ""), report.type === "combat" || report.type === "strike", c.lean ?? "");
   if (teller) return { kind: "reject", reason: "reader", note: sentence(teller) };
@@ -1110,6 +1112,25 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   report.flags = [...(report.flags ?? []), ...arenas.map((a) => `arena:${a}`), ...(r.actor_side ? [`actor:${r.actor_side}`] : [])];
   report.desks = ["iran"];
   return { kind: "publish", report };
+}
+
+/**
+ * An Iran attack card's pins (Round 30 stage 6): the region's places its
+ * targets and copy name that the source names too (iran-places.ts), the
+ * first the card's own pin and the rest pins of their own. The Yemen
+ * gazetteer's place stays only when the region's list names none.
+ */
+function pinIran(report: LiveReport, r: Reading, sourceText: string): void {
+  if (!mapsAsPin(report.type) || tallyNotEvent(report.summary)) return;
+  // Where it was fired from is not where it landed.
+  const from = new Set(iranPins((r.origins ?? []).join(", "), sourceText, false).map((p) => p.name));
+  const pins = iranPins(`${(r.targets ?? []).join(", ")}. ${r.headline}`, sourceText, report.type === "vessel").filter((p) => !from.has(p.name));
+  if (!pins.length) return;
+  const [first, ...more] = pins;
+  report.place = first.name;
+  report.lat = first.lat;
+  report.lng = first.lng;
+  if (more.length) report.places = more.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng }));
 }
 
 export const IRAN_READER: DeskReader = {

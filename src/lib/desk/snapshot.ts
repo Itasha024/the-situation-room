@@ -45,6 +45,8 @@ export type DeskEventRow = {
   mapOnly: boolean;
   /** Only when not Yemen's alone (desk-route.ts). */
   desks?: string[];
+  /** Who acted, from its card (the Iran desk colours its pins by it). */
+  actor?: string;
 };
 
 /** A link that points at a section front rather than one report is not a report. */

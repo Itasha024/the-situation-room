@@ -80,7 +80,7 @@ export function numberRefs(points: string[], refOf: (id: string, point: string) 
       return marks;
     });
     // A mark the writer put after the full stop moves before it, as every other one is.
-    const tidy = text.replace(/([.!?])((?:\[\[\d+\]\])+)\s*$/, "$2$1").replace(/\s+([.,;:!?])/g, "$1").trim();
+    const tidy = text.replace(/([.!?])((?:\[\[\d+\]\])+)\s*$/, "$2$1").replace(/\s+([.,;:!?])/g, "$1").replace(/[,;:]+((?:\[\[\d+\]\])*[.!?])/g, "$1").trim();
     if (stripRefs(tidy).length >= 3) out.push(tidy);
   }
   return { points: out, refs };
@@ -88,7 +88,7 @@ export function numberRefs(points: string[], refOf: (id: string, point: string) 
 
 /** The text without its reference marks: for the places, the map and the next writer. */
 export function stripRefs(text: string): string {
-  return String(text || "").replace(NUM_MARK, "").replace(ID_MARK, "").replace(/\s+([.,;:!?])/g, "$1").replace(/[ \t]+/g, " ").trim();
+  return String(text || "").replace(NUM_MARK, "").replace(ID_MARK, "").replace(/\s+([.,;:!?])/g, "$1").replace(/[,;:]+([.!?])/g, "$1").replace(/[ \t]+/g, " ").trim();
 }
 
 /** A card as a reference. */

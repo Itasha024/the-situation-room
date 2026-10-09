@@ -13,6 +13,8 @@ test("the writer's ids become the box's own numbers, in order of first use; a ma
   assert.deepEqual(got.points, ["Trump said the blockade stays[[1]].", "Saudi jets hit Sanaa[[2]].", "The IRGC seized a tanker[[2]]."]);
   assert.deepEqual(got.refs.map((r) => r.fp), ["ts-1", "b"]);
   assert.equal(stripRefs(got.points[1]), "Saudi jets hit Sanaa.");
+  assert.equal(numberRefs(["Flights were disrupted, [r1]."], look).points[0], "Flights were disrupted[[1]].");
+  assert.equal(stripRefs("Flights were disrupted,[[4]]."), "Flights were disrupted.");
 });
 
 test("points come as a list or as numbered lines; a point about absence or the desk goes", () => {
@@ -67,6 +69,9 @@ test("arenas: the Yemen desk's war goes nowhere, US in the region is the US's do
   assert.equal(fits("us-region", "Turkey, Pakistan and Saudi Arabia pledged deployments to help Riyadh against Houthi attacks."), false);
   assert.equal(fits("us-region", "UAE and British naval commanders met on a Gulf coalition."), false);
   assert.equal(fits("us-region", "The Pentagon sent a third carrier to the Gulf."), true);
+  assert.equal(fits("sanctions", "A US military source said US forces are focused on a complete blockade of Iranian ships and ports."), false);
+  assert.equal(fits("sanctions", "The US Treasury sanctioned 17 vessels of Iran's shadow fleet."), true);
+  assert.equal(fits("nuclear", "Trump said Iran will never have a nuclear weapon."), true);
   assert.equal(fits("axis", "The US Mission to the UAE warned of Iranian-supported Houthi attacks."), true);
   const r = (source: string, lean?: string) => ({ fp: "x", source, at: "", url: "", headline: "h", ...(lean ? { lean } : {}) });
   assert.equal(israelRef(r("Tasnim", "axis")), undefined);

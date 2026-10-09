@@ -122,11 +122,19 @@ export function fromAnswer(j: Record<string, unknown>, refOf: Record<string, Ref
   return { situation: pts.points.length ? pts : null, arenas };
 }
 
+const TOPIC: Record<string, RegExp> = {
+  sanctions: /\b(?:sanction\w*|designat\w*|blacklist\w*|OFAC|Treasury|embargo\w*|asset freeze|waiver\w*|seiz\w+|confiscat\w+)\b/i,
+  nuclear: /\b(?:nuclear|enrich\w*|uranium|IAEA|Grossi|atomic|NPT|Fordow|Natanz|Isfahan|Arak|centrifuge\w*|inspect\w*|safeguards)\b/i,
+  hormuz: /\b(?:Hormuz|strait|tanker\w*|ship\w*|vessel\w*|maritime|mine[sd]?|UKMTO|Gulf of Oman|Musandam|navy|naval|escort\w*|transit\w*|insur\w+|cargo|crew)\b/i,
+};
+
 /** What each arena takes, in code (first-brief review, 9 Oct): the Yemen desk's war goes nowhere; "US in the region" is the US's own doing. */
 export function fits(arena: string, point: string): boolean {
   if (yemenOnly(point)) return false;
   if (arena === "us-region") return namesNation("us", point);
-  return true;
+  // An arena on one subject takes only points that name it (a blockade point sat under Sanctions, 9 Oct).
+  const topic = TOPIC[arena];
+  return !topic || topic.test(point);
 }
 
 /** A report Israel's arena may cite: Israel's own sources, Lebanon's, a wire, or any outlet's exclusive. Never Iran's outlets retelling Israel. */

@@ -34,8 +34,10 @@ const BASE = arg("--base", "public/iran-strikes-baseline.json");
 const CACHE = arg("--cache", "iran-research-cache.json");
 const UA = "TheSituationRoomDesk/1.0 (research backfill; itamarshaashua@gmail.com)";
 
-type Hand = { day: string; actor: string; said: string; cands?: string[]; country: string; label: string; source: string; url: string; text: string; en?: string };
-type Pin = { fp: string; day: string; actor: string; place: string; lat: number; lng: number; label: string; source: string; url: string; also: { source: string; url: string }[] };
+// `at` (ISO): the attack's own time, when the source gives it (sirens, UKMTO). `lat`/`lng`: a position the
+// source gives itself (UKMTO's, a Home Front Command locality's), used instead of looking the name up.
+type Hand = { day: string; at?: string; actor: string; said: string; cands?: string[]; country: string; label: string; source: string; url: string; text: string; en?: string; lat?: number; lng?: number; also?: { source: string; url: string }[] };
+type Pin = { fp: string; day: string; at?: string; actor: string; place: string; lat: number; lng: number; label: string; source: string; url: string; also: { source: string; url: string }[] };
 type Geo = { lat: number; lng: number; name: string } | null;
 
 const ISO: Record<string, string> = { Iran: "ir", Israel: "il", Lebanon: "lb", Iraq: "iq", Syria: "sy", Jordan: "jo", UAE: "ae", Qatar: "qa", Bahrain: "bh", Kuwait: "kw", Oman: "om", "Saudi Arabia": "sa", Cyprus: "cy" };
@@ -116,12 +118,30 @@ for (const e of hand) {
   if (!/^2026-\d{2}-\d{2}$/.test(e.day) || !(e.said || e.cands?.length) || !e.url || !e.label) { drop("incomplete", e); continue; }
   const names = (e.cands ?? [e.said]).filter((n) => e.text.includes(n));
   if (!names.length) { drop("place not in the text", e); continue; }
-  let g: Geo = null;
-  for (const n of names) if ((g = await geocode(n, e.country))) break;
+  let g: Geo = Number.isFinite(e.lat) && Number.isFinite(e.lng) ? { lat: +e.lat!.toFixed(4), lng: +e.lng!.toFixed(4), name: e.en || names[0] } : null;
+  if (!g) for (const n of names) if ((g = await geocode(n, e.country))) break;
   if (!g && e.en) g = await geocode(e.en, e.country);
   if (!g) { drop("not found as a town or site", e); continue; }
   if (!iranPinAllowed(e.actor, { country: e.country }, e.label)) { drop("outside the map's scope", e); continue; }
-  const same = base.find((p) => p.day === e.day && km(p, g) < 1.5);
+  // One attack, one pin: a second source of it is its "also".
+  // - Reports by the day alone: the same place that day (two of NNA's headlines on one village are one).
+  // - Timed reports from one source are that many attacks (three tankers struck in Hormuz in ten minutes);
+  //   a timed one and another source's: within two hours and 5 km, or that day and 1.5 km.
+  // - A ship attack is told by the town it lies off ("137 nautical miles east of Muscat"), which one source
+  //   pins at the town and another at sea, its day by report or by incident: another source's that day within
+  //   30 km, or a day apart within 25 km or at the same distance off the same town.
+  // A pin takes one report from each other source, so a second UKMTO warning beside it is a second attack;
+  // of several that fit, the nearest in days, then in km.
+  const SHIP = /\b(?:tanker|vessel|ship|carrier|tug|nautical miles)\b/i;
+  const off = (s: string) => (s.match(/\b(\d+(?:\.\d+)?) (?:nautical miles|NM)\b[^,(]*?\bof ([A-Z][\w' -]+?)(?:,|\s\(|$)/) ?? []).slice(1).join(" ");
+  const dayGap = (p: Pin) => Math.abs(Date.parse(p.day) - Date.parse(e.day)) / 864e5;
+  const other = (p: Pin) => p.source !== e.source && p.also.every((a) => a.source !== e.source);
+  const fits = (p: Pin) =>
+    !e.at && !p.at && p.day === e.day && km(p, g) < 1.5
+    || other(p) && (
+      SHIP.test(e.label) && SHIP.test(p.label) && (dayGap(p) === 0 ? km(p, g) < 30 : dayGap(p) === 1 && (km(p, g) < 25 || (!!off(e.label) && off(e.label) === off(p.label))))
+      || (e.at && p.at ? Math.abs(Date.parse(p.at) - Date.parse(e.at)) <= 2 * 3600e3 && km(p, g) < 5 : p.day === e.day && km(p, g) < 1.5));
+  const same = base.filter(fits).sort((a, b) => dayGap(a) - dayGap(b) || km(a, g) - km(b, g))[0];
   if (same) {
     if (same.url !== e.url && !same.also.some((a) => a.url === e.url)) same.also.push({ source: e.source, url: e.url });
     drop("already pinned that day", e);
@@ -129,8 +149,9 @@ for (const e of hand) {
   }
   const place = e.en || g.name;
   base.push({
-    fp: `rs-${e.day}-${e.actor}-${place.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    fp: `rs-${e.at ? e.at.slice(0, 16).replace(/[^0-9]/g, "") : e.day}-${e.actor}-${place.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     day: e.day,
+    ...(e.at ? { at: e.at } : {}),
     actor: e.actor,
     place,
     lat: g.lat,
@@ -139,7 +160,7 @@ for (const e of hand) {
     label: e.label.replace("{place}", place),
     source: e.source,
     url: e.url,
-    also: [],
+    also: e.also ?? [],
   });
   added[e.day.slice(0, 7)] = (added[e.day.slice(0, 7)] ?? 0) + 1;
 }

@@ -5200,8 +5200,9 @@ function oneEventOnePin(pins, sorted = false) {
       if (sorted && a.t - b.t > 12 * 3600e3) break;
       if (Math.abs(a.t - b.t) > 6 * 3600e3) continue;
       if (a.cat !== b.cat || a.base === b.base || !a.w.size || !b.w.size) continue;
-      // Researched pins are one per place and day already: two villages struck the same day are two attacks.
-      if (p.dayOnly && out[i].dayOnly && p.place && out[i].place && p.place !== out[i].place) continue;
+      // Researched pins were made one per attack already: two villages struck the same day, or three
+      // tankers hit in Hormuz in ten minutes, are that many attacks.
+      if (p.researched && out[i].researched) continue;
       if (twinKm(p, out[i]) > 25) continue;
       let shared = 0;
       for (const w of a.w) if (b.w.has(w)) shared++;
@@ -7281,7 +7282,8 @@ async function loadIranPast() {
     if (!res.ok) return [];
     const rows = await res.json();
     return (Array.isArray(rows) ? rows : []).map((p) => ({
-      fp: p.fp, at: `${p.day}T12:00:00+03:00`, dayOnly: true, actor: p.actor, type: 'strike', mapOnly: true,
+      // A researched attack with its own time (sirens, UKMTO) keeps it; the rest carry only their day.
+      fp: p.fp, at: p.at || `${p.day}T12:00:00+03:00`, dayOnly: !p.at, researched: true, actor: p.actor, type: 'strike', mapOnly: true,
       place: p.place, lat: p.lat, lng: p.lng, label: p.label, text: '', source: p.source, url: p.url, also: p.also || [],
     }));
   } catch (e) { return []; }

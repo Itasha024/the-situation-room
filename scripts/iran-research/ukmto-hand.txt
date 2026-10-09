@@ -1,0 +1,101 @@
+004|2026-03-01T09:00|Oman|2|N|vessel struck in the Strait of Hormuz, crew taken off|unclear
+005|2026-03-01T09:50|Muscat|50|N|vessel struck by an uncrewed surface vessel, engine-room fire|unclear
+006|2026-03-01T08:05|Mina Saqr|17|NW|vessel struck by a projectile, fire|unclear
+007|2026-03-01T16:45|Sharjah|35|W|projectile exploded close to a vessel|unclear
+008|2026-03-02T02:57|Port of Bahrain|0|N|vessel in port struck by two projectiles, fire|unclear
+009|2026-03-03T19:50|Muscat|137|E|loud explosion close to a vessel|unclear
+010|2026-03-03T22:40|Fujairah|7|E|vessel struck by a projectile|unclear
+011|2026-03-04T09:30|Fujairah|10|E|tanker damaged by a blast, projectile debris on deck|unclear
+012|2026-03-04T11:09|Oman|2|N|container ship hit in the Strait of Hormuz, engine-room fire, crew abandoned ship|unclear
+013|2026-03-04T06:23|Dubai|20|W|projectile splash close to a container ship|unclear
+014|2026-03-04T22:40|Mubarak Al Kabeer|30|SE|large explosion on a tanker at anchor, a small craft seen leaving, oil in the water|unclear
+015|2026-03-06T12:57|Oman|6|N|tug hit by projectiles in the Strait of Hormuz|unclear
+016|2026-03-07T12:10|Jubail|10|N|possible drone attack on a vessel, crew taken off|unclear
+017|2026-03-10T08:00|Abu Dhabi|36|N|splash and loud bang close to a bulk carrier|unclear
+018|2026-03-11T01:58|Ras al Khaimah|25|NW|container ship damaged by a projectile|unclear
+019|2026-03-11T04:35|Oman|11|N|cargo ship hit in the Strait of Hormuz, fire, crew leaving the ship|unclear
+020|2026-03-11T02:05|Dubai|50|NW|bulk carrier hit by a projectile|unclear
+021|2026-03-11T22:30|Al Basrah Oil Terminal|5|S|two tankers struck in Iraqi waters, fires, crews taken off|unclear
+022|2026-03-12T02:19|Jebel Ali|35|N|container ship struck by a projectile, fire|unclear
+023|2026-03-16T23:01|Fujairah|23|E|tanker at anchor hit by debris from interceptions|unclear
+024|2026-03-18T23:00|Khor Fakkan|11|E|vessel hit by a projectile, fire|unclear
+025|2026-03-19T01:30|Ras Laffan|4|E|vessel hit by a projectile|unclear
+026|2026-03-21T23:08|Sharjah|15|N|projectile exploded close to a bulk carrier|unclear
+028|2026-03-30T05:38|Ras Tanura|22|NE|two projectiles splashed close to a container ship|unclear
+029|2026-03-30T20:20|Dubai|31|NW|tanker struck by a projectile, fire|unclear
+030|2026-03-31T22:35|Ras Laffan|17|N|tanker struck by two projectiles, fire|unclear
+031|2026-04-05T12:48|Khor Fakkan|0|N|projectiles splashed by a container ship in port|unclear
+032|2026-04-07T00:45|Kish Island|25|S|container ship struck by a projectile|unclear
+036|2026-04-07T12:00|Ras al Hadd|112|SE|bulk carrier struck by two projectiles, fire|unclear
+037|2026-04-18T09:20|Oman|20|NE|two IRGC gunboats fired on a tanker|iran
+038|2026-04-18T11:25|Oman|25|NE|container ship hit by a projectile|unclear
+039|2026-04-18T12:08|Oman|3|E|splash close to a cruise ship|unclear
+041|2026-04-22T03:55|Oman|15|NE|IRGC gunboat fired on a container ship, bridge heavily damaged|iran
+043|2026-04-22T06:38|Hormuz|8|W|outbound cargo ship fired upon and stopped|unclear
+050|2026-05-03T11:30|Sirik|11|W|bulk carrier attacked by several small craft|unclear
+052|2026-05-03T19:40|Fujairah|78|N|tanker hit by projectiles|unclear
+055|2026-05-05T18:30|Hormuz|0|N|cargo ship struck by a projectile in the Strait of Hormuz|unclear
+056|2026-05-10T03:01|Doha|23|NE|bulk carrier hit by a projectile, fire|unclear
+062|2026-05-26T09:45|Muscat|60|E|external explosion on a tanker, fuel in the sea|unclear
+063|2026-06-01T13:00|Umm Qasr|40|SE|large explosion on a cargo ship, likely a projectile|unclear
+068|2026-06-12T22:30|Oman|6|E|tanker struck by a projectile|unclear
+074|2026-06-25T14:10|Dahit|7.5|SE|cargo ship hit by a projectile, bridge damaged|unclear
+076|2026-06-27T08:00|Hormuz|0|N|tanker struck by a projectile in the Strait of Hormuz, bridge damaged|unclear
+080|2026-07-06T21:19|Limah|8|E|tanker hit by a projectile, fire|unclear
+085|2026-07-13T21:04|Qalhat|40|NE|tanker hit by a projectile in the engine room|unclear
+086|2026-07-13T12:00|Limah|13|SE|tanker hit by a missile on the southern route|unclear
+088|2026-07-16T22:10|Khasab|19|E|tanker hit by a projectile|unclear
+091|2026-07-16T12:00|Duqm|100|E|tanker in an incident with military forces|unclear
+092|2026-07-19T22:45|Kumzar|8|NW|vessel struck by a projectile, fire|unclear
+093|2026-07-19T22:30|Dibba|17|E|vessel struck by a projectile, steering gear damaged|unclear
+094|2026-07-20T20:10|Limah|8|NE|tanker struck by a projectile, crew abandoned ship|unclear
+101|2026-07-31T23:30|Limah|11|NE|tanker struck by a projectile, engine room damaged|unclear
+102|2026-07-31T22:06|Khasab|21|NE|large splash and explosion close to a tanker|unclear
+103|2026-08-02T20:37|Khasab|20|NE|explosion close to a tanker|unclear
+104|2026-08-03T22:00|Khasab|20|NE|cargo ship hit by a projectile|unclear|26.417,56.533
+107|2026-08-05T19:18|Kumzar|9|SE|two explosions heard by a tanker|unclear|26.250,56.550
+108|2026-08-08T12:00|Khasab|18|E|vessel struck by a projectile, fire|unclear|26.096,56.647
+109|2026-08-11T07:58|Pakistan coast|71|S|container ship Vela Nova struck by a missile fired from a helicopter|unclear|23.850,61.817
+111|2026-08-14T07:53|Hormuz|0|N|tanker struck by a drone|unclear|26.500,56.450
+112|2026-08-14T08:00|Hormuz|0|N|second tanker struck by a drone|unclear|26.500,56.450
+113|2026-08-14T20:00|Hormuz|0|N|bulk carrier struck by a projectile|unclear|26.479,56.459
+115|2026-08-18T03:25|Hormuz|0|N|vessel struck by a projectile, a crewman hurt|unclear|26.333,56.600
+116|2026-08-18T15:42|Hormuz|0|N|bulk carrier struck by a projectile, a crewman hurt|unclear|26.550,56.733
+120|2026-08-24T19:25|Ash Shishah|9|NE|oil tanker struck by a projectile and disabled|unclear|26.317,56.567
+121|2026-08-27T00:54|Hormuz|0|N|tanker hit by a projectile, fire|unclear|26.383,56.500
+122|2026-08-29T20:53|Khasab|12|N|tanker struck by a projectile|unclear|26.367,56.333
+123|2026-08-30T16:24|Ras al Hadd|0|N|tanker in an incident with military forces in the Indian Ocean|unclear|22.567,60.900
+124|2026-08-31T20:00|Khasab|17|E|tanker struck by three projectiles|unclear|26.200,56.550
+126|2026-09-02T13:49|Hormuz|0|N|tanker in a security incident, two dead|unclear|26.417,56.513
+127|2026-09-05T16:04|Gulf of Oman|0|N|several merchant ships hit by disabling fire in military operations|unclear|24.939,57.453
+128|2026-09-08T22:53|Hormuz|0|N|merchant ship in an incident with military forces|unclear|25.672,56.919
+129|2026-09-09T08:38|Hormuz|0|N|several merchant ships hit by disabling fire in military operations|unclear|26.517,56.570
+130|2026-09-09T09:10|Port Rashid|24|NW|tanker at anchor listing after an apparent projectile attack|unclear|25.500,54.917
+131|2026-09-09T10:50|Al-Faw|28|SE|tanker struck by a projectile|unclear|29.583,48.750
+133|2026-09-10T19:10|Khasab|4|W|four projectiles hit two vessels, one on fire|unclear|26.262,56.185
+134|2026-09-12T23:00|Hormuz|0|N|vessel struck by a projectile, fire|unclear|26.383,56.533
+135|2026-09-15T09:43|Hormuz|0|N|vessel struck by a projectile|unclear|26.633,56.387
+137|2026-09-17T19:31|Khasab|16|NE|security incident on a vessel|unclear|26.433,56.400
+138|2026-09-18T07:15|Hormuz|0|N|tanker hit by a projectile, fire|unclear|26.367,56.300
+139|2026-09-16T12:00|Hormuz|0|N|outbound tanker struck by a projectile|unclear|26.367,56.300
+140|2026-09-21T07:30|Hormuz|0|N|inbound tanker struck by a projectile, two crew hurt|unclear|26.417,56.467
+141|2026-09-21T14:17|Hormuz|0|N|LPG tanker hit by projectile debris|unclear|26.400,56.500
+142|2026-09-23T06:30|Hormuz|0|N|cargo ship struck by a projectile, on fire and adrift, two hurt|unclear|26.593,56.388
+143|2026-09-28T20:00|Hormuz|0|N|vessel struck by a suspected projectile, fire|unclear|26.433,56.486
+144|2026-09-30T09:28|Hormuz|0|N|crude oil tanker struck by a projectile|unclear|26.400,56.517
+145|2026-09-30T09:33|Hormuz|0|N|inbound tanker struck by a projectile|unclear|26.400,56.517
+146|2026-09-30T09:39|Hormuz|0|N|tanker struck by a projectile|unclear|26.400,56.517
+147|2026-10-01T20:00|Hormuz|0|N|tanker struck by a projectile, fire|unclear|26.383,56.417
+148|2026-10-02T11:22|Hormuz|0|N|outbound tanker struck by a projectile, fire and blackout|unclear|26.393,56.190
+149|2026-10-02T23:11|Oman|4|E|crude oil tanker struck by a projectile|unclear|26.217,56.567
+150|2026-10-04T07:45|Hormuz|0|N|tanker struck by a projectile, engine room damaged|unclear|26.636,56.467
+153|2026-10-04T17:16|Hormuz|0|N|inbound LPG tanker struck by a projectile|unclear|26.413,56.518
+154|2026-10-04T19:07|Hormuz|0|N|crude oil tanker struck by projectiles|unclear|26.413,56.518
+155|2026-10-03T14:00|Hormuz|0|N|crude oil tanker struck by a projectile|unclear|26.413,56.518
+156|2026-10-05T16:37|Hormuz|0|N|tanker struck by a projectile, engine-room fire|unclear|26.433,56.533
+157|2026-10-05T22:30|Hormuz|0|N|outbound oil tanker struck by a projectile|unclear|26.413,56.518
+158|2026-10-07T19:00|Madinat ash Shamal|51|N|tanker struck by several projectiles, casualties|unclear|26.963,51.474
+159|2026-10-06T17:09|Hormuz|0|N|crude oil tanker struck by a projectile|unclear|26.417,56.417
+160|2026-10-09T12:46|Al Jazirah Al Hamra|13|W|vessel struck by a projectile, fire|unclear|25.783,55.567
+081|2026-07-07T12:00|Hormuz|0|N|tanker struck by a projectile in the Strait of Hormuz, structural damage|unclear|26.45,56.45|https://x.com/UK_MTO/status/2074483890576592960
+082|2026-07-07T13:05|Hormuz|0|N|second tanker struck by a drone in the Strait of Hormuz|unclear|26.45,56.45|https://x.com/UK_MTO/status/2074492705451733369

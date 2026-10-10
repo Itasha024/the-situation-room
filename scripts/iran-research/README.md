@@ -73,3 +73,30 @@ Each reader's output was read in samples by hand against its posts before mergin
   kept with it (`hand-a2.txt`: the F-15E shot down over south-west Iran and the rescue fighting,
   Yemen's drone at Eilat stopped before alerts).
 - `scripts/iran-countries.mjs`: Judea and Samaria (the West Bank) joined to Israel's shape in its colour.
+
+## Stage B part 3 and stage C (10 Oct): the news, the axis, Iran's channels and the opposition's
+
+Reports count, not only official statements (user: "of course its a report not a confirmation"). One attack, one
+pin: a report that falls on a pin of that day nearby (the city, or the country when it names no place) takes that
+pin's point, so the merge makes it a second source.
+
+- **Read** with `dumpto.mjs` (t.me/s pages, in parallel ranges): Al Hadath, Al Jazeera (ajanews), Al Arabiya,
+  Al Mayadeen; Fars, IRNA, Akhbar-e Fori; Iran International, Vahid Online; the axis channels already dumped.
+  The UAE's own accounts on X by Wayback ids (`cdx.mjs`, `xids2.mjs`): its defence ministry and the Dubai, Abu
+  Dhabi, Sharjah, Ras al-Khaimah and Ajman media offices.
+- **`gulf.cjs`**, the Gulf states, Jordan and the sea: the channels' own reports beside the officials' words
+  ("انفجارات تهز دبي", "مراسل الجزيرة: اعتراضات صاروخية في المفرق", Iran's and the Iraqi factions' claims).
+  Places as whole words ("جدة" is not in "المتواجدة"); a weak name ("العين", "العقبة") only with its country named;
+  a city dropped when a site in it is named. Not: sirens alone, launches toward Israel crossing Jordan, someone
+  else's words (Israel's officials, ministers; Israel's media do count), satellite pictures and other later
+  reports, Yemen's front. Ships: attacks, blasts at sea, carriers struck, UKMTO or not; Red Sea and Aden left
+  to the Yemen desk, Iran's own coast to Iran's sources.
+- **`axis.cjs`** on the news channels for Iraq; sites as whole words ("حرير" is not in "التحرير": 9 old pins of
+  Lebanon's and Yemen's "liberation" at the Harir base removed), hashtags read as words.
+- **`nna.cjs`** on the news and axis channels for Lebanon: a headline naming Lebanon and no other front; no
+  footage, no attack on Israel or its troops, no district read as a strike of its own ("X في قضاء بنت جبيل").
+- **`iran.cjs`**, attacks on Iran: towns from GeoNames (20,000 people or a seat) and Tehran's quarters, a site
+  list (Natanz, Fordow, Parchin, Kharg ...). The act must be told of the place itself (within nine words before
+  it or four after). Not: someone's words, footage, warnings, controlled blasts of old munitions, mines,
+  accidents, weather, Iran's own launches, armed attacks inside Iran, the war elsewhere. Who: Israel or the US
+  when named; Iran's air defences when they are what was seen.

@@ -1,0 +1,173 @@
+// Research stage C (user, 10 Oct: "Iran's own channels and the opposition's"; "do that for any attack in this
+// conflict instead of against israel"): attacks on Iran read from Iran's channels (Fars, IRNA, Akhbar-e Fori),
+// the opposition's (Iran International, Vahid Online), and the Arabic news and axis channels -> hand events.
+// A post's opening line is read when it tells one attack, that day, at a place in Iran:
+// - an attack word: blasts heard, a strike, a hit, a drone or missile falling, air defences firing;
+// - a place: a site on the list below, a town of Iran from GeoNames (20,000 people or a province's seat), or a
+//   quarter of Tehran, after a word that makes it a place ("در", "به", "شهر", "حوالی", "في", "على" ...) or as a
+//   hashtag (#اصفهان);
+// - not: a warning, a threat, a claim denied, footage, a drill, a controlled blast of old munitions, an
+//   accident, Iran's own launches, Iran's internal security (police, militants, unrest), the war elsewhere
+//   (Lebanon, Gaza, Iraq, Israel).
+// Who: Israel or the US when named as the attacker; Iran's air defences when they are what was seen; else not stated.
+//   node iran.cjs gn/IR.txt iran-events.jsonl ir/*.jsonl part/hd?.jsonl part2/aj?.jsonl ...
+const fs = require('fs');
+const [GN, OUT, ...FILES] = process.argv.slice(2);
+const BASE = process.env.BASE ? JSON.parse(fs.readFileSync(process.env.BASE, 'utf8')) : [];
+const SRC = {
+  farsna: 'Fars', irna_1313: 'IRNA', akhbarefori: 'Akhbar-e Fori', iranintltv: 'Iran International', VahidOnline: 'Vahid Online',
+  almayadeen: 'Al Mayadeen', AlHadath_Brk: 'Al Hadath', ajanews: 'Al Jazeera', AlArabiya: 'Al Arabiya', naya_foriraq: 'Naya', SabrenNewss: 'Sabereen', Alomhoar: 'Al-Mihwar', Alibk3: 'Ali Bk',
+};
+const chOf = (f) => { const b = f.replace(/^.*[\\/]/, '').replace(/\.jsonl$/, ''); return /^hd\d$/.test(b) ? 'AlHadath_Brk' : /^aj\d$/.test(b) ? 'ajanews' : /^ar\d$/.test(b) ? 'AlArabiya' : b.replace(/-\d+$/, ''); };
+
+// Persian and Arabic spellings are one: ي ی, ك ک, ة ه; no vowel marks, no half-spaces, no spaces in a key.
+const norm = (s) => s.normalize('NFC').replace(/[ً-ْٰـ]/g, '').replace(/ي/g, 'ی').replace(/ى/g, 'ی').replace(/ك/g, 'ک').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/[‌‍​]/g, '');
+const key = (s) => norm(s).replace(/\s+/g, '');
+const L = '؀-ۿ';
+
+// Sites: [pattern on the normalised text, place, lat, lng, English].
+const SITES = [
+  [/نطنز/, 'Natanz', 33.7246, 51.7275, 'the Natanz enrichment site'],
+  [/فردو/, 'Fordow', 34.8845, 50.9958, 'the Fordow enrichment site'],
+  [/پارچین|بارشین/, 'Parchin', 35.52, 51.77, 'the Parchin military site'],
+  [/خنداب|آب سنگین|راکتور اراک|رآکتور اراک|مفاعل اراک|المفاعل النووی فی اراک/, 'Arak heavy-water site', 34.37, 49.24, 'the Arak heavy-water site'],
+  [/نیروگاه بوشهر|محطه بوشهر|مفاعل بوشهر/, 'Bushehr nuclear plant', 28.83, 50.89, 'the Bushehr nuclear plant'],
+  [/خارک|جزیره خرج/, 'Kharg Island', 29.25, 50.32, 'Kharg island'],
+  [/عسلویه|پارس جنوبی|بارس الجنوبی|عسلوییه/, 'Asaluyeh, South Pars', 27.48, 52.6, 'the South Pars gas plants at Asaluyeh'],
+  [/مهرآباد|مهراباد|مهر اباد/, 'Mehrabad Airport', 35.6892, 51.3134, 'Mehrabad airport in Tehran'],
+  [/فرودگاه امام|مطار الامام الخمینی|فرودگاه بین المللی امام/, 'Imam Khomeini Airport', 35.4161, 51.1522, 'Imam Khomeini airport'],
+  [/انبار نفت شهران|مستودع شهران|شهران/, 'Shahran oil depot', 35.78, 51.29, 'the Shahran oil depot in Tehran'],
+  [/پالایشگاه آبادان|مصفاه عبادان|مصفی عبادان/, 'Abadan refinery', 30.35, 48.28, 'the Abadan refinery'],
+  [/پالایشگاه تبریز|مصفاه تبریز/, 'Tabriz refinery', 38.05, 46.18, 'the Tabriz refinery'],
+  [/بندر شهید رجایی|میناء الشهید رجائی|میناء رجائی/, 'Shahid Rajaee port', 27.11, 56.07, 'the Shahid Rajaee port at Bandar Abbas'],
+  [/ساختمان صدا و سیما|ساختمان صداوسیما|ساختمان شیشه ای صدا و سیما|مبنی الاذاعه والتلفزیون|مبنی التلفزیون الایرانی/, 'IRIB headquarters, Tehran', 35.7835, 51.413, "the state broadcaster's building in Tehran"],
+  [/زندان اوین|سجن ایفین|اوین/, 'Evin prison', 35.796, 51.385, 'Evin prison in Tehran'],
+  [/پایگاه شکاری|قاعده الشکاری|قاعده نوژه|پایگاه نوژه/, 'airbase', null, null, null],
+];
+
+for (const x of SITES) x[0] = new RegExp(`(?<![${L}])(?:[وب]|ال|بال|وال)?(?:${x[0].source})(?![${L}])`);
+// Towns of Iran from GeoNames, and Tehran's quarters.
+const towns = new Map();
+for (const l of fs.readFileSync(GN, 'utf8').split('\n')) {
+  const c = l.split('\t');
+  if (c.length < 15 || c[6] !== 'P') continue;
+  const lat = +c[4], lng = +c[5], pop = +c[14] || 0;
+  const tehranQuarter = c[7] === 'PPLX' && lat > 35.55 && lat < 35.85 && lng > 51.2 && lng < 51.65;
+  if (!(pop >= 20000 || /^PPL(?:A|A2|C)$/.test(c[7]) || tehranQuarter)) continue;
+  for (const n of c[3].split(',').filter((x) => /[ء-ی]/.test(x))) {
+    const k = key(n);
+    if (k.length < 3) continue;
+    const t = { name: tehranQuarter ? `${c[1]}, Tehran` : c[1], lat, lng, pop: tehranQuarter ? 1 : pop, quarter: tehranQuarter };
+    if (!towns.has(k) || towns.get(k).pop < t.pop) towns.set(k, t);
+  }
+}
+for (const [ar, fa] of [['عبادان', 'آبادان'], ['تشابهار', 'چابهار'], ['جابهار', 'چابهار'], ['کرمنشاه', 'کرمانشاه'], ['خرم اباد', 'خرمآباد'], ['الاهواز', 'اهواز'], ['اصفهان', 'اصفهان'], ['ارومیه', 'ارومیه'], ['شهریار', 'شهریار'], ['بندر عباس', 'بندرعباس'], ['عسلویه', 'عسلویه'], ['کنارک', 'کنارک'], ['قشم', 'قشم'], ['بوشهر', 'بوشهر']]) {
+  const t = towns.get(key(fa));
+  if (t && !towns.has(key(ar))) towns.set(key(ar), t);
+}
+// Names that are words too, or not a town on their own here.
+for (const w of ['ایران', 'جمهوری', 'اسلامی', 'شهر', 'مرکز', 'شرق', 'غرب', 'شمال', 'جنوب', 'نور', 'بم', 'امید', 'پارس', 'آزادی', 'انقلاب', 'دولت', 'ملت', 'سپاه', 'ارتش', 'امام', 'شهید', 'گلستان', 'بهار', 'آفتاب', 'زمین', 'کوثر', 'نصر', 'فتح', 'قدس', 'المقدس', 'الامام', 'الاسلامیه', 'الجمهوریه', 'الشرق', 'الغرب', 'خلیج', 'خلیجفارس', 'دریا', 'شاه', 'کرد', 'قلعه', 'میدان', 'محله', 'تپه', 'باغ', 'سعادت', 'خیابان', 'پاسداران', 'الحرس', 'الثوری', 'النصر', 'شاهد', 'شهرک', 'بندر', 'جزیره', 'المدینه', 'العاصمه', 'بنیه', 'البنیه', 'میانه', 'مهر', 'وکاله', 'خبرگزاری', 'البنیه التحتیه'].map(key)) towns.delete(w);
+
+const FUNC = new Set(['را', 'بر', 'به', 'در', 'از', 'و', 'که', 'با', 'این', 'آن', 'تا', 'یا', 'هم', 'نیز', 'برای', 'شد', 'شده', 'است', 'بود', 'می', 'فی', 'من', 'علی', 'الی', 'عن', 'مع', 'بعد', 'قبل']);
+const CUE = /^(?:فرودگاه|پالایشگاه|بندر|اسکله|شهرک|شهرستان|حومه|مناطق|محله|عوارضی|اتوبان|بزرگراه|بازار|پایگاه|آسمان|اسمان|مطار|میناء|قاعده|ضواحی|سماء|اجواء|مدینتی|در|به|بر|شهر|شهرهای|استان|حوالی|اطراف|نزدیک|نزدیکی|منطقه|محدوده|سمت|جنوب|شمال|غرب|شرق|مرکز|في|فی|ب|علی|على|مدینه|مدينة|محافظه|محافظة|قرب|محیط|محيط|اطراف|أطراف|شرقی|غربی|جنوبی|شمالی|شرق|غرب|جنوب|شمال)$/;
+const ATTACK = /انفجار|حمله|حملات|اصابت|بمباران|هدف قرار|مورد حمله|ضربه هوایی|ضربات|سقوط (?:پهپاد|موشک|صاروخ|مسیره)|(?:فعالیت|شلیک|صدای|درگیری) پدافند|پدافند (?:فعال|شلیک|درگیر)|غاره|غارات|قصف|استهداف|هجوم|انفجارات|دوی|(?:تفعیل|تتصدی|تصدت|تصدی) (?:ال)?(?:دفاعات|دفاع)|الدفاعات الجویه (?:تتصدی|تصدت|تتعامل|تعاملت)/;
+// Iran in an Arabic post: its name, a city of it, or its people.
+const IRAN_AR = /ایران|الایرانی|طهران|اصفهان|شیراز|تبریز|مشهد|الاهواز|کرمانشاه|بندر عباس|قم|کرج|همدان|یزد|بوشهر|خرمشهر|عبادان|نطنز|فوردو|اراک|کرمان|زاهدان|ارومیه|سنندج|خرم اباد|قزوین|زنجان|رشت|ساری|جزیره|قشم|خارک/;
+// Not one attack on Iran that day.
+const NOT0 = /ارهابی|الارهابیه|ارهابیین|مسلح|الشرطه|امحا|امحای|تاهیل|منظمه الصحه|سفیر|المندوب|بازگشته|انفجار مین|مین به جا|مین های|مینهای|صحت ندارد|صحت|نادرست|مسلحانه|گروهی با نام|تحقیق|التحقیق|سازمان ملل|بازدید|مادری|سوگ|مزار|یادش|زادروز|جاویدنام|معترض|سرکوبگر|کیهان|روزنامه|مقاله|بلومبرگ|توییت|در طول|طی جنگ|پس از جنگ|تاب آوری|سایبری|غیر صحیح|مسیطر علیها|آتش نشانی|نه انفجار|ناشی از آتش|سوران|اربیل|السلیمانیه|کویه|کردستان عراق|اقلیم کردستان|شمال عراق|نقطه امنیه|اطلاق صواریخ|اطلاق الصواریخ|رشقه|بزرگداشت|مجروحیت|بعد از \d+ روز|المحتله|فلسطین|هنگ کنگ|نمایش|ورزش|هتل|درخت|طوفان|باد|زلزله|سیل|هشدار|تهدید|خواهد|خواهیم|احتمال|ادعا|ادعای|تکذیب|شایعه|رد ادعا|فیلم|ویدیو|ویدئو|🎥|📹|تصاویر|تصویر|عکس|لحظه|سالگرد|یادبود|سخنرانی|مذاکره|توافق|آتش بس|آتشبس|کنترل شده|کنترلشده|خنثی|مهمات عمل نکرده|مانور|رزمایش|تمرین|تست|آزمایش|حادثه|تصادف|آتش سوزی|آتشسوزی|نشت گاز|نشت|ترکیدن|کپسول|سیلندر|پلیس|اشرار|تروریست|جیش|درگیری|اغتشاش|اعتراضات|تجمع|بازداشت|دستگیری|اعدام|شلیک موشک|پرتاب|عملیات وعده صادق|شلیک به سمت|به سوی اراضی|اراضی اشغالی|سرزمینهای اشغالی|فلسطین اشغالی|تل آویو|تلآویو|حیفا|اسرائیل را|لبنان|غزه|عراق|سوریه|یمن|حزب الله|حزبالله|الضاحیه|بیروت|کویت|قطر|امارات|بحرین|عربستان|اردن|تنگه هرمز|نفتکش|کشتی|ناو|گزارش داد که در جنگ|در جنگ اخیر|جنگ ۱۲ روزه|جنگ دوازده روزه|خرداد ۱۴۰۴|سال گذشته|ماه گذشته|هفته گذشته|دیروز|دیشب(?! ساعت)|بازسازی|تلفات جنگ|شهدای جنگ|تشییع|تشیع|جنازه|ترحیم|تحلیل|کارشناس|نظرسنجی|تذکر|تبریک|قیمت|بورس|دلار|طلا|تحریم|فیفا|جام جهانی|فوتبال|لیگ|تحذیر|تهدد|یهدد|سوف|محتمل|تکذب|ینفی|نفی|فیدیو|مشاهد|لقطات|صور|لبنان|غزه|العراق|سوریا|الیمن|الاراضی المحتله|تل ابیب|حیفا|الخلیج|الکویت|قطر|الامارات|البحرین|السعودیه|الاردن|هرمز|ناقله|سفینه|الحوثی|حزب الله/;
+const SPEAKER = /وزیر|سخنگو|رئیس|رییس|نماینده|بقایی|قالیباف|ترامپ|ترمب|فانس|کاتس|نتانیاهو|عراقچی|پزشکیان|لاریجانی|ولایتی|خامنه ای|روبیو|هگست|هگزث|کاخ سفید|پنتاگون|البنتاغون|البیت الابیض|المتحدث|وزیر الخارجیه|الخارجیه|حماس|حزب الله|روسیه|روسیا|الکرملین|چین|الصین|سازمان ملل|الامم المتحده|واشینگتن پست|نیویورک تایمز|وال استریت|آکسیوس|اکسیوس|سی ان ان|رویترز عن|کانال ۱۲|کانال ۱۳|القناه 12|القناه 13/;
+// Words start a word: "باد" (wind) is not inside "آباد".
+const NOT = new RegExp(`(?<![${L}])(?:[وبل]|ال|بال|وال)?(?:${NOT0.source})`);
+const ACT = /انفجار|حمله|حملات|اصابت|بمباران|هدف|ضربه|ضربات|پدافند|غاره|غارات|قصف|استهداف|هجوم|دوی|الدفاعات|الدفاع|اعتراض|تصدی|تتصدی/;
+const BLAST = /صدای انفجار|انفجار|انفجارها|انفجارات|دوی|صدای جنگنده/;
+const AD = /پدافند|الدفاعات الجویه|الدفاع الجوی|المضادات/;
+const IL = /اسرائیل|صهیونیست|صهیونی|رژیم صهیونی|الاسرائیلی|الاسرائیلیه|الصهیونی|اسرائیلیه/;
+const US = /آمریکا|آمریکایی|امریکا|امریکایی|ایالات متحده|الامریکی|الامریکیه|الامیرکی|الامیرکیه|امریکیه/;
+
+const iranDay = (iso) => new Date(Date.parse(iso) + 3.5 * 3600e3).toISOString().slice(0, 10);
+const km = (a, b) => Math.hypot((a.lat - b.lat) * 111, (a.lng - b.lng) * 111 * Math.cos((a.lat * Math.PI) / 180));
+const ev = [], skip = {};
+let CUR = '';
+const no = (k) => { skip[k] = (skip[k] || 0) + 1; if (process.env.GDEBUG && k === process.env.GDEBUG) console.error(CUR.slice(0, 170)); };
+const seen = new Set();
+for (const f of FILES) {
+  const ch = chOf(f);
+  const persian = ['farsna', 'irna_1313', 'akhbarefori', 'iranintltv', 'VahidOnline'].includes(ch);
+  for (const l of fs.readFileSync(f, 'utf8').split('\n')) {
+    if (!l) continue;
+    const p = JSON.parse(l);
+    if (!p.text || p.at < '2026-02-28' || seen.has(ch + p.id)) continue;
+    seen.add(ch + p.id);
+    // The opening line, without its marks; the first that says something.
+    const line = (p.text.split('\n').find((x) => x.replace(/[^ء-ی]/g, '').length > 8) || '').replace(/&rlm;|&#33;|[🔴♦️🔺🔹⭕️❗️🚨⚡️]/gu, ' ').replace(/^\s*(?:#?عاجل|فوری|فوری:)\s*[|:]*\s*/, '').trim();
+    const h = norm(line).slice(0, 260);
+    CUR = h;
+    if (!h || !ATTACK.test(h)) { no('not an attack'); continue; }
+    if (!persian && !IRAN_AR.test(h)) { no('Arabic, not Iran'); continue; }
+    if (NOT.test(h)) { no('not one attack on Iran that day'); continue; }
+    const lead = h.split(/[:：]/)[0];
+    if (lead !== h && lead.length < 60 && SPEAKER.test(lead)) { no("someone's words"); continue; }
+    const words = h.replace(/#/g, ' # ').split(/[\s،,.:;!؟()«»"“”'\/|-]+/).filter(Boolean);
+    // The place: a site; else a town or a Tehran quarter after a cue word or as a hashtag.
+    const places = [];
+    for (const [re, place, lat, lng, en] of SITES) { const m = h.match(re); if (m && lat && ACT.test(h.slice(Math.max(0, m.index - 50), m.index + m[0].length + 40))) places.push({ said: m[0], place, lat, lng, en, site: true }); }
+    for (let i = 0; i < words.length; i++) {
+      const prev = words[i - 1] || '';
+      const glued = !persian && /^(?:ب|بال|وب)(?=..)/.test(words[i]) && !CUE.test(prev);
+      const big = (towns.get(key(words[i])) || {}).pop >= 200000;
+      if (!(CUE.test(prev) || prev === '#' || glued || big || i === 0)) continue;
+      let best = null;
+      for (const n of [3, 2, 1]) {
+        const g = words.slice(i, i + n);
+        if (g.length < n || (n > 1 && g.some((x) => FUNC.has(x)))) continue;
+        for (const w of persian ? [g.join(' ')] : [g.join(' '), g.join(' ').replace(/^(?:ب|ال|بال|و|ل)(?=..)/, '')]) {
+          const t = towns.get(key(w));
+          if (t && t.quarter && !/تهران|طهران/.test(h)) continue;
+          if (t && !best) best = { said: w, place: t.name, lat: t.lat, lng: t.lng, en: t.name, quarter: t.quarter };
+        }
+        if (best) break;
+      }
+      const near = words.slice(Math.max(0, i - 9), i).concat(words.slice(i + 1, i + 5)).join(' ');
+      if (best && !ACT.test(near)) best = null;
+      if (best && !places.some((q) => km(q, best) < 1.5)) places.push(best);
+    }
+    // A quarter of Tehran is finer than Tehran; a site is finer than its town.
+    for (let i = places.length - 1; i >= 0; i--) if (!places[i].site && !places[i].quarter && places.some((q) => q !== places[i] && (q.site || q.quarter) && km(q, places[i]) < 40)) places.splice(i, 1);
+    if (!places.length) { no('no place in Iran'); continue; }
+    // Who: the attacker named; air defences seen; else not stated.
+    const both = IL.test(h) && US.test(h);
+    const actor = both ? 'unclear' : IL.test(h) ? 'israel' : US.test(h) ? 'us' : AD.test(h) && !/حمله|اصابت|بمباران|غاره|غارات|قصف|استهداف|انفجار/.test(h) ? 'iran' : 'unclear';
+    const who = { israel: 'Israeli', us: 'US', unclear: both ? 'US and Israeli' : '' }[actor] ?? '';
+    const kind = actor === 'iran' ? 'ad' : /بمباران|حمله هوایی|غاره|غارات|جنگنده|قصف جوی/.test(h) ? 'air' : /پهپاد|مسیر/.test(h) ? 'drone' : /موشک|صاروخ|صواریخ/.test(h) ? 'missile' : /حمله|اصابت|هدف قرار|استهداف|هجوم|ضربه|ضربات|قصف/.test(h) ? 'attack' : BLAST.test(h) ? 'blast' : 'attack';
+    const src = SRC[ch] || ch;
+    const day = iranDay(p.at);
+    const url = `https://t.me/${ch}/${p.id}`;
+    for (const q of places) {
+      const at = q.en;
+      const label = kind === 'ad' ? `Air defences fire over ${at}, ${src} reports`
+        : kind === 'blast' ? `Explosions heard in ${at}, ${src} reports`
+        : `${who ? who + ' ' : ''}${{ air: 'air strike', drone: 'drone strike', missile: 'missile strike', attack: 'attack' }[kind]} on ${at}, ${src} reports`.replace(/^./, (c) => c.toUpperCase());
+      const e = { day, actor: actor === 'iran' ? 'iran' : actor, said: q.said, country: 'Iran', label, source: src, url, text: line, en: q.place, lat: q.lat, lng: q.lng, also: [] };
+      // A city's report on a day it is already pinned: that attack's other source.
+      if (!q.site && !q.quarter) {
+        const near = BASE.filter((b) => b.day === day && km(b, e) < 15).sort((a, b) => km(a, e) - km(b, e))[0];
+        if (near) Object.assign(e, { lat: near.lat, lng: near.lng, snapped: near.place });
+      }
+      const k = `${day}|${q.place}`;
+      const had = ev.find((x) => x.k === k);
+      if (had) {
+        if (had.actor === 'unclear' && e.actor !== 'unclear' && e.actor !== 'iran') Object.assign(had, { ...e, k, also: had.also });
+        else if (had.source !== src && !had.also.some((a) => a.source === src) && had.also.length < 4) had.also.push({ source: src, url });
+        continue;
+      }
+      ev.push({ ...e, k });
+    }
+  }
+}
+// "said" must be in "text" as the merge reads it.
+for (const e of ev) if (!e.text.includes(e.said)) { const i = norm(e.text).indexOf(e.said); e.said = i >= 0 ? e.text.slice(i, i + e.said.length) : e.text.slice(0, 20); }
+fs.writeFileSync(OUT, ev.map(({ k, snapped, ...e }) => JSON.stringify(e)).join('\n') + '\n');
+fs.writeFileSync(OUT + '.review.txt', ev.map((e) => `${e.day} ${e.actor} ${e.en}${e.snapped ? ' =>' + e.snapped : ''} | ${e.label}\n   ${e.text.slice(0, 200)}\n   ${e.url}`).join('\n'));
+const by = {};
+for (const e of ev) by[e.source + (e.snapped ? ' (on a pin)' : '')] = (by[e.source + (e.snapped ? ' (on a pin)' : '')] || 0) + 1;
+console.log(ev.length, 'events', by, 'skipped', skip);

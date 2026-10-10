@@ -152,9 +152,14 @@ const P = {
     [/المنامة/, 'Manama', 26.2235, 50.5876, 'Manama'],
   ],
   jo: [
-    [/موفق السلطي|(?<!النيل )الأزرق|(?<!النيل )الازرق/, 'Muwaffaq Salti Air Base', 31.8267, 36.7822, 'the Muwaffaq Salti air base'],
-    [/الأمير حسن|الامير حسن|H-?5/, 'Prince Hassan Air Base', 32.16, 37.15, 'the Prince Hassan air base'],
-    [/البرج 22|برج 22|Tower 22/, 'Tower 22', 33.32, 38.7, 'the Tower 22 base'],
+    [/موفق السلطي|(?:قاعدة|قاعدتي|مدينة|منطقة|في|ب|و)\s?(?:ال)?(?:أزرق|ازرق)(?! (?:اللون|الدولي|الصافي))|(?:الأزرق|الازرق) (?:الأردني|الاردني|الجوية|في الأردن|في الاردن|بالأردن|بالاردن|شرق)/, 'Muwaffaq Salti Air Base', 31.8267, 36.7822, 'the Muwaffaq Salti air base'],
+    [/مطار (?:الملك حسين|العقبة)/, 'Aqaba airport', 29.6116, 35.0181, 'the Aqaba airport'],
+    [/(?:قاعدة|قاعدتي) الملك حسين|الملك حسين الجوية|(?:قاعدة|قاعدتي|و)الملك حسين/, 'King Hussein Air Base', 32.356, 36.259, 'the King Hussein air base, Mafraq'],
+    [/الملك فيصل|(?:قاعدة )?الجفر/, 'King Faisal Air Base', 30.32, 36.15, 'the King Faisal air base, Al-Jafr'],
+    [/المنطقة الحرة (?:\S+ ){0,2}(?:السورية|الأردنية|الاردنية)|جابر الحدودي/, 'Jordanian-Syrian free zone', 32.47, 36.2, 'the Jordanian-Syrian free zone'],
+    [/طريبيل|منفذ الكرامة/, 'Karameh border crossing', 33.0, 38.82, 'the Karameh crossing on the Iraqi border'],
+    [/الأمير حسن|الامير حسن|(?<![A-Za-z-])H-?5(?![\d])/, 'Prince Hassan Air Base', 32.16, 37.15, 'the Prince Hassan air base'],
+    [/البرج 22|برج 22|Tower 22|الركبان/, 'Tower 22', 33.32, 38.7, 'the Tower 22 base'],
     [/الرويشد/, 'Ruwaished', 32.5, 38.2, 'Ruwaished'],
     [/الرمثا/, 'Ramtha', 32.56, 36.0, 'Ramtha'],
     [/كفرسوم|كفر سوم/, 'Kufr Soum', 32.69, 35.8, 'Kufr Soum'],
@@ -192,21 +197,21 @@ const SAUDI_SOUTH = /جازان|جيزان|نجران|خميس مشيط|[أا]ب
 const BROAD = new Set(['Riyadh', 'Eastern Province', 'Al-Kharj', 'Dubai', 'Abu Dhabi', 'Sharjah', 'Fujairah', 'Ras al-Khaimah', 'Ajman', 'Umm al-Quwain', 'Al Ain', 'Doha', 'Manama', 'Muharraq', 'Amman', 'Irbid', 'Zarqa', 'Mafraq', 'Karak', "Ma'an", 'Salt', 'Jordan Valley', 'Ahmadi', 'Jahra', 'Muscat', 'Al-Ahsa', 'Qassim', 'Al-Jawf', 'Arar']);
 // Names that are words too ("العين" an eye, "العقبة" an obstacle, "مسقط رأس" a birthplace): a report needs its
 // country named beside them.
-const WEAK = new Set(['Jordan Valley', 'Amman', 'Al Ain', 'Eastern Province', "Ma'an", 'Aqaba', 'Sitra', 'Khasab', 'Muscat', 'Mafraq', 'Zarqa', 'Shuaiba', "Ha'il", 'Shaybah oil field', 'Salt', 'Riffa', 'Al-Jawf', 'Muharraq']);
+const WEAK = new Set(['Jordan Valley', 'Amman', 'Al Ain', 'Eastern Province', "Ma'an", 'Sitra', 'Khasab', 'Muscat', 'Mafraq', 'Zarqa', 'Shuaiba', "Ha'il", 'Shaybah oil field', 'Salt', 'Riffa', 'Al-Jawf', 'Muharraq']);
 // A country by its name in a report (not its adjective: "من الجنسية الأردنية" is a person, not a place).
 const CW = [
-  [/السعودية|المملكة العربية/, 'sa'], [/الإمارات(?!ي)|الامارات(?!ي)/, 'ae'], [/(?:^|[\s#])قطر(?![يا])/, 'qa'], [/القوات المسلحة الأردنية|الجيش الأردني|الجيش الاردني|الإعلام العسكري الأردني|الحياري|المجال الجوي الأردني|المجال الجوي الاردني|الأجواء الأردنية|الاجواء الاردنية|الأراضي الأردنية|الاراضي الاردنية/, 'jo'], [/الكويت(?!ي)/, 'kw'],
+  [/السعودية|المملكة العربية/, 'sa'], [/الإمارات(?!ي)|الامارات(?!ي)/, 'ae'], [/(?:^|[\s#])قطر(?![يا])/, 'qa'], [/القوات المسلحة الأردنية|الجيش الأردني|الجيش الاردني|الإعلام العسكري الأردني|الحياري|المجال الجوي الأردني|المجال الجوي الاردني|الأجواء الأردنية|الاجواء الاردنية|الأراضي الأردنية|الاراضي الاردنية|(?:الدفاعات|الدفاع الجوي|القوات|الدفاعات الجوية|العاصمه|العاصمة|سماء|أجواء|اجواء|المدن|القواعد|قاعدة) (?:الجوية )?(?:ال)?(?:أردني|اردني)(?:ة|ه)?|المسلحة ?(?:الأردنية|الاردنية)|المملكة (?:الأردنية|الاردنية)/, 'jo'], [/الكويت(?!ي)/, 'kw'],
   [/البحرين(?!ي)/, 'bh'], [/الأردن(?!ي)|الاردن(?!ي)/, 'jo'], [/سلطنة ع[ُ]?مان|عُمان/, 'om'],
 ];
 // The same, any form, for a weak place's check.
 const CWANY = { sa: /سعودي/, ae: /[إا]مارات/, qa: /قطر/, kw: /كويت/, bh: /بحرين/, jo: /[أا]ردن/, om: /ع[ُ]?مان|العماني/ };
 
 // An attack word with a weapon or an act of war in it: a fire at a factory is not one.
-const ATTACK = start(/(?:تعاملت|تتعامل|تصدت|تتصدى|اعترضت|تعترض) (?:ال)?دفاعات|الدفاعات الجوية (?:\S+ ){0,2}(?:تتعامل|تعاملت|تتصدى|تصدت|تعترض|اعترضت)|تسقط|يسقط|هاجم|هاجمنا|هاجمت|تستهدف|يستهدف|استهدفت|إصابة مباشرة|اصابة مباشرة|سقط صاروخ|سقطت|اعتراض|اعترض|تدمير|دمرنا|إسقاط|اسقاط|[أا]سقط|تحييد|تصد[تي]|تتصدى|التصدي|يتصدى|نتصدى|التعامل مع (?:صاروخ|صواريخ|مسير|هجم|الهجم|تهديد|[أا]هداف)|تعامل(?:نا|ت) مع|تتعامل مع|نتعامل مع|هجوم|هجمات|هجمة|استهداف|استهدف|عدوان|اعتداء|شظايا|حطام|سقوط (?:\d+ )?(?:صاروخ|صواريخ|مسير|طائرة|جسم|[أا]جسام|بقايا|شظايا|حطام)/);
+const ATTACK = start(/(?:تعاملت|تتعامل|تصدت|تتصدى|اعترضت|تعترض) (?:ال)?دفاعات|الدفاعات الجوية (?:\S+ ){0,2}(?:تتعامل|تعاملت|تتصدى|تصدت|تعترض|اعترضت)|تسقط|يسقط|يعترض|تعترض|نعترض|سقوط مباشر|[أا]صاب(?:ت|ا)? (?:\S+ )?(?:القاعدة|قاعدة|هدف|بشكل مباشر)|(?:ال)?اعتداء (?:ال)?(?:صاروخي|بالصواريخ|بالمسيرات)|هاجم|هاجمنا|هاجمت|تستهدف|يستهدف|استهدفت|إصابة مباشرة|اصابة مباشرة|سقط صاروخ|سقطت|اعتراض|اعترض|تدمير|دمرنا|إسقاط|اسقاط|[أا]سقط|تحييد|تصد[تي]|تتصدى|التصدي|يتصدى|نتصدى|التعامل مع (?:صاروخ|صواريخ|مسير|هجم|الهجم|تهديد|[أا]هداف)|تعامل(?:نا|ت) مع|تتعامل مع|نتعامل مع|هجوم|هجمات|هجمة|استهداف|استهدف|عدوان|اعتداء|شظايا|حطام|سقوط (?:\d+ )?(?:صاروخ|صواريخ|مسير|طائرة|جسم|[أا]جسام|بقايا|شظايا|حطام)/);
 // A report may tell it by what was heard and seen: blasts, a strike, shelling.
 const BLAST = start(/يهز|تهز|هزت|رشقة|رشقات|[أا]طلقت|إطلاق|اطلاق|انفجار|انفجارات|دوي(?!ل)|قصف|يدك|تدك|ضربة|ضربات|هجوم صاروخي|اعتراضات/);
 // A report's attack is told in the words of war: a missile, a drone, blasts, an interception, a base.
-const WAR = start(/صاروخ|صواريخ|مسير|طائرة|طائرات|شظايا|حطام|جسم|[أا]جسام|انفجار|دوي(?!ل)|قصف|غارة|غارات|اعتراض|باليستي|الدفاع(?:ات)? الجوي|قاعدة|قواعد/);
+const WAR = start(/صاروخ|صواريخ|مسير|طائرة|طائرات|شظايا|حطام|جسم|[أا]جسام|انفجار|دوي(?!ل)|قصف|غارة|غارات|اعتراض|باليستي|الدفاع(?:ات)? الجوي|قاعدة|قاعدت(?:ي|ين|ان)|قواعد|مطار|سقوط مباشر/);
 // The words of a report that is not an attack: after the fact, or of something else.
 const SIRENS = /(?:صافرات|صفارات) (?:الإنذار|الانذار)(?: تدوي)?|دوي (?:صافرات|صفارات)(?: الإنذار| الانذار)?/g;
 // Not one day's attack: tallies over days, footage, notices, drills, denials, yesterday's news; condemnations,
@@ -214,7 +219,7 @@ const SIRENS = /(?:صافرات|صفارات) (?:الإنذار|الانذار)(
 const NOT = start(/منذ بد[ءا]|منذ بداية|إجمالي|اجمالي|حصيلة|خلال (?:الـ?\s*)?\d+ (?:يوم|أيام|ايام)|خلال (?:الـ?\s*)?(?:48|72|96) ساعة|في \d+ (?:يوم|يومًا|يوما)|خلال (?:الأيام|الايام|الأسبوع|الاسبوع|الشهر)|مشاهد|فيديو|لقطات|صور ل|التخلص من|تمرين|مناورة|لا صحة|تنفي|ينفي|نفت|نفى|شائعات|(?:^|\s)(?:أمس|امس)(?=\s|$|،|\.)|البارحة|سابق|تحذر|تحذير|يرجى|ترجو|تدعو|غرفة عمليات|تدريب|وفد|اجتماع|اتصال|بحث|يلتقي|التقى|يشارك|زيارة|يدين|تدين|ندين|[أا]دان|إدانة|ادانة|استنكار|تستنكر|نستنكر|نحمل|تحمل|رفض|ترفض|انتهاك|سافر|تبرير|ذريعة|سيادت|القانون الدولي|مخزون|نحتفظ|تحتفظ|حق الرد|لن نتردد|نعمل على|سنرد|سفير|السفير|مجلس الأمن|الأمم المتحدة|عزاء|نعي|ينعى|جنازة|تشييع|تجار|مخدرات|تهريب|مهرب|عطل فني|تسرب|ضمن منظومة|الجاهزية|اشتراطات|حج |يثمن|يشيد|حفل|اليوم الوطني|عروض|نقف مع|القوة الباكستانية|تهديد(?:ا)? (?:مباشر|خطير)|يمثل|جنوب بارس|براكة النووية تهديد|لم يتم|احتجاج|الخطوط الحمراء|مواصلة|العمل المشترك|لمواجهة|وزير الدفاع|كلمة|خطاب|«/);
 // A report's own doubts and its words about the war: a threat, a warning, what may come, a launch from a Gulf
 // base at Iran, missiles crossing on their way to Israel, Hebrew media's speculation.
-const RNOT = start(/يهدد|تهدد|تهديد|توعد|يتوعد|إذا|اذا |في حال|سيتم|سنستهدف|ستستهدف|سوف|محتمل|تحليل|الإعلام العبري|الاعلام العبري|؟|كاذب|مزاعم|انطلاق[اًا]* من|من (?:قاعدة|قواعد) [^ ]+ (?:في|ب)|متجهة (?:نحو|إلى|الى) (?:إسرائيل|اسرائيل|الكيان|الأراضي المحتلة|الاراضي المحتلة|فلسطين)|نحو (?:الأراضي المحتلة|الاراضي المحتلة|الكيان)|يستعد|تستعد|أسعار|اسعار|البورصة|الأسهم|تناقش|يناقش|مباحثات|يبحث|تبحث|يطالب|تطالب|يعزي|تعزي|منجم|غير صحيح|تداول|تشويش|الأقمار الصناعية|الاقمار الصناعية|مجلة|يوثق|لحظة|ستحترق|ستطال|سيطال|ستشمل|ستضرب|سنضرب|مقامرة|تنسحب|انسحاب|ضبط|حادثة|يتهم|تتهم|اتهم|التحقيق|تحقيق|تقرير|تكشف|يكشف|كشفت|مظهرا|تستأنف|استأنف|استئناف|بعد نحو|قبل نحو|قبل أيام|الشهر الماضي|الأسبوع الماضي|الاسبوع الماضي|لم تتعرض|لم تصب|لتجنب|لا توجد|[أا]قمار صناعية|صور[ةه]|توثيق|يوثق|تحديد هوية|الليلة الماضية|يعتقد أنه|يعتقد انه/);
+const RNOT = start(/يهدد|تهدد|تهديد|توعد|يتوعد|إذا|اذا |في حال|سيتم|سنستهدف|ستستهدف|سوف|محتمل|تحليل|الإعلام العبري|الاعلام العبري|؟|كاذب|مزاعم|انطلاق[اًا]* من|من (?:قاعدة|قواعد) [^ ]+ (?:في|ب)|متجهة (?:نحو|إلى|الى) (?:إسرائيل|اسرائيل|الكيان|الأراضي المحتلة|الاراضي المحتلة|فلسطين)|نحو (?:الأراضي المحتلة|الاراضي المحتلة|الكيان)|يستعد|تستعد|أسعار|اسعار|البورصة|الأسهم|تناقش|يناقش|مباحثات|يبحث|تبحث|يطالب|تطالب|يعزي|تعزي|منجم|غير صحيح|تداول|تشويش|الأقمار الصناعية|الاقمار الصناعية|مجلة|يوثق|لحظة|ستحترق|ستطال|سيطال|ستشمل|ستضرب|سنضرب|مقامرة|تنسحب|انسحاب|ضبط|حادثة|يتهم|تتهم|اتهم|التحقيق|تحقيق|تقرير|تكشف|يكشف|كشفت|مظهرا|تستأنف|استأنف|استئناف|بعد نحو|قبل نحو|قبل أيام|الشهر الماضي|الأسبوع الماضي|الاسبوع الماضي|لم تتعرض|لم تصب|لتجنب|لا توجد|[أا]قمار صناعية|صور[ةه]|توثيق|يوثق|تحديد هوية|يعتقد أنه|يعتقد انه/);
 // Someone else's words quoted: Israel's army, Hezbollah, a minister, a president.
 const OTHERS = start(/إسرائيل|اسرائيل|الإسرائيلي|الاسرائيلي|حزب الله|ترامب|البيت الأبيض|البنتاغون|الخارجية|وزير|رئيس|المتحدث|الكرملين|نتنياهو|قاليباف|عراقجي/);
 // Another theatre named: Lebanon, Gaza, Syria, Sudan; the Gulf's places are not theirs.
@@ -296,7 +301,7 @@ for (const r of rows) {
   const id = r.handle + r.id;
   if (seenId.has(id)) continue;
   seenId.add(id);
-  const raw = norm(r.text || '');
+  const raw = norm(r.text || '').replace(/https?:\/\/\S+|\S+\.(?:gov\.jo|tv|com|net)\/\S*/g, '');
   // The opening line or sentence carries the news; Petra and Al Hadath put it all in one line. An account's own
   // statement is read to the end of its news, before the tally and the explanation that follow.
   const title = raw.split('\n')[0].trim();
@@ -311,7 +316,9 @@ for (const r of rows) {
   const body = raw.slice(0, 900);
   const source = SRC[r.handle] || r.handle;
   const url = r.url || `https://t.me/${r.handle}/${r.id}`;
-  const local = new Date(Date.parse(r.at) + 3 * 3600e3).toISOString().slice(0, 10);
+  const lt = new Date(Date.parse(r.at) + 3 * 3600e3);
+  const lastNight = /الليلة الماضية|ليلة (?:أمس|امس)/.test(head) && lt.getUTCHours() < 14;
+  const local = new Date(lt - (lastNight ? 864e5 : 0)).toISOString().slice(0, 10);
   // Who speaks: the account itself, an official quoted by name, a claimant, or the channel's own report.
   // A first line that is only a speaker ("الإعلام الأجنبي:"): its words are on the lines after.
   if (/[:：]$/.test(head)) head = raw.split(/\n\s*\n/)[0].replace(/\s+/g, ' ').slice(0, 400).replace(/^[^\u0600-\u06FFA-Za-z0-9"«]+/u, '').replace(/^#?عاجل\s*[|:]*\s*/, '').trim();
@@ -368,8 +375,13 @@ for (const r of rows) {
   // The US military on land in the Gulf is a witness, not the striker: its words are a report of Iran's attack.
   if (claim && claim[1] === 'us') claim = null;
   const act = report ? head.replace(SIRENS, '') : head;
-  if (!(report ? (ATTACK.test(act.replace(/عدوان|اعتداء|العدوان|الاعتداء/g, '')) || BLAST.test(act)) && WAR.test(act) : ATTACK.test(head))) { no('not an attack'); continue; }
-  if (NOT.test(head) || bigCount(head) || (report && RNOT.test(head))) { no('tally, footage, notice or statement'); continue; }
+  const actA = act.replace(/(?:عدوان|اعتداء|العدوان|الاعتداء)(?! (?:ال)?(?:صاروخي|بالصواريخ|بالمسيرات))/g, '');
+  if (!(report ? (ATTACK.test(actA) || BLAST.test(act)) && WAR.test(act) : ATTACK.test(head))) { no('not an attack'); continue; }
+  const hq = head.replace(/«[^»]{1,20}»/g, '').replace(/(?:البيان|بيان رقم|المرحلة|الموجة|الموجه)\s*(?:رقم\s*)?\d+/g, '');
+  // Missiles brought down over a Gulf state or Jordan on their way to Israel fall there: an event of its own.
+  const down = /اعتراض|اعترض|يعترض|تعترض|تسقط|يسقط|[أا]سقط|إسقاط|اسقاط|سقوط|شظايا|حطام/.test(head);
+  const rq = down ? hq.replace(/(?:متجه[ةه]?|في طريقها|في طريقه|باتجاه)? ?(?:نحو|إلى|الى) (?:إسرائيل|اسرائيل|الكيان|الأراضي المحتلة|الاراضي المحتلة|فلسطين)/g, '') : hq;
+  if (NOT.test(hq) || bigCount(hq) || (report && RNOT.test(rq))) { no('tally, footage, notice or statement'); continue; }
   if (SEA.test(head.replace(/قبالة (?:إيلات|ايلات|إسرائيل|اسرائيل)/g, ''))) { no('at sea'); continue; }
   const ccs = cc ? [cc] : Object.keys(P);
   if (ccs.includes('sa') && SAUDI_SOUTH.test(head) && !IRAN.test(body)) { no('Saudi south, Houthi front'); continue; }

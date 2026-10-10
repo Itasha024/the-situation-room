@@ -119,3 +119,20 @@ pin's point, so the merge makes it a second source.
   فرون والغندورية", or one strike on "the outskirts of the two villages", had been pinned at both. The second
   folds into the first ("between Froun and Ghanduriyah"); a pin another report also holds stays that report's.
   Strikes in the plural on two villages stay two.
+
+## Round 31, the reading method (user, 10 Oct: "search by words is not very smart")
+Word readers miss what is said another way and catch what only looks like an attack. Beside them now:
+1. **Broad candidates** (`cands.cjs <country> out.jsonl <dumps...>`): every post since 28 Feb, from every channel
+   dumped (the news channels, the axis's, Iran's, the opposition's, Israel's, the country's own: for Jordan, Petra,
+   Jfra News and Roya TV), that names the country or one of its places in any language and any word of war. Copies
+   across channels are one candidate with their refs.
+2. **Reading**: the candidates are read post by post by Claude readers (not the site's AI quota), in date batches,
+   with `read-instructions-<country>.md` and the country's place list: each physical attack, a place a day, its
+   refs and a quote copied from the first.
+3. **Grounding and merge** (`read-merge.cjs <Country> <cands> <baseline> <out> <events...>`): the quote must be in
+   the post, the refs must be candidates; a reading on a pin of that day nearby is its second source.
+4. **Checking the old pins**: a pin whose post no reader took as an attack is read again; wrong ones go.
+Jordan, the first country read this way: 4,516 candidates; 20 old pins removed (a missile painted blue, "الأزرق",
+read as Azraq; a CH5 drone read as the H5 base; the Blue Stream pipeline; a C-17's emergency call; a WSJ report of
+an earlier hit), 33 added (Iraqi factions' claims on King Faisal, King Abdullah II and Queen Alia bases, Ruwaished,
+Tower 22, Amman's interceptions...). 171 Jordan pins. The word reader's place patterns are fixed to match.

@@ -136,3 +136,13 @@ Jordan, the first country read this way: 4,516 candidates; 20 old pins removed (
 read as Azraq; a CH5 drone read as the H5 base; the Blue Stream pipeline; a C-17's emergency call; a WSJ report of
 an earlier hit), 33 added (Iraqi factions' claims on King Faisal, King Abdullah II and Queen Alia bases, Ruwaished,
 Tower 22, Amman's interceptions...). 171 Jordan pins. The word reader's place patterns are fixed to match.
+5. **Sirens and explosions heard** are events of their own (user, 10 Oct), in every country but Israel (its alerts are
+   the Home Front Command's): a second reading pass over the posts that tell sirens or blasts (`sirsub.cjs`). The map
+   no longer treats "sirens" as no attack, except in Israel (iran-places.ts). Out: a test, a drill, a fault or an
+   accident by the country's own word; Saudi Arabia's unattributed blasts on the Houthi front (the Yemen desk's).
+6. **Source by source** (`src-cands.cjs`, `read-instructions-src.md`, `src-merge.cjs`): every post of every channel
+   with a word of war in any language, no country asked, read whole channel by channel; the reader names the place
+   as written and the merge's gazetteers place it. Copies across channels are one line with their refs.
+The Gulf read (26,932 candidates, 51 batches, then 8 siren batches): 97 old pins that were no attack removed ("طريف",
+funny, read as Turaif; an investment "targeting" schools; Yemen's launches; later reports; flights), the readings
+merged as new pins or second sources. Jordan with its sirens: 205 pins.

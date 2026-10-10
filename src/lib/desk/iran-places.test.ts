@@ -58,6 +58,9 @@ test("the map's scope (user, 9 Oct): who acted, where it landed, and never a fly
   assert.equal(iranPinAllowed("us", at("Iraq"), "US strike hits Kataib Hezbollah at Jurf al-Sakhar"), true);
   assert.equal(iranPinAllowed("houthi", at("sea"), "Houthis strike a tanker"), false);
   assert.equal(iranPinAllowed("houthi", at("Israel"), "Missile from Yemen at Eilat"), true);
+  // Sirens are pinned (user, 10 Oct), but not Israel's: its alerts come from the Home Front Command.
+  assert.equal(iranPinAllowed("unclear", at("Kuwait"), "Sirens sound in Kuwait City, Sabereen reports"), true);
+  assert.equal(iranPinAllowed("unclear", at("Israel"), "Sirens sound in Tel Aviv"), false);
   // Not an attack, or no one attack.
   assert.equal(iranPinAllowed("israel", at("Lebanon"), "Israeli drones fly low over Beirut and suburbs"), false);
   assert.equal(iranPinAllowed("unclear", at("Iran"), "Jet activity reported over western Tehran"), false);

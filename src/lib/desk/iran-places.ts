@@ -230,11 +230,13 @@ export function tallyNotEvent(headline: string): boolean {
  * - The Houthis: their launches at Israel (user, 9 Oct); their war at sea and
  *   in Yemen is the Yemen desk's map.
  * - Not told who: at sea, or a strike or blast that is no police matter.
+ * Sirens and explosions heard count, in every country but Israel, whose alerts
+ * come from the Home Front Command (user, 10 Oct).
  * Never a fly-over, a round-up of attacks, a count of the dead with no attack,
  * or a tally over days.
  */
 const NOT_AN_ATTACK =
-  /\b(?:fl(?:y|ies|ew|ying)\s+(?:low\s+)?over|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?|evacuat\w*|sirens?|unidentified (?:object|aircraft|drone))\b/i;
+  /\b(?:fl(?:y|ies|ew|ying)\s+(?:low\s+)?over|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?|evacuat\w*|unidentified (?:object|aircraft|drone))\b/i;
 const ROUNDUP =
   /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)|\bas\s+(?:Tehran|Iran|Washington|the US|Israel)\s+(?:tries|seeks|aims|moves|looks|struggles|presses)\b|\bin\s+(?:recent|past|the past)\s+(?:days|weeks|months)\b/i;
 const INTERNAL =
@@ -249,6 +251,7 @@ const PURSUERS: Record<string, Set<string>> = {
 export function iranPinAllowed(actor: string | null | undefined, place: Pick<IranPlace, "country">, headline: string): boolean {
   const a = String(actor || "unclear");
   if ((a === "houthi" && place.country !== "Israel") || NOT_AN_ATTACK.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
+  if (/\bsirens?\b/i.test(headline) && place.country === "Israel") return false;
   if (place.country === "Yemen" || place.country === "Gaza" || place.country === "Palestine") return false;
   if (AXIS.has(a)) return place.country !== "Iran" || (a === "iran" && AIR_DEFENCE.test(headline) && !INTERNAL.test(headline));
   if (PURSUERS[a]) return PURSUERS[a].has(place.country);

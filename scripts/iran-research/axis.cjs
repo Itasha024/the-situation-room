@@ -119,7 +119,7 @@ for (const ch of Object.keys(CH)) {
             if (!t) continue;
             const cued = prov || new RegExp(norm(CUE) + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(nh) || t.pop >= 50000;
             if (!cued) continue;
-            if (!best || (best.prov && !prov) || (!!best.prov === !!prov && w.length > best.said.length)) best = { said: words.slice(i, i + len).join(' ').match(/[ء-ي][ء-ي ]*/)?.[0] || w, name: prov ? `${t.name}` : t.name, lat: t.lat, lng: t.lng, country: 'Iraq', en: prov ? `${t.name.replace(/ Governorate$/, '')} province` : t.name, prov };
+            if (!best || (best.prov && !prov) || (!!best.prov === !!prov && w.length > best.said.length)) best = { said: words.slice(i, i + len).join(' ').match(/[ء-ي][ء-ي ]*/)?.[0] || w, name: prov ? `${t.name}` : t.name, lat: t.lat, lng: t.lng, country: 'Iraq', en: prov ? `${t.name.replace(/ Governorate$/, '').replace(/^Muhafazat (?:al )?/, '')} province` : t.name, prov };
           }
         }
       }

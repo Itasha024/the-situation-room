@@ -143,6 +143,14 @@ for (const e of hand) {
       || (e.at && p.at ? Math.abs(Date.parse(p.at) - Date.parse(e.at)) <= 2 * 3600e3 && km(p, g) < 5 : p.day === e.day && km(p, g) < 1.5));
   const same = base.filter(fits).sort((a, b) => dayGap(a) - dayGap(b) || km(a, g) - km(b, g))[0];
   if (same) {
+    if (same.actor === "unclear" && e.actor !== "unclear" && same.url !== e.url) {
+      // The pin said no one; this report names who launched it (Kuwait's army: "the Iranian aggression"). It
+      // takes the pin's side and words, and the first report stays as a second source.
+      same.also = [{ source: same.source, url: same.url }, ...same.also.filter((a) => a.url !== e.url)];
+      Object.assign(same, { actor: e.actor, label: e.label, source: e.source, url: e.url });
+      drop("already pinned that day; its side now named", e);
+      continue;
+    }
     if (same.url !== e.url && !same.also.some((a) => a.url === e.url)) same.also.push({ source: e.source, url: e.url });
     drop("already pinned that day", e);
     continue;

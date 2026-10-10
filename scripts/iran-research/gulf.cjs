@@ -19,6 +19,7 @@
 // same attack. The Red Sea and the Gulf of Aden are the Yemen desk's; Iran's own coast and islands are Iran's.
 //   node gulf.cjs gulf-events.jsonl [--base public/iran-strikes-baseline.json] x/modgovksa.jsonl ... part/hd0.jsonl
 const fs = require('fs');
+const countryAt = require('./country-at.cjs');
 const argv = process.argv.slice(2);
 const bi = argv.indexOf('--base');
 const BASE = bi >= 0 ? JSON.parse(fs.readFileSync(argv.splice(bi, 2)[1], 'utf8')) : [];
@@ -260,7 +261,9 @@ const SHIPLAB = /\b(?:tanker|vessel|ship|carrier|tug|nautical miles)\b/i;
 const dayN = (d) => Date.parse(d) / 864e5;
 // A report beside a pin already made: that attack's second source. It takes the pin's point, so the merge folds it.
 const snap = (e, r) => {
-  const near = BASE.filter((p) => (r.ship ? SHIPLAB.test(p.label) && Math.abs(dayN(p.day) - dayN(e.day)) <= 1 : p.day === e.day && !SHIPLAB.test(p.label)) && km(p, e) < r.km)
+  // On land, only a pin in the same country, never an alert in Israel (a report of Jordan in general is not Ein Gedi's).
+  const own = (p) => { if (/alerts in/.test(p.label)) return false; const c = countryAt(p.lat, p.lng); return c === e.country || (!c && km(p, e) < 40); };
+  const near = BASE.filter((p) => (r.ship ? SHIPLAB.test(p.label) && Math.abs(dayN(p.day) - dayN(e.day)) <= 1 : p.day === e.day && !SHIPLAB.test(p.label) && own(p)) && km(p, e) < r.km)
     .sort((a, b) => Math.abs(dayN(a.day) - dayN(e.day)) - Math.abs(dayN(b.day) - dayN(e.day)) || km(a, e) - km(b, e))[0];
   if (near) Object.assign(e, { lat: near.lat, lng: near.lng, day: near.day, snapped: near.place });
 };

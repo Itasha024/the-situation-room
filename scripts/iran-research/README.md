@@ -100,3 +100,22 @@ pin's point, so the merge makes it a second source.
   it or four after). Not: someone's words, footage, warnings, controlled blasts of old munitions, mines,
   accidents, weather, Iran's own launches, armed attacks inside Iran, the war elsewhere. Who: Israel or the US
   when named; Iran's air defences when they are what was seen.
+
+## Round 31, more sources and one event one pin (10 Oct, user's corrections)
+
+- **Ilia** (t.me/iliaen, an opposition channel) read by `iran.cjs` with the other Persian channels.
+- **Israel's channels for attacks in Iran** (N12, Hazfon, Israel1, in Hebrew), read by `iran.cjs`: Iran's towns
+  and sites as Israel's media spell them, glued to "ב" or after a cue; a name that is a word or a place in Israel
+  too ("קום", "רשת", "משהד") only with Iran named. Not: launches from Iran, alerts, threats, analysis, footage,
+  arrests, someone's words in quotes, Lebanon and the other fronts.
+- **`gulf-fa.cjs`**: attacks in the Gulf states, Jordan, Iraq and at sea from Iran's Persian channels and the
+  opposition's (Fars, IRNA, Akhbar-e Fori, Iran International, Vahid Online, Ilia). Iran's forces' claims are
+  "Iran says it struck"; an Iranian ship struck is the US's or Israel's attack. Not: footage, digests, tallies,
+  history, a commander's or a paper's words, the Yemen and Lebanon fronts.
+- **Snapping in one country only** (`country-at.cjs`, the map's own borders): a report snaps onto a pin of that
+  day only inside its own country, and never onto an Israeli alert pin. Before, Irbid's 40 km reached Tirat Zvi and
+  Jordan "in general" reached Ein Gedi: 18 such second sources removed, and those reports are Jordan's pins now.
+- **One strike between two villages is one pin** (`lb-between.cjs`, and `nna.cjs` from now on): "غارة بين بلدتي
+  فرون والغندورية", or one strike on "the outskirts of the two villages", had been pinned at both. The second
+  folds into the first ("between Froun and Ghanduriyah"); a pin another report also holds stays that report's.
+  Strikes in the plural on two villages stay two.

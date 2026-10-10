@@ -30,6 +30,10 @@ for (const p of L) {
   const label = kind === 'shell' ? 'Israeli shelling of {place}, Lebanon' : kind === 'drone' ? 'Israeli drone strike on {place}, Lebanon' : 'Israeli air strike on {place}, Lebanon';
   const w = head.split(/\s+/).map((x) => x.replace(/^[«"(]+|[»")،,.:؟!]+$/g, ''));
   const starts = new Set();
+  // One strike between two villages is one attack ("غارة بين بلدتي فرون والغندورية", one strike on "أطراف بلدتي X
+  // وY"): the second village is no place of its own, and the pin is near the first. Strikes in the plural stay two.
+  const single = !/غارات|غارتين|غارتان|بغارتين|قذائف|ضربات/.test(head);
+  const pairAt = new Set();
   w.forEach((x, i) => {
     if (TRIG.test(x) && !w.slice(Math.max(0, i - 3), i).some((y) => NOT_BEFORE.test(y))) {
       // "X في النبطية", "في منطقة جزين": a district after a place or an area is where it lies, not a second strike.
@@ -37,9 +41,13 @@ for (const p of L) {
       const next = w[i + 1] === 'منطقة' ? w[i + 2] : w[i + 1];
       if (DISTRICT.test(next || '') && (w[i + 1] === 'منطقة' || (x === 'في' && i > 0 && !/^(?:غارة|غارات|قصف|استهداف|غارتان|شهيد|شهداء|جرحى)$/.test(w[i - 1])))) return;
       starts.add(i + 1);
+      if (x === 'بين' || (single && /^(?:أطراف|اطراف|محيط|خراج)$/.test(x) && w[i + 1] === 'بلدتي')) {
+        const j = w.findIndex((y, k) => k > i + 1 && /^و\S{2,}/.test(y));
+        if (j > 0 && j <= i + 5) pairAt.add(j);
+      }
     }
     // "X وY": the place after "و" next to a place.
-    if (/^و\S{2,}/.test(x) && i > 0 && !STOP.has(x.slice(1))) starts.add(i);
+    if (/^و\S{2,}/.test(x) && i > 0 && !STOP.has(x.slice(1)) && !pairAt.has(i)) starts.add(i);
   });
   const groups = [];
   for (let s of starts) {

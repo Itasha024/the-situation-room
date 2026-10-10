@@ -4,7 +4,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Yemen Conflict Desk";
-const ASSET_V = "desk-en-156";
+const ASSET_V = "desk-en-157";
 // The reader's language before anything is drawn: ?lang= or the one they chose. Hebrew and
 // Arabic load their labels (public/i18n) ahead of app.js, read right to left, and add their fonts.
 const LANG_FONTS: Record<string, string> = {

@@ -9,6 +9,16 @@ const HAND = [
   ['x:2028182813837828251', '2026-02-28', 'iran', 'Burj Al Arab', '25.1412,55.1853', 'Iranian attack on the Burj Al Arab hotel in Dubai', 'UAE'],
   ['x:2028182813837828251', '2026-02-28', 'iran', 'Zayed International Airport', '24.433,54.6511', 'Iranian attack on Zayed International Airport, Abu Dhabi', 'UAE'],
   ['x:2028182813837828251', '2026-02-28', 'iran', 'Kuwait International Airport', '29.2266,47.9689', 'Iranian attack on Kuwait International Airport', 'Kuwait'],
+  // The rest of the same list (user, 10 Oct). A place that can't be found exactly is pinned in its country in
+  // general: the Era Views Towers in Bahrain, Qatar's "residential areas"; the Port of Dubai at Port Rashid.
+  ['x:2028182813837828251', '2026-02-28', 'iran', 'Dubai International Airport', '25.2528,55.3644', 'Iranian attack on Dubai International Airport', 'UAE'],
+  ['x:2028182813837828251', '2026-02-28', 'iran', 'Erbil International Airport', '36.2376,43.9632', 'Iranian attack on Erbil International Airport', 'Iraq'],
+  ['x:2028182813837828251', '2026-02-28', 'iran', 'Fairmont Palm Hotel', '25.1103,55.1395', 'Iranian attack on the Fairmont Palm hotel in Dubai', 'UAE'],
+  ['x:2028182813837828251', '2026-02-28', 'iran', 'Crowne Plaza Hotel, Bahrain', '26.2335,50.5876', 'Iranian attack on the Crowne Plaza hotel in Manama, Bahrain', 'Bahrain'],
+  ['x:2028182813837828251', '2026-02-28', 'iran', 'Port of Dubai', '25.2697,55.2775', 'Iranian attack on the Port of Dubai', 'UAE'],
+  ['x:2028182813837828251', '2026-02-28', 'iran', 'Beit Shemesh', '31.7470,34.9881', 'Iranian attack on residential areas in Beit Shemesh', 'Israel'],
+  ['x:2028182813837828251', '2026-02-28', 'iran', 'Era Views Towers', '26.07,50.55', 'Iranian attack on the residential area of the Era Views Towers, Bahrain (place in Bahrain not found)', 'Bahrain'],
+  ['x:2028182813837828251', '2026-02-28', 'iran', 'Residential areas in Qatar', '25.30,51.20', 'Iranian attack on residential areas in Qatar (place not stated)', 'Qatar'],
   ['x:2030727586226360485', '2026-03-01', 'iran', 'Saudi Arabia', '24.0627,47.5805', 'Iranian attack on US troops in Saudi Arabia; a US soldier wounded there dies a week later', 'Saudi Arabia'],
   ['x:2028553001644736808', '2026-03-02', 'us', 'Gulf of Oman', '24.8,58.2', 'US forces sink the last of the 11 Iranian ships in the Gulf of Oman', 'sea'],
   ['x:2034040698954031326', '2026-03-17', 'us', 'Strait of Hormuz', '27.08,56.6', "US 5,000-pound bunker busters hit Iranian anti-ship missile sites on Iran's coast near the Strait of Hormuz", 'Iran'],

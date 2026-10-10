@@ -56,6 +56,26 @@ while (pieces.length) {
 israel.arcs = null;
 israel.ring = joined.flatMap((a, i) => (i ? a.slice(1) : a));
 
+// Every other country with an attack on the map is lit in the Gulf's purple too, as "others" (user, 10 Oct):
+// a pin inside its shape (point in polygon). Yemen is the Yemen desk's; Gaza and the West Bank are Palestine.
+const pins = JSON.parse(fs.readFileSync("public/iran-strikes-baseline.json", "utf8"));
+const inRing = (r, x, y) => {
+  let inside = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const [xi, yi] = r[i], [xj, yj] = r[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+};
+const polys = (g) => (g.type === "Polygon" ? [g.arcs.map(ring)] : g.arcs.map((p) => p.map(ring)));
+const holds = (g, x, y) => polys(g).some(([outer, ...holes]) => inRing(outer, x, y) && !holes.some((h) => inRing(h, x, y)));
+for (const g of geoms) {
+  const n = g.properties?.name;
+  if (!n || SIDE[n] || !g.arcs || ["Yemen", "Palestine"].includes(n)) continue;
+  const hits = pins.filter((p) => holds(g, p.lng, p.lat)).length;
+  if (hits) { SIDE[n] = "gulf"; console.log("others:", n, hits, "pins"); }
+}
+
 const features = [];
 for (const g of geoms) {
   const side = SIDE[g.properties?.name];

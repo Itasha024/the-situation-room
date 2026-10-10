@@ -7118,6 +7118,7 @@ function bootOtherDesk(el) {
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
   iranPins.drawn = '';
   iranPins.countries = null;
+  iranPins.day = iranToday(); // the map opens on today (user, 10 Oct), not the whole war
   renderIranLegend();
   wireIranMapTools();
   drawIranCountries();
@@ -7171,7 +7172,7 @@ const IRAN_PIN_SIDES = [
   ['houthi', '#16a34a', 'Houthis'],
   ['us', '#2563eb', 'US'],
   ['israel', '#60a5fa', 'Israel'],
-  ['gulf', '#a855f7', 'Gulf states'],
+  ['gulf', '#a855f7', 'Gulf states and others'],
   ['other', '#94a3b8', 'Not stated'],
 ];
 const IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));

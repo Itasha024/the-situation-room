@@ -25,7 +25,9 @@
  *   node iran-research.mts --events research.jsonl [--gaz Lebanon=osm-lb.json] [--gn Iraq=IQ.txt] [--base public/iran-strikes-baseline.json] [--dry]
  */
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import { iranPinAllowed, iranPlacesIn } from "../src/lib/desk/iran-places.ts";
+const countryAt: (lat: number, lng: number) => string = createRequire(import.meta.url)("./iran-research/country-at.cjs");
 
 const arg = (k: string, d: string) => {
   const i = process.argv.indexOf(k);
@@ -91,6 +93,15 @@ for (const g of process.argv.flatMap((a, i) => (process.argv[i - 1] === "--gn" ?
   GN.set(country, m);
 }
 
+// `--places out-0.jsonl,out-1.jsonl`: the names the gazetteers missed, placed by hand ({ key: "country|said", level, en, lat, lng }).
+// level "no": not a place. "country": only the country is known, so the pin goes at its middle, and only on a
+// day with no other pin in that country (a report that names no place is most likely one already pinned).
+type Placed = { level: string; en?: string; lat?: number; lng?: number };
+const PLACES = new Map<string, Placed>();
+for (const f of process.argv.flatMap((a, i) => (process.argv[i - 1] === "--places" ? a.split(",") : [])))
+  for (const l of fs.readFileSync(f, "utf8").split("\n")) if (l.trim()) { const p = JSON.parse(l); PLACES.set(p.key, p); }
+const GEN: Record<string, [number, number]> = { Iran: [32.4, 53.7], Iraq: [33.2, 43.7], Lebanon: [33.85, 35.86], Syria: [34.8, 38.99], Jordan: [31.25, 36.5], "Saudi Arabia": [24, 45], "United Arab Emirates": [23.9, 54.3], UAE: [23.9, 54.3], Qatar: [25.3, 51.2], Kuwait: [29.31, 47.48], Bahrain: [26.07, 50.55], Oman: [21.5, 57], Turkey: [39, 35], Azerbaijan: [40.3, 47.7], Cyprus: [35, 33.2], Egypt: [26.8, 30.8] };
+
 const cache: Record<string, Geo> = fs.existsSync(CACHE) ? JSON.parse(fs.readFileSync(CACHE, "utf8")) : {};
 let lastCall = 0;
 async function geocode(q: string, country: string): Promise<Geo> {
@@ -137,6 +148,8 @@ const dropped: Record<string, number> = {};
 const drop = (why: string, e: Hand) => {
   dropped[why] = (dropped[why] ?? 0) + 1;
   if (process.env.BF_DEBUG) console.log(`drop: ${why} | ${e.day} ${e.said ?? e.cands?.join("/")} | ${e.label}`);
+  // BF_DROPS=file: the dropped events, one JSON line each, with the reason (for a second look at the places not found).
+  if (process.env.BF_DROPS) fs.appendFileSync(process.env.BF_DROPS, JSON.stringify({ why, ...e }) + "\n");
 };
 const added: Record<string, number> = {};
 for (const e of hand) {
@@ -146,6 +159,21 @@ for (const e of hand) {
   let g: Geo = Number.isFinite(e.lat) && Number.isFinite(e.lng) ? { lat: +e.lat!.toFixed(4), lng: +e.lng!.toFixed(4), name: e.en || names[0] } : null;
   if (!g) for (const n of names) if ((g = await geocode(n, e.country))) break;
   if (!g && e.en) g = await geocode(e.en, e.country);
+  if (!g) {
+    const h = PLACES.get(`${e.country}|${e.cands ? e.cands.join(" / ") : e.said}`);
+    if (h?.level === "no") { drop("not a place (checked by hand)", e); continue; }
+    if (h?.level === "country") {
+      const c = GEN[e.country];
+      if (!c) { drop("country not on the map", e); continue; }
+      const cn = e.country === "UAE" ? "United Arab Emirates" : e.country;
+      if (base.some((p) => p.day === e.day && countryAt(p.lat, p.lng) === cn)) { drop("country in general, a day with places", e); continue; }
+      g = { lat: c[0], lng: c[1], name: `${cn === "United Arab Emirates" ? "the UAE" : cn} (place not stated)` };
+    } else if (h && Number.isFinite(h.lat) && Number.isFinite(h.lng)) {
+      // A place in Israel: its attacks are the Home Front Command's pins, never another source's.
+      if (countryAt(h.lat!, h.lng!) === "Israel") { drop("in Israel", e); continue; }
+      g = { lat: +h.lat!.toFixed(4), lng: +h.lng!.toFixed(4), name: h.en || names[0] };
+    }
+  }
   if (!g) { drop("not found as a town or site", e); continue; }
   if (!iranPinAllowed(e.actor, { country: e.country }, e.label)) { drop("outside the map's scope", e); continue; }
   // One attack, one pin: a second source of it is its "also".
@@ -174,7 +202,7 @@ for (const e of hand) {
       // The pin said no one; this report names who launched it (Kuwait's army: "the Iranian aggression"). It
       // takes the pin's side and words, and the first report stays as a second source.
       same.also = [{ source: same.source, url: same.url }, ...same.also.filter((a) => a.url !== e.url)];
-      Object.assign(same, { actor: e.actor, label: e.label, source: e.source, url: e.url });
+      Object.assign(same, { actor: e.actor, label: e.label.replace("{place}", same.place), source: e.source, url: e.url });
       drop("already pinned that day; its side now named", e);
       continue;
     }

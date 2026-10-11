@@ -16,7 +16,7 @@ const SRC = {
   akhbarefori: 'Akhbar-e Fori', iranintltv: 'Iran International', VahidOnline: 'Vahid Online', iliaen: 'Ilia', N12chat: 'N12',
   hazfon1: 'Hazfon', israel1: 'Israel1', Jfranews: 'Jfra News', CENTCOM: 'CENTCOM', NNA_Leb: 'NNA', almanarnews: 'Al-Manar',
   IDFSpokespersonArabic: 'IDF Arabic spokesman', idfinfarsi: 'IDF in Persian', alichoeib1970: 'Ali Shoaib', elamharbi: 'Islamic Resistance in Iraq',
-  K24Arabic: 'Kurdistan 24', rudawarabic: 'Rudaw', baghdadtoday: 'Baghdad Today',
+  K24Arabic: 'Kurdistan 24', rudawarabic: 'Rudaw', baghdadtoday: 'Baghdad Today', AlarabyTvBrk: 'Al Araby', Jfranews: 'Jfra News',
   KuwaitArmyGHQ: 'Kuwait Army General Staff', modgovksa: 'Saudi Ministry of Defence', MOD_Qatar: 'Qatar Ministry of Defence',
   BDF_Bahrain: 'Bahrain Defence Force', modgovae: 'UAE Ministry of Defence', DXBMediaOffice: 'Dubai Media Office',
   ADMediaOffice: 'Abu Dhabi Media Office', sharjahmedia: 'Sharjah Media Office', RAKMediaOffice: 'Ras Al Khaimah Media Office', ajmanmedia: 'Ajman Media Office',
@@ -33,6 +33,11 @@ const cand = new Map();
 for (const l of fs.readFileSync(CANDS, 'utf8').split('\n')) if (l) { const c = JSON.parse(l); cand.set(c.ref, c); for (const a of c.also) cand.set(a, { ...c, ref: a, url: 'https://t.me/' + a }); }
 const w8 = (t) => { const m = /صاروخ|صواريخ|باليستي|موشک|טיל|missile/i.test(t), d = /مسير|مسيّر|پهپاد|כטב"ם|drone/i.test(t); return m && d ? 'missiles and drones' : m ? 'missiles' : d ? 'drones' : ''; };
 const out = new Map(), drop = {}, no = (k) => (drop[k] = (drop[k] || 0) + 1);
+// The country in general (a day's tally, "the UAE intercepted..."): only on a day with no place of that country,
+// in the readings or on the map (BASE=<baseline> in the environment).
+const placed = new Set();
+for (const f of EVF) for (const l of fs.readFileSync(f, 'utf8').split('\n')) { try { const e = JSON.parse(l); if (e.said && !/place not stated/i.test(e.place || '')) placed.add(`${e.day}|${CN[e.country] || e.country}`); } catch {} }
+if (process.env.BASE) { const countryAt = require('./country-at.cjs'); for (const p of JSON.parse(fs.readFileSync(process.env.BASE, 'utf8'))) if (!/place not stated/.test(p.label) && !/alerts in/.test(p.label)) placed.add(`${p.day}|${countryAt(p.lat, p.lng)}`); }
 for (const f of EVF) for (const l of fs.readFileSync(f, 'utf8').split('\n')) {
   if (!l.trim()) continue;
   let e; try { e = JSON.parse(l); } catch { no('bad line'); continue; }
@@ -46,12 +51,15 @@ for (const f of EVF) for (const l of fs.readFileSync(f, 'utf8').split('\n')) {
   const gen = /place not stated/i.test(e.place || '') || !e.said;
   if (!gen && !norm(e.quote).includes(norm(e.said))) { no('place not in the quote'); continue; }
   if (country === 'Saudi Arabia' && (e.actor || 'unclear') === 'unclear' && ['blast', 'sirens'].includes(e.kind) && (HOUTHI_FRONT.test(e.place || '') || e.day >= '2026-09-14')) { no('Saudi blast, the Houthi front'); continue; }
+  // Syria is on the map only where this war's sides strike: its own bombings, depot blasts and blasts no one names
+  // are not this war.
+  if (country === 'Syria' && (e.actor || 'unclear') === 'unclear') { no('Syria, no side named'); continue; }
   const lead = cand.get(refs[0]);
   const ch = refs[0].split('/')[0];
   const source = SRC[ch] || ch;
   let lat, lng, place = gen ? `${country === 'United Arab Emirates' ? 'the UAE' : country} (place not stated)` : String(e.place || e.said).replace(/\s*\(.*\)\s*$/, '');
   if (country === 'sea') { const s = SEAS.find(([re]) => re.test(`${e.place} ${e.said}`)); if (!s) { no('sea not named'); continue; } [, place, lat, lng] = s; }
-  else if (gen) { if (!GEN[country]) { no('country not on the map'); continue; } [lat, lng] = GEN[country]; }
+  else if (gen) { if (!GEN[country]) { no('country not on the map'); continue; } if (placed.has(`${e.day}|${country}`)) { no('country in general, a day with places'); continue; } [lat, lng] = GEN[country]; }
   const key = `${e.day}|${country}|${norm(place).toLowerCase()}`;
   const also = refs.slice(1).map((r) => ({ source: SRC[r.split('/')[0]] || r.split('/')[0], url: cand.get(r).url }));
   if (out.has(key)) { const o = out.get(key); for (const a of [{ source, url: lead.url }, ...also]) if (a.source !== o.source && !o.also.some((b) => b.source === a.source) && o.also.length < 4) o.also.push(a); no('same place and day twice'); continue; }

@@ -20,7 +20,9 @@
  * OpenStreetMap download (Overpass, place=*), matched by their Arabic names,
  * instead of a geocoder call per name.
  *
- *   node iran-research.mts --events research.jsonl [--gaz Lebanon=osm-lb.json] [--base public/iran-strikes-baseline.json] [--dry]
+ * `--gn Iraq=IQ.txt`: a country's GeoNames dump, tried before the geocoder.
+ *
+ *   node iran-research.mts --events research.jsonl [--gaz Lebanon=osm-lb.json] [--gn Iraq=IQ.txt] [--base public/iran-strikes-baseline.json] [--dry]
  */
 import fs from "node:fs";
 import { iranPinAllowed, iranPlacesIn } from "../src/lib/desk/iran-places.ts";
@@ -69,6 +71,26 @@ for (const g of process.argv.flatMap((a, i) => (process.argv[i - 1] === "--gaz" 
   GAZ.set(country, m);
 }
 
+// `--gn Iraq=gn/IQ.txt`: a country's GeoNames dump (towns, villages, bases, airports, ports, islands), every
+// name and other name of each, tried before Nominatim. A name several places share: the most populous town.
+const GN_OK = /^(P\.|S\.(AIRB|AIRF|AIRP|AIRH|MILB|INSM|PRT|PO|OILR|OILT|PS|PSH|DAM|CMP|RSTN|BDG|PAL|UNIV|HSP|CTRR|FT|MSQE|STDM|SQR)|T\.(ISL|ISLS)|L\.(PRT|PRK|INDS|MILB))/;
+const GN = new Map<string, Map<string, Geo & { pop: number; p: boolean }>>();
+for (const g of process.argv.flatMap((a, i) => (process.argv[i - 1] === "--gn" ? [a] : []))) {
+  const [country, file] = g.split("=");
+  const m = new Map<string, Geo & { pop: number; p: boolean }>();
+  for (const l of fs.readFileSync(file, "utf8").split("\n")) {
+    const c = l.split("\t");
+    if (c.length < 15 || !GN_OK.test(`${c[6]}.${c[7]}`)) continue;
+    const v = { lat: +(+c[4]).toFixed(4), lng: +(+c[5]).toFixed(4), name: c[2] || c[1], pop: +c[14] || 0, p: c[6] === "P" };
+    for (const n of [c[1], c[2], ...c[3].split(",")]) {
+      if (!n || n.length < 3) continue;
+      const k = norm(n), o = m.get(k);
+      if (!o || (v.p && !o.p) || (v.p === o.p && v.pop > o.pop)) m.set(k, v);
+    }
+  }
+  GN.set(country, m);
+}
+
 const cache: Record<string, Geo> = fs.existsSync(CACHE) ? JSON.parse(fs.readFileSync(CACHE, "utf8")) : {};
 let lastCall = 0;
 async function geocode(q: string, country: string): Promise<Geo> {
@@ -77,6 +99,9 @@ async function geocode(q: string, country: string): Promise<Geo> {
   if (own && own.kind !== "sea" && own.country === country) return { lat: own.lat, lng: own.lng, name: own.name };
   const gaz = GAZ.get(country);
   if (gaz) return gaz.get(norm(q)) ?? gaz.get(norm(q.replace(/^ال/, ""))) ?? gaz.get(norm("ال" + q)) ?? null;
+  const gn = GN.get(country);
+  const hit = gn && (gn.get(norm(q)) ?? gn.get(norm(q.replace(/^ال/, ""))) ?? gn.get(norm("ال" + q)));
+  if (hit) return { lat: hit.lat, lng: hit.lng, name: hit.name };
   const key = `${q}|${country}`;
   if (key in cache) return cache[key];
   const cc = ISO[country];
@@ -136,8 +161,10 @@ for (const e of hand) {
   const off = (s: string) => (s.match(/\b(\d+(?:\.\d+)?) (?:nautical miles|NM)\b[^,(]*?\bof ([A-Z][\w' -]+?)(?:,|\s\(|$)/) ?? []).slice(1).join(" ");
   const dayGap = (p: Pin) => Math.abs(Date.parse(p.day) - Date.parse(e.day)) / 864e5;
   const other = (p: Pin) => p.source !== e.source && p.also.every((a) => a.source !== e.source);
+  // - The same place by name that day is that pin (sources place a town by different points), within 40 km.
+  const sameName = (p: Pin) => !e.at && p.day === e.day && p.place.toLowerCase() === (e.en || g.name).toLowerCase() && km(p, g) < 40;
   const fits = (p: Pin) =>
-    !e.at && !p.at && p.day === e.day && km(p, g) < 1.5
+    sameName(p) || !e.at && !p.at && p.day === e.day && km(p, g) < 1.5
     || other(p) && (
       SHIP.test(e.label) && SHIP.test(p.label) && (dayGap(p) === 0 ? km(p, g) < 30 : dayGap(p) === 1 && (km(p, g) < 25 || (!!off(e.label) && off(e.label) === off(p.label))))
       || (e.at && p.at ? Math.abs(Date.parse(p.at) - Date.parse(e.at)) <= 2 * 3600e3 && km(p, g) < 5 : p.day === e.day && km(p, g) < 1.5));

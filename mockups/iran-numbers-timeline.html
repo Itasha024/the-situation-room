@@ -17,6 +17,7 @@
   .rows-more tr.xtra { display: none; }
   .rows-more.open tr.xtra { display: table-row; }
   .tally-box.claims th.o { color: var(--t-strong,#f1f5f9); }
+  .tally-box.ledger td small.q { display: block; }
   .tally-box.claims th.u, .tally-box.claims td.u a { color: #f59e0b; }
 </style>
 </head>
@@ -38,10 +39,12 @@
 </section>
 
 <ol class="mock-q">
-  <li><b>Energy:</b> each struck site has a Status column. New: Iran's petrochemical exports.</li>
-  <li><b>Economy:</b> the region's markets first (the shekel, Tel Aviv, the Gulf), then Iran's: the rial, the gold coin, inflation, gasoline, food prices, trade, Tehran stocks.</li>
-  <li><b>Inside Iran:</b> gone. NetBlocks' last reading on Iran is from May. The internet box comes back by itself when NetBlocks reports a new shutdown.</li>
-  <li><b>Sanctions:</b> the header is plain.</li>
+  <li><b>Gone:</b> displaced, sailors, the source names under the headers (the figures link to them), the sanctions counts.</li>
+  <li><b>Fuel:</b> Europe's gas price (that was natural gas for power and heating) is now petrol at the pump: the US, Europe and Israel.</li>
+  <li><b>"vs before conflict"</b> sits under the number.</li>
+  <li><b>Nuclear:</b> the last known uranium figure with its date; days since the IAEA's last visit. Both update themselves.</li>
+  <li><b>Operation Economic Fury</b> lists the Treasury's measures beyond sanctions (airlines, crypto, frozen assets). Each sanctions designation goes only in the US sanctions box.</li>
+  <li><b>The rial and the gold coin:</b> read from bonbast and tgju, both every time.</li>
   <li>The figures are placeholders until the research.</li>
 </ol>
 </main>
@@ -62,7 +65,7 @@ const listBox = (title, th, rows) => `<div class="tally-box claims ledger${rows.
 const KILLED = [
   ['All sides', '6,700', ['more than', '9,000']], ['Civilians, all sides', '4,950', '5,200'], ['Iran', '3,412', ['more than', '6,000']], ['Lebanon', '2,870', '4,100'], ['Israel<small>every front, since 28 Feb</small>', '41', N],
   ['Iraq', '96', '180'], ['Syria', '41', N], ['US troops', '17', N], ['Saudi Arabia', '12', N],
-  ['UAE', '9', N], ['Kuwait', '4', N], ['Jordan', '3', N], ['Qatar', '2', N], ['Bahrain', '1', N], ['Oman', N, N], ['Sailors at sea', ['at least', '23'], N],
+  ['UAE', '9', N], ['Kuwait', '4', N], ['Jordan', '3', N], ['Qatar', '2', N], ['Bahrain', '1', N], ['Oman', N, N],
 ];
 const INJURED = KILLED.map(([l, a, b]) => [l, a && '1,240', b && '900']);
 const ledBox = (t, body, unit) => `<div class="tally-box claims ledger"><h3>${t}${unit ? ` <small class="unit">(${unit})</small>` : ''}</h3>${body}</div>`;
@@ -76,7 +79,6 @@ const SETS = {
   cas: [
     ['Killed', casBox('Killed', KILLED)],
     ['Injured', casBox('Injured', INJURED)],
-    ['Displaced', casBox('Displaced', [['In Lebanon<small>people</small>', '1.1M', N], ['In Iran<small>people</small>', N, '3.2M'], ['In Israel<small>homes evacuated, Home Front Command</small>', '6,473', N]])],
   ],
   sea: [
     ['Incidents', ledBox('Incidents', more(stat3(0, 3, 61), 'ships', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th><th scope="col" class="l w">What happened</th></tr>', [
@@ -93,43 +95,42 @@ const SETS = {
       `<tr><td class="d">${un('10 Oct')}</td><td class="l">Abadan refinery, Iran</td><td class="l">Airstrike</td><td class="l w">${un('Partly working')}</td></tr>`,
       `<tr><td class="d">${off('8 Oct')}</td><td class="l">Ras Tanura terminal, Saudi Arabia</td><td class="l">Drone</td><td class="l w">${off('Working')}</td></tr>`,
       `<tr><td class="d">${un('6 Oct')}</td><td class="l">South Pars gas field, phase 14</td><td class="l"><span class="unk">Unknown</span></td><td class="l w">${un('Shut')}</td></tr>`]))],
-    ["Iran's oil output", ledBox("Iran's crude oil production", mbars([[BEFORE, 100, '3.3', 1], ['August', 64, '2.1'], ['September', 58, '1.9']]), 'million barrels a day, OPEC secondary sources')],
-    ["Iran's gas output", ledBox("Iran's gas production", mbars([[BEFORE, 100, '880', 1], ['August', 70, '615'], ['September', 66, '580']]), 'million cubic metres a day, NIGC')],
-    ["Iran's crude exports", ledBox("Iran's crude oil exports", mbars([[BEFORE, 100, '1.62', 1], ['August', 31, '0.5'], ['September<small>(so far)</small>', 25, '0.41']]), 'million barrels a day, TankerTrackers and Kpler')],
-    ["Iran's petrochemical exports", ledBox("Iran's petrochemical exports", mbars([[BEFORE, 100, '$1.9B', 1], ['August', 58, '$1.1B'], ['September', 53, '$1.0B']]), 'a month, Iran customs (IRICA)')],
+    ["Iran's oil output", ledBox("Iran's crude oil production", mbars([[BEFORE, 100, '3.3', 1], ['August', 64, '2.1'], ['September', 58, '1.9']]), 'million barrels a day')],
+    ["Iran's gas output", ledBox("Iran's gas production", mbars([[BEFORE, 100, '880', 1], ['August', 70, '615'], ['September', 66, '580']]), 'million cubic metres a day')],
+    ["Iran's crude exports", ledBox("Iran's crude oil exports", mbars([[BEFORE, 100, '1.62', 1], ['August', 31, '0.5'], ['September<small>(so far)</small>', 25, '0.41']]), 'million barrels a day')],
+    ["Iran's petrochemical exports", ledBox("Iran's petrochemical exports", mbars([[BEFORE, 100, '$1.9B', 1], ['August', 58, '$1.1B'], ['September', 53, '$1.0B']]), 'dollars a month')],
     ['Gulf crude exports', ledBox('Gulf crude oil exports', mbars([[BEFORE, 100, '16.8', 1], ['August', 58, '9.7'], ['September<small>(so far)</small>', 54, '9.1']]), 'million barrels a day')],
     ['Crude oil price', ledBox('Crude oil price', span3('$118.20', '+64%', '$111.05', '$72.10'), 'Brent, dollars a barrel')],
-    ["Europe's gas price", ledBox("Europe's gas price", span3('€71.40', '+118%', '€68.90', '€32.70'), 'Dutch TTF, euros a megawatt-hour')],
-    ['US gasoline price', ledBox('US gasoline price', span3('$4.61', '+48%', '$4.52', '$3.11'), 'AAA national average, dollars a gallon')],
+    ['Petrol prices', ledBox('Petrol prices at the pump', `<table class="span3"><tbody><tr><th scope="col"></th><th scope="col">Latest</th><th scope="col">7 days earlier</th><th scope="col">Before conflict<small class="span">(28 Jan – 27 Feb)</small></th></tr><tr><td class="l">US<small>dollars a gallon</small></td><td>${off('$4.61')}<small>10 Oct</small><small class="q down">+48% vs before conflict</small></td><td>${off('$4.52')}</td><td>${off('$3.11')}</td></tr><tr><td class="l">Europe<small>euros a litre, EU average</small></td><td>${off('€2.21')}<small>10 Oct</small><small class="q down">+31% vs before conflict</small></td><td>${off('€2.18')}</td><td>${off('€1.69')}</td></tr><tr><td class="l">Israel<small>shekels a litre, 95 octane</small></td><td>${off('₪8.40')}<small>10 Oct</small><small class="q down">+19% vs before conflict</small></td><td>${off('₪8.40')}</td><td>${off('₪7.05')}</td></tr></tbody></table>`)],
   ],
   econ: [
-    ['The shekel', ledBox("The shekel's rate", span3('3.92', '+8%', '3.88', '3.63'), 'shekels to the dollar, Bank of Israel')],
-    ['Tel Aviv stocks', ledBox('Tel Aviv Stock Exchange', span3('2,710', '−6%', '2,690', '2,880'), 'TA-35 index')],
-    ['Gulf stocks', ledBox('Gulf stock markets', span3('812', '−9%', '820', '893'), 'S&P GCC index')],
-    ['The rial', ledBox("The rial's open-market rate", span3('1,410,000', '+52%', '1,365,000', '928,000'), 'rials to the dollar, bonbast')],
-    ['Gold coin', ledBox('Gold coin in Tehran', span3('182M', '+61%', '176M', '113M'), 'rials for an Emami coin, bonbast')],
-    ['Inflation', ledBox("Iran's inflation", mbars([[BEFORE, 67, '38%', 1], ['August', 93, '53%'], ['September', 100, '57%']]), 'over a year, Statistical Centre of Iran')],
-    ['Gasoline in Iran', ledBox('Gasoline prices in Iran', `<table class="span3"><tbody><tr><th scope="col">Tier</th><th scope="col">Now</th><th scope="col">Before conflict<small class="span">(28 Jan – 27 Feb)</small></th></tr><tr><td class="l">Subsidised quota<small>first 60 litres a month</small></td><td>${off('15,000')}</td><td>${off('15,000')}</td></tr><tr><td class="l">Second tier<small>next 100 litres</small></td><td>${off('30,000')}</td><td>${off('30,000')}</td></tr><tr><td class="l">Free price<small>beyond the quota</small></td><td>${off('65,000')}<small class="q down">+30% vs before conflict</small></td><td>${off('50,000')}</td></tr></tbody></table>`, 'rials a litre, NIORDC')],
-    ['Food in Iran', ledBox('Food prices in Iran', `<table class="span3"><tbody><tr><th scope="col">Item</th><th scope="col">Now</th><th scope="col">Before conflict<small class="span">(28 Jan – 27 Feb)</small></th></tr>${[['Bread<small>a lavash loaf</small>', '50,000', '30,000'], ['Eggs<small>a tray of 30</small>', '2.9M', '1.6M'], ['Milk<small>a litre</small>', '420,000', '260,000'], ['Cooking oil<small>a litre</small>', '1.1M', '640,000'], ['Rice<small>a kilo, Iranian</small>', '2.4M', '1.5M'], ['Chicken<small>a kilo</small>', '2.2M', '1.2M'], ['Red meat<small>a kilo</small>', '9.5M', '6.1M']].map(([k, a, b]) => `<tr><td class="l">${k}</td><td>${off(a)}</td><td>${off(b)}</td></tr>`).join('')}</tbody></table>${KEY}`, 'rials, Statistical Centre of Iran')],
-    ["Iran's trade", ledBox("Iran's non-oil exports and imports", mbars([[BEFORE + ' exports', 100, '$4.1B', 1], ['September exports', 61, '$2.5B'], [BEFORE + ' imports', 100, '$5.0B', 1], ['September imports', 52, '$2.6B']]), 'a month, Iran customs (IRICA)')],
-    ['Tehran stocks', ledBox('Tehran Stock Exchange', span3('2.1M', '−34%', '2.2M', '3.2M'), 'TEDPIX index')],
+    ['The shekel', ledBox("The shekel's rate", span3('3.92', '+8%', '3.88', '3.63'), 'shekels to the dollar')],
+    ['Tel Aviv stocks', ledBox('Tel Aviv Stock Exchange', span3('2,710', '−6%', '2,690', '2,880'), 'TA-35: the 35 biggest companies in Tel Aviv')],
+    ['Gulf stocks', ledBox('Gulf stock markets', span3('812', '−9%', '820', '893'), 'S&P GCC: the biggest companies in the six Gulf states')],
+    ['The rial', ledBox("The rial's open-market rate", span3('1,410,000', '+52%', '1,365,000', '928,000'), 'rials to the dollar, on the street')],
+    ['Gold coin', ledBox('Gold coin in Tehran', span3('182M', '+61%', '176M', '113M'), 'rials for one Emami coin, 8.1 g of gold, which Iranians buy to keep their savings from the falling rial')],
+    ['Inflation', ledBox("Iran's inflation", mbars([[BEFORE, 67, '38%', 1], ['August', 93, '53%'], ['September', 100, '57%']]), 'over a year')],
+    ['Gasoline in Iran', ledBox('Gasoline prices in Iran', `<table class="span3"><tbody><tr><th scope="col">Tier</th><th scope="col">Now</th><th scope="col">Before conflict<small class="span">(28 Jan – 27 Feb)</small></th></tr><tr><td class="l">Subsidised quota<small>first 60 litres a month</small></td><td>${off('15,000')}</td><td>${off('15,000')}</td></tr><tr><td class="l">Second tier<small>next 100 litres</small></td><td>${off('30,000')}</td><td>${off('30,000')}</td></tr><tr><td class="l">Free price<small>beyond the quota</small></td><td>${off('65,000')}<small class="q down">+30% vs before conflict</small></td><td>${off('50,000')}</td></tr></tbody></table>`, 'rials a litre')],
+    ['Food in Iran', ledBox('Food prices in Iran', `<table class="span3"><tbody><tr><th scope="col">Item</th><th scope="col">Now</th><th scope="col">Before conflict<small class="span">(28 Jan – 27 Feb)</small></th></tr>${[['Bread<small>a lavash loaf</small>', '50,000', '30,000'], ['Eggs<small>a tray of 30</small>', '2.9M', '1.6M'], ['Milk<small>a litre</small>', '420,000', '260,000'], ['Cooking oil<small>a litre</small>', '1.1M', '640,000'], ['Rice<small>a kilo, Iranian</small>', '2.4M', '1.5M'], ['Chicken<small>a kilo</small>', '2.2M', '1.2M'], ['Red meat<small>a kilo</small>', '9.5M', '6.1M']].map(([k, a, b]) => `<tr><td class="l">${k}</td><td>${off(a)}</td><td>${off(b)}</td></tr>`).join('')}</tbody></table>${KEY}`, 'rials')],
+    ["Iran's trade", ledBox("Iran's non-oil exports and imports", mbars([[BEFORE + ' exports', 100, '$4.1B', 1], ['September exports', 61, '$2.5B'], [BEFORE + ' imports', 100, '$5.0B', 1], ['September imports', 52, '$2.6B']]), 'dollars a month')],
+    ['Tehran stocks', ledBox('Tehran Stock Exchange', span3('2.1M', '−34%', '2.2M', '3.2M'), 'TEDPIX: every company on the Tehran exchange')],
   ],
   nuke: [
-    ['Enriched uranium', ledBox('Uranium enriched to 60%', span3('unknown', '', 'unknown', '440.9 kg'), 'IAEA, last verified figure')],
+    ['Enriched uranium', ledBox('Uranium enriched to 60%', `<div class="stat3"><div><b>${off('440.9 kg')}</b><span>last known, IAEA, 13 Jun 2025</span></div></div>`)],
     ['Sites struck', listBox('Nuclear sites struck', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l">By</th></tr>', [
       `<td class="d">${off('2 Mar')}</td><td class="l">Natanz</td><td class="l">Israel</td>`, `<td class="d">${off('2 Mar')}</td><td class="l">Fordow</td><td class="l">US</td>`, `<td class="d">${un('5 Mar')}</td><td class="l">Isfahan uranium conversion</td><td class="l">Israel</td>`])],
-    ['IAEA access', ledBox('IAEA inspectors in Iran', stat3('No', 0, '224 days'), 'since the last inspection, IAEA')],
+    ['IAEA access', ledBox('IAEA inspectors in Iran', `<div class="stat3"><div><b>${off('224 days')}</b><span>since the last visit, 1 Mar</span></div></div>`)],
   ],
   sanc: [
-    ['Sanctions', ledBox('US sanctions on Iran and Hezbollah', more(stat3(0, 14, 386), 'sanc', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Who</th><th scope="col" class="l">Why</th></tr>', [
+    ['Sanctions', ledBox('US sanctions on Iran and Hezbollah', more('', 'sanc', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Who</th><th scope="col" class="l">Why</th></tr>', [
       `<tr><td class="d">${off('9 Oct')}</td><td class="l">6 tankers, 2 UAE firms</td><td class="l">Shipping Iranian oil</td></tr>`,
       `<tr><td class="d">${off('2 Oct')}</td><td class="l">8 people, IRGC drone network</td><td class="l">Drone parts</td></tr>`,
       `<tr><td class="d">${off('25 Sep')}</td><td class="l">3 Hezbollah financiers, Lebanon</td><td class="l">Moving money for Hezbollah</td></tr>`]))],
-    ['Pressure campaign', listBox('The US economic pressure campaign', '<tr><th scope="col" class="d">Since</th><th scope="col" class="l">Measure</th></tr>', [
-      `<td class="d">${off('Sep')}</td><td class="l">Flights to and from Iran banned from US airspace; airlines that fly there face penalties</td>`,
-      `<td class="d">${off('Aug')}</td><td class="l">Ports that take Iranian oil barred from US trade</td>`,
-      `<td class="d">${off('Jul')}</td><td class="l">Secondary tariffs on countries buying Iranian oil</td>`])],
-    ['In force', listBox('Sanctions on Iran in force', '<tr><th scope="col" class="d">Since</th><th scope="col" class="l">Measure</th><th scope="col" class="l">By</th></tr>', [
+    ['Pressure campaign', listBox('Operation Economic Fury', '<tr><th scope="col" class="d">Since</th><th scope="col" class="l">Measure</th></tr>', [
+      `<td class="d">${off('Sep')}</td><td class="l">Iranian airlines cut off from landing rights, fuel and ticket sales</td>`,
+      `<td class="d">${off('Aug')}</td><td class="l">Iranian crypto seized, about $1 billion</td>`,
+      `<td class="d">${off('Jul')}</td><td class="l">Iranian bank accounts and property abroad frozen with allies</td>`])],
+    ['In force', listBox('Older sanctions on Iran still in force', '<tr><th scope="col" class="d">Since</th><th scope="col" class="l">Measure</th><th scope="col" class="l">By</th></tr>', [
       `<td class="d">${off('Sep 2025')}</td><td class="l">UN sanctions restored (snapback): arms embargo, enrichment ban, asset freezes</td><td class="l">UN</td>`,
       `<td class="d">${off('Feb 2025')}</td><td class="l">"Maximum pressure" order: oil exports to zero</td><td class="l">US</td>`,
       `<td class="d">${off('Apr 2019')}</td><td class="l">The IRGC listed as a terrorist group</td><td class="l">US</td>`,

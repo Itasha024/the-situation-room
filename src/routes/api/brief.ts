@@ -3,6 +3,7 @@ import type { Brief } from "@/lib/desk/brief";
 import { briefWindow } from "@/lib/desk/brief";
 import { refreshBrief } from "@/lib/desk/brief-store";
 import { IRAN_BRIEF_KEY, type IranBrief } from "@/lib/desk/iran-brief";
+import { IRAN_NOW_KEY, type IranTimelineNow } from "@/lib/desk/iran-timeline-now";
 import { metered } from "@/lib/desk/cpu-meter";
 import { deskParam } from "@/lib/desk/desk-route";
 import { deskById } from "@/lib/desks";
@@ -29,8 +30,10 @@ export const Route = createFileRoute("/api/brief")({
           // The Iran desk's brief is built from stage 4 of Round 30; until then it has none.
           const desk = deskParam(new URL(request.url).searchParams.get("desk"));
           if (desk !== "yemen") {
-            const ib = desk === "iran" ? await (await getStore()).getJson<IranBrief>(IRAN_BRIEF_KEY) : null;
-            if (ib) return json(ib, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=60");
+            const st = desk === "iran" ? await getStore() : null;
+            const ib = st ? await st.getJson<IranBrief>(IRAN_BRIEF_KEY) : null;
+            // The Timeline's Now box rides with the brief, as on the Yemen desk.
+            if (ib) return json({ ...ib, timelineNow: (await st!.getJson<IranTimelineNow>(IRAN_NOW_KEY)) ?? null }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=60");
             return json({ ok: true, desk, pending: true, ...briefWindow(new Date(), deskById(desk).cadenceHours) }, 200, "public, max-age=60", "public, s-maxage=300");
           }
           const store = await getStore();

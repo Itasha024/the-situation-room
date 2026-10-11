@@ -12,6 +12,7 @@
  */
 
 import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
+import { refreshIranTimelineNow } from "./iran-timeline-now.ts";
 import { briefWindow } from "./brief.ts";
 import { cleanPoints, onePointEach, oncePer } from "./prose.ts";
 
@@ -234,6 +235,12 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
     proseTriedAt: now.toISOString(),
   };
   await store.putJson(IRAN_BRIEF_KEY, brief);
+  // The Timeline's "Now" box, rewritten every 36 hours from the cards; it must never cost the brief.
+  try {
+    await refreshIranTimelineNow(store, reports as unknown as LiveReport[], now);
+  } catch (err) {
+    console.error("[iran-timeline-now]", err instanceof Error ? err.message : err);
+  }
   console.log(`[iran-brief] ${w.updatedAt}: ${cards.length} cards, ${trump.length} Trump statements, ${answer ? `written by ${answer.model}` : "no writer"}, ${Object.keys(got.arenas).length} arenas new`);
   return brief;
 }

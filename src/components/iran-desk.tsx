@@ -29,20 +29,6 @@ const ARENAS: [string, string][] = [
   ["The U.S.", "What the US itself does and says on the war, in the region and at home: forces, the blockade, Congress, polls, gasoline prices."],
 ];
 
-const NUMBERS = [
-  "Killed, by country",
-  "Maritime incidents",
-  "Crude oil through Hormuz",
-  "LNG through Hormuz",
-  "Ships through Hormuz",
-  "Attacks on energy sites inside Iran",
-  "Iran crude exports",
-  "Gulf crude exports",
-  "Crude oil price",
-  "The rial's open-market rate",
-  "US gasoline price",
-];
-
 const IRAN_HTML = `
 <div class="mast">
   <span class="mast-date"></span>
@@ -127,12 +113,11 @@ const IRAN_HTML = `
 </section>
 <section class="cas-wrap" id="cas-wrap">
   <h2>The conflict in numbers</h2>
-  ${SOON("each number from 28 Feb 2026, with its source.")}
-  <ul class="soon-list">${NUMBERS.map((n) => `<li>${n}</li>`).join("")}</ul>
+  <div id="iran-numbers">${SOON("each number from 28 Feb 2026, with its source.")}</div>
 </section>
 <section class="timeline-wrap" id="timeline-wrap">
   <h2>Timeline</h2>
-  ${SOON("from the nuclear deal of July 2015 to today.")}
+  <div id="iran-timeline">${SOON("from the nuclear deal of July 2015 to today.")}</div>
 </section>
 <footer>
   <span id="attrib"></span>

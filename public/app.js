@@ -7151,7 +7151,7 @@ function startIranFeed() {
   wireLeanMenu();
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
-  const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); };
+  const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
@@ -7692,6 +7692,116 @@ function openRefPop(refs, idx, from) {
  * Yemen desk, with no line under an arena's name.
  */
 const iranBrief = { b: null, sig: '', idx: 0 };
+/*
+ * The Iran desk's numbers and timeline (Round 31 N3): the researched figures in
+ * /iran-numbers.json, each with its source, date and link, official in the
+ * desk's blue and unofficial in amber, in the Yemen desk's boxes and pager.
+ * A box with a dated series draws it as a small line from the real points only.
+ * Cell: {v, q?, k: 'off'|'unoff', src, url, date, note?}.
+ */
+const iranNums = { d: null, cat: '', tl: null };
+const IR_KEY = '<p class="sl-key"><span class="sl-off">Official</span><span class="sl-unoff">Unofficial</span></p>';
+function irCell(c, cls = '') {
+  if (!c || c.v == null) return `<td class="${cls} none" title="Not published: no count from these sources">—</td>`;
+  return `<td class="${cls}">${irLink(c)}</td>`;
+}
+function irLink(c) {
+  if (!c || c.v == null) return '—';
+  const tip = [c.src, c.date && fmtDay(c.date), c.note].filter(Boolean).join(' · ');
+  const q = c.q ? `<small class="q">${escapeHtml(c.q)}</small> ` : '';
+  const body = `${q}${escapeHtml(String(c.v))}`;
+  return c.url ? `<a class="sl ${c.k === 'unoff' ? 'sl-unoff' : 'sl-off'}" href="${escapeHtml(c.url)}" target="_blank" rel="noopener" title="${escapeHtml(tip)}">${body}</a>` : `<span class="sl ${c.k === 'unoff' ? 'sl-unoff' : 'sl-off'}" title="${escapeHtml(tip)}">${body}</span>`;
+}
+const irSmall = (s) => (s ? `<small>${escapeHtml(s)}</small>` : '');
+/** A line through the real points only, with the first and last labelled. */
+function irSpark(series, unit) {
+  const pts = (series || []).filter((p) => p && p.d && Number.isFinite(+p.v)).sort((a, b) => a.d.localeCompare(b.d));
+  if (pts.length < 3) return '';
+  const W = 300, H = 64, P = 4;
+  const t0 = Date.parse(pts[0].d), t1 = Date.parse(pts[pts.length - 1].d);
+  const vs = pts.map((p) => +p.v), lo = Math.min(...vs), hi = Math.max(...vs);
+  const x = (p) => P + ((Date.parse(p.d) - t0) / Math.max(1, t1 - t0)) * (W - 2 * P);
+  const y = (v) => H - P - ((v - lo) / Math.max(1e-9, hi - lo)) * (H - 2 * P);
+  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p).toFixed(1)},${y(+p.v).toFixed(1)}`).join('');
+  const fmt = (v) => (Math.abs(v) >= 1000 ? Math.round(v).toLocaleString('en-US') : String(+(+v).toFixed(2)));
+  const first = pts[0], last = pts[pts.length - 1];
+  return `<figure class="ir-spark"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${path}"/></svg><figcaption><span>${escapeHtml(fmtDay(first.d))}: ${fmt(first.v)}</span><span>${unit ? escapeHtml(unit) + ' · ' : ''}${pts.length} points</span><span>${escapeHtml(fmtDay(last.d))}: ${fmt(last.v)}</span></figcaption></figure>`;
+}
+function irBox(b) {
+  const unit = b.unit ? ` <small class="unit">(${escapeHtml(b.unit)})</small>` : '';
+  const why = b.why ? `<small class="unit-why">${escapeHtml(b.why)}</small>` : '';
+  const head = `<h3>${escapeHtml(b.title)}${unit}${why}</h3>`;
+  const note = b.note ? `<p class="ir-note">${escapeHtml(b.note)}</p>` : '';
+  const spark = irSpark(b.series, b.seriesUnit);
+  const SHOW = 6;
+  const more = (rows) => (rows.length > SHOW ? '<button type="button" class="toggle-phase rows-tog">Read more</button>' : '');
+  const xtra = (i) => (i >= SHOW ? ' class="xtra"' : '');
+  if (b.type === 'claims') {
+    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><th scope="row">${escapeHtml(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</th>${irCell(r.off, 'off')}${irCell(r.unoff, 'u')}</tr>`).join('');
+    return `<div class="tally-box claims ir${b.rows.length > SHOW ? ' rows-more' : ''}">${head}<table><tbody><tr><th></th><th scope="col" class="o">Official</th><th scope="col" class="u">Unofficial</th></tr>${rows}</tbody></table>${more(b.rows)}${note}</div>`;
+  }
+  let body = '';
+  if (b.type === 'span3') {
+    body = `<table class="span3 one"><tbody><tr><th scope="col">Latest</th><th scope="col">7 days earlier</th><th scope="col">Before conflict<small class="span">(${escapeHtml(b.beforeSpan || '28 Jan – 27 Feb')})</small></th></tr><tr><td class="big">${irLink(b.latest)}${irSmall(b.latest && b.latest.date && fmtDay(b.latest.date))}${b.change ? `<small class="q">${escapeHtml(b.change)} vs before conflict</small>` : ''}</td><td>${irLink(b.week)}${irSmall(b.week && b.week.date && fmtDay(b.week.date))}</td><td>${irLink(b.before)}${irSmall(b.beforeNote || 'average')}</td></tr></tbody></table>${IR_KEY}`;
+  } else if (b.type === 'table') {
+    const th = `<tr>${b.cols.map((c, i) => `<th scope="col"${i === 0 ? ' class="l"' : ''}>${escapeHtml(c)}</th>`).join('')}</tr>`;
+    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><td class="l">${escapeHtml(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</td>${r.cells.map((c) => irCell(c)).join('')}</tr>`).join('');
+    body = `<table class="span3${b.rows.length > SHOW ? '' : ''}"><tbody>${th}${rows}</tbody></table>${more(b.rows)}${IR_KEY}`;
+  } else if (b.type === 'bars') {
+    const max = Math.max(...b.bars.map((x) => +x.n || 0), 1e-9);
+    body = `<div class="mbars">${b.bars.map((x) => `<div class="mbar${x.pre ? ' pre' : ''}"><span class="k">${escapeHtml(x.label)}${x.sub ? `<small>${escapeHtml(x.sub)}</small>` : ''}</span><span class="mb-track"><i style="width:${Math.max(1, Math.round(((+x.n || 0) / max) * 100))}%"></i></span><b>${irLink(x.c)}</b></div>`).join('')}</div>${IR_KEY}`;
+  } else if (b.type === 'stat') {
+    body = `<div class="stat3 solo"><div><b>${irLink(b.value)}</b><span>${escapeHtml(b.caption || '')}</span></div></div>`;
+  } else if (b.type === 'list' || b.type === 'incidents') {
+    const th = `<tr>${b.cols.map(([h, cls]) => `<th scope="col" class="${cls || 'l'}">${escapeHtml(h)}</th>`).join('')}</tr>`;
+    const rows = b.rows.map((r) => `<tr>${r.map((c, j) => `<td class="${(b.cols[j] && b.cols[j][1]) || 'l'}">${c && typeof c === 'object' ? irLink(c) : escapeHtml(c == null ? '' : String(c))}</td>`).join('')}</tr>`);
+    const stats = b.stats ? `<div class="stat3">${b.stats.map(([v, l]) => `<div><b>${irLink(v)}</b><span>${escapeHtml(l)}</span></div>`).join('')}</div>` : '';
+    body = `<div class="led-more expandable"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div><button type="button" class="toggle-sit led-tog" aria-expanded="false">Show more</button></div>`;
+  }
+  return `<div class="tally-box claims ledger ir">${head}${body}${spark}${note}</div>`;
+}
+function renderIranNumbers() {
+  const el = document.getElementById('iran-numbers');
+  const d = iranNums.d;
+  if (!el || !d || !Array.isArray(d.sets)) return;
+  if (!iranNums.cat) iranNums.cat = d.sets[0].key;
+  const set = d.sets.find((s) => s.key === iranNums.cat) || d.sets[0];
+  const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${d.sets.map((s) => `<button type="button" data-cat="${s.key}" aria-pressed="${s.key === set.key}"${s.key === set.key ? ' class="on"' : ''}>${escapeHtml(s.name)}</button>`).join('')}</div>`;
+  el.innerHTML = `<p class="cadence at-head">Researched from the sources · as of ${escapeHtml(fmtDay(d.asOf))}</p>${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map(irBox), 0, set.boxes.map((b) => b.title))}</div>`;
+  wirePager(el, 0, () => {});
+  el.querySelectorAll('.led-tog').forEach((b) => (b.onclick = () => { const o = b.closest('.led-more').classList.toggle('open'); b.textContent = o ? 'Show less' : 'Show more'; b.setAttribute('aria-expanded', String(o)); }));
+  el.querySelectorAll('.rows-tog').forEach((b) => (b.onclick = () => { const o = b.closest('.rows-more').classList.toggle('open'); b.textContent = o ? 'Show less' : 'Read more'; }));
+  el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { iranNums.cat = b.dataset.cat; renderIranNumbers(); }));
+}
+function renderIranTimeline() {
+  const el = document.getElementById('iran-timeline');
+  const t = iranNums.tl;
+  if (!el || !t || !Array.isArray(t.phases)) return;
+  // The live rewrite of the Now box (every 36 hours) when there is one.
+  const live = iranBrief.b && iranBrief.b.timelineNow;
+  const now = live && live.summary ? { ...t.now, sum: live.summary, detail: live.detail, asOf: live.asOf } : t.now;
+  const card = (p, isNow) => {
+    const paras = String(p.detail || p.sum).split(/\n\n+/).map((x) => `<p>${escapeHtml(x).replace(/^([^:.]{3,40}):/, '<strong>$1:</strong>')}</p>`).join('');
+    const links = (p.sources || []).map((s) => `<a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>`).join(' · ');
+    return `<article class="phase-card${isNow ? ' now' : ''} expandable"><div class="phase-head"><strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates)}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${isNow && p.asOf ? `Updated ${escapeHtml(fmtDay(String(p.asOf).slice(0, 10)))} · ` : ''}Sources: ${links}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
+  };
+  const all = [...t.phases.map((p) => card(p, false)), card(now, true)];
+  const labels = [...t.phases.map((p) => p.title), `Now: ${now.title}`];
+  el.innerHTML = pagerHtml('timeline', all, all.length - 1, labels);
+  wirePager(el, all.length - 1, () => closeReadMore(el, '.phase-card', '.toggle-phase'), { wrap: false });
+  el.querySelectorAll('.phase-card').forEach((c) => wireBoxToggle(c, c.querySelector('.toggle-phase'), 'open'));
+}
+async function loadIranNumbers() {
+  try {
+    if (!iranNums.d) {
+      const [n, t] = await Promise.all([fetch('/iran-numbers.json', { cache: 'no-cache' }), fetch('/iran-timeline.json', { cache: 'no-cache' })]);
+      if (n.ok) iranNums.d = await n.json();
+      if (t.ok) iranNums.tl = await t.json();
+      renderIranNumbers();
+      renderIranTimeline();
+    }
+  } catch (e) { console.warn('iran numbers', e); }
+}
 async function loadIranBrief() {
   try {
     const res = await fetch('/api/brief?desk=iran', { cache: 'no-cache' });
@@ -7703,6 +7813,7 @@ async function loadIranBrief() {
     iranBrief.b = b;
     iranBrief.sig = sig;
     renderIranBrief();
+    renderIranTimeline();
   } catch (e) { console.warn('iran brief', e); }
 }
 /** Read more on a box: the button, or a click anywhere in it that is not a link or a button. */

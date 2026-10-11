@@ -7354,8 +7354,18 @@ function drawIranPins() {
   const all = shown.map((ev) => ({ ...ev, mapCat: ['strike', 'combat', 'vessel', 'port'].includes(ev.type) ? ev.type : 'strike' }))
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   const kept = oneEventOnePin(all, true);
+  // The whole war is thousands of pins (Round 31 1f): drawn on one canvas, not one element each.
+  const many = kept.length > 1500;
+  if (many && !iranPins.canvas) iranPins.canvas = L.canvas({ padding: 0.3 });
   for (const ev of kept) {
     const ageH = (Date.now() - new Date(ev.at).getTime()) / 3600000;
+    if (many) {
+      const m = L.circleMarker([ev.lat, ev.lng], { renderer: iranPins.canvas, radius: 6, weight: 2, color: '#fff', fillColor: IRAN_PIN_INK[iranSideOf(ev)], fillOpacity: 1 })
+        .bindPopup(() => iranPopupHtml(ev), { maxWidth: 300, maxHeight: 360, autoPan: true });
+      m.addTo(iranPins.layer);
+      iranPins.byFp.set(String(ev.fp).split('-pin-')[0], m);
+      continue;
+    }
     const icon = L.divIcon({
       className: 'ir-dot-wrap',
       html: `<span class="ir-dot${ageH <= 6 ? ' fresh' : ''}" style="--ink:${IRAN_PIN_INK[iranSideOf(ev)]}" title="${escapeHtml(ev.label || '')}"></span>`,

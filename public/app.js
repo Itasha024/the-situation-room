@@ -7709,7 +7709,8 @@ function irLink(c) {
   if (!c || c.v == null) return '—';
   const tip = [c.src, c.date && fmtDay(c.date), c.note].filter(Boolean).join(' · ');
   const q = c.q ? `<small class="q">${escapeHtml(c.q)}</small> ` : '';
-  const body = `${q}${escapeHtml(String(c.v))}`;
+  // A range breaks only at its dash on a phone, never inside a number.
+  const body = `${q}${escapeHtml(String(c.v)).replace(/–/g, "–<wbr>")}`;
   return c.url ? `<a class="sl ${c.k === 'unoff' ? 'sl-unoff' : 'sl-off'}" href="${escapeHtml(c.url)}" target="_blank" rel="noopener" title="${escapeHtml(tip)}">${body}</a>` : `<span class="sl ${c.k === 'unoff' ? 'sl-unoff' : 'sl-off'}" title="${escapeHtml(tip)}">${body}</span>`;
 }
 const irSmall = (s) => (s ? `<small>${escapeHtml(s)}</small>` : '');

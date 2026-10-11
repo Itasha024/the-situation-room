@@ -5,7 +5,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { iranPins, iranPlacesIn } from "./iran-places.ts";
+import { heardInside, iranPins, iranPlacesIn } from "./iran-places.ts";
 
 test("a place is pinned only when the source names it too, in any of its languages", () => {
   assert.deepEqual(iranPins("Israeli strikes hit Isfahan and Natanz", "حملات اسرائیل به اصفهان و نطنز", false).map((p) => p.name), ["Isfahan", "Natanz"]);
@@ -94,4 +94,19 @@ test("the wider list (user, 11 Oct): villages the hand list missed, named in the
   assert.deepEqual(names("Israeli air strike hits Qantara, south Lebanon", "غارة إسرائيلية في الجنوب"), []);
   // A common word in the copy is no village the source never named.
   assert.deepEqual(names("Spokesman tells reporters of strike on Tyre", "Spokesman tells reporters of a strike on Tyre"), ["Tyre"]);
+});
+
+test("a name inside a longer place's name is not that place: Bint Jbeil is not Byblos", () => {
+  const names = (s: string) => iranPlacesIn(s).map((p) => p.name);
+  assert.ok(!names("Israeli artillery strikes Kafra in Bint Jbeil district, south Lebanon").includes("Byblos"));
+  assert.ok(!names("قصف مدفعي على أطراف كفرا في قضاء بنت جبيل").includes("Byblos"));
+  assert.ok(iranPins("An Israeli strike hit a car near Jbeil", "غارة على سيارة قرب جبيل", false).some((p) => p.name === "Byblos"));
+  const pins = iranPins("Israeli artillery strikes outskirts of Kafra and Beit Lif in Bint Jbeil district, south Lebanon", "قصف مدفعي إسرائيلي على أطراف كفرا وبيت ليف في قضاء بنت جبيل", false);
+  assert.ok(!pins.some((p) => p.name === "Byblos"), pins.map((p) => p.name).join());
+});
+
+test("a stored pin heard inside a longer place's name moves to that place as it is served", () => {
+  assert.equal(heardInside({ place: "Byblos", label: "Israeli artillery strikes outskirts of Kafra and Beit Lif in Bint Jbeil district, south Lebanon" })?.name, "Bint Jbeil");
+  assert.equal(heardInside({ place: "Byblos", label: "Israeli strike on a car near Jbeil" }), null);
+  assert.equal(heardInside({ place: "Nabatieh", label: "Israeli artillery strikes Nabatieh al-Fawqa in south Lebanon" }), null);
 });

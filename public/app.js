@@ -3240,7 +3240,7 @@ function niceStep(range, n) {
   const p = 10 ** Math.floor(Math.log10(raw || 1));
   return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || p * 10;
 }
-function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), label }) {
+function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), label, start = WAR_START }) {
   const all = lines.flatMap((l) => l.pts);
   if (all.length < 2) return '';
   const W = 320;
@@ -3270,8 +3270,8 @@ function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), la
     g += `<text x="${x(d).toFixed(1)}" y="${H - 5}" text-anchor="middle">${m.toLocaleDateString(LOC, { month: 'short', timeZone: 'UTC' })}</text><line class="tick" x1="${x(d).toFixed(1)}" x2="${x(d).toFixed(1)}" y1="${H - B}" y2="${H - B + 3}"/>`;
     m.setUTCMonth(m.getUTCMonth() + 1);
   }
-  const war = Date.parse(`${WAR_START}T00:00:00Z`) >= t0 && Date.parse(`${WAR_START}T00:00:00Z`) <= t1
-    ? `<line class="war" x1="${x(WAR_START).toFixed(1)}" x2="${x(WAR_START).toFixed(1)}" y1="${T}" y2="${H - B}"/><text class="war" x="${(x(WAR_START) + 3).toFixed(1)}" y="${T + 8}">Conflict</text>`
+  const war = Date.parse(`${start}T00:00:00Z`) >= t0 && Date.parse(`${start}T00:00:00Z`) <= t1
+    ? `<line class="war" x1="${x(start).toFixed(1)}" x2="${x(start).toFixed(1)}" y1="${T}" y2="${H - B}"/><text class="war" x="${(x(start) + 3).toFixed(1)}" y="${T + 8}">Conflict</text>`
     : '';
   const base = bases.map((b) => `<line class="base ${b.cls || ''}" x1="${L}" x2="${W - R}" y1="${y(b.value).toFixed(1)}" y2="${y(b.value).toFixed(1)}"/>`).join('');
   const path = lines.map((l) => {
@@ -6613,8 +6613,8 @@ const IRAN_FLAG = '<rect width="630" height="360" fill="#da0000"/><rect width="6
 const FLAG_ART = { iran: () => IRAN_FLAG };
 /** A small flag: its drawing, or its stripes top to bottom; a hairline so the white shows on either theme. */
 const flagSvg = (d) => FLAG_ART[d.id] ? `<svg class="flag flag-${d.id}" viewBox="0 0 630 360" aria-hidden="true">${FLAG_ART[d.id]()}<rect x="6" y="6" width="618" height="348" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="12"/></svg>` : `<svg class="flag" viewBox="0 0 18 12" aria-hidden="true">${d.flag.map((c, i) => `<rect y="${i * 4}" width="18" height="4" fill="${c}"/>`).join('')}<rect x=".25" y=".25" width="17.5" height="11.5" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width=".5"/></svg>`;
-/** The same stripes as a strip, for the side menu's line by each desk. */
-const flagStrip = (d) => `linear-gradient(${d.flag.map((c, i) => `${c} ${(i * 100 / d.flag.length).toFixed(2)}% ${((i + 1) * 100 / d.flag.length).toFixed(2)}%`).join(',')})`;
+/** The same flag as a strip, for the side menu's line by each desk: its drawing (squeezed to the strip) or its stripes. */
+const flagStrip = (d) => FLAG_ART[d.id] ? `url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 630 360" preserveAspectRatio="none">${FLAG_ART[d.id]()}</svg>`)}') 0 0/100% 100%` : `linear-gradient(${d.flag.map((c, i) => `${c} ${(i * 100 / d.flag.length).toFixed(2)}% ${((i + 1) * 100 / d.flag.length).toFixed(2)}%`).join(',')})`;
 const SITE_PAGES = () => desksShown().map((d) => [d.href, d.name, d.sub, d.kids, d]);
 
 /*
@@ -7262,16 +7262,19 @@ function iranPinShown(ev) {
 }
 async function loadIranPins() {
   if (!map) return;
+  // The war's researched pins are read alongside, never before, the desk's own (user, 11 Oct:
+  // the map comes up at once): today is drawn from the live pins, the whole war when they come.
+  const pastP = iranPins.past ? Promise.resolve(iranPins.past) : (iranPins.pastP = iranPins.pastP || loadIranPast());
   try {
     const res = await fetch(`/api/desk?desk=iran&since=${IRAN_MAP_FROM}`, { cache: 'no-cache' });
     if (!res.ok) return;
     const d = await res.json();
-    if (!iranPins.past) iranPins.past = await loadIranPast();
     // The desk's own pins from the day it began reading; the researched ones before it.
     const live = (d.events || []).filter(iranPinShown);
     const first = live.reduce((m, e) => Math.min(m, Date.parse(e.at) || Infinity), Infinity);
-    iranPins.events = [...iranPins.past.filter((e) => Date.parse(e.at) < first), ...live];
-    drawIranPins();
+    const merge = () => { iranPins.events = [...(iranPins.past || []).filter((e) => Date.parse(e.at) < first), ...live]; drawIranPins(); };
+    merge();
+    if (!iranPins.past) { iranPins.past = await pastP; merge(); }
   } catch (e) { console.warn('iran pins', e); }
 }
 /**
@@ -7281,15 +7284,38 @@ async function loadIranPins() {
  */
 async function loadIranPast() {
   try {
-    const res = await fetch('/iran-strikes-baseline.json', { cache: 'no-cache' });
+    // What drawing needs first (scripts/iran-research/map-pack.cjs); the notes follow.
+    const res = await fetch(`/iran-map-pins.json?v=${IRAN_ASSET_V}`);
     if (!res.ok) return [];
-    const rows = await res.json();
-    return (Array.isArray(rows) ? rows : []).map((p) => ({
+    const d = await res.json();
+    const out = (d.pins || []).map(([md, actor, lat, lng, hm], i) => ({
       // A researched attack with its own time (sirens, UKMTO) keeps it; the rest carry only their day.
-      fp: p.fp, at: p.at || `${p.day}T12:00:00+03:00`, dayOnly: !p.at, researched: true, actor: p.actor, type: 'strike', mapOnly: true,
-      place: p.place, lat: p.lat, lng: p.lng, label: p.label, text: '', source: p.source, url: p.url, also: p.also || [],
+      fp: `rs#${i}`, ni: i, at: hm ? `${d.year}-${md}T${hm}:00Z` : `${d.year}-${md}T12:00:00+03:00`, dayOnly: !hm, researched: true, actor, type: 'strike', mapOnly: true,
+      place: '', lat, lng, label: '', text: '', source: '', url: '', also: [],
     }));
+    if (!iranPins.notesP) iranPins.notesP = loadIranNotes();
+    return out;
   } catch (e) { return []; }
+}
+/** This release's version (the page's app.js address): a new release reads the pin files anew. */
+const IRAN_ASSET_V = (() => { try { const m = /[?&]v=([^&]+)/.exec(document.querySelector('script[src*="/app.js?v="]').src); return m ? m[1] : Date.now(); } catch (e) { return Date.now(); } })();
+/** The researched pins' notes, row for row with the pins: read once, filled in when a note opens. */
+async function loadIranNotes() {
+  try {
+    const res = await fetch(`/iran-map-notes.json?v=${IRAN_ASSET_V}`);
+    if (res.ok) iranPins.notes = (await res.json()).notes || [];
+    // A note opened while they were on the way is written now.
+    if (map) map.eachLayer((l) => { if (l.isPopupOpen && l.isPopupOpen()) l.getPopup().update(); });
+  } catch (e) {}
+}
+function iranNoteOf(ev) {
+  if (ev.ni == null || ev.noted) return true;
+  const n = iranPins.notes && iranPins.notes[ev.ni];
+  if (!n) return false;
+  [ev.rfp, ev.place, ev.label, ev.source, ev.url] = n;
+  ev.also = (n[5] || []).map(([source, url]) => ({ source, url }));
+  ev.noted = true;
+  return true;
 }
 function renderIranLegend() {
   const legend = document.getElementById('legend');
@@ -7327,6 +7353,7 @@ function renderIranLegend() {
 }
 /** The note: the report as the card tells it, its time and place, its source. Nothing more to open. */
 function iranPopupHtml(ev) {
+  if (!iranNoteOf(ev)) { if (!iranPins.notesP) iranPins.notesP = loadIranNotes(); return '<p class="pop-meta">Loading…</p>'; }
   const head = String(ev.label || '').trim() || headlineFrom(ev.text || '');
   const body = cleanBody(ev.text || '');
   let anchors = sourceAnchors(ev.source || ev.sources || '', ev.url || '');
@@ -7353,7 +7380,8 @@ function drawIranPins() {
   // One event, one pin: the Yemen desk's rule (same kind, 25 km, 6 hours, most telling words shared).
   const all = shown.map((ev) => ({ ...ev, mapCat: ['strike', 'combat', 'vessel', 'port'].includes(ev.type) ? ev.type : 'strike' }))
     .sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-  const kept = oneEventOnePin(all, true);
+  // The researched pins are one per attack already (the merge folds them); only the desk's own are matched.
+  const kept = [...all.filter((e) => e.researched), ...oneEventOnePin(all.filter((e) => !e.researched), true)];
   // The whole war is thousands of pins (Round 31 1f): drawn on one canvas, not one element each.
   const many = kept.length > 1500;
   if (many && !iranPins.canvas) iranPins.canvas = L.canvas({ padding: 0.3 });
@@ -7472,7 +7500,8 @@ function renderIranScan() {
   const list = document.getElementById('live-scan-list');
   if (!s || !list || !details || !details.open) return;
   const rows = (s.rawHits || []).slice(0, 80);
-  list.innerHTML = (s.cycleNote ? `<p class="ls-note">${escapeHtml(s.cycleNote)}</p>` : '') + (rows.length
+  // No summary line of the scan above the rows (user, 11 Oct).
+  list.innerHTML = (rows.length
     ? rows.map((h) => `<div class="ls-row"><div class="ls-top"><span class="ls-src">${escapeHtml(canonicalSourceName(h.source))}</span><span class="ls-at">${escapeHtml(h.at ? fmtStamp(h.at) : '')}</span><span class="ls-verdict">${h.kept ? 'Published' : h.outcome === 'tray' ? 'Waiting for the reader' : 'Not published'}</span></div><a class="ls-snip" href="${escapeHtml(h.url)}" target="_blank" rel="noopener">${escapeHtml((h.snippet || '').slice(0, 240))}</a></div>`).join('')
     : '<p class="soon">Nothing read yet.</p>');
 }
@@ -7728,12 +7757,25 @@ function irSpark(series, unit) {
   const first = pts[0], last = pts[pts.length - 1];
   return `<figure class="ir-spark"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path d="${path}"/></svg><figcaption><span>${escapeHtml(fmtDay(first.d))}: ${fmt(first.v)}</span><span>${unit ? escapeHtml(unit) + ' · ' : ''}${pts.length} points</span><span>${escapeHtml(fmtDay(last.d))}: ${fmt(last.v)}</span></figcaption></figure>`;
 }
-function irBox(b) {
+/** A box's series as the Yemen desk's charts: opened from the chart sign by its name (user, 11 Oct). */
+function irChart(b, id) {
+  const pts = (b.series || []).filter((p) => p && p.d && Number.isFinite(+p.v)).map((p) => ({ date: p.d, value: +p.v })).sort((x, y) => x.date.localeCompare(y.date));
+  if (pts.length < 3) return '';
+  const big = Math.max(...pts.map((p) => Math.abs(p.value)));
+  const fmt = (v) => (big >= 1e6 ? `${+(v / 1e6).toFixed(2)}M` : big >= 1e4 ? `${+(v / 1e3).toFixed(1)}k` : ledNum(v, big < 10 ? 2 : big < 100 ? 1 : 0));
+  const chart = lineChart({ lines: [{ name: b.seriesUnit || b.unit || '', cls: 's1', pts }], fmt, label: b.title, start: IRAN_MAP_FROM });
+  if (!chart) return '';
+  spotCharts[id] = `<p class="chart-title">${escapeHtml(b.title)}</p>${chart}`;
+  return id;
+}
+function irBox(b, i = 0) {
   const unit = b.unit ? ` <small class="unit">(${escapeHtml(b.unit)})</small>` : '';
   const why = b.why ? `<small class="unit-why">${escapeHtml(b.why)}</small>` : '';
-  const head = `<h3>${escapeHtml(b.title)}${unit}${why}</h3>`;
+  const chartId = irChart(b, `ir-${iranNums.cat}-${i}`);
+  const name = chartId ? `<button type="button" class="spot" data-spot="${chartId}" aria-haspopup="dialog" aria-expanded="false">${spotLabel(b.title)}</button>` : escapeHtml(b.title);
+  const head = `<h3>${name}${unit}${why}</h3>`;
   const note = b.note ? `<p class="ir-note">${escapeHtml(b.note)}</p>` : '';
-  const spark = irSpark(b.series, b.seriesUnit);
+  const spark = '';
   const SHOW = 6;
   const more = (rows) => (rows.length > SHOW ? '<button type="button" class="toggle-phase rows-tog">Read more</button>' : '');
   const xtra = (i) => (i >= SHOW ? ' class="xtra"' : '');
@@ -7745,8 +7787,11 @@ function irBox(b) {
   if (b.type === 'span3') {
     body = `<table class="span3 one"><tbody><tr><th scope="col">Latest</th><th scope="col">7 days earlier</th><th scope="col">Before conflict<small class="span">(${escapeHtml(b.beforeSpan || '28 Jan – 27 Feb')})</small></th></tr><tr><td class="big">${irLink(b.latest)}${irSmall(b.latest && b.latest.date && fmtDay(b.latest.date))}${b.change ? `<small class="q">${escapeHtml(b.change)} vs before conflict</small>` : ''}</td><td>${irLink(b.week)}${irSmall(b.week && b.week.date && fmtDay(b.week.date))}</td><td>${irLink(b.before)}${irSmall(b.beforeNote || 'average')}</td></tr></tbody></table>${IR_KEY}`;
   } else if (b.type === 'table') {
-    const th = `<tr>${b.cols.map((c, i) => `<th scope="col"${i === 0 ? ' class="l"' : ''}>${escapeHtml(c)}</th>`).join('')}</tr>`;
-    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><td class="l">${escapeHtml(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</td>${r.cells.map((c) => irCell(c)).join('')}</tr>`).join('');
+    // A Latest or Now column's date: once in its head when every row shares it, else under each figure.
+    const days = b.cols.map((c, j) => (/^(?:Latest|Now)$/.test(c) && j ? [...new Set(b.rows.map((r) => r.cells[j - 1] && r.cells[j - 1].date).filter(Boolean))] : []));
+    const dated = days.map((d) => d.length > 1);
+    const th = `<tr>${b.cols.map((c, i) => `<th scope="col"${i === 0 ? ' class="l"' : ''}>${escapeHtml(c)}${days[i].length === 1 ? `<small class="span">(${escapeHtml(fmtDay(days[i][0]))})</small>` : ''}</th>`).join('')}</tr>`;
+    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><td class="l">${escapeHtml(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</td>${r.cells.map((c, j) => (dated[j + 1] && c && c.v != null && c.date ? `<td>${irLink(c)}${irSmall(fmtDay(c.date).replace(new RegExp(" " + new Date().getFullYear() + "$"), ""))}</td>` : irCell(c))).join('')}</tr>`).join('');
     body = `<table class="span3${b.rows.length > SHOW ? '' : ''}"><tbody>${th}${rows}</tbody></table>${more(b.rows)}${IR_KEY}`;
   } else if (b.type === 'bars') {
     const max = Math.max(...b.bars.map((x) => +x.n || 0), 1e-9);
@@ -7759,7 +7804,7 @@ function irBox(b) {
     const stats = b.stats ? `<div class="stat3">${b.stats.map(([v, l]) => `<div><b>${irLink(v)}</b><span>${escapeHtml(l)}</span></div>`).join('')}</div>` : '';
     body = `<div class="led-more expandable"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div><button type="button" class="toggle-sit led-tog" aria-expanded="false">Show more</button></div>`;
   }
-  return `<div class="tally-box claims ledger ir">${head}${body}${spark}${note}</div>`;
+  return `<div class="tally-box claims ledger ir${b.type === 'table' && b.rows.length > SHOW ? ' rows-more' : ''}">${head}${body}${spark}${note}</div>`;
 }
 function renderIranNumbers() {
   const el = document.getElementById('iran-numbers');
@@ -7768,11 +7813,36 @@ function renderIranNumbers() {
   if (!iranNums.cat) iranNums.cat = d.sets[0].key;
   const set = d.sets.find((s) => s.key === iranNums.cat) || d.sets[0];
   const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${d.sets.map((s) => `<button type="button" data-cat="${s.key}" aria-pressed="${s.key === set.key}"${s.key === set.key ? ' class="on"' : ''}>${escapeHtml(s.name)}</button>`).join('')}</div>`;
-  el.innerHTML = `<p class="cadence at-head">Researched from the sources · as of ${escapeHtml(fmtDay(d.asOf))}</p>${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map(irBox), 0, set.boxes.map((b) => b.title))}</div>`;
-  wirePager(el, 0, () => {});
+  el.innerHTML = `<p class="cadence at-head">Researched from the sources · as of ${escapeHtml(fmtDay(d.asOf))}</p>${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
+  wirePager(el, 0, () => { hideSpot(); irClamp(el); });
+  wireSpots(el);
+  irClamp(el);
   el.querySelectorAll('.led-tog').forEach((b) => (b.onclick = () => { const o = b.closest('.led-more').classList.toggle('open'); b.textContent = o ? 'Show less' : 'Show more'; b.setAttribute('aria-expanded', String(o)); }));
   el.querySelectorAll('.rows-tog').forEach((b) => (b.onclick = () => { const o = b.closest('.rows-more').classList.toggle('open'); b.textContent = o ? 'Show less' : 'Read more'; }));
   el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { iranNums.cat = b.dataset.cat; renderIranNumbers(); }));
+}
+/*
+ * A long box shows its first part and "Read more", on a PC and a phone (user, 11 Oct): measured
+ * when it is the one shown, as hidden slides have no height. Boxes with their own toggle keep it.
+ */
+const IR_CLAMP_PX = 520;
+function irClamp(el) {
+  requestAnimationFrame(() => el.querySelectorAll('.pg-slide.on .tally-box.ir').forEach((box) => {
+    if (box.dataset.clamped || box.querySelector('.rows-tog, .led-tog')) return;
+    if (box.scrollHeight <= IR_CLAMP_PX + 80) return;
+    box.dataset.clamped = '1';
+    box.classList.add('ir-clamp');
+    const inner = document.createElement('div');
+    inner.className = 'ir-clamp-body';
+    inner.append(...[...box.childNodes].filter((n) => !(n.nodeType === 1 && n.tagName === 'H3')));
+    box.appendChild(inner);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toggle-phase ir-clamp-tog';
+    btn.textContent = 'Read more';
+    btn.onclick = () => { const o = box.classList.toggle('open'); btn.textContent = o ? 'Show less' : 'Read more'; if (!o) box.scrollIntoView({ block: 'nearest' }); };
+    box.appendChild(btn);
+  }));
 }
 function renderIranTimeline() {
   const el = document.getElementById('iran-timeline');

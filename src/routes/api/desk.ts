@@ -8,7 +8,7 @@ import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
 import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
-import { iranEventAllowed } from "@/lib/desk/iran-places";
+import { heardInside, iranEventAllowed } from "@/lib/desk/iran-places";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -59,6 +59,13 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   if (desk === "iran" && Array.isArray((slice as { events?: unknown[] }).events)) {
     const s = slice as unknown as { events: { desks?: string[]; actor?: string | null; place?: string | null; label?: string | null }[] };
     s.events = s.events.filter((e) => (e.desks ?? []).includes("yemen") || iranEventAllowed(e));
+    // A pin on a place heard inside a longer one's name: a card's extra pin goes, its own pin moves to the longer place.
+    s.events = s.events.flatMap((e) => {
+      const host = (e.desks ?? []).includes("yemen") ? null : heardInside(e);
+      if (!host) return [e];
+      const x = e as typeof e & { fp?: string; lat?: number; lng?: number };
+      return String(x.fp ?? "").includes("-pin-") ? [] : [{ ...x, place: host.name, lat: host.lat, lng: host.lng }];
+    });
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }

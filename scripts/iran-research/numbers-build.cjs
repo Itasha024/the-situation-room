@@ -935,6 +935,92 @@ for (const s of out.sets) for (const b of s.boxes) {
   b.unit = 'thousand tomans (1 toman = 10 rials)';
   for (const r of b.rows) for (const c of r.cells) if (c && c.v != null) c.v = String(c.v).replace(/\d{1,3}(?:,\d{3})+|\d{4,}/g, (n) => { const x = Number(n.replace(/,/g, '')) / 1000; return x >= 1000 ? x.toLocaleString('en-US', { maximumFractionDigits: 1 }) : String(+x.toFixed(1)); });
 }
+// The user's pass of 11 Oct: one rate source for the rial and the coin (tgju, which updates through the
+// trading day), no wages box, inflation read by its calendar months, the food and sanctions boxes
+// explained, and notes kept to what is needed to read a figure (no "nothing newer was published").
+const NOTES = {
+  'Killed': 'Lebanon: 8,954 killed since 8 Oct 2023 (Health Ministry). Hezbollah fighters: more than 1,000 by 17 Apr (sources close to Hezbollah); about 2,500 by 28 May (the IDF).',
+  'Injured': 'Israel: everyone taken to hospital, not only the wounded.',
+  'Incidents': '100 confirmed by the IMO (24 seafarers killed, 3 missing) and 40 reported by trackers and the media.',
+  'Ships through the Strait of Hormuz': 'Each counts differently: the IMO averages several sources; Windward adds ships with their transponders off; Kpler sees only ships that broadcast their position. Before the war: about 125 a day (Clarksons).',
+  'Crude oil through the Strait of Hormuz': 'Kpler, which counts differently, put it at 8.5 in the week to 7 Oct, against 13.5 before the war.',
+  'LNG through the Strait of Hormuz': 'The US EIA: 10.5 billion cubic feet a day before the war (late 2025), 0.8 in April – June.',
+  'War-risk insurance for a Gulf voyage': 'The highest quote a broker put its name to: 7.5–10% (Marsh, 22 Jul).',
+  'Ships and crews stranded in the Gulf': '',
+  'Attacks on energy sites': 'Ministries reported more strikes on energy sites without naming them. Attacks on ships are under Maritime.',
+  "Iran's crude oil production": 'Iran has reported no output to OPEC since the war began: these are outside estimates (OPEC\'s secondary sources, the US EIA).',
+  "Iran's gas": 'The oil ministry said half the damaged capacity was back by 22 Sep.',
+  "Iran's crude oil exports": 'Loadings at Iranian terminals, counted by trackers. Iran\'s only word: "we are not exporting oil" (the central bank governor, 19 Aug).',
+  'Gulf crude oil exports': 'TankerTrackers put May at 67% below January – February, and August at 39% below.',
+  'Gulf crude oil exports by country': 'Official: each government\'s monthly figure (JODI, Iraq\'s oil ministry, Oman\'s statistics centre); the UAE and Qatar publish none for 2026. Unofficial: TankerTrackers, August against January – February.',
+  'Crude oil price': 'Dated Brent, the price of cargoes loading in the next weeks: $125.44 on 6 Oct (US EIA), against $70.95 before the war.',
+  'Petrol prices at the pump': 'Saudi Arabia and Oman cap their prices.',
+  'Gulf exchanges': 'Change since each exchange\'s last close before the war.',
+  "The rial's open-market rate": '',
+  'Gold coin in Tehran': '',
+  "Iran's inflation": 'The central bank, which counts towns only, puts the latest month at 83.8%.',
+  'Gasoline prices in Iran': '',
+  'Food prices in Iran': 'Since May, Mehr has priced the cheaper municipal markets (8–27% below shops, the central bank says), so "Now" is below what shops charge.',
+  "Iran's trade": '',
+  'Tehran Stock Exchange': 'Shut from 28 Feb to 19 May. The index is in rials: much of its rise is the falling rial.',
+  'Internet in Iran': 'Since 26 May the international internet is back, heavily filtered.',
+  'Uranium enriched to 60%': 'Not verified since. Iran\'s atomic energy chief, Mohammad Eslami, said on 8 Oct that Iran would not hand it over.',
+  'Nuclear sites struck': '',
+  'IAEA inspectors in Iran': 'The sites bombed in June 2025 have had no inspection since. On 9 Sep the IAEA Board voted to report Iran to the UN Security Council.',
+  'US sanctions on Iran and Hezbollah': 'People, firms, ships and aircraft added to the US blacklist, by our count of OFAC notices.',
+  'Economic Outcast': 'The Treasury\'s two campaigns: Economic Fury from 15 Apr and Operation Economic Outcast from 24 Aug.',
+  'EU and UK listings since 28 Feb': 'The UK also listed the IRGC under its State Threats Act (13 Jul) and banned trade with Iran in energy, shipping, banking and gold (8 Sep).',
+};
+for (const s of out.sets) {
+  s.boxes = s.boxes.filter((b) => b.title !== 'Wages in Iran');
+  for (const b of s.boxes) {
+    if (b.title in NOTES) { if (NOTES[b.title]) b.note = NOTES[b.title]; else delete b.note; }
+    if (b.title === "The rial's open-market rate" || b.title === 'Gold coin in Tehran') {
+      const [latest, week, before] = b.rows.find((r) => r.label === 'tgju').cells;
+      const change = String(latest.note || '').replace(/ vs before conflict$/, '');
+      Object.assign(b, { type: 'span3', why: b.why || 'The open-market rate, sell side (tgju.org)', latest: { ...latest, note: undefined }, week, before: { ...before, note: undefined }, change, beforeNote: 'average' });
+      delete b.rows; delete b.cols;
+    }
+    if (b.title === "The rial's open-market rate") b.seriesUnit = 'rials to the dollar';
+    if (b.title === 'Gold coin in Tehran') b.seriesUnit = 'million rials';
+    if (b.title === "Iran's inflation") {
+      b.title = "Iran's inflation, year on year";
+      b.unit = 'consumer prices against the same month a year before';
+      b.why = 'Each bar is one Iranian month: 89.8% means what cost 100 a year earlier cost 189.8 (Statistical Centre of Iran)';
+      b.bars = b.bars.map((x) => ({ ...x, label: x.pre ? 'Before the war' : x.sub, sub: x.pre ? `${x.sub} (Bahman)` : x.label }));
+    }
+    if (b.title === 'Food prices in Iran') {
+      b.cols = ['Item', 'Before the war', 'Now', 'Shop check'];
+      b.why = 'Tehran prices. Before the war (22 Feb) and Now (9–10 Oct): Mehr News\'s weekly market survey, or the city\'s official rate where marked. Shop check: what Independent Persian\'s reporters paid in ordinary Tehran shops, on the date in the row';
+    }
+    if (b.title === 'EU and UK listings since 28 Feb') {
+      b.title = 'EU and UK sanctions since 28 Feb';
+      b.unit = 'people and firms put under sanctions';
+      b.why = 'Each row is one decision: the people and firms it named have their assets frozen and may not travel to the EU or the UK';
+      b.cols = ['', 'Named'];
+    }
+  }
+}
+// The older sanctions in two columns, each measure in a line or two (user, 11 Oct: too dense).
+const OLDER = [
+  ['EU', 'The IRGC on the EU terrorist list'],
+  ['EU', 'All EU nuclear sanctions back: the central bank and big banks frozen, oil, gas, gold and diamonds trade banned'],
+  ['UK', 'UN sanctions back in UK law: 121 people and firms'],
+  ['UN', 'UN "snapback": the arms embargo, the enrichment ban, asset freezes and travel bans back in force'],
+  ['US', '"Maximum pressure" restored, to drive Iran\'s oil exports to zero'],
+  ['US', 'Sanctions on whole sectors (construction, mining, manufacturing, textiles, later oil and petrochemicals)'],
+  ['US', 'Sanctions on the Supreme Leader and his office'],
+  ['US', 'The IRGC listed as a terrorist organisation'],
+  ['US', 'All US nuclear sanctions back: oil, banking, shipping'],
+  ['US', 'The US leaves the nuclear deal'],
+  ['US', 'Hezbollah listed as a terrorist organisation'],
+];
+for (const s of out.sets) for (const b of s.boxes) {
+  if (b.title !== 'Older sanctions on Iran still in force') continue;
+  if (b.rows.length !== OLDER.length) problems.push('Older sanctions: rows changed, update OLDER');
+  b.cols = [['Since', 'd'], ['By', 'l'], ['Measure', 'l w']];
+  b.rows = b.rows.map((r, i) => [r[0], OLDER[i][0], OLDER[i][1]]);
+}
 const ships = out.sets[1].boxes[1];
 if (ships.rows.some((r) => /Hormuz/.test(r.label))) problems.push('Ships rows name Hormuz');
 if (problems.length) { console.error(problems.join('\n')); process.exit(1); }

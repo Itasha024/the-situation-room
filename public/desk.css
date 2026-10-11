@@ -1164,3 +1164,17 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
   .tally-box.ir table td.l{min-width:5.5rem}
   .tally-box.ir table.list td.l.w{min-width:6rem}
 }
+/* Iran numbers (user, 11 Oct): a long box opens with Read more; the chart sign by a box's name; the older sanctions given room. */
+.tally-box.ir.ir-clamp:not(.open) .ir-clamp-body{max-height:520px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 80%,transparent);mask-image:linear-gradient(#000 80%,transparent)}
+.tally-box.ir table.list.sanc td{padding-top:.55rem;padding-bottom:.55rem;line-height:1.45;vertical-align:top}
+.tally-box.ir table.list.sanc tr+tr td{border-top:1px solid var(--t-line,rgba(127,127,127,.18))}
+/* Six sets do not fit a phone's width in one row: two rows of three. */
+@media (max-width:560px){
+  #iran-numbers .num-cat{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--t-line-strong,#334155);width:100%}
+  #iran-numbers .num-cat button{background:var(--t-bg,var(--bg,#111));padding:.55rem .3rem;text-align:center}
+  #iran-numbers .num-cat button+button{border-left:0}
+  #iran-numbers .num-cat button.on{background:#f8fafc}
+  html[data-set="broadsheet"] #iran-numbers .num-cat button.on{background:var(--t-strong)}
+}
+.tally-box.ir table.list.sanc td.l:not(.w),.tally-box.ir table.list.sanc th.l:not(.w){width:2.6rem;min-width:0;white-space:nowrap}
+.tally-box.ir table.list.sanc td.l.w,.tally-box.ir table.list.sanc th.l.w{width:auto}

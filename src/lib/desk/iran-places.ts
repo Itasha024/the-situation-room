@@ -171,15 +171,19 @@ const PATTERNS = IRAN_PLACES.map((p) => ({ p, res: [p.name, ...(p.alt ?? [])].ma
 /** The region's places a text names, in the order it names them. */
 export function iranPlacesIn(text: string): IranPlace[] {
   const t = String(text || "");
-  const hits: { p: IranPlace; at: number }[] = [];
+  const spans: { p: IranPlace; at: number; end: number }[] = [];
   for (const { p, res } of PATTERNS) {
-    let at = Infinity;
     for (const re of res) {
-      const m = re.exec(t);
-      if (m && m.index < at) at = m.index;
+      const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+      for (const m of t.matchAll(g)) spans.push({ p, at: m.index!, end: m.index! + m[0].length });
     }
-    if (at < Infinity) hits.push({ p, at });
   }
+  // A name inside another place's longer name is not that place (user, 11 Oct): "Bint Jbeil" is
+  // not also Jbeil (Byblos), "بنت جبيل" not also "جبيل". A place counts where it stands on its own.
+  const free = spans.filter((s) => !spans.some((o) => o.p !== s.p && o.end - o.at > s.end - s.at && o.at <= s.at && s.end <= o.end));
+  const first = new Map<IranPlace, number>();
+  for (const s of free) if (!first.has(s.p) || s.at < first.get(s.p)!) first.set(s.p, s.at);
+  const hits = [...first].map(([p, at]) => ({ p, at }));
   // "Bushehr nuclear plant" is not also the port; "Kharg Island" is not also "Kharg".
   const out = hits.sort((a, b) => a.at - b.at).map((h) => h.p);
   return out.filter((p) => !out.some((q) => q !== p && q.name.length > p.name.length && q.name.startsWith(p.name)));
@@ -265,7 +269,15 @@ for (const g of GAZ) {
 function windows(words: string[], each: (key: string, at: number, run: string[]) => void): void {
   for (let i = 0; i < words.length; i++) for (let n = 1; n <= 4 && i + n <= words.length; n++) each(words.slice(i, i + n).join(" "), i, words.slice(i, i + n));
 }
-export function gazPlacesIn(copy: string, sourceText: string): IranPlace[] {
+/** The hand list's names blanked out, so no wider place is read inside one ("Jbeil" in "Bint Jbeil"). */
+function maskHand(text: string): string {
+  let t = String(text || "");
+  for (const { res } of PATTERNS) for (const re of res) t = t.replace(new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g"), " zzzz ");
+  return t;
+}
+export function gazPlacesIn(copyIn: string, sourceIn: string): IranPlace[] {
+  const copy = maskHand(copyIn);
+  const sourceText = maskHand(sourceIn);
   const named = new Set<(typeof GAZ)[number]>();
   const inNative = new Set<(typeof GAZ)[number]>();
   windows(latinWords(sourceText), (k) => BY_LATIN.get(k)?.forEach((g) => named.add(g)));
@@ -359,4 +371,27 @@ const PLACE_BY_NAME = new Map([...GAZ.map((g) => [g.place.name, g.place] as cons
 export function iranEventAllowed(e: { actor?: string | null; place?: string | null; label?: string | null }): boolean {
   const p = PLACE_BY_NAME.get(String(e.place ?? ""));
   return !!p && iranPinAllowed(e.actor ?? null, p, String(e.label ?? ""));
+}
+
+/**
+ * A stored pin whose place was only heard inside a longer place's name (user,
+ * 11 Oct: "Bint Jbeil" read as Jbeil, Byblos, 113 km north): the longer place
+ * the label names, when the pin's own name is nowhere else in it and the two
+ * lie more than 15 km apart. Null when the pin stands right.
+ */
+export function heardInside(e: { place?: string | null; label?: string | null }): IranPlace | null {
+  const me = PLACE_BY_NAME.get(String(e.place ?? ""));
+  const label = String(e.label ?? "");
+  if (!me || !label) return null;
+  const words = latinWords(label);
+  const mine = [me.name, ...(me.alt ?? [])].filter((n) => LATIN.test(n)).map((n) => latinWords(n).join(" ")).filter(Boolean);
+  const said = words.join(" ");
+  if (mine.some((n) => ` ${said} `.includes(` ${n} `))) return null;
+  const sounds = new Set([me.name, ...(me.alt ?? [])].map((n) => (LATIN.test(n) ? latinSound(latinWords(n)) : nativeSound(n))).filter((s) => s.length >= 3));
+  for (const host of iranPlacesIn(label)) {
+    if (host === me || km(host, me) <= 15) continue;
+    const parts = [host.name, ...(host.alt ?? [])].filter((n) => LATIN.test(n) && /[\s-]/.test(n)).flatMap((n) => latinWords(n));
+    if (parts.some((w) => sounds.has(latinSound([w])))) return host;
+  }
+  return null;
 }

@@ -59,6 +59,9 @@ test("the map's scope (user, 9 Oct): who acted, where it landed, and never a fly
   assert.equal(iranPinAllowed("us", at("Iraq"), "US strike hits Kataib Hezbollah at Jurf al-Sakhar"), true);
   assert.equal(iranPinAllowed("houthi", at("sea"), "Houthis strike a tanker"), false);
   assert.equal(iranPinAllowed("houthi", at("Israel"), "Missile from Yemen at Eilat"), true);
+  assert.equal(iranPinAllowed("iran", { country: "Saudi Arabia", lat: 16.89, lng: 42.56 }, "Drone attack on the Jizan refinery"), false);
+  assert.equal(iranPinAllowed("unclear", { country: "sea", lat: 13.2, lng: 43.13 }, "Ship attacked off Mokha"), false);
+  assert.equal(iranPinAllowed("iran", { country: "Saudi Arabia", lat: 21.46, lng: 40.53 }, "Iranian missiles hit King Fahd Air Base in Taif"), true);
   // Sirens are pinned (user, 10 Oct), but not Israel's: its alerts come from the Home Front Command.
   assert.equal(iranPinAllowed("unclear", at("Kuwait"), "Sirens sound in Kuwait City, Sabereen reports"), true);
   assert.equal(iranPinAllowed("unclear", at("Israel"), "Sirens sound in Tel Aviv"), false);
@@ -82,6 +85,11 @@ test("the wider list (user, 11 Oct): villages the hand list missed, named in the
   assert.deepEqual(names("Israeli warplane strikes Kfar Tibnit in south Lebanon", "غارة للطيران المعادي على كفرتبنيت"), []);
   assert.deepEqual(names("Israeli warplane strikes Kfar Tibnit in south Lebanon", "غارة للطيران المعادي على كفر تبنيت"), ["Kafr Tibnit"]);
   assert.deepEqual(names("Israeli air strike hits Qantara, south Lebanon", "غارة إسرائيلية على بلدة القنطرة"), ["Qantara"]);
+  // A spelling no list has, when the source names the place in Arabic: it sounds the same.
+  assert.deepEqual(names("Israeli warplane strikes Kfar Tebneet in south Lebanon", "غارة للطيران المعادي على كفر تبنيت"), ["Kafr Tibnit"]);
+  assert.deepEqual(names("Israeli air strike hits Tellouseh, south Lebanon", "غارة معادية على بلدة طلوسة"), ["Tallousa"]);
+  assert.deepEqual(names("US strike hits Dayr al-Zawr", "غارة أمريكية على دير الزور"), ["Deir ez-Zor"]);
+  assert.deepEqual(names("Army spokesman tells of a strike in south Lebanon", "غارة معادية على بلدة طلوسة"), []);
   // The source must name it: the copy alone is no pin.
   assert.deepEqual(names("Israeli air strike hits Qantara, south Lebanon", "غارة إسرائيلية في الجنوب"), []);
   // A common word in the copy is no village the source never named.

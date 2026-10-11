@@ -192,7 +192,12 @@ export function iranPlacesIn(text: string): IranPlace[] {
  */
 export function iranPins(copy: string, sourceText: string, vessel: boolean): IranPlace[] {
   const inSource = new Set(iranPlacesIn(sourceText).map((p) => p.name));
-  const hand = iranPlacesIn(copy).filter((p) => inSource.has(p.name));
+  const inCopy = iranPlacesIn(copy);
+  // A hand-list place the source names in Arabic or Persian and the copy spells its own way.
+  const sounds = new Set<string>();
+  windows(latinWords(copy), (_k, _at, run) => isName(copy, run) && sounds.add(latinSound(run)));
+  const heard = iranPlacesIn(sourceText).filter((p) => !inCopy.includes(p) && (p.alt ?? []).some((n) => !LATIN.test(n) && nativeSound(n).length >= 3 && sounds.has(nativeSound(n))));
+  const hand = [...inCopy.filter((p) => inSource.has(p.name)), ...heard];
   const wider = gazPlacesIn(copy, sourceText).filter((g) => !hand.some((p) => km(p, g) < 3));
   const named = [...hand, ...wider].filter((p) => !asProvince(copy, p) && !asProvince(sourceText, p));
   const land = named.filter((p) => p.kind !== "sea");
@@ -222,12 +227,31 @@ const skeleton = (words: string[]) => words.join("").replace(/q|c/g, "k").replac
 /** Arabic and Persian letters made one: hamzas, ta marbuta, alif maqsura, Persian kaf and yeh. */
 const nativeNorm = (s: string) => s.replace(/[ً-ٟـ]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/[ىی]/g, "ي").replace(/ک/g, "ك");
 const nativeWords = (s: string) => nativeNorm(s).split(/[^\p{L}]+/u).filter(Boolean);
+/**
+ * A name's consonants by sound, in either script, so an English spelling the
+ * lists lack still meets the source's Arabic or Persian (user, 11 Oct): "Kfar
+ * Tibnit" and "كفر تبنيت" are both KFRTBNT. Vowels, h, w, y and ain drop out.
+ */
+const SOUND: Record<string, string> = {
+  ب: "B", پ: "B", ت: "T", ث: "T", ط: "T", ج: "J", چ: "C", خ: "K", د: "D", ذ: "D", ض: "D", ظ: "D", ر: "R", ز: "Z", ژ: "Z",
+  س: "S", ش: "S", ص: "S", غ: "G", ف: "F", ق: "K", ك: "K", ک: "K", گ: "G", ل: "L", م: "M", ن: "N",
+};
+const nativeSound = (name: string) =>
+  nativeWords(name).map((w) => w.replace(/^ال/, "")).join("").split("").map((c) => SOUND[c] ?? "").join("").replace(/(.)\1+/g, "$1");
+const latinSound = (words: string[]) =>
+  words.join("").replace(/ch/g, "C").replace(/h/g, "").replace(/[qck]/g, "K").replace(/[pb]/g, "B").replace(/[vf]/g, "F").replace(/[aeiouyw']/g, "").toUpperCase().replace(/(.)\1+/g, "$1");
+/** The run is a name in the copy: each of its words capitalised ("tells" is no Tallousa). */
+const isName = (copy: string, run: string[]) => {
+  const caps = new Set(latinWords((copy.match(/(?<![\p{L}])[A-Z][\p{L}'’-]*/gu) ?? []).join(" ")));
+  return run.every((w) => caps.has(w));
+};
 const COUNTRY: Record<string, string> = { "United Arab Emirates": "UAE" };
 // The hand list's places are its own (its seas too): the wider list never stands in for them.
 const HAND = new Set(IRAN_PLACES.flatMap((p) => [p.name, ...(p.alt ?? [])]).map((n) => n.toLowerCase()));
 const GAZ = IRAN_GAZ.filter(([name]) => !HAND.has(name.toLowerCase()) && !/(?:Strait|Gulf|Sea|Ocean|off)/i.test(name)).map(([name, lat, lng, country, latin, native]) => ({
   place: { name, lat, lng, country: COUNTRY[country] ?? country, kind: "city", alt: [...latin, ...native] } as IranPlace,
   skeletons: new Set(latin.map((n) => skeleton(latinWords(n))).filter((k) => k.length >= 3)),
+  sounds: new Set(native.map(nativeSound).filter((k) => k.length >= 3)),
 }));
 const BY_LATIN = new Map<string, (typeof GAZ)[number][]>();
 const BY_NATIVE = new Map<string, (typeof GAZ)[number][]>();
@@ -243,16 +267,21 @@ function windows(words: string[], each: (key: string, at: number, run: string[])
 }
 export function gazPlacesIn(copy: string, sourceText: string): IranPlace[] {
   const named = new Set<(typeof GAZ)[number]>();
+  const inNative = new Set<(typeof GAZ)[number]>();
   windows(latinWords(sourceText), (k) => BY_LATIN.get(k)?.forEach((g) => named.add(g)));
   // "وكفر تبنيت", "بالقنطرة": the joined letters before a native name.
   windows(nativeWords(sourceText), (k) => {
-    for (const key of [k, k.replace(/^(?:[وبلف]?ال|[وبلف])/, "")]) BY_NATIVE.get(key)?.forEach((g) => named.add(g));
+    for (const key of [k, k.replace(/^(?:[وبلف]?ال|[وبلف])/, "")]) BY_NATIVE.get(key)?.forEach((g) => (named.add(g), inNative.add(g)));
   });
   if (!named.size) return [];
   const hits: { p: IranPlace; at: number; n: number }[] = [];
   windows(latinWords(copy), (_k, at, run) => {
+    if (!isName(copy, run)) return;
     const s = skeleton(run);
-    for (const g of named) if (g.skeletons.has(s) && !hits.some((h) => h.p === g.place)) hits.push({ p: g.place, at, n: run.length });
+    // A spelling the lists know; or, when the source names it in Arabic or Persian, any that sounds the same.
+    const sound = latinSound(run);
+    for (const g of named)
+      if ((g.skeletons.has(s) || (inNative.has(g) && sound.length >= 3 && g.sounds.has(sound))) && !hits.some((h) => h.p === g.place)) hits.push({ p: g.place, at, n: run.length });
   });
   // "Kfar Tibnit" is not also a village called "Kfar": the longer name wins.
   const inside = (h: (typeof hits)[number]) => hits.some((o) => o !== h && o.n > h.n && o.at <= h.at && h.at + h.n <= o.at + o.n);
@@ -287,7 +316,9 @@ export function tallyNotEvent(headline: string): boolean {
  * - The US, Israel and the Gulf states: in Iran, Iraq and the seas; Israel in
  *   Lebanon too. Israel in Syria and Gaza is not this war's map.
  * - The Houthis: their launches at Israel (user, 9 Oct); their war at sea and
- *   in Yemen is the Yemen desk's map.
+ *   in Yemen is the Yemen desk's map, and so is everything south of 20.3°N
+ *   between the Red Sea and Oman: southern Saudi Arabia, the southern Red
+ *   Sea, Bab al-Mandab, the Gulf of Aden (user, 11 Oct).
  * - Not told who: at sea, or a strike or blast that is no police matter.
  * Sirens and explosions heard count, in every country but Israel, whose alerts
  * come from the Home Front Command (user, 10 Oct).
@@ -307,8 +338,9 @@ const PURSUERS: Record<string, Set<string>> = {
   gulf: new Set(["Iran", "Iraq", "sea"]),
   israel: new Set(["Iran", "Iraq", "Lebanon", "sea"]),
 };
-export function iranPinAllowed(actor: string | null | undefined, place: Pick<IranPlace, "country">, headline: string): boolean {
+export function iranPinAllowed(actor: string | null | undefined, place: Pick<IranPlace, "country"> & Partial<Pick<IranPlace, "lat" | "lng">>, headline: string): boolean {
   const a = String(actor || "unclear");
+  if (place.lat != null && place.lng != null && place.lat < 20.3 && place.lng > 32 && place.lng < 52) return false;
   if ((a === "houthi" && place.country !== "Israel") || NOT_AN_ATTACK.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
   if (/\bsirens?\b/i.test(headline) && place.country === "Israel") return false;
   if (place.country === "Yemen" || place.country === "Gaza" || place.country === "Palestine") return false;

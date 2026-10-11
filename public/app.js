@@ -6584,12 +6584,12 @@ try { setFavicon(THEME); } catch (e) {}
  */
 /*
  * The site's desks (Round 30; src/lib/desks.ts keeps the same list). A desk
- * still being built is in the menus only for a reader on it, or who opened a
+ * still being built ("soon") is in the menus only for a reader on it, or who opened a
  * page once with ?desks=1.
  */
 const DESKS = [
   { id: 'yemen', name: 'Yemen Conflict Desk', short: 'Yemen conflict', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden', kids: [['/yemen-conflict-desk/methodology', 'Methodology']] },
-  { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Being built', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran', soon: true, kids: [] },
+  { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Live', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran', kids: [] },
 ];
 function deskOf() {
   const el = document.querySelector('[data-desk]');

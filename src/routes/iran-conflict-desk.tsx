@@ -3,8 +3,8 @@ import { IranDesk } from "@/components/iran-desk";
 import { deskById } from "@/lib/desks";
 
 /**
- * The Iran desk at thesituationroom.live/iran-conflict-desk (Round 30). Open to
- * anyone with the link while it is built; in the menus only once it is ready.
+ * The Iran desk at thesituationroom.live/iran-conflict-desk (Round 30). Live in the
+ * menus since 11 Oct (user).
  */
 const desk = deskById("iran");
 

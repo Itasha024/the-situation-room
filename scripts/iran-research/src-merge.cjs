@@ -25,7 +25,7 @@ const OWN = { modgovksa: 'Saudi Arabia', KuwaitArmyGHQ: 'Kuwait', MOD_Qatar: 'Qa
 // The country in general, and the seas, by their points.
 const GEN = { Iran: [32.4, 53.7], Iraq: [33.2, 43.7], Lebanon: [33.85, 35.86], Syria: [34.8, 38.99], Jordan: [31.25, 36.5], 'Saudi Arabia': [24, 45], 'United Arab Emirates': [23.9, 54.3], Qatar: [25.3, 51.2], Kuwait: [29.31, 47.48], Bahrain: [26.07, 50.55], Oman: [21.5, 57], Turkey: [39, 35], Azerbaijan: [40.3, 47.7], Cyprus: [35, 33.2], Egypt: [26.8, 30.8] };
 const SEAS = [[/hormuz|هرمز/i, 'Strait of Hormuz', 26.55, 56.45], [/gulf of oman|خليج عمان|دریای عمان/i, 'Gulf of Oman', 24.9, 58.2], [/arabian sea|بحر العرب/i, 'Arabian Sea', 17.5, 60.5], [/indian ocean/i, 'Indian Ocean', 5.6, 80.2], [/gulf|الخليج|خلیج فارس/i, 'Persian Gulf', 27, 51.5]];
-const CN = { UAE: 'United Arab Emirates', 'the UAE': 'United Arab Emirates', 'Iraqi Kurdistan': 'Iraq', Kurdistan: 'Iraq', Sea: 'sea', sea: 'sea' };
+const CN = { UAE: 'United Arab Emirates', 'the UAE': 'United Arab Emirates', 'Iraqi Kurdistan': 'Iraq', Kurdistan: 'Iraq', Sea: 'sea', sea: 'sea', Hormuz: 'sea', 'Strait of Hormuz': 'sea', 'Gulf of Oman': 'sea', 'Persian Gulf': 'sea' };
 const OUTSIDE = /^(?:Israel|Gaza|Palestine|West Bank|Yemen|Sudan|Ukraine|Russia)$/i;
 const HOUTHI_FRONT = /Abha|Asir|Jizan|Jazan|Najran|Khamis|Sharurah|Taif|Jeddah|Yanbu|Mecca|Makkah|Tabuk|Ula|Farasan/;
 const norm = (s) => String(s || '').normalize('NFC').replace(/[ً-ْـ​-‏‪-‮⁦-⁩]/g, '').replace(/[أإآ]/g, 'ا').replace(/\s+/g, ' ').trim();
@@ -46,7 +46,9 @@ for (const f of EVF) for (const l of fs.readFileSync(f, 'utf8').split('\n')) {
   const k = refs.findIndex((r) => e.quote && norm(cand.get(r).text).includes(norm(e.quote)));
   if (k < 0) { no('quote not in the post'); continue; }
   refs.unshift(...refs.splice(k, 1));
-  const country = CN[e.country] || e.country;
+  let country = CN[e.country] || e.country;
+  // عمان is Amman and Oman alike: the post's other words decide.
+  if (/عمان/.test(e.quote || '')) { const t = cand.get(refs[0]).text; if (country === 'Oman' && /الأردن|الاردن|أردن|اردن/.test(t) && !/سلطنة|مسقط|عُمان/.test(t)) country = 'Jordan'; else if (country === 'Jordan' && /سلطنة|مسقط/.test(t) && !/الأردن|الاردن/.test(t)) country = 'Oman'; }
   if (!country || OUTSIDE.test(country)) { no('outside the map'); continue; }
   const gen = /place not stated/i.test(e.place || '') || !e.said;
   if (!gen && !norm(e.quote).includes(norm(e.said))) { no('place not in the quote'); continue; }
@@ -54,6 +56,13 @@ for (const f of EVF) for (const l of fs.readFileSync(f, 'utf8').split('\n')) {
   // Syria is on the map only where this war's sides strike: its own bombings, depot blasts and blasts no one names
   // are not this war.
   if (country === 'Syria' && (e.actor || 'unclear') === 'unclear') { no('Syria, no side named'); continue; }
+  const qt = `${e.quote} ${e.place || ''}`;
+  // Hezbollah's claims on the Israeli posts "opposite" a Lebanese village are attacks in Israel, not Lebanon.
+  if (country === 'Lebanon' && e.actor === 'hezbollah' && /مقابل|قبالة|opposite|روبروی/i.test(qt)) { no('Hezbollah claim on a post in Israel'); continue; }
+  // A launch only "toward" a place, with nothing said to reach it, is no event on the map.
+  if (e.claim && /باتجاه|نحو|toward|به سمت|به سوی/i.test(e.quote || '') && !/أصاب|اصاب|hit|اصابت|استهدف|targeted/i.test(e.quote || '')) { no('a launch toward, nothing reached'); continue; }
+  if (country === 'Jordan' && /مخدر|تهريب|مهرب|smuggl|narcotic|drug/i.test(qt)) { no('Jordan, an anti-smuggling raid'); continue; }
+  if (country === 'sea' && /indian ocean|sri lanka|سريلانكا|سری‌لانکا/i.test(`${qt} ${(cand.get(refs[0]) || {}).text || ''}`)) { no('sea, off Sri Lanka'); continue; }
   const lead = cand.get(refs[0]);
   const ch = refs[0].split('/')[0];
   const source = SRC[ch] || ch;

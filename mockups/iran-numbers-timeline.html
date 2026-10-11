@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-theme="broadsheet-night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iran numbers mockup</title>
+<!-- The live desk's own stylesheets: the same pieces as the Yemen desk, nothing restyled. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap">
+<link rel="stylesheet" href="https://thesituationroom.live/desk.css?v=desk-en-163">
+<link rel="stylesheet" href="https://thesituationroom.live/themes.css?v=desk-en-163">
+<style>
+  .mock-main { max-width: 760px; margin: 24px auto; padding: 0 16px; }
+  .mock-note { border: 1px dashed currentColor; opacity: .85; padding: 10px 12px; margin: 0 0 20px; font: 14px/1.45 "Libre Franklin", sans-serif; }
+  .mock-q { margin: 28px 0 40px; font: 14px/1.5 "Libre Franklin", sans-serif; }
+  .mock-q li { margin: 6px 0; }
+  .pg-slide:not(.on) { display: none; }
+  .rows-more tr.xtra { display: none; }
+  .rows-more.open tr.xtra { display: table-row; }
+  .tally-box.claims th.o { color: var(--t-strong,#f1f5f9); }
+  .tally-box.claims th.u, .tally-box.claims td.u a { color: #f59e0b; }
+</style>
+</head>
+<body>
+<main class="mock-main">
+<p class="mock-note"><b>Mockup.</b> Built from the Yemen desk's own boxes, tables and pager, with the same stylesheets. Every figure, date and the "Now" text below are made up for the layout; the real ones come from the sources in the next step.</p>
+
+<section class="cas-wrap" id="cas-wrap">
+  <h2>The conflict in numbers</h2>
+  <div id="casualties"><p class="cadence at-head">Based on latest reports · Updates 18:00, 11 Oct</p>
+    <div class="num-cat" role="group" aria-label="Numbers to show"><button type="button" data-cat="cas" aria-pressed="true" class="on">Casualties</button><button type="button" data-cat="sea" aria-pressed="false">Maritime</button><button type="button" data-cat="energy" aria-pressed="false">Energy</button><button type="button" data-cat="econ" aria-pressed="false">Economy</button><button type="button" data-cat="iran" aria-pressed="false">Inside Iran</button><button type="button" data-cat="nuke" aria-pressed="false">Nuclear</button><button type="button" data-cat="sanc" aria-pressed="false">Sanctions</button></div>
+    <div class="tally one" id="num-pager"></div>
+  </div>
+</section>
+
+<section class="timeline-wrap" id="timeline-wrap">
+  <h2>Timeline</h2>
+  <div id="timeline"></div>
+</section>
+
+<ol class="mock-q">
+  <li><b>Casualties:</b> "Civilians, all sides" is second. Israel's figure covers every front (Iran, Lebanon, Iraq, Yemen) from 28 Feb to today, the April ceasefire included, official only. Displaced: Lebanon and Iran in people, Israel in homes evacuated (the Home Front Command counts homes). No Iraq row.</li>
+  <li><b>Energy:</b> each struck site shows its status now (working, partly working, shut). New: Iran's crude oil production and gas production.</li>
+  <li><b>Economy:</b> Iran's money and prices (the rial, the gold coin, inflation, gasoline tiers), then its non-oil exports and imports, then the region's markets.</li>
+  <li><b>Inside Iran:</b> only internet access is left (NetBlocks' last reading, with its date). Arrests and executions are out.</li>
+  <li><b>Sanctions:</b> the OFAC box counts Hezbollah's designations too. New: the US economic pressure campaign, measure by measure (flight bans and the rest). Its name and every measure are to be checked in the research.</li>
+  <li>The figures are placeholders until the research.</li>
+</ol>
+</main>
+
+<script>
+const off = (v) => `<a class="sl sl-off" href="#">${v}</a>`;
+const un = (v) => `<a class="sl sl-unoff" href="#">${v}</a>`;
+const KEY = '<p class="sl-key"><span class="sl-off">Official</span><span class="sl-unoff">Unofficial</span></p>';
+const td = (cls, v, q) => v == null ? `<td class="${cls} none" title="Not published: no count for this round from these sources">—</td>` : `<td class="${cls}"><a href="#">${q ? `<small class="q">${q}</small> ` : ''}${v}</a></td>`;
+const cell = (cls, x) => (Array.isArray(x) ? td(cls, x[1], x[0]) : td(cls, x));
+const HEAD = '<tr><th></th><th scope="col" class="o">Official</th><th scope="col" class="u">Unofficial</th></tr>';
+// The first SHOW rows on load; the rest behind Read more / Show less.
+const SHOW = 6;
+const casBox = (title, rows) => `<div class="tally-box claims${rows.length > SHOW ? ' rows-more' : ''}"><h3>${title}</h3><table><tbody>${HEAD}${rows.map(([l, a, b], i) => `<tr${i >= SHOW ? ' class="xtra"' : ''}><th scope="row">${l}</th>${cell('off', a)}${cell('u', b)}</tr>`).join('')}</tbody></table>${rows.length > SHOW ? '<button type="button" class="toggle-phase rows-tog">Read more</button>' : ''}</div>`;
+const N = null;
+const listBox = (title, th, rows) => `<div class="tally-box claims ledger${rows.length > SHOW ? ' rows-more' : ''}"><h3>${title}</h3><table class="list"><tbody>${th}${rows.map((r, i) => `<tr${i >= SHOW ? ' class="xtra"' : ''}>${r}</tr>`).join('')}</tbody></table>${rows.length > SHOW ? '<button type="button" class="toggle-phase rows-tog">Read more</button>' : ''}</div>`;
+// All sides first, then the parties by their dead.
+const KILLED = [
+  ['All sides', '6,700', ['more than', '9,000']], ['Civilians, all sides', '4,950', '5,200'], ['Iran', '3,412', ['more than', '6,000']], ['Lebanon', '2,870', '4,100'], ['Israel<small>every front, since 28 Feb</small>', '41', N],
+  ['Iraq', '96', '180'], ['Syria', '41', N], ['US troops', '17', N], ['Saudi Arabia', '12', N],
+  ['UAE', '9', N], ['Kuwait', '4', N], ['Jordan', '3', N], ['Qatar', '2', N], ['Bahrain', '1', N], ['Oman', N, N], ['Sailors at sea', ['at least', '23'], N],
+];
+const INJURED = KILLED.map(([l, a, b]) => [l, a && '1,240', b && '900']);
+const ledBox = (t, body, unit) => `<div class="tally-box claims ledger"><h3>${t}${unit ? ` <small class="unit">(${unit})</small>` : ''}</h3>${body}</div>`;
+const stat3 = (a, b, c) => `<div class="stat3"><div><b>${a}</b><span>Today</span></div><div><b>${b}</b><span>Last 7 days</span></div><div><b>${c}</b><span>Since conflict</span></div></div>`;
+const more = (head, cls, th, rows) => `<div class="led-more expandable"><div class="led-head">${head}</div><div class="led-detail">${KEY}<table class="list ${cls}"><tbody>${th}${rows.join('')}</tbody></table></div><button type="button" class="toggle-sit led-tog" aria-expanded="false">Show more</button></div>`;
+const mbars = (rows) => `<div class="mbars">${rows.map(([k, w, v, pre]) => `<div class="mbar${pre ? ' pre' : ''}"><span class="k">${k}</span><span class="mb-track"><i style="width:${w}%"></i></span><b>${off(v)}</b></div>`).join('')}</div>${KEY}`;
+const BEFORE = 'Before conflict<small>(28 Jan – 27 Feb)</small>';
+const span3 = (last, pct, week, base) => `<table class="span3"><tbody><tr><th scope="col">Latest</th><th scope="col">7 days earlier</th><th scope="col">Before conflict<small class="span">(28 Jan – 27 Feb)</small></th></tr><tr><td class="big">${off(last)}<small>10 Oct</small><small class="q down">${pct} vs before conflict</small></td><td>${off(week)}<small>3 Oct</small></td><td>${off(base)}<small>average</small></td></tr></tbody></table>`;
+
+const SETS = {
+  cas: [
+    ['Killed', casBox('Killed', KILLED)],
+    ['Injured', casBox('Injured', INJURED)],
+    ['Displaced', casBox('Displaced', [['In Lebanon<small>people</small>', '1.1M', N], ['In Iran<small>people</small>', N, '3.2M'], ['In Israel<small>homes evacuated, Home Front Command</small>', '6,473', N]])],
+  ],
+  sea: [
+    ['Incidents', ledBox('Incidents', more(stat3(0, 3, 61), 'ships', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Ship</th><th scope="col" class="l">Location</th><th scope="col" class="l w">What happened</th></tr>', [
+      `<tr><td class="d">${off('9 Oct')}</td><td class="l">Tanker <small class="flag">(Panama)</small></td><td class="l">22 nautical miles east of Fujairah</td><td class="l w">Drone</td></tr>`,
+      `<tr><td class="d">${un('7 Oct')}</td><td class="l">Bulk carrier</td><td class="l">Strait of Hormuz</td><td class="l w">Seized</td></tr>`,
+      `<tr><td class="d">${off('4 Oct')}</td><td class="l">Container ship</td><td class="l">Off Khor Fakkan</td><td class="l w">Explosion near the ship</td></tr>`]))],
+    ['Ships', ledBox('Ships through the Strait of Hormuz', `<table class="span5"><tbody><tr><th></th><th scope="col">Latest</th><th scope="col">Last 7 days</th><th scope="col">Since conflict</th><th scope="col">Before conflict<small class="span">(28 Jan – 27 Feb)</small></th></tr><tr><th scope="row"><span class="spot-name">Hormuz</span></th><td>${off(41)}<small>9 Oct</small><small class="q down">−62% vs before conflict</small></td><td>${off(298)}<small>42.6 a day</small></td><td>${off('9,870')}<small>43.1 a day</small></td><td>${off(108)}<small>a day</small></td></tr></tbody></table>`)],
+    ['Crude oil', ledBox('Crude oil through the Strait of Hormuz', mbars([[BEFORE, 100, '20.1', 1], ['August', 46, '9.2'], ['September<small>(so far)</small>', 39, '7.8']]), 'million barrels a day')],
+    ['LNG', ledBox('LNG through the Strait of Hormuz', mbars([[BEFORE, 100, '10.4', 1], ['August', 22, '2.3'], ['September<small>(so far)</small>', 18, '1.9']]), 'billion cubic feet a day')],
+    ['War-risk insurance', ledBox('War-risk insurance for a Gulf voyage', span3('1.0%', '+400%', '0.9%', '0.2%'), "of a ship's hull value, per voyage")],
+  ],
+  energy: [
+    ['Attacks on energy sites', ledBox('Attacks on energy sites, in every country', more(stat3(0, 5, 137), 'sites', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l">Weapon</th><th scope="col" class="l w">Status now</th></tr>', [
+      `<tr><td class="d">${un('10 Oct')}</td><td class="l">Abadan refinery, Iran</td><td class="l">Airstrike</td><td class="l w">${un('Partly working')}</td></tr>`,
+      `<tr><td class="d">${off('8 Oct')}</td><td class="l">Ras Tanura terminal, Saudi Arabia</td><td class="l">Drone</td><td class="l w">${off('Working')}</td></tr>`,
+      `<tr><td class="d">${un('6 Oct')}</td><td class="l">South Pars gas field, phase 14</td><td class="l"><span class="unk">Unknown</span></td><td class="l w">${un('Shut')}</td></tr>`]))],
+    ["Iran's oil output", ledBox("Iran's crude oil production", mbars([[BEFORE, 100, '3.3', 1], ['August', 64, '2.1'], ['September', 58, '1.9']]), 'million barrels a day, OPEC secondary sources')],
+    ["Iran's gas output", ledBox("Iran's gas production", mbars([[BEFORE, 100, '880', 1], ['August', 70, '615'], ['September', 66, '580']]), 'million cubic metres a day, NIGC')],
+    ["Iran's crude exports", ledBox("Iran's crude oil exports", mbars([[BEFORE, 100, '1.62', 1], ['August', 31, '0.5'], ['September<small>(so far)</small>', 25, '0.41']]), 'million barrels a day, TankerTrackers and Kpler')],
+    ['Gulf crude exports', ledBox('Gulf crude oil exports', mbars([[BEFORE, 100, '16.8', 1], ['August', 58, '9.7'], ['September<small>(so far)</small>', 54, '9.1']]), 'million barrels a day')],
+    ['Crude oil price', ledBox('Crude oil price', span3('$118.20', '+64%', '$111.05', '$72.10'), 'Brent, dollars a barrel')],
+    ["Europe's gas price", ledBox("Europe's gas price", span3('€71.40', '+118%', '€68.90', '€32.70'), 'Dutch TTF, euros a megawatt-hour')],
+    ['US gasoline price', ledBox('US gasoline price', span3('$4.61', '+48%', '$4.52', '$3.11'), 'AAA national average, dollars a gallon')],
+  ],
+  econ: [
+    ['The rial', ledBox("The rial's open-market rate", span3('1,410,000', '+52%', '1,365,000', '928,000'), 'rials to the dollar, bonbast')],
+    ['Gold coin', ledBox('Gold coin in Tehran', span3('182M', '+61%', '176M', '113M'), 'rials for an Emami coin, bonbast')],
+    ['Inflation', ledBox("Iran's inflation", mbars([[BEFORE, 67, '38%', 1], ['August', 93, '53%'], ['September', 100, '57%']]), 'over a year, Statistical Centre of Iran')],
+    ['Gasoline in Iran', ledBox('Gasoline prices in Iran', `<table class="span3"><tbody><tr><th scope="col">Tier</th><th scope="col">Now</th><th scope="col">Before conflict<small class="span">(28 Jan – 27 Feb)</small></th></tr><tr><td class="l">Subsidised quota<small>first 60 litres a month</small></td><td>${off('15,000')}</td><td>${off('15,000')}</td></tr><tr><td class="l">Second tier<small>next 100 litres</small></td><td>${off('30,000')}</td><td>${off('30,000')}</td></tr><tr><td class="l">Free price<small>beyond the quota</small></td><td>${off('65,000')}<small class="q down">+30% vs before conflict</small></td><td>${off('50,000')}</td></tr></tbody></table>`, 'rials a litre, NIORDC')],
+    ["Iran's trade", ledBox("Iran's non-oil exports and imports", mbars([[BEFORE + ' exports', 100, '$4.1B', 1], ['September exports', 61, '$2.5B'], [BEFORE + ' imports', 100, '$5.0B', 1], ['September imports', 52, '$2.6B']]), 'a month, Iran customs (IRICA)')],
+    ['Tehran stocks', ledBox('Tehran Stock Exchange', span3('2.1M', '−34%', '2.2M', '3.2M'), 'TEDPIX index')],
+    ['The shekel', ledBox("The shekel's rate", span3('3.92', '+8%', '3.88', '3.63'), 'shekels to the dollar, Bank of Israel')],
+    ['Tel Aviv stocks', ledBox('Tel Aviv Stock Exchange', span3('2,710', '−6%', '2,690', '2,880'), 'TA-35 index')],
+    ['Gulf stocks', ledBox('Gulf stock markets', span3('812', '−9%', '820', '893'), 'S&P GCC index')],
+  ],
+  iran: [
+    ['Internet', ledBox('Internet access in Iran', span3('38%', '−62%', '35%', '100%'), 'of normal traffic, NetBlocks; the last reading, with its date')],
+  ],
+  nuke: [
+    ['Enriched uranium', ledBox('Uranium enriched to 60%', span3('unknown', '', 'unknown', '440.9 kg'), 'IAEA, last verified figure')],
+    ['Sites struck', listBox('Nuclear sites struck', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Site</th><th scope="col" class="l">By</th></tr>', [
+      `<td class="d">${off('2 Mar')}</td><td class="l">Natanz</td><td class="l">Israel</td>`, `<td class="d">${off('2 Mar')}</td><td class="l">Fordow</td><td class="l">US</td>`, `<td class="d">${un('5 Mar')}</td><td class="l">Isfahan uranium conversion</td><td class="l">Israel</td>`])],
+    ['IAEA access', ledBox('IAEA inspectors in Iran', stat3('No', 0, '224 days'), 'since the last inspection, IAEA')],
+  ],
+  sanc: [
+    ['New sanctions', ledBox('New US sanctions on Iran and Hezbollah', more(stat3(0, 14, 386), 'sanc', '<tr><th scope="col" class="d">Date</th><th scope="col" class="l">Who</th><th scope="col" class="l">Why</th></tr>', [
+      `<tr><td class="d">${off('9 Oct')}</td><td class="l">6 tankers, 2 UAE firms</td><td class="l">Shipping Iranian oil</td></tr>`,
+      `<tr><td class="d">${off('2 Oct')}</td><td class="l">8 people, IRGC drone network</td><td class="l">Drone parts</td></tr>`,
+      `<tr><td class="d">${off('25 Sep')}</td><td class="l">3 Hezbollah financiers, Lebanon</td><td class="l">Moving money for Hezbollah</td></tr>`]), 'people, firms and ships designated, OFAC')],
+    ['Pressure campaign', listBox('The US economic pressure campaign', '<tr><th scope="col" class="d">Since</th><th scope="col" class="l">Measure</th></tr>', [
+      `<td class="d">${off('Sep')}</td><td class="l">Flights to and from Iran banned from US airspace; airlines that fly there face penalties</td>`,
+      `<td class="d">${off('Aug')}</td><td class="l">Ports that take Iranian oil barred from US trade</td>`,
+      `<td class="d">${off('Jul')}</td><td class="l">Secondary tariffs on countries buying Iranian oil</td>`])],
+    ['In force', listBox('Sanctions on Iran in force', '<tr><th scope="col" class="d">Since</th><th scope="col" class="l">Measure</th><th scope="col" class="l">By</th></tr>', [
+      `<td class="d">${off('Sep 2025')}</td><td class="l">UN sanctions restored (snapback): arms embargo, enrichment ban, asset freezes</td><td class="l">UN</td>`,
+      `<td class="d">${off('Feb 2025')}</td><td class="l">"Maximum pressure" order: oil exports to zero</td><td class="l">US</td>`,
+      `<td class="d">${off('Apr 2019')}</td><td class="l">The IRGC listed as a terrorist group</td><td class="l">US</td>`,
+      `<td class="d">${off('Nov 2018')}</td><td class="l">Oil, banking and shipping sanctions restored</td><td class="l">US</td>`,
+      `<td class="d">${off('Sep 2025')}</td><td class="l">Nuclear sanctions restored</td><td class="l">EU, UK</td>`,
+      `<td class="d">${off('2023')}</td><td class="l">Drone and missile sanctions</td><td class="l">EU</td>`,
+      `<td class="d">${off('2011')}</td><td class="l">Human rights sanctions</td><td class="l">EU</td>`])],
+  ],
+};
+
+const PHASES = [
+  ['The nuclear deal', 'July 2015 – May 2018', 'Iran agreed with six powers to curb its nuclear program in return for sanctions relief.'],
+  ['Maximum pressure', 'May 2018 – Dec 2019', 'The US left the deal and restored sanctions; tankers and Saudi oil sites were attacked in 2019.'],
+  ['Soleimani and the shadow war', 'Jan 2020 – Sept 2023', 'A US strike killed Qassem Soleimani; Israel and Iran traded covert blows at sea and on nuclear sites.'],
+  ['Gaza and the first direct blows', 'Oct 2023 – Dec 2024', 'The Gaza war opened the axis fronts; Iran and Israel struck each other directly in April and October 2024.'],
+  ['The twelve-day war and snapback', 'Jan 2025 – Feb 2026', 'Israel and the US struck Iran in June 2025; the UN sanctions returned that September.'],
+];
+const NOW = ['28 Feb 2026 to now: the war', '28 Feb 2026 – now',
+  'Placeholder: the war that began on 28 February has spread from Iran and Israel to Lebanon, Iraq, the Gulf states and the Strait of Hormuz. This box is rewritten every 36 hours from the latest reports.',
+  "Placeholder for the longer text under Read more: the main turns of the war since 28 February, front by front, latest first. Written from the desk's own reports, with its sources listed below."];
+
+function phaseCard([t, dates, sum, detail], isNow) {
+  return `<article class="phase-card${isNow ? ' now' : ''} expandable"><div class="phase-head"><strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${t}</strong><span class="muted">${dates}</span></div><p class="phase-sum">${sum}</p><div class="full"><p>${detail || sum}</p><div class="srcs">${isNow ? 'Updated 11 Oct · ' : ''}Source: <a class="src-link" href="#">Placeholder</a></div></div><button type="button" class="toggle-phase">Read more</button></article>`;
+}
+
+function pager(kind, slides, labels, idx) {
+  return `<div class="pager pager-${kind} many"><div class="pg-track">${slides.map((s, i) => `<div class="pg-slide${i === idx ? ' on' : ''}" data-i="${i}">${s}</div>`).join('')}</div>
+    <button type="button" class="pg-arrow pg-prev" aria-label="Previous"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
+    <button type="button" class="pg-arrow pg-next" aria-label="Next"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button></div>
+    <div class="pg-dots" role="tablist">${labels.map((l, i) => `<button type="button" role="tab" data-i="${i}" title="${l}" aria-label="${l}" class="${i === idx ? 'on' : ''}"></button>`).join('')}</div>`;
+}
+function wire(root, wrap) {
+  const slides = [...root.querySelectorAll('.pg-slide')], dots = [...root.querySelectorAll('.pg-dots button')];
+  const prev = root.querySelector('.pg-prev'), next = root.querySelector('.pg-next');
+  let cur = slides.findIndex((s) => s.classList.contains('on'));
+  const go = (i) => {
+    const n = slides.length; cur = wrap ? (i + n) % n : Math.max(0, Math.min(n - 1, i));
+    slides.forEach((s, k) => s.classList.toggle('on', k === cur)); dots.forEach((d, k) => d.classList.toggle('on', k === cur));
+    if (!wrap) { prev.hidden = cur === 0; next.hidden = cur === n - 1; }
+  };
+  prev.onclick = () => go(cur - 1); next.onclick = () => go(cur + 1); dots.forEach((d, k) => (d.onclick = () => go(k))); go(cur);
+  root.querySelectorAll('.led-tog').forEach((b) => (b.onclick = () => { const o = b.closest('.led-more').classList.toggle('open'); b.textContent = o ? 'Show less' : 'Show more'; }));
+  root.querySelectorAll('.rows-tog').forEach((b) => (b.onclick = () => { const o = b.closest('.rows-more').classList.toggle('open'); b.textContent = o ? 'Show less' : 'Read more'; }));
+  root.querySelectorAll('.phase-card').forEach((c) => (c.onclick = () => { const o = c.classList.toggle('open'); const b = c.querySelector('.toggle-phase'); if (b) b.textContent = o ? 'Show less' : 'Read more'; }));
+}
+let cat = 'cas';
+function renderNumbers() {
+  const s = SETS[cat], el = document.getElementById('num-pager');
+  el.innerHTML = pager('numbers', s.map((x) => x[1]), s.map((x) => x[0]), 0);
+  wire(el, true);
+  document.querySelectorAll('.num-cat button').forEach((b) => { b.classList.toggle('on', b.dataset.cat === cat); b.setAttribute('aria-pressed', b.dataset.cat === cat); b.onclick = () => { cat = b.dataset.cat; renderNumbers(); }; });
+}
+renderNumbers();
+const tl = document.getElementById('timeline');
+const all = [...PHASES.map((p) => phaseCard(p, false)), phaseCard(NOW, true)];
+tl.innerHTML = pager('timeline', all, [...PHASES.map((p) => p[0]), `Now: ${NOW[0]}`], all.length - 1);
+wire(tl, false);
+</script>
+</body>
+</html>

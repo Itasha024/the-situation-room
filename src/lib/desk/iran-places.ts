@@ -13,6 +13,8 @@
  *
  * Coordinates checked against OpenStreetMap's Nominatim (9 Oct 2026).
  */
+import { IRAN_GAZ } from "./iran-gazetteer.ts";
+
 export type IranPlaceKind = "city" | "site" | "base" | "port" | "island" | "sea";
 export type IranPlace = { name: string; lat: number; lng: number; country: string; kind: IranPlaceKind; alt?: string[] };
 
@@ -190,7 +192,9 @@ export function iranPlacesIn(text: string): IranPlace[] {
  */
 export function iranPins(copy: string, sourceText: string, vessel: boolean): IranPlace[] {
   const inSource = new Set(iranPlacesIn(sourceText).map((p) => p.name));
-  const named = iranPlacesIn(copy).filter((p) => inSource.has(p.name) && !asProvince(copy, p) && !asProvince(sourceText, p));
+  const hand = iranPlacesIn(copy).filter((p) => inSource.has(p.name));
+  const wider = gazPlacesIn(copy, sourceText).filter((g) => !hand.some((p) => km(p, g) < 3));
+  const named = [...hand, ...wider].filter((p) => !asProvince(copy, p) && !asProvince(sourceText, p));
   const land = named.filter((p) => p.kind !== "sea");
   const sea = named.filter((p) => p.kind === "sea");
   if (vessel) {
@@ -200,11 +204,66 @@ export function iranPins(copy: string, sourceText: string, vessel: boolean): Ira
   return land.length ? land.slice(0, 6) : sea.slice(0, 1);
 }
 
+/**
+ * The wider list (user, 11 Oct: Qantara, Talousa and Hermel got no pin, as the
+ * hand list above had no room for every village): every place a research pin
+ * stands on, and Lebanon's villages from OpenStreetMap (iran-gazetteer.ts). A
+ * place counts only when the source names it, in its own script or in English,
+ * and the card's copy names it too, in any English spelling ("Kfar Tibnit",
+ * "Kafr Tebnit"): the copy is the model's English, so the two must agree.
+ */
+const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => Math.hypot((a.lat - b.lat) * 111, (a.lng - b.lng) * 111 * Math.cos((a.lat * Math.PI) / 180));
+const ARTICLE = /^(?:al|el|ad|an|ar|as|ash|at|az|ad-)$/;
+/** A Latin text's words, lower case, without the Arabic article ("al-Qantara" is "qantara"). */
+const latinWords = (s: string) =>
+  s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\b(?:al|el|ad|an|ar|as|ash|at|az)-/g, "").split(/[^a-z]+/).filter((w) => w && !ARTICLE.test(w));
+/** A spelling's consonants: "Kfar Tibnit" and "Kafr Tebnit" are both "kfrtbnt". */
+const skeleton = (words: string[]) => words.join("").replace(/q|c/g, "k").replace(/[aeiouy]/g, "").replace(/(.)\1+/g, "$1");
+/** Arabic and Persian letters made one: hamzas, ta marbuta, alif maqsura, Persian kaf and yeh. */
+const nativeNorm = (s: string) => s.replace(/[ً-ٟـ]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/[ىی]/g, "ي").replace(/ک/g, "ك");
+const nativeWords = (s: string) => nativeNorm(s).split(/[^\p{L}]+/u).filter(Boolean);
+const COUNTRY: Record<string, string> = { "United Arab Emirates": "UAE" };
+// The hand list's places are its own (its seas too): the wider list never stands in for them.
+const HAND = new Set(IRAN_PLACES.flatMap((p) => [p.name, ...(p.alt ?? [])]).map((n) => n.toLowerCase()));
+const GAZ = IRAN_GAZ.filter(([name]) => !HAND.has(name.toLowerCase()) && !/(?:Strait|Gulf|Sea|Ocean|off)/i.test(name)).map(([name, lat, lng, country, latin, native]) => ({
+  place: { name, lat, lng, country: COUNTRY[country] ?? country, kind: "city", alt: [...latin, ...native] } as IranPlace,
+  skeletons: new Set(latin.map((n) => skeleton(latinWords(n))).filter((k) => k.length >= 3)),
+}));
+const BY_LATIN = new Map<string, (typeof GAZ)[number][]>();
+const BY_NATIVE = new Map<string, (typeof GAZ)[number][]>();
+for (const g of GAZ) {
+  for (const n of g.place.alt ?? []) {
+    const [map, key] = /^[\x20-\x7e]+$/.test(n) ? [BY_LATIN, latinWords(n).join(" ")] : [BY_NATIVE, nativeWords(n).join(" ")];
+    if (key) (map.get(key) ?? map.set(key, []).get(key)!).push(g);
+  }
+}
+/** Each run of one to four words, as the key of a name. */
+function windows(words: string[], each: (key: string, at: number, run: string[]) => void): void {
+  for (let i = 0; i < words.length; i++) for (let n = 1; n <= 4 && i + n <= words.length; n++) each(words.slice(i, i + n).join(" "), i, words.slice(i, i + n));
+}
+export function gazPlacesIn(copy: string, sourceText: string): IranPlace[] {
+  const named = new Set<(typeof GAZ)[number]>();
+  windows(latinWords(sourceText), (k) => BY_LATIN.get(k)?.forEach((g) => named.add(g)));
+  // "وكفر تبنيت", "بالقنطرة": the joined letters before a native name.
+  windows(nativeWords(sourceText), (k) => {
+    for (const key of [k, k.replace(/^(?:[وبلف]?ال|[وبلف])/, "")]) BY_NATIVE.get(key)?.forEach((g) => named.add(g));
+  });
+  if (!named.size) return [];
+  const hits: { p: IranPlace; at: number; n: number }[] = [];
+  windows(latinWords(copy), (_k, at, run) => {
+    const s = skeleton(run);
+    for (const g of named) if (g.skeletons.has(s) && !hits.some((h) => h.p === g.place)) hits.push({ p: g.place, at, n: run.length });
+  });
+  // "Kfar Tibnit" is not also a village called "Kfar": the longer name wins.
+  const inside = (h: (typeof hits)[number]) => hits.some((o) => o !== h && o.n > h.n && o.at <= h.at && h.at + h.n <= o.at + o.n);
+  return hits.filter((h) => !inside(h)).sort((a, b) => a.at - b.at).map((h) => h.p);
+}
+
 /** "Kerman province", "استان کرمان": the province, never a pin on its city. */
 export function asProvince(copy: string, p: IranPlace): boolean {
   return [p.name, ...(p.alt ?? [])].some((n) => {
     const e = esc(n);
-    return new RegExp(`${e}\\s+(?:province|governorate|region)\\b|\\b(?:province|governorate) of\\s+${e}`, "i").test(copy) || new RegExp(`(?:استان|محافظة|محافظه)\\s+${e}`, "u").test(copy);
+    return new RegExp(`${e}\\s+(?:province|governorate|region|district|county)\\b|\\b(?:province|governorate|district) of\\s+${e}`, "i").test(copy) || new RegExp(`(?:استان|محافظة|محافظه|قضاء|شهرستان)\\s+${e}`, "u").test(copy);
   });
 }
 
@@ -258,7 +317,7 @@ export function iranPinAllowed(actor: string | null | undefined, place: Pick<Ira
   return place.country !== "Syria" && !INTERNAL.test(headline);
 }
 
-const PLACE_BY_NAME = new Map(IRAN_PLACES.map((p) => [p.name, p]));
+const PLACE_BY_NAME = new Map([...GAZ.map((g) => [g.place.name, g.place] as const), ...IRAN_PLACES.map((p) => [p.name, p] as const)]);
 
 /**
  * A stored Iran pin the map may show, checked again as it is served (user,

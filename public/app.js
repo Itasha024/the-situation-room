@@ -7128,10 +7128,12 @@ function bootOtherDesk(el) {
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
   iranPins.drawn = '';
   iranPins.countries = null;
+  iranPins.adm = null;
   iranPins.day = iranToday(); // the map opens on today (user, 10 Oct), not the whole war
   renderIranLegend();
   wireIranMapTools();
   drawIranCountries();
+  drawIranAdmin();
   loadIranPins();
 }
 
@@ -7187,7 +7189,7 @@ const IRAN_PIN_SIDES = [
 ];
 const IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));
 const IRAN_MAP_FROM = '2026-02-28';
-const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), collapsed: false, day: null, countries: null, focus: false };
+const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), where: { land: true, sea: true }, collapsed: false, day: null, range: null, countries: null, focus: false };
 /** The day an attack belongs to, in Israel and Iran's part of the world: the researched ones carry only their day. */
 const iranDayOf = (ev) => (ev.dayOnly ? String(ev.at).slice(0, 10) : new Date(ev.at).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }));
 const iranToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
@@ -7202,18 +7204,29 @@ function wireIranMapTools() {
   const next = document.getElementById('btn-day-next');
   const today = document.getElementById('btn-day-today');
   const all = document.getElementById('btn-conflict-all');
+  // A period (user, 12 Oct): from one day to another, both kept within the war.
+  const per = document.getElementById('btn-period');
+  const box = document.getElementById('tf-range');
+  const from = document.getElementById('map-from');
+  const to = document.getElementById('map-to');
   const shift = (ymd, n) => { const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const sync = () => {
     const max = iranToday();
     if (inp) { inp.min = IRAN_MAP_FROM; inp.max = max; inp.value = iranPins.day || max; }
     if (prev) prev.disabled = !!iranPins.day && iranPins.day <= IRAN_MAP_FROM;
     if (next) next.disabled = !iranPins.day || iranPins.day >= max;
-    if (today) today.classList.toggle('on', iranPins.day === max);
-    if (all) all.classList.toggle('on', !iranPins.day);
+    if (today) today.classList.toggle('on', !iranPins.range && iranPins.day === max);
+    if (all) all.classList.toggle('on', !iranPins.range && !iranPins.day);
+    if (per) { per.classList.toggle('on', !!iranPins.range); per.setAttribute('aria-expanded', String(!!box && !box.hidden)); }
+    for (const x of [from, to]) if (x) { x.min = IRAN_MAP_FROM; x.max = max; }
+    if (from && iranPins.range) from.value = iranPins.range.from;
+    if (to && iranPins.range) to.value = iranPins.range.to;
   };
   const go = (ymd) => {
     const max = iranToday();
     iranPins.day = ymd ? (ymd < IRAN_MAP_FROM ? IRAN_MAP_FROM : ymd > max ? max : ymd) : null;
+    iranPins.range = null;
+    if (box) box.hidden = true;
     sync();
     drawIranPins();
   };
@@ -7222,6 +7235,30 @@ function wireIranMapTools() {
   if (next) next.onclick = () => { if (iranPins.day) go(shift(iranPins.day, 1)); };
   if (today) today.onclick = (ev) => { ev.preventDefault(); go(iranToday()); };
   if (all) all.onclick = (ev) => { ev.preventDefault(); go(null); };
+  const keep = (v) => { const max = iranToday(); return v < IRAN_MAP_FROM ? IRAN_MAP_FROM : v > max ? max : v; };
+  const setRange = () => {
+    if (!from || !to || !from.value || !to.value) return;
+    let a = keep(from.value), b = keep(to.value);
+    if (a > b) [a, b] = [b, a];
+    iranPins.range = { from: a, to: b };
+    iranPins.day = null;
+    sync();
+    drawIranPins();
+  };
+  if (per && box) per.onclick = (ev) => {
+    ev.preventDefault();
+    box.hidden = !box.hidden;
+    // It opens on the last seven days, or on the day shown, and shows them at once.
+    if (!box.hidden && !iranPins.range) {
+      const end = iranPins.day || iranToday();
+      from.value = iranPins.day || keep(shift(end, -6));
+      to.value = end;
+      setRange();
+    }
+    sync();
+  };
+  if (from) from.onchange = setRange;
+  if (to) to.onchange = setRange;
   sync();
   const fb = document.getElementById('btn-focus-map');
   if (fb && fb.dataset.wired !== '1') {
@@ -7258,6 +7295,89 @@ async function drawIranCountries() {
     iranPins.countries = L.geoJSON(iranPins.countryGeo, { pane: 'irCountries', interactive: false, style: iranCountryStyle }).addTo(map);
   } catch (e) { console.warn('iran countries', e); }
 }
+/*
+ * Provinces, districts and towns in every coloured country (user, 12 Oct), as the Yemen map
+ * has its governorates and the Saudi cities: from scripts/iran-research/adm-pack.cjs. The
+ * capitals and the biggest cities show from the start; provinces, then towns, then districts
+ * as the map zooms in; each level's markers are on the map only from its zoom on.
+ */
+const IR_ADM_ZOOM = { adm1: 5.5, adm1Names: 6.5, adm2: 7.5, adm2Names: 9, t2: 6, t3: 7.25, t4: 8.5 };
+async function drawIranAdmin() {
+  if (!map || iranPins.adm) return;
+  const m = map;
+  iranPins.adm = {};
+  if (!m.getPane('irAdm')) {
+    m.createPane('irAdm');
+    m.getPane('irAdm').style.zIndex = 360;
+    m.getPane('irAdm').style.pointerEvents = 'none';
+  }
+  if (!m.getPane('govNames')) {
+    m.createPane('govNames');
+    m.getPane('govNames').style.zIndex = 460;
+    m.getPane('govNames').style.pointerEvents = 'none';
+  }
+  const get = (u) => fetch(`${u}?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const line = (w, o, dash) => () => ({ pane: 'irAdm', color: EDGE, weight: w, opacity: o, dashArray: dash, fill: false, interactive: false });
+  const names = (g, cls, prio, from) => {
+    const group = L.layerGroup();
+    const entries = [];
+    for (const f of (g && g.features) || []) {
+      const pt = featureLabelPoint(f);
+      const n = f.properties && f.properties.n;
+      if (!pt || !n) continue;
+      const marker = L.marker(pt, { pane: 'govNames', interactive: false, keyboard: false, icon: L.divIcon({ className: `gov-name ${cls}`, html: `<span>${escapeHtml(T(n))}</span>`, iconSize: null }) }).addTo(group);
+      entries.push({ group: cls, prio, marker, visible: (z) => z >= from });
+    }
+    return { group, entries };
+  };
+  const levels = [];
+  // A level is on the map from its zoom on, off below it.
+  const sync = () => {
+    const z = m.getZoom();
+    for (const lv of levels) {
+      const on = z >= lv.from;
+      if (on && !m.hasLayer(lv.layer)) lv.layer.addTo(m);
+      else if (!on && m.hasLayer(lv.layer)) m.removeLayer(lv.layer);
+    }
+    if (m._deskLabelPass) m._deskLabelPass();
+  };
+  const add = (key, layer, from, entries) => {
+    levels.push({ layer, from });
+    iranPins.adm[key] = layer;
+    if (entries) registerLabels(m, key, entries);
+    sync();
+  };
+  m.on('zoomend', sync);
+  const [cities, adm1] = await Promise.all([get('/iran-cities.json'), get('/iran-adm1.geojson')]);
+  if (map !== m) return;
+  if (cities) {
+    for (const tier of [1, 2, 3, 4]) {
+      const group = L.layerGroup();
+      const entries = (cities.cities || []).filter((c) => c[3] === tier).map(([n, lat, lng]) => ({
+        prio: tier === 1 ? 0 : tier + 1,
+        marker: L.marker([lat, lng], { pane: 'govNames', interactive: false, keyboard: false, icon: L.divIcon({ className: `sa-city ir-city t${Math.min(tier, 3)}`, html: `<i></i><span>${escapeHtml(T(n))}</span>`, iconSize: null }) }).addTo(group),
+      }));
+      add(`city${tier}`, group, tier === 1 ? 0 : IR_ADM_ZOOM[`t${tier}`], entries.map((e) => ({ ...e, group: `city${tier}` })));
+    }
+  }
+  if (adm1) {
+    add('adm1', L.geoJSON(adm1, { pane: 'irAdm', interactive: false, style: line(0.7, 0.55, '3 3') }), IR_ADM_ZOOM.adm1);
+    const n1 = names(adm1, 'ir-adm1', 1, IR_ADM_ZOOM.adm1Names);
+    add('adm1Names', n1.group, IR_ADM_ZOOM.adm1Names, n1.entries);
+  }
+  // The districts are many: read the first time the map is zoomed in to them.
+  const loadAdm2 = async () => {
+    if (iranPins.adm.adm2 || iranPins.adm.adm2Loading || m.getZoom() < IR_ADM_ZOOM.adm2) return;
+    iranPins.adm.adm2Loading = true;
+    const adm2 = await get('/iran-adm2.geojson');
+    if (!adm2 || map !== m) return;
+    add('adm2', L.geoJSON(adm2, { pane: 'irAdm', interactive: false, style: line(0.5, 0.4, '1 3') }), IR_ADM_ZOOM.adm2);
+    const n2 = names(adm2, 'ir-adm2', 5, IR_ADM_ZOOM.adm2Names);
+    add('adm2Names', n2.group, IR_ADM_ZOOM.adm2Names, n2.entries);
+  };
+  m.on('zoomend', loadAdm2);
+  loadAdm2();
+}
 function iranCountryStyle(f) {
   const side = f && f.properties && f.properties.side;
   const ink = IRAN_PIN_INK[side] || '#94a3b8';
@@ -7266,6 +7386,39 @@ function iranCountryStyle(f) {
   return { fillColor: ink, fillOpacity: on ? 0.38 : 0, color: EDGE, weight: 0.8, opacity: on ? 0.75 : 0.15 };
 }
 const iranSideOf = (ev) => (IRAN_PIN_INK[ev.actor] ? ev.actor : 'other');
+/*
+ * At sea or on land (user, 12 Oct), as scripts/iran-research/map-pack.cjs reads the researched pins:
+ * a ship, a boat or "off" a place is at sea, and so is a point more than 3 km off the coast
+ * (public/iran-land.json, read the first time the filter is used).
+ */
+const IRAN_SEA_WORDS = /\b(?:ships?|vessels?|tankers?|freighters?|boats?|dhows?|frigates?|destroyers?|warships?|carriers?|submarines?|corvettes?|IRIS|USS|HMS|UKMTO|JMIC|at sea|offshore)\b/i;
+const inRing = (r, x, y) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+function iranAtSea(ev) {
+  if (ev.sea != null) return ev.sea;
+  const words = `${ev.label || ''} ${ev.text || ''}`.replace(/anti-ship|KC-\d+\s+tankers?|tanker (?:aircraft|planes?)|refuel+ing tankers?/gi, '');
+  if (ev.type === 'vessel' || IRAN_SEA_WORDS.test(words) || /^off /i.test(ev.place || '')) return (ev.sea = true);
+  const land = iranPins.land;
+  if (!land) return false; // read again once the land is in
+  const { lat, lng } = ev;
+  const on = land.some((p) => lng >= p.b[0] && lng <= p.b[2] && lat >= p.b[1] && lat <= p.b[3] && inRing(p.r[0], lng, lat) && !p.r.slice(1).some((h) => inRing(h, lng, lat)));
+  if (on) return (ev.sea = false);
+  const k = Math.cos((lat * Math.PI) / 180);
+  let km = Infinity;
+  for (const p of land) {
+    if (lng < p.b[0] - 0.1 || lng > p.b[2] + 0.1 || lat < p.b[1] - 0.1 || lat > p.b[3] + 0.1) continue;
+    for (const r of p.r) for (let i = 1; i < r.length; i++) {
+      const ax = (r[i - 1][0] - lng) * k, ay = r[i - 1][1] - lat, bx = (r[i][0] - lng) * k, by = r[i][1] - lat;
+      const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / (dx * dx + dy * dy || 1)));
+      km = Math.min(km, Math.hypot(ax + t * dx, ay + t * dy) * 111);
+    }
+  }
+  return (ev.sea = km > 3);
+}
+async function loadIranLand() {
+  if (iranPins.land || iranPins.landP) return iranPins.landP;
+  iranPins.landP = fetch(`/iran-land.json?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).then((d) => { iranPins.land = (d && d.polys) || []; }).catch(() => { iranPins.land = []; });
+  return iranPins.landP;
+}
 function iranPinShown(ev) {
   if (ev.actor === 'houthi') return false;
   return !(Array.isArray(ev.desks) && ev.desks.includes('yemen'));
@@ -7298,9 +7451,9 @@ async function loadIranPast() {
     const res = await fetch(`/iran-map-pins.json?v=${IRAN_ASSET_V}`);
     if (!res.ok) return [];
     const d = await res.json();
-    const out = (d.pins || []).map(([md, actor, lat, lng, hm], i) => ({
+    const out = (d.pins || []).map(([md, actor, lat, lng, hm, sea], i) => ({
       // A researched attack with its own time (sirens, UKMTO) keeps it; the rest carry only their day.
-      fp: `rs#${i}`, ni: i, at: hm ? `${d.year}-${md}T${hm}:00Z` : `${d.year}-${md}T12:00:00+03:00`, dayOnly: !hm, researched: true, actor, type: 'strike', mapOnly: true,
+      fp: `rs#${i}`, ni: i, sea: !!sea, at: hm ? `${d.year}-${md}T${hm}:00Z` : `${d.year}-${md}T12:00:00+03:00`, dayOnly: !hm, researched: true, actor, type: 'strike', mapOnly: true,
       place: '', lat, lng, label: '', text: '', source: '', url: '', also: [],
     }));
     if (!iranPins.notesP) iranPins.notesP = loadIranNotes();
@@ -7350,12 +7503,18 @@ function renderIranLegend() {
     <div class="leg-body">
       <p class="leg-hint">Tick to show, untick to hide.</p>
       ${rows}
+      <p class="leg-sub">Where</p>
+      ${[['land', 'On land'], ['sea', 'At sea']].map(([k, n]) => `<button type="button" class="leg-item leg-where${iranPins.where[k] ? ' on' : ''}" data-where="${k}" aria-pressed="${iranPins.where[k] ? 'true' : 'false'}"><span class="sw ink-dark" style="background:${k === 'sea' ? '#bfdbfe' : '#e7dcc8'}"><span class="tick">✓</span></span>${n}</button>`).join('')}
     </div>`;
   legend.querySelector('.leg-collapse').onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); iranPins.collapsed = !iranPins.collapsed; renderIranLegend(); };
   legend.querySelectorAll('.leg-item').forEach((b) => {
-    b.onclick = (ev) => {
+    b.onclick = async (ev) => {
       ev.preventDefault(); ev.stopPropagation();
-      iranPins.on[b.dataset.side] = !iranPins.on[b.dataset.side];
+      if (b.dataset.where) {
+        iranPins.where[b.dataset.where] = !iranPins.where[b.dataset.where];
+        renderIranLegend();
+        await loadIranLand();
+      } else iranPins.on[b.dataset.side] = !iranPins.on[b.dataset.side];
       drawIranPins();
     };
   });
@@ -7380,7 +7539,11 @@ function iranPopupHtml(ev) {
 function drawIranPins() {
   renderIranLegend();
   if (iranPins.countries) { try { iranPins.countries.setStyle(iranCountryStyle); } catch (e) {} }
-  const shown = iranPins.events.filter((ev) => iranPins.on[iranSideOf(ev)] !== false && (!iranPins.day || iranDayOf(ev) === iranPins.day));
+  const r = iranPins.range;
+  const inTime = (ev) => { const d = iranDayOf(ev); return r ? d >= r.from && d <= r.to : !iranPins.day || d === iranPins.day; };
+  const w = iranPins.where;
+  const inWhere = (ev) => (w.land && w.sea) || (iranAtSea(ev) ? w.sea : w.land);
+  const shown = iranPins.events.filter((ev) => iranPins.on[iranSideOf(ev)] !== false && inTime(ev) && inWhere(ev));
   const key = shown.map((e) => e.fp).join('|');
   if (!map || key === iranPins.drawn) return;
   iranPins.drawn = key;
@@ -7428,9 +7591,12 @@ function drawIranPins() {
   const chip = document.getElementById('map-chip');
   if (chip) {
     const n = `${kept.length} attack${kept.length === 1 ? '' : 's'}`;
-    chip.textContent = iranPins.day
-      ? (kept.length ? `${n} on the map on ${fmtDay(iranPins.day)}` : `No attack on the map on ${fmtDay(iranPins.day)}`)
-      : `${n} on the map since 28 Feb 2026`;
+    const where = w.land && w.sea ? '' : w.sea ? ' at sea' : w.land ? ' on land' : '';
+    chip.textContent = r
+      ? (kept.length ? `${n}${where} on the map, ${fmtDay(r.from)} to ${fmtDay(r.to)}` : `No attack${where} on the map, ${fmtDay(r.from)} to ${fmtDay(r.to)}`)
+      : iranPins.day
+        ? (kept.length ? `${n}${where} on the map on ${fmtDay(iranPins.day)}` : `No attack${where} on the map on ${fmtDay(iranPins.day)}`)
+        : `${n}${where} on the map since 28 Feb 2026`;
   }
   renderIranFeed();
 }

@@ -351,7 +351,10 @@
        "unoff": null
       }
      ],
-     "note": "Lebanon: 8,954 killed since 8 Oct 2023 (Health Ministry). Hezbollah fighters: more than 1,000 by 17 Apr (sources close to Hezbollah); about 2,500 by 28 May (the IDF)."
+     "link": {
+      "text": "Saudi casualties in the Yemen conflict",
+      "href": "/yemen-conflict-desk#n=cas"
+     }
     },
     {
      "type": "claims",
@@ -647,8 +650,7 @@
        },
        "unoff": null
       }
-     ],
-     "note": "Israel: everyone taken to hospital, not only the wounded."
+     ]
     }
    ]
   },
@@ -2394,8 +2396,7 @@
        },
        "Since 28 Feb"
       ]
-     ],
-     "note": "100 confirmed by the IMO (24 seafarers killed, 3 missing) and 40 reported by trackers and the media."
+     ]
     },
     {
      "type": "table",
@@ -2794,34 +2795,19 @@
        "l"
       ],
       [
-       "By, weapon",
+       "By",
        "l"
       ],
       [
-       "Status",
+       "Weapon",
+       "l"
+      ],
+      [
+       "Current state",
        "l w"
       ]
      ],
      "rows": [
-      [
-       {
-        "v": "30 Sep",
-        "k": "unoff",
-        "src": "Ali Bk",
-        "url": "https://t.me/Alibk3/37510",
-        "date": "2026-09-30",
-        "note": "Claim; no confirmation from the operator or a government"
-       },
-       "Abqaiq, Saudi Arabia",
-       "Claimed by Ali Bk",
-       {
-        "v": "Claim",
-        "k": "unoff",
-        "src": "Ali Bk",
-        "url": "https://t.me/Alibk3/37510",
-        "date": "2026-09-30"
-       }
-      ],
       [
        {
         "v": "10 Sep",
@@ -2831,14 +2817,14 @@
         "date": "2026-09-10"
        },
        "East-West crude pipeline, three of 11 pump stations (Riyadh and Medina regions), Saudi Arabia",
-       "Unknown (launched from Iraq; Iraqi militias alleged, deny it); drone",
+       "Iraqi militias (per Saudi Arabia; they deny it)",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working: restarted after the 11 Sep shutdown; 5.8m barrels pumped as of 6 Oct",
+        "k": "unoff",
+        "src": "khaleejtimes.com",
         "url": "https://www.khaleejtimes.com/business/saudi-energy-minister-says-oil-pumped-through-east-west-pipeline-reached-58-million-barrels",
-        "date": "2026-10-06",
-        "note": "working (flows restored to 5.8 million b/d, energy minister)"
+        "date": "2026-10-06"
        }
       ],
       [
@@ -2848,17 +2834,17 @@
         "src": "IRNA",
         "url": "https://t.me/irna_1313/395152",
         "date": "2026-03-20",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "South Pars plants, Asaluyeh (later strikes), Iran",
-       "Claimed by Iranian media (IRNA, Fars) and relays; 1 Sep Fars: explosion heard",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Partly back: Phase 14 at about 70%; 3rd and 5th refineries being rebuilt",
         "k": "unoff",
-        "src": "IRNA",
-        "url": "https://t.me/irna_1313/395152",
-        "date": "2026-03-20",
-        "note": "No damage to a named plant confirmed after 18 Mar / 6 Apr."
+        "src": "en.shana.ir",
+        "url": "https://en.shana.ir/news/2585806/Shana",
+        "date": "2026-08-22"
        }
       ],
       [
@@ -2868,17 +2854,17 @@
         "src": "Fars",
         "url": "https://t.me/farsna/459128",
         "date": "2026-08-31",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Al-Dura refinery, Baghdad (explosion, smoke), Iraq",
-       "Claimed by Fars citing Iraqi sources",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Explosion and smoke reported; no official word on damage (31 Aug)",
         "k": "unoff",
-        "src": "Fars",
+        "src": "t.me",
         "url": "https://t.me/farsna/459128",
-        "date": "2026-08-31",
-        "note": "Cause unknown."
+        "date": "2026-08-31"
        }
       ],
       [
@@ -2890,14 +2876,14 @@
         "date": "2026-07-28"
        },
        "Petroleum facilities, Eastern Province and Riyadh region (two waves of drones from Iraq), Saudi Arabia",
-       "Iran-backed Iraqi militias (per Saudi Arabia); drone",
+       "Iraqi militias (per Saudi Arabia)",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Drones intercepted; no damage reported (28 Jul)",
+        "k": "unoff",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/2026_in_Saudi_Arabia",
-        "date": "2026-07-28",
-        "note": "working (Saudi MoD: drones intercepted; see Abqaiq row for the reported fire)"
+        "date": "2026-07-28"
        }
       ],
       [
@@ -2909,14 +2895,14 @@
         "date": "2026-07-27"
        },
        "Abqaiq oil processing plant, Saudi Arabia",
-       "Iran-backed Iraqi militias (per Saudi Arabia); Houthis also claimed attacks that day; drone",
+       "Iraqi militias (per Saudi Arabia)",
+       "Drone",
        {
-        "v": "Unknown",
+        "v": "Big fire; operations reportedly halted; no restart report found (28 Jul)",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://www.turkiyetoday.com/region/satellite-image-shows-smoke-fire-at-saudi-aramcos-abqaiq-facility-3217739",
-        "date": "2026-07-27",
-        "note": "FIRMS fire detections and Reuters satellite image of smoke; Aramco did not answer Reuters; no output statement"
+        "src": "caliber.az",
+        "url": "https://caliber.az/en/post/saudi-aramco-halts-operations-at-abqaiq-oil-facility-after-houthi-drone-attack",
+        "date": "2026-07-28"
        }
       ],
       [
@@ -2926,17 +2912,17 @@
         "src": "Sabereen",
         "url": "https://t.me/SabrenNewss/218852",
         "date": "2026-07-24",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Al-Zallaq power station, Bahrain",
-       "Claimed by Sabereen, Al-Mihwar",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Bahrain reported only interceptions, no damage (18 Jul)",
         "k": "unoff",
-        "src": "Sabereen",
-        "url": "https://t.me/SabrenNewss/218852",
-        "date": "2026-07-24",
-        "note": "Bahrain reported only interceptions, no damage."
+        "src": "english.aawsat.com",
+        "url": "https://english.aawsat.com/node/5297333",
+        "date": "2026-07-18"
        }
       ],
       [
@@ -2945,18 +2931,17 @@
         "k": "unoff",
         "src": "Reuters",
         "url": "https://www.reuters.com/world/middle-east/rubio-says-us-still-willing-negotiate-over-iran-crisis-2026-07-22/",
-        "date": "2026-07-22",
-        "note": "Claim; no confirmation from the operator or a government"
+        "date": "2026-07-22"
        },
        "Electricity post near Bushehr nuclear plant, Iran",
-       "Claimed by Reuters citing Iranian reports (not read: Reuters blocked)",
+       "US (per Iranian reports)",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No repair report; governor said several places in Bushehr hit, no deaths (20 Jul)",
         "k": "unoff",
-        "src": "Reuters",
+        "src": "reuters.com",
         "url": "https://www.reuters.com/world/middle-east/rubio-says-us-still-willing-negotiate-over-iran-crisis-2026-07-22/",
-        "date": "2026-07-22",
-        "note": "Bushehr governor 20 Jul: several places in Bushehr hit."
+        "date": "2026-07-20"
        }
       ],
       [
@@ -2966,17 +2951,17 @@
         "src": "Sabereen",
         "url": "https://t.me/SabrenNewss/217784",
         "date": "2026-07-19",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Hateen and Az-Zour power stations (names); Al-Zour refinery, Kuwait",
-       "Claimed by Sabereen, IRGC, Naya",
+       "Iran",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Power units repaired by end of August; no refinery hit confirmed",
         "k": "unoff",
-        "src": "Sabereen",
-        "url": "https://t.me/SabrenNewss/217784",
-        "date": "2026-07-19",
-        "note": "Ministry confirmed attacks on unnamed power plants 17-21 Jul (in the list); no refinery hit confirmed."
+        "src": "kuwaittimes.com",
+        "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
+        "date": "2026-09-15"
        }
       ],
       [
@@ -2988,14 +2973,14 @@
         "date": "2026-07-20"
        },
        "Several power and desalination stations, Kuwait",
-       "Iran; unknown",
+       "Iran",
+       "Not stated",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Back in service: damaged units repaired by end of August (plants not named)",
+        "k": "unoff",
+        "src": "kuwaittimes.com",
         "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
-        "date": "2026-09-15",
-        "note": "repaired (electricity ministry: damaged generating units restored gradually through end of August; stations not named, so not confirmed for this one)"
+        "date": "2026-09-15"
        }
       ],
       [
@@ -3007,14 +2992,14 @@
         "date": "2026-07-19"
        },
        "Power and desalination plant (second in two days), Kuwait",
-       "Iran; unknown",
+       "Iran",
+       "Not stated",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Back in service: damaged units repaired by end of August (plants not named)",
+        "k": "unoff",
+        "src": "kuwaittimes.com",
         "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
-        "date": "2026-09-15",
-        "note": "repaired (electricity ministry: damaged generating units restored gradually through end of August; stations not named, so not confirmed for this one)"
+        "date": "2026-09-15"
        }
       ],
       [
@@ -3026,14 +3011,14 @@
         "date": "2026-07-19"
        },
        "Khor Mor gas field, Sulaymaniyah, Iraq (Kurdistan)",
-       "Unknown (IRGC per reports); drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Working: supplying gas to Kirkuk power station from early August",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://www.iraqinews.com/iraq/drone-strike-targets-khor-mor-gas-field-in-iraqi-kurdistan/",
-        "date": "2026-07-19",
-        "note": "working (two security sources to Reuters: fire caused no losses and did not disrupt operations or output)"
+        "src": "iraq-businessnews.com",
+        "url": "https://www.iraq-businessnews.com/2026/08/05/khor-mor-gas-project-starts-supplies-to-kirkuk-power-station/",
+        "date": "2026-08-05"
        }
       ],
       [
@@ -3045,14 +3030,14 @@
         "date": "2026-07-18"
        },
        "Power facilities and desalination pumps, Bonji / Jask (Hormozgan), Iran",
-       "US; missile",
+       "US",
+       "Missile",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Repaired: desalination intake and transformer back within 48 hours",
+        "k": "unoff",
+        "src": "hamshahrionline.ir",
         "url": "https://www.hamshahrionline.ir/news/1058271/",
-        "date": "2026-08-04",
-        "note": "repaired (Hormozgan water utility: Bonji desalination intake and transformer repaired and back in operation within 48 hours)"
+        "date": "2026-08-04"
        }
       ],
       [
@@ -3064,14 +3049,14 @@
         "date": "2026-07-18"
        },
        "Kuwait Oil Company 'vital facility'",
-       "Iran; unknown",
+       "Iran",
+       "Not stated",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Heavy damage, site evacuated; no later report (18 Jul)",
+        "k": "unoff",
+        "src": "qna.org.qa",
         "url": "https://qna.org.qa/en/News-Area/News/2026-7/18/kuwait-petroleum-corporation-oil-facility-hit-by-iranian-attacks-causing-injuries-significant-material-damage",
-        "date": "2026-07-18",
-        "note": "no status report found beyond the last one already held: (KPC: significant material damage, injuries, site evacuated; no later status)"
+        "date": "2026-07-18"
        }
       ],
       [
@@ -3083,14 +3068,14 @@
         "date": "2026-07-17"
        },
        "Tanker at Kharg Island oil terminal, Iran",
-       "US (per Iran); missile",
+       "US",
+       "Missile",
        {
-        "v": "Terminal working",
+        "v": "Terminal working: loadings resumed 12 Aug",
         "k": "unoff",
-        "src": "Media report",
+        "src": "thenationalnews.com",
         "url": "https://www.thenationalnews.com/business/energy/2026/08/16/iran-reroutes-oil-flow-as-loading-resumes-at-kharg-island-terminal/",
-        "date": "2026-08-16",
-        "note": "CENTCOM disabled the empty tanker Belma on 15 Jul as it headed to Kharg (Hellfire into the funnel, no spill); Windward/TankerTrackers: Kharg western terminal reactivated 12 Aug, VLCC loading at Azarpad jetty"
+        "date": "2026-08-16"
        }
       ],
       [
@@ -3102,14 +3087,14 @@
         "date": "2026-07-17"
        },
        "Power and desalination station (unnamed), Kuwait",
-       "Iran; unknown",
+       "Iran",
+       "Not stated",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Back in service: damaged units repaired by end of August (plants not named)",
+        "k": "unoff",
+        "src": "kuwaittimes.com",
         "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
-        "date": "2026-09-15",
-        "note": "repaired (electricity ministry: damaged generating units restored gradually through end of August; stations not named, so not confirmed for this one)"
+        "date": "2026-09-15"
        }
       ],
       [
@@ -3119,17 +3104,17 @@
         "src": "Sabereen",
         "url": "https://t.me/SabrenNewss/216707",
         "date": "2026-07-15",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Mina Abdullah refinery, Kuwait",
-       "Claimed by Sabereen, Naya, Fars, Al-Mihwar",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Was due back online by 30 Jun after March damage; no 15 Jul hit confirmed",
         "k": "unoff",
-        "src": "Sabereen",
-        "url": "https://t.me/SabrenNewss/216707",
-        "date": "2026-07-15",
-        "note": "KPC confirmed only an unnamed \"vital oil site\" on 18 Jul (in the list)."
+        "src": "argusmedia.com",
+        "url": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/2830424-war-halves-kuwaiti-oil-products-output-export-in-march",
+        "date": "2026-05-22"
        }
       ],
       [
@@ -3141,14 +3126,14 @@
         "date": "2026-07-15"
        },
        "Power transmission lines, Bandar Abbas, Iran",
-       "US; airstrike",
+       "US",
+       "Air strike",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Repaired: lines back in service, regional grid normal",
+        "k": "unoff",
+        "src": "hamshahrionline.ir",
         "url": "https://www.hamshahrionline.ir/news/1058271/",
-        "date": "2026-08-04",
-        "note": "repaired (energy minister: four 400 kV and two 230 kV lines in Hormozgan repaired and back in service, regional grid normal)"
+        "date": "2026-08-04"
        }
       ],
       [
@@ -3160,14 +3145,14 @@
         "date": "2026-07-12"
        },
        "Kuwait Oil Company offshore drilling platform",
-       "Unknown (Kuwait foreign ministry blames Iran and Iraqi factions); drone",
+       "Iran or Iraqi militias (per Kuwait)",
+       "Drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Damaged, one worker hurt; no later report (12 Jul)",
+        "k": "unoff",
+        "src": "khaleejtimes.com",
         "url": "https://www.khaleejtimes.com/world/gulf/kuwait-drone-attack-offshore-oil-platform-injures-worker",
-        "date": "2026-07-12",
-        "note": "no status report found beyond the last one already held: (MoD: material damage, one worker injured)"
+        "date": "2026-07-12"
        }
       ],
       [
@@ -3177,35 +3162,17 @@
         "src": "Iran International",
         "url": "https://t.me/iranintltv/346534",
         "date": "2026-07-08",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Lavan and Siri islands, Iran",
-       "Claimed by Ali Bk (\"US strike\"); Iran International (explosions heard)",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Explosions heard; no damage reported (8 Jul)",
         "k": "unoff",
-        "src": "Iran International",
+        "src": "t.me",
         "url": "https://t.me/iranintltv/346534",
         "date": "2026-07-08"
-       }
-      ],
-      [
-       {
-        "v": "28 Jun",
-        "k": "unoff",
-        "src": "Ali Bk",
-        "url": "https://t.me/Alibk3/27504",
-        "date": "2026-06-28",
-        "note": "Claim; no confirmation from the operator or a government"
-       },
-       "Ras Tanura refinery, Saudi Arabia",
-       "Claimed by Ali Bk",
-       {
-        "v": "Claim",
-        "k": "unoff",
-        "src": "Ali Bk",
-        "url": "https://t.me/Alibk3/27504",
-        "date": "2026-06-28"
        }
       ],
       [
@@ -3217,14 +3184,14 @@
         "date": "2026-06-08"
        },
        "Karun Petrochemical Company, Mahshahr, Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Unknown",
+        "v": "Damaged; fire during debris clearing 26 Jun; no restart reported",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/2810444-israel-hits-iran-s-assaluyeh-petchem-complex",
-        "date": "2026-06-08",
-        "note": "Argus: the 6 Jun strike on Mahshahr shut production across the hub; Iranian state media named Fajr 1, Fajr 2, Karun, Razi and Bandar Imam as damaged; no restart report found"
+        "src": "guest.meed.com",
+        "url": "https://guest.meed.com/iran-extinguishes-fire-at-mahshahr-petrochemicals-complex/",
+        "date": "2026-06-29"
        }
       ],
       [
@@ -3233,17 +3200,18 @@
         "k": "unoff",
         "src": "Reported by the media",
         "url": "https://gdeltcloud.com/events/iran-attacks-israels-petrochemical-industry-in-retaliation--conflict_40361fb3",
-        "date": "2026-06-08"
+        "date": "2026-06-08",
+        "note": "Reported by one source only"
        },
        "Petrochemical facility, Haifa (IRGC claim), Israel",
-       "Iran (IRGC claim); missile",
+       "Iran (IRGC claim)",
+       "Missile",
        {
-        "v": "Unknown",
+        "v": "No hit confirmed by Israel or Bazan",
         "k": "unoff",
-        "src": "Media report",
+        "src": "iranwire.com",
         "url": "https://iranwire.com/en/news/153419-irgc-in-response-to-the-attack-on-the-petrochemical-plant-we-targeted-haifa/",
-        "date": "2026-06-08",
-        "note": "no status report found beyond the last one already held: (IRGC claim only; no Israeli, Bazan or independent confirmation of a hit found)"
+        "date": "2026-06-08"
        }
       ],
       [
@@ -3253,17 +3221,17 @@
         "src": "Al Araby",
         "url": "https://t.me/AlarabyTvBrk/49674",
         "date": "2026-03-29",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Baiji refinery, Iraq",
-       "Claimed by Al Araby, Ali Bk; Naya (interceptions 6 Jun)",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No damage from an attack confirmed (29 Mar)",
         "k": "unoff",
-        "src": "Al Araby",
+        "src": "t.me",
         "url": "https://t.me/AlarabyTvBrk/49674",
-        "date": "2026-03-29",
-        "note": "A Baiji refinery fire on 3 Aug was put out by civil defence, cause not stated."
+        "date": "2026-03-29"
        }
       ],
       [
@@ -3272,18 +3240,17 @@
         "k": "unoff",
         "src": "Al Jazeera",
         "url": "https://t.me/ajanews/495090",
-        "date": "2026-06-05",
-        "note": "Claim; no confirmation from the operator or a government"
+        "date": "2026-06-05"
        },
        "Mina al-Fahal crude terminal (blast near SBM buoys, drone suspected), Oman",
-       "Claimed by Reuters sources; Bloomberg traders",
+       "Not stated",
+       "Drone (suspected)",
        {
-        "v": "Claim",
+        "v": "Working normally (PDO, 5 Jun)",
         "k": "unoff",
-        "src": "Al Jazeera",
-        "url": "https://t.me/ajanews/495090",
-        "date": "2026-06-05",
-        "note": "PDO: operations continuing normally; Oman confirmed no attack."
+        "src": "al-monitor.com",
+        "url": "https://www.al-monitor.com/originals/2026/06/oman-denies-disruption-key-oil-hub-after-reported-drone-attack",
+        "date": "2026-06-05"
        }
       ],
       [
@@ -3295,14 +3262,14 @@
         "date": "2026-05-17"
        },
        "Barakah nuclear power plant (perimeter), UAE",
-       "Unknown; drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Working: all units operating normally (FANR, 17 May)",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-05-17",
-        "note": "working (fire, no injuries or leaks reported)"
+        "src": "newarab.com",
+        "url": "https://www.newarab.com/news/uae-condemns-drone-strike-caused-fire-outside-nuclear-plant",
+        "date": "2026-05-17"
        }
       ],
       [
@@ -3314,14 +3281,14 @@
         "date": "2026-05-04"
        },
        "Fujairah Oil Industry Zone, UAE",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Working: fuel oil exports 357,000 b/d in September",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://engine.online/news/fujairahs-fuel-oil-inventories-drawn-29-pc-in-august-80d2",
-        "date": "2026-10-01",
-        "note": "working (see 3 Mar entry: terminals operating, Aug-Sep export data)"
+        "src": "engine.online",
+        "url": "https://engine.online/news/fujairahs-fuel-oil-inventories-increased-by-14-pc-in-september-821b",
+        "date": "2026-10-01"
        }
       ],
       [
@@ -3331,16 +3298,17 @@
         "src": "Naya",
         "url": "https://t.me/naya_foriraq/73290",
         "date": "2026-04-22",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Oil field near Erbil, Iraq (Kurdistan)",
-       "Claimed by Naya (explosions heard)",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "All Kurdistan oil fields but Sarsang producing (KRG, 29 Aug)",
         "k": "unoff",
-        "src": "Naya",
-        "url": "https://t.me/naya_foriraq/73290",
-        "date": "2026-04-22"
+        "src": "thenationalnews.com",
+        "url": "https://www.thenationalnews.com/business/energy/2026/08/30/iraqi-kurdistan-resumes-oil-production-of-up-to-230000-bpd-after-drone-attacks/",
+        "date": "2026-08-30"
        }
       ],
       [
@@ -3349,18 +3317,17 @@
         "k": "unoff",
         "src": "Windward",
         "url": "https://windward.ai/blog/april-16-maritime-intelligence-daily/",
-        "date": "2026-04-15",
-        "note": "Claim; no confirmation from the operator or a government"
+        "date": "2026-04-15"
        },
        "Siri Island oil storage tank (~1m bbl) heavily damaged and on fire, Iran",
-       "Claimed by Windward satellite imagery",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Tank seen damaged and burning (16 Apr); no later report",
         "k": "unoff",
-        "src": "Windward",
+        "src": "windward.ai",
         "url": "https://windward.ai/blog/april-16-maritime-intelligence-daily/",
-        "date": "2026-04-15",
-        "note": "Damage seen, cause not confirmed; may follow the 8 Apr Sirri strike."
+        "date": "2026-04-16"
        }
       ],
       [
@@ -3370,17 +3337,17 @@
         "src": "Naya",
         "url": "https://t.me/naya_foriraq/57212",
         "date": "2026-03-09",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Ras Laffan (other attacks), Qatar",
-       "Claimed by Naya; Al Jazeera; Fars",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Partly back: 4 of 5 undamaged trains running by early July; Trains 4 and 6 out for 3-5 years",
         "k": "unoff",
-        "src": "Naya",
-        "url": "https://t.me/naya_foriraq/57212",
-        "date": "2026-03-09",
-        "note": "Not confirmed by Qatar MoD or QatarEnergy."
+        "src": "gem.wiki",
+        "url": "https://www.gem.wiki/Rasgas_LNG_Terminal_1",
+        "date": "2026-07-05"
        }
       ],
       [
@@ -3392,14 +3359,14 @@
         "date": "2026-04-09"
        },
        "Riyadh refinery, Saudi Arabia",
-       "Unknown; unknown",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Unknown",
+        "v": "No update on the refinery since the attack (12 Apr)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "meed.com",
         "url": "https://www.meed.com/saudi-arabia-restores-capacity-of-affected-oil-and-gas-assets",
-        "date": "2026-04-13",
-        "note": "MEED: Saudi energy ministry's 12 Apr statement restored the East-West pipeline (7 mb/d) and Manifa, Khurais still being restored, and gave no update on the Riyadh, Ras Tanura, SATORP and Samref refineries"
+        "date": "2026-04-12"
        }
       ],
       [
@@ -3411,14 +3378,14 @@
         "date": "2026-04-09"
        },
        "Ju'aymah gas/NGL plant, Saudi Arabia",
-       "Unknown; unknown",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Shut",
+        "v": "LPG loadings still suspended; Aramco offered Sep cargoes, restart unconfirmed",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://www.opis.com/resources/energy-market-news-from-opis/saudi-aramco-continues-lpg-cancellations-at-juaymah-ramps-up-yanbu-loadings-sources/",
-        "date": "2026-06-17",
-        "note": "shut (LPG loadings from the Juaymah NGL terminal still suspended, July cargoes cancelled; note the NGL pipeline had collapsed on 23 Feb, before the war)"
+        "src": "argusmedia.com",
+        "url": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/2878203-saudi-aramco-to-cut-propane-exports-in-1h27",
+        "date": "2026-09-15"
        }
       ],
       [
@@ -3430,14 +3397,14 @@
         "date": "2026-04-09"
        },
        "Manifa oil field, Saudi Arabia",
-       "Unknown; unknown",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Back to full output (about 300,000 b/d restored) on 12 Apr",
+        "k": "unoff",
+        "src": "aljazeera.com",
         "url": "https://www.aljazeera.com/economy/2026/4/12/saudi-arabia-says-key-oil-pipeline-back-to-full-capacity-after-attacks",
-        "date": "2026-04-12",
-        "note": "working (output restored to full, about 300,000 b/d recovered, energy ministry via SPA)"
+        "date": "2026-04-12"
        }
       ],
       [
@@ -3449,14 +3416,14 @@
         "date": "2026-04-09"
        },
        "Khurais oil field, Saudi Arabia",
-       "Unknown; unknown",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Partly back: work to restore lost ~300,000 b/d continuing; no completion announced",
+        "k": "unoff",
+        "src": "aa.com.tr",
         "url": "https://www.aa.com.tr/en/middle-east/saudi-energy-facilities-east-west-pipeline-recover-after-attacks-restore-operational-capacity/3902615",
-        "date": "2026-04-12",
-        "note": "partly working (energy ministry: work continuing to restore the lost ~300,000 b/d; no completion announced since)"
+        "date": "2026-04-12"
        }
       ],
       [
@@ -3468,14 +3435,14 @@
         "date": "2026-04-09"
        },
        "East-West pipeline pumping station, Saudi Arabia",
-       "Unknown; drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working: 5.8m barrels pumped through the pipeline as of 6 Oct",
+        "k": "unoff",
+        "src": "khaleejtimes.com",
         "url": "https://www.khaleejtimes.com/business/saudi-energy-minister-says-oil-pumped-through-east-west-pipeline-reached-58-million-barrels",
-        "date": "2026-10-06",
-        "note": "working (see 10-11 Sep entry)"
+        "date": "2026-10-06"
        }
       ],
       [
@@ -3487,14 +3454,14 @@
         "date": "2026-04-08"
        },
        "Lavan Island oil refinery, Iran",
-       "UAE (per WSJ/Bloomberg; UAE has not confirmed); airstrike",
+       "UAE (reported; UAE has not confirmed)",
+       "Air strike",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Lost half its capacity; partial restart promised; no restart confirmed (12 Apr)",
+        "k": "unoff",
+        "src": "presstv.ir",
         "url": "https://www.presstv.ir/Detail/2026/04/12/766713/Iran-begins-rebuilding-oil-facilities-hit-by-US-Israeli-strikes-targets-80-percent-capacity-in-2-months",
-        "date": "2026-04-12",
-        "note": "Deputy oil minister Azimifar: partial restart within ~10 days, 70-80% within two months; NIOPDC head: refinery lost half its capacity; no confirmation of restart found"
+        "date": "2026-04-12"
        }
       ],
       [
@@ -3506,14 +3473,14 @@
         "date": "2026-04-08"
        },
        "Sirri Island oil facilities, Iran",
-       "Unknown; airstrike",
+       "Not stated",
+       "Air strike",
        {
-        "v": "Unknown",
+        "v": "No report since the strike (8 Apr)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-04-08",
-        "note": "no status report found beyond the last one already held: [re-searched 11 Oct in Persian/English media (NIORDC, Shana, Mehr, Tasnim, Iran Intl etc.): no status report found]"
+        "date": "2026-04-08"
        }
       ],
       [
@@ -3525,14 +3492,14 @@
         "date": "2026-04-08"
        },
        "Fujairah oil terminal, UAE",
-       "Iran; drone and missile",
+       "Iran",
+       "Drone and missile",
        {
-        "v": "Working",
+        "v": "Working: fuel oil exports 357,000 b/d in September",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://engine.online/news/fujairahs-fuel-oil-inventories-drawn-29-pc-in-august-80d2",
-        "date": "2026-10-01",
-        "note": "working (see 3 Mar entry: terminals operating, Aug-Sep export data)"
+        "src": "engine.online",
+        "url": "https://engine.online/news/fujairahs-fuel-oil-inventories-increased-by-14-pc-in-september-821b",
+        "date": "2026-10-01"
        }
       ],
       [
@@ -3544,14 +3511,14 @@
         "date": "2026-04-08"
        },
        "Habshan gas complex, UAE",
-       "Iran; interception debris",
+       "Iran",
+       "Interception debris",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://www.investwithabudhabi.com/en/news/adnoc-gas-habshan",
-        "date": "2026-08-11",
-        "note": "partly working (about 60% in May, 85% restored by Aug; full capacity expected 2027, ADNOC Gas)"
+        "v": "Partly back: 85% restored; full capacity expected 2027",
+        "k": "unoff",
+        "src": "khaleejtimes.com",
+        "url": "https://www.khaleejtimes.com/business/adnoc-gas-habshan-complex-restored-to-85-after-april-attack",
+        "date": "2026-08-10"
        }
       ],
       [
@@ -3563,14 +3530,14 @@
         "date": "2026-04-08"
        },
        "Power stations and desalination plants (unnamed), Kuwait",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Back in service: damaged units repaired by end of August (plants not named)",
+        "k": "unoff",
+        "src": "kuwaittimes.com",
         "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
-        "date": "2026-09-15",
-        "note": "repaired (electricity ministry: damaged generating units restored gradually through end of August; stations not named, so not confirmed for this one)"
+        "date": "2026-09-15"
        }
       ],
       [
@@ -3582,14 +3549,14 @@
         "date": "2026-04-07"
        },
        "SABIC petrochemical complex, Jubail, Saudi Arabia",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "No restart or damage figure published; Q2 loss blamed on the conflict (29 Jul)",
+        "k": "unoff",
+        "src": "saudiexchange.sa",
         "url": "https://www.saudiexchange.sa/Resources/fsPdf/23754_381_2026-07-29_07-41-27_en.pdf",
-        "date": "2026-07-29",
-        "note": "SABIC Q2 2026 results (Tadawul, 29 Jul): adjusted net loss SAR 0.38bn, blamed on the regional conflict and supply disruptions; no plant restart stated"
+        "date": "2026-07-29"
        }
       ],
       [
@@ -3601,14 +3568,14 @@
         "date": "2026-04-07"
        },
        "SATORP refinery, Jubail, Saudi Arabia",
-       "Unknown; unknown",
+       "Not stated",
+       "Drone",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://hydrocarbonprocessing.com/news/2026/06/totalenergies-saudi-arabia-refinery-will-not-be-fully-repaired-until-early-2027-ceo-says/",
-        "date": "2026-06-17",
-        "note": "partly working (about 70% of 460,000 b/d; full repair not before 2027, TotalEnergies CEO Pouyanne to French parliament; undamaged units restarted 14 Apr)"
+        "v": "Running at about 70% of capacity since early May",
+        "k": "unoff",
+        "src": "sec.gov",
+        "url": "https://www.sec.gov/Archives/edgar/data/0000879764/000110465926086078/tot-20260630xex99d1.htm",
+        "date": "2026-07-23"
        }
       ],
       [
@@ -3618,17 +3585,17 @@
         "src": "Sabereen",
         "url": "https://t.me/SabrenNewss/200668",
         "date": "2026-04-07",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Refinery in Khurabak area, Duhok, Iraq (Kurdistan)",
-       "Claimed by Al Mayadeen via Mehr; Sabereen",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Explosions reported, cause unknown (7 Apr)",
         "k": "unoff",
-        "src": "Sabereen",
+        "src": "t.me",
         "url": "https://t.me/SabrenNewss/200668",
-        "date": "2026-04-07",
-        "note": "Explosions reported, cause unknown."
+        "date": "2026-04-07"
        }
       ],
       [
@@ -3640,14 +3607,14 @@
         "date": "2026-04-06"
        },
        "Pars petrochemical complex, Asaluyeh (incl. Mobin and Damavand power/utility plants), Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Partly working: Mobin utility at about 60% of capacity (Aug)",
+        "k": "unoff",
+        "src": "nabzebourse.com",
         "url": "https://nabzebourse.com/fa/news/137765/",
-        "date": "2026-08-01",
-        "note": "partly working (Mobin utility company at about 60% capacity in Mordad, per its Codal filing)"
+        "date": "2026-08-01"
        }
       ],
       [
@@ -3659,14 +3626,14 @@
         "date": "2026-04-06"
        },
        "Marvdasht (Shiraz) petrochemical, fertiliser section, Iran",
-       "US/Israel; airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Mostly working",
+        "v": "Mostly working: all units but one running, urea trains producing",
         "k": "unoff",
-        "src": "Media report",
+        "src": "nabzebourse.com",
         "url": "https://nabzebourse.com/fa/news/131073/",
-        "date": "2026-06-07",
-        "note": "Nabz-e Bourse ('latest information'): all Shiraz Petrochemical units but one running; two urea trains producing without interruption"
+        "date": "2026-06-07"
        }
       ],
       [
@@ -3676,17 +3643,17 @@
         "src": "Sabereen News",
         "url": "https://t.me/SabrenNewss/182436",
         "date": "2026-03-02",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Tabriz oil refinery, Iran",
-       "Claimed by Sabereen (1 Mar); Iran International reporters (6 Apr)",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No damage confirmed; the 30 Mar strike hit the Tabriz petrochemical plant",
         "k": "unoff",
-        "src": "Sabereen News",
-        "url": "https://t.me/SabrenNewss/182436",
-        "date": "2026-03-02",
-        "note": "No Iranian official or company confirmation; the confirmed 30 Mar hit was the petrochemical plant."
+        "src": "iranintl.com",
+        "url": "https://www.iranintl.com/en/202603309187",
+        "date": "2026-03-30"
        }
       ],
       [
@@ -3698,14 +3665,14 @@
         "date": "2026-04-05"
        },
        "Borouge petrochemical plant, Ruwais, UAE",
-       "Iran; interception debris",
+       "Iran",
+       "Interception debris",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Repaired by end of June; output limited by feedstock (~60% in Q2)",
+        "k": "unoff",
+        "src": "chemxplore.com",
         "url": "https://chemxplore.com/news/borouge-increases-net-profit-qoq",
-        "date": "2026-08-01",
-        "note": "repaired (Borouge: asset availability fully restored by end of June; output since limited by feedstock, Q2 utilisation ~60%)"
+        "date": "2026-08-01"
        }
       ],
       [
@@ -3717,14 +3684,14 @@
         "date": "2026-04-05"
        },
        "KPC/KNPC and PIC facilities incl. Shuwaikh oil complex, Kuwait",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Severe damage to the KPC/oil ministry building; no later report",
+        "k": "unoff",
+        "src": "wam.ae",
         "url": "https://www.wam.ae/en/article/175monj-kuwait-fire-shuwaikh-oil-sector-complex-due-drone",
-        "date": "2026-04-05",
-        "note": "KPC: severe material damage at the Shuwaikh oil-sector complex (KPC and oil ministry HQ), still assessing damage to KNPC and PIC facilities; no later statement found"
+        "date": "2026-04-05"
        }
       ],
       [
@@ -3736,14 +3703,14 @@
         "date": "2026-04-05"
        },
        "Bapco oil storage facility, Bahrain",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Tank fire put out, no injuries; no later report",
+        "k": "unoff",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Bahrain_Petroleum_Company",
-        "date": "2026-04-05",
-        "note": "no status report found beyond the last one already held: (Bapco: tank fire extinguished, no injuries; no later status)"
+        "date": "2026-04-05"
        }
       ],
       [
@@ -3755,14 +3722,14 @@
         "date": "2026-04-05"
        },
        "Gulf Petrochemical Industries Co. (GPIC), Bahrain",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Unknown",
+        "v": "Ammonia, urea and methanol plants offline (20 May); repairs done, no restart reported",
         "k": "unoff",
-        "src": "Media report",
+        "src": "bcinsight.crugroup.com",
         "url": "https://bcinsight.crugroup.com/2026/05/20/gpic-down-after-iranian-drone-attack/",
-        "date": "2026-07-22",
-        "note": "CRU 20 May: GPIC says ammonia, urea and methanol plants remain offline; MEED 22 Jul: GPIC awarded Fluor a FEED contract for an aromatics plant, no word on restart"
+        "date": "2026-05-20"
        }
       ],
       [
@@ -3774,14 +3741,14 @@
         "date": "2026-04-05"
        },
        "Kuwait power and desalination plants (two units out)",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Back in service: damaged units repaired by end of August (plants not named)",
+        "k": "unoff",
+        "src": "kuwaittimes.com",
         "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
-        "date": "2026-09-15",
-        "note": "repaired (ministry: units restored gradually through end of August; stations not named)"
+        "date": "2026-09-15"
        }
       ],
       [
@@ -3793,14 +3760,14 @@
         "date": "2026-04-04"
        },
        "Bandar Imam / Mahshahr petrochemical zone (Fajr 1 and 2 utilities, Amir Kabir, Rejal), Iran",
-       "US/Israel; airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Partly back: about 60% of lost petrochemical capacity restored (28 Sep)",
+        "k": "unoff",
+        "src": "presstv.co.uk",
         "url": "https://www.presstv.co.uk/Detail/2026/05/30/769526/Iran",
-        "date": "2026-10-03",
-        "note": "partly working (Fajr utility units back in operation and Bandar Imam being revived, Press TV 30 May; NPC CEO Omid Shakeri 28 Sep: about 60% of lost petrochemical capacity in Asaluyeh and Mahshahr back; Shana 3 Oct: Mahshahr complexes still in assessment and reconstruction)"
+        "date": "2026-10-03"
        }
       ],
       [
@@ -3812,14 +3779,14 @@
         "date": "2026-04-04"
        },
        "Bushehr nuclear power plant perimeter, Iran",
-       "Unknown; unknown",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working: main facilities undamaged, unit 1 operating",
+        "k": "unoff",
+        "src": "malaymail.com",
         "url": "https://www.malaymail.com/news/world/2026/04/04/projectile-lands-near-bushehr-nuclear-power-plant-in-iran-one-killed-no-damage-reported/215102",
-        "date": "2026-04-07",
-        "note": "working (AEOI: auxiliary building damaged, main facilities undamaged and operations not disrupted; Rosatom: unit 1 keeps operating with reduced staff)"
+        "date": "2026-04-07"
        }
       ],
       [
@@ -3831,14 +3798,14 @@
         "date": "2026-04-04"
        },
        "North Rumaila oil field (BP), Basra, Iraq",
-       "Unknown; drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Working: no impact on operations",
         "k": "unoff",
-        "src": "Media report",
+        "src": "airwars.org",
         "url": "https://airwars.org/source/www-reuters-com-reuters-2026-04-04-051619/",
-        "date": "2026-04-04",
-        "note": "working (engineers: no impact on operations)"
+        "date": "2026-04-04"
        }
       ],
       [
@@ -3850,14 +3817,14 @@
         "date": "2026-04-04"
        },
        "Bazarkan oil field, Maysan, Iraq",
-       "Unknown; drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Warehouses hit, no injuries; no production report",
+        "k": "unoff",
+        "src": "tradearabia.com",
         "url": "https://www.tradearabia.com/News/413646/Drone-attack-targets-Iraq%27s-Bazarkan-oilfield%2C-no-casualties",
-        "date": "2026-04-04",
-        "note": "no status report found beyond the last one already held: (Maysan Oil Company: its warehouses at the field hit, no injuries; no production statement)"
+        "date": "2026-04-04"
        }
       ],
       [
@@ -3869,14 +3836,14 @@
         "date": "2026-04-03"
        },
        "Habshan gas complex, UAE",
-       "Iran; missile and drone (interception debris)",
+       "Iran",
+       "Missile and drone (interception debris)",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://www.investwithabudhabi.com/en/news/adnoc-gas-habshan",
-        "date": "2026-08-11",
-        "note": "partly working (about 60% in May, 85% restored by Aug; full capacity expected 2027, ADNOC Gas)"
+        "v": "Partly back: 85% restored; full capacity expected 2027",
+        "k": "unoff",
+        "src": "khaleejtimes.com",
+        "url": "https://www.khaleejtimes.com/business/adnoc-gas-habshan-complex-restored-to-85-after-april-attack",
+        "date": "2026-08-10"
        }
       ],
       [
@@ -3888,14 +3855,14 @@
         "date": "2026-04-03"
        },
        "Ajban gas facility, UAE",
-       "Iran; missile and drone (interception debris)",
+       "Iran",
+       "Missile and drone (interception debris)",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "12 hurt, damage nearby; no operating status found (3 Apr)",
+        "k": "unoff",
+        "src": "gulfnews.com",
         "url": "https://gulfnews.com/uae/government/debris-falls-at-abu-dhabi-sites-after-iranian-missiles-intercepted-1.500495222",
-        "date": "2026-04-03",
-        "note": "no status report found beyond the last one already held: (12 injured, KEZAD damaged; no operating status found)"
+        "date": "2026-04-03"
        }
       ],
       [
@@ -3907,14 +3874,14 @@
         "date": "2026-04-03"
        },
        "Power and desalination plant (unnamed), Kuwait",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Back in service: damaged units repaired by end of August (plants not named)",
+        "k": "unoff",
+        "src": "kuwaittimes.com",
         "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
-        "date": "2026-09-15",
-        "note": "repaired (electricity ministry: damaged generating units restored gradually through end of August; stations not named, so not confirmed for this one)"
+        "date": "2026-09-15"
        }
       ],
       [
@@ -3926,14 +3893,14 @@
         "date": "2026-04-03"
        },
        "Mina al-Ahmadi refinery, Kuwait",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Partly working",
+        "v": "Running below normal; Kuwait among the biggest refinery run losses in the Gulf",
         "k": "unoff",
-        "src": "Media report",
+        "src": "kpler.com",
         "url": "https://www.kpler.com/blog/middle-east-refining-under-pressure-damage-export-disruption-and-a-two-speed-recovery",
-        "date": "2026-08-20",
-        "note": "partly working (all three Kuwaiti refineries running at reduced rates with some units idle, Q3 runs ~570,000 b/d; no KPC/KNPC restart statement found)"
+        "date": "2026-08-20"
        }
       ],
       [
@@ -3943,16 +3910,17 @@
         "src": "Akhbar-e Fori",
         "url": "https://t.me/akhbarefori/642175",
         "date": "2026-03-30",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Fujairah pipeline; Fujairah oil port, UAE",
-       "Claimed by Akhbar-e Fori; Iraqi factions via Sabereen",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Working: Fujairah fuel oil exports 357,000 b/d in September",
         "k": "unoff",
-        "src": "Akhbar-e Fori",
-        "url": "https://t.me/akhbarefori/642175",
-        "date": "2026-03-30"
+        "src": "engine.online",
+        "url": "https://engine.online/news/fujairahs-fuel-oil-inventories-increased-by-14-pc-in-september-821b",
+        "date": "2026-10-01"
        }
       ],
       [
@@ -3964,14 +3932,14 @@
         "date": "2026-04-02"
        },
        "Fuel tank near Mashhad airport, Iran",
-       "Unknown; unknown",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Unknown",
+        "v": "No report since the strike (2 Apr)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-04-02",
-        "note": "no status report found beyond the last one already held: [re-searched 11 Oct in Persian/English media (NIORDC, Shana, Mehr, Tasnim, Iran Intl etc.): no status report found]"
+        "date": "2026-04-02"
        }
       ],
       [
@@ -3983,14 +3951,14 @@
         "date": "2026-04-01"
        },
        "Kuwait International Airport fuel storage (third strike)",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Unknown",
+        "v": "Tanks badly damaged; airport reopened 2 Jun, no tank repair report",
         "k": "unoff",
-        "src": "Media report",
+        "src": "aljarida.com",
         "url": "https://www.aljarida.com/article/127705",
-        "date": "2026-06-02",
-        "note": "KUNA via Al-Jarida: KAFCO tanks suffered severe damage on 1 Apr; airport Terminal 1 reopened to international flights 2 Jun (no KAFCO repair statement)"
+        "date": "2026-06-02"
        }
       ],
       [
@@ -4002,14 +3970,14 @@
         "date": "2026-04-01"
        },
        "Sarsang oil field, Chamanke, Duhok (second attack), Iraq (Kurdistan)",
-       "Unknown (METIS links Islamic Resistance in Iraq); drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Shut",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://www.iraqinews.com/iraq/breaking-drone-attack-targets-sarsang-oilfield-in-northern-iraq/",
-        "date": "2026-08-30",
-        "note": "shut (only Kurdistan field not restarted, KRG minister 30 Aug — see 5 Mar row)"
+        "v": "Shut: the only Kurdistan field not restarted (KRG, 29 Aug)",
+        "k": "unoff",
+        "src": "thenationalnews.com",
+        "url": "https://www.thenationalnews.com/business/energy/2026/08/30/iraqi-kurdistan-resumes-oil-production-of-up-to-230000-bpd-after-drone-attacks/",
+        "date": "2026-08-30"
        }
       ],
       [
@@ -4021,14 +3989,14 @@
         "date": "2026-04-01"
        },
        "Castrol (Sardar Group) engine-oil warehouse, Erbil–Mosul road, Iraq (Kurdistan)",
-       "Unknown; drone (Shahed type, 3-4)",
+       "Not stated",
+       "Drone",
        {
-        "v": "Shut",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Destroyed: nothing inside left unburned",
+        "k": "unoff",
+        "src": "thenewregion.com",
         "url": "https://thenewregion.com/posts/5020",
-        "date": "2026-04-02",
-        "note": "shut (Erbil governor: nothing inside the warehouse left unburned; damage ~$5m per company)"
+        "date": "2026-04-02"
        }
       ],
       [
@@ -4038,17 +4006,17 @@
         "src": "Al-Mihwar",
         "url": "https://t.me/Alomhoar/93111",
         "date": "2026-04-01",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Barakah nuclear plant, UAE",
-       "Claimed by Iraqi factions (Al-Mihwar, Sabereen)",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "Working: all units operating normally (FANR, 17 May)",
         "k": "unoff",
-        "src": "Al-Mihwar",
-        "url": "https://t.me/Alomhoar/93111",
-        "date": "2026-04-01",
-        "note": "No UAE confirmation."
+        "src": "newarab.com",
+        "url": "https://www.newarab.com/news/uae-condemns-drone-strike-caused-fire-outside-nuclear-plant",
+        "date": "2026-05-17"
        }
       ],
       [
@@ -4060,14 +4028,14 @@
         "date": "2026-03-31"
        },
        "Power substation, eastern Tehran, Iran",
-       "Unknown (strike debris); unknown",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Unknown",
+        "v": "No report since the strike (31 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-03-31",
-        "note": "no status report found beyond the last one already held: [re-searched 11 Oct in Persian/English media (NIORDC, Shana, Mehr, Tasnim, Iran Intl etc.): no status report found]"
+        "date": "2026-03-31"
        }
       ],
       [
@@ -4079,14 +4047,14 @@
         "date": "2026-03-31"
        },
        "West Qurna 1 oil field, Basra, Iraq",
-       "Unknown; drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working: drone fell in open desert without exploding, no damage",
+        "k": "unoff",
+        "src": "kurdistan24.net",
         "url": "https://www.kurdistan24.net/en/story/904615/drone-crashes-in-west-qurna-1-oil-field-missile-hits-house-in-anbar-no-casualties",
-        "date": "2026-03-31",
-        "note": "working (Security Media Cell: drone fell in open desert inside the field without exploding, no damage)"
+        "date": "2026-03-31"
        }
       ],
       [
@@ -4098,14 +4066,14 @@
         "date": "2026-03-30"
        },
        "Power and desalination plant (unnamed), Kuwait",
-       "Iran; unknown",
+       "Iran",
+       "Not stated",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Back in service: damaged units repaired by end of August (plants not named)",
+        "k": "unoff",
+        "src": "kuwaittimes.com",
         "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
-        "date": "2026-09-15",
-        "note": "repaired (electricity ministry: damaged generating units restored gradually through end of August; stations not named, so not confirmed for this one)"
+        "date": "2026-09-15"
        }
       ],
       [
@@ -4117,14 +4085,14 @@
         "date": "2026-03-30"
        },
        "Tabriz Petrochemical Company, Iran",
-       "US/Israel; airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Partly working",
+        "v": "Partly working: olefin unit running, damaged C4 section moved",
         "k": "unoff",
-        "src": "Media report",
+        "src": "nabzebourse.com",
         "url": "https://nabzebourse.com/fa/news/131073/",
-        "date": "2026-06-07",
-        "note": "Nabz-e Bourse citing complex officials: part of the olefin unit damaged, the C4 section moved elsewhere so the olefin unit keeps running"
+        "date": "2026-06-07"
        }
       ],
       [
@@ -4136,14 +4104,14 @@
         "date": "2026-03-30"
        },
        "BAZAN refinery, Haifa (interception debris, second hit), Israel",
-       "Iran or Hezbollah; missile debris",
+       "Iran",
+       "Missile (interception debris)",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working normally; production not hit (30 Mar)",
+        "k": "unoff",
+        "src": "timesofisrael.com",
         "url": "https://www.timesofisrael.com/liveblog_entry/haifa-oil-refinery-hit-by-debris-from-intercepted-missile-fire-and-rescue-service-says/",
-        "date": "2026-03-30",
-        "note": "working (Energy Minister Eli Cohen: no damage to production facilities, fuel supply unaffected)"
+        "date": "2026-03-30"
        }
       ],
       [
@@ -4153,14 +4121,15 @@
         "src": "Ali Bk",
         "url": "https://t.me/Alibk3/14810",
         "date": "2026-03-30",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Asab oil and gas facility, UAE",
-       "Claimed by Ali Bk",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No confirmed attack",
         "k": "unoff",
-        "src": "Ali Bk",
+        "src": "t.me",
         "url": "https://t.me/Alibk3/14810",
         "date": "2026-03-30"
        }
@@ -4172,17 +4141,17 @@
         "src": "Al Hadath",
         "url": "https://t.me/AlHadath_Brk/110674",
         "date": "2026-03-27",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Abadan refinery, Iran",
-       "Claimed by Al Hadath; attackers' claim per ISW",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No confirmed attack; refinery not reported hit",
         "k": "unoff",
-        "src": "Al Hadath",
+        "src": "t.me",
         "url": "https://t.me/AlHadath_Brk/110674",
-        "date": "2026-03-27",
-        "note": "No Iranian confirmation found; a US strike on Abadan outskirts 13 Jul hurt one person (not the refinery)."
+        "date": "2026-03-27"
        }
       ],
       [
@@ -4194,14 +4163,14 @@
         "date": "2026-03-29"
        },
        "Dushan Tappeh substation, Tehran, Iran",
-       "US/Israel; airstrike (shrapnel)",
+       "US and Israel",
+       "Air strike (shrapnel)",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Repaired; power back within hours (30 Mar)",
+        "k": "unoff",
+        "src": "t.me",
         "url": "https://t.me/farsna/424873",
-        "date": "2026-03-30",
-        "note": "repaired (Tavanir: two sub-transmission posts out that night, outages fixed within hours; Fars: crews sent to restore service)"
+        "date": "2026-03-30"
        }
       ],
       [
@@ -4213,14 +4182,14 @@
         "date": "2026-03-28"
        },
        "Majnoon oil field, Basra (drone crash), Iraq",
-       "Unknown; drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working normally; drone did not explode (28 Mar)",
+        "k": "unoff",
+        "src": "voiceofemirates.com",
         "url": "https://www.voiceofemirates.com/en/news/2026/03/28/a-drone-crashed-in-the-majnoon-oil-field-in-basra-causing-no-damage/",
-        "date": "2026-03-28",
-        "note": "working (Iraqi MoD: drone did not explode, no damage or injuries)"
+        "date": "2026-03-28"
        }
       ],
       [
@@ -4232,14 +4201,14 @@
         "date": "2026-03-27"
        },
        "Bushehr nuclear power plant grounds, Iran",
-       "Unknown; missile",
+       "Not stated",
+       "Projectile",
        {
-        "v": "Working",
+        "v": "Working; no damage to the plant (27 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "insurancejournal.com",
         "url": "https://www.insurancejournal.com/news/international/2026/04/07/864740.htm",
-        "date": "2026-03-27",
-        "note": "working (no damage to any section, preliminary assessment per Fars)"
+        "date": "2026-03-27"
        }
       ],
       [
@@ -4251,14 +4220,14 @@
         "date": "2026-03-27"
        },
        "Two power plants (900 MW and 250 MW), Isfahan province, Iran",
-       "US/Israel; missile",
+       "US and Israel",
+       "Missile",
        {
-        "v": "Unknown",
+        "v": "Being rebuilt; no output figure given (2 Aug)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "entekhab.ir",
         "url": "https://www.entekhab.ir/fa/news/933324/",
-        "date": "2026-08-02",
-        "note": "Mobarakeh Steel AGM (11 Mordad 1405): reconstruction of damaged units begun, war damage put at 215,000bn tomans; the 900 and 250 MW plants named by the Isfahan deputy governor are not given a status"
+        "date": "2026-08-02"
        }
       ],
       [
@@ -4270,14 +4239,14 @@
         "date": "2026-03-27"
        },
        "Khondab heavy-water plant, Markazi, Iran",
-       "US (per IRNA pin); unknown",
+       "Israel",
+       "Air strike",
        {
-        "v": "Shut",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Shut; badly damaged, no longer working (IAEA)",
+        "k": "unoff",
+        "src": "timesofoman.com",
         "url": "https://timesofoman.com/article/170036-iaea-says-irans-khondab-heavy-water-plant-sustained-severe-damage-no-longer-operational-after-israeli-strikes",
-        "date": "2026-03-30",
-        "note": "IAEA: the Khondab heavy water production plant, which Iran said was hit on 27 Mar, sustained severe damage and is no longer operational (the 'plant' in the Markazi deputy governor's statement is this complex, not a power station)"
+        "date": "2026-03-30"
        }
       ],
       [
@@ -4289,14 +4258,14 @@
         "date": "2026-03-25"
        },
        "Kuwait International Airport fuel depot",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/2798143-kuwait-reports-drone-strikes-at-airport-fuel-tanks",
-        "date": "2026-04-01",
-        "note": "no status report found beyond the last one already held: (KAFCO tanks hit 8 Mar, 25 Mar and 1 Apr; no repair report)"
+        "v": "Tanks damaged; no report of repair (1 Apr); airport kept running",
+        "k": "unoff",
+        "src": "qna.org.qa",
+        "url": "https://qna.org.qa/en/News-Area/News/2026-4/1/kuwait-international-airport-targeted-by-drone-attacks-on-fuel-tanks",
+        "date": "2026-04-01"
        }
       ],
       [
@@ -4308,14 +4277,14 @@
         "date": "2026-03-25"
        },
        "Orot Rabin power station area, Hadera, Israel",
-       "Iran; missile",
+       "Iran",
+       "Missile",
        {
-        "v": "Working",
+        "v": "Working normally; no damage to the plant (25 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "thesun.my",
         "url": "https://thesun.my/news/world-news/israel-power-supplier-reports-damage-near-strategic-facility-kf14336905/",
-        "date": "2026-03-25",
-        "note": "working (IEC: no damage to infrastructure)"
+        "date": "2026-03-25"
        }
       ],
       [
@@ -4327,14 +4296,14 @@
         "date": "2026-03-24"
        },
        "Gas pipeline to Khorramshahr power plant, Iran",
-       "US/Israel (US says it struck the power plant); airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working; power supply stable (24 Mar)",
+        "k": "unoff",
+        "src": "tasnimnews.ir",
         "url": "https://www.tasnimnews.ir/en/news/2026/03/24/3547901/us-israel-attack-iran-s-civilian-energy-infrastructure-in-isfahan-khorramshahr",
-        "date": "2026-03-24",
-        "note": "working (local officials: no casualties, essential services not disrupted, power stable)"
+        "date": "2026-03-24"
        }
       ],
       [
@@ -4346,14 +4315,14 @@
         "date": "2026-03-24"
        },
        "Gas company building and pressure-reduction station, Kaveh St, Isfahan, Iran",
-       "US/Israel; airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Damaged; no report of repair since 24 Mar",
+        "k": "unoff",
+        "src": "tasnimnews.ir",
         "url": "https://www.tasnimnews.ir/en/news/2026/03/24/3547901/us-israel-attack-iran-s-civilian-energy-infrastructure-in-isfahan-khorramshahr",
-        "date": "2026-03-24",
-        "note": "no status report found beyond the last one already held: (parts of gas facilities and nearby homes damaged, Tasnim/Fars)"
+        "date": "2026-03-24"
        }
       ],
       [
@@ -4362,18 +4331,17 @@
         "k": "unoff",
         "src": "Akhbar-e Fori",
         "url": "https://t.me/akhbarefori/633588",
-        "date": "2026-03-12",
-        "note": "Claim; no confirmation from the operator or a government"
+        "date": "2026-03-12"
        },
        "Repeat strikes on Tehran/Karaj depots (Rey 12 Mar, Fardis 17 Mar, Aghdasieh 20 Mar, Shahran 24 Mar), Iran",
-       "Claimed by Akhbar-e Fori; Iran International; INSS map",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Claim",
+        "v": "Rey and Karaj running on bypass lines; Shahran damaged again (30 May)",
         "k": "unoff",
-        "src": "Akhbar-e Fori",
-        "url": "https://t.me/akhbarefori/633588",
-        "date": "2026-03-12",
-        "note": "Press TV (30 May) mentions a \"second wave\" on Rey, Shahran, Karaj and Quchak depots without dates."
+        "src": "en.shana.ir",
+        "url": "https://en.shana.ir/news/2031132/Shana",
+        "date": "2026-05-30"
        }
       ],
       [
@@ -4383,17 +4351,17 @@
         "src": "Human Rights Activists News Agency",
         "url": "https://www.en-hrana.org/day-24-of-u-s-and-israeli-attacks-on-iran-a-deadly-day-for-civilians/",
         "date": "2026-03-23",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Gas company, Tehran, Iran",
-       "Claimed by HRANA list / IDF posts",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No confirmed attack",
         "k": "unoff",
-        "src": "Human Rights Activists News Agency",
+        "src": "en-hrana.org",
         "url": "https://www.en-hrana.org/day-24-of-u-s-and-israeli-attacks-on-iran-a-deadly-day-for-civilians/",
-        "date": "2026-03-23",
-        "note": "Possibly confused with the Isfahan gas company hit the same day."
+        "date": "2026-03-23"
        }
       ],
       [
@@ -4403,17 +4371,17 @@
         "src": "Human Rights Activists News Agency",
         "url": "https://www.en-hrana.org/day-23-of-u-s-and-israeli-attacks-on-iran-more-than-15-of-the-total-fatalities-are-children/",
         "date": "2026-03-22",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Bandar Abbas combined-cycle and Geno power plants, Iran",
-       "Claimed by HRANA (preliminary list)",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No confirmed attack",
         "k": "unoff",
-        "src": "Human Rights Activists News Agency",
+        "src": "en-hrana.org",
         "url": "https://www.en-hrana.org/day-23-of-u-s-and-israeli-attacks-on-iran-more-than-15-of-the-total-fatalities-are-children/",
-        "date": "2026-03-22",
-        "note": "Documentation group, damage not described."
+        "date": "2026-03-22"
        }
       ],
       [
@@ -4425,14 +4393,14 @@
         "date": "2026-03-20"
        },
        "Mina al-Ahmadi refinery, Kuwait",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Partly working",
+        "v": "Running at reduced rates, some units idle (Aug)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "kpler.com",
         "url": "https://www.kpler.com/blog/middle-east-refining-under-pressure-damage-export-disruption-and-a-two-speed-recovery",
-        "date": "2026-08-20",
-        "note": "partly working (all three Kuwaiti refineries running at reduced rates with some units idle, Q3 runs ~570,000 b/d; no KPC/KNPC restart statement found)"
+        "date": "2026-08-20"
        }
       ],
       [
@@ -4444,14 +4412,14 @@
         "date": "2026-03-19"
        },
        "Pearl GTL, Ras Laffan (train 2), Qatar",
-       "Iran; missile",
+       "Iran",
+       "Missile",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://www.hrw.org/news/2026/04/22/israel-iran-unlawful-march-attacks-on-energy-infrastructure",
-        "date": "2026-04-22",
-        "note": "partly working (Shell: about one year to repair train 2)"
+        "v": "Partly restarted (train 1); train 2 due back in early 2027",
+        "k": "unoff",
+        "src": "bairdmaritime.com",
+        "url": "https://www.bairdmaritime.com/shipping/tankers/gas/shells-qatar-gas-to-liquids-plant-back-online-but-regional-security-risks-stall-shipping",
+        "date": "2026-10-08"
        }
       ],
       [
@@ -4463,14 +4431,14 @@
         "date": "2026-03-19"
        },
        "SAMREF refinery, Yanbu, Saudi Arabia",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Working normally; loadings resumed same day",
         "k": "unoff",
-        "src": "Media report",
+        "src": "insurancejournal.com",
         "url": "https://www.insurancejournal.com/news/international/2026/04/07/864740.htm",
-        "date": "2026-03-19",
-        "note": "working (Yanbu loadings resumed same day; damage minimal)"
+        "date": "2026-03-19"
        }
       ],
       [
@@ -4482,14 +4450,14 @@
         "date": "2026-03-19"
        },
        "Habshan gas processing complex and Bab field, UAE",
-       "Iran; missile",
+       "Iran",
+       "Missile",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://www.investwithabudhabi.com/en/news/adnoc-gas-habshan",
-        "date": "2026-08-11",
-        "note": "partly working (about 60% in May, 85% restored by Aug; full capacity expected 2027, ADNOC Gas)"
+        "v": "Partly back: about 85% of capacity; full output expected 2027",
+        "k": "unoff",
+        "src": "khaleejtimes.com",
+        "url": "https://www.khaleejtimes.com/business/adnoc-gas-habshan-complex-restored-to-85-after-april-attack",
+        "date": "2026-08-11"
        }
       ],
       [
@@ -4501,14 +4469,14 @@
         "date": "2026-03-19"
        },
        "Mina al-Ahmadi refinery, Kuwait",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Partly working",
+        "v": "Running at reduced rates, some units idle (Aug)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "kpler.com",
         "url": "https://www.kpler.com/blog/middle-east-refining-under-pressure-damage-export-disruption-and-a-two-speed-recovery",
-        "date": "2026-08-20",
-        "note": "partly working (all three Kuwaiti refineries running at reduced rates with some units idle, Q3 runs ~570,000 b/d; no KPC/KNPC restart statement found)"
+        "date": "2026-08-20"
        }
       ],
       [
@@ -4520,14 +4488,14 @@
         "date": "2026-03-19"
        },
        "Mina Abdullah refinery, Kuwait",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Partly working",
+        "v": "Running at reduced rates (Aug)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "kpler.com",
         "url": "https://www.kpler.com/blog/middle-east-refining-under-pressure-damage-export-disruption-and-a-two-speed-recovery",
-        "date": "2026-08-20",
-        "note": "partly working (all three Kuwaiti refineries running at reduced rates with some units idle, Q3 runs ~570,000 b/d; no KPC/KNPC restart statement found)"
+        "date": "2026-08-20"
        }
       ],
       [
@@ -4539,14 +4507,14 @@
         "date": "2026-03-19"
        },
        "BAZAN refinery, Haifa, Israel",
-       "Iran; missile",
+       "Iran",
+       "Ballistic missile",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://www.hellenicshippingnews.com/israels-haifa-refinery-confirms-damage-to-essential-infrastructure/",
-        "date": "2026-03-20",
-        "note": "partly working (most units running, rest restarting, per Bazan; later single-sourced reports of longer outage unconfirmed)"
+        "v": "Distillate units back at full capacity; power backup still being rebuilt",
+        "k": "unoff",
+        "src": "qcintel.com",
+        "url": "https://www.qcintel.com/article/israel-s-haifa-refinery-restarting-after-localised-damage-61177.html",
+        "date": "2026-03-20"
        }
       ],
       [
@@ -4558,14 +4526,14 @@
         "date": "2026-03-18"
        },
        "South Pars gas refineries 3, 4, 5 and 6, Asaluyeh, Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Partly back: about 100 of 230 mcm/d; refineries 3 and 5 being rebuilt",
+        "k": "unoff",
+        "src": "mehrnews.com",
         "url": "https://mehrnews.com/news/6968846/",
-        "date": "2026-10-05",
-        "note": "partly working (about 100 of 230 million m3/day restored from three phases; refineries 3 and 5 being rebuilt; NIGC CEO Saeed Tavakoli)"
+        "date": "2026-10-05"
        }
       ],
       [
@@ -4577,14 +4545,14 @@
         "date": "2026-03-18"
        },
        "South Pars Phase 14 refinery, Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Partly back: about 70% of capacity; last train due by March 2027",
+        "k": "unoff",
+        "src": "en.shana.ir",
         "url": "https://en.shana.ir/news/2585806/Shana",
-        "date": "2026-08-22",
-        "note": "partly working (about 70% of capacity restored; last damaged train due back by March 2027, POGC CEO Touraj Dehqani)"
+        "date": "2026-08-22"
        }
       ],
       [
@@ -4596,14 +4564,14 @@
         "date": "2026-03-18"
        },
        "South Pars offshore platforms (three, idle after onshore refineries hit), Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working: three platforms back in production (31 May)",
+        "k": "unoff",
+        "src": "mehrnews.com",
         "url": "https://www.mehrnews.com/news/6845784/",
-        "date": "2026-05-31",
-        "note": "working (three platforms back in production, gas sent to other refineries)"
+        "date": "2026-05-31"
        }
       ],
       [
@@ -4615,14 +4583,14 @@
         "date": "2026-03-18"
        },
        "Oil terminal near Bandar Abbas, Iran",
-       "US/Israel; airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Unknown",
+        "v": "No report of damage or status since attack (18 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-03-18",
-        "note": "no status report found beyond the last one already held: [re-searched 11 Oct in Persian/English media (NIORDC, Shana, Mehr, Tasnim, Iran Intl etc.): no status report found]"
+        "date": "2026-03-18"
        }
       ],
       [
@@ -4634,14 +4602,14 @@
         "date": "2026-03-18"
        },
        "Ras Laffan LNG, trains 4 and 6, Qatar",
-       "Iran; missile",
+       "Iran",
+       "Ballistic missile",
        {
-        "v": "Shut",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Shut; repair put at 3 to 5 years",
+        "k": "unoff",
+        "src": "ndtv.com",
         "url": "https://www.ndtv.com/world-news/iran-war-news-qatars-17-lng-exports-disrupted-in-iran-attacks-these-nations-impacted-11241053",
-        "date": "2026-03-19",
-        "note": "shut (trains 4 and 6, 12.8 mtpa, ~17% of exports; repair up to 3-5 years per energy minister). Other trains restarted from April; third-party satellite data later showed train 5 offline"
+        "date": "2026-03-19"
        }
       ],
       [
@@ -4653,14 +4621,14 @@
         "date": "2026-03-18"
        },
        "Energy facility, Eastern Province (5 drones intercepted), Saudi Arabia",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working; drones shot down, no damage (18 Mar)",
+        "k": "unoff",
+        "src": "newsquawk.com",
         "url": "https://www.newsquawk.com/headlines/saudi-arabia-defence-ministry-says-it-intercepted-and-destroyed-five-drones-that-attempted-to-approach-an-energy-facility-in-the-eastern-region",
-        "date": "2026-03-18",
-        "note": "working (Saudi MoD: drones intercepted; no damage reported)"
+        "date": "2026-03-18"
        }
       ],
       [
@@ -4670,14 +4638,15 @@
         "src": "Al-Mihwar",
         "url": "https://t.me/Alomhoar/88029",
         "date": "2026-03-18",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "South Riyadh refinery, Saudi Arabia",
-       "Claimed by Al-Mihwar",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No confirmed attack",
         "k": "unoff",
-        "src": "Al-Mihwar",
+        "src": "t.me",
         "url": "https://t.me/Alomhoar/88029",
         "date": "2026-03-18"
        }
@@ -4691,14 +4660,14 @@
         "date": "2026-03-17"
        },
        "Bushehr nuclear power plant area, Iran",
-       "US/Israel; unknown",
+       "US and Israel",
+       "Not stated",
        {
-        "v": "Working",
+        "v": "Working; no damage reported (17 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-03-17",
-        "note": "working (no damage reported)"
+        "date": "2026-03-17"
        }
       ],
       [
@@ -4710,14 +4679,14 @@
         "date": "2026-03-16"
        },
        "Shah gas field, UAE",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://guest.meed.com/abu-dhabis-shah-field-goes-offline-after-drone-attack/",
-        "date": "2026-03-16",
-        "note": "WAM via MEED: operations temporarily suspended pending assessment; no restart statement found in ADNOC, WAM or trade press read"
+        "v": "Shut since 16 Mar pending assessment; no restart reported",
+        "k": "unoff",
+        "src": "offshore-technology.com",
+        "url": "https://www.offshore-technology.com/news/operations-cease-shah-gas-field-after-drone-strike/",
+        "date": "2026-03-17"
        }
       ],
       [
@@ -4729,14 +4698,14 @@
         "date": "2026-03-16"
        },
        "Dubai International Airport fuel tank, UAE",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Airport working; flights resumed same day; tank repair not reported",
+        "k": "unoff",
+        "src": "newsonair.gov.in",
         "url": "https://www.newsonair.gov.in/dubai-international-airport-resumes-flights-after-drone-strike-on-fuel-tank",
-        "date": "2026-03-16",
-        "note": "partly working (Dubai Airports: flights gradually resumed the same day after a ~7-hour halt; repair of the burned tank not reported)"
+        "date": "2026-03-16"
        }
       ],
       [
@@ -4748,14 +4717,14 @@
         "date": "2026-03-16"
        },
        "Majnoon oil field (KBR office, comms tower), Basra, Iraq",
-       "Unknown; drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working; no damage at the field (16 Mar)",
+        "k": "unoff",
+        "src": "today.lorientlejour.com",
         "url": "https://today.lorientlejour.com/article/1499485/drone-attack-targets-major-southern-iraqi-oil-field-officials.html",
-        "date": "2026-03-16",
-        "note": "working (oil ministry spokesman Saheb Bazoun: no damage; only Iraqi staff on site after foreign workers left)"
+        "date": "2026-03-16"
        }
       ],
       [
@@ -4767,14 +4736,14 @@
         "date": "2026-03-14"
        },
        "Fujairah oil terminal (loading), UAE",
-       "Iran; drone (interception debris)",
+       "Iran",
+       "Drone (interception debris)",
        {
-        "v": "Working",
+        "v": "Working: terminals loading, exports running Aug-Sep",
         "k": "unoff",
-        "src": "Media report",
+        "src": "engine.online",
         "url": "https://engine.online/news/fujairahs-fuel-oil-inventories-drawn-29-pc-in-august-80d2",
-        "date": "2026-10-01",
-        "note": "working (see 3 Mar entry: terminals operating, Aug-Sep export data)"
+        "date": "2026-10-01"
        }
       ],
       [
@@ -4786,14 +4755,14 @@
         "date": "2026-03-13"
        },
        "Kharg Island oil export hub (strikes on military sites on the island), Iran",
-       "US; airstrike",
+       "US",
+       "Air strike",
        {
-        "v": "Working",
+        "v": "Working: oil loadings continued (17 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/2026_Kharg_Island_attack",
-        "date": "2026-03-17",
-        "note": "working (Iranian officials: oil operations uninterrupted; satellite images show tankers loading ~17 Mar)"
+        "date": "2026-03-17"
        }
       ],
       [
@@ -4805,14 +4774,14 @@
         "date": "2026-03-12"
        },
        "Fuel tanks, Muharraq (near Bahrain International Airport)",
-       "Iran; missile and drone",
+       "Iran",
+       "Missile and drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://gna.org.gh/2026/03/iran-strikes-fuel-tanks-near-bahrain-airport-authorities-say/",
-        "date": "2026-03-12",
-        "note": "no status report found beyond the last one already held: (Interior Ministry: fire contained, cooling under way; unclear whether airport kerosene tanks or another depot)"
+        "v": "Fire put out; no report of damage or repair (12 Mar)",
+        "k": "unoff",
+        "src": "qna.org.qa",
+        "url": "https://qna.org.qa/en/News-Area/News/2026-3/12/bahrain-says-firefighters-contain-blaze-after-iranian-strike-on-fuel-tanks",
+        "date": "2026-03-12"
        }
       ],
       [
@@ -4824,14 +4793,14 @@
         "date": "2026-03-12"
        },
        "Shaybah oil field (repeated drone attacks, all intercepted), Saudi Arabia",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working; all drones shot down",
+        "k": "unoff",
+        "src": "x.com",
         "url": "https://x.com/modgovksa/status/2031880477993222325",
-        "date": "2026-03-12",
-        "note": "working (Saudi MoD: drones intercepted and destroyed; no damage reported)"
+        "date": "2026-03-12"
        }
       ],
       [
@@ -4843,14 +4812,14 @@
         "date": "2026-03-11"
        },
        "Oil depot and fuel station, Tehran, Iran",
-       "US/Israel; airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Unknown",
+        "v": "No report of status since attack (11 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-03-11",
-        "note": "no status report found beyond the last one already held: [re-searched 11 Oct in Persian/English media (NIORDC, Shana, Mehr, Tasnim, Iran Intl etc.): no status report found]"
+        "date": "2026-03-11"
        }
       ],
       [
@@ -4862,14 +4831,14 @@
         "date": "2026-03-11"
        },
        "Port of Salalah fuel tanks, Oman",
-       "Unknown (unclaimed); drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Port partly back from 31 Mar; fuel tank repair not reported",
+        "k": "unoff",
+        "src": "seatrade-maritime.com",
         "url": "https://www.seatrade-maritime.com/ports-logistics/some-operations-to-resume-tuesday-at-port-of-salalah-says-maersk",
-        "date": "2026-03-31",
-        "note": "partly working (container terminal resumed gradually from 31 Mar after a second drone strike on 28 Mar, Maersk/APM Terminals; repair of the fuel tanks hit 11 Mar not reported)"
+        "date": "2026-03-31"
        }
       ],
       [
@@ -4879,16 +4848,17 @@
         "src": "Fars",
         "url": "https://t.me/farsna/418207",
         "date": "2026-03-11",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Garmian oil field (probably Khor Mor, Garmian district), Iraq (Kurdistan)",
-       "Claimed by Fars, Akhbar-e Fori",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No confirmed attack; Khor Mor was shut by the war and restarted 13 Apr",
         "k": "unoff",
-        "src": "Fars",
-        "url": "https://t.me/farsna/418207",
-        "date": "2026-03-11"
+        "src": "rudaw.net",
+        "url": "https://www.rudaw.net/english/kurdistan/13042026",
+        "date": "2026-04-13"
        }
       ],
       [
@@ -4900,14 +4870,14 @@
         "date": "2026-03-11"
        },
        "Majnoon oil field, Basra (earlier drone attacks), Iraq",
-       "Unknown; drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working; no damage at the field (16 Mar)",
+        "k": "unoff",
+        "src": "today.lorientlejour.com",
         "url": "https://today.lorientlejour.com/article/1499485/drone-attack-targets-major-southern-iraqi-oil-field-officials.html",
-        "date": "2026-03-16",
-        "note": "working (10 Mar: drone fell inside, no losses; 11 Mar: a building hit; oil ministry later said no damage at the field)"
+        "date": "2026-03-16"
        }
       ],
       [
@@ -4919,14 +4889,14 @@
         "date": "2026-03-10"
        },
        "Kerman airport fuel depot, Iran",
-       "US/Israel; airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Unknown",
+        "v": "No report of status since attack (10 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-03-10",
-        "note": "no status report found beyond the last one already held: [re-searched 11 Oct in Persian/English media (NIORDC, Shana, Mehr, Tasnim, Iran Intl etc.): no status report found]"
+        "date": "2026-03-10"
        }
       ],
       [
@@ -4938,14 +4908,14 @@
         "date": "2026-03-10"
        },
        "Ruwais refinery (ADNOC), UAE",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Back to full 922,000 b/d (Aug)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "egyptoil-gas.com",
         "url": "https://egyptoil-gas.com/news/adnoc-restores-922000-bbl-d-ruwais-refinery-to-full-capacity/",
-        "date": "2026-08-31",
-        "note": "working (back at full 922,000 b/d capacity since about early August, Bloomberg citing people familiar)"
+        "date": "2026-08-31"
        }
       ],
       [
@@ -4957,14 +4927,14 @@
         "date": "2026-03-09"
        },
        "Shaybah oil field, Saudi Arabia",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Working; drones shot down, no damage",
         "k": "unoff",
-        "src": "Media report",
+        "src": "insurancejournal.com",
         "url": "https://www.insurancejournal.com/news/international/2026/04/07/864740.htm",
-        "date": "2026-04-07",
-        "note": "working (drones intercepted, no damage reported)"
+        "date": "2026-04-07"
        }
       ],
       [
@@ -4976,14 +4946,14 @@
         "date": "2026-03-09"
        },
        "Subiya power station (fuel tank), Kuwait",
-       "Iran; drone (debris)",
+       "Iran",
+       "Drone (interception debris)",
        {
-        "v": "Repaired",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working; fuel tank fire put out, damaged units restored by end Aug",
+        "k": "unoff",
+        "src": "kuwaittimes.com",
         "url": "https://kuwaittimes.com/article/49849/kuwait/other-news/energy-conservation-helps-cut-kuwait-summer-power-peak-to-17540-mw/",
-        "date": "2026-09-15",
-        "note": "repaired (electricity ministry: damaged generating units restored gradually through end of August; stations not named, so not confirmed for this one)"
+        "date": "2026-09-15"
        }
       ],
       [
@@ -4995,14 +4965,14 @@
         "date": "2026-03-09"
        },
        "Bapco Sitra refinery, Bahrain",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Damaged, runs cut",
+        "v": "Damaged; runs cut, force majeure not lifted (Aug)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "kpler.com",
         "url": "https://www.kpler.com/blog/middle-east-refining-under-pressure-damage-export-disruption-and-a-two-speed-recovery",
-        "date": "2026-08-20",
-        "note": "Kpler: Bahrain, with Saudi Arabia and Kuwait, combines substantial physical damage with some of the largest refinery run losses; no Bapco statement lifting force majeure found"
+        "date": "2026-08-20"
        }
       ],
       [
@@ -5014,14 +4984,14 @@
         "date": "2026-03-08"
        },
        "Kuwait International Airport fuel tanks (KAFCO), first strike",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
-        "url": "https://www.argusmedia.com/en/news-and-insights/latest-market-news/2798143-kuwait-reports-drone-strikes-at-airport-fuel-tanks",
-        "date": "2026-03-08",
-        "note": "no status report found beyond the last one already held: (two tanks hit, fire and damage, no casualties; no repair report)"
+        "v": "Tanks damaged; no report of repair (1 Apr)",
+        "k": "unoff",
+        "src": "qna.org.qa",
+        "url": "https://qna.org.qa/en/News-Area/News/2026-4/1/kuwait-international-airport-targeted-by-drone-attacks-on-fuel-tanks",
+        "date": "2026-04-01"
        }
       ],
       [
@@ -5033,14 +5003,14 @@
         "date": "2026-03-07"
        },
        "Shahran oil depot, Tehran, Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Hit again in second wave; earlier damaged tanks back in service (30 May)",
+        "k": "unoff",
+        "src": "en.shana.ir",
         "url": "https://en.shana.ir/news/2031132/Shana",
-        "date": "2026-05-30",
-        "note": "working (damaged tanks repaired and returned to service, per NIORDC)"
+        "date": "2026-05-30"
        }
       ],
       [
@@ -5052,14 +5022,14 @@
         "date": "2026-03-07"
        },
        "Shahr-e Rey (Tehran refinery) oil depot, Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Partly working on bypass lines; rebuild under way (30 May)",
+        "k": "unoff",
+        "src": "en.shana.ir",
         "url": "https://en.shana.ir/news/2031132/Shana",
-        "date": "2026-05-30",
-        "note": "partly working (emergency bypass lines; three-phase rebuild under way)"
+        "date": "2026-05-30"
        }
       ],
       [
@@ -5071,14 +5041,14 @@
         "date": "2026-03-07"
        },
        "Aghdasieh oil depot, Tehran, Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Unknown",
+        "v": "No report of status since attack (7 Mar)",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://fararu.com/fa/news/954751/",
-        "date": "2026-03-07",
-        "note": "no status report found beyond the last one already held: [re-searched 11 Oct in Persian/English media (NIORDC, Shana, Mehr, Tasnim, Iran Intl etc.): no status report found]"
+        "src": "hrw.org",
+        "url": "https://www.hrw.org/news/2026/04/22/israel-iran-unlawful-march-attacks-on-energy-infrastructure",
+        "date": "2026-03-09"
        }
       ],
       [
@@ -5090,14 +5060,14 @@
         "date": "2026-03-07"
        },
        "Fardis oil depot, Karaj (Alborz), Iran",
-       "Israel; airstrike",
+       "Israel",
+       "Air strike",
        {
-        "v": "Partly working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Partly working on bypass line; depot to be moved (3 Jun)",
+        "k": "unoff",
+        "src": "en.shana.ir",
         "url": "https://en.shana.ir/news/2031132/Shana",
-        "date": "2026-06-03",
-        "note": "partly working (emergency bypass; Alborz governorate says depot will be moved to Eshtehard)"
+        "date": "2026-06-03"
        }
       ],
       [
@@ -5107,17 +5077,17 @@
         "src": "Philenews",
         "url": "https://in-cyprus.philenews.com/international/drone-attack-basra-halliburton-kbr-fire-iraq-live/",
         "date": "2026-03-07",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Basra \"refinery structures\", Iraq",
-       "Claimed by relays (Ali Bk, Akhbar-e Fori)",
+       "Not stated",
+       "Drone",
        {
-        "v": "Claim",
+        "v": "No refinery hit; target was oil-firm housing compounds",
         "k": "unoff",
-        "src": "Philenews",
+        "src": "in-cyprus.philenews.com",
         "url": "https://in-cyprus.philenews.com/international/drone-attack-basra-halliburton-kbr-fire-iraq-live/",
-        "date": "2026-03-07",
-        "note": "Confirmed target was Halliburton/KBR housing compounds (excluded)."
+        "date": "2026-03-07"
        }
       ],
       [
@@ -5129,14 +5099,14 @@
         "date": "2026-03-06"
        },
        "National Iranian Oil Company facility, Miandoab",
-       "US/Israel; airstrike",
+       "US and Israel",
+       "Air strike",
        {
-        "v": "Unknown",
+        "v": "No report of status since attack (6 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "en.wikipedia.org",
         "url": "https://en.wikipedia.org/wiki/Timeline_of_the_2026_Iran_war",
-        "date": "2026-03-06",
-        "note": "no status report found beyond the last one already held: [re-searched 11 Oct in Persian/English media (NIORDC, Shana, Mehr, Tasnim, Iran Intl etc.): no status report found]"
+        "date": "2026-03-06"
        }
       ],
       [
@@ -5148,14 +5118,14 @@
         "date": "2026-03-06"
        },
        "Burjisiya oil-services logistics hub (chemical storage), Basra, Iraq",
-       "Unknown (Iraqi factions per local sources; Basra Oil Co. sources told Al Jazeera \"Iranian drone\"); drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Unknown",
+        "v": "Fire at chemical store; no report of repair (6 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "iraqoilreport.com",
         "url": "https://www.iraqoilreport.com/news/oil-companies-evacuate-as-burjisiya-drone-attack-highlights-rising-threat-47591/",
-        "date": "2026-03-06",
-        "note": "no status report found beyond the last one already held: (fire at chemical storage; foreign oil firms evacuated staff)"
+        "date": "2026-03-06"
        }
       ],
       [
@@ -5167,14 +5137,14 @@
         "date": "2026-03-05"
        },
        "Sarsang oil field (HKN), Duhok, Iraq (Kurdistan Region)",
-       "Iran-aligned Iraqi militia (claimed by 'Guardians of Blood'); drone",
+       "Iraqi militias",
+       "Drone",
        {
-        "v": "Shut",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Shut since 20 Jul; briefly back at about 7,000 b/d in July",
+        "k": "unoff",
+        "src": "thenationalnews.com",
         "url": "https://www.thenationalnews.com/business/energy/2026/08/30/iraqi-kurdistan-resumes-oil-production-of-up-to-230000-bpd-after-drone-attacks/",
-        "date": "2026-08-30",
-        "note": "shut (only Kurdistan field not restarted, KRG natural resources minister)"
+        "date": "2026-08-30"
        }
       ],
       [
@@ -5186,14 +5156,14 @@
         "date": "2026-03-05"
        },
        "Bapco Sitra refinery (first strike), Bahrain",
-       "Iran; missile",
+       "Iran",
+       "Missile",
        {
-        "v": "Damaged, runs cut",
+        "v": "Damaged; runs cut, force majeure not lifted (Aug)",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://guest.meed.com/hydrogen-production-unit-was-hit-at-bahrains-sitra-refinery/",
-        "date": "2026-04-08",
-        "note": "MEED: a hydrogen production unit was among the key units hit at Sitra; if it cannot run at full capacity the refinery must cut throughput; see the 9 Mar row for later status"
+        "src": "kpler.com",
+        "url": "https://www.kpler.com/blog/middle-east-refining-under-pressure-damage-export-disruption-and-a-two-speed-recovery",
+        "date": "2026-08-20"
        }
       ],
       [
@@ -5205,14 +5175,14 @@
         "date": "2026-03-05"
        },
        "Rumaila oil field (BP), Basra, Iraq",
-       "Unknown (Iraqi factions loyal to Iran per local sources); drone",
+       "Not stated",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Working; 4 Apr strike hit a store, no effect on output",
         "k": "unoff",
-        "src": "Media report",
+        "src": "english.alarabiya.net",
         "url": "https://english.alarabiya.net/News/middle-east/2026/04/04/three-workers-wounded-in-drone-strike-on-iraq-s-north-rumaila-oilfield-sources-say-",
-        "date": "2026-04-04",
-        "note": "Reuters via Al Arabiya: two Iraqi engineers said the 4 Apr drone strikes on North Rumaila hit an equipment store and had no impact on operations; three workers wounded"
+        "date": "2026-04-04"
        }
       ],
       [
@@ -5224,14 +5194,14 @@
         "date": "2026-03-04"
        },
        "Ras Tanura refinery (Aramco), second hit, Saudi Arabia",
-       "Iran; unknown (projectile)",
+       "Iran",
+       "Not stated (projectile)",
        {
-        "v": "Working",
+        "v": "Working; refinery restarted (18 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "bloomberg.com",
         "url": "https://www.bloomberg.com/news/articles/2026-03-18/saudi-arabia-s-ras-tanura-refinery-has-restarted-operations",
-        "date": "2026-03-18",
-        "note": "working (refinery restarted; crude loadings at Ras Tanura terminal resumed 26 Jun after ~4 months)"
+        "date": "2026-03-18"
        }
       ],
       [
@@ -5243,14 +5213,14 @@
         "date": "2026-03-04"
        },
        "Bandar Abbas power plant, Iran",
-       "US/Israel; missile",
+       "US and Israel",
+       "Missile",
        {
-        "v": "Unknown",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Kept running; no later report (4 Mar)",
+        "k": "unoff",
+        "src": "t.me",
         "url": "https://t.me/irna_1313/419071",
-        "date": "2026-03-04",
-        "note": "no status report found beyond the last one already held: (IRNA: missile hit a sensitive area near gas lines, HV cables and fuel tanks; staff kept the plant running; no later status)"
+        "date": "2026-03-04"
        }
       ],
       [
@@ -5262,14 +5232,14 @@
         "date": "2026-03-03"
        },
        "Fujairah Oil Industry Zone storage tanks, UAE",
-       "Iran; drone (interception debris)",
+       "Iran",
+       "Drone (interception debris)",
        {
-        "v": "Working",
+        "v": "Working: terminals and exports running Aug-Sep",
         "k": "unoff",
-        "src": "Media report",
+        "src": "engine.online",
         "url": "https://engine.online/news/fujairahs-fuel-oil-inventories-drawn-29-pc-in-august-80d2",
-        "date": "2026-10-01",
-        "note": "working (Fujairah terminals resumed 6 Mar after the first strikes, Argus; FOIZ/Vortexa data show product exports and storage running in Aug-Sep 2026; damage to individual tanks not reported)"
+        "date": "2026-10-01"
        }
       ],
       [
@@ -5281,14 +5251,14 @@
         "date": "2026-03-02"
        },
        "Ras Laffan and Mesaieed gas facilities, Qatar",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Partly working",
+        "v": "Partly working: exports slowly rising via Hormuz (late Sep); trains 4 and 6 still out",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://www.bairdmaritime.com/shipping/tankers/gas/qatarenergy-moves-to-bring-lng-production-back-online",
-        "date": "2026-04-01",
-        "note": "partly working (see 18 Mar entry)"
+        "src": "gcaptain.com",
+        "url": "https://gcaptain.com/qatar-boosts-lng-traffic-via-hormuz-as-global-shortage-bites/",
+        "date": "2026-09-24"
        }
       ],
       [
@@ -5300,14 +5270,14 @@
         "date": "2026-03-02"
        },
        "Ras Tanura refinery (Aramco), Saudi Arabia",
-       "Iran; drone",
+       "Iran",
+       "Drone",
        {
-        "v": "Working",
+        "v": "Working; refinery restarted (18 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "bloomberg.com",
         "url": "https://www.bloomberg.com/news/articles/2026-03-18/saudi-arabia-s-ras-tanura-refinery-has-restarted-operations",
-        "date": "2026-03-18",
-        "note": "working (refinery restarted; crude loadings at Ras Tanura terminal resumed 26 Jun after ~4 months)"
+        "date": "2026-03-18"
        }
       ],
       [
@@ -5319,14 +5289,14 @@
         "date": "2026-03-02"
        },
        "Doha West power and desalination complex, fuel tank (interception debris), Kuwait",
-       "Iran; drone (debris)",
+       "Iran",
+       "Drone (interception debris)",
        {
-        "v": "Working",
+        "v": "Working normally; fire put out (12 Mar)",
         "k": "unoff",
-        "src": "Media report",
+        "src": "mees.com",
         "url": "https://www.mees.com/2026/3/27/news-in-brief/kuwait-overhead-power-lines-damaged-in-attack/ab67ebc0-29ed-11f1-87d5-97ef808339f2",
-        "date": "2026-03-12",
-        "note": "working (operations not affected, fire contained; warhead later removed from the tank by the National Guard)"
+        "date": "2026-03-12"
        }
       ],
       [
@@ -5338,14 +5308,14 @@
         "date": "2026-03-02"
        },
        "Mina al-Ahmadi refinery (interception debris), Kuwait",
-       "Iran; debris (missile/drone)",
+       "Iran",
+       "Drone (interception debris)",
        {
-        "v": "Working",
-        "k": "off",
-        "src": "Operator or government",
+        "v": "Working at full capacity (2 Mar); hit again later",
+        "k": "unoff",
+        "src": "wam.ae",
         "url": "https://www.wam.ae/en/article/bz024ig-two-workers-injured-after-debris-falls-kuwait",
-        "date": "2026-03-02",
-        "note": "working (KNPC/KIPIC spokesman: two workers lightly hurt, no material damage, refinery at full capacity) — later strikes from 19 Mar, see those rows"
+        "date": "2026-03-02"
        }
       ],
       [
@@ -5355,14 +5325,15 @@
         "src": "Baghdad Today",
         "url": "https://t.me/baghdadtoday/137146",
         "date": "2026-03-02",
-        "note": "Claim; no confirmation from the operator or a government"
+        "note": "Reported by one source only"
        },
        "Power station south of Baghdad (debris), Iraq",
-       "Claimed by Baghdad Today",
+       "Not stated",
+       "Not stated",
        {
-        "v": "Claim",
+        "v": "No confirmed attack",
         "k": "unoff",
-        "src": "Baghdad Today",
+        "src": "t.me",
         "url": "https://t.me/baghdadtoday/137146",
         "date": "2026-03-02"
        }
@@ -5376,14 +5347,14 @@
         "date": "2026-03-01"
        },
        "Lanaz refinery, Erbil, Iraq (Kurdistan Region)",
-       "Unknown; drone",
+       "Iraqi militias",
+       "Drone",
        {
-        "v": "Unknown",
+        "v": "Halted after second strike on 14 Mar; no report of restart",
         "k": "unoff",
-        "src": "Media report",
-        "url": "https://peregraf.com/en/news/11179",
-        "date": "2026-04-07",
-        "note": "no status report found beyond the last one already held: (conflicting: Reuters via Peregraf 13 Mar said limited damage and operations continued; Reuters via Insurance Journal 7 Apr said operations suspended; no later report)"
+        "src": "insurancejournal.com",
+        "url": "https://www.insurancejournal.com/news/international/2026/04/07/864740.htm",
+        "date": "2026-04-07"
        }
       ]
      ],
@@ -5410,11 +5381,11 @@
       ],
       [
        {
-        "v": "135",
+        "v": "133",
         "k": "unoff",
         "src": "Our count of the list below",
         "date": "2026-10-11",
-        "note": "count of the list below: 108 attacks and 27 claims"
+        "note": "count of the list below"
        },
        "Since 28 Feb"
       ]

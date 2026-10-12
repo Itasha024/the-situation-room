@@ -155,7 +155,7 @@ export async function askChain(
   tag: string,
   system: string,
   user: string,
-  { temperature = 0.2, models = WRITER_MODELS, timeoutMs = 90_000, fast = false, budget }: { temperature?: number; models?: ChainModel[]; timeoutMs?: number; fast?: boolean; budget?: Record<string, number> } = {},
+  { temperature = 0.2, models = WRITER_MODELS, timeoutMs = 90_000, fast = false, budget, accept }: { temperature?: number; models?: ChainModel[]; timeoutMs?: number; fast?: boolean; budget?: Record<string, number>; accept?: (json: Record<string, unknown>) => string | null } = {},
 ): Promise<{ json: Record<string, unknown>; model: string } | null> {
   for (const m of models) {
     if (!hasKey(m) || (resting.get(restKey(m)) ?? 0) > Date.now()) continue;
@@ -169,7 +169,10 @@ export async function askChain(
     try {
       const json = looseJson(await callOne(m, system, user, temperature, timeoutMs, fast));
       spent();
-      if (json) {
+      // An answer the caller cannot use (accept names why) goes to the next model.
+      const why = json && accept ? accept(json) : null;
+      if (json && why) console.error(`[${tag}] ${restKey(m)}: ${why}`);
+      else if (json) {
         console.log(`[${tag}] written by ${restKey(m)}`);
         return { json, model: m.id };
       }

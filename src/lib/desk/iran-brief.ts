@@ -165,6 +165,20 @@ export function ownRef(point: string, ref: Ref | undefined): Ref | undefined {
   return !quoted && namesNation("iran", text) ? ref : undefined;
 }
 
+/**
+ * Why a writer's answer cannot be used, or null (user, 12 Oct: one point held the whole window, with
+ * made-up ids "[snn]", "[irib]"): an id not given, or one point for a window of many reports.
+ */
+export function unusable(j: Record<string, unknown>, refOf: Record<string, Ref>, nLines: number): string | null {
+  const raw = Array.isArray(j.points) ? j.points.map(String) : [];
+  const bad = raw.flatMap((p) => [...p.matchAll(/\[([^\]\s]{1,12})\]/g)].map((m) => m[1])).filter((id) => !/^\d+$/.test(id) && !refOf[id.toLowerCase()]);
+  if (bad.length) return `ids not given: ${bad.slice(0, 4).join(", ")}`;
+  const got = fromAnswer(j, refOf).situation;
+  if (!got) return "no usable points";
+  if (nLines >= 8 && got.points.length < 3) return `${got.points.length} point(s) for ${nLines} reports`;
+  return null;
+}
+
 /** Only points that kept a reference. */
 function marked(x: { points: string[]; refs: Ref[] }): { points: string[]; refs: Ref[] } {
   return { points: x.points.filter((p) => new RegExp(NUM_MARK.source).test(p)), refs: x.refs };
@@ -205,7 +219,7 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
 
   const { lines, refOf } = writerInput(cards, trump);
   let answer: { json: Record<string, unknown>; model: string } | null = null;
-  if (lines.length) answer = await askChain("iran-brief", SYSTEM, ["REPORTS:", ...lines].join("\n"), { models: IRAN_WRITERS, timeoutMs: 120_000 });
+  if (lines.length) answer = await askChain("iran-brief", SYSTEM, ["REPORTS:", ...lines].join("\n"), { models: IRAN_WRITERS, timeoutMs: 120_000, accept: (j) => unusable(j, refOf, lines.length) });
   const got = answer ? fromAnswer(answer.json, refOf) : { situation: null, arenas: {} };
 
   // No writer: the strongest headlines as the points, each with its own card.

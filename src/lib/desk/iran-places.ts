@@ -374,6 +374,19 @@ export function iranEventAllowed(e: { actor?: string | null; place?: string | nu
 }
 
 /**
+ * Iran's own air defence, interceptions, sirens and blasts heard over Iran are
+ * not Iran's attacks (user, 12 Oct): with no attacker named, the pin's side is
+ * "not stated". map-pack.cjs applies the same rule to the researched pins.
+ */
+const DEFENCE = /intercept|air[- ]?defen[cs]e|shot down|shoots? down|downed|sirens?\b|explosions? (?:were |was )?(?:heard|reported)|blasts? heard|sounds? of explosions|red alert|anti-?aircraft|alert sounded/i;
+const ATTACKER = /\b(?:Israel|Israeli|US|U\.S\.|American|CENTCOM|IDF|Mossad)\b/;
+export function ownSkyOnly(e: { actor?: string | null; place?: string | null; label?: string | null }): boolean {
+  const p = PLACE_BY_NAME.get(String(e.place ?? ""));
+  const label = String(e.label ?? "");
+  return e.actor === "iran" && p?.country === "Iran" && DEFENCE.test(label) && !ATTACKER.test(label);
+}
+
+/**
  * A stored pin whose place was only heard inside a longer place's name (user,
  * 11 Oct: "Bint Jbeil" read as Jbeil, Byblos, 113 km north): the longer place
  * the label names, when the pin's own name is nowhere else in it and the two

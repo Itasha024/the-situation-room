@@ -777,3 +777,11 @@ html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","No
 .ref-list .pager{border:0;background:transparent;overflow:visible}
 .ref-list .pager .card{margin:0}
 @media (hover:hover) and (min-width:721px){.ref-list .pager.many{padding:0 2.3rem}.ref-list .pg-prev{left:0}.ref-list .pg-next{right:0}}
+/* Phone (user, 12 Oct): Trump's statements open full screen, the page behind them still; nothing spills right of the desk. */
+@media (max-width:720px){
+  html,body{overflow-x:clip}
+  .tp-pop{place-items:stretch;overscroll-behavior:contain}
+  .tp-sheet{width:100%;height:100vh;height:100dvh;max-height:none;border-radius:0;border-left:0;border-right:0}
+  .tp-list{flex:1;min-height:0;overscroll-behavior:contain;padding-bottom:calc(1rem + env(safe-area-inset-bottom,0px))}
+  html.tp-open,html.tp-open body{overflow:hidden}
+}

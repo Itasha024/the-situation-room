@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { headlinePoints, numberRefs, pointList, type Ref, stripRefs } from "./refs.ts";
 import { cleanPoints } from "./prose.ts";
-import { fromAnswer, writerInput } from "./iran-brief.ts";
+import { fromAnswer, unusable, writerInput } from "./iran-brief.ts";
 
 const card = (fp: string, source: string, summary: string) => ({ fp, source, summary, at: "2026-10-09T10:00:00Z", url: `https://x/${fp}`, text: "", type: "statement", live: true }) as never;
 
@@ -116,4 +116,13 @@ test("a statement's speaker gets the colon; first-person words with no speaker a
   assert.equal(colonAfterLead("Hezbollah fighters will not disarm", "Hezbollah"), "Hezbollah fighters will not disarm");
   assert.equal(fixHeadline("IRGC Navy: continued US interventions will lead to more incidents"), "IRGC Navy: continued US interventions will lead to more incidents");
   assert.equal(fixHeadline("Trump: held a call with Putin"), "Trump held a call with Putin");
+});
+
+test("a writer's answer with made-up ids, or one point for many reports, goes to the next model (12 Oct)", () => {
+  const refOf: Record<string, Ref> = {};
+  for (let i = 1; i <= 10; i++) refOf[`r${i}`] = { fp: `f${i}`, source: "Reuters", at: "2026-10-12T07:00:00Z", url: `https://x/${i}`, headline: "h" } as Ref;
+  const glued = { points: ["Baghaei: Hormuz was a response [r1]. Iran reviews the US proposal [snn]. Messages continue [irib]."] };
+  assert.match(String(unusable(glued, refOf, 10)), /ids not given: snn, irib/);
+  assert.match(String(unusable({ points: ["Baghaei: Hormuz was a response to attacks [r1]."] }, refOf, 10)), /1 point/);
+  assert.equal(unusable({ points: ["Israeli jets struck a weapons depot near Isfahan, Iranian state media said [r1].", "The IRGC Navy seized a tanker off Fujairah, accusing it of smuggling fuel [r2].", "Qatar said messages between Washington and Tehran were again passing through it [r3]."] }, refOf, 10), null);
 });

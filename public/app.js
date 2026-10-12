@@ -3645,6 +3645,16 @@ function flashCard(el) {
  * link): that card is shown, opened and flashed, once.
  */
 function revealHashCard() {
+  // "#n=<set>" (the Iran desk's link to Saudi casualties in the Yemen conflict): that numbers set, shown once.
+  const n = /^#n=(\w+)$/.exec(location.hash || '');
+  if (n && NUM_CATS.some(([k]) => k === n[1])) {
+    history.replaceState(null, '', location.pathname + location.search);
+    numCat = n[1];
+    renderCasualties();
+    const box = document.getElementById('casualties');
+    if (box) setTimeout(() => window.scrollTo({ top: box.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' }), 150);
+    return;
+  }
   const m = /^#r=(.+)$/.exec(location.hash || '');
   if (!m || !data) return;
   const fp = decodeURIComponent(m[1]);
@@ -7493,7 +7503,7 @@ async function loadIranScan() {
 function renderIranScan() {
   const s = iranDesk.scan;
   const title = document.querySelector('#live-scan-box .ls-title');
-  if (title) title.textContent = s && s.scannedAt ? 'Live scan · last scan ' + fmtClock(s.scannedAt) : 'Live scan';
+  if (title) title.textContent = 'Live scan';
   const up = document.getElementById('updated');
   if (up && s && s.scannedAt) up.textContent = 'UPDATED ' + fmtClock(s.scannedAt);
   const details = document.getElementById('live-scan-details');
@@ -7774,7 +7784,7 @@ function irBox(b, i = 0) {
   const chartId = irChart(b, `ir-${iranNums.cat}-${i}`);
   const name = chartId ? `<button type="button" class="spot" data-spot="${chartId}" aria-haspopup="dialog" aria-expanded="false">${spotLabel(b.title)}</button>` : escapeHtml(b.title);
   const head = `<h3>${name}${unit}${why}</h3>`;
-  const note = b.note ? `<p class="ir-note">${escapeHtml(b.note)}</p>` : '';
+  const note = (b.note ? `<p class="ir-note">${escapeHtml(b.note)}</p>` : '') + (b.link ? `<p class="ir-note"><a class="x-desk" href="${escapeHtml(b.link.href)}">${escapeHtml(b.link.text)} →</a></p>` : '');
   const spark = '';
   const SHOW = 6;
   const more = (rows) => (rows.length > SHOW ? '<button type="button" class="toggle-phase rows-tog">Read more</button>' : '');
@@ -7802,7 +7812,7 @@ function irBox(b, i = 0) {
     const th = `<tr>${b.cols.map(([h, cls]) => `<th scope="col" class="${cls || 'l'}">${escapeHtml(h)}</th>`).join('')}</tr>`;
     const rows = b.rows.map((r) => `<tr>${r.map((c, j) => `<td class="${(b.cols[j] && b.cols[j][1]) || 'l'}">${c && typeof c === 'object' ? irLink(c) : escapeHtml(c == null ? '' : String(c))}</td>`).join('')}</tr>`);
     const stats = b.stats ? `<div class="stat3">${b.stats.map(([v, l]) => `<div><b>${irLink(v)}</b><span>${escapeHtml(l)}</span></div>`).join('')}</div>` : '';
-    body = `<div class="led-more expandable"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div><button type="button" class="toggle-sit led-tog" aria-expanded="false">Show more</button></div>`;
+    body = `<div class="led-more expandable"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div><button type="button" class="toggle-sit led-tog" aria-expanded="false">Read more</button></div>`;
   }
   return `<div class="tally-box claims ledger ir${b.type === 'table' && b.rows.length > SHOW ? ' rows-more' : ''}">${head}${body}${spark}${note}</div>`;
 }
@@ -7817,8 +7827,14 @@ function renderIranNumbers() {
   wirePager(el, 0, () => { hideSpot(); irClamp(el); });
   wireSpots(el);
   irClamp(el);
-  el.querySelectorAll('.led-tog').forEach((b) => (b.onclick = () => { const o = b.closest('.led-more').classList.toggle('open'); b.textContent = o ? 'Show less' : 'Show more'; b.setAttribute('aria-expanded', String(o)); }));
-  el.querySelectorAll('.rows-tog').forEach((b) => (b.onclick = () => { const o = b.closest('.rows-more').classList.toggle('open'); b.textContent = o ? 'Show less' : 'Read more'; }));
+  // A click anywhere on a box opens it, as on the timeline and the Yemen desk (user, 12 Oct).
+  el.querySelectorAll('.led-tog').forEach((b) => {
+    wireBoxToggle(b.closest('.led-more'), b, 'open');
+    const box = b.closest('.tally-box');
+    box.classList.add('expandable');
+    box.onclick = (ev) => { if (!ev.target.closest('a, button, .led-more') && !String(window.getSelection() || '')) b.click(); };
+  });
+  el.querySelectorAll('.rows-tog').forEach((b) => wireBoxToggle(b.closest('.rows-more'), b, 'open'));
   el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { iranNums.cat = b.dataset.cat; renderIranNumbers(); }));
 }
 /*
@@ -7840,8 +7856,8 @@ function irClamp(el) {
     btn.type = 'button';
     btn.className = 'toggle-phase ir-clamp-tog';
     btn.textContent = 'Read more';
-    btn.onclick = () => { const o = box.classList.toggle('open'); btn.textContent = o ? 'Show less' : 'Read more'; if (!o) box.scrollIntoView({ block: 'nearest' }); };
     box.appendChild(btn);
+    wireBoxToggle(box, btn, 'open');
   }));
 }
 function renderIranTimeline() {
@@ -7857,7 +7873,7 @@ function renderIranTimeline() {
     return `<article class="phase-card${isNow ? ' now' : ''} expandable"><div class="phase-head"><strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates)}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${isNow && p.asOf ? `Updated ${escapeHtml(fmtDay(String(p.asOf).slice(0, 10)))} · ` : ''}Sources: ${links}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
   };
   const all = [...t.phases.map((p) => card(p, false)), card(now, true)];
-  const labels = [...t.phases.map((p) => p.title), `Now: ${now.title}`];
+  const labels = [...t.phases.map((p) => p.title), now.title];
   el.innerHTML = pagerHtml('timeline', all, all.length - 1, labels);
   wirePager(el, all.length - 1, () => closeReadMore(el, '.phase-card', '.toggle-phase'), { wrap: false });
   el.querySelectorAll('.phase-card').forEach((c) => wireBoxToggle(c, c.querySelector('.toggle-phase'), 'open'));

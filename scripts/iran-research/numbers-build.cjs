@@ -939,9 +939,9 @@ for (const s of out.sets) for (const b of s.boxes) {
 // trading day), no wages box, inflation read by its calendar months, the food and sanctions boxes
 // explained, and notes kept to what is needed to read a figure (no "nothing newer was published").
 const NOTES = {
-  'Killed': 'Lebanon: 8,954 killed since 8 Oct 2023 (Health Ministry). Hezbollah fighters: more than 1,000 by 17 Apr (sources close to Hezbollah); about 2,500 by 28 May (the IDF).',
-  'Injured': 'Israel: everyone taken to hospital, not only the wounded.',
-  'Incidents': '100 confirmed by the IMO (24 seafarers killed, 3 missing) and 40 reported by trackers and the media.',
+  'Killed': '',
+  'Injured': '',
+  'Incidents': '',
   'Ships through the Strait of Hormuz': 'Each counts differently: the IMO averages several sources; Windward adds ships with their transponders off; Kpler sees only ships that broadcast their position. Before the war: about 125 a day (Clarksons).',
   'Crude oil through the Strait of Hormuz': 'Kpler, which counts differently, put it at 8.5 in the week to 7 Oct, against 13.5 before the war.',
   'LNG through the Strait of Hormuz': 'The US EIA: 10.5 billion cubic feet a day before the war (late 2025), 0.8 in April – June.',
@@ -975,6 +975,8 @@ for (const s of out.sets) {
   s.boxes = s.boxes.filter((b) => b.title !== 'Wages in Iran');
   for (const b of s.boxes) {
     if (b.title in NOTES) { if (NOTES[b.title]) b.note = NOTES[b.title]; else delete b.note; }
+    // The Houthi front is the Yemen desk's (user, 12 Oct): the Killed box links to its casualties.
+    if (b.title === 'Killed') b.link = { text: 'Saudi casualties in the Yemen conflict', href: '/yemen-conflict-desk#n=cas' };
     if (b.title === "The rial's open-market rate" || b.title === 'Gold coin in Tehran') {
       const [latest, week, before] = b.rows.find((r) => r.label === 'tgju').cells;
       const change = String(latest.note || '').replace(/ vs before conflict$/, '');
@@ -1021,6 +1023,60 @@ for (const s of out.sets) for (const b of s.boxes) {
   b.cols = [['Since', 'd'], ['By', 'l'], ['Measure', 'l w']];
   b.rows = b.rows.map((r, i) => [r[0], OLDER[i][0], OLDER[i][1]]);
 }
+// The weapon on every attack, and an energy site's present working state, not who reported it or that
+// it was a claim (user, 12 Oct). Read row by row from S/n4 (energy-*.out.json, ships-*.out.json), each
+// row matched by its date and site as dumped in S/n4/*-rows.json.
+{
+  const n4 = (f) => (fs.existsSync(path.join(S, 'n4', f)) ? load(`n4/${f}`) : []);
+  const keyOf = (r) => `${r[0] && r[0].date}|${typeof r[1] === 'string' ? r[1] : ''}`;
+  const research = (kind) => {
+    const rows = n4(`${kind}-rows.json`);
+    const by = new Map();
+    for (const o of [...n4(`${kind}-a.out.json`), ...n4(`${kind}-b.out.json`)]) {
+      const r = rows.find((x) => x.i === o.i);
+      if (r) by.set(`${r.first && r.first.date}|${r.site}`, o);
+    }
+    return by;
+  };
+  const lc = (s) => String(s || '').replace(/^./, (c) => c.toUpperCase());
+  const ATT = { 'US/Israel': 'US and Israel', 'Iraqi militias': 'Iraqi militias' };
+  // Both halves of a box's research, or none of it.
+  const ready = (kind) => ['a', 'b'].every((h) => fs.existsSync(path.join(S, 'n4', `${kind}-${h}.out.json`)));
+  for (const s of out.sets) for (const b of s.boxes) {
+    if (b.title === 'Attacks on energy sites' && ready('energy')) {
+      const R4 = research('energy');
+      let miss = 0;
+      b.cols = [['Date', 'd'], ['Site', 'l'], ['By', 'l'], ['Weapon', 'l'], ['Current state', 'l w']];
+      // A row the readers found was no attack (Ras Tanura, 28 Jun: a helicopter crash), or an unconfirmed claim of the Houthi front (the Yemen desk's), leaves the list.
+      b.rows = b.rows.filter((r) => { const o = R4.get(keyOf(r)); return !(o && o.confirmed === false && /helicopter crash|not an attack|Yemeni|Houthi/i.test(o.note || '')); });
+      b.rows = b.rows.map((r) => {
+        const o = R4.get(keyOf(r));
+        if (!o) { miss++; return [r[0], r[1], String(r[2]).replace(/^Claimed by .*/, 'Not stated').split(';')[0], 'Not stated', { ...r[3], note: undefined }]; }
+        const date = o.confirmed === false ? { ...r[0], note: 'Reported by one source only' } : { ...r[0], note: undefined };
+        const by = o.attacker && !/^unknown/i.test(o.attacker) ? ATT[o.attacker] || o.attacker : 'Not stated';
+        const st = C(lc(o.status), 'unoff', hostOf(o.status_url), o.status_url || null, o.status_date || r[0].date);
+        return [date, r[1], by, lc(o.weapon) || 'Not stated', st];
+      });
+      if (miss) problems.push(`energy: ${miss} rows without research`);
+      // The counts over the list as it now stands, with no attacks-and-claims split.
+      const w7 = new Date(Date.parse(AS_OF) - 6 * 864e5).toISOString().slice(0, 10);
+      const cnt = (f, l) => [unoff(String(b.rows.filter(f).length), 'Our count of the list below', null, AS_OF, { note: 'count of the list below' }), l];
+      b.stats = [cnt((r) => r[0].date === AS_OF, 'Today'), cnt((r) => r[0].date >= w7, 'Last 7 days'), cnt(() => true, 'Since 28 Feb')];
+    }
+    if (b.title === 'Incidents' && ready('ships')) {
+      const R4 = research('ships');
+      let miss = 0;
+      b.cols = [['Date', 'd'], ['Ship', 'l'], ['Location', 'l'], ['Weapon', 'l'], ['What happened', 'l w']];
+      b.rows = b.rows.map((r) => {
+        const o = R4.get(keyOf(r));
+        if (!o) { miss++; return [r[0], r[1], r[2], 'Not stated', r[3]]; }
+        return [r[0], r[1], r[2], lc(o.weapon) || 'Not stated', o.fix ? lc(o.fix) : r[3]];
+      });
+      if (miss) problems.push(`ships: ${miss} rows without research`);
+    }
+  }
+}
+function hostOf(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'Source'; } }
 const ships = out.sets[1].boxes[1];
 if (ships.rows.some((r) => /Hormuz/.test(r.label))) problems.push('Ships rows name Hormuz');
 if (problems.length) { console.error(problems.join('\n')); process.exit(1); }

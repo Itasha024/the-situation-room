@@ -9,9 +9,31 @@ const pub = path.join(__dirname, '..', '..', 'public');
 const base = JSON.parse(fs.readFileSync(path.join(pub, 'iran-strikes-baseline.json'), 'utf8'));
 const year = base[0] ? base[0].day.slice(0, 4) : '2026';
 if (base.some((p) => p.day.slice(0, 4) !== year)) throw new Error('map-pack: pins from more than one year');
+// Air defence fire, interceptions, sirens and blasts heard over Iran are not Iran's attacks (user, 12 Oct):
+// with no attacker named they are "not stated". The same rule serves the live pins (iran-places.ts ownSkyOnly).
+const DEFENCE = /intercept|air[- ]?defen[cs]e|shot down|shoots? down|downed|sirens?\b|explosions? (?:were |was )?(?:heard|reported)|blasts? heard|sounds? of explosions|red alert|anti-?aircraft|alert sounded/i;
+const ATTACKER = /\b(?:Israel|Israeli|US|U\.S\.|American|CENTCOM|IDF|Mossad)\b/;
+const IRAN = JSON.parse(fs.readFileSync(path.join(pub, 'iran-countries.geojson'), 'utf8')).features.find((f) => f.properties.name === 'Iran');
+const ring = (r, x, y) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+const inIran = (lat, lng) => { const g = IRAN.geometry; const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates; return polys.some((p) => ring(p[0], lng, lat) && !p.slice(1).some((h) => ring(h, lng, lat))); };
+let unstated = 0;
+const actorOf = (p) => (p.actor === 'iran' && DEFENCE.test(p.label || '') && !ATTACKER.test(p.label || '') && inIran(p.lat, p.lng) ? (unstated++, 'unclear') : p.actor);
 // [MM-DD, actor, lat, lng, HH:MM (UTC) or 0]
-const pins = base.map((p) => [p.day.slice(5), p.actor, p.lat, p.lng, p.at ? new Date(p.at).toISOString().slice(11, 16) : 0]);
-const notes = base.map((p) => [p.fp, p.place, p.label, p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
+const pins = base.map((p) => [p.day.slice(5), actorOf(p), p.lat, p.lng, p.at ? new Date(p.at).toISOString().slice(11, 16) : 0]);
+// A note's words (user, 12 Oct): no ", X reports" (the source is linked under it), no "Its attackers
+// say they struck", no "attack claim", and the country, not "Gulf", where it is known.
+const GULF = { 'bf-2026-07-29-gulf-bartella': 'Saudi', 'rs-2026-07-29-gulf-kirkuk': 'Saudi', 'rs-2026-07-29-gulf-khalis-diyala': 'Saudi', 'rs-2026-07-29-gulf-amerli': 'Saudi', 'rs-2026-07-29-gulf-wasit': 'Saudi' };
+const WITH = { drones: 'Drone strike', missiles: 'Missile strike', 'missiles and drones': 'Missile and drone strike', rockets: 'Rocket fire' };
+function relabel(p) {
+  let l = String(p.label || '').trim();
+  l = l.replace(/,\s+[^,]{2,90}?\s+reports?$/i, '');
+  l = l.replace(/\s+—\s+(?:attack )?claim$/i, '').replace(/\s+(?:area\s+)?strike report$/i, '');
+  l = l.replace(/^Its attackers say they struck (.+?)(?: with (drones|missiles|missiles and drones|rockets))?$/, (m, x, w) => `${w ? WITH[w] : 'Strike'} on ${x}`);
+  if (GULF[p.fp]) l = l.replace(/^Gulf strike/, `${GULF[p.fp]} strike`);
+  else l = l.replace(/^Gulf strike on/, 'Strike on');
+  return l;
+}
+const notes = base.map((p) => [p.fp, p.place, relabel(p), p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
 fs.writeFileSync(path.join(pub, 'iran-map-pins.json'), JSON.stringify({ year, n: pins.length, pins }));
 fs.writeFileSync(path.join(pub, 'iran-map-notes.json'), JSON.stringify({ n: notes.length, notes }));
-console.log('[map-pack]', pins.length, 'pins');
+console.log('[map-pack]', pins.length, 'pins;', unstated, "of Iran's own air defence and alarms shown as not stated");

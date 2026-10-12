@@ -8,7 +8,7 @@ import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
 import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
-import { heardInside, iranEventAllowed } from "@/lib/desk/iran-places";
+import { heardInside, iranEventAllowed, ownSkyOnly } from "@/lib/desk/iran-places";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -66,6 +66,8 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
       const x = e as typeof e & { fp?: string; lat?: number; lng?: number };
       return String(x.fp ?? "").includes("-pin-") ? [] : [{ ...x, place: host.name, lat: host.lat, lng: host.lng }];
     });
+    // Iran's own air defence and alarms, with no attacker named: side not stated.
+    s.events = s.events.map((e) => (ownSkyOnly(e) ? { ...e, actor: "unclear" } : e));
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }

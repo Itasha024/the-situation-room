@@ -591,7 +591,7 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 @media (prefers-reduced-motion:reduce){.site-menu .sm-panel,.site-menu .sm-back{transition:none}}
 /* A desk's own pages under it, and Dark | Light at the panel's foot (user, 2 Oct). */
 .site-menu .sm-panel{display:flex;flex-direction:column}
-.site-menu .sm-sub li a{padding:.5rem 0 .5rem 1.6rem;font:500 .84rem/1.2 var(--f-body,inherit);color:var(--t-text-2,var(--t-text,#e2e8f0))}
+.site-menu .sm-sub li a{padding:.5rem 0 .5rem calc(.7rem + 24px + .65rem);font:500 .84rem/1.2 var(--f-body,inherit);color:var(--t-text-2,var(--t-text,#e2e8f0))}
 .sm-theme{display:grid;grid-template-columns:1fr 1fr;margin-top:auto;padding-top:1.4rem;gap:0}
 .sm-theme button{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;padding:.55rem .5rem;background:transparent;border:1px solid var(--t-line-strong,#334155);color:var(--t-muted,#8fa0b4);font:600 .7rem/1 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:color .15s,background .15s}
 .sm-theme button+button{border-inline-start:0}
@@ -704,9 +704,15 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 
 /* Round 30: the desks. The desk's name opens a list of the desks, each a small flag then its name;
    in the side menu each desk's line is its flag's stripes (user, 8 Oct). */
-.site-menu li a.sm-desk{position:relative;border-left-color:transparent!important}
-.site-menu li a.sm-desk::before{content:"";position:absolute;left:-3px;top:0;bottom:0;width:3px;background:var(--flag);box-shadow:0 0 0 .5px var(--t-line-strong,#555);opacity:0;transition:opacity .15s}
-.site-menu li a.sm-desk:hover::before,.site-menu li a.sm-desk:focus-visible::before,.site-menu li a.sm-desk[aria-current="page"]::before{opacity:1}
+/* (user, 12 Oct) Each desk's own small flag, always shown: a thin strip could not show Iran's emblem. */
+.site-menu li a.sm-desk{flex-direction:row;align-items:center;gap:.65rem}
+.site-menu li a.sm-desk .flag{flex:none;width:24px;height:auto;color:var(--t-line-strong,#555)}
+.site-menu li a.sm-desk .sm-t{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.sm-logo{display:block;line-height:0;border-radius:6px}
+.sm-logo img{width:34px;height:34px;display:block}
+.sm-logo .sm-logo-d,html[data-theme="broadsheet-day"] .sm-logo .sm-logo-n{display:none}
+html[data-theme="broadsheet-day"] .sm-logo .sm-logo-d{display:block}
+.sm-logo:focus-visible{outline:1px solid var(--accent-ui,#7eb6ff);outline-offset:3px}
 .top .brand{position:relative}
 .desk-pick{all:unset;display:inline-flex;align-items:center;gap:.45em;cursor:pointer}
 .desk-pick:focus-visible{outline:1px solid var(--accent-ui,#7eb6ff);outline-offset:3px}
@@ -777,10 +783,10 @@ html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","No
 .ref-list .pager{border:0;background:transparent;overflow:visible}
 .ref-list .pager .card{margin:0}
 @media (hover:hover) and (min-width:721px){.ref-list .pager.many{padding:0 2.3rem}.ref-list .pg-prev{left:0}.ref-list .pg-next{right:0}}
-/* Phone (user, 12 Oct): Trump's statements open full screen, the page behind them still. (Not overflow-x:clip on html or body: on the root it stops the page scrolling.) */
+/* Phone (user, 12 Oct): Trump's statements open as a sheet from the bottom, the page still showing (and closing it) above, the page behind them still. (Not overflow-x:clip on html or body: on the root it stops the page scrolling.) */
 @media (max-width:720px){
-  .tp-pop{place-items:stretch;overscroll-behavior:contain}
-  .tp-sheet{width:100%;height:100vh;height:100dvh;max-height:none;border-radius:0;border-left:0;border-right:0}
+  .tp-pop{place-items:end stretch;overscroll-behavior:contain}
+  .tp-sheet{width:100%;height:82vh;height:82dvh;max-height:none;border-radius:12px 12px 0 0;border-left:0;border-right:0;border-bottom:0}
   .tp-list{flex:1;min-height:0;overscroll-behavior:contain;padding-bottom:calc(1rem + env(safe-area-inset-bottom,0px))}
   html.tp-open,html.tp-open body{overflow:hidden}
 }

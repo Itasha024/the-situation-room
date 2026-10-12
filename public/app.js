@@ -6535,18 +6535,20 @@ async function setTheme(t, keep = true) {
     if (broad) waits.push(loadThemeFonts());
     THEME = t;
     themeValues();
-    // The new tiles load under a clear layer first, so nothing blinks in.
+    // The page changes at once (user, 12 Oct: it took seconds); the map's new tiles load
+    // under a clear layer and take the old ones' place when they are in, so nothing blinks.
     let tiles = null;
     if (map && baseTiles) {
+      const old = baseTiles;
       tiles = L.tileLayer(TILE_URL, { maxZoom: 18, noWrap: true, attribution: TILE_ATTR || baseAttr, opacity: 0 }).addTo(map);
-      waits.push(new Promise((r) => tiles.once('load', r)));
+      tiles.once('load', () => { tiles.setOpacity(1); try { map.removeLayer(old); } catch (e) {} });
+      baseTiles = tiles;
     }
-    await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, 1800))]);
+    await Promise.race([Promise.all(waits), new Promise((r) => setTimeout(r, 250))]);
     const apply = () => {
       const h = document.documentElement;
       if (broad) { h.dataset.theme = t; h.dataset.set = 'broadsheet'; } else { delete h.dataset.theme; delete h.dataset.set; }
       setFavicon(t);
-      if (tiles) { tiles.setOpacity(1); try { map.removeLayer(baseTiles); } catch (e) {} baseTiles = tiles; }
       try { closePinSheet(); } catch (e) {}
       try { syncLeanMenu(); } catch (e) {}
       if (data) {
@@ -6623,8 +6625,6 @@ const IRAN_FLAG = '<rect width="630" height="360" fill="#da0000"/><rect width="6
 const FLAG_ART = { iran: () => IRAN_FLAG };
 /** A small flag: its drawing, or its stripes top to bottom; a hairline so the white shows on either theme. */
 const flagSvg = (d) => FLAG_ART[d.id] ? `<svg class="flag flag-${d.id}" viewBox="0 0 630 360" aria-hidden="true">${FLAG_ART[d.id]()}<rect x="6" y="6" width="618" height="348" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width="12"/></svg>` : `<svg class="flag" viewBox="0 0 18 12" aria-hidden="true">${d.flag.map((c, i) => `<rect y="${i * 4}" width="18" height="4" fill="${c}"/>`).join('')}<rect x=".25" y=".25" width="17.5" height="11.5" fill="none" stroke="currentColor" stroke-opacity=".4" stroke-width=".5"/></svg>`;
-/** The same flag as a strip, for the side menu's line by each desk: its drawing (squeezed to the strip) or its stripes. */
-const flagStrip = (d) => FLAG_ART[d.id] ? `url('data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 630 360" preserveAspectRatio="none">${FLAG_ART[d.id]()}</svg>`)}') 0 0/100% 100%` : `linear-gradient(${d.flag.map((c, i) => `${c} ${(i * 100 / d.flag.length).toFixed(2)}% ${((i + 1) * 100 / d.flag.length).toFixed(2)}%`).join(',')})`;
 const SITE_PAGES = () => desksShown().map((d) => [d.href, d.name, d.sub, d.kids, d]);
 
 /*
@@ -6673,9 +6673,9 @@ function installMast() {
   panel.hidden = true;
   panel.innerHTML = `<div class="sm-back" data-close></div>
     <nav class="sm-panel" aria-label="Site">
-      <div class="sm-head"><span class="sm-name">The Situation Room</span><button type="button" class="sm-x" data-close aria-label="Close menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="sm-head"><a class="sm-logo" href="/" aria-label="The Situation Room" title="The Situation Room"><img class="sm-logo-n" src="/favicon.svg?v=sr1" alt=""><img class="sm-logo-d" src="/favicon-day.svg?v=sr1" alt=""></a><button type="button" class="sm-x" data-close aria-label="Close menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <p class="sm-date">${escapeHtml(new Date().toLocaleDateString(LOC, { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p>
-      <ul>${SITE_PAGES().map(([href, name, sub, kids, d]) => `<li><a class="sm-desk" style="--flag:${flagStrip(d)}" href="${href}"${href === here ? ' aria-current="page"' : ''}><b>${name}</b><small>${sub}</small></a>${(kids || []).length ? `<ul class="sm-sub">${kids.map(([h, n]) => `<li><a href="${h}"${h === here ? ' aria-current="page"' : ''}>${n}</a></li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>
+      <ul>${SITE_PAGES().map(([href, name, sub, kids, d]) => `<li><a class="sm-desk" href="${href}"${href === here ? ' aria-current="page"' : ''}>${flagSvg(d)}<span class="sm-t"><b>${name}</b><small>${sub}</small></span></a>${(kids || []).length ? `<ul class="sm-sub">${kids.map(([h, n]) => `<li><a href="${h}"${h === here ? ' aria-current="page"' : ''}>${n}</a></li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>
       <div class="sm-theme" role="group" aria-label="Theme">${[['broadsheet-night', 'Dark'], ['broadsheet-day', 'Light']].map(([t, n]) => `<button type="button" data-theme="${t}" aria-pressed="${t === THEME}">${THEME_ICONS[t][1]}<span>${n}</span></button>`).join('')}</div>
     </nav>`;
   panel.querySelectorAll('.sm-theme button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));

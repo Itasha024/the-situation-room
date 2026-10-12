@@ -353,7 +353,11 @@
      ],
      "link": {
       "text": "Saudi casualties in the Yemen conflict",
-      "href": "/yemen-conflict-desk#n=cas"
+      "href": "/yemen-conflict-desk#n=cas",
+      "mark": "*",
+      "on": [
+       "Saudi Arabia"
+      ]
      }
     },
     {
@@ -650,7 +654,15 @@
        },
        "unoff": null
       }
-     ]
+     ],
+     "link": {
+      "text": "Saudi casualties in the Yemen conflict",
+      "href": "/yemen-conflict-desk#n=cas",
+      "mark": "*",
+      "on": [
+       "Saudi Arabia"
+      ]
+     }
     }
    ]
   },

@@ -14,6 +14,8 @@
  * Coordinates checked against OpenStreetMap's Nominatim (9 Oct 2026).
  */
 import { IRAN_GAZ } from "./iran-gazetteer.ts";
+import { makeSea } from "../../../scripts/iran-research/offshore.mjs";
+import LAND from "../../../public/iran-land.json" with { type: "json" };
 
 export type IranPlaceKind = "city" | "site" | "base" | "port" | "island" | "sea";
 export type IranPlace = { name: string; lat: number; lng: number; country: string; kind: IranPlaceKind; alt?: string[] };
@@ -428,4 +430,13 @@ export function heardInside(e: { place?: string | null; label?: string | null })
     if (parts.some((w) => sounds.has(latinSound([w])))) return host;
   }
   return null;
+}
+
+/**
+ * At sea or on land, and a sea pin in its sea and off the land (user, 12 Oct: a Hormuz pin in the Red Sea,
+ * land pins under "At sea"): the researched pins' rule (scripts/iran-research/offshore.mjs), for the desk's own.
+ */
+const SEA_RULE = makeSea((LAND as { polys: Parameters<typeof makeSea>[0] }).polys);
+export function seaPlace(e: { lat: number; lng: number; place?: string | null; label?: string | null; type?: string | null }) {
+  return SEA_RULE.place(e, (name) => { const p = PLACE_BY_NAME.get(name) ?? iranPlacesIn(name)[0]; return p ? [p.lat, p.lng] : null; });
 }

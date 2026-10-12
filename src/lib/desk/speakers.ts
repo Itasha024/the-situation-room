@@ -48,6 +48,11 @@ export const SPEAKERS: Speaker[] = [
   S("Keir Starmer", /\bStarmer\b|ستارمر/, "UK", "English", "gb", "Keir_Starmer", "gov.uk"),
   S("Yvette Cooper", /\bYvette Cooper\b|إيفيت كوبر/, "UK", "English", "gb", "YvetteCooperMP", "gov.uk"),
   S("John Healey", /\bHealey\b|هيلي/, "UK", "English", "gb", "JohnHealey_MP", "gov.uk"),
+  // Andy Burnham's government, from 20 July 2026 (offices.ts has their offices).
+  S("Andy Burnham", /\bBurnham\b|بيرنهام|برنهام/, "UK", "English", "gb", undefined, "gov.uk"),
+  S("Ed Miliband", /\bMiliband\b|ميليباند/, "UK", "English", "gb", "Ed_Miliband", "gov.uk"),
+  S("Shabana Mahmood", /\bShabana Mahmood\b|شبانة محمود/, "UK", "English", "gb", "ShabanaMahmood", "gov.uk"),
+  S("Wes Streeting", /\bStreeting\b|ستريتنغ/, "UK", "English", "gb", "wesstreeting", "gov.uk"),
   S("Masoud Pezeshkian", /\bPezeshkian\b|بزشكيان/, "IR", "Persian", "en", "drpezeshkian", "president.ir"),
   S("Abbas Araghchi", /\bAraghchi\b|عراقجي/, "IR", "Persian", "en", "araghchi", "mfa.gov.ir"),
   S("Ali Khamenei", /\bKhamenei\b|خامنئي/, "IR", "Persian", "en", "khamenei_ir", "khamenei.ir"),

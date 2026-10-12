@@ -1178,3 +1178,12 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 }
 .tally-box.ir table.list.sanc td.l:not(.w),.tally-box.ir table.list.sanc th.l:not(.w){width:2.6rem;min-width:0;white-space:nowrap}
 .tally-box.ir table.list.sanc td.l.w,.tally-box.ir table.list.sanc th.l.w{width:auto}
+/* The timeline's sources: a list that opens on a click (user, 12 Oct). */
+.src-list{margin-top:.25rem}
+.src-list summary{cursor:pointer;color:var(--t-link,#7eb6ff);list-style:none;display:inline-block}
+.src-list summary::-webkit-details-marker{display:none}
+.src-list summary::after{content:" ▾";font-size:.85em}
+.src-list[open] summary::after{content:" ▴"}
+.src-list ul{margin:.3rem 0 0;padding-left:1.1rem;columns:2 12rem;column-gap:1.2rem}
+.src-list li{margin:.12rem 0;break-inside:avoid}
+.ir-mark{color:var(--t-accent,#f59e0b);font-weight:700;margin-left:1px}

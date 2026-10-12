@@ -18,29 +18,23 @@ const ring = (r, x, y) => { let c = false; for (let i = 0, j = r.length - 1; i <
 const inIran = (lat, lng) => { const g = IRAN.geometry; const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates; return polys.some((p) => ring(p[0], lng, lat) && !p.slice(1).some((h) => ring(h, lng, lat))); };
 let unstated = 0;
 const actorOf = (p) => (p.actor === 'iran' && DEFENCE.test(p.label || '') && !ATTACKER.test(p.label || '') && inIran(p.lat, p.lng) ? (unstated++, 'unclear') : p.actor);
-// At sea or on land, for the map's filter (user, 12 Oct): a ship, a boat or "off" a place is at sea; so is a
-// point off the coast by more than 3 km (public/iran-land.json, from adm-pack.cjs). A coastal town's point
-// can sit a little off the drawn coast; it stays on land. The page reads the live pins the same way (iranAtSea).
+// At sea or on land, and a sea pin in its sea and off the land (offshore.mjs, the rule the live pins are served by).
 const LAND = JSON.parse(fs.readFileSync(path.join(pub, 'iran-land.json'), 'utf8')).polys;
-const SEA_WORDS = /\b(?:ships?|vessels?|tankers?|freighters?|boats?|dhows?|frigates?|destroyers?|warships?|carriers?|submarines?|corvettes?|IRIS|USS|HMS|UKMTO|JMIC|at sea|offshore)\b/i;
-const onLand = (lat, lng) => LAND.some((p) => lng >= p.b[0] && lng <= p.b[2] && lat >= p.b[1] && lat <= p.b[3] && ring(p.r[0], lng, lat) && !p.r.slice(1).some((h) => ring(h, lng, lat)));
-function coastKm(lat, lng) {
-  const k = Math.cos((lat * Math.PI) / 180);
-  let best = Infinity;
-  for (const p of LAND) {
-    if (lng < p.b[0] - 0.1 || lng > p.b[2] + 0.1 || lat < p.b[1] - 0.1 || lat > p.b[3] + 0.1) continue;
-    for (const r of p.r) for (let i = 1; i < r.length; i++) {
-      const ax = (r[i - 1][0] - lng) * k, ay = r[i - 1][1] - lat, bx = (r[i][0] - lng) * k, by = r[i][1] - lat;
-      const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / (dx * dx + dy * dy || 1)));
-      best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy) * 111);
-    }
-  }
-  return best;
-}
-const atSea = (p) => SEA_WORDS.test(String(p.label || '').replace(/anti-ship|KC-\d+\s+tankers?|tanker (?:aircraft|planes?)|refuel+ing tankers?/gi, '')) || /^off /i.test(p.place || '') || (!onLand(p.lat, p.lng) && coastKm(p.lat, p.lng) > 3);
+import('./offshore.mjs').then(({ makeSea }) => {
+const SEA = makeSea(LAND);
+// A town's point, from the other pins on it (the one most of them share).
+const TOWN = new Map();
+for (const p of base) { const k = String(p.place || '').toLowerCase().trim(); const at = `${p.lat},${p.lng}`; const m = TOWN.get(k) || new Map(); m.set(at, (m.get(at) || 0) + 1); TOWN.set(k, m); }
+const lookup = (name) => { const m = TOWN.get(name.toLowerCase()); if (!m) return null; const [at] = [...m].sort((a, b) => b[1] - a[1])[0]; return at.split(',').map(Number); };
 let seaN = 0;
+let movedN = 0;
 // [MM-DD, actor, lat, lng, HH:MM (UTC) or 0, 1 at sea or 0]
-const pins = base.map((p) => [p.day.slice(5), actorOf(p), p.lat, p.lng, p.at ? new Date(p.at).toISOString().slice(11, 16) : 0, atSea(p) ? (seaN++, 1) : 0]);
+const pins = base.map((p) => {
+  const w = SEA.place(p, lookup);
+  if (w.sea) seaN++;
+  if (w.moved) { movedN++; if (process.env.SEA_DBG) console.log('[sea]', p.fp, '|', p.place, '|', w.moved, '|', p.lat, p.lng, '->', w.lat, w.lng); }
+  return [p.day.slice(5), actorOf(p), w.lat, w.lng, p.at ? new Date(p.at).toISOString().slice(11, 16) : 0, w.sea ? 1 : 0];
+});
 // A note's words (user, 12 Oct): no ", X reports" (the source is linked under it), no "Its attackers
 // say they struck", no "attack claim", and the country, not "Gulf", where it is known.
 const GULF = { 'bf-2026-07-29-gulf-bartella': 'Saudi', 'rs-2026-07-29-gulf-kirkuk': 'Saudi', 'rs-2026-07-29-gulf-khalis-diyala': 'Saudi', 'rs-2026-07-29-gulf-amerli': 'Saudi', 'rs-2026-07-29-gulf-wasit': 'Saudi' };
@@ -61,17 +55,17 @@ function relabel(p) {
 }
 // The sea in plain English (Stage C, 12 Oct): "attacked in Off the coast of Oman" is "attacked off the coast of
 // Oman", "struck Gulf of Oman" is "struck a target in the Gulf of Oman", and a sea or strait takes "the".
-const SEA = String.raw`(?:Strait of Hormuz|Gulf of Oman|Persian Gulf|Arabian Sea|Red Sea|Gulf of Aden|Arabian Gulf)`;
+const SEA_NAMES = String.raw`(?:Strait of Hormuz|Gulf of Oman|Persian Gulf|Arabian Sea|Red Sea|Gulf of Aden|Arabian Gulf)`;
 function seaWords(l) {
   return String(l || '')
     .replace(/\s+(?:in|at|on)\s+(?:the\s+)?off\b/gi, ' off')
     .replace(/\b(struck|hit|targeted)\s+off\b/gi, '$1 a target off')
     .replace(/\b(struck|hit|targeted)\s+near\b/gi, '$1 a target near')
-    .replace(new RegExp(String.raw`\b(struck|hit|targeted)\s+(?:the\s+)?(${SEA}\s+coast)`, 'g'), '$1 the $2')
-    .replace(new RegExp(String.raw`\b(struck|hit|targeted)\s+(?:the\s+)?((?:(?:northern|southern|eastern|western|central)\s+)?${SEA})(?!\s+coast)`, 'g'), '$1 a target in the $2')
-    .replace(new RegExp(String.raw`\bfalls\s+on\s+(?:the\s+)?(${SEA})`, 'g'), 'falls into the $1')
-    .replace(new RegExp(String.raw`\b(strikes?|attacks?)\s+on\s+(?:the\s+)?(${SEA})`, 'g'), '$1 in $2')
-    .replace(new RegExp(String.raw`\b(in|over|near|across|into)\s+(${SEA})`, 'g'), '$1 the $2')
+    .replace(new RegExp(String.raw`\b(struck|hit|targeted)\s+(?:the\s+)?(${SEA_NAMES}\s+coast)`, 'g'), '$1 the $2')
+    .replace(new RegExp(String.raw`\b(struck|hit|targeted)\s+(?:the\s+)?((?:(?:northern|southern|eastern|western|central)\s+)?${SEA_NAMES})(?!\s+coast)`, 'g'), '$1 a target in the $2')
+    .replace(new RegExp(String.raw`\bfalls\s+on\s+(?:the\s+)?(${SEA_NAMES})`, 'g'), 'falls into the $1')
+    .replace(new RegExp(String.raw`\b(strikes?|attacks?)\s+on\s+(?:the\s+)?(${SEA_NAMES})`, 'g'), '$1 in $2')
+    .replace(new RegExp(String.raw`\b(in|over|near|across|into)\s+(${SEA_NAMES})`, 'g'), '$1 the $2')
     .replace(/\s+(?:in|on|at)\s+(?:the\s+)?(\d+\s*(?:NM|nm|nautical miles?)\s)/g, ' $1')
     .replace(/\s+—\s+M\/[TV]\s+([^,—]+)/g, (m, n) => ` (${n.trim().replace(/\b(\w)(\w*)/g, (w, a, b) => a + b.toLowerCase())})`)
     .replace(/\s+—\s+(?:the\s+)?(.+?)\s+attack claim$/i, ' ($1)')
@@ -80,4 +74,5 @@ function seaWords(l) {
 const notes = base.map((p) => [p.fp, seaWords(p.place).replace(/^the /, ''), relabel(p), p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
 fs.writeFileSync(path.join(pub, 'iran-map-pins.json'), JSON.stringify({ year, n: pins.length, pins }));
 fs.writeFileSync(path.join(pub, 'iran-map-notes.json'), JSON.stringify({ n: notes.length, notes }));
-console.log('[map-pack]', pins.length, 'pins,', seaN, 'at sea;', unstated, "of Iran's own air defence and alarms shown as not stated");
+console.log('[map-pack]', pins.length, 'pins,', seaN, 'at sea,', movedN, 'moved to or out to sea;', unstated, "of Iran's own air defence and alarms shown as not stated");
+});

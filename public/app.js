@@ -1574,9 +1574,12 @@ async function pullDesk() {
     if (!res.ok) return;
     const body = await res.json();
     if (!body || body.ok === false) return;
+    // Added to what the page holds, never in its place (user, 12 Oct: the whole war's count fell back to
+    // about 930): each refresh read the newest 400 rows over the whole war's pins and the pages read back.
+    const keep = (fresh, had) => { const seen = new Set(fresh.map((x) => String(x.fp || ''))); return [...fresh, ...had.filter((x) => !seen.has(String(x.fp || '')))]; };
     deskArchive = {
-      reports: Array.isArray(body.reports) ? body.reports : [],
-      events: Array.isArray(body.events) ? body.events : [],
+      reports: keep(Array.isArray(body.reports) ? body.reports : [], deskArchive.reports),
+      events: keep(Array.isArray(body.events) ? body.events : [], deskArchive.events),
       updatedAt: body.updatedAt || null,
     };
   } catch (e) {
@@ -7950,13 +7953,15 @@ function irBox(b, i = 0) {
   const chartId = irChart(b, `ir-${iranNums.cat}-${i}`);
   const name = chartId ? `<button type="button" class="spot" data-spot="${chartId}" aria-haspopup="dialog" aria-expanded="false">${spotLabel(b.title)}</button>` : escapeHtml(b.title);
   const head = `<h3>${name}${unit}${why}</h3>`;
-  const note = (b.note ? `<p class="ir-note">${escapeHtml(b.note)}</p>` : '') + (b.link ? `<p class="ir-note"><a class="x-desk" href="${escapeHtml(b.link.href)}">${escapeHtml(b.link.text)} →</a></p>` : '');
+  const note = (b.note ? `<p class="ir-note">${escapeHtml(b.note)}</p>` : '') + (b.link ? `<p class="ir-note">${b.link.mark ? `<span class="ir-mark">${escapeHtml(b.link.mark)}</span> ` : ''}<a class="x-desk" href="${escapeHtml(b.link.href)}">${escapeHtml(b.link.text)} →</a></p>` : '');
+  // The row the link is about carries its mark (Saudi Arabia*).
+  const mark = (label) => (b.link && b.link.mark && (b.link.on || []).includes(label) ? `<span class="ir-mark">${escapeHtml(b.link.mark)}</span>` : '');
   const spark = '';
   const SHOW = 6;
   const more = (rows) => (rows.length > SHOW ? '<button type="button" class="toggle-phase rows-tog">Read more</button>' : '');
   const xtra = (i) => (i >= SHOW ? ' class="xtra"' : '');
   if (b.type === 'claims') {
-    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><th scope="row">${escapeHtml(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</th>${irCell(r.off, 'off')}${irCell(r.unoff, 'u')}</tr>`).join('');
+    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><th scope="row">${escapeHtml(r.label)}${mark(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</th>${irCell(r.off, 'off')}${irCell(r.unoff, 'u')}</tr>`).join('');
     return `<div class="tally-box claims ir${b.rows.length > SHOW ? ' rows-more' : ''}">${head}<table><tbody><tr><th></th><th scope="col" class="o">Official</th><th scope="col" class="u">Unofficial</th></tr>${rows}</tbody></table>${more(b.rows)}${note}</div>`;
   }
   let body = '';
@@ -7967,7 +7972,7 @@ function irBox(b, i = 0) {
     const days = b.cols.map((c, j) => (/^(?:Latest|Now)$/.test(c) && j ? [...new Set(b.rows.map((r) => r.cells[j - 1] && r.cells[j - 1].date).filter(Boolean))] : []));
     const dated = days.map((d) => d.length > 1);
     const th = `<tr>${b.cols.map((c, i) => `<th scope="col"${i === 0 ? ' class="l"' : ''}>${escapeHtml(c)}${days[i].length === 1 ? `<small class="span">(${escapeHtml(fmtDay(days[i][0]))})</small>` : ''}</th>`).join('')}</tr>`;
-    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><td class="l">${escapeHtml(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</td>${r.cells.map((c, j) => (dated[j + 1] && c && c.v != null && c.date ? `<td>${irLink(c)}${irSmall(fmtDay(c.date).replace(new RegExp(" " + new Date().getFullYear() + "$"), ""))}</td>` : irCell(c))).join('')}</tr>`).join('');
+    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><td class="l">${escapeHtml(r.label)}${mark(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</td>${r.cells.map((c, j) => (dated[j + 1] && c && c.v != null && c.date ? `<td>${irLink(c)}${irSmall(fmtDay(c.date).replace(new RegExp(" " + new Date().getFullYear() + "$"), ""))}</td>` : irCell(c))).join('')}</tr>`).join('');
     body = `<table class="span3${b.rows.length > SHOW ? '' : ''}"><tbody>${th}${rows}</tbody></table>${more(b.rows)}${IR_KEY}`;
   } else if (b.type === 'bars') {
     const max = Math.max(...b.bars.map((x) => +x.n || 0), 1e-9);
@@ -8035,8 +8040,10 @@ function renderIranTimeline() {
   const now = live && live.summary ? { ...t.now, sum: live.summary, detail: live.detail, asOf: live.asOf } : t.now;
   const card = (p, isNow) => {
     const paras = String(p.detail || p.sum).split(/\n\n+/).map((x) => `<p>${escapeHtml(x).replace(/^([^:.]{3,40}):/, '<strong>$1:</strong>')}</p>`).join('');
-    const links = (p.sources || []).map((s) => `<a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>`).join(' · ');
-    return `<article class="phase-card${isNow ? ' now' : ''} expandable"><div class="phase-head"><strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates)}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${isNow && p.asOf ? `Updated ${escapeHtml(fmtDay(String(p.asOf).slice(0, 10)))} · ` : ''}Sources: ${links}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
+    // The sources in a list that opens on a click (user, 12 Oct: all of them at once was too much).
+    const n = (p.sources || []).length;
+    const links = (p.sources || []).map((s) => `<li><a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a></li>`).join('');
+    return `<article class="phase-card${isNow ? ' now' : ''} expandable"><div class="phase-head"><strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates)}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${isNow && p.asOf ? `Updated ${escapeHtml(fmtDay(String(p.asOf).slice(0, 10)))}` : ''}${n ? `<details class="src-list"><summary>Sources (${n})</summary><ul>${links}</ul></details>` : ''}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
   };
   const all = [...t.phases.map((p) => card(p, false)), card(now, true)];
   const labels = [...t.phases.map((p) => p.title), now.title];
@@ -8080,7 +8087,7 @@ function wireBoxToggle(box, btn, cls) {
   btn.onclick = (ev) => { ev.stopPropagation(); toggle(); };
   box.classList.add(cls === 'sit-open' ? 'sit-click' : 'expandable');
   box.onclick = (ev) => {
-    if (ev.target.closest('a, button, .place-link, [data-place]')) return;
+    if (ev.target.closest('a, button, summary, details, .place-link, [data-place]')) return;
     if (window.getSelection && String(window.getSelection() || '')) return;
     toggle();
   };

@@ -23,6 +23,7 @@ import {
   understandLocally,
 } from "@/lib/desk/search";
 import { respell } from "@/lib/desk/spelling";
+import { rightOffice } from "@/lib/desk/offices";
 import { deskParam, onDesk } from "@/lib/desk/desk-route";
 import { getStore } from "@/lib/desk/store";
 
@@ -46,8 +47,8 @@ async function loadCorpus(): Promise<Corpus> {
   const rows = slice.reports as unknown as Row[];
   checkLinks(rows as never[], rows as never[]);
   for (const r of rows) {
-    r.summary = respell(unglue(String(r.summary ?? "")));
-    if (r.text) r.text = respell(String(r.text));
+    r.summary = rightOffice(respell(unglue(String(r.summary ?? ""))));
+    if (r.text) r.text = rightOffice(respell(String(r.text)));
   }
   // The cards from before the database, as the page shows them.
   try {

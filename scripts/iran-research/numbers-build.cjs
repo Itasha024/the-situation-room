@@ -975,8 +975,9 @@ for (const s of out.sets) {
   s.boxes = s.boxes.filter((b) => b.title !== 'Wages in Iran');
   for (const b of s.boxes) {
     if (b.title in NOTES) { if (NOTES[b.title]) b.note = NOTES[b.title]; else delete b.note; }
-    // The Houthi front is the Yemen desk's (user, 12 Oct): the Killed box links to its casualties.
-    if (b.title === 'Killed') b.link = { text: 'Saudi casualties in the Yemen conflict', href: '/yemen-conflict-desk#n=cas' };
+    // The Houthi front is the Yemen desk's (user, 12 Oct): the casualty boxes link to its casualties, and
+    // Saudi Arabia's row and the link carry one asterisk.
+    if (b.title === 'Killed' || b.title === 'Injured') b.link = { text: 'Saudi casualties in the Yemen conflict', href: '/yemen-conflict-desk#n=cas', mark: '*', on: ['Saudi Arabia'] };
     if (b.title === "The rial's open-market rate" || b.title === 'Gold coin in Tehran') {
       const [latest, week, before] = b.rows.find((r) => r.label === 'tgju').cells;
       const change = String(latest.note || '').replace(/ vs before conflict$/, '');

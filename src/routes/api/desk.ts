@@ -6,9 +6,10 @@ import { checkLinks } from "@/lib/desk/links";
 import { type DeskId, deskById } from "@/lib/desks";
 import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
+import { rightOffice } from "@/lib/desk/offices";
 import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
-import { districtSeat, heardInside, iranEventAllowed, ownSkyOnly } from "@/lib/desk/iran-places";
+import { districtSeat, heardInside, iranEventAllowed, ownSkyOnly, seaPlace } from "@/lib/desk/iran-places";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -50,8 +51,8 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   // A word a model glued to a name is shown split, and a name in the
   // desk's one spelling; the row is left as it is.
   for (const r of slice.reports) {
-    r.summary = respell(unglue(String(r.summary ?? "")));
-    if (r.text) r.text = respell(String(r.text));
+    r.summary = rightOffice(respell(unglue(String(r.summary ?? ""))));
+    if (r.text) r.text = rightOffice(respell(String(r.text)));
     // The Iran desk's filter buttons go by the source's group.
     if (desk === "iran") (r as Record<string, unknown>).lean = iranLeanOfSource(String(r.source ?? ""));
   }
@@ -74,6 +75,13 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     });
     // Iran's own air defence and alarms, with no attacker named: side not stated.
     s.events = s.events.map((e) => (ownSkyOnly(e) ? { ...e, actor: "unclear" } : e));
+    // At sea or on land, a sea pin in its sea and off the land: the researched pins' rule.
+    s.events = s.events.map((e) => {
+      const x = e as typeof e & { lat?: number; lng?: number; type?: string | null };
+      if ((e.desks ?? []).includes("yemen") || typeof x.lat !== "number" || typeof x.lng !== "number") return e;
+      const w = seaPlace({ ...x, lat: x.lat, lng: x.lng });
+      return { ...e, lat: w.lat, lng: w.lng, sea: w.sea };
+    });
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }

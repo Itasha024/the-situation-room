@@ -5,7 +5,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { heardInside, iranPins, iranPlacesIn } from "./iran-places.ts";
+import { heardInside, iranPins, iranPlacesIn, seaPlace } from "./iran-places.ts";
 
 test("a place is pinned only when the source names it too, in any of its languages", () => {
   assert.deepEqual(iranPins("Israeli strikes hit Isfahan and Natanz", "حملات اسرائیل به اصفهان و نطنز", false).map((p) => p.name), ["Isfahan", "Natanz"]);
@@ -118,4 +118,22 @@ test("a stored pin heard inside a longer place's name moves to that place as it 
   assert.equal(heardInside({ place: "Byblos", label: "Israeli artillery strikes outskirts of Kafra and Beit Lif in Bint Jbeil district, south Lebanon" })?.name, "Bint Jbeil");
   assert.equal(heardInside({ place: "Byblos", label: "Israeli strike on a car near Jbeil" }), null);
   assert.equal(heardInside({ place: "Nabatieh", label: "Israeli artillery strikes Nabatieh al-Fawqa in south Lebanon" }), null);
+});
+
+test("a sea pin sits in the sea it names and off the land; land pins stay on land (user, 12 Oct)", () => {
+  // "Persian Gulf" drawn in the Red Sea goes to the Gulf.
+  const gulf = seaPlace({ lat: 23.8833, lng: 36.9167, place: "Persian Gulf", label: "A ship attacked in the Persian Gulf" });
+  assert.ok(gulf.sea && gulf.lat > 24 && gulf.lng > 48, JSON.stringify(gulf));
+  // "off Sohar" on the town goes out to sea, still near it.
+  const sohar = seaPlace({ lat: 24.347, lng: 56.709, place: "Sohar", label: "Drone strike sets oil tanker ablaze off Sohar, Oman" });
+  assert.ok(sohar.sea && (sohar.lat !== 24.347 || sohar.lng !== 56.709) && Math.abs(sohar.lat - 24.347) < 0.2, JSON.stringify(sohar));
+  // "137 nautical miles east of Muscat" is 250 km out.
+  const far = seaPlace({ lat: 23.588, lng: 58.3829, place: "Muscat", label: "Bulk carrier Pelagia attacked 137 nautical miles east of Muscat" });
+  assert.ok(far.lng > 60.5, JSON.stringify(far));
+  // A tanker aircraft at an air base, and a ship-repair yard, are on land.
+  assert.equal(seaPlace({ lat: 24.06, lng: 47.58, place: "Prince Sultan Air Base", label: "Iranian strike on Prince Sultan Air Base damages US tankers and an E-3" }).sea, false);
+  assert.equal(seaPlace({ lat: 36.8093, lng: 53.1117, place: "Caspian naval HQ", label: "Israel says it struck Caspian Sea naval HQ and ship repair base" }).sea, false);
+  // A ship in a port stays at the port.
+  const port = seaPlace({ lat: 29.26, lng: 50.33, place: "Kharg Island", label: "US missiles strike tanker Belma docked at Kharg Island" });
+  assert.ok(port.sea && port.lat === 29.26 && port.lng === 50.33, JSON.stringify(port));
 });

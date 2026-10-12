@@ -710,6 +710,8 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 .site-menu li a.sm-desk .sm-t{display:flex;flex-direction:column;gap:.15rem;min-width:0}
 .sm-logo{display:block;line-height:0;border-radius:6px}
 .sm-logo img{width:34px;height:34px;display:block}
+/* Night: the dark square gets a light edge, as the day one has its red edge (user, 12 Oct: it blended in). */
+.sm-logo .sm-logo-n{border-radius:6px;box-shadow:0 0 0 1.5px rgba(243,238,227,.6)}
 .sm-logo .sm-logo-d,html[data-theme="broadsheet-day"] .sm-logo .sm-logo-n{display:none}
 html[data-theme="broadsheet-day"] .sm-logo .sm-logo-d{display:block}
 .sm-logo:focus-visible{outline:1px solid var(--accent-ui,#7eb6ff);outline-offset:3px}

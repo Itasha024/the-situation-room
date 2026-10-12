@@ -13,6 +13,7 @@
 
 import { anglicise } from "./anglicise.ts";
 import { respell } from "./spelling.ts";
+import { rightOffice } from "./offices.ts";
 import { westernDates } from "./calendars.ts";
 import { type NeedsPlace, geocodeJobs } from "./geocode.ts";
 import { maritimeType, seaPlace } from "./maritime.ts";
@@ -1070,7 +1071,7 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // The site's general copy rules, as on the Yemen desk (user, 8 Oct): Iran's
   // calendar out, one spelling per name, the outlet off its own copy, no
   // role the text did not give.
-  const fix = (s: string) => westernDates(iranReword(reword(respell(anglicise(s)))));
+  const fix = (s: string) => rightOffice(westernDates(iranReword(reword(respell(anglicise(s))))));
   const r: Reading = { ...raw, headline: firstEvent(fixHeadline(fix(raw.headline))), body: fix(raw.body) };
   r.headline = dropInventedRole(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.text);
   r.body = stripOwnOutlet(r.body, c.source);

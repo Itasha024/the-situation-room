@@ -52,9 +52,32 @@ function relabel(p) {
   l = l.replace(/^Its attackers say they struck (.+?)(?: with (drones|missiles|missiles and drones|rockets))?$/, (m, x, w) => `${w ? WITH[w] : 'Strike'} on ${x}`);
   if (GULF[p.fp]) l = l.replace(/^Gulf strike/, `${GULF[p.fp]} strike`);
   else l = l.replace(/^Gulf strike on/, 'Strike on');
-  return l;
+  // A country with no place named: "struck targets in Iraq", not "struck Iraq".
+  const country = /^(.+?) \(place not stated\)$/.exec(p.place || '') || /\b(?:on|struck)\s+(?:the\s+)?([A-Z][\w ]+?) \(place not stated\)/.exec(l);
+  if (country) l = l.replace(new RegExp(String.raw`\b(struck|strike on|attack on|attacks on)\s+(?:the\s+)?${country[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\b`), (m, v) => (v === 'struck' ? 'struck targets in ' : v.replace(/ on$/, ' in ')) + country[1]);
+  // "heard at the airport", not "in" it.
+  l = l.replace(/\b(heard|Sirens|Interceptions)\s+in\s+(?=[^,]*\b(?:base|school|airport|port|hospital|building|depot|refinery|camp|station|plant|facility|HQ|headquarters|barracks|complex|pier)\b)/gi, '$1 at ');
+  return seaWords(l).replace(/^\p{Ll}/u, (c) => c.toUpperCase());
 }
-const notes = base.map((p) => [p.fp, p.place, relabel(p), p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
+// The sea in plain English (Stage C, 12 Oct): "attacked in Off the coast of Oman" is "attacked off the coast of
+// Oman", "struck Gulf of Oman" is "struck a target in the Gulf of Oman", and a sea or strait takes "the".
+const SEA = String.raw`(?:Strait of Hormuz|Gulf of Oman|Persian Gulf|Arabian Sea|Red Sea|Gulf of Aden|Arabian Gulf)`;
+function seaWords(l) {
+  return String(l || '')
+    .replace(/\s+(?:in|at|on)\s+(?:the\s+)?off\b/gi, ' off')
+    .replace(/\b(struck|hit|targeted)\s+off\b/gi, '$1 a target off')
+    .replace(/\b(struck|hit|targeted)\s+near\b/gi, '$1 a target near')
+    .replace(new RegExp(String.raw`\b(struck|hit|targeted)\s+(?:the\s+)?(${SEA}\s+coast)`, 'g'), '$1 the $2')
+    .replace(new RegExp(String.raw`\b(struck|hit|targeted)\s+(?:the\s+)?((?:(?:northern|southern|eastern|western|central)\s+)?${SEA})(?!\s+coast)`, 'g'), '$1 a target in the $2')
+    .replace(new RegExp(String.raw`\bfalls\s+on\s+(?:the\s+)?(${SEA})`, 'g'), 'falls into the $1')
+    .replace(new RegExp(String.raw`\b(strikes?|attacks?)\s+on\s+(?:the\s+)?(${SEA})`, 'g'), '$1 in $2')
+    .replace(new RegExp(String.raw`\b(in|over|near|across|into)\s+(${SEA})`, 'g'), '$1 the $2')
+    .replace(/\s+(?:in|on|at)\s+(?:the\s+)?(\d+\s*(?:NM|nm|nautical miles?)\s)/g, ' $1')
+    .replace(/\s+—\s+M\/[TV]\s+([^,—]+)/g, (m, n) => ` (${n.trim().replace(/\b(\w)(\w*)/g, (w, a, b) => a + b.toLowerCase())})`)
+    .replace(/\s+—\s+(?:the\s+)?(.+?)\s+attack claim$/i, ' ($1)')
+    .replace(/\s+,/g, ',').replace(/\s{2,}/g, ' ').replace(/[.,]\s*$/, '').trim();
+}
+const notes = base.map((p) => [p.fp, seaWords(p.place).replace(/^the /, ''), relabel(p), p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
 fs.writeFileSync(path.join(pub, 'iran-map-pins.json'), JSON.stringify({ year, n: pins.length, pins }));
 fs.writeFileSync(path.join(pub, 'iran-map-notes.json'), JSON.stringify({ n: notes.length, notes }));
 console.log('[map-pack]', pins.length, 'pins,', seaN, 'at sea;', unstated, "of Iran's own air defence and alarms shown as not stated");

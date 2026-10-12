@@ -8,7 +8,7 @@ import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
 import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
-import { heardInside, iranEventAllowed, ownSkyOnly } from "@/lib/desk/iran-places";
+import { districtSeat, heardInside, iranEventAllowed, ownSkyOnly } from "@/lib/desk/iran-places";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -65,6 +65,12 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
       if (!host) return [e];
       const x = e as typeof e & { fp?: string; lat?: number; lng?: number };
       return String(x.fp ?? "").includes("-pin-") ? [] : [{ ...x, place: host.name, lat: host.lat, lng: host.lng }];
+    });
+    // A pin on a district's seat moves to the village its label names.
+    s.events = s.events.map((e) => {
+      if ((e.desks ?? []).includes("yemen")) return e;
+      const v = districtSeat(e);
+      return v ? { ...e, place: v.name, lat: v.lat, lng: v.lng } : e;
     });
     // Iran's own air defence and alarms, with no attacker named: side not stated.
     s.events = s.events.map((e) => (ownSkyOnly(e) ? { ...e, actor: "unclear" } : e));

@@ -58,6 +58,15 @@ test("the map's scope (user, 9 Oct): who acted, where it landed, and never a fly
   assert.equal(iranPinAllowed("israel", at("Syria"), "Israeli strike hits Damascus"), false);
   assert.equal(iranPinAllowed("us", at("Iraq"), "US strike hits Kataib Hezbollah at Jurf al-Sakhar"), true);
   assert.equal(iranPinAllowed("houthi", at("sea"), "Houthis strike a tanker"), false);
+  // Stage C (12 Oct): footage, a later look, a sound bomb, a sonic boom, an alert declared, troops moving, the MEK.
+  assert.equal(iranPinAllowed("iran", at("sea"), "IRGC releases footage of naval mine explosion on oil tanker in Strait of Hormuz"), false);
+  assert.equal(iranPinAllowed("israel", at("Lebanon"), "Israeli helicopter drops sound bomb in Nabatieh al-Fawqa square, south Lebanon"), false);
+  assert.equal(iranPinAllowed("unclear", at("Iran"), "Phantom fighter jets break sound barrier over Dezful, Khuzestan province"), false);
+  assert.equal(iranPinAllowed("unclear", at("Iran"), "Air defence at highest alert; red alert declared from Qeshm to Jask in Hormozgan province"), false);
+  assert.equal(iranPinAllowed("israel", at("Lebanon"), "Israeli tanks move on outskirts of Kfar Shouba in south Lebanon under machine-gun cover"), false);
+  assert.equal(iranPinAllowed("other", at("Iran"), "MEK reports attacks on Basij bases and regime banners in multiple Iranian cities"), false);
+  assert.equal(iranPinAllowed("unclear", at("sea"), "Kuwaiti VLCC Kazimah III still ablaze off Musandam after 1 Oct projectile strike"), false);
+  assert.equal(iranPinAllowed("iran", at("sea"), "IRGC Navy: third rogue supertanker since yesterday hits mine in Strait of Hormuz"), true);
   assert.equal(iranPinAllowed("houthi", at("Israel"), "Missile from Yemen at Eilat"), true);
   assert.equal(iranPinAllowed("iran", { country: "Saudi Arabia", lat: 16.89, lng: 42.56 }, "Drone attack on the Jizan refinery"), false);
   assert.equal(iranPinAllowed("unclear", { country: "sea", lat: 13.2, lng: 43.13 }, "Ship attacked off Mokha"), false);

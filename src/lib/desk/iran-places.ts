@@ -342,7 +342,15 @@ const NOT_AN_ATTACK =
 const ROUNDUP =
   /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)|\bas\s+(?:Tehran|Iran|Washington|the US|Israel)\s+(?:tries|seeks|aims|moves|looks|struggles|presses)\b|\bin\s+(?:recent|past|the past)\s+(?:days|weeks|months)\b/i;
 const INTERNAL =
-  /\b(?:police|roadside|gunmen|militants?|Jaish al-Adl|PJAK|PKK|Komala|protest(?:s|ers)?|riots?|unrest|clash(?:es)?|security forces|border guards?|assassinat\w*|executed|arrest(?:s|ed)?)\b/i;
+  /\b(?:police|roadside|gunmen|militants?|Jaish al-Adl|PJAK|PKK|Komala|protest(?:s|ers)?|riots?|unrest|clash(?:es)?|security forces|border guards?|assassinat\w*|executed|arrest(?:s|ed)?|MEK|PMOI|Mojahedin|resistance units|regime banners?)\b/i;
+/**
+ * Not an attack of its own (Stage C, 12 Oct, the live pins read one by one): footage or a later look at
+ * an attack already pinned ("IRGC releases footage of …", "still ablaze after the 1 Oct strike", "in
+ * Erbil yesterday", thermal anomalies), a sound bomb, a sonic boom, an alert declared with nothing heard,
+ * troops or tanks on the move, gunfire sweeps.
+ */
+const NOT_NEW_OR_NOT_A_STRIKE =
+  /\b(?:releases? (?:new )?footage|footage (?:shows?|of)|video (?:shows?|of)|still (?:ablaze|burning|on fire)|(?<!since )yesterday|over (?:the )?past (?:\d+|two|three|few|several) (?:days|hours)|thermal anomal\w*|sound bombs?|sonic boom|(?:break|breaks|broke) the sound barrier|break sound barrier|breaks sound barrier|(?:at|on) (?:its )?(?:highest|high|full|maximum) alert|alert (?:was |is )?declared|declared? (?:a )?(?:red |state of )?alert|state of alert|(?:tanks?|troops|forces|bulldozers?) (?:move|moves|moved|advance|advances|advanced)|machine-?gun (?:cover|sweeps?))\b/i;
 const AIR_DEFENCE = /\b(?:intercept\w*|air defen[cs]es?|shot down|shoots down|downed|downs)\b/i;
 const AXIS = new Set(["iran", "hezbollah", "iraqi_militias"]);
 const PURSUERS: Record<string, Set<string>> = {
@@ -353,7 +361,7 @@ const PURSUERS: Record<string, Set<string>> = {
 export function iranPinAllowed(actor: string | null | undefined, place: Pick<IranPlace, "country"> & Partial<Pick<IranPlace, "lat" | "lng">>, headline: string): boolean {
   const a = String(actor || "unclear");
   if (place.lat != null && place.lng != null && place.lat < 20.3 && place.lng > 32 && place.lng < 52) return false;
-  if ((a === "houthi" && place.country !== "Israel") || NOT_AN_ATTACK.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
+  if ((a === "houthi" && place.country !== "Israel") || NOT_AN_ATTACK.test(headline) || NOT_NEW_OR_NOT_A_STRIKE.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
   if (/\bsirens?\b/i.test(headline) && place.country === "Israel") return false;
   if (place.country === "Yemen" || place.country === "Gaza" || place.country === "Palestine") return false;
   if (AXIS.has(a)) return place.country !== "Iran" || (a === "iran" && AIR_DEFENCE.test(headline) && !INTERNAL.test(headline));
@@ -384,6 +392,19 @@ export function ownSkyOnly(e: { actor?: string | null; place?: string | null; la
   const p = PLACE_BY_NAME.get(String(e.place ?? ""));
   const label = String(e.label ?? "");
   return e.actor === "iran" && p?.country === "Iran" && DEFENCE.test(label) && !ATTACKER.test(label);
+}
+
+/**
+ * A pin on a district's seat when its label names the village ("Israeli tank fire kills a retired soldier
+ * in Yater, Bint Jbeil district", pinned at Bint Jbeil; Stage C, 12 Oct): the village the label names first,
+ * near the seat. Null when the pin stands right.
+ */
+export function districtSeat(e: { place?: string | null; label?: string | null }): IranPlace | null {
+  const me = PLACE_BY_NAME.get(String(e.place ?? ""));
+  const label = String(e.label ?? "");
+  if (!me || !asProvince(label, me)) return null;
+  const others = [...iranPlacesIn(label), ...gazPlacesIn(label, label)].filter((p) => p.name !== me.name && p.kind !== "sea" && km(p, me) < 40);
+  return others[0] ?? null;
 }
 
 /**

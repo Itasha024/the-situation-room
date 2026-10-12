@@ -252,7 +252,7 @@ const isName = (copy: string, run: string[]) => {
 const COUNTRY: Record<string, string> = { "United Arab Emirates": "UAE" };
 // The hand list's places are its own (its seas too): the wider list never stands in for them.
 const HAND = new Set(IRAN_PLACES.flatMap((p) => [p.name, ...(p.alt ?? [])]).map((n) => n.toLowerCase()));
-const GAZ = IRAN_GAZ.filter(([name]) => !HAND.has(name.toLowerCase()) && !/(?:Strait|Gulf|Sea|Ocean|off)/i.test(name)).map(([name, lat, lng, country, latin, native]) => ({
+const GAZ = IRAN_GAZ.filter(([name]) => !HAND.has(name.toLowerCase()) && !/\b(?:Strait|Gulf|Sea|Ocean|off)\b/i.test(name)).map(([name, lat, lng, country, latin, native]) => ({
   place: { name, lat, lng, country: COUNTRY[country] ?? country, kind: "city", alt: [...latin, ...native] } as IranPlace,
   skeletons: new Set(latin.map((n) => skeleton(latinWords(n))).filter((k) => k.length >= 3)),
   sounds: new Set(native.map(nativeSound).filter((k) => k.length >= 3)),

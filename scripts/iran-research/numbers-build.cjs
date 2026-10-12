@@ -1028,15 +1028,15 @@ for (const s of out.sets) for (const b of s.boxes) {
 // row matched by its date and site as dumped in S/n4/*-rows.json.
 {
   const n4 = (f) => (fs.existsSync(path.join(S, 'n4', f)) ? load(`n4/${f}`) : []);
-  const keyOf = (r) => `${r[0] && r[0].date}|${typeof r[1] === 'string' ? r[1] : ''}`;
-  const research = (kind) => {
-    const rows = n4(`${kind}-rows.json`);
-    const by = new Map();
-    for (const o of [...n4(`${kind}-a.out.json`), ...n4(`${kind}-b.out.json`)]) {
-      const r = rows.find((x) => x.i === o.i);
-      if (r) by.set(`${r.first && r.first.date}|${r.site}`, o);
-    }
-    return by;
+  // Each row with its research, [row, finding], by its place in the list (its date and site checked).
+  const research = (kind, list) => {
+    const dumped = n4(`${kind}-rows.json`);
+    const byI = new Map([...n4(`${kind}-a.out.json`), ...n4(`${kind}-b.out.json`)].map((o) => [o.i, o]));
+    return list.map((r, i) => {
+      const d = dumped[i];
+      if (!d || (d.first && d.first.date) !== (r[0] && r[0].date) || d.site !== r[1]) { problems.push(`${kind}: row ${i} is not the row researched`); return [r, undefined]; }
+      return [r, byI.get(i)];
+    });
   };
   const lc = (s) => String(s || '').replace(/^./, (c) => c.toUpperCase());
   const ATT = { 'US/Israel': 'US and Israel', 'Iraqi militias': 'Iraqi militias' };
@@ -1044,13 +1044,11 @@ for (const s of out.sets) for (const b of s.boxes) {
   const ready = (kind) => ['a', 'b'].every((h) => fs.existsSync(path.join(S, 'n4', `${kind}-${h}.out.json`)));
   for (const s of out.sets) for (const b of s.boxes) {
     if (b.title === 'Attacks on energy sites' && ready('energy')) {
-      const R4 = research('energy');
+      const R4 = research('energy', b.rows);
       let miss = 0;
       b.cols = [['Date', 'd'], ['Site', 'l'], ['By', 'l'], ['Weapon', 'l'], ['Current state', 'l w']];
       // A row the readers found was no attack (Ras Tanura, 28 Jun: a helicopter crash), or an unconfirmed claim of the Houthi front (the Yemen desk's), leaves the list.
-      b.rows = b.rows.filter((r) => { const o = R4.get(keyOf(r)); return !(o && o.confirmed === false && /helicopter crash|not an attack|Yemeni|Houthi/i.test(o.note || '')); });
-      b.rows = b.rows.map((r) => {
-        const o = R4.get(keyOf(r));
+      b.rows = R4.filter(([, o]) => !(o && o.confirmed === false && /helicopter crash|not an attack|Yemeni|Houthi/i.test(o.note || ''))).map(([r, o]) => {
         if (!o) { miss++; return [r[0], r[1], String(r[2]).replace(/^Claimed by .*/, 'Not stated').split(';')[0], 'Not stated', { ...r[3], note: undefined }]; }
         const date = o.confirmed === false ? { ...r[0], note: 'Reported by one source only' } : { ...r[0], note: undefined };
         const by = o.attacker && !/^unknown/i.test(o.attacker) ? ATT[o.attacker] || o.attacker : 'Not stated';
@@ -1064,15 +1062,18 @@ for (const s of out.sets) for (const b of s.boxes) {
       b.stats = [cnt((r) => r[0].date === AS_OF, 'Today'), cnt((r) => r[0].date >= w7, 'Last 7 days'), cnt(() => true, 'Since 28 Feb')];
     }
     if (b.title === 'Incidents' && ready('ships')) {
-      const R4 = research('ships');
+      const R4 = research('ships', b.rows);
       let miss = 0;
       b.cols = [['Date', 'd'], ['Ship', 'l'], ['Location', 'l'], ['Weapon', 'l'], ['What happened', 'l w']];
-      b.rows = b.rows.map((r) => {
-        const o = R4.get(keyOf(r));
+      // A row the readers found was another row's attack (a Windward cargo ship that was CAPE DAO) leaves the list.
+      b.rows = R4.filter(([r, o]) => !(o && r[0].k === 'unoff' && /\bsame (?:attack|incident) as\b/i.test(o.fix || ''))).map(([r, o]) => {
         if (!o) { miss++; return [r[0], r[1], r[2], 'Not stated', r[3]]; }
         return [r[0], r[1], r[2], lc(o.weapon) || 'Not stated', o.fix ? lc(o.fix) : r[3]];
       });
       if (miss) problems.push(`ships: ${miss} rows without research`);
+      const w7 = new Date(Date.parse(AS_OF) - 6 * 864e5).toISOString().slice(0, 10);
+      const cnt = (f, l, note) => [unoff(String(b.rows.filter(f).length), 'Our count of the list below', b.stats[2][0].url, AS_OF, { note }), l];
+      b.stats = [cnt((r) => r[0].date === AS_OF, 'Today', b.stats[0][0].note), cnt((r) => r[0].date >= w7, 'Last 7 days', b.stats[1][0].note), cnt(() => true, 'Since 28 Feb', b.stats[2][0].note)];
     }
   }
 }

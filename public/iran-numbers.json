@@ -676,6 +676,10 @@
        "l"
       ],
       [
+       "Weapon",
+       "l"
+      ],
+      [
        "What happened",
        "l w"
       ]
@@ -691,6 +695,7 @@
        },
        "Supertanker",
        "Strait of Hormuz",
+       "Naval mine (IRGC Navy claim, unverified)",
        "Explosion and fire; IRGC Navy says naval mine (unverified)"
       ],
       [
@@ -703,6 +708,7 @@
        },
        "Tanker",
        "Strait of Hormuz, outbound",
+       "Projectile (type not stated)",
        "Port side damaged by unidentified projectile; crew safe (UKMTO)"
       ],
       [
@@ -715,7 +721,8 @@
        },
        "Tanker",
        "Gulf of Oman",
-       "Incident involving tanker and military forces (UKMTO)"
+       "Not stated",
+       "Incident between a tanker and military forces; no details given (UKMTO advisory)"
       ],
       [
        {
@@ -727,6 +734,7 @@
        },
        "Tanker",
        "Strait of Hormuz, outbound",
+       "Projectile (type not stated)",
        "Unknown projectile, fire; crew safe (UKMTO, 23:20 UAE time)"
       ],
       [
@@ -739,6 +747,7 @@
        },
        "Ocean Molika (Arika Sun) (Panama)",
        "after leaving Iranian port, Gulf of Oman",
+       "Air strike (precision munition from a US fighter jet)",
        "Stern struck by US jet precision munition (blockade); no injuries"
       ],
       [
@@ -751,7 +760,8 @@
        },
        "Oil tanker",
        "Arabian Gulf (UAE waters)",
-       "Fire on board; 22 rescued by UAE National Guard"
+       "Not stated",
+       "Fire on board, cause not given; 22 crew rescued by UAE National Guard"
       ],
       [
        {
@@ -763,6 +773,7 @@
        },
        "Gem No.2 (Panama)",
        "13 nm W of Al Jazeera, UAE",
+       "Projectile (type not stated)",
        "Unknown projectile, fire extinguished (UKMTO)"
       ],
       [
@@ -775,6 +786,7 @@
        },
        "unidentified tanker",
        "Gulf of Oman, east of Fujairah, ~10 nm from the SPM area",
+       "Not stated",
        "Reported struck and on fire; first strike there in six months"
       ],
       [
@@ -787,7 +799,8 @@
        },
        "NV Sunshine (LPG carrier)",
        "Hormuz area",
-       "IRGC claimed strike; unverified"
+       "Not stated",
+       "IRGC Navy claimed it hit the ship for using an unauthorised route, causing an engine-room fire; unverified"
       ],
       [
        {
@@ -799,7 +812,8 @@
        },
        "Acers (Antigua and Barbuda)",
        "~51 nm N of Madinat ash Shamal, Qatar",
-       "Multiple projectiles; casualties reported (UKMTO)"
+       "Drone (three UAVs)",
+       "Struck by three drones; engine-room fire put out; one crew member injured"
       ],
       [
        {
@@ -811,6 +825,7 @@
        },
        "ST1",
        "2NM off the coast of Oman, near Jazirat",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -823,6 +838,7 @@
        },
        "On Peace (Panama)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution. Twelve seafarers injured."
       ],
       [
@@ -835,6 +851,7 @@
        },
        "Maran Gas Mystras (Greece)",
        "Strait of Hormuz, outbound",
+       "Projectile (type not stated)",
        "Struck, engine-room fire; crew safe"
       ],
       [
@@ -847,6 +864,7 @@
        },
        "Lipsi (Liberia)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -859,6 +877,7 @@
        },
        "Cameroon Prosperity",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -871,6 +890,7 @@
        },
        "GAS VELA",
        "Strait of Hormuz",
+       "Drone (suspected UAV)",
        "Damaged. No pollution."
       ],
       [
@@ -883,6 +903,7 @@
        },
        "Ghana Prosperity",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -895,6 +916,7 @@
        },
        "PROMISE",
        "4NM east of Oman",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -907,6 +929,7 @@
        },
        "UHUD (Panama)",
        "Strait of Hormuz",
+       "Drone (entered the funnel and fell into the engine room)",
        "Damaged. No pollution."
       ],
       [
@@ -919,6 +942,7 @@
        },
        "Kazimah III (Kuwait)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -931,6 +955,7 @@
        },
        "MERSIN PROSPERITY (Liberia)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -943,6 +968,7 @@
        },
        "SINBAD (Liberia)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -955,6 +981,7 @@
        },
        "AL RUWAIS (Liberia)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -967,6 +994,7 @@
        },
        "AL FUNTAS (Kuwait)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -979,19 +1007,8 @@
        },
        "CAPE DAO (Antigua and Barbuda)",
        "15NM northeast of Khasab, Oman",
+       "Projectile (type not stated)",
        "Damaged. No pollution. One seafarer fatality."
-      ],
-      [
-       {
-        "v": "23 Sep",
-        "k": "unoff",
-        "src": "Windward",
-        "url": "https://insights.windward.ai/",
-        "date": "2026-09-23"
-       },
-       "unidentified cargo vessel",
-       "",
-       "Struck, fire, crew evacuated, two casualties"
       ],
       [
        {
@@ -1003,6 +1020,7 @@
        },
        "LR STEPHANIE (United Kingdom)",
        "Strait of Hormuz",
+       "Drone (UAV, per US Navy)",
        "Damaged. No pollution. Two seafarers injured."
       ],
       [
@@ -1015,7 +1033,8 @@
        },
        "AL MARYAH (Liberia)",
        "Strait of Hormuz",
-       "Damaged. No pollution."
+       "Projectile debris (two unknown projectiles exploded in the air)",
+       "Hit by debris from two projectiles that exploded in the air; no injuries"
       ],
       [
        {
@@ -1027,6 +1046,7 @@
        },
        "STI STEADFAST",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1039,6 +1059,7 @@
        },
        "TREND",
        "16NM northeast of Khasab, Oman",
+       "Not stated",
        "Damaged. No pollution."
       ],
       [
@@ -1051,6 +1072,7 @@
        },
        "ST HELENA (Djibouti)",
        "",
+       "Projectile (type not stated)",
        "Reportedly struck by unknown projectile, no damage"
       ],
       [
@@ -1063,6 +1085,7 @@
        },
        "unknown Iranian commercial vessel (Iran)",
        "near Qeshm Island",
+       "Projectile (type not identified)",
        "Struck; 1 killed, 4 injured (IRIB)"
       ],
       [
@@ -1075,6 +1098,7 @@
        },
        "El Gaia (Panama)",
        "Strait of Hormuz",
+       "Drone (US CENTCOM); Iran says naval mines",
        "Damaged. Pollution (extent unknown). Two seafarers missing."
       ],
       [
@@ -1087,6 +1111,7 @@
        },
        "ROMANCE",
        "4NM west of Khasab, Oman",
+       "Projectile (type not stated)",
        "Damaged. Oil leak under assessment."
       ],
       [
@@ -1099,6 +1124,7 @@
        },
        "New Andros",
        "28NM south-east of Al-Faw, Iraq",
+       "Drone (Iraqi port officials); UKMTO: unknown projectile",
        "Damaged. No pollution."
       ],
       [
@@ -1111,6 +1137,7 @@
        },
        "HERCULES STAR (Gibraltar)",
        "24NM northwest of Port Rashid, UAE",
+       "Projectile (suspected)",
        "Damaged. No pollution. Two seafarer fatalities."
       ],
       [
@@ -1123,7 +1150,8 @@
        },
        "8 tankers + 2 US vessels (IRGC claim)",
        "Strait of Hormuz area; northern Gulf; Gulf of Oman",
-       "IRGC said it fired on them; UKMTO reported several merchant ships hit by \"disabling fire\""
+       "Not stated",
+       "IRGC claimed attacks on 8 tankers and 2 US vessels (unverified); the UKMTO \"disabling fire\" report refers to US strikes on Iran-linked tankers"
       ],
       [
        {
@@ -1135,6 +1163,7 @@
        },
        "LNG carrier",
        "Khor Fakkan, UAE",
+       "Not stated",
        "Damaged"
       ],
       [
@@ -1147,7 +1176,8 @@
        },
        "HORIZON 1",
        "38NM northeast of Dibba, UAE",
-       "Damaged. No pollution."
+       "US military strike (munition not stated)",
+       "Struck on the stern and disabled by US forces after the crew was told to abandon ship; fire spread to accommodation"
       ],
       [
        {
@@ -1159,7 +1189,8 @@
        },
        "5 Iranian tankers incl. Riesco (Iran-linked)",
        "Gulf of Oman",
-       "Destroyed/sunk"
+       "US military strike (munition not stated)",
+       "Struck and disabled by US forces after crews were told to abandon ship; Riesco sank"
       ],
       [
        {
@@ -1171,6 +1202,7 @@
        },
        "AL DASMA",
        "Southeast of Strait of Hormuz",
+       "Not stated",
        "Damaged. No pollution."
       ],
       [
@@ -1183,7 +1215,8 @@
        },
        "Downy (Dauni), Stark 1, Kylo (Iran-linked)",
        "off Kharg Island, near Jask, Gulf of Oman",
-       "2 disabled, 1 destroyed"
+       "Air strike (US fighters and drones, per officials)",
+       "Disabled by US forces; Kylo (Noxen) sank"
       ],
       [
        {
@@ -1195,6 +1228,7 @@
        },
        "SENEGAL PROSPERITY (Liberia)",
        "17NM east of Khasab, Oman",
+       "Rockets (three, per the company)",
        "Damaged. No pollution."
       ],
       [
@@ -1207,6 +1241,7 @@
        },
        "SIDR (Saudi Arabia)",
        "17NM east of Khasab, Oman",
+       "Projectile (type not stated)",
        "Damaged. No pollution. Two seafarer fatalities."
       ],
       [
@@ -1219,6 +1254,7 @@
        },
        "BURGAN (Kuwait)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1231,6 +1267,7 @@
        },
        "AL YARMOUK",
        "6NM southeast of the Umm Al-Fayarin area, Oman",
+       "Not stated",
        "Damaged. No pollution."
       ],
       [
@@ -1243,6 +1280,7 @@
        },
        "AL SALAM II",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1255,6 +1293,7 @@
        },
        "METRO VENETIAN (Liberia)",
        "9NM northeast of Ash Shishah, Oman",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1267,7 +1306,8 @@
        },
        "AMARA (Liberia)",
        "",
-       "Seized, held near Qeshm Island"
+       "Boarded and seized",
+       "Reportedly detained by the IRGC and held south of Qeshm Island (Amara identified from AIS, not officially confirmed)"
       ],
       [
        {
@@ -1279,6 +1319,7 @@
        },
        "MINOAN DIGNITY (Liberia)",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution. One seafarer fatality."
       ],
       [
@@ -1291,6 +1332,7 @@
        },
        "RIYAN STAR",
        "Strait of Hormuz",
+       "Rocket (per the Master)",
        "Damaged. No pollution. One seafarer fatality."
       ],
       [
@@ -1303,6 +1345,7 @@
        },
        "AL WATAN",
        "Strait of Hormuz",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1315,7 +1358,8 @@
        },
        "TARIF (Liberia)",
        "",
-       "ADNOC-linked Aframax struck by a drone; continued (IMO lists AL WATAN on 14 Aug, possibly a different ship)"
+       "Drone (UAV)",
+       "ADNOC Aframax struck by a drone on 13 Aug while leaving Hormuz; minor damage, continued under own power"
       ],
       [
        {
@@ -1327,6 +1371,7 @@
        },
        "NAVIG8 MESSI (Singapore)",
        "Strait of Hormuz",
+       "Drone (UAV)",
        "Damaged. No pollution."
       ],
       [
@@ -1339,19 +1384,8 @@
        },
        "VELA NOVA",
        "70NM south of Gwadar, Pakistan",
-       "Damaged. No pollution."
-      ],
-      [
-       {
-        "v": "11 Aug",
-        "k": "unoff",
-        "src": "gCaptain (UKMTO)",
-        "url": "https://gcaptain.com/vessel-struck-by-unknown-projectile-off-uae-coast-amid-surge-in-attacks-ukmto-says/",
-        "date": "2026-08-11"
-       },
-       "Container ship",
-       "Gulf of Oman",
-       "Incident involving military forces (UKMTO)"
+       "Air-launched missile (two Hellfires from a US Navy MH-60 helicopter)",
+       "Disabled by US forces for running the blockade; fire put out, crew of 17 safe"
       ],
       [
        {
@@ -1363,6 +1397,7 @@
        },
        "AL JABRIYAH II",
        "Strait of Hormuz",
+       "Not stated",
        "Damaged. No pollution"
       ],
       [
@@ -1375,7 +1410,8 @@
        },
        "ADNOC-linked vessel (unconfirmed) (UAE)",
        "",
-       "UAE said Iran struck it with a missile; no injuries"
+       "Missile (per UAE); UKMTO: unknown projectile",
+       "UAE said Iran hit an ADNOC tanker with a missile; fire put out, no injuries"
       ],
       [
        {
@@ -1387,6 +1423,7 @@
        },
        "MINOAN PIONEER (Liberia)",
        "20NM northeast of Al Khasab, Oman",
+       "Projectile (type not stated)",
        "Damaged. Pollution unconfirmed. One seafarer missing."
       ],
       [
@@ -1399,7 +1436,8 @@
        },
        "unnamed",
        "",
-       "Incident at the same spot ~20 nm NE of Khasab, two days before Minoan Pioneer"
+       "Projectile (type not stated); missed",
+       "Projectile landed 5 m from a VLCC ~21 nm NE of Khasab; ship not struck"
       ],
       [
        {
@@ -1411,6 +1449,7 @@
        },
        "Gaslog Shanghai (Bermuda)",
        "11NM northeast of Lima, Oman",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1423,7 +1462,8 @@
        },
        "Lavine (Mozambique)",
        "Gulf of Oman",
-       "Damaged. No pollution."
+       "US strike into the engine room (munition not stated)",
+       "Disabled by US forces for running the blockade; 28 Indian crew safe"
       ],
       [
        {
@@ -1435,6 +1475,7 @@
        },
        "KAIFAN (Kuwait)",
        "8NM northeast of Limah, Oman",
+       "Projectile (type not stated)",
        "Damaged. Abandoned. Two seafarers injured."
       ],
       [
@@ -1447,6 +1488,7 @@
        },
        "KAVOMALEAS (Malta)",
        "8NM northwest of Kumzar, Oman",
+       "Drone (suspected UAV)",
        "Damaged. No pollution. Abandoned."
       ],
       [
@@ -1459,6 +1501,7 @@
        },
        "ACHELOOS (Liberia)",
        "17NM east of Dibba, UAE",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1471,6 +1514,7 @@
        },
        "IDI",
        "19NM east of Khasab, Oman",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1483,7 +1527,8 @@
        },
        "BELMA",
        "IVO Bushehr Province, Persian Gulf",
-       "Damaged. No pollution."
+       "Air strike (Hellfire missiles from a US aircraft)",
+       "Disabled by a US aircraft for running the blockade toward Kharg Island"
       ],
       [
        {
@@ -1495,6 +1540,7 @@
        },
        "MOMBASA B (Liberia)",
        "13 NM from the coast of Oman",
+       "Missile",
        "Damaged. No pollution. Abandoned. Eleven seafarers injured."
       ],
       [
@@ -1507,6 +1553,7 @@
        },
        "AL BAHYAH (Liberia)",
        "13 NM from the coast of Oman",
+       "Missile",
        "Damaged. No pollution. One seafarer fatality. Three seafarers injured."
       ],
       [
@@ -1519,6 +1566,7 @@
        },
        "STOLT MAGNESIUM",
        "40 NM from the coast of Oman",
+       "Projectile (type not stated)",
        "Damaged. No pollution."
       ],
       [
@@ -1531,7 +1579,8 @@
        },
        "GFS Galaxy (Cyprus)",
        "9NM east of Oman",
-       "Damaged. No pollution. One seafarer fatality."
+       "Projectile (type not stated)",
+       "Hit in the stern by a projectile; engine room fire, crew abandoned ship; one crew member missing, later counted dead"
       ],
       [
        {
@@ -1543,7 +1592,8 @@
        },
        "Cyprus Prosperity (Liberia)",
        "6NM east of Musandam Peninsula, Oman",
-       "Damaged. No pollution. No injuries."
+       "Drone",
+       "Struck by a drone; minor structural damage; no injuries"
       ],
       [
        {
@@ -1555,7 +1605,8 @@
        },
        "Al Rekayyat (Marshall Islands)",
        "8NM east of Limah, Oman",
-       "Damaged. No Pollution"
+       "Drone (captain's account; some reports say missiles)",
+       "LNG carrier hit by a drone above the engine room; engine room fire, crew evacuated"
       ],
       [
        {
@@ -1567,6 +1618,7 @@
        },
        "Wedyan (Saudi Arabia)",
        "16NM east of Khor Fakkan, UAE",
+       "Projectile (type not stated)",
        "Damaged. No pollution. No injuries."
       ],
       [
@@ -1579,7 +1631,8 @@
        },
        "KIKU (Panama)",
        "8NM off Oman",
-       "Damaged. No Pollution."
+       "Projectile (type not stated)",
+       "Hit by an unknown projectile; bridge damaged; crew unhurt"
       ],
       [
        {
@@ -1591,7 +1644,8 @@
        },
        "Vessel (Qatar)",
        "off Qatar",
-       "Shrapnel; 1 killed, 1 injured"
+       "Shrapnel (source not stated)",
+       "Boat found with a Qatari citizen killed and another person hurt by shrapnel from \"military operations\""
       ],
       [
        {
@@ -1603,7 +1657,8 @@
        },
        "EVER LOVELY (Singapore)",
        "7.5NM southeast of Dahit, Oman",
-       "Damaged. No pollution. No injuries."
+       "Projectile (type not stated)",
+       "Hit by an unknown projectile; bridge damaged; no injuries"
       ],
       [
        {
@@ -1615,6 +1670,7 @@
        },
        "BOCHEM MARENGO",
        "6NM east of Oman",
+       "Drone (Indian reports; UKMTO says unknown projectile)",
        "Damaged. No pollution. No injuries."
       ],
       [
@@ -1627,7 +1683,8 @@
        },
        "Jalveer (Guinea-Bissau)",
        "21 NM northeast of Sohar, Oman",
-       "Damaged. Abandoned. No pollution"
+       "Air strike (two Hellfire missiles)",
+       "Disabled by a US air strike for carrying Iranian oil through the blockade; crew abandoned ship"
       ],
       [
        {
@@ -1639,7 +1696,8 @@
        },
        "Settebello (Palau)",
        "25 NM east of Shinas, Oman",
-       "Damaged. Abandoned. Three seafarer fatalities."
+       "Air strike (munition not stated)",
+       "Hit by US forces for carrying Iranian oil through the blockade; three Indian crew killed"
       ],
       [
        {
@@ -1651,7 +1709,8 @@
        },
        "Marivex (Madagascar (false flag))",
        "21NM northeast of Masirah Island, Oman",
-       "Damaged. No pollution. Abandoned. No injuries."
+       "Air strike (precision munition from a US Navy F/A-18)",
+       "Disabled by a US Navy jet strike for heading to Iran through the blockade; fire, crew rescued by Oman"
       ],
       [
        {
@@ -1663,7 +1722,8 @@
        },
        "Lexie (Botswana (false flag))",
        "Near Strait of Hormuz",
-       "Damaged. No pollution."
+       "Air strike (Hellfire missile)",
+       "Disabled by a US Hellfire missile in the engine room for heading to Kharg Island through the blockade"
       ],
       [
        {
@@ -1675,7 +1735,8 @@
        },
        "MSC SARISKA V",
        "40NM southeast of Umm Qasr, Iraq",
-       "Damaged. No pollution. No injuries."
+       "Projectiles (IRGC claimed a cruise missile; not confirmed)",
+       "Hit twice leaving Umm Qasr; fire put out; no injuries"
       ],
       [
        {
@@ -1687,7 +1748,8 @@
        },
        "Lian Star (The Gambia)",
        "Gulf of Oman",
-       "Damaged. No pollution."
+       "Air strike (Hellfire missile)",
+       "Disabled by a US Hellfire missile in the engine room for heading to an Iranian port through the blockade"
       ],
       [
        {
@@ -1699,7 +1761,8 @@
        },
        "Olympic Life (Marshall Islands)",
        "60NM east of Muscat, Oman",
-       "Damaged. Pollution (limited bunker fuel discharge). No injuries."
+       "Not stated (external explosion near the waterline)",
+       "External explosion near the waterline; bunker tank holed, some fuel spilled; crew safe"
       ],
       [
        {
@@ -1711,7 +1774,8 @@
        },
        "Hui Chuan (Honduras)",
        "Gulf of Oman",
-       "Seized and taken to Iran"
+       "Boarded and seized",
+       "Floating armoury seized at anchor and taken to Iran"
       ],
       [
        {
@@ -1723,7 +1787,8 @@
        },
        "Haji Ali (India)",
        "off Oman",
-       "Struck by drone/missile, sank; 14 rescued"
+       "Drone or missile (suspected)",
+       "Explosion and fire, sank; 14 crew rescued (suspected drone or missile)"
       ],
       [
        {
@@ -1735,7 +1800,8 @@
        },
        "Safesea Neha (Marshall Islands)",
        "23NM northeast of Doha, Qatar",
-       "Damaged. No pollution. No injuries."
+       "Drone",
+       "Struck by a drone at Doha anchorage; small fire put out; no injuries"
       ],
       [
        {
@@ -1747,7 +1813,8 @@
        },
        "Sea Star III (Iran)",
        "Gulf of Oman",
-       "Damaged. No pollution. No injuries."
+       "Air strike (precision munition from a US Navy F/A-18)",
+       "Iranian tanker disabled by a US Navy jet strike for running the US blockade"
       ],
       [
        {
@@ -1759,7 +1826,8 @@
        },
        "Sevda (Iran)",
        "Gulf of Oman",
-       "Damaged. No pollution. No injuries."
+       "Air strike (precision munition from a US Navy F/A-18)",
+       "Iranian tanker disabled by a US Navy jet strike for running the US blockade; caught fire"
       ],
       [
        {
@@ -1771,7 +1839,8 @@
        },
        "Hasna (Iran)",
        "Gulf of Oman",
-       "Damaged. No pollution. No injuries."
+       "Air strike (20mm cannon fire from a US Navy F/A-18)",
+       "Iranian tanker's rudder shot out by a US Navy jet for running the US blockade"
       ],
       [
        {
@@ -1783,6 +1852,7 @@
        },
        "CMA CGM SAN ANTONIO (Malta)",
        "30 NM northeast of Dibba Al-Fujairah, UAE",
+       "Drone (reported; not confirmed)",
        "Damaged. No pollution. Eight seafarers injured."
       ],
       [
@@ -1795,7 +1865,8 @@
        },
        "JV Innovation (Marshall Islands)",
        "15NM northwest of Ras Al-Khaimah, UAE",
-       "Damaged. Pollution. No injuries."
+       "Projectile (type not stated)",
+       "Bow hit by an unidentified munition; deck fire; no injuries"
       ],
       [
        {
@@ -1807,7 +1878,8 @@
        },
        "HMM NAMU (Panama)",
        "36NM North of Dubai, UAE",
-       "Damaged. No pollution. One seafarer injured."
+       "Anti-ship missile (Iranian Nour-series, per South Korea's debris analysis)",
+       "Hit twice at anchor; engine room fire and hole above the waterline"
       ],
       [
        {
@@ -1819,7 +1891,8 @@
        },
        "MINOAN FALCON",
        "11NM west of Sirik, Islamic Republic of Iran",
-       "Damaged. No pollution. No injuries."
+       "Small craft attack (weapon not stated)",
+       "Approached and attacked by several small boats; no injuries"
       ],
       [
        {
@@ -1831,7 +1904,8 @@
        },
        "TMO BARAKAH",
        "78NM north of Fujairah, UAE",
-       "Damaged. No pollution. Vessel abandoned. No injuries"
+       "Drone (two)",
+       "Hit by two drones; crew left the ship; some bunker fuel leaked"
       ],
       [
        {
@@ -1843,7 +1917,8 @@
        },
        "VOLANS",
        "/ BADR (BARGE) 32NM northeast of Dibba Al-Fujairah, UAE",
-       "Damaged (Badr - Barge). No pollution. One seafarer fatality."
+       "Projectile (type not stated; tracker coded it a drone)",
+       "Tug and barge hit; barge damaged; one crew member killed"
       ],
       [
        {
@@ -1855,7 +1930,8 @@
        },
        "Epaminondas (Liberia)",
        "15NM northeast of Oman",
-       "Damaged. No pollution. No injuries. Vessel detained."
+       "Gunboat fire, then seized",
+       "Fired on by an IRGC gunboat, bridge damaged, then taken to Iran"
       ],
       [
        {
@@ -1867,7 +1943,8 @@
        },
        "MSC Francesca (Panama)",
        "15NM northeast of Oman",
-       "Damaged. No pollution. No injuries. Vessel detained."
+       "Boarded and seized",
+       "Seized by the IRGC Navy and taken to Iran; no injuries"
       ],
       [
        {
@@ -1879,7 +1956,8 @@
        },
        "Euphoria (Panama)",
        "8NM west of Islamic Republic of Iran",
-       "Minor damage. No pollution. No injuries."
+       "Gunboat fire",
+       "Fired on and stopped; minor damage; no injuries"
       ],
       [
        {
@@ -1891,7 +1969,8 @@
        },
        "Touska (Iran)",
        "45 NM southeast of Chabahar, Islamic Republic of Iran",
-       "Damaged. No pollution. No injuries. Vessel seized."
+       "Naval gunfire (5-inch rounds), then boarded and seized",
+       "Iranian ship disabled by US destroyer gunfire in the engine room, then boarded and seized by US Marines"
       ],
       [
        {
@@ -1903,7 +1982,8 @@
        },
        "SANMAR HERALD (India)",
        "19NM North of Kumzar, Oman",
-       "Damaged. No pollution. No injuries."
+       "Gunboat fire",
+       "Fired on by Iranian gunboats; no injuries"
       ],
       [
        {
@@ -1915,7 +1995,8 @@
        },
        "CMA CGM EVERGLADE (France)",
        "22NM North of Kumzar, Oman",
-       "Damaged. No pollution. No injuries."
+       "Projectile (type not stated; some reports say IRGC gunfire)",
+       "Hit by a projectile; some containers damaged; no injuries"
       ],
       [
        {
@@ -1927,7 +2008,8 @@
        },
        "MEIN SCHIFF 4 / BHAGYA LAXMI / JAG ARNAV (Malta / Antigua and Barbuda / India)",
        "",
-       "Near misses during the Abu Dhabi breakout"
+       "Gunboat fire and a projectile splash",
+       "Ships leaving the Gulf through Hormuz on 18 April: a projectile splashed near the cruise ship Mein Schiff 4; Iranian boats fired on the Indian tanker Jag Arnav (cabin glass shattered); no injuries"
       ],
       [
        {
@@ -1939,7 +2021,8 @@
        },
        "QINGDAO STAR (Marshall Islands)",
        "25NM south of Kish Island, Islamic Republic of Iran",
-       "Damaged. No pollution. No injuries."
+       "Missile (UKMTO: unknown projectile)",
+       "Hit above the waterline; no injuries"
       ],
       [
        {
@@ -1951,7 +2034,8 @@
        },
        "GOLD AUTUMN",
        "112NM southeast of Ras Al",
-       "Damaged. No pollution. No injuries."
+       "Missiles (crew account)",
+       "Hit by missiles in the Arabian Sea; fire; 18 crew taken off by the Pakistan Navy"
       ],
       [
        {
@@ -1963,7 +2047,8 @@
        },
        "AQUA 1 (Panama)",
        "17NM north of Ras Laffan, Qatar",
-       "Damaged. No pollution. No injuries."
+       "Cruise missile",
+       "Hit by an Iranian cruise missile; fire put out; no injuries"
       ],
       [
        {
@@ -1975,7 +2060,8 @@
        },
        "Al Salmi (Kuwait)",
        "31NM NW of Dubai, UAE",
-       "Damaged. No pollution. No injuries."
+       "Drone",
+       "Loaded tanker hit by a drone at Dubai anchorage; hull damage and fire; no injuries"
       ],
       [
        {
@@ -1987,7 +2073,8 @@
        },
        "Express Rome (Liberia)",
        "22 nm NE of Ras Tanura, Saudi Arabia",
-       "Two near misses"
+       "Projectiles (type not stated)",
+       "Two projectiles splashed near the ship; no damage"
       ],
       [
        {
@@ -1999,7 +2086,8 @@
        },
        "Haiphong Express (Singapore)",
        "unclear",
-       "IRGC claimed ballistic missile strike"
+       "Ballistic missile (IRGC claim; not confirmed)",
+       "IRGC claimed a ballistic missile strike; damage not confirmed"
       ],
       [
        {
@@ -2011,6 +2099,7 @@
        },
        "SUNNY 77",
        "Near Duqm, Oman",
+       "Not stated",
        "Damaged. No pollution. No injuries."
       ],
       [
@@ -2023,7 +2112,8 @@
        },
        "Unknown",
        "15 nm N of Sharjah",
-       "Attacked"
+       "Projectile (type not stated)",
+       "Unknown projectile exploded close to a bulk carrier; crew safe; UKMTO later reclassified it as suspicious activity"
       ],
       [
        {
@@ -2035,7 +2125,8 @@
        },
        "Halul 50 (Qatar)",
        "4NM east of Ras Laffan, Qatar",
-       "Damaged. No pollution. No injuries."
+       "Falling debris from an intercepted drone",
+       "Hit by falling debris from Iranian strikes on Ras Laffan; bridge window damaged; no injuries"
       ],
       [
        {
@@ -2047,7 +2138,8 @@
        },
        "Unknown",
        "11 nm E of Khor Fakkan, UAE",
-       "Projectile, fire, crew abandoned; 1 missing"
+       "Projectile (type not stated)",
+       "Chemical tanker Parimal hit by a projectile; fire, crew abandoned ship; master missing"
       ],
       [
        {
@@ -2059,7 +2151,8 @@
        },
        "Gas Al Ahmadiah (Kuwait)",
        "23NM east of Fujairah, UAE",
-       "Damaged. No pollution. No injuries."
+       "Falling debris from intercepted munitions",
+       "Hit at anchor by falling debris from nearby interceptions; minor damage; no injuries"
       ],
       [
        {
@@ -2071,7 +2164,8 @@
        },
        "Source Blessing (Liberia)",
        "35NM north of Jebel Ali, UAE",
-       "Damaged. No pollution. No injuries."
+       "Projectile fragments (type not stated)",
+       "Hit by fragments of an unknown projectile; engine room fire put out; no injuries"
       ],
       [
        {
@@ -2083,7 +2177,8 @@
        },
        "One Majesty (Japan)",
        "25NM northwest of Ra’s al Khaymah, UAE",
-       "Hull damage. No injuries."
+       "Projectile (type not stated)",
+       "Hit at anchor by a projectile; small hole above the waterline; no injuries"
       ],
       [
        {
@@ -2095,7 +2190,8 @@
        },
        "Mayuree Naree (Thailand)",
        "11NM north of Oman",
-       "Fire on board. Three seafarer fatalities."
+       "Projectile (IRGC said it fired; weapon not confirmed)",
+       "Fired on by the IRGC; fire, crew abandoned ship; three crew killed in the engine room"
       ],
       [
        {
@@ -2107,7 +2203,8 @@
        },
        "Star Gwyneth (Marshall Islands)",
        "50NM northwest of Dubai",
-       "Damage to cargo holds and forecastle. No injuries."
+       "Projectile (type not stated)",
+       "Hit above the waterline by a projectile; cargo hold and forecastle damaged; no injuries"
       ],
       [
        {
@@ -2119,7 +2216,8 @@
        },
        "Safesea Vishnu (Marshall Islands)",
        "Near Khor Al Zubair Port, Iraq",
-       "Impact caused fire. One seafarer fatality."
+       "Explosive drone boats (uncrewed surface vessels)",
+       "Rammed by two explosive drone boats during a ship-to-ship transfer; fire; one crew member killed"
       ],
       [
        {
@@ -2131,6 +2229,7 @@
        },
        "Zefyros",
        "Near Khor Al Zubair Port, Iraq",
+       "Explosive drone boats (manager says a projectile)",
        "Attack on SAFESEA VISHNU caused collateral damage (fire). No injuries."
       ],
       [
@@ -2143,7 +2242,8 @@
        },
        "Express Rome (Liberia)",
        "near Ruus Al Jibal, Oman",
-       "Multiple projectiles (IRGC claimed)"
+       "Missile (IRGC claim; not confirmed)",
+       "IRGC said it fired on the ship for ignoring its warnings; hit by several projectiles"
       ],
       [
        {
@@ -2155,6 +2255,7 @@
        },
        "Unknown",
        "Iraq",
+       "Not stated",
        "Attacked (Reuters list)"
       ],
       [
@@ -2167,7 +2268,8 @@
        },
        "GH KAHLO (Bermuda)",
        "",
-       "Near miss, splash and bang"
+       "Projectile (type not stated)",
+       "Near miss: a splash and a bang near the ship; no damage"
       ],
       [
        {
@@ -2179,7 +2281,8 @@
        },
        "ARABIA III (Liberia)",
        "Al Jubayl, Saudi Arabia",
-       "Damaged. No pollution. One seafarer injured."
+       "Drone (possible, per UKMTO third-party report)",
+       "Jack-up rig hit, possibly by a drone; most crew evacuated; one injured"
       ],
       [
        {
@@ -2191,7 +2294,8 @@
        },
        "Louise P (Marshall Islands)",
        "near Al Jubail, Saudi Arabia",
-       "Attacked"
+       "Drone (one-way attack drone, per IRGC claim)",
+       "IRGC claimed a drone strike on the tanker; damage not confirmed"
       ],
       [
        {
@@ -2203,7 +2307,8 @@
        },
        "Mussafah 2 (UAE)",
        "6NM north of Oman",
-       "Four seafarer fatalities. Three severely injured."
+       "Missiles (two, per Vanguard)",
+       "Tug hit while helping the stricken Safeen Prestige and sank; four crew killed, three badly hurt"
       ],
       [
        {
@@ -2215,7 +2320,8 @@
        },
        "Sonangol Namibe (Bahamas)",
        "30NM southeast of Mubarak Al Kabeer, Kuwait",
-       "Hull breach. No injuries."
+       "Explosive boat (small craft seen leaving; possibly a drone boat)",
+       "Blast on the port side at anchor holed a tank; small craft seen leaving; no injuries"
       ],
       [
        {
@@ -2227,7 +2333,8 @@
        },
        "Safeen Prestige (Malta)",
        "2NM north of Oman",
-       "Sunk. Oil slick detected. No injuries."
+       "Missile (reported; origin not confirmed)",
+       "Hit above the waterline; engine room fire, crew abandoned ship; drifted and later sank"
       ],
       [
        {
@@ -2239,7 +2346,8 @@
        },
        "Libra Trader (Marshall Islands)",
        "10NM east of Fujairah, UAE",
-       "Minor damage. No injuries."
+       "Projectile (type not stated; debris found on deck)",
+       "Explosion damaged the funnel; projectile debris found on deck; no injuries"
       ],
       [
        {
@@ -2251,7 +2359,8 @@
        },
        "Gold Oak (Panama)",
        "7NM east of Fujairah, UAE",
-       "Steel plating damage. No injuries."
+       "Projectile (type not stated)",
+       "Hit by an unknown projectile; steel plating damaged; no injuries"
       ],
       [
        {
@@ -2263,6 +2372,7 @@
        },
        "Tanker",
        "off Iraq",
+       "Not stated",
        "Attacked (Reuters list)"
       ],
       [
@@ -2275,6 +2385,7 @@
        },
        "MSC Grace (Liberia)",
        "20 nm W of Dubai",
+       "Projectile (type not stated)",
        "Near miss, no damage"
       ],
       [
@@ -2287,7 +2398,8 @@
        },
        "Pelagia (Malta)",
        "137 nm E of Muscat, Oman",
-       "Attacked; no casualties"
+       "Not stated (explosion close to the ship)",
+       "Loud explosion close to the ship; vessel and crew safe"
       ],
       [
        {
@@ -2299,7 +2411,8 @@
        },
        "Skylight",
        "5 NM North of Khasab, Oman",
-       "Four seafarers injured. Two seafarer fatalities."
+       "Projectile (type not confirmed; reported as drone or missile)",
+       "Sanctioned tanker hit at anchor; two crew killed, four injured"
       ],
       [
        {
@@ -2311,7 +2424,8 @@
        },
        "MKD Vyom (Marshall Islands)",
        "52 NM northwest of Muscat, Oman",
-       "One seafarer fatality."
+       "Explosive drone boat (uncrewed surface vessel)",
+       "Hit by an explosive drone boat; engine room fire; one crew member killed"
       ],
       [
        {
@@ -2323,7 +2437,8 @@
        },
        "Hercules Star (Gibraltar)",
        "17 NM northwest of Mina Saqr, UAE",
-       "Fire on board. No injuries."
+       "Projectile (type not stated)",
+       "Hit by a projectile; fire on board put out; no injuries"
       ],
       [
        {
@@ -2335,7 +2450,8 @@
        },
        "Stena Imperative (USA)",
        "At Berth, Port of Bahrain",
-       "One shipyard worker fatality. Two shipyard workers seriously injured."
+       "Drone (two, most likely Shahed, per Amnesty)",
+       "Tanker in dry dock hit by two drones; fire; one shipyard worker killed, two badly hurt"
       ],
       [
        {
@@ -2347,7 +2463,8 @@
        },
        "Ocean Electra (Liberia)",
        "35 nm from Sharjah, UAE",
-       "Attacked; no casualties"
+       "Projectile (type not stated)",
+       "Near miss; no damage"
       ],
       [
        {
@@ -2359,7 +2476,8 @@
        },
        "Athe Nova (Honduras)",
        "Strait of Hormuz",
-       "Attacked"
+       "Drone (two, per IRGC)",
+       "IRGC said two drones hit the tanker and set it ablaze"
       ]
      ],
      "stats": [
@@ -2387,7 +2505,7 @@
       ],
       [
        {
-        "v": "140",
+        "v": "138",
         "k": "unoff",
         "src": "Our count of the list below",
         "url": "https://www.imo.org/en/mediacentre/hottopics/pages/middle-east-highlighted-incidents.aspx",

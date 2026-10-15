@@ -9,10 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as MainRouteImport } from './routes/_main'
 import { Route as IranConflictDeskRouteImport } from './routes/iran-conflict-desk'
-import { Route as YemenRouteImport } from './routes/yemen'
 import { Route as YemenConflictDeskRouteImport } from './routes/yemen-conflict-desk'
+import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as MainPlaceRouteImport } from './routes/_main/$place'
 import { Route as ApiBriefRouteImport } from './routes/api/brief'
 import { Route as ApiDeskRouteImport } from './routes/api/desk'
 import { Route as ApiRegionRouteImport } from './routes/api/region'
@@ -25,9 +26,8 @@ import { Route as ApiTrumpRouteImport } from './routes/api/trump'
 import { Route as YemenConflictDeskMethodologyRouteImport } from './routes/yemen-conflict-desk_.methodology'
 import { Route as YemenConflictDeskSourcesRouteImport } from './routes/yemen-conflict-desk_.sources'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const MainRoute = MainRouteImport.update({
+  id: '/_main',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IranConflictDeskRoute = IranConflictDeskRouteImport.update({
@@ -35,15 +35,20 @@ const IranConflictDeskRoute = IranConflictDeskRouteImport.update({
   path: '/iran-conflict-desk',
   getParentRoute: () => rootRouteImport,
 } as any)
-const YemenRoute = YemenRouteImport.update({
-  id: '/yemen',
-  path: '/yemen',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const YemenConflictDeskRoute = YemenConflictDeskRouteImport.update({
   id: '/yemen-conflict-desk',
   path: '/yemen-conflict-desk',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MainIndexRoute = MainIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainPlaceRoute = MainPlaceRouteImport.update({
+  id: '/$place',
+  path: '/$place',
+  getParentRoute: () => MainRoute,
 } as any)
 const ApiBriefRoute = ApiBriefRouteImport.update({
   id: '/api/brief',
@@ -104,10 +109,10 @@ const YemenConflictDeskSourcesRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof MainIndexRoute
   '/iran-conflict-desk': typeof IranConflictDeskRoute
-  '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
+  '/$place': typeof MainPlaceRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/region': typeof ApiRegionRoute
@@ -121,10 +126,9 @@ export interface FileRoutesByFullPath {
   '/yemen-conflict-desk/sources': typeof YemenConflictDeskSourcesRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/iran-conflict-desk': typeof IranConflictDeskRoute
-  '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
+  '/$place': typeof MainPlaceRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/region': typeof ApiRegionRoute
@@ -136,13 +140,14 @@ export interface FileRoutesByTo {
   '/api/trump': typeof ApiTrumpRoute
   '/yemen-conflict-desk/methodology': typeof YemenConflictDeskMethodologyRoute
   '/yemen-conflict-desk/sources': typeof YemenConflictDeskSourcesRoute
+  '/': typeof MainIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_main': typeof MainRouteWithChildren
   '/iran-conflict-desk': typeof IranConflictDeskRoute
-  '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
+  '/_main/$place': typeof MainPlaceRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/region': typeof ApiRegionRoute
@@ -154,14 +159,15 @@ export interface FileRoutesById {
   '/api/trump': typeof ApiTrumpRoute
   '/yemen-conflict-desk_/methodology': typeof YemenConflictDeskMethodologyRoute
   '/yemen-conflict-desk_/sources': typeof YemenConflictDeskSourcesRoute
+  '/_main/': typeof MainIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/iran-conflict-desk'
-    | '/yemen'
     | '/yemen-conflict-desk'
+    | '/$place'
     | '/api/brief'
     | '/api/desk'
     | '/api/region'
@@ -175,10 +181,9 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk/sources'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/iran-conflict-desk'
-    | '/yemen'
     | '/yemen-conflict-desk'
+    | '/$place'
     | '/api/brief'
     | '/api/desk'
     | '/api/region'
@@ -190,12 +195,13 @@ export interface FileRouteTypes {
     | '/api/trump'
     | '/yemen-conflict-desk/methodology'
     | '/yemen-conflict-desk/sources'
+    | '/'
   id:
     | '__root__'
-    | '/'
+    | '/_main'
     | '/iran-conflict-desk'
-    | '/yemen'
     | '/yemen-conflict-desk'
+    | '/_main/$place'
     | '/api/brief'
     | '/api/desk'
     | '/api/region'
@@ -207,12 +213,12 @@ export interface FileRouteTypes {
     | '/api/trump'
     | '/yemen-conflict-desk_/methodology'
     | '/yemen-conflict-desk_/sources'
+    | '/_main/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  MainRoute: typeof MainRouteWithChildren
   IranConflictDeskRoute: typeof IranConflictDeskRoute
-  YemenRoute: typeof YemenRoute
   YemenConflictDeskRoute: typeof YemenConflictDeskRoute
   ApiBriefRoute: typeof ApiBriefRoute
   ApiDeskRoute: typeof ApiDeskRoute
@@ -229,11 +235,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_main': {
+      id: '/_main'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/iran-conflict-desk': {
@@ -243,19 +249,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IranConflictDeskRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/yemen': {
-      id: '/yemen'
-      path: '/yemen'
-      fullPath: '/yemen'
-      preLoaderRoute: typeof YemenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/yemen-conflict-desk': {
       id: '/yemen-conflict-desk'
       path: '/yemen-conflict-desk'
       fullPath: '/yemen-conflict-desk'
       preLoaderRoute: typeof YemenConflictDeskRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_main/': {
+      id: '/_main/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof MainIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/$place': {
+      id: '/_main/$place'
+      path: '/$place'
+      fullPath: '/$place'
+      preLoaderRoute: typeof MainPlaceRouteImport
+      parentRoute: typeof MainRoute
     }
     '/api/brief': {
       id: '/api/brief'
@@ -337,10 +350,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MainRouteChildren {
+  MainPlaceRoute: typeof MainPlaceRoute
+  MainIndexRoute: typeof MainIndexRoute
+}
+
+const MainRouteChildren: MainRouteChildren = {
+  MainPlaceRoute: MainPlaceRoute,
+  MainIndexRoute: MainIndexRoute,
+}
+
+const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  MainRoute: MainRouteWithChildren,
   IranConflictDeskRoute: IranConflictDeskRoute,
-  YemenRoute: YemenRoute,
   YemenConflictDeskRoute: YemenConflictDeskRoute,
   ApiBriefRoute: ApiBriefRoute,
   ApiDeskRoute: ApiDeskRoute,

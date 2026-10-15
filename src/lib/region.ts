@@ -139,3 +139,26 @@ export function warDay(desk: WarDesk, at: number): number | null {
   const start = Date.parse(`${desk.start}T00:00:00+03:00`);
   return Math.floor((at - start) / 86_400_000) + 1;
 }
+
+/**
+ * The forces and governments a country page lists under "Who is active": a
+ * side counts when a report names it, never by guess. Each has the places it
+ * is listed on; a page shows only its own.
+ */
+export const ACTORS: { id: string; name: string; re: RegExp; on: FocusId[] }[] = [
+  { id: "houthis", name: "Houthi forces", re: /\bHouthi|\bAnsar Allah\b|\bSanaa (?:government|authorities)\b/i, on: ["yemen", "saudi", "redsea", "israel", "us", "gulf"] },
+  { id: "yemen-gov", name: "Yemen's government", re: /\bPresidential (?:Leadership )?Council\b|\bPLC\b|\bYemeni government\b|\bgovernment forces\b|\bal-Alimi\b|\bGiants Brigades\b|\bNational Resistance\b/i, on: ["yemen", "saudi"] },
+  { id: "stc", name: "Southern Transitional Council", re: /\bSouthern Transitional Council\b|\bSTC\b|\bSouthern forces\b/i, on: ["yemen", "gulf"] },
+  { id: "coalition", name: "Saudi-led coalition", re: /\bcoalition\b|\bSaudi (?:air|forces|army|military|jets|warplanes|strikes?|air defen[cs]e)/i, on: ["yemen", "saudi", "redsea"] },
+  { id: "iran", name: "Iran and the IRGC", re: /\bIRGC\b|\bRevolutionary Guard|\bIranian (?:forces|army|military|navy|missiles?|drones?|strikes?)|\bIran (?:launche|fire|strike|attack|target)/i, on: ["iran", "israel", "hormuz", "gulf", "iraq", "lebanon", "us", "saudi"] },
+  { id: "israel", name: "Israel and the IDF", re: /\bIDF\b|\bIsraeli (?:air|forces|army|military|jets|warplanes|strikes?|drones?|artillery|navy)|\bIsrael (?:strike|attack|target|bomb|hit)/i, on: ["israel", "lebanon", "iran", "yemen", "iraq", "redsea"] },
+  { id: "hezbollah", name: "Hezbollah", re: /\bHezbollah\b|\bIslamic Resistance in Lebanon\b/i, on: ["lebanon", "israel"] },
+  { id: "iraq-militias", name: "Iraqi armed groups", re: /\bKataib\b|\bIslamic Resistance in Iraq\b|\bPMF\b|\bPopular Mobili[sz]ation\b|\bNujaba\b|\bIraqi (?:militia|factions?|armed groups?)\b/i, on: ["iraq", "israel", "us", "gulf"] },
+  { id: "iraq-gov", name: "Iraq's government", re: /\bSudani\b|\bIraqi (?:government|prime minister|army|forces)\b|\bBaghdad (?:government|says)\b/i, on: ["iraq"] },
+  { id: "us", name: "United States", re: /\bCENTCOM\b|\bUS (?:forces|military|navy|strikes?|jets|warplanes|Treasury|envoy)|\bPentagon\b|\bHegseth\b|\bRubio\b|\bTrump\b|\bWhite House\b/, on: ["us", "iran", "yemen", "redsea", "hormuz", "iraq", "gulf", "israel", "saudi", "lebanon"] },
+  { id: "uk", name: "United Kingdom", re: /\bUKMTO\b|\bRoyal Navy\b|\bBritish\b|\bUK (?:forces|government|navy)\b/, on: ["redsea", "yemen", "hormuz"] },
+  { id: "gulf", name: "Gulf states", re: /\bUAE\b|\bEmirati\b|\bQatari?\b|\bBahraini?\b|\bKuwaiti?\b|\bOmani?\b/i, on: ["gulf", "yemen", "hormuz", "iran", "saudi"] },
+  { id: "lebanon-gov", name: "Lebanon's government and army", re: /\bLebanese (?:army|government|president|prime minister)\b|\bAoun\b|\bSalam\b/i, on: ["lebanon"] },
+  { id: "hamas", name: "Hamas", re: /\bHamas\b/i, on: ["israel"] },
+  { id: "un", name: "United Nations", re: /\bUN\b|\bUnited Nations\b|\bUNIFIL\b|\bGrundberg\b|\bSecurity Council\b|\bIAEA\b/, on: ["yemen", "lebanon", "iran", "redsea", "israel", "us"] },
+];

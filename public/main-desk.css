@@ -212,6 +212,48 @@ html[data-theme="broadsheet-day"] .md{--sunk:#efe2d3;--accent2:#c4512f;--gold:#a
 .md-toast.show{display:block;animation:md-slide .3s}
 .md-loading{padding:40px 20px;text-align:center;color:var(--muted);font-family:var(--serif);font-size:17px}
 
+/* a country or sea page: head, figures, who is active, places, hour clock */
+.md-place{border-bottom:1px solid var(--line);padding:16px 20px 0}
+.md-place[hidden]{display:none}
+.md-phead{display:grid;gap:6px}
+.md-ph1{display:flex;align-items:center;gap:10px}
+.md-ph1 .md-flag{width:30px;height:20px}
+.md-ph1 h1{font-family:var(--serif);font-weight:500;font-size:40px;line-height:1;margin:0;color:var(--head);letter-spacing:-.01em}
+.md-pkind{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-left:4px}
+.md-pctx{font-family:var(--serif);font-size:17px;margin:0;color:var(--text);max-width:70ch}
+.md-plinks{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:2px}
+.md-pclock{font-size:12px;color:var(--muted);margin-right:6px}
+.md-pclock b{font-family:var(--mono);color:var(--head);font-weight:600}
+.md-figs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--line);margin-top:14px}
+.md-fig{padding:10px 14px 12px 0;display:flex;flex-direction:column;gap:2px;min-width:0}
+.md-fig+.md-fig{padding-left:14px;border-left:1px solid var(--line)}
+.md-fig .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.md-fig b{font-family:var(--serif);font-weight:500;font-size:28px;line-height:1.1;color:var(--head);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.md-fig small{font-size:11.5px;color:var(--muted)}
+.md-spark{width:70px;height:18px;fill:var(--accent);opacity:.8;margin-top:2px}
+.md-figat{grid-column:1/-1;font-size:10.5px;color:var(--faint);padding:0 0 8px}
+.md-cn{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-left:2px}
+.md-cats .on .md-cn{color:inherit;opacity:.75}
+.md-boxsub{font-family:var(--sans)!important;font-size:11.5px;color:var(--muted);margin:-2px 0 10px!important}
+.md-bar{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 36px;gap:8px;align-items:center;font-size:13px;margin:5px 0}
+.md-bar .nm{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.md-bar .tr{height:7px;background:var(--panel2);border-radius:4px;overflow:hidden}
+.md-bar .tr i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.md-bar .n,.md-plist .n{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-align:right}
+.md-plist{display:grid}
+.md-plist button{display:grid;grid-template-columns:minmax(0,1fr) 36px 78px;gap:8px;align-items:baseline;text-align:left;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px;color:var(--text);cursor:pointer;background:none}
+.md-plist button:first-child{border-top:0}
+.md-plist button:hover .nm{color:var(--accent)}
+.md-plist .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.md-plist .w{font-size:11px;color:var(--faint);text-align:right}
+.md-hclock{display:flex;align-items:center;gap:14px}
+.md-hclock svg{width:150px;height:150px;flex:none}
+.md-hclock path{fill:var(--accent)}
+.md-hclock text{font-family:var(--mono);font-size:8.5px;fill:var(--faint);text-anchor:middle}
+.md-hclock text.c{font-family:var(--sans);font-size:8px;letter-spacing:.08em;text-transform:uppercase}
+.md-hclock p{font-family:var(--sans)!important;font-size:12.5px;color:var(--muted)}
+.md-hclock p b{color:var(--head);font-family:var(--mono)}
+
 /* phone */
 @media (max-width:860px){
   .md-dateline{padding:6px 16px}
@@ -241,4 +283,11 @@ html[data-theme="broadsheet-day"] .md{--sunk:#efe2d3;--accent2:#c4512f;--gold:#a
   .md-tlabel small{display:none}
   .md-tlabel{font-size:11px;padding:3px 6px;gap:4px}
   .md-tlabel .md-flag{width:16px;height:10px}
+  .md-place{padding:12px 16px 0}
+  .md-ph1 h1{font-size:30px}
+  .md-pctx{font-size:15.5px}
+  .md-figs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .md-fig,.md-fig+.md-fig{padding:8px 10px 10px 0;border-left:0;border-top:1px solid var(--line)}
+  .md-fig:nth-child(-n+2){border-top:0}
+  .md-fig b{font-size:24px}
 }

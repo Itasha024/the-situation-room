@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+
+import { focusById, type FocusId } from "@/lib/region";
+import { placeHeadHtml } from "@/lib/main-desk/place-head";
+import type { MainDeskHandle } from "@/lib/main-desk/engine";
 
 /**
  * The main desk (option C): the whole region on one map, then one wire for
  * every desk. The markup is a shell; src/lib/main-desk/engine.ts fills it
- * from /api/region. The masthead is the site's own (public/app.js adds its
+ * from /api/region. A country or sea page (/lebanon) is the same page with
+ * its place in focus, so moving between places only flies the map. The masthead is the site's own (public/app.js adds its
  * menu and theme switch), so every page reads as one paper.
  */
-const MAIN_HTML = `
+const mainHtml = (focus: FocusId | "region") => {
+  const f = focus === "region" ? undefined : focusById(focus);
+  return `
 <div class="mast">
   <span class="mast-date"></span>
   <div class="mast-mid">
@@ -19,6 +27,7 @@ const MAIN_HTML = `
 </div>
 <div class="md-dateline"><span id="md-dateline"></span><span class="md-clocks" id="md-clocks"></span></div>
 <nav class="md-focusbar" id="md-focusbar" aria-label="Countries, seas and desks"></nav>
+<section class="md-place" id="md-place"${f ? ` data-focus="${f.id}"` : " hidden"}>${f ? placeHeadHtml(f) : ""}</section>
 <div id="md-key"></div>
 <section class="md-lead" id="md-lead"><div class="md-loading">Loading the region…</div></section>
 <section class="md-stage" id="md-stage" aria-label="Map of the region">
@@ -44,11 +53,24 @@ const MAIN_HTML = `
 </section>
 <div class="md-toast" id="md-toast" role="status"></div>
 `;
+};
 
-export function MainDesk() {
+export function MainDesk({ focus = "region" }: { focus?: FocusId | "region" }) {
+  const navigate = useNavigate();
+  const engine = useRef<MainDeskHandle | null>(null);
+  const want = useRef(focus);
+  want.current = focus;
+  // Written once, as one object: React 19 rewrites the shell (and the map in it) whenever
+  // this object is new, even with the same text.
+  const [html] = useState(() => ({ __html: mainHtml(focus) }));
+
   useEffect(() => {
-    let stop: (() => void) | undefined;
     let gone = false;
+    // The old /yemen address carried the Yemen desk's card links (#n=…, #r=…): they go to the desk.
+    if (focus === "yemen" && /^#(n|r)=/.test(location.hash)) {
+      location.replace(`/yemen-conflict-desk${location.hash}`);
+      return;
+    }
     // The site's masthead menu and theme switch, from public/app.js (window.startDeskDoc,
     // typed in desk-doc.tsx); app.js loads after the page, so try again for a few seconds.
     let tries = 0;
@@ -59,13 +81,25 @@ export function MainDesk() {
     };
     mast();
     void import("@/lib/main-desk/engine").then((m) => {
-      if (!gone) stop = m.startMainDesk();
+      if (gone) return;
+      engine.current = m.startMainDesk({
+        focus: want.current,
+        onFocus: (f) =>
+          void navigate(f ? { to: "/$place", params: { place: f.slug }, resetScroll: false } : { to: "/", resetScroll: false }),
+      });
     });
     return () => {
       gone = true;
-      stop?.();
+      engine.current?.stop();
+      engine.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return <div id="main-desk" className="md" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: MAIN_HTML }} />;
+  // The address changed (a place picked, or Back): the map flies there.
+  useEffect(() => {
+    engine.current?.focus(focus);
+  }, [focus]);
+
+  return <div id="main-desk" className="md" suppressHydrationWarning dangerouslySetInnerHTML={html} />;
 }

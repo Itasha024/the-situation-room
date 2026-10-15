@@ -7,7 +7,7 @@ import { facetsOf, storyKey } from "@/lib/desk/facets";
 import { BRIEF_KEY, type StoredBrief } from "@/lib/desk/brief-store";
 import { IRAN_BRIEF_KEY, type IranBrief } from "@/lib/desk/iran-brief";
 import { deskById, type DeskId } from "@/lib/desks";
-import { focusById, warDeskById } from "@/lib/region";
+import { ACTORS, focusById, warDeskById } from "@/lib/region";
 
 /**
  * The main desk (option C): both desks' cards and pins as one wire, each
@@ -18,6 +18,7 @@ import { focusById, warDeskById } from "@/lib/region";
  *   /api/region?focus=lebanon       one country or sea
  *   /api/region?desk=yemen          one desk (war)
  *   &limit=400&before=<ISO>         paging back
+ *   /api/region?figures=lebanon     a country or sea page's figures, 7 days
  *   /api/region?pins=2026-07-13     the map's pins alone back to a day, as
  *                                   short rows, for the replay strip
  *
@@ -26,6 +27,7 @@ import { focusById, warDeskById } from "@/lib/region";
  */
 const MEMO_MS = 60_000;
 const STALE_MS = 30 * 60_000;
+const DAY_MS = 86_400_000;
 const memo = new Map<string, { at: number; body: string }>();
 const reading = new Map<string, Promise<{ at: number; body: string }>>();
 
@@ -130,10 +132,97 @@ async function readPins(since: string) {
   return { at: Date.now(), body: JSON.stringify({ ok: true, since, pins: rows }) };
 }
 
+/**
+ * A country or sea page's figures: the last seven days of its reports, read
+ * once and kept ten minutes. Counts belong on these pages only, never on the
+ * main page (user, 9 Oct).
+ */
+async function readFigures(focusId: string) {
+  const f = focusById(focusId)!;
+  const store = await getStore();
+  const now = Date.now();
+  const since = new Date(now - 7 * DAY_MS).toISOString();
+  const tz = f.tz ?? "Asia/Aden";
+  const hourOf = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hour12: false });
+  const dayOf = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+  const seen = new Set<string>();
+  const reports: Row[] = [];
+  let pins24 = 0;
+  const seenPin = new Set<string>();
+  for (const id of f.desks.filter((d) => d === "yemen" || d === "iran") as DeskId[]) {
+    const slice = serveSlice(await store.recentDesk(20_000, undefined, { desk: id, since, floor: deskById(id).feedFrom }), id);
+    for (const r of slice.reports as Row[]) {
+      const key = storyKey(r.fp);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const fc = facetsOf(r, id);
+      if (!fc.countries.includes(f.id)) continue;
+      reports.push({ ...r, cat: fc.category, where: fc.where });
+    }
+    for (const e of slice.events as unknown as Row[]) {
+      if (typeof e.lat !== "number") continue;
+      const k = `${storyKey(e.fp)}|${e.lat}|${e.lng}`;
+      if (seenPin.has(k)) continue;
+      seenPin.add(k);
+      const fc = facetsOf({ summary: e.label, place: e.place, lat: e.lat, lng: e.lng, type: e.type, desks: e.desks }, id);
+      const mine = f.kind === "actor" ? fc.countries.includes(f.id) : fc.where === f.id;
+      if (mine && now - Date.parse(String(e.at)) < DAY_MS) pins24++;
+    }
+  }
+  const days: Record<string, number> = {};
+  for (let i = 6; i >= 0; i--) days[dayOf.format(now - i * DAY_MS)] = 0;
+  const hours = new Array(24).fill(0);
+  const cats: Record<string, number> = {};
+  const places = new Map<string, { n: number; at: string; fp: string; lat?: number; lng?: number }>();
+  const actors: Record<string, number> = {};
+  const outlets = new Set<string>();
+  let d1 = 0;
+  let d0 = 0;
+  for (const r of reports) {
+    const ms = Date.parse(String(r.at));
+    if (!Number.isFinite(ms)) continue;
+    const age = now - ms;
+    if (age < DAY_MS) d1++;
+    else if (age < 2 * DAY_MS) d0++;
+    const dk = dayOf.format(ms);
+    if (dk in days) days[dk]++;
+    hours[Number(hourOf.format(ms)) % 24]++;
+    cats[String(r.cat)] = (cats[String(r.cat)] ?? 0) + 1;
+    if (r.source) outlets.add(String(r.source));
+    // A place counts on its own country's page only.
+    const p = String(r.place ?? "");
+    if (p && (f.kind === "actor" || r.where === f.id)) {
+      const had = places.get(p);
+      if (had) had.n++;
+      else places.set(p, { n: 1, at: String(r.at), fp: String(r.fp), ...(typeof r.lat === "number" ? { lat: r.lat as number, lng: r.lng as number } : {}) });
+    }
+    const text = `${r.summary ?? ""} ${r.text ?? ""}`;
+    for (const a of ACTORS) if (a.on.includes(f.id) && a.re.test(text)) actors[a.id] = (actors[a.id] ?? 0) + 1;
+  }
+  return {
+    at: now,
+    body: JSON.stringify({
+      ok: true,
+      focus: f.id,
+      tz,
+      week: reports.length,
+      d1,
+      d0,
+      pins24,
+      outlets: outlets.size,
+      days: Object.entries(days),
+      hours,
+      cats,
+      places: [...places.entries()].sort((a, b) => b[1].n - a[1].n || b[1].at.localeCompare(a[1].at)).slice(0, 12).map(([name, v]) => ({ name, ...v })),
+      actors: ACTORS.filter((a) => actors[a.id]).map((a) => ({ id: a.id, name: a.name, n: actors[a.id] })).sort((a, b) => b.n - a.n),
+    }),
+  };
+}
+
 function renew(key: string, ...a: Parameters<typeof readRegion>) {
   let p = reading.get(key);
   if (!p) {
-    p = (key.startsWith("pins|") ? readPins(a[1] as string) : readRegion(...a))
+    p = (key.startsWith("pins|") ? readPins(a[1] as string) : key.startsWith("fig|") ? readFigures(key.slice(4)) : readRegion(...a))
       .then((hit) => {
         if (memo.size > 40) memo.clear();
         memo.set(key, hit);
@@ -161,6 +250,24 @@ export const Route = createFileRoute("/api/region")({
             const age = hit ? Date.now() - hit.at : Infinity;
             if (!hit || age > STALE_MS) hit = await renew(key, 0, since, null, null);
             else if (age > MEMO_MS) renew(key, 0, since, null, null).catch(() => {});
+            return new Response(hit.body, {
+              headers: {
+                "content-type": "application/json; charset=utf-8",
+                "cache-control": "public, max-age=300",
+                "cdn-cache-control": "public, s-maxage=600, stale-while-revalidate=1800",
+              },
+            });
+          }
+          // A country or sea page's figures: seven days, kept ten minutes.
+          const figFocus = url.searchParams.get("figures");
+          if (figFocus) {
+            const f = focusById(figFocus);
+            if (!f || f.hidden) return json({ ok: false, error: "unknown place" }, 404);
+            const key = `fig|${f.id}`;
+            let hit = memo.get(key);
+            const age = hit ? Date.now() - hit.at : Infinity;
+            if (!hit || age > STALE_MS) hit = await renew(key, 0, undefined, null, null);
+            else if (age > 10 * MEMO_MS) renew(key, 0, undefined, null, null).catch(() => {});
             return new Response(hit.body, {
               headers: {
                 "content-type": "application/json; charset=utf-8",

@@ -12,6 +12,7 @@
  *     points no report named, so they are not here);
  *   - reads only: the page asks /api/region, never anything that scans.
  */
+import { flag, placeHeadHtml } from "./place-head";
 import { CATEGORIES, FOCI, REGION_BOUNDS, WAR_DESKS, focusById, focusBySlug, warDay, type Bounds, type Focus, type FocusId } from "@/lib/region";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -138,22 +139,36 @@ const store = {
   },
 };
 
-function flag(id: string): string {
-  if (id === "region")
-    return '<svg class="md-flag" viewBox="0 0 20 13"><rect width="20" height="13" fill="#282421"/><circle cx="10" cy="6.5" r="4.5" fill="none" stroke="#f4a58a" stroke-width="1.3"/><path d="M5.5 6.5h9M10 2v9" stroke="#f4a58a" stroke-width=".9"/></svg>';
-  const f = focusById(id);
-  if (f?.kind === "sea")
-    return '<svg class="md-flag" viewBox="0 0 20 13"><rect width="20" height="13" fill="#20425e"/><path d="M0 5q2.5-2 5 0t5 0 5 0 5 0M0 9q2.5-2 5 0t5 0 5 0 5 0" stroke="#5fa8dc" fill="none" stroke-width="1.3"/></svg>';
-  const c = f?.flag?.length ? f.flag : ["#766b62"];
-  const n = c.length;
-  return `<svg class="md-flag" viewBox="0 0 20 13">${c.map((x, i) => `<rect y="${(i * 13) / n}" width="20" height="${13 / n + 0.1}" fill="${x}"/>`).join("")}${id === "lebanon" ? '<path d="M10 3.6l2 3.4h-4z" fill="#00a651"/>' : ""}</svg>`;
-}
-
 /* ---------------------------------------------------------------- the page */
 
-export function startMainDesk(): () => void {
+/** Figures for a country or sea page, from /api/region?figures=<id>. */
+type Figs = {
+  focus: string;
+  tz: string;
+  week: number;
+  d1: number;
+  d0: number;
+  pins24: number;
+  outlets: number;
+  days: [string, number][];
+  hours: number[];
+  cats: Record<string, number>;
+  places: { name: string; n: number; at: string; fp: string; lat?: number; lng?: number }[];
+  actors: { id: string; name: string; n: number }[];
+  got: number;
+};
+
+export type MainDeskOpts = {
+  /** The page's place: a country or sea page passes its own; the front page, none. */
+  focus?: FocusId | "region";
+  /** A reader picked a place: the page's router moves to its address and calls focus(). */
+  onFocus?: (f: Focus | null) => void;
+};
+export type MainDeskHandle = { stop: () => void; focus: (id: FocusId | "region") => void };
+
+export function startMainDesk(opts: MainDeskOpts = {}): MainDeskHandle {
   const root = document.getElementById("main-desk");
-  if (!root) return () => {};
+  if (!root) return { stop: () => {}, focus: () => {} };
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const cleanups: (() => void)[] = [];
   let L: Leaflet = (window as any).L;
@@ -161,7 +176,7 @@ export function startMainDesk(): () => void {
   /* ---------- state ---------- */
   const params = new URLSearchParams(location.search);
   const S = {
-    focus: (focusBySlug(params.get("focus") || "")?.id ?? "region") as FocusId | "region",
+    focus: (opts.focus ?? focusBySlug(params.get("focus") || "")?.id ?? "region") as FocusId | "region",
     lens: "reports" as Lens,
     cat: "all",
     view: "cards" as "cards" | "log" | "table",
@@ -196,6 +211,7 @@ export function startMainDesk(): () => void {
   const deep = new Set<string>();
   let reachedEnd = false;
   let STORY = new Map<string, string>();
+  const FIGS = new Map<string, Figs>();
 
   function addReports(list: any[]): number {
     let added = 0;
@@ -620,6 +636,9 @@ export function startMainDesk(): () => void {
     $("md-dateline").innerHTML = `<b>${esc(fLong.format(t))}</b> · ${days.join(" · ")}`;
   }
   function tick() {
+    const pc = document.getElementById("md-pclock");
+    const pf = F();
+    if (pc && pf?.tz) pc.textContent = new Intl.DateTimeFormat("en-GB", { timeZone: pf.tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now());
     const clocks = [["Sanaa", "Asia/Aden"], ["Tehran", "Asia/Tehran"], ["Beirut", "Asia/Beirut"], ["Washington", "America/New_York"]];
     $("md-clocks").innerHTML = clocks
       .map(([n, tz]) => `${n} <b>${new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(now())}</b>`)
@@ -629,7 +648,7 @@ export function startMainDesk(): () => void {
   function renderFocusBar() {
     const fresh = (id: string) => R.some((r) => r.ms > lastVisit && r.countries.includes(id));
     const btn = (id: string, name: string) =>
-      `<button type="button" class="md-fb ${S.focus === id ? "on" : ""}" data-focus="${id}" title="${esc(focusById(id)?.context || "Everything, on one map")}">${flag(id)}${esc(name)}${id !== "region" && S.focus !== id && fresh(id) ? '<span class="hot" title="New since your last visit"></span>' : ""}</button>`;
+      `<a class="md-fb ${S.focus === id ? "on" : ""}" href="/${focusById(id)?.slug ?? ""}" data-focus="${id}" title="${esc(focusById(id)?.context || "Everything, on one map")}"${S.focus === id ? ' aria-current="page"' : ""}>${flag(id)}${esc(name)}${id !== "region" && S.focus !== id && fresh(id) ? '<span class="hot" title="New since your last visit"></span>' : ""}</a>`;
     const desks = WAR_DESKS.map((d) =>
       d.planned
         ? `<span class="md-fb soon" title="${esc(d.context)}">${esc(d.short)}<span class="n">soon</span></span>`
@@ -669,7 +688,10 @@ export function startMainDesk(): () => void {
 
   /* ---------- lead ---------- */
   function leadPick() {
-    const list = R.filter((r) => inFocus(r) && r.ms <= endMs());
+    const all = R.filter((r) => inFocus(r) && r.ms <= endMs());
+    // A country or sea page leads with what happened there, not what only names it.
+    const own = F() && F()!.kind !== "actor" ? all.filter((r) => r.where === S.focus) : [];
+    const list = own.length >= 4 ? own : all;
     const hard = list.filter((r) => ["strike", "combat", "shipping"].includes(r.cat));
     const score = (r: Rep) => (r.alsoReportedBy?.length || 0) * 3 + (r.tier === "agency" ? 2 : 0) + (r.place ? 1 : 0) - (endMs() - r.ms) / (3 * H);
     const lead = [...hard.slice(0, 60)].sort((a, b) => score(b) - score(a))[0] || list[0];
@@ -688,13 +710,12 @@ export function startMainDesk(): () => void {
   function renderLead() {
     const { lead, side } = leadPick();
     const f = F();
-    const kick = !f ? "The whole region" : f.kind === "sea" ? "Sea" : f.kind === "actor" ? "Actor" : "Country";
+    const kick = !f ? "The whole region" : `Latest from ${f.name}`;
     const viewing = S.end ? ` · <span style="color:var(--gold)">to ${dm(S.end)} ${hm(S.end)}</span>` : "";
     $("md-lead").innerHTML = lead
       ? `<div>
-        <div class="md-kicker">${flag(S.focus)} ${esc(kick)} · <b>●</b> updated ${hm(R[0]?.ms ?? now())} Sanaa${viewing}</div>
+        <div class="md-kicker">${f ? "" : `${flag(S.focus)} `}${esc(kick)} · <b>●</b> updated ${hm(R[0]?.ms ?? now())} Sanaa${viewing}</div>
         <h2 data-sel="${esc(lead.fp)}">${esc(lead.summary)}</h2>
-        <p class="md-dek">${f ? esc(f.context) : ""}</p>
         <div class="md-meta"><span class="md-src">${esc(lead.source)}</span><span>${dm(lead.ms)} ${hm(lead.ms)}</span>${lead.place ? `<span>${esc(lead.place)}</span>` : ""}${lead.countries.filter((c) => focusById(c) && !focusById(c)!.hidden && c !== S.focus).map((c) => `<span class="md-ctag" data-focus="${c}">${esc(focusById(c)!.name)}</span>`).join("")}</div>
       </div>
       <div class="md-side">${side.map((r) => `<div class="it" data-sel="${esc(r.fp)}"><div class="md-kicker" style="font-size:9.5px">${esc(catName(r.cat))} · ${hm(r.ms)} · ${esc(r.source)}</div><h3>${esc(r.summary)}</h3></div>`).join("")}</div>`
@@ -868,10 +889,15 @@ export function startMainDesk(): () => void {
     } else if (S.view === "log") {
       body = `<div class="md-log">${all.slice(0, 200).map((r) => `<div data-sel="${esc(r.fp)}"><span class="t">${hm(r.ms)}</span><span style="color:${catCol(r.cat)}">${esc(catName(r.cat).toUpperCase())}</span><span class="t">${esc((r.place || focusById(r.countries[0] || "")?.name || "").slice(0, 15))}</span><span>${esc(r.summary)}</span></div>`).join("")}</div>`;
     } else body = table(all);
-    const cats = [["all", "All", ""], ...CATEGORIES.map((c) => [c.id, c.name, c.color])];
+    const fg = f ? FIGS.get(f.id) : undefined;
+    const cats = [["all", "All", ""], ...CATEGORIES.filter((c) => !fg || fg.cats[c.id] || S.cat === c.id).map((c) => [c.id, c.name, c.color])];
     $("md-feed").innerHTML = `${dailyHtml()}<div class="md-sech"><h2>${esc(title)}<small>${S.end ? `to ${dm(S.end)} ${hm(S.end)}` : "live"}</small></h2>
       <span class="md-views">${(["cards", "log", "table"] as const).map((v) => `<button type="button" data-view="${v}" class="${S.view === v ? "on" : ""}">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</span></div>
-      <div class="md-cats">${cats.map(([id, n, c]) => `<button type="button" data-cat="${id}" class="${S.cat === id ? "on" : ""}">${c ? `<i style="background:${c}"></i>` : ""}${n}</button>`).join("")}</div>${body}`;
+      <div class="md-cats">${cats.map(([id, n, c]) => {
+        // A country or sea page shows each kind's seven days; the main page, no counts.
+        const k = fg ? (id === "all" ? fg.week : fg.cats[id] || 0) : null;
+        return `<button type="button" data-cat="${id}" class="${S.cat === id ? "on" : ""}"${k != null ? ' title="Reports in the last 7 days"' : ""}>${c ? `<i style="background:${c}"></i>` : ""}${n}${k != null ? ` <span class="md-cn">${k}</span>` : ""}</button>`;
+      }).join("")}</div>${body}`;
   }
   /** The table: the latest from each place or outlet, newest first. A list, not a tally. */
   function table(list: Rep[]) {
@@ -890,6 +916,98 @@ export function startMainDesk(): () => void {
             : `<tr data-sel="${esc(r.fp)}"><td>${esc(k)}</td><td class="h">${esc(r.summary)}</td><td class="w">${ago(r.ms)}</td></tr>`,
         )
         .join("")}</tbody></table></div>`;
+  }
+
+  /* ---------- a country or sea page ---------- */
+  async function loadFigures(id: string) {
+    const had = FIGS.get(id);
+    if (had && now() - had.got < 10 * 60_000) return;
+    try {
+      const j = await getJson(`/api/region?figures=${encodeURIComponent(id)}`);
+      if (!j.ok) return;
+      FIGS.set(id, { ...j, got: now() });
+      if (stopped || S.focus !== id) return;
+      renderPlace();
+      renderSide();
+      renderFeed();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  /** The page's head and figures strip; the main page has neither. */
+  function renderPlace() {
+    const el = $("md-place");
+    const f = F();
+    if (!f) {
+      el.innerHTML = "";
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    if (el.dataset.focus !== f.id) {
+      el.innerHTML = placeHeadHtml(f);
+      el.dataset.focus = f.id;
+      tick();
+    }
+    const fg = FIGS.get(f.id);
+    $("md-figs").innerHTML = fg ? figsHtml(fg) : '<div class="md-fig"><span class="k">Figures</span><b>…</b></div>';
+  }
+  function figsHtml(fg: Figs) {
+    const dir = fg.d1 > fg.d0 * 1.15 ? ["md-up", "▲"] : fg.d1 < fg.d0 * 0.85 ? ["md-down", "▼"] : ["md-flat", "→"];
+    const max = Math.max(1, ...fg.days.map((d) => d[1]));
+    const spark = `<svg class="md-spark" viewBox="0 0 70 22" preserveAspectRatio="none" aria-hidden="true">${fg.days
+      .map(([, n], i) => `<rect x="${i * 10 + 1}" y="${22 - Math.max(1, (n / max) * 22)}" width="8" height="${Math.max(1, (n / max) * 22)}"/>`)
+      .join("")}</svg>`;
+    const top = fg.places[0];
+    const cell = (k: string, v: string, sub = "") => `<div class="md-fig"><span class="k">${k}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ""}</div>`;
+    return (
+      cell("Reports, last 24 hours", String(fg.d1), `<span class="${dir[0]}">${dir[1]}</span> ${fg.d0} the day before`) +
+      cell("Reports, 7 days", String(fg.week), spark) +
+      (F()?.kind === "actor" ? "" : cell("Pins on the map, 24 hours", String(fg.pins24))) +
+      cell("Outlets, 7 days", String(fg.outlets)) +
+      (top ? cell("Most reported place", esc(top.name), `${top.n} reports in 7 days`) : "") +
+      `<div class="md-figat">As of ${hm(fg.got)} Sanaa, renewed every ten minutes</div>`
+    );
+  }
+  function whoHtml(fg: Figs) {
+    if (!fg.actors.length) return "";
+    const max = fg.actors[0].n;
+    return `<div class="md-box"><h4>Who is active</h4><p class="md-boxsub">Reports that name each side, last 7 days</p>${fg.actors
+      .slice(0, 8)
+      .map((a) => `<div class="md-bar"><span class="nm">${esc(a.name)}</span><span class="tr"><i style="width:${Math.max(3, (a.n / max) * 100)}%"></i></span><span class="n">${a.n}</span></div>`)
+      .join("")}</div>`;
+  }
+  function placesHtml(fg: Figs) {
+    if (!fg.places.length) return "";
+    return `<div class="md-box"><h4>Places</h4><p class="md-boxsub">Most reported, last 7 days</p><div class="md-plist">${fg.places
+      .slice(0, 10)
+      .map((p) => `<button type="button" ${byFp.has(p.fp) ? `data-sel="${esc(p.fp)}"` : p.lat != null ? `data-fly="${p.lat},${p.lng}"` : ""}><span class="nm">${esc(p.name)}</span><span class="n">${p.n}</span><span class="w">${ago(Date.parse(p.at))}</span></button>`)
+      .join("")}</div></div>`;
+  }
+  /** When reports come in, by the hour of the place's own clock, over seven days. */
+  function hourClockHtml(fg: Figs, f: Focus) {
+    const max = Math.max(1, ...fg.hours);
+    if (!fg.week) return "";
+    const c = 80;
+    const r0 = 24;
+    const pt = (r: number, a: number) => `${(c + r * Math.sin(a)).toFixed(1)},${(c - r * Math.cos(a)).toFixed(1)}`;
+    const wedges = fg.hours
+      .map((n, h) => {
+        const a0 = (h / 24) * 2 * Math.PI + 0.02;
+        const a1 = ((h + 1) / 24) * 2 * Math.PI - 0.02;
+        const r1 = r0 + 4 + (n / max) * 40;
+        return `<path d="M${pt(r0, a0)} L${pt(r1, a0)} A${r1} ${r1} 0 0 1 ${pt(r1, a1)} L${pt(r0, a1)} A${r0} ${r0} 0 0 0 ${pt(r0, a0)}Z" opacity="${(0.35 + 0.65 * (n / max)).toFixed(2)}"><title>${String(h).padStart(2, "0")}:00–${String((h + 1) % 24).padStart(2, "0")}:00 · ${n}</title></path>`;
+      })
+      .join("");
+    const peak = fg.hours.indexOf(max);
+    const marks = [0, 6, 12, 18].map((h) => {
+      const [x, y] = pt(r0 + 51, (h / 24) * 2 * Math.PI).split(",");
+      return `<text x="${x}" y="${Number(y) + 3}">${String(h).padStart(2, "0")}</text>`;
+    });
+    const where = f.clock ?? "Sanaa";
+    return `<div class="md-box"><h4>The hour clock</h4><p class="md-boxsub">When reports come in, ${esc(where)} time, last 7 days</p>
+      <div class="md-hclock"><svg viewBox="-4 -4 168 168" role="img" aria-label="Reports by hour of the day">${wedges}${marks.join("")}<text x="80" y="78" class="c">${esc(where)}</text><text x="80" y="90" class="c">time</text></svg>
+      <p>Busiest hour: <b>${String(peak).padStart(2, "0")}:00–${String((peak + 1) % 24).padStart(2, "0")}:00</b></p></div></div>`;
   }
 
   /* ---------- the side column ---------- */
@@ -913,9 +1031,8 @@ export function startMainDesk(): () => void {
     let lead = "";
     if (f) {
       const secs = [...(BRIEFS.yemen?.sections || []), ...(BRIEFS.iran?.sections || [])].filter((s) => (BRIEF_FOR[s.name] || (f.id === "yemen" && BRIEFS.yemen?.sections.includes(s) ? ["yemen"] : [])).includes(f.id));
-      lead = `<div class="md-box">${flag(f.id)}<h4 style="display:inline;margin-left:6px">${esc(f.name)}</h4><p style="margin:6px 0">${esc(f.context)}</p>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">${f.desks.map((id) => WAR_DESKS.find((d) => d.id === id)).filter((d) => d && !d.planned).map((d) => `<a class="md-pill" href="${d!.path}">${esc(d!.name)} →</a>`).join("")}<button type="button" class="md-pill" data-focus="region">Whole region</button></div></div>
-        ${secs.length ? `<div class="md-box"><h4>Latest developments</h4><ol style="margin:0;padding-left:18px;font-family:var(--serif)">${secs.slice(0, 4).map((s) => `<li style="margin-bottom:6px"><b style="font-family:var(--sans);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">${esc(s.name)}</b><br>${s.points.slice(0, 2).map((p) => esc(noRefs(p))).join(" ")}</li>`).join("")}</ol></div>` : ""}`;
+      const fg = FIGS.get(f.id);
+      lead = `${secs.length ? `<div class="md-box"><h4>Latest developments</h4><ol style="margin:0;padding-left:18px;font-family:var(--serif)">${secs.slice(0, 4).map((s) => `<li style="margin-bottom:6px"><b style="font-family:var(--sans);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">${esc(s.name)}</b><br>${s.points.slice(0, 2).map((p) => esc(noRefs(p))).join(" ")}</li>`).join("")}</ol></div>` : ""}${fg ? whoHtml(fg) + placesHtml(fg) + hourClockHtml(fg, f) : ""}`;
     }
     $("md-sidecol").innerHTML = `${lead}<div class="md-sech"><h2>Across the region</h2></div>${areas}<div class="md-sech" style="margin-top:18px"><h2>The desks</h2></div>${desks}${how}`;
   }
@@ -928,12 +1045,16 @@ export function startMainDesk(): () => void {
     if (f?.lens && S.lens === "reports") S.lens = f.lens;
     if (instant) map.fitBounds(boundsOf(), { animate: false, ...pad() });
     else map.flyToBounds(boundsOf(), { duration: 1.4, easeLinearity: 0.25, ...pad() });
-    const u = new URL(location.href);
-    if (f) u.searchParams.set("focus", f.slug);
-    else u.searchParams.delete("focus");
-    history.replaceState(null, "", u.pathname + u.search + u.hash);
+    // With a router, the address is already the place's own (/lebanon); alone, a ?focus= mark.
+    if (!opts.onFocus) {
+      const u = new URL(location.href);
+      if (f) u.searchParams.set("focus", f.slug);
+      else u.searchParams.delete("focus");
+      history.replaceState(null, "", u.pathname + u.search + u.hash);
+    }
     $("md-sel").classList.remove("show");
     renderAll();
+    if (f) void loadFigures(f.id);
     if (f && !deep.has(f.id)) {
       deep.add(f.id);
       try {
@@ -945,6 +1066,7 @@ export function startMainDesk(): () => void {
   }
   function renderAll() {
     renderFocusBar();
+    renderPlace();
     renderKey();
     renderLead();
     renderModes();
@@ -983,16 +1105,24 @@ export function startMainDesk(): () => void {
     }
     renderFeed();
   }
+  /** A reader picked a place: its own address when the page has a router, else a move in place. */
+  function pick(id: FocusId | "region") {
+    if (id === S.focus) return;
+    if (opts.onFocus) opts.onFocus(id === "region" ? null : focusById(id) ?? null);
+    else void go(id);
+  }
   const scrollToMap = () => $("md-stage").scrollIntoView({ behavior: "smooth", block: "center" });
 
   function onClick(e: MouseEvent) {
-    const a = (e.target as HTMLElement).closest<HTMLElement>("[data-focus],[data-sel],[data-cat],[data-lens],[data-view],[data-ttab],[data-thread],[data-story],[data-near],[data-keyx],[data-more],[data-close-sel]");
+    const a = (e.target as HTMLElement).closest<HTMLElement>("[data-focus],[data-sel],[data-cat],[data-lens],[data-view],[data-ttab],[data-thread],[data-story],[data-near],[data-keyx],[data-more],[data-close-sel],[data-fly]");
     if (!a) return;
     const d = a.dataset;
+    // A place's link opened in a new tab or window stays a plain link.
+    if (a.tagName === "A" && (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0)) return;
     if (a.tagName === "A" && !a.getAttribute("target")) e.preventDefault();
     if (d.closeSel != null) return $("md-sel").classList.remove("show");
     if (d.focus) {
-      void go(d.focus as FocusId | "region");
+      pick(d.focus as FocusId | "region");
       if (!a.closest(".md-stage") && !a.closest(".md-focusbar")) scrollToMap();
       return;
     }
@@ -1043,6 +1173,11 @@ export function startMainDesk(): () => void {
     if (d.keyx) {
       store.set("keyx", d.keyx);
       return renderKey();
+    }
+    if (d.fly) {
+      const [la, ln] = d.fly.split(",").map(Number);
+      if (Number.isFinite(la) && Number.isFinite(ln)) map.flyTo([la, ln], 9, { duration: 1 });
+      return scrollToMap();
     }
     if (d.more) void more();
   }
@@ -1158,7 +1293,7 @@ export function startMainDesk(): () => void {
   }
   void boot();
 
-  return () => {
+  const stop = () => {
     stopped = true;
     stopPlay();
     timers.forEach(clearInterval);
@@ -1174,5 +1309,14 @@ export function startMainDesk(): () => void {
     } catch {
       /* already gone */
     }
+  };
+  return {
+    stop,
+    // The router moved to a place's address (or back): fly there.
+    focus: (id) => {
+      if (stopped || id === S.focus) return;
+      if (!map) S.focus = id; // still starting: it opens there
+      else void go(id);
+    },
   };
 }

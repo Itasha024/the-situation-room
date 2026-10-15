@@ -18,6 +18,8 @@ import { focusById, warDeskById } from "@/lib/region";
  *   /api/region?focus=lebanon       one country or sea
  *   /api/region?desk=yemen          one desk (war)
  *   &limit=400&before=<ISO>         paging back
+ *   /api/region?pins=2026-07-13     the map's pins alone back to a day, as
+ *                                   short rows, for the replay strip
  *
  * A read, never a scan, and never a brief build: the desks' saved briefs are
  * served as they are.
@@ -105,10 +107,33 @@ async function readRegion(limit: number, before: string | undefined, focus: stri
   };
 }
 
+/**
+ * Every pin of both desks back to a day, as [at, category, lat, lng, where]:
+ * the replay strip's history. Iran's pins pass the same rules they are shown by.
+ */
+async function readPins(since: string) {
+  const store = await getStore();
+  const rows: [string, string, number, number, string | null][] = [];
+  const seen = new Set<string>();
+  for (const id of ["yemen", "iran"] as DeskId[]) {
+    const slice = serveSlice(await store.recentDesk(20_000, undefined, { desk: id, since, reports: false }), id);
+    for (const e of slice.events as unknown as Row[]) {
+      if (typeof e.lat !== "number" || typeof e.lng !== "number") continue;
+      const k = `${storyKey(e.fp)}|${e.lat}|${e.lng}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const f = facetsOf({ summary: e.label, place: e.place, lat: e.lat, lng: e.lng, type: e.type, desks: e.desks }, id);
+      rows.push([String(e.at).slice(0, 16), f.category, Math.round(e.lat * 1000) / 1000, Math.round(e.lng * 1000) / 1000, f.where]);
+    }
+  }
+  rows.sort((a, b) => b[0].localeCompare(a[0]));
+  return { at: Date.now(), body: JSON.stringify({ ok: true, since, pins: rows }) };
+}
+
 function renew(key: string, ...a: Parameters<typeof readRegion>) {
   let p = reading.get(key);
   if (!p) {
-    p = readRegion(...a)
+    p = (key.startsWith("pins|") ? readPins(a[1] as string) : readRegion(...a))
       .then((hit) => {
         if (memo.size > 40) memo.clear();
         memo.set(key, hit);
@@ -126,6 +151,24 @@ export const Route = createFileRoute("/api/region")({
       GET: ({ request }) => metered("region", async () => {
         try {
           const url = new URL(request.url);
+          // The replay strip's history: pins alone, back to a day (never before the Iran war's first).
+          const pinsDay = url.searchParams.get("pins") || "";
+          if (pinsDay) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(pinsDay)) return json({ ok: false, error: "bad pins day" }, 400);
+            const since = `${pinsDay < "2026-02-28" ? "2026-02-28" : pinsDay}T00:00:00+03:00`;
+            const key = `pins|${since}`;
+            let hit = memo.get(key);
+            const age = hit ? Date.now() - hit.at : Infinity;
+            if (!hit || age > STALE_MS) hit = await renew(key, 0, since, null, null);
+            else if (age > MEMO_MS) renew(key, 0, since, null, null).catch(() => {});
+            return new Response(hit.body, {
+              headers: {
+                "content-type": "application/json; charset=utf-8",
+                "cache-control": "public, max-age=300",
+                "cdn-cache-control": "public, s-maxage=600, stale-while-revalidate=1800",
+              },
+            });
+          }
           const asked = Number(url.searchParams.get("limit") || NaN);
           const limit = Number.isFinite(asked) ? Math.min(Math.max(asked, 1), 800) : 400;
           const before = url.searchParams.get("before") || undefined;

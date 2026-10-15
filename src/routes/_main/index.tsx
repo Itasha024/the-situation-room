@@ -1,13 +1,20 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { MainDesk } from "@/components/main-desk";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
+import { focusBySlug } from "@/lib/region";
 
 /**
  * The front page (option C): the main desk, the whole region on one map and
  * one wire. The Yemen desk lives at /yemen-conflict-desk, the Iran desk at
- * /iran-conflict-desk.
+ * /iran-conflict-desk; each country and sea at its own address (/lebanon).
  */
-export const Route = createFileRoute("/")({
-  component: MainDesk,
+export const Route = createFileRoute("/_main/")({
+  // The first build marked a place as /?focus=lebanon: it has its own address now.
+  beforeLoad: ({ location }) => {
+    const slug = (location.search as Record<string, unknown>).focus;
+    const f = typeof slug === "string" ? focusBySlug(slug) : undefined;
+    if (f && !f.hidden) throw redirect({ to: "/$place", params: { place: f.slug }, statusCode: 301 });
+  },
+  component: () => null,
   head: () => ({
     meta: [
       { title: "The Situation Room: Yemen, Iran and the region, live" },
@@ -16,10 +23,6 @@ export const Route = createFileRoute("/")({
         content:
           "Live open-source reporting on the wars in Yemen and Iran on one map: Saudi Arabia, the Red Sea, Hormuz, Israel, Lebanon, Iraq and the Gulf, from every side's sources.",
       },
-    ],
-    links: [
-      { rel: "stylesheet", href: "/main-desk.css?v=md-1" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" },
     ],
   }),
   // The page is a shell: its news comes from the cached APIs.

@@ -15,6 +15,7 @@ import { Route as YemenRouteImport } from './routes/yemen'
 import { Route as YemenConflictDeskRouteImport } from './routes/yemen-conflict-desk'
 import { Route as ApiBriefRouteImport } from './routes/api/brief'
 import { Route as ApiDeskRouteImport } from './routes/api/desk'
+import { Route as ApiRegionRouteImport } from './routes/api/region'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiStatusRouteImport } from './routes/api/status'
@@ -52,6 +53,11 @@ const ApiBriefRoute = ApiBriefRouteImport.update({
 const ApiDeskRoute = ApiDeskRouteImport.update({
   id: '/api/desk',
   path: '/api/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRegionRoute = ApiRegionRouteImport.update({
+  id: '/api/region',
+  path: '/api/region',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiScanRoute = ApiScanRouteImport.update({
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/region': typeof ApiRegionRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/region': typeof ApiRegionRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/region': typeof ApiRegionRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/region'
     | '/api/scan'
     | '/api/search'
     | '/api/status'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/region'
     | '/api/scan'
     | '/api/search'
     | '/api/status'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/region'
     | '/api/scan'
     | '/api/search'
     | '/api/status'
@@ -204,6 +216,7 @@ export interface RootRouteChildren {
   YemenConflictDeskRoute: typeof YemenConflictDeskRoute
   ApiBriefRoute: typeof ApiBriefRoute
   ApiDeskRoute: typeof ApiDeskRoute
+  ApiRegionRoute: typeof ApiRegionRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiSearchRoute: typeof ApiSearchRoute
   ApiStatusRoute: typeof ApiStatusRoute
@@ -256,6 +269,13 @@ declare module '@tanstack/react-router' {
       path: '/api/desk'
       fullPath: '/api/desk'
       preLoaderRoute: typeof ApiDeskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/region': {
+      id: '/api/region'
+      path: '/api/region'
+      fullPath: '/api/region'
+      preLoaderRoute: typeof ApiRegionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/scan': {
@@ -324,6 +344,7 @@ const rootRouteChildren: RootRouteChildren = {
   YemenConflictDeskRoute: YemenConflictDeskRoute,
   ApiBriefRoute: ApiBriefRoute,
   ApiDeskRoute: ApiDeskRoute,
+  ApiRegionRoute: ApiRegionRoute,
   ApiScanRoute: ApiScanRoute,
   ApiSearchRoute: ApiSearchRoute,
   ApiStatusRoute: ApiStatusRoute,

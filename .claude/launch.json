@@ -2,9 +2,39 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "region-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/with-app-env.mjs",
+        "vite",
+        "dev",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8097",
+        "--strictPort"
+      ],
+      "port": 8097,
+      "env": {
+        "DESK_DATA_DIR": ".preview",
+        "DESK_SELF_TICK": "0",
+        "GEMINI_API_KEY": "",
+        "GROQ_API_KEY": "",
+        "DATABASE_URL": ""
+      }
+    },
+    {
       "name": "mockups",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["node_modules/vite/bin/vite.js", "mockups", "--host", "127.0.0.1", "--port", "8095", "--strictPort"],
+      "runtimeArgs": [
+        "node_modules/vite/bin/vite.js",
+        "mockups",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8095",
+        "--strictPort"
+      ],
       "port": 8095
     },
     {

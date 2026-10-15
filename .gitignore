@@ -41,3 +41,4 @@ scripts/data/iran-backfill/pins.json
 # Made from the baseline before every build (scripts/iran-research/map-pack.cjs)
 public/iran-map-pins.json
 public/iran-map-notes.json
+.preview/

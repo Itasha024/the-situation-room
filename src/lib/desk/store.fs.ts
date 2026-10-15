@@ -21,19 +21,27 @@ import type { DeskSlice, DeskStore, MergeResult, RecentOpts } from "./store.ts";
 import { EMPTY_SCAN_STATE, type LiveReport, type ScanPayload, type ScanState } from "./types.ts";
 
 const PUBLIC_DIR = join(process.cwd(), "public");
-const DATA_FILE = join(PUBLIC_DIR, "data.json");
-const STATE_FILE = join(PUBLIC_DIR, "desk-state.json");
+/**
+ * Where the local store keeps its files. A preview (npm run preview:region)
+ * points DESK_DATA_DIR at a copy of the live public feed, so the checked-in
+ * snapshots in public/ are never touched.
+ */
+const DATA_DIR = process.env.DESK_DATA_DIR ? join(process.cwd(), process.env.DESK_DATA_DIR) : PUBLIC_DIR;
+const DATA_FILE = join(DATA_DIR, "data.json");
+const STATE_FILE = join(DATA_DIR, "desk-state.json");
+/** A key may hold ":" (brief:iran), which Windows does not allow in a file name. */
+const keyFile = (key: string) => join(DATA_DIR, `desk-${key.replace(/[:]/g, "_")}.json`);
 
 /**
  * The payload is written to both the served directory and the built output, so
  * a preview of the built bundle sees the same snapshot as dev.
  */
 const PAYLOAD_FILES = [
-  join(PUBLIC_DIR, "live-reports.json"),
+  join(DATA_DIR, "live-reports.json"),
   join(process.cwd(), ".vercel", "output", "static", "live-reports.json"),
 ];
 
-const rowsFile = (prefix: string) => join(PUBLIC_DIR, `desk-rows-${prefix}.json`);
+const rowsFile = (prefix: string) => join(DATA_DIR, `desk-rows-${prefix}.json`);
 
 async function readJson<T>(path: string): Promise<T | null> {
   try {
@@ -100,15 +108,15 @@ export function createFsStore(): DeskStore {
     },
 
     async getJson<T>(key: string): Promise<T | null> {
-      return readJson<T>(join(PUBLIC_DIR, `desk-${key}.json`));
+      return readJson<T>(keyFile(key));
     },
 
     async putJson(key: string, value: unknown): Promise<void> {
-      await writeJsonAtomic(join(PUBLIC_DIR, `desk-${key}.json`), value);
+      await writeJsonAtomic(keyFile(key), value);
     },
 
     async deleteJson(key: string): Promise<void> {
-      await unlink(join(PUBLIC_DIR, `desk-${key}.json`)).catch(() => {});
+      await unlink(keyFile(key)).catch(() => {});
     },
 
     /** Locally a cache's rows share one file: `desk-rows-<prefix>.json`. */

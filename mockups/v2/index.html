@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Situation Room v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="geo.js"></script>
+<script src="data.js"></script>
+</head>
+<body>
+
+<div class="mockbar">
+  <b>Mock v2</b>
+  <span>One main desk · countries and seas as focus · wars as their own pages</span>
+  <span class="views" id="layoutSeg"><button data-l="news" class="on">Newsroom</button><button data-l="cmd">Command</button></span>
+  <a href="research.html">Research and the reasoning →</a>
+  <a href="../redesign.html">v1 (separate desks)</a>
+</div>
+
+<header class="mast">
+  <div class="left" id="dateline"></div>
+  <div><h1 id="homeLink" title="The whole region">The Situation Room</h1><span class="tag">Open-source intelligence</span></div>
+  <div class="right">
+    <div class="clocks" id="clocks"></div>
+    <button class="iconbtn" id="themeBtn" title="Day / night">◐</button>
+    <button class="iconbtn" id="helpBtn" title="Keys">?</button>
+  </div>
+</header>
+<hr class="rule">
+
+<nav class="focusbar" id="focusbar"></nav>
+
+<div id="keyEvent"></div>
+
+<section class="lead" id="lead"></section>
+
+<section class="stage" id="stage">
+  <div id="map"></div>
+
+  <div class="hud glass modes" id="modes"></div>
+  <div class="hud glass figs" id="figs"></div>
+
+  <div class="hud alerts">
+    <div class="btnrow">
+      <button class="glass hbtn" id="jumpBtn" title="Fly to the newest report"><span class="k">Space</span>Latest</button>
+      <button class="glass hbtn" id="shareBtn" title="Copy a link to exactly this view">Share view</button>
+    </div>
+    <div class="glass since" id="since"></div>
+    <div id="chips" style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"></div>
+  </div>
+
+  <div class="hud glass mini" id="mini" title="Click to move"><canvas id="miniC" width="360" height="252"></canvas><span class="lbl">Region</span></div>
+  <div class="hud glass legend" id="legend"></div>
+  <div class="hud glass sel" id="sel"></div>
+
+  <div class="swipe" id="swipe"><span class="lb" id="swA"></span><span class="la" id="swB"></span><span class="h" id="swH">⇔</span></div>
+
+  <div class="hud glass scrub">
+    <button class="play" id="play" title="Replay the period">▶</button>
+    <button class="sp" id="speed" title="Speed">1 day/s</button>
+    <div class="track"><canvas id="trackC" height="60"></canvas><input type="range" id="range" min="0" max="1000" value="1000" aria-label="Day"><div class="thumb" id="thumb"><span id="thumbLbl">Today</span></div></div>
+    <span class="when" id="when"></span>
+  </div>
+
+  <div class="glass tour" id="tour"></div>
+  <div class="intro" id="intro"><div><span id="introTxt">The region, last 24 hours</span><button id="skipIntro">Skip</button></div></div>
+
+  <aside class="rail" id="rail">
+    <div class="tabs" id="railTabs"><button data-t="reports" class="on">Reports</button><button data-t="log">Log</button><button data-t="dossier">Dossier</button><button data-t="following">Following</button></div>
+    <div class="rb" id="railBody"></div>
+  </aside>
+</section>
+
+<section class="below" id="below">
+  <div class="col" id="feedCol"></div>
+  <div class="col" id="sideCol"></div>
+</section>
+
+<div class="ov" id="ov"><div class="sheet" id="sheet"><button class="x" id="ovX">✕</button><div id="sheetIn"></div></div></div>
+<div class="toast" id="toast"></div>
+<div id="tips"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

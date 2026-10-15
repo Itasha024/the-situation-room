@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "mockups",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "mockups", "--host", "127.0.0.1", "--port", "8095", "--strictPort"],
+      "port": 8095
+    },
+    {
       "name": "desk",
       "runtimeExecutable": "node",
       "runtimeArgs": [

@@ -376,8 +376,8 @@ export const SHARED_RSS: Record<string, IranLean> = {
  */
 /** Google News's public listing of one site's last hour, in Hebrew. */
 const gnSite = (site: string) => `https://news.google.com/rss/search?q=${encodeURIComponent(`site:${site} when:1h`)}&hl=iw&gl=IL&ceid=IL:he`;
-/** The same in English, for a US outlet. */
-const gnSiteEn = (site: string) => `https://news.google.com/rss/search?q=${encodeURIComponent(`site:${site} when:1h`)}&hl=en-US&gl=US&ceid=US:en`;
+/** The same in English, for a US outlet: Google lists its articles hours late, so the last 12 hours (what was read is not read again). */
+const gnSiteEn = (site: string) => `https://news.google.com/rss/search?q=${encodeURIComponent(`site:${site} when:12h`)}&hl=en-US&gl=US&ceid=US:en`;
 
 export const IRAN_RSS: { id: string; url: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; israeliMedia?: true }[] = [
   { id: "trumpstruth", url: "https://trumpstruth.org/feed", name: "Truth Social (Trump)", lean: "us", every: 5 },

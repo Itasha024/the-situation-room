@@ -146,7 +146,8 @@ async function readX(src: { id: string; name: string; lean: IranLean }, state: I
 
 async function readFeed(f: Feed): Promise<{ rows: RawHit[]; ok: boolean }> {
   const body = await fetchText(f.url, 10_000);
-  const ok = !!(body && /<item[\s>]/i.test(body));
+  // A feed with nothing new still answered (Google's listing of a slow site).
+  const ok = !!(body && /<(?:item|channel)[\s>]/i.test(body));
   return { rows: ok ? parseRss(body as string, f.name).map((r) => ({ ...r, lean: f.lean })) : [], ok };
 }
 

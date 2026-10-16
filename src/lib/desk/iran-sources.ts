@@ -376,6 +376,8 @@ export const SHARED_RSS: Record<string, IranLean> = {
  */
 /** Google News's public listing of one site's last hour, in Hebrew. */
 const gnSite = (site: string) => `https://news.google.com/rss/search?q=${encodeURIComponent(`site:${site} when:1h`)}&hl=iw&gl=IL&ceid=IL:he`;
+/** The same in English, for a US outlet. */
+const gnSiteEn = (site: string) => `https://news.google.com/rss/search?q=${encodeURIComponent(`site:${site} when:1h`)}&hl=en-US&gl=US&ceid=US:en`;
 
 export const IRAN_RSS: { id: string; url: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; israeliMedia?: true }[] = [
   { id: "trumpstruth", url: "https://trumpstruth.org/feed", name: "Truth Social (Trump)", lean: "us", every: 5 },
@@ -394,6 +396,8 @@ export const IRAN_RSS: { id: string; url: string; name: string; lean: IranLean; 
   { id: "israelhayom", url: gnSite("israelhayom.co.il"), name: "Israel Hayom", lean: "israel", every: 15, israeliMedia: true },
   { id: "kan", url: gnSite("kan.org.il"), name: "Kan", lean: "israel", every: 15, israeliMedia: true },
   { id: "c13", url: gnSite("13tv.co.il"), name: "Channel 13", lean: "israel", every: 15, israeliMedia: true },
+  // Trump's interviews (user, 16 Oct). newsmax.com does not answer the server; its listing on Google News does.
+  { id: "newsmax", url: gnSiteEn("newsmax.com"), name: "Newsmax", lean: "us", every: 10 },
 ];
 
 /**

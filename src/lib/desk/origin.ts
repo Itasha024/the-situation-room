@@ -76,7 +76,7 @@ export type Cited = {
 
 /** Each country's main outlets: where "British media" or "a US official" is looked for. */
 export const COUNTRY_SITES: Record<string, string[]> = {
-  US: ["nytimes.com", "wsj.com", "washingtonpost.com", "apnews.com", "reuters.com", "cnn.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "foxnews.com", "axios.com", "politico.com", "bloomberg.com"],
+  US: ["nytimes.com", "wsj.com", "washingtonpost.com", "apnews.com", "reuters.com", "cnn.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "foxnews.com", "axios.com", "politico.com", "bloomberg.com", "newsmax.com"],
   UK: ["ft.com", "theguardian.com", "thetimes.com", "telegraph.co.uk", "bbc.com", "economist.com", "independent.co.uk", "news.sky.com"],
   IR: ["tasnimnews.ir", "presstv.ir", "irna.ir", "mehrnews.com", "farsnews.ir", "javanonline.ir", "kayhan.ir"],
   IT: ["repubblica.it", "corriere.it", "ansa.it", "lastampa.it", "ilsole24ore.com"],

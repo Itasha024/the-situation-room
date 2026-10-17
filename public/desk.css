@@ -1207,3 +1207,19 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .src-list ul{margin:.3rem 0 0;padding-left:1.1rem;columns:2 12rem;column-gap:1.2rem}
 .src-list li{margin:.12rem 0;break-inside:avoid}
 .ir-mark{color:var(--t-accent,#f59e0b);font-weight:700;margin-left:1px}
+
+/* Every map's pin (user, 17 Oct): the mark says what happened, the colour who did it.
+   A white mark on a dark side colour, a near-black one on a light one; the legend's
+   marks for the kinds of event sit on a plain disc, since the colour is the side's. */
+.ev.ink-light .ev-glyph{color:#fff}
+.leg-ico.kind{background:#e2e8f0;color:#0b0f14}
+/* A period: the day's own date box is its first day, a second one like it beside it its last (user, 17 Oct). */
+.time-filter .tf-range{display:inline-flex;flex-basis:auto;align-items:center;gap:.35rem;padding:0}
+.time-filter .tf-range[hidden]{display:none}
+.time-filter .tf-range .tf-to{font-size:.72rem}
+
+/* Going from one desk, or the home page, to another is one cross-fade (user, 17 Oct): the masthead stays put. */
+@view-transition{navigation:auto}
+.mast{view-transition-name:mast}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.32s}
+@media (prefers-reduced-motion: reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}

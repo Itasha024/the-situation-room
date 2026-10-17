@@ -11,6 +11,7 @@ import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { districtSeat, heardInside, iranEventAllowed, ownSkyOnly, seaPlace } from "@/lib/desk/iran-places";
 import { countryPin, onePinPerEvent, servePins } from "@/lib/desk/yemen-pins";
+import { pinSideOf } from "@/lib/desk/dev-marks";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -56,6 +57,8 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     if (r.text) r.text = rightOffice(respell(String(r.text)));
     // The Iran desk's filter buttons go by the source's group.
     if (desk === "iran") (r as Record<string, unknown>).lean = iranLeanOfSource(String(r.source ?? ""));
+    // Who acted, for its map pin's colour (user, 17 Oct): the Yemen map draws its pins from the cards.
+    if (desk === "yemen" && !r.actor) (r as Record<string, unknown>).actor = pinSideOf({ type: String(r.type ?? ""), label: String(r.summary ?? ""), text: String(r.text ?? "") }) ?? "unclear";
   }
   // The Iran map's own pins pass its scope as they are served, so a pin stored under older rules never shows.
   if (desk === "iran" && Array.isArray((slice as { events?: unknown[] }).events)) {
@@ -90,6 +93,11 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   if (desk === "yemen" && Array.isArray((slice as { events?: unknown[] }).events)) {
     const s = slice as unknown as { events: Parameters<typeof servePins>[0] };
     s.events = servePins(s.events);
+    // Who acted, for the pin's colour (user, 17 Oct); "unclear" when the report does not say.
+    s.events = s.events.map((e) => {
+      const x = e as typeof e & { actor?: string | null; type?: string | null; label?: string | null; text?: string | null };
+      return x.actor ? e : { ...e, actor: pinSideOf(x) ?? "unclear" };
+    });
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }

@@ -461,11 +461,52 @@ a{color:inherit}
 
 /* The shared map. */
 #h-map{position:absolute;inset:0;background:var(--t-surface-1,#0a1018)}
-/* A desk change swaps the page in place: the header and map stay, the part under the map cross-fades. */
-::view-transition-old(root),::view-transition-new(root){animation:none}
-#g-body{view-transition-name:g-body}
-.dl-name{view-transition-name:g-desk}
-::view-transition-old(g-body){animation:gOut .22s ease-in both}
-::view-transition-new(g-body){animation:gIn .32s ease-out .08s both}
-@keyframes gOut{to{opacity:0;transform:translateY(8px)}}
-@keyframes gIn{from{opacity:0;transform:translateY(-8px)}}
+
+/* ---- 17 Oct, second pass (user): the map alone, full width, then the stories ---- */
+.h-solo{display:block}
+.h-solo .map-wrap{height:100%;border-inline-end:0}
+@media (max-width:720px){.h-solo .map-wrap{height:68vh;min-height:360px}}
+/* The legend: pick whose, then that desk's own legend in full. */
+.h-leg-pick{display:flex;gap:.25rem;margin:.35rem 0 .1rem}
+.h-leg-pick button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .45rem;border:1px solid var(--t-line-strong);border-radius:3px;font:700 .56rem/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--t-muted)}
+.h-leg-pick button[aria-selected="true"]{color:var(--t-strong);border-color:var(--accent-ui);background:var(--t-surface-2)}
+.h-leg-pick button:focus-visible{outline:2px solid var(--accent-ui);outline-offset:1px}
+.h-leg-pick .flag{width:14px;height:10px}
+.legend.collapsed .h-leg-pick{display:none}
+/* A pin's note: the desk's own, and a link to the same pin on its desk. */
+.leaflet-popup-content .pop-desk{margin:.5rem 0 0;font-size:.72rem}
+.leaflet-popup-content .pop-desk a{color:#1a5fb4;font-weight:600;text-decoration:none}
+.leaflet-popup-content .pop-desk a:hover{text-decoration:underline}
+/* A callout by each war that leads to its desk (user, 17 Oct): a dot on its ground, a leader line, a card in open sea. */
+.h-co-wrap{background:none!important;border:0!important;overflow:visible}
+.h-co-dot{position:absolute;left:-6px;top:-6px;width:12px;height:12px;z-index:1;border:2px solid #fff;box-sizing:border-box;border-radius:50%;background:var(--accent-ui);box-shadow:0 0 0 2px rgba(10,10,12,.85);pointer-events:none}
+.h-co-dot::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1.5px solid var(--accent-ui);opacity:0;animation:hCoPing 2.6s ease-out infinite}
+.h-co-line{position:absolute;overflow:visible;pointer-events:none}
+.h-co-line{left:0;top:0}
+.h-co-line path{stroke:var(--accent-ui);stroke-width:1.5;fill:none;opacity:.95;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+.h-co{position:absolute;display:flex;align-items:stretch;min-width:190px;text-decoration:none;color:#f5efe8;pointer-events:auto;
+  background:linear-gradient(180deg,rgba(26,24,24,.95),rgba(14,13,14,.95));border:1px solid rgba(255,255,255,.14);border-radius:3px;
+  box-shadow:0 10px 26px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.06) inset;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,opacity .25s}
+.h-co-rb{transform:translate(-22px,0)}
+.h-co-rt{transform:translate(-22px,-100%)}
+.h-co-lb{transform:translate(calc(-100% + 22px),0)}
+.h-co-lt{transform:translate(calc(-100% + 22px),-100%)}
+.h-co-flag{display:flex;align-items:center;padding:0 0 0 .6rem;flex:none}
+.h-co-flag .flag{width:30px;height:20px;display:block;border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.18)}
+.h-co-body{display:flex;flex-direction:column;gap:.18rem;padding:.5rem .7rem .5rem .6rem;flex:1}
+.h-co-kick{display:inline-flex;align-items:center;gap:.35rem;font:700 .52rem/1 var(--f-body);letter-spacing:.16em;text-transform:uppercase;color:#cfc4b8}
+.h-co-live{width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.6);animation:hCoLive 1.8s ease-out infinite}
+.h-co b{font:700 .95rem/1.1 var(--f-head,inherit);letter-spacing:.005em;color:#fff}
+.h-co-foot{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin-top:.1rem;padding-top:.3rem;border-top:1px solid rgba(255,255,255,.1);font:500 .62rem/1.2 var(--f-body);color:#bdb2a7}
+.h-co-foot em{font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.56rem;color:var(--accent-ui);white-space:nowrap}
+.h-co-foot em i{font-style:normal;display:inline-block;transition:transform .18s}
+.h-co:hover,.h-co:focus-visible{border-color:var(--accent-ui);box-shadow:0 14px 30px rgba(0,0,0,.55),0 0 0 1px var(--accent-ui)}
+.h-co:hover .h-co-foot em i,.h-co:focus-visible .h-co-foot em i{transform:translateX(3px)}
+.h-co:focus-visible{outline:none}
+.h-close-in .h-co,.h-close-in .h-co-line,.h-close-in .h-co-dot{opacity:0;pointer-events:none}
+@keyframes hCoPing{0%{opacity:.8;transform:scale(.6)}100%{opacity:0;transform:scale(1.6)}}
+@keyframes hCoLive{70%{box-shadow:0 0 0 6px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+@media (prefers-reduced-motion: reduce){.h-co-dot::after,.h-co-live{animation:none}}
+@media (max-width:720px){.h-co{min-width:0}.h-co-flag{padding-left:.4rem}.h-co-flag .flag{width:22px;height:15px}.h-co-body{padding:.32rem .5rem .34rem .45rem;gap:.1rem}.h-co b{font-size:.72rem}.h-co-kick{font-size:.46rem}.h-co-foot{font-size:.55rem;gap:.5rem}.h-co-foot>span{display:none}.h-co-foot{border-top:0;padding-top:0}}
+.h-co-foot>span{white-space:nowrap}

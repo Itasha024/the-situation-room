@@ -31,6 +31,7 @@ const DESK_HTML = `
     <span class="tf-label">Map:</span>
     <button type="button" id="btn-day-prev" class="day-nav" aria-label="Previous day"><span class="day-nav-arr" aria-hidden="true">←</span><span class="day-nav-txt">Back</span></button>
     <input type="date" id="map-date" min="2026-07-13" />
+    <span class="tf-range" id="tf-range" hidden><span class="tf-to" aria-hidden="true">to</span><input type="date" id="map-to" min="2026-07-13" aria-label="To" /></span>
     <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day"><span class="day-nav-txt">Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
     <button type="button" id="btn-day-today">Today</button>
     <span class="tf-sep" aria-hidden="true"></span>
@@ -38,10 +39,6 @@ const DESK_HTML = `
     <button type="button" id="btn-period" aria-expanded="false" aria-controls="tf-range" aria-label="Pick a period">Period</button>
   </div>
     <button type="button" class="rel-btn map-meth" id="btn-map-meth" aria-expanded="false" aria-haspopup="dialog">Map methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button>
-  <div class="tf-range" id="tf-range" hidden>
-    <label>From <input type="date" id="map-from" min="2026-07-13" /></label>
-    <label>To <input type="date" id="map-to" min="2026-07-13" /></label>
-  </div>
 </div>
 <main class="stage" id="stage">
   <section class="map-wrap" id="map-wrap">

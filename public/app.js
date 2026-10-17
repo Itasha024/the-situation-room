@@ -99,10 +99,142 @@ const EVENT_SVG = {
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 3h3.2v7.6h8.2V7.4L21 12l-5.6 4.6v-3.2H7.2V21H4zm-1 18.4h18V23H3z"/></svg>',
 };
 
+// A nuclear site hit (the Iran war): the trefoil.
+EVENT_SVG.nuclear = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="12" cy="12" r="2.3"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z" transform="rotate(120 12 12)"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z" transform="rotate(240 12 12)"/></g></svg>';
+
 /** Marker HTML: a floating pill that lifts off the map, with a fresh-event ring. */
 function eventIconHtml(cat, fresh, title) {
   const svg = EVENT_SVG[cat] || EVENT_SVG.combat;
   return `<div class="ev ${cat}${fresh || ''}" title="${title || ''}"><span class="ev-glyph">${svg}</span><span class="ev-stem" aria-hidden="true"></span></div>`;
+}
+
+/*
+ * Every map's pin (user, 17 Oct): its mark says what happened, its colour who
+ * did it, on both desks and on the home page's map of every desk.
+ */
+/** True when a white mark stands out more on this colour than a near-black one (WCAG contrast). */
+function inkIsDark(hex) {
+  const h = String(hex || '').replace('#', '');
+  if (h.length < 6) return false;
+  const lin = (i) => { const c = parseInt(h.slice(i, i + 2), 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const l = 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
+  return 1.05 / (l + 0.05) > (l + 0.05) / 0.0625;
+}
+function sidePinHtml(cat, ink, fresh, title) {
+  const svg = EVENT_SVG[cat] || EVENT_SVG.strike;
+  return `<div class="ev ${cat}${fresh || ''}${inkIsDark(ink) ? ' ink-light' : ''}" style="--ev-ink:${ink}" title="${title || ''}"><span class="ev-glyph">${svg}</span><span class="ev-stem" aria-hidden="true"></span></div>`;
+}
+function sidePinIcon(cat, ink, fresh, title) {
+  return L.divIcon({ className: 'ev-wrap', html: sidePinHtml(cat, ink, fresh, title), iconSize: [34, 42], iconAnchor: [17, 40], popupAnchor: [0, -34] });
+}
+/** The marks' shapes for a canvas, read from the same drawings. */
+const PIN_PATHS = {};
+function pinPaths(cat) {
+  if (PIN_PATHS[cat]) return PIN_PATHS[cat];
+  const out = [];
+  for (const m of (EVENT_SVG[cat] || EVENT_SVG.strike).matchAll(/<(path|circle)\b([^>]*)>/g)) {
+    const get = (k) => (new RegExp(`\\b${k}="([^"]*)"`).exec(m[2]) || [])[1];
+    let d = get('d');
+    if (m[1] === 'circle') { const cx = +get('cx'), cy = +get('cy'), r = +get('r'); d = `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0z`; }
+    const rot = /rotate\(([-\d.]+)/.exec(get('transform') || '');
+    out.push({ p: new Path2D(d), stroke: get('fill') === 'none', w: Number(get('stroke-width')) || 1.7, rot: rot ? Number(rot[1]) : 0, odd: get('fill-rule') === 'evenodd' });
+  }
+  return (PIN_PATHS[cat] = out);
+}
+/*
+ * The same pin drawn on one canvas, for the whole war's thousands (17 Oct: the
+ * plain dots there read as another map): the disc in the side's colour, the
+ * mark on it, a white rim.
+ */
+let PinMarkClass = null;
+/* Each look (mark, colour, size) is drawn once and stamped for every pin that has it: the whole war's tens of thousands draw at once. */
+const PIN_SPRITES = new Map();
+function pinSprite(cat, ink, R) {
+  const dpr = Math.min(3, Math.ceil(window.devicePixelRatio || 1));
+  const key = `${cat}|${ink}|${R}|${dpr}`;
+  let c = PIN_SPRITES.get(key);
+  if (c) return c;
+  const size = (R + 2) * 2;
+  c = document.createElement('canvas');
+  c.width = c.height = size * dpr;
+  c.css = size;
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const m = size / 2;
+  ctx.beginPath();
+  ctx.arc(m, m, R + 1, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(m, m, R, 0, Math.PI * 2);
+  ctx.fillStyle = ink;
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,.92)';
+  ctx.stroke();
+  const s = (R * 1.2) / 24;
+  ctx.translate(m - 12 * s, m - 12 * s);
+  ctx.scale(s, s);
+  const g = inkIsDark(ink) ? '#fff' : '#0b0f14';
+  for (const x of pinPaths(cat)) {
+    ctx.save();
+    if (x.rot) { ctx.translate(12, 12); ctx.rotate((x.rot * Math.PI) / 180); ctx.translate(-12, -12); }
+    if (x.stroke) { ctx.lineWidth = x.w; ctx.lineCap = 'round'; ctx.strokeStyle = g; ctx.stroke(x.p); }
+    else { ctx.fillStyle = g; ctx.fill(x.p, x.odd ? 'evenodd' : 'nonzero'); }
+    ctx.restore();
+  }
+  PIN_SPRITES.set(key, c);
+  return c;
+}
+function pinMark(ll, o) {
+  if (!PinMarkClass) {
+    PinMarkClass = L.CircleMarker.extend({
+      _updatePath() {
+        const r = this._renderer;
+        if (!r || !r._drawing || this._empty()) return;
+        const p = this._point, op = this.options;
+        const sp = pinSprite(op.cat, op.ink, op.radius);
+        r._ctx.drawImage(sp, p.x - sp.css / 2, p.y - sp.css / 2, sp.css, sp.css);
+      },
+    });
+  }
+  return new PinMarkClass(ll, { radius: 8, stroke: false, fill: true, ...o });
+}
+/* Who acted on the Yemen map, in the colours of the ground each side holds where it holds any (user, 17 Oct). */
+const YEMEN_PIN_SIDES = () => [
+  ['houthi', COLORS.houthi, 'Houthis'],
+  ['government', COLORS.plc, 'Government forces'],
+  ['southern', '#c084fc', 'Southern forces'],
+  ['saudi', COLORS.saudi, 'Saudi-led coalition'],
+  ['us', '#2563eb', 'US'],
+  ['israel', '#f472b6', 'Israel'],
+  ['unclear', '#94a3b8', 'Not stated'],
+];
+const yemenSidesOn = {};
+const yemenSideOf = (ev) => (YEMEN_PIN_SIDES().some(([k]) => k === ev.actor) ? ev.actor : 'unclear');
+const yemenInk = (ev) => YEMEN_PIN_SIDES().find(([k]) => k === yemenSideOf(ev))[1];
+/* What happened on the Iran map: the researched pins carry it (map-pack.cjs), the live ones are read the same way. */
+const IRAN_KINDS = ['strike', 'combat', 'vessel', 'port', 'nuclear'];
+const IRAN_NUCLEAR_RE = /\bnuclear (?:site|facilit|plant|reactor|complex)|\b(?:fordow|natanz|bushehr|arak|isfahan nuclear|enrichment (?:site|plant|facilit))/i;
+const IRAN_ENERGY_RE = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel (?:depot|tank|storage)|storage tank|pipeline|power (?:station|plant)|gas (?:field|plant|facilit)|petrochem|\blng\b|desalination|electricity (?:station|grid)|south pars|kharg|ras tanura|abqaiq/i;
+const IRAN_GROUND_RE = /\b(?:artillery|shelling|tanks? fire|sniper|clash|clashes|ground (?:assault|incursion|raid)|gunfight|firefight)\b/i;
+function iranKindOf(ev) {
+  if (typeof ev.kind === 'number') return IRAN_KINDS[ev.kind] || 'strike';
+  const s = `${ev.label || ''} ${ev.place || ''}`;
+  if (IRAN_NUCLEAR_RE.test(s)) return 'nuclear';
+  if (ev.type === 'port' || (IRAN_ENERGY_RE.test(s) && !/tanker/i.test(s))) return 'port';
+  if (ev.type === 'vessel' || ev.sea) return 'vessel';
+  if (ev.type === 'combat' || IRAN_GROUND_RE.test(s)) return 'combat';
+  return 'strike';
+}
+const IRAN_KIND_LABEL = { strike: 'Strike or launch', combat: 'Ground fighting', vessel: 'At sea', port: 'Energy site hit', nuclear: 'Nuclear site hit' };
+/** A legend row for a kind of event: the mark on a plain disc, since the colour now says who acted. */
+function kindLegendRow(cat, label, on, attr) {
+  return `<button type="button" class="leg-item${on ? ' on' : ''}" ${attr} aria-pressed="${on ? 'true' : 'false'}"><span class="leg-ico kind">${EVENT_SVG[cat] || ''}</span>${escapeHtml(label)}</button>`;
+}
+/** A legend row for a side: its colour with a tick. */
+function sideLegendRow(color, label, on, attr) {
+  return `<button type="button" class="leg-item${on ? ' on' : ''}" ${attr} aria-pressed="${on ? 'true' : 'false'}"><span class="sw${inkIsDark(color) ? '' : ' ink-dark'}" style="background:${color}"><span class="tick">✓</span></span>${escapeHtml(label)}</button>`;
 }
 
 const LABELS = {
@@ -3660,6 +3792,16 @@ function flashCard(el) {
  * "#r=<fp>" in the address (the Iran desk's "Full report on the Yemen desk"
  * link): that card is shown, opened and flashed, once.
  */
+let pendingPin = null;
+function openPendingPin() {
+  if (!pendingPin) return;
+  if (Date.now() > pendingPin.until) { pendingPin = null; return; }
+  const fp = pendingPin.fp;
+  const pin = mappableByFp.get(fp) || mappableByFp.get(fp.split('-pin-')[0]);
+  if (!pin) return;
+  pendingPin = null;
+  setTimeout(() => goToPinOnMainMap(pin, { note: true }), 0);
+}
 function revealHashCard() {
   // "#n=<set>" (the Iran desk's link to Saudi casualties in the Yemen conflict): that numbers set, shown once.
   const n = /^#n=(\w+)$/.exec(location.hash || '');
@@ -3669,6 +3811,15 @@ function revealHashCard() {
     renderCasualties();
     const box = document.getElementById('casualties');
     if (box) setTimeout(() => window.scrollTo({ top: box.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' }), 150);
+    return;
+  }
+  // "#pin=<fp>" (a pin's note on the home page's map links to the pin here): the map goes to its day and opens it.
+  const pm = /^#pin=([^&]+)/.exec(location.hash || '');
+  if (pm && data) {
+    history.replaceState(null, '', location.pathname + location.search);
+    // Opened once the map has it: the desk's live pins and the whole war's come in after the page.
+    pendingPin = { fp: decodeURIComponent(pm[1]), until: Date.now() + 60_000 };
+    loadAllPins().then(() => { if (pendingPin) applyMapFilters(); });
     return;
   }
   const m = /^#r=(.+)$/.exec(location.hash || '');
@@ -5020,7 +5171,7 @@ function openPinSheet(pin, anchor) {
       const ymd = jerusalemYmd(pin.at);
       [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
         const me = p.fp === pin.fp;
-        const icon = L.divIcon({ className: 'ev-wrap', html: eventIconHtml(p.mapCat, me ? ' pin-pulse' : '', escapeHtml(p.label || '')), iconSize: [34, 42], iconAnchor: [17, 40] });
+        const icon = L.divIcon({ className: 'ev-wrap', html: sidePinHtml(p.mapCat, yemenInk(p), me ? ' pin-pulse' : '', escapeHtml(p.label || '')), iconSize: [34, 42], iconAnchor: [17, 40] });
         L.marker([p.lat, p.lng], { icon, zIndexOffset: me ? 2000 : 0 }).bindPopup(popupHtml(p), { maxWidth: 260, className: popLeanClass(p) }).addTo(m);
       });
     },
@@ -5073,6 +5224,7 @@ function buildMapPins(d) {
     const keep = String(pin.text || '').length > String(prev.text || '').length ? pin : prev;
     const other = keep === pin ? prev : pin;
     if ((!keep.media || !keep.media.length) && other.media && other.media.length) keep.media = other.media;
+    if ((!keep.actor || keep.actor === 'unclear') && other.actor) keep.actor = other.actor;
     byFp.set(fp, keep);
   };
 
@@ -5119,6 +5271,7 @@ function buildMapPins(d) {
       priority: r.priority || 2,
       media: collectMedia(r),
       live: !!r.live,
+      actor: r.actor,
     });
   });
 
@@ -5155,6 +5308,7 @@ function buildMapPins(d) {
       priority: ev.priority || 2,
       mapOnly: !!ev.mapOnly,
       media: collectMedia(ev),
+      actor: ev.actor,
       // Headline and body together: the attack is often named only in the headline.
       classText: [rawLabel, blob].filter(Boolean).join('\n'),
     });
@@ -5266,14 +5420,16 @@ function placeMapPin(ev) {
   const cat = ev.mapCat || classifyForMap(ev.text || ev.label || '', t) || pinCategory(t);
   if (!['strike', 'combat', 'vessel', 'port'].includes(cat)) return;
   if (!layersOn[cat]) return;
+  if (yemenSidesOn[yemenSideOf(ev)] === false) return;
   const key = pinPaintKey(ev);
   if (paintedPinKeys.has(key)) return;
   paintedPinKeys.add(key);
   const ageH = (Date.now() - new Date(ev.at).getTime()) / 3600000;
   const fresh = ageH <= 6 ? ' fresh' : '';
+  // The mark says what happened, the colour who did it (user, 17 Oct).
   const icon = L.divIcon({
     className: 'ev-wrap',
-    html: eventIconHtml(cat, fresh, escapeHtml(ev.label || '')),
+    html: sidePinHtml(cat, yemenInk(ev), fresh, escapeHtml(ev.label || '')),
     iconSize: [34, 42],
     iconAnchor: [17, 40],
   });
@@ -5350,6 +5506,7 @@ function renderEvents(d) {
     });
   }
   drawIslands(d);
+  openPendingPin();
 }
 
 function fmtDay(ymd) {
@@ -6136,11 +6293,7 @@ function renderLegend(d) {
       <div class="leg-sec">Territory</div>
       ${controlRows}
       ${row('saudi', COLORS.saudi, 'Saudi Arabia')}
-      <div class="leg-sec">Events</div>
-      ${row('combat', EVENT_COLORS.combat, 'Ground fighting', true)}
-      ${row('strike', EVENT_COLORS.strike, 'Launch/strike/alert', true)}
-      ${row('vessel', EVENT_COLORS.vessel, 'Maritime incident', true)}
-      ${row('port', EVENT_COLORS.port, 'Energy incident', true)}
+      ${yemenEventRows()}
     </div>`;
   fitLegend();
   if (!legendFitWired) {
@@ -6155,6 +6308,12 @@ function renderLegend(d) {
   legend.querySelectorAll('.leg-item').forEach((btn) => {
     btn.onclick = (ev) => {
       if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+      if (btn.dataset.side) {
+        yemenSidesOn[btn.dataset.side] = yemenSidesOn[btn.dataset.side] === false;
+        renderLegend(d);
+        applyMapFilters();
+        return;
+      }
       const k = btn.dataset.layer;
       if (!k || !(k in layersOn)) return;
       layersOn[k] = !layersOn[k];
@@ -6162,6 +6321,14 @@ function renderLegend(d) {
       applyMapFilters();
     };
   });
+}
+/** The Yemen legend's events: what happened (the mark), then who acted (the colour). The home page's map shows the same rows. */
+const YEMEN_KINDS = [['combat', 'Ground fighting'], ['strike', 'Launch/strike/alert'], ['vessel', 'Maritime incident'], ['port', 'Energy incident']];
+function yemenEventRows(kindOn = (k) => !!layersOn[k], sideOn = (k) => yemenSidesOn[k] !== false) {
+  return `<div class="leg-sec">Events</div>
+      ${YEMEN_KINDS.map(([k, n]) => kindLegendRow(k, n, kindOn(k), `data-layer="${k}"`)).join('')}
+      <div class="leg-sec">Who acted</div>
+      ${YEMEN_PIN_SIDES().map(([k, c, n]) => sideLegendRow(c, n, sideOn(k), `data-side="${k}"`)).join('')}`;
 }
 
 function syncDayNav() {
@@ -6226,6 +6393,9 @@ function wireUi(d) {
     dateInp.max = todayYmd();
     dateInp.value = mapDate;
     dateInp.onchange = () => {
+      // While a period is being picked, this box is its first day.
+      const box = document.getElementById('tf-range');
+      if (box && !box.hidden) { setRange(); return; }
       enterDayMode(dateInp.value);
       dateInp.value = mapDate;
       markDayBtn(null);
@@ -6279,11 +6449,12 @@ function wireUi(d) {
     fillMapDay();
   };
   // A period (user, 16 Oct), as the Iran desk's: from one day to another, both kept within the conflict.
+  // The period's first day is the day's own date box, its last a second box beside it (user, 17 Oct).
   const per = document.getElementById('btn-period');
   const box = document.getElementById('tf-range');
-  const from = document.getElementById('map-from');
+  const from = document.getElementById('map-from') || dateInp;
   const to = document.getElementById('map-to');
-  const setRange = () => {
+  function setRange() {
     if (!from || !to || !from.value || !to.value) return;
     let a = clampMapDate(from.value), b = clampMapDate(to.value);
     if (a > b) [a, b] = [b, a];
@@ -6317,10 +6488,14 @@ function wireUi(d) {
           to.value = end;
           setRange();
         }
-      } else box.hidden = true;
+      } else {
+        // Closing the period goes back to today.
+        box.hidden = true;
+        if (todayBtn) { todayBtn.onclick(); return; }
+      }
       syncDayNav();
     };
-    from.onchange = setRange;
+    if (from !== dateInp) from.onchange = setRange;
     to.onchange = setRange;
   }
 
@@ -6721,6 +6896,8 @@ function installDeskPicker() {
     if (!a) return;
     e.preventDefault();
     if (a.getAttribute('aria-current')) { open(false); return; }
+    // The page goes over to the desk in one cross-fade where the browser can (desk.css @view-transition), else a short fade out.
+    if ('onpagereveal' in window) { location.href = a.href; return; }
     document.documentElement.classList.add('desk-leaving');
     setTimeout(() => { location.href = a.href; }, 180);
   });
@@ -7255,9 +7432,11 @@ const IRAN_PIN_SIDES = [
 ];
 const IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));
 const IRAN_MAP_FROM = '2026-02-28';
-const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), where: { land: true, sea: true }, collapsed: false, day: null, range: null, countries: null, focus: false };
+const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), kinds: {}, where: { land: true, sea: true }, collapsed: false, day: null, range: null, countries: null, focus: false };
 /** The day an attack belongs to, in Israel and Iran's part of the world: the researched ones carry only their day. */
-const iranDayOf = (ev) => (ev.dayOnly ? String(ev.at).slice(0, 10) : new Date(ev.at).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }));
+// One formatter, and each pin's day kept once worked out: the whole war's 22,000 pins are filtered by day on every redraw.
+const IRAN_DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' });
+const iranDayOf = (ev) => ev._d || (ev._d = ev.dayOnly ? String(ev.at).slice(0, 10) : IRAN_DAY_FMT.format(new Date(ev.at)));
 const iranToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
 /**
  * The map's day controls, as the Yemen desk's (user, 9 Oct): back and forward
@@ -7273,12 +7452,13 @@ function wireIranMapTools() {
   // A period (user, 12 Oct): from one day to another, both kept within the war.
   const per = document.getElementById('btn-period');
   const box = document.getElementById('tf-range');
-  const from = document.getElementById('map-from');
+  // The period's first day is the day's own date box, its last a second box beside it (user, 17 Oct).
+  const from = document.getElementById('map-from') || inp;
   const to = document.getElementById('map-to');
   const shift = (ymd, n) => { const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const sync = () => {
     const max = iranToday();
-    if (inp) { inp.min = IRAN_MAP_FROM; inp.max = max; inp.value = iranPins.day || max; }
+    if (inp) { inp.min = IRAN_MAP_FROM; inp.max = max; inp.value = iranPins.range ? iranPins.range.from : iranPins.day || max; }
     if (prev) prev.disabled = !!iranPins.day && iranPins.day <= IRAN_MAP_FROM;
     // Forward shows only on a day before today, as on the Yemen map (user, 17 Oct).
     if (next) next.hidden = !!iranPins.range || !iranPins.day || iranPins.day >= max;
@@ -7297,13 +7477,13 @@ function wireIranMapTools() {
     sync();
     drawIranPins();
   };
-  if (inp) inp.onchange = () => go(inp.value || null);
+  if (inp) inp.onchange = () => { if (box && !box.hidden) setRange(); else go(inp.value || null); };
   if (prev) prev.onclick = () => go(shift(iranPins.day || iranToday(), iranPins.day ? -1 : 0));
   if (next) next.onclick = () => { if (iranPins.day) go(shift(iranPins.day, 1)); };
   if (today) today.onclick = (ev) => { ev.preventDefault(); go(iranToday()); };
   if (all) all.onclick = (ev) => { ev.preventDefault(); go(null); };
   const keep = (v) => { const max = iranToday(); return v < IRAN_MAP_FROM ? IRAN_MAP_FROM : v > max ? max : v; };
-  const setRange = () => {
+  function setRange() {
     if (!from || !to || !from.value || !to.value) return;
     let a = keep(from.value), b = keep(to.value);
     if (a > b) [a, b] = [b, a];
@@ -7314,6 +7494,8 @@ function wireIranMapTools() {
   };
   if (per && box) per.onclick = (ev) => {
     ev.preventDefault();
+    // Closing the period goes back to today.
+    if (!box.hidden) { go(iranToday()); return; }
     box.hidden = !box.hidden;
     // It opens on the last seven days, or on the day shown, and shows them at once.
     if (!box.hidden && !iranPins.range) {
@@ -7324,8 +7506,9 @@ function wireIranMapTools() {
     }
     sync();
   };
-  if (from) from.onchange = setRange;
+  if (from && from !== inp) from.onchange = setRange;
   if (to) to.onchange = setRange;
+  iranPins.sync = sync;
   sync();
   const fb = document.getElementById('btn-focus-map');
   if (fb && fb.dataset.wired !== '1') {
@@ -7502,7 +7685,13 @@ async function loadIranPins() {
     // The desk's own pins from the day it began reading; the researched ones before it.
     const live = (d.events || []).filter(iranPinShown);
     const first = live.reduce((m, e) => Math.min(m, Date.parse(e.at) || Infinity), Infinity);
-    const merge = () => { iranPins.events = [...(iranPins.past || []).filter((e) => Date.parse(e.at) < first), ...live]; drawIranPins(); };
+    const merge = () => {
+      iranPins.events = [...(iranPins.past || []).filter((e) => Date.parse(e.at) < first), ...live];
+      drawIranPins();
+      // The arenas' "Show on map" buttons need the pins.
+      if (iranBrief.b && !iranBrief.pinned) { iranBrief.pinned = true; renderIranBrief(); }
+      openIranHashPin();
+    };
     merge();
     if (!iranPins.past) { iranPins.past = await pastP; merge(); }
   } catch (e) { console.warn('iran pins', e); }
@@ -7518,9 +7707,9 @@ async function loadIranPast() {
     const res = await fetch(`/iran-map-pins.json?v=${IRAN_ASSET_V}`);
     if (!res.ok) return [];
     const d = await res.json();
-    const out = (d.pins || []).map(([md, actor, lat, lng, hm, sea], i) => ({
+    const out = (d.pins || []).map(([md, actor, lat, lng, hm, sea, kind], i) => ({
       // A researched attack with its own time (sirens, UKMTO) keeps it; the rest carry only their day.
-      fp: `rs#${i}`, ni: i, sea: !!sea, at: hm ? `${d.year}-${md}T${hm}:00Z` : `${d.year}-${md}T12:00:00+03:00`, dayOnly: !hm, researched: true, actor, type: 'strike', mapOnly: true,
+      fp: `rs#${i}`, ni: i, sea: !!sea, kind: typeof kind === 'number' ? kind : undefined, at: hm ? `${d.year}-${md}T${hm}:00Z` : `${d.year}-${md}T12:00:00+03:00`, dayOnly: !hm, researched: true, actor, type: 'strike', mapOnly: true,
       place: '', lat, lng, label: '', text: '', source: '', url: '', also: [],
     }));
     if (!iranPins.notesP) iranPins.notesP = loadIranNotes();
@@ -7570,6 +7759,7 @@ function renderIranLegend() {
     <div class="leg-body">
       <p class="leg-hint">Tick to show, untick to hide.</p>
       ${rows}
+      ${iranKindRows()}
       <p class="leg-sub">Where</p>
       ${[['land', 'On land'], ['sea', 'At sea']].map(([k, n]) => `<button type="button" class="leg-item leg-where${iranPins.where[k] ? ' on' : ''}" data-where="${k}" aria-pressed="${iranPins.where[k] ? 'true' : 'false'}"><span class="sw ink-dark" style="background:${k === 'sea' ? '#bfdbfe' : '#e7dcc8'}"><span class="tick">✓</span></span>${n}</button>`).join('')}
     </div>`;
@@ -7581,11 +7771,18 @@ function renderIranLegend() {
         iranPins.where[b.dataset.where] = !iranPins.where[b.dataset.where];
         renderIranLegend();
         await loadIranLand();
+      } else if (b.dataset.kind) {
+        iranPins.kinds[b.dataset.kind] = iranPins.kinds[b.dataset.kind] === false;
       } else iranPins.on[b.dataset.side] = !iranPins.on[b.dataset.side];
       drawIranPins();
     };
   });
   try { L.DomEvent.disableClickPropagation(legend); L.DomEvent.disableScrollPropagation(legend); } catch (e) {}
+}
+/** The Iran legend's kinds of event (the marks). The home page's map shows the same rows. */
+function iranKindRows(on = (k) => iranPins.kinds[k] !== false) {
+  return `<p class="leg-sub">What happened</p>
+      ${IRAN_KINDS.map((k) => kindLegendRow(k, IRAN_KIND_LABEL[k], on(k), `data-kind="${k}"`)).join('')}`;
 }
 /** The note: the report as the card tells it, its time and place, its source. Nothing more to open. */
 function iranPopupHtml(ev) {
@@ -7610,7 +7807,7 @@ function drawIranPins() {
   const inTime = (ev) => { const d = iranDayOf(ev); return r ? d >= r.from && d <= r.to : !iranPins.day || d === iranPins.day; };
   const w = iranPins.where;
   const inWhere = (ev) => (w.land && w.sea) || (iranAtSea(ev) ? w.sea : w.land);
-  const shown = iranPins.events.filter((ev) => iranPins.on[iranSideOf(ev)] !== false && inTime(ev) && inWhere(ev));
+  const shown = iranPins.events.filter((ev) => iranPins.on[iranSideOf(ev)] !== false && iranPins.kinds[iranKindOf(ev)] !== false && inTime(ev) && inWhere(ev));
   const key = shown.map((e) => e.fp).join('|');
   if (!map || key === iranPins.drawn) return;
   iranPins.drawn = key;
@@ -7635,18 +7832,14 @@ function drawIranPins() {
     const ev = n ? { ...ev0, lat, lng } : ev0;
     const ageH = (Date.now() - new Date(ev.at).getTime()) / 3600000;
     if (many) {
-      const m = L.circleMarker([ev.lat, ev.lng], { renderer: iranPins.canvas, radius: 6, weight: 2, color: '#fff', fillColor: IRAN_PIN_INK[iranSideOf(ev)], fillOpacity: 1 })
+      const m = pinMark([ev.lat, ev.lng], { renderer: iranPins.canvas, cat: iranKindOf(ev), ink: IRAN_PIN_INK[iranSideOf(ev)] })
         .bindPopup(() => iranPopupHtml(ev), { maxWidth: 300, maxHeight: 360, autoPan: true });
       m.addTo(iranPins.layer);
       iranPins.byFp.set(String(ev.fp).split('-pin-')[0], m);
       continue;
     }
-    const icon = L.divIcon({
-      className: 'ir-dot-wrap',
-      html: `<span class="ir-dot${ageH <= 6 ? ' fresh' : ''}" style="--ink:${IRAN_PIN_INK[iranSideOf(ev)]}" title="${escapeHtml(ev.label || '')}"></span>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
-    });
+    // The mark says what happened, the colour who did it (user, 17 Oct), as on the Yemen map.
+    const icon = sidePinIcon(iranKindOf(ev), IRAN_PIN_INK[iranSideOf(ev)], ageH <= 6 ? ' fresh' : '', escapeHtml(ev.label || ''));
     const m = L.marker([ev.lat, ev.lng], { icon, zIndexOffset: Math.round(1000 - ageH), riseOnHover: true })
       // The note is written when it opens: thousands of researched pins draw at once.
       .bindPopup(() => iranPopupHtml(ev), { maxWidth: 300, maxHeight: 360, autoPan: true });
@@ -8185,11 +8378,13 @@ function renderIranBrief() {
   const wrap = document.getElementById('fronts-wrap');
   const arenas = Array.isArray(b.arenas) ? b.arenas : [];
   if (!wrap || !arenas.length) return;
-  const cards = arenas.map((a) => {
+  const cards = arenas.map((a, i) => {
     const pts = Array.isArray(a.points) ? a.points : [];
     const old = pts.length && a.lastNewsAt && a.lastNewsAt !== b.updatedAt;
+    // "Show on map" where the arena's reports have pins (user, 17 Oct), as on the Yemen desk's fronts.
+    const onMap = iranArenaPins(a.refs).length ? `<button type="button" class="sit-map-btn front-map-btn ir-arena-map" data-i="${i}">Show on map</button>` : '';
     return `<article class="front-card">
-      <div class="front-head"><strong>${escapeHtml(a.name)}</strong></div>
+      <div class="front-head"><strong>${escapeHtml(a.name)}</strong>${onMap}</div>
       ${pts.length ? `<div class="front-pts">${pointsHtml(pts, a.refs, { show: 1, toggle: pts.length > 1 ? FRONT_BTN : '' })}</div>` : '<p class="front-asof">Nothing reported here yet.</p>'}
       ${old ? `<p class="front-asof">${escapeHtml(T('As of {t}, {d}', { t: fmtClock(a.lastNewsAt), d: new Date(a.lastNewsAt).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ }) }))}</p>` : ''}
     </article>`;
@@ -8205,7 +8400,46 @@ function renderIranBrief() {
   box.querySelectorAll('.front-card').forEach((card, i) => {
     wireBoxToggle(card, card.querySelector('.toggle-front'), 'open');
     wireRefs(card, arenas[i].refs);
+    const mb = card.querySelector('.ir-arena-map');
+    if (mb) mb.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); showIranArena(arenas[i].refs); };
   });
+}
+/** "#pin=<fp>" (a pin's note on the home page's map links to the pin here): its day on the map, the pin open. */
+function openIranHashPin() {
+  const pm = /^#pin=([^&]+)/.exec(location.hash || '');
+  if (!pm) return;
+  const fp = decodeURIComponent(pm[1]);
+  const ev = iranPins.events.find((e) => String(e.fp) === fp || String(e.fp).split('-pin-')[0] === fp.split('-pin-')[0]);
+  if (!ev) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  iranPins.day = iranDayOf(ev);
+  iranPins.range = null;
+  if (iranPins.sync) iranPins.sync();
+  drawIranPins();
+  showIranPin(String(ev.fp).split('-pin-')[0]);
+}
+/** The pins of an arena's reports. */
+function iranArenaPins(refs) {
+  const fps = new Set((refs || []).map((r) => String((r && r.fp) || '')).filter(Boolean));
+  return fps.size ? iranPins.events.filter((e) => fps.has(String(e.fp).split('-pin-')[0])) : [];
+}
+/** An arena on the map: the days its pins fall on, the map round them, each pin pulsing. */
+function showIranArena(refs) {
+  const evs = iranArenaPins(refs);
+  if (!evs.length || !map) return;
+  const days = evs.map(iranDayOf).sort();
+  if (days[0] === days[days.length - 1]) { iranPins.day = days[0]; iranPins.range = null; }
+  else { iranPins.day = null; iranPins.range = { from: days[0], to: days[days.length - 1] }; }
+  if (iranPins.sync) iranPins.sync();
+  drawIranPins();
+  scrollToMap();
+  setTimeout(() => {
+    try { map.invalidateSize(); } catch (e) {}
+    const ms = evs.map((e) => iranPins.byFp.get(String(e.fp).split('-pin-')[0])).filter(Boolean);
+    if (!ms.length) return;
+    map.once('moveend', () => ms.forEach((m) => pulsePin(m.getElement && m.getElement())));
+    try { map.flyToBounds(L.latLngBounds(ms.map((m) => m.getLatLng())).pad(0.4), { maxZoom: 7, duration: 0.8 }); } catch (e) {}
+  }, 380);
 }
 
 window.startYemenDesk = startYemenDesk;

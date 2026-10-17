@@ -53,15 +53,12 @@ const IRAN_HTML = `
     <span class="tf-label">Map:</span>
     <button type="button" id="btn-day-prev" class="day-nav" aria-label="Previous day"><span class="day-nav-arr" aria-hidden="true">←</span><span class="day-nav-txt">Back</span></button>
     <input type="date" id="map-date" min="2026-02-28" aria-label="Day" />
+    <span class="tf-range" id="tf-range" hidden><span class="tf-to" aria-hidden="true">to</span><input type="date" id="map-to" min="2026-02-28" aria-label="To" /></span>
     <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day"><span class="day-nav-txt">Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
     <button type="button" id="btn-day-today">Today</button>
     <span class="tf-sep" aria-hidden="true"></span>
     <button type="button" id="btn-conflict-all" class="on" aria-label="The whole war, since 28 Feb 2026"><span class="tf-long">Whole war</span><span class="tf-short">All</span></button>
     <button type="button" id="btn-period" aria-expanded="false" aria-controls="tf-range" aria-label="Pick a period">Period</button>
-  </div>
-  <div class="tf-range" id="tf-range" hidden>
-    <label>From <input type="date" id="map-from" min="2026-02-28" /></label>
-    <label>To <input type="date" id="map-to" min="2026-02-28" /></label>
   </div>
 </div>
 <main class="stage" id="stage">

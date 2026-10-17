@@ -28,12 +28,19 @@ for (const p of base) { const k = String(p.place || '').toLowerCase().trim(); co
 const lookup = (name) => { const m = TOWN.get(name.toLowerCase()); if (!m) return null; const [at] = [...m].sort((a, b) => b[1] - a[1])[0]; return at.split(',').map(Number); };
 let seaN = 0;
 let movedN = 0;
-// [MM-DD, actor, lat, lng, HH:MM (UTC) or 0, 1 at sea or 0]
+// What happened, for the pin's mark (user, 17 Oct: the mark says what happened, the colour who did it):
+// 0 a strike or launch, 1 fighting on the ground, 2 at sea, 3 an energy site hit, 4 a nuclear site hit.
+// The same words as public/app.js iranKindOf, which reads the live pins.
+const NUCLEAR = /\bnuclear (?:site|facilit|plant|reactor|complex)|\b(?:fordow|natanz|bushehr|arak|isfahan nuclear|enrichment (?:site|plant|facilit))/i;
+const ENERGY = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel (?:depot|tank|storage)|storage tank|pipeline|power (?:station|plant)|gas (?:field|plant|facilit)|petrochem|\blng\b|desalination|electricity (?:station|grid)|south pars|kharg|ras tanura|abqaiq/i;
+const GROUND = /\b(?:artillery|shelling|tanks? fire|sniper|clash|clashes|ground (?:assault|incursion|raid)|gunfight|firefight)\b/i;
+const kindOf = (p, sea) => { const s = `${p.label || ''} ${p.place || ''}`; return NUCLEAR.test(s) ? 4 : ENERGY.test(s) && !/tanker/i.test(s) ? 3 : sea ? 2 : GROUND.test(s) ? 1 : 0; };
+// [MM-DD, actor, lat, lng, HH:MM (UTC) or 0, 1 at sea or 0, kind]
 const pins = base.map((p) => {
   const w = SEA.place(p, lookup);
   if (w.sea) seaN++;
   if (w.moved) { movedN++; if (process.env.SEA_DBG) console.log('[sea]', p.fp, '|', p.place, '|', w.moved, '|', p.lat, p.lng, '->', w.lat, w.lng); }
-  return [p.day.slice(5), actorOf(p), w.lat, w.lng, p.at ? new Date(p.at).toISOString().slice(11, 16) : 0, w.sea ? 1 : 0];
+  return [p.day.slice(5), actorOf(p), w.lat, w.lng, p.at ? new Date(p.at).toISOString().slice(11, 16) : 0, w.sea ? 1 : 0, kindOf(p, w.sea)];
 });
 // A note's words (user, 12 Oct): no ", X reports" (the source is linked under it), no "Its attackers
 // say they struck", no "attack claim", and the country, not "Gulf", where it is known.

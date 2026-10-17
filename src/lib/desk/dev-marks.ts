@@ -89,6 +89,49 @@ export function actorOf(r: Pick<LiveReport, "summary" | "text">, kind: DevKind):
   return side;
 }
 
+/**
+ * The side a Yemen map pin is coloured by (user, 17 Oct: the mark says what
+ * happened, the colour who did it): the developments' rule, Israel added, and
+ * null when the report names no one (the pin is then "not stated").
+ */
+export type PinSide = DevSide | "israel";
+/** A side named as the one hit or killed ("Houthi fighters killed", "bodies of Houthi fighters"): not who acted. */
+const VICTIM_AFTER = /^(?:[\w-]+\s+)?(?:fighters?|members?|elements?|militants?|militiamen|soldiers?|troops|personnel|commanders?|leaders?|officers?)?\s*(?:were |was )?(?:killed|wounded|dead|died|bodies|casualties|losses|captured|taken prisoner|surrender\w*)\b/i;
+/** The Houthis' own outlets call their forces "Yemeni" ("Yemeni ballistic missiles target…"). */
+const HOUTHI_YEMENI = /\bYemeni (?:ballistic |cruise |winged |hypersonic )?(?:missiles?|drones?|rockets?)\b|\bYemeni (?:armed|naval|missile) forces\b|\bSanaa forces\b/i;
+const PIN_SIDES: [PinSide, RegExp][] = [["israel", /\b(Israel(?:i)?|IDF)\b/g], ...SIDE_RE];
+/** The first side the words name as the one acting: not one named as the target or the dead. */
+function firstSide(s: string): PinSide | null {
+  let best: { side: PinSide; at: number } | null = null;
+  for (const [side, re] of PIN_SIDES) {
+    for (const m of s.matchAll(new RegExp(re.source, re.flags))) {
+      const at = m.index ?? 0;
+      if (OBJECT_BEFORE.test(s.slice(Math.max(0, at - 30), at))) continue;
+      if (VICTIM_AFTER.test(s.slice(at + m[0].length).trimStart())) continue;
+      if (!best || at < best.at) best = { side, at };
+      break;
+    }
+  }
+  return best?.side ?? null;
+}
+function sideIn(s: string): PinSide | null {
+  const y = s.search(HOUTHI_YEMENI);
+  if (y >= 0 && !firstSide(s.slice(0, y))) return "houthi";
+  return firstSide(s);
+}
+export function pinSideOf(e: { type?: string | null; label?: string | null; text?: string | null }): PinSide | null {
+  const full = String(e.label || "");
+  const rep = repelAttacker(full);
+  if (rep) return rep;
+  // "Aden security: two Houthi missiles land…": the words after the speaker first.
+  const colon = /^[^:]{2,60}:\s+/.exec(full);
+  const side = (colon ? sideIn(full.slice(colon[0].length)) : null) ?? sideIn(full);
+  if (side) return side;
+  // Only the coalition, the US and Israel fly strike aircraft over Yemen.
+  if (/\b(air ?strikes?|air ?raids?|warplanes?|fighter jets?|cluster bombs?)\b/i.test(full)) return /\b(US|U\.S\.|American)\b/.test(full) ? "us" : "saudi";
+  return sideIn(String(e.text || "").slice(0, 300));
+}
+
 /** "shoot down a Saudi ScanEagle drone", "intercepted two Houthi missiles". */
 const DOWNED_RE = /\b(?:shot|shoots?|shooting|downed|downs?|intercept\w*)\s+(?:down\s+)?(?:an?\s+|the\s+|two\s+|three\s+|several\s+|\d+\s+)?(Saudi|coalition|US|U\.S\.|American|Houthis?|Emirati)\b/i;
 const SIDE_NAME = "(Houthis?|Ansar ?Allah|government|pro-government|army|Giants(?: Brigades)?|National Resistance|Nation'?s Shield|Yemeni forces|southern|STC|Security Belt|Saudi|coalition)";

@@ -1,23 +1,36 @@
 /*
- * The home page (Mock G, chosen by the user on 17 Oct).
- * - One shared map for every desk, with the desks' own toolbar above it and Latest reports on its right.
- * - The header's desk menu turns the page into a desk in place: the address changes (#iran, #yemen), the map
- *   flies to the desk and the part under the map cross-fades to the desk's own. Back and forward work.
- * - Latest developments under the map, most important first; then "Follow a story".
+ * The home page: every desk on one map, then "Follow a story" (user, 17 Oct).
+ * - The map is the desks' own: their toolbar, their pins (the mark says what happened, the colour who did it),
+ *   their control colours (Yemen's districts, the Iran war's countries), their legends (pick a desk's to see it
+ *   in full), their count in the box at the top right. A banner by each war leads to its desk.
+ * - A pin's note is the desk's own note, with a link to the same pin on its desk.
+ * - The header's desk menu opens a desk's own page; there is one page per desk.
  * Everything comes from the live feeds: /api/desk, /api/brief, /api/trump and /api/oil.
- * public/app.js is loaded on every page; its masthead menu, theme button and source names are used here.
+ * public/app.js is loaded on every page; the pins, notes, legends, masthead and colours are its own.
  */
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const phone = () => matchMedia('(max-width:720px)').matches;
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const app = (name) => { try { return eval(name); } catch (e) { return null; } };
+  // app.js's top-level names (a classic script's are shared with this one).
+  // Functions and the objects app.js never replaces are looked up once (a lookup per pin made the whole war take seconds).
+  const APP = new Map();
+  const VALUES = new Set(['districtGeo', 'geoCache', 'brief']);
+  const app = (name) => {
+    if (APP.has(name)) return APP.get(name);
+    let v = null;
+    try { v = eval(name); } catch (e) { return null; }
+    if (v && !VALUES.has(name) && (typeof v === 'function' || typeof v === 'object')) APP.set(name, v);
+    return v;
+  };
+  const setApp = (name, v) => { try { window.__homeV = v; (0, eval)(`${name} = window.__homeV`); } catch (e) { /* not there */ } finally { delete window.__homeV; } };
+  const A = (name) => app(name) || (() => null);
 
   /* ---------- The desks ---------- */
   const HD = {
-    iran: { name: 'Iran conflict', short: 'Iran', href: '/iran-conflict-desk', from: '2026-02-28', tz: 'Asia/Tehran', clock: 'Tehran' },
-    yemen: { name: 'Yemen conflict', short: 'Yemen', href: '/yemen-conflict-desk', from: '2026-07-13', tz: 'Asia/Aden', clock: 'Sanaa' },
+    iran: { name: 'Iran conflict', short: 'Iran', desk: 'Iran conflict desk', href: '/iran-conflict-desk', from: '2026-02-28' },
+    yemen: { name: 'Yemen conflict', short: 'Yemen', desk: 'Yemen conflict desk', href: '/yemen-conflict-desk', from: '2026-07-13' },
   };
   const WAR_FROM = '2026-02-28';
   const appDesks = app('DESKS') || [];
@@ -38,47 +51,22 @@
     if (!Number.isFinite(d.getTime())) return '';
     return `${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} · ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
   };
-  const dayOf = (at) => new Date(at).toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' });
+  const dayOf = (at) => DAY_FMT.format(new Date(at));
+  /* A pin's day, worked out once. */
+  const evDay = (e) => e._d || (e._d = dayOf(e.at));
   const today = () => dayOf(Date.now());
   const shift = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const dayName = (ymd) => new Date(ymd + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const longDay = (ymd) => { const f = app('fmtDay'); return f ? f(ymd) : dayName(ymd); };
 
-  /* ---------- Pins: one set for every desk ---------- */
-  const EVENT_SVG = {
-    strike: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1.2c2.6 2.3 4.1 5.4 4.3 9.2l1.9 2a1 1 0 0 1 .3.7v3.3l-3.3-1.7-.8.8v2.1l-2.4 2.4-2.4-2.4v-2.1l-.8-.8L5.5 18v-3.3a1 1 0 0 1 .3-.7l1.9-2c.2-3.8 1.7-6.9 4.3-9.2zm0 5.1a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>',
-    combat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.3 2.2 7 2.9l11.4 11.4-2.1 2.1L4.9 5 3.3 2.2zm17.4 0L19.1 5 14 10.1l2.1 2.1L21.1 7l.7-3.7-1.1-1.1zM2.9 19.3l2.6-2.6 2.1 2.1-2.6 2.6a1.5 1.5 0 0 1-2.1-2.1zm18.2 0a1.5 1.5 0 0 1-2.1 2.1l-2.6-2.6 2.1-2.1 2.6 2.6zM8.9 13.2l2.1 2.1-2.4 2.4-2.1-2.1 2.4-2.4z"/></svg>',
-    vessel: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 2.5h1.4v4H11zM7.5 7h8.5v5H7.5zM16.8 5h2.4v7h-2.4zM1.5 13h21l-3.3 5.2H4.2z"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" d="M2 21.2c1.7 0 1.7-1.2 3.3-1.2s1.7 1.2 3.3 1.2 1.7-1.2 3.4-1.2 1.7 1.2 3.3 1.2 1.7-1.2 3.3-1.2 1.7 1.2 3.4 1.2"/></svg>',
-    energy: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1c1.9 2.2 4 4 4 6.8a4 4 0 0 1-8 0c0-1.5.8-2.5 1.6-3.3.1 1.2.7 2 1.4 2.2C10.5 4.7 11 2.8 12 1z"/><path fill="currentColor" fill-rule="evenodd" d="M4 13.5h16V22H4zM4 16.4h16v1.3H4zM4 19.2h16v.01H4z"/></svg>',
-    nuclear: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="12" cy="12" r="2.3"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z" transform="rotate(120 12 12)"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z" transform="rotate(240 12 12)"/></g></svg>',
-  };
-  const PIN_KINDS = [['strike', 'Strike or launch'], ['energy', 'Energy site hit'], ['nuclear', 'Nuclear site hit'], ['combat', 'Fighting'], ['vessel', 'At sea']];
-  const PIN_INK = { strike: '#ef4444', energy: '#f97316', nuclear: '#a3e635', combat: '#facc15', vessel: '#22d3ee' };
-  const IRAN_SIDES = [['iran', 'Iran', '#dc2626'], ['israel', 'Israel', '#60a5fa'], ['us', 'US', '#2563eb'], ['hezbollah', 'Hezbollah', '#eab308'], ['iraqi_militias', 'Iraqi and Syrian militias', '#f97316'], ['houthi', 'Houthis', '#16a34a'], ['gulf', 'Gulf states and others', '#a855f7'], ['other', 'Not stated', '#94a3b8']];
-  const IRAN_INK = Object.fromEntries(IRAN_SIDES.map(([k, , c]) => [k, c]));
-  const sideOf = (e) => (IRAN_INK[e.actor] ? e.actor : 'other');
-  /* A strike is "energy" or "nuclear" only when the report names the site hit; otherwise it stays a strike. */
-  const NUCLEAR = /\bnuclear (site|facilit|plant|reactor|complex)|\b(fordow|natanz|bushehr|arak|isfahan nuclear|enrichment (site|plant|facilit))/i;
-  const ENERGY = /aramco|refiner|oil (field|facilit|terminal|depot|install)|fuel (depot|tank|storage)|storage tank|pipeline|power (station|plant)|gas (field|plant|facilit)|petrochem|\blng\b|desalination|electricity (station|grid)/i;
-  const AT_SEA = /\b(ship|ships|vessel|tanker|container ship|frigate|sank|sunk|sunken|sinks|anti-ship|naval mine|cargo)\b/i;
-  const GROUND = /\b(artillery|shell|shells|shelling|tank|sniper|clash|clashes)\b|\b(forces|army|troops)\b[^|]*\b(burn|bring|combing|sweep|carr(?:y|ied) out|raid|advance|deploy|demoli)/i;
-  function kindOf(e) {
-    const s = e.label || '';
-    if (NUCLEAR.test(s)) return 'nuclear';
-    if (ENERGY.test(s) && !/tanker/i.test(s)) return 'energy';
-    if (e.desk !== 'iran') return PIN_INK[e.type] ? e.type : 'strike';
-    if (e.sea || AT_SEA.test(s)) return 'vessel';
-    if (GROUND.test(s)) return 'combat';
-    return 'strike';
-  }
-
-  /* ---------- Map views ---------- */
+  /* ---------- The map's views ---------- */
   const REGION = [[11.5, 32.5], [38.5, 61]];
-  const DESK_BOUNDS = { iran: [[24.5, 33.5], [39.8, 62.5]], yemen: [[12, 38.5], [27.5, 54.5]] };
 
   /* ---------- The data ---------- */
-  const D = { asOf: null, reports: [], events: [], trump: [], devs: {}, arenas: [], fronts: [], oil: null, briefs: {} };
+  const D = { asOf: null, reports: [], events: [], trump: [], arenas: [], fronts: [], oil: null, ydata: null, ybrief: null };
   let byFp = new Map();
-  const getJson = (u) => fetch(u).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const getJson = (u, o) => fetch(u, o).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const srcName = (s) => { const f = app('canonicalSourceName'); return f ? f(s) : String(s || ''); };
   function leanCls(r) {
     if (r.desks[0] === 'iran' && r.lean) return 'ir-' + r.lean;
@@ -93,16 +81,18 @@
       lean: r.lean, replyTo: r.replyTo, flags: r.flags || [],
     })).filter((r) => r.h && r.at);
   }
-  /* The Iran map leaves out the Houthis' attacks and the pins it shares with the Yemen desk, as the desk does. */
-  const iranPinShown = (e) => e.actor !== 'houthi' && !(Array.isArray(e.desks) && e.desks.includes('yemen'));
-  function eventsOf(desk, rows) {
-    return (rows || []).filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number' && (desk !== 'iran' || iranPinShown(e)))
-      .map((e) => {
-        const x = { desk, fp: String(e.fp), at: e.at, lat: e.lat, lng: e.lng, place: e.place || '', label: e.label || '', src: srcName(e.source), url: e.url || '', type: e.type, actor: e.actor, sea: !!e.sea, ni: e.ni, researched: !!e.researched };
-        x.kind = kindOf(x);
-        return x;
-      });
+  /* A pin as its desk draws it: the kind of event (the mark) and who acted (the colour). */
+  function yemenPin(e) {
+    const t = String(e.type || '').toLowerCase();
+    const classify = app('classifyForMap'), cat0 = app('pinCategory');
+    const cat = ['strike', 'combat', 'vessel', 'port'].includes(t) ? t : (classify && classify(`${e.label || ''} ${e.text || ''}`, t)) || (cat0 && cat0(t)) || 'strike';
+    if (!['strike', 'combat', 'vessel', 'port'].includes(cat)) return null;
+    return { ...e, desk: 'yemen', fp: String(e.fp), mapCat: cat, cat };
   }
+  const iranPin = (e) => ({ ...e, desk: 'iran', fp: String(e.fp), mapCat: ['strike', 'combat', 'vessel', 'port'].includes(e.type) ? e.type : 'strike', cat: A('iranKindOf')(e) || 'strike' });
+  const eventsOf = (desk, rows) => (rows || []).filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number')
+    .filter((e) => desk !== 'iran' || A('iranPinShown')(e) !== false)
+    .map((e) => (desk === 'iran' ? iranPin(e) : yemenPin(e))).filter(Boolean);
   /* "…[[2]]." as the text and the report it rests on. */
   const plain = (p) => String(p || '').replace(/\s*\[\[\d+\]\]/g, '').trim();
   const firstRef = (p, refs) => { const m = /\[\[(\d+)\]\]/.exec(p); return m && refs ? refs[Number(m[1]) - 1] || null : null; };
@@ -117,6 +107,12 @@
     }
     return [...m.values()].sort((a, b) => (a.at < b.at ? 1 : -1));
   }
+  const keyOf = (e) => e.desk + '|' + e.fp;
+  function addEvents(list, replace) {
+    const keep = new Map(D.events.map((e) => [keyOf(e), e]));
+    list.forEach((e) => { if (replace || !keep.has(keyOf(e))) keep.set(keyOf(e), e); });
+    D.events = [...keep.values()];
+  }
 
   async function load() {
     const [di, dy, bi, by, ti, ty, oil] = await Promise.all([
@@ -126,18 +122,15 @@
     if (di || dy) {
       D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports)]);
       byFp = new Map(D.reports.map((r) => [r.fp, r]));
-      const ye = eventsOf('yemen', dy && dy.events), yeFps = new Set(ye.map((e) => e.fp));
-      const live = [...ye, ...eventsOf('iran', di && di.events).filter((e) => !yeFps.has(e.fp))];
-      // Pins already read for a longer view stay.
-      const keep = new Map(D.events.map((e) => [e.desk + e.fp, e]));
-      live.forEach((e) => keep.set(e.desk + e.fp, e));
-      D.events = [...keep.values()];
+      addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events)], true);
       D.asOf = [di && di.updatedAt, dy && dy.updatedAt].filter(Boolean).sort().pop() || D.asOf;
     }
-    if (bi || by) {
-      D.briefs = { iran: bi && bi.ok !== false && !bi.pending ? bi : D.briefs.iran, yemen: by && by.ok !== false ? by : D.briefs.yemen };
-      D.arenas = (D.briefs.iran && D.briefs.iran.arenas) || [];
-      D.fronts = (D.briefs.yemen && D.briefs.yemen.fronts) || [];
+    if (bi && bi.ok !== false && !bi.pending) D.arenas = bi.arenas || D.arenas;
+    if (by && by.ok !== false) {
+      D.fronts = by.fronts || D.fronts;
+      // Yemen's control as the desk has it now: its update clock's live layer over the hand baseline.
+      D.ybrief = by;
+      setApp('brief', by);
     }
     if (ti || ty) {
       const m = new Map();
@@ -152,52 +145,38 @@
     if (oil && oil.ok && oil.rows && oil.rows.length) D.oil = oil;
   }
 
-  /* The whole war's pins, read once when a longer view is asked for. */
-  let warP = null;
+  /* The whole war's pins, read once, soon after the page is up, so a longer view comes at once. */
+  let warP = null, warIn = false;
+  const assetV = () => { try { const m = /[?&]v=([^&]+)/.exec(document.querySelector('script[src*="/app.js?v="]').src); return m ? m[1] : 'h'; } catch (e) { return 'h'; } };
   function loadWar() {
     warP ??= Promise.all([
       getJson(`/api/desk?desk=yemen&since=${HD.yemen.from}`),
       getJson(`/api/desk?desk=iran&since=${HD.iran.from}`),
       getJson(`/iran-map-pins.json?v=${assetV()}`),
     ]).then(([y, i, past]) => {
-      const keep = new Map(D.events.map((e) => [e.desk + e.fp, e]));
-      const ye = eventsOf('yemen', y && y.events);
-      ye.forEach((e) => { if (!keep.has('yemen' + e.fp)) keep.set('yemen' + e.fp, e); });
       const ir = eventsOf('iran', i && i.events);
-      ir.forEach((e) => { if (!keep.has('iran' + e.fp)) keep.set('iran' + e.fp, e); });
-      // The war's researched attacks, before the desk began reading (the Iran desk's own file).
+      addEvents([...eventsOf('yemen', y && y.events), ...ir]);
+      // The war's researched attacks, before the Iran desk began reading (the desk's own file, map-pack.cjs).
       const first = ir.reduce((m, e) => Math.min(m, Date.parse(e.at) || Infinity), Infinity);
       if (past && Array.isArray(past.pins)) {
-        past.pins.forEach(([md, actor, lat, lng, hm, sea], ni) => {
+        const out = [];
+        past.pins.forEach(([md, actor, lat, lng, hm, sea, kind], ni) => {
           const at = hm ? `${past.year}-${md}T${hm}:00Z` : `${past.year}-${md}T12:00:00+03:00`;
           if (!(Date.parse(at) < first)) return;
-          const e = { desk: 'iran', fp: 'rs#' + ni, ni, researched: true, at, lat, lng, actor, sea: !!sea, place: '', label: '', src: '', url: '', type: 'strike' };
-          e.kind = sea ? 'vessel' : 'strike';
-          keep.set('iran' + e.fp, e);
+          out.push(iranPin({ fp: 'rs#' + ni, ni, researched: true, dayOnly: !hm, mapOnly: true, at, lat, lng, actor, sea: !!sea, kind: typeof kind === 'number' ? kind : undefined, type: 'strike', place: '', label: '', text: '', source: '', url: '', also: [] }));
         });
+        addEvents(out);
       }
-      D.events = [...keep.values()];
+      warIn = true;
       return true;
     }).catch(() => { warP = null; return false; });
     return warP;
-  }
-  const assetV = () => { try { const m = /[?&]v=([^&]+)/.exec(document.querySelector('script[src*="/app.js?v="]').src); return m ? m[1] : 'h'; } catch (e) { return 'h'; } };
-  /* The researched pins' notes: read only when one of them is opened. */
-  let notesP = null, notes = null;
-  const loadNotes = () => (notesP ??= getJson(`/iran-map-notes.json?v=${assetV()}`).then((n) => { notes = (n && n.notes) || []; }));
-  function noted(e) {
-    if (!e.researched || e.label) return true;
-    const n = notes && notes[e.ni];
-    if (!n) return false;
-    [, e.place, e.label, e.src, e.url] = n;
-    e.kind = kindOf(e);
-    return true;
   }
 
   /* ---------- Small pieces ---------- */
   const deskTag = (desk) => (desk === 'both'
     ? `<span class="h-tags">${deskTag('iran')}${deskTag('yemen')}</span>`
-    : `<button type="button" class="h-tag h-tag-${desk}" data-zoom-desk="${desk}" title="${esc(HD[desk].name)}">${FLAG[desk]}<span>${esc(HD[desk].short)}</span></button>`);
+    : `<a class="h-tag h-tag-${desk}" href="${HD[desk].href}" title="${esc(HD[desk].desk)}">${FLAG[desk]}<span>${esc(HD[desk].short)}</span></a>`);
   const deskOfReport = (r) => (r.desks.includes('iran') && r.desks.includes('yemen') ? 'both' : r.desks[0]);
 
   function card(r, o) {
@@ -217,15 +196,13 @@
       ${also.length ? `<p class="also">Also: ${also.slice(0, 4).map((a) => `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(srcName(a.source))}</a>`).join(' · ')}</p>` : ''}
     </article>`;
   }
-  function trumpCard(s, o) {
-    const opts = o || {};
+  function trumpCard(s) {
     return `<article class="card ir-us trump-st" data-fp="${esc(s.id)}">
       <div class="meta">
         <time datetime="${esc(s.at)}">${esc(fmt(s.at))}</time>
         <span class="src-wrap"><a class="src-link" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.src)}</a><a class="src-go" href="${esc(s.url)}" target="_blank" rel="noopener" aria-label="Open source">${ICON_EXT}</a></span>
       </div>
       <p class="headline">Trump: ${esc(s.h)}</p>
-      ${opts.body ? `<p class="lead">${esc(s.body)}</p>` : ''}
     </article>`;
   }
 
@@ -275,17 +252,17 @@
   }
   const latestOf = (t) => [t.cards[0] && t.cards[0].at, t.trump && t.trump[0] && t.trump[0].at, t.oil && t.oil.rows[0].at, t.pts && t.pts[0] && t.pts[0].ref && t.pts[0].ref.at].filter(Boolean).sort().pop();
   const lastLine = (t) => (t.trump ? (t.trump[0] ? 'Trump: ' + t.trump[0].h : '') : t.oil ? oilLine(t.oil) : t.pts && t.pts[0] ? t.pts[0].t : t.cards[0] ? t.cards[0].h : '');
-  const timeOf = (at) => (at ? fmt(at).split(' · ')[0] + ' · ' + fmt(at).split(' · ')[1] : '');
+  const timeOf = (at) => (at ? fmt(at) : '');
   const kicker = (t) => `<span class="h2-kick">${t.desk === 'both' ? `${FLAG.iran}${FLAG.yemen}<span>Both desks</span>` : `${FLAG[t.desk]}<span>${HD[t.desk].short} desk</span>`}</span>`;
 
   /* Oil: the prices as Yahoo Finance gives them, read by the server every ten minutes. */
-  const money = (k, v) => '$' + v.toFixed(k === 'Natural gas' ? 2 : 2);
+  const money = (v) => '$' + v.toFixed(2);
   const pctTxt = (p) => (p == null ? '' : `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(1)}%`);
-  const oilLine = (o) => o.rows.map((x) => `${x.k} ${money(x.k, x.v)} (${pctTxt(x.day)})`).join(' · ');
+  const oilLine = (o) => o.rows.map((x) => `${x.k} ${money(x.v)} (${pctTxt(x.day)})`).join(' · ');
   function oilHtml(o) {
     const newest = o.rows.map((x) => x.at).sort().pop();
     const since = (x) => (x.since ? `Highest since ${dayName(x.since)}` : '');
-    return `<div class="h2-oil">${o.rows.map((x) => `<div class="h2-px"><span class="k">${esc(x.k)}</span><b>${esc(money(x.k, x.v))}</b>${x.day == null ? '' : `<span class="d ${x.day >= 0 ? 'up' : 'dn'}">${x.day >= 0 ? '▲' : '▼'} ${esc(pctTxt(x.day))}</span>`}<small>${esc([x.note, x.week == null ? '' : `Week ${pctTxt(x.week)}`, since(x)].filter(Boolean).join(' · '))}</small></div>`).join('')}</div>
+    return `<div class="h2-oil">${o.rows.map((x) => `<div class="h2-px"><span class="k">${esc(x.k)}</span><b>${esc(money(x.v))}</b>${x.day == null ? '' : `<span class="d ${x.day >= 0 ? 'up' : 'dn'}">${x.day >= 0 ? '▲' : '▼'} ${esc(pctTxt(x.day))}</span>`}<small>${esc([x.note, x.week == null ? '' : `Week ${pctTxt(x.week)}`, since(x)].filter(Boolean).join(' · '))}</small></div>`).join('')}</div>
       <p class="h2-oil-src">${esc(fmt(newest))} · ${o.rows.map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.k)}</a>`).join(', ')} via ${esc(o.src)}</p>`;
   }
   const said = (s, n) => { const q = [...String(s.body).matchAll(/“([^”]+)”/g)].map((m) => m[1].trim()); return q.length ? q.slice(0, n).join(' ') : String(s.body).replace(/[“”]/g, ''); };
@@ -293,86 +270,242 @@
 
   /* The reports under a story's lines, without the ones the lines came from. */
   const words = (s) => new Set(String(s).toLowerCase().match(/[a-z]{4,}/g) || []);
-  const alike = (a, b) => { const A = words(a), B = words(b); let n = 0; A.forEach((w) => B.has(w) && n++); return n / Math.max(1, Math.min(A.size, B.size)) > 0.6; };
+  const alike = (a, b) => { const X = words(a), Y = words(b); let n = 0; X.forEach((w) => Y.has(w) && n++); return n / Math.max(1, Math.min(X.size, Y.size)) > 0.6; };
   const rest = (t) => { const shown = (t.pts || []).slice(0, 4); const urls = new Set(shown.map((p) => p.ref && p.ref.url)); return t.cards.filter((r) => !urls.has(r.url) && !shown.some((p) => alike(r.h, p.t))); };
 
   /* ---------- Page state ---------- */
-  const S = { desk: 'all', view: 'all', topic: null, mode: 'day', day: null, from: null, to: null, shown: 0, story: null };
-  let map, marks, tiles, legendBox, chipEl;
+  const S = { mode: 'day', day: null, from: null, to: null, story: null, legend: 'yemen' };
+  let map, marks, tiles, legendBox, chipEl, canvas = null;
   const tileUrl = () => 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/' + (document.documentElement.dataset.theme === 'broadsheet-day' ? 'World_Light_Gray_Base' : 'World_Dark_Gray_Base') + '/MapServer/tile/{z}/{y}/{x}';
 
-  function shownEvents() {
-    const d = S.day || today();
-    return D.events.filter((e) => {
-      const k = dayOf(e.at);
-      if (S.mode === 'day') return k === d;
-      if (S.mode === 'range') return k >= S.from && k <= S.to;
-      return true;
-    });
+  /* The desks' own ticks (app.js): a side, a kind of event or a territory unticked in a legend leaves the map here too. */
+  const yeLayers = () => app('layersOn') || {};
+  const yeSides = () => app('yemenSidesOn') || {};
+  const irPins = () => app('iranPins') || { on: {}, kinds: {}, where: { land: true, sea: true } };
+  const yeInk = (e) => A('yemenInk')(e) || '#94a3b8';
+  const irInk = (e) => { const ink = app('IRAN_PIN_INK') || {}; const side = A('iranSideOf')(e) || 'other'; return ink[side] || '#94a3b8'; };
+  // One colour per side, worked out once (and again when the theme changes).
+  const INK = new Map();
+  const inkOf = (e) => { const k = e.desk + '|' + e.actor; let c = INK.get(k); if (!c) { c = e.desk === 'iran' ? irInk(e) : yeInk(e); INK.set(k, c); } return c; };
+  function ticked(e) {
+    if (e.desk === 'yemen') return yeLayers()[e.cat] !== false && yeSides()[A('yemenSideOf')(e) || 'unclear'] !== false;
+    const p = irPins();
+    const w = p.where || { land: true, sea: true };
+    const sea = !!e.sea || e.cat === 'vessel';
+    return p.on[A('iranSideOf')(e) || 'other'] !== false && (p.kinds || {})[e.cat] !== false && ((w.land && w.sea) || (sea ? w.sea : w.land));
   }
+  function inTime(e) {
+    const k = evDay(e);
+    if (S.mode === 'day') return k === (S.day || today());
+    if (S.mode === 'range') return k >= S.from && k <= S.to;
+    return true;
+  }
+  const shownEvents = () => D.events.filter((e) => inTime(e) && ticked(e));
 
-  /* ---------- Map marks: one pin per event ---------- */
-  const pinIcon = (e, cls) => L.divIcon({
-    className: 'ev-wrap',
-    html: `<div class="ev h2-ev ${e.kind} ${cls || ''}" style="--ev-ink:${PIN_INK[e.kind]}"><span class="ev-glyph">${EVENT_SVG[e.kind]}</span>${e.desk === 'iran' ? `<span class="h2-side" style="--ink:${IRAN_INK[sideOf(e)]}"></span>` : ''}<span class="ev-stem" aria-hidden="true"></span></div>`,
-    iconSize: [34, 42], iconAnchor: [17, 40], popupAnchor: [0, -34],
-  });
-  function popRow(e) {
-    noted(e);
-    const go = S.desk === e.desk ? '' : `<button type="button" class="h-pop-go h2-pop-go" data-zoom-desk="${e.desk}">${FLAG[e.desk]}${esc(HD[e.desk].name)} →</button>`;
-    return `<div class="h-pop-meta">${deskTag(e.desk)}<time>${esc(e.researched && /T12:00:00\+03:00$/.test(e.at) ? dayName(dayOf(e.at)) : fmt(e.at))}</time></div><p class="h-pop-h">${esc(e.label || '…')}</p><p class="h-pop-src">${esc(e.place || '')}${e.place && e.src ? ' · ' : ''}${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.src)}</a>` : ''}</p>${go}`;
+  /* ---------- The pins: each its own, as on the desks ---------- */
+  function noteHtml(e) {
+    let body;
+    if (e.desk === 'iran') {
+      const f = app('iranPopupHtml');
+      body = f ? f(e) : esc(e.label);
+    } else {
+      const f = app('popupHtml');
+      body = f ? f(e) : esc(e.label);
+    }
+    return `${body}<p class="pop-desk"><a href="${HD[e.desk].href}#pin=${encodeURIComponent(e.fp)}">On the ${esc(HD[e.desk].desk)} →</a></p>`;
   }
-  const popupHtml = (g) => `<div class="h-pop">${popRow(g[0])}</div>`;
-  /* The i-th pin on one spot, set round it on a widening spiral (the desks' own rule): every pin on its own. */
-  const jitter = (lat, lng, i) => { const a = i * 2.39996, r = 0.01 * Math.sqrt(i); return [lat + Math.sin(a) * r, lng + Math.cos(a) * r]; };
-  let canvas = null;
   function drawMarks() {
     if (!map) return;
+    // All the pins are put in off the map, then the layer goes on once: one drawing, not one per pin.
+    map.removeLayer(marks);
     marks.clearLayers();
     // Every event its own pin, never one mark with a number (user, 17 Oct). Newest on top.
     const evs = shownEvents().sort((a, b) => (a.at < b.at ? -1 : 1));
-    // The whole war is thousands of pins: drawn on one canvas, in the same colours, as the Iran desk does.
+    // The whole war is thousands of pins: the same pins, drawn on one canvas.
     const many = evs.length > 1500;
     if (many && !canvas) canvas = L.canvas({ padding: 0.3 });
     const atSpot = new Map();
+    const jit = app('jitter') || ((lat, lng) => [lat, lng]);
+    const icon = app('sidePinIcon'), mark = app('pinMark');
+    const lean = app('popLeanClass');
     for (const e of evs) {
       const k = `${Math.round(e.lat * 100)},${Math.round(e.lng * 100)}`;
       const n = atSpot.get(k) || 0;
       atSpot.set(k, n + 1);
-      const ll = n ? jitter(e.lat, e.lng, n) : [e.lat, e.lng];
-      const dim = S.desk !== 'all' && e.desk !== S.desk;
-      const mk = many
-        ? L.circleMarker(ll, { renderer: canvas, radius: 5, weight: 1.5, color: e.desk === 'iran' ? IRAN_INK[sideOf(e)] : '#fff', fillColor: PIN_INK[e.kind], fillOpacity: dim ? 0.3 : 1, opacity: dim ? 0.3 : 1 })
-        : L.marker(ll, { icon: pinIcon(e, dim ? 'h2-dim' : ''), keyboard: true, title: e.label || e.place || '', zIndexOffset: dim ? -500 : 0 });
-      mk.bindPopup(() => popupHtml([e]), { maxWidth: 300 });
-      if (e.researched && !e.label) mk.on('popupopen', () => { loadNotes().then(() => mk.getPopup() && mk.getPopup().setContent(popupHtml([e]))); });
-      mk.addTo(marks);
+      const ll = n ? jit(e.lat, e.lng, n) : [e.lat, e.lng];
+      const ink = inkOf(e);
+      const ageH = (Date.now() - Date.parse(e.at)) / 3600e3;
+      const mk = many ? mark(ll, { renderer: canvas, cat: e.cat, ink })
+        : L.marker(ll, { icon: icon(e.cat, ink, ageH <= 6 ? ' fresh' : '', esc(e.label || '')), keyboard: true, zIndexOffset: Math.round(1000 - ageH), riseOnHover: true });
+      mk.bindPopup(() => noteHtml(e), { className: e.desk === 'yemen' && lean ? lean(e) : '', maxWidth: 300, maxHeight: 360, autoPan: true });
+      // A researched Iran pin's note is read when it is first opened (the desk's own file).
+      if (e.researched) mk.on('popupopen', () => {
+        const p = irPins();
+        p.notesP = p.notesP || A('loadIranNotes')();
+        Promise.resolve(p.notesP).then(() => { if (mk.isPopupOpen()) mk.setPopupContent(noteHtml(e)); });
+      });
+      marks.addLayer(mk);
     }
-    drawLegend();
+    marks.addTo(map);
+    drawChip(evs.length);
+    drawBanners();
   }
 
-  /* ---------- The key: an Iran part and a Yemen part; one part once a desk is picked ---------- */
-  const kindRow = ([k, n]) => `<div class="h-leg-row"><span class="h2-mini ev" style="--ev-ink:${PIN_INK[k]}"><span class="ev-glyph">${EVENT_SVG[k]}</span></span>${esc(n)}</div>`;
-  function pinKey(desk) {
-    const evs = D.events.filter((e) => e.desk === desk);
-    const kinds = PIN_KINDS.filter(([k]) => evs.some((e) => e.kind === k) || k === 'strike' || k === 'energy' || (desk === 'iran' && k === 'nuclear'));
-    let h = `<div class="h2-legdesk">${FLAG[desk]}<b>${esc(HD[desk].name)}</b></div><div class="h2-leggrid">${kinds.map(kindRow).join('')}</div>`;
-    if (desk === 'iran') {
-      const present = new Set(evs.map(sideOf));
-      const sides = IRAN_SIDES.filter(([k]) => present.has(k) || k === 'iran' || k === 'us' || k === 'israel');
-      h += `<div class="h2-legsub">Side that acted</div><div class="h2-leggrid">${sides.map(([k, n]) => `<div class="h-leg-row"><span class="h2-sidekey" style="--ink:${IRAN_INK[k]}"></span>${esc(n)}</div>`).join('')}</div>`;
-    }
-    return `<div class="h2-legsec">${h}</div>`;
+  /* ---------- The control colours: Yemen's districts, the Iran war's countries ---------- */
+  let yeDistricts = null, yeGovs = null, irCountries = null, irGeo = null;
+  async function drawControl() {
+    if (!map) return;
+    if (!map.getPane('hCtrl')) { map.createPane('hCtrl'); map.getPane('hCtrl').style.zIndex = 350; map.getPane('hCtrl').style.pointerEvents = 'none'; }
+    // The Iran war's countries in their side's colour (the Iran desk's file and style).
+    try {
+      irGeo = irGeo || (await getJson('/iran-countries.geojson', { cache: 'no-cache' }));
+      const st = app('iranCountryStyle');
+      if (irGeo && st) {
+        if (irCountries) map.removeLayer(irCountries);
+        irCountries = L.geoJSON(irGeo, { pane: 'hCtrl', interactive: false, style: st }).addTo(map);
+      }
+    } catch (e) { console.warn('iran countries', e); }
+    // Yemen's districts in their holder's colour, the governorates drawn over them (the Yemen desk's files and style).
+    try {
+      D.ydata = D.ydata || (await getJson(`/data.json?v=${assetV()}`));
+      const byIso = A('controlByIso')(D.ydata || {}) || {};
+      if (await A('loadDistricts')()) {
+        const geo = app('districtGeo'), st = app('districtStyle');
+        if (yeDistricts) map.removeLayer(yeDistricts);
+        if (geo && st) yeDistricts = L.geoJSON(geo, { pane: 'hCtrl', interactive: false, style: (f) => st(f, byIso) }).addTo(map);
+      }
+      const adm1 = await A('loadAdm1')();
+      const split = adm1 && app('splitIslandFeatures') ? app('splitIslandFeatures')(adm1) : null;
+      const st1 = app('styleFeature');
+      if (split && st1) {
+        if (yeGovs) map.removeLayer(yeGovs);
+        yeGovs = L.geoJSON(split.mainland, { pane: 'hCtrl', interactive: false, style: (f) => st1(f, byIso) }).addTo(map);
+      }
+    } catch (e) { console.warn('yemen control', e); }
   }
+  function restyleControl() {
+    const byIso = A('controlByIso')(D.ydata || {}) || {};
+    try { if (irCountries) irCountries.setStyle(app('iranCountryStyle')); } catch (e) { /* not yet */ }
+    try { if (yeDistricts) yeDistricts.setStyle((f) => app('districtStyle')(f, byIso)); } catch (e) { /* not yet */ }
+    try { if (yeGovs) yeGovs.setStyle((f) => app('styleFeature')(f, byIso)); } catch (e) { /* not yet */ }
+  }
+
+  /*
+   * A callout by each war that leads to its desk (user, 17 Oct: rectangular, as map graphics do it): a dot on
+   * the country itself, a leader of two lines (out, then a right angle), and a card at its end with the desk's
+   * flag and name, today's events and the way in. The card sits in open space, and turns to whichever side
+   * keeps it on the map.
+   */
+  const BANNERS = [
+    // Hadramawt, inside Yemen; the leader runs east over the Arabian Sea, then down.
+    { desk: 'yemen', at: [15.6, 48.6], out: 92, drop: 34 },
+    // The middle of Iran (Dasht-e Kavir); the leader runs east over Afghanistan, then down.
+    { desk: 'iran', at: [33.9, 55.6], out: 118, drop: 30 },
+  ];
+  let bannerLayer = null;
+  const todayCount = (desk) => { const t = today(); return D.events.filter((e) => e.desk === desk && evDay(e) === t).length; };
+  function bannerHtml(b, sx, sy) {
+    const n = todayCount(b.desk);
+    // Shorter leaders on a phone's small map.
+    const k = phone() ? 0.55 : 1;
+    const dx = Math.round(sx * b.out * k), dy = Math.round(sy * b.drop * k);
+    return `<span class="h-co-dot" aria-hidden="true"></span>
+      <svg class="h-co-line" aria-hidden="true" width="1" height="1"><path d="M0 0H${dx}V${dy}"/></svg>
+      <a class="h-co h-co-${sx < 0 ? 'l' : 'r'}${sy < 0 ? 't' : 'b'}" href="${HD[b.desk].href}" style="left:${dx}px;top:${dy}px" aria-label="Open the ${esc(HD[b.desk].desk)}">
+        <span class="h-co-flag" aria-hidden="true">${FLAG[b.desk]}</span>
+        <span class="h-co-body">
+          <span class="h-co-kick"><span class="h-co-live"></span>Live desk</span>
+          <b>${esc(HD[b.desk].name)}</b>
+          <span class="h-co-foot"><span>${n ? `${n.toLocaleString('en-GB')} event${n === 1 ? '' : 's'} today` : 'Latest reports'}</span><em>Open desk <i aria-hidden="true">→</i></em></span>
+        </span>
+      </a>`;
+  }
+  const bannerSide = new Map();
+  function drawBanners() {
+    if (!map) return;
+    if (bannerLayer) map.removeLayer(bannerLayer);
+    bannerLayer = L.layerGroup(BANNERS.map((b) => {
+      const [sx, sy] = bannerSide.get(b.desk) || [1, 1];
+      return L.marker(b.at, { keyboard: false, interactive: false, zIndexOffset: 3000, icon: L.divIcon({ className: 'h-co-wrap', iconSize: [0, 0], iconAnchor: [0, 0], html: bannerHtml(b, sx, sy) }) });
+    })).addTo(map);
+  }
+  /* A card that would run off the map turns to the other side of its dot. */
+  function placeBanners() {
+    if (!map) return;
+    const box = map.getContainer().getBoundingClientRect();
+    let moved = false;
+    BANNERS.forEach((b) => {
+      const p = map.latLngToContainerPoint(b.at);
+      const card = map.getContainer().querySelector(`.h-co[href="${HD[b.desk].href}"]`);
+      const w = card ? card.offsetWidth : 200, h = card ? card.offsetHeight : 70;
+      const k = phone() ? 0.55 : 1;
+      const sx = p.x + b.out * k + w + 8 > box.width ? -1 : 1;
+      const sy = p.y + b.drop * k + h + 8 > box.height ? -1 : 1;
+      const was = bannerSide.get(b.desk) || [1, 1];
+      if (was[0] !== sx || was[1] !== sy) { bannerSide.set(b.desk, [sx, sy]); moved = true; }
+    });
+    if (moved) drawBanners();
+  }
+  let bannerWired = false;
+  function wireBanners() {
+    if (bannerWired) return;
+    bannerWired = true;
+    const fade = () => { map.getContainer().classList.toggle('h-close-in', map.getZoom() > 6.5); placeBanners(); };
+    map.on('zoomend moveend resize', fade);
+    fade();
+  }
+
+  /* ---------- The legend: each desk's own, in full; pick whose ---------- */
+  function legendBody(desk) {
+    if (desk === 'yemen') {
+      const lo = yeLayers();
+      const row = app('sideLegendRow');
+      const ctl = ((D.ydata && D.ydata.control) || []).map((c) => row(A('sideColor')(c), A('controlShortName')(c), !!lo[A('controlLayerKey')(c.id)], `data-layer="${esc(A('controlLayerKey')(c.id))}"`)).join('');
+      const colors = app('COLORS') || {};
+      return `<div class="leg-sec">Territory</div>${ctl}${row(colors.saudi, 'Saudi Arabia', !!lo.saudi, 'data-layer="saudi"')}${A('yemenEventRows')() || ''}`;
+    }
+    const p = irPins();
+    const sides = (app('IRAN_PIN_SIDES') || []).filter(([k]) => k !== 'other' || D.events.some((e) => e.desk === 'iran' && A('iranSideOf')(e) === 'other'));
+    const row = app('sideLegendRow');
+    return `${sides.map(([k, c, n]) => row(c, n, p.on[k] !== false, `data-side="${k}"`)).join('')}
+      ${A('iranKindRows')() || ''}
+      <p class="leg-sub">Where</p>
+      ${[['land', 'On land', '#e7dcc8'], ['sea', 'At sea', '#bfdbfe']].map(([k, n, c]) => row(c, n, p.where[k] !== false, `data-where="${k}"`)).join('')}`;
+  }
+  let legendCollapsed = false;
   function drawLegend() {
-    const body = (S.desk === 'all' ? ['iran', 'yemen'] : [S.desk]).map(pinKey).join('');
-    legendBox.innerHTML = `<div class="leg-head"><span class="leg-title">Map key</span><button type="button" class="leg-collapse" aria-label="Collapse legend">▾</button></div><div class="leg-body">${body}</div>`;
-    legendBox.querySelector('.leg-collapse').onclick = () => legendBox.classList.toggle('collapsed');
+    const d = S.legend;
+    legendBox.classList.toggle('collapsed', legendCollapsed);
+    legendBox.innerHTML = `<div class="leg-head"><span class="leg-title">${d === 'iran' ? 'Attacks legend' : 'Legend'}</span><button type="button" class="leg-collapse" aria-label="${legendCollapsed ? 'Expand legend' : 'Collapse legend'}" aria-expanded="${legendCollapsed ? 'false' : 'true'}">${legendCollapsed ? '▸' : '▾'}</button></div>
+      <div class="h-leg-pick" role="tablist" aria-label="Whose legend">${['yemen', 'iran'].map((k) => `<button type="button" role="tab" data-leg="${k}" aria-selected="${k === d}">${FLAG[k]}<span>${HD[k].short}</span></button>`).join('')}</div>
+      <div class="leg-body"><p class="leg-hint">Tick to show, untick to hide.</p>${legendBody(d)}</div>`;
+  }
+  function wireLegend() {
+    try { L.DomEvent.disableClickPropagation(legendBox); L.DomEvent.disableScrollPropagation(legendBox); } catch (e) { /* no map yet */ }
+    legendBox.addEventListener('click', (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      const t = ev.target;
+      if (t.closest('.leg-collapse')) { legendCollapsed = !legendCollapsed; drawLegend(); return; }
+      const pick = t.closest('[data-leg]');
+      if (pick) { S.legend = pick.dataset.leg; drawLegend(); return; }
+      const b = t.closest('.leg-item');
+      if (!b) return;
+      if (S.legend === 'yemen') {
+        if (b.dataset.side) { const s = yeSides(); s[b.dataset.side] = s[b.dataset.side] === false; }
+        else if (b.dataset.layer) { const lo = yeLayers(); lo[b.dataset.layer] = !lo[b.dataset.layer]; }
+      } else {
+        const p = irPins();
+        if (b.dataset.where) p.where[b.dataset.where] = !p.where[b.dataset.where];
+        else if (b.dataset.kind) p.kinds[b.dataset.kind] = p.kinds[b.dataset.kind] === false;
+        else if (b.dataset.side) p.on[b.dataset.side] = !p.on[b.dataset.side];
+      }
+      drawLegend(); restyleControl(); drawMarks();
+    });
   }
 
   /* ---------- The page's frame ---------- */
   function chromeHtml() {
-    const item = (k, name, flag) => `<li><button type="button" class="h2-pick" data-pick="${k}">${flag}<span>${esc(name)}</span></button></li>`;
+    const item = (k, name, flag, href) => `<li><a href="${href}"${k === 'all' ? ' aria-current="page"' : ''}>${flag}<span>${esc(name)}</span></a></li>`;
     return `<div class="mast">
       <span class="mast-date"></span>
       <div class="mast-mid"><a class="mast-name" href="/" aria-label="The Situation Room"><span class="mn">The Situation Room</span></a><span class="mast-line">Open-source intelligence</span></div>
@@ -380,17 +513,12 @@
     </div>
     <header class="top">
       <div class="brand">
-        <h1 class="desk-label"><span class="dl-pre">Desk:</span> <span class="dl-name"><button type="button" class="desk-pick" aria-haspopup="true" aria-expanded="false" aria-controls="h2-desk-list"><span id="h2-dl">All desks</span><svg class="dp-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"></path></svg></button></span></h1>
-        <ul class="desk-list h-desk-list h2-desk-list" id="h2-desk-list" hidden>
-          ${item('all', 'All desks', ALL_FLAG)}${item('yemen', 'Yemen conflict', FLAG.yemen)}${item('iran', 'Iran conflict', FLAG.iran)}
+        <h1 class="desk-label"><span class="dl-pre">Desk:</span> <span class="dl-name"><button type="button" class="desk-pick" aria-haspopup="true" aria-expanded="false" aria-controls="h2-desk-list">All desks<svg class="dp-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"></path></svg></button></span></h1>
+        <ul class="desk-list h-desk-list" id="h2-desk-list" hidden>
+          ${item('all', 'All desks', ALL_FLAG, '/')}${item('yemen', 'Yemen conflict', FLAG.yemen, HD.yemen.href)}${item('iran', 'Iran conflict', FLAG.iran, HD.iran.href)}
         </ul>
       </div>
-      <div class="stamp">
-        <span class="ye-clock"><span class="yc-label">Sanaa</span><time data-tz="Asia/Aden">--:--:--</time></span>
-        <span class="ye-clock h-clock2"><span class="yc-label">Tehran</span><time data-tz="Asia/Tehran">--:--:--</time></span>
-        <span class="pulse" aria-hidden="true"></span>
-        <span id="h2-upd"></span>
-      </div>
+      <div class="stamp"><span class="pulse" aria-hidden="true"></span><span id="h2-upd"></span></div>
     </header>`;
   }
   const toolbarHtml = () => `<div class="toolbar">
@@ -398,26 +526,16 @@
       <span class="tf-label">Map:</span>
       <button type="button" id="btn-day-prev" class="day-nav" aria-label="Previous day"><span class="day-nav-arr" aria-hidden="true">←</span><span class="day-nav-txt">Back</span></button>
       <input type="date" id="map-date" min="${WAR_FROM}" aria-label="Day" />
-      <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day"><span class="day-nav-txt">Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
+      <span class="tf-range" id="tf-range" hidden><span class="tf-to" aria-hidden="true">to</span><input type="date" id="map-to" min="${WAR_FROM}" aria-label="To" /></span>
+      <button type="button" id="btn-day-next" class="day-nav" aria-label="Next day" hidden><span class="day-nav-txt">Forward</span><span class="day-nav-arr" aria-hidden="true">→</span></button>
       <button type="button" id="btn-day-today">Today</button>
       <span class="tf-sep" aria-hidden="true"></span>
       <button type="button" id="btn-conflict-all" aria-label="The whole war"><span class="tf-long">Whole war</span><span class="tf-short">All</span></button>
       <button type="button" id="btn-period" aria-expanded="false" aria-controls="tf-range">Period</button>
     </div>
-    <div class="tf-range" id="tf-range" hidden>
-      <label>From <input type="date" id="map-from" min="${WAR_FROM}" /></label>
-      <label>To <input type="date" id="map-to" min="${WAR_FROM}" /></label>
-    </div>
   </div>`;
-  const stageHtml = () => `<main class="stage h-stage" id="h2-stage">
-    <section class="map-wrap"><div id="h-map"></div><div class="legend h-legend h2-legend" id="h-legend"></div><div class="map-chip h-chip h2-chip" id="h2-chip"></div></section>
-    <div class="rail-splitter" aria-hidden="true"></div>
-    <aside class="rail">
-      <div class="rail-head"><h2>Latest reports</h2></div>
-      <div class="h2-railnote" id="h2-railnote" hidden></div>
-      <div class="feed" id="h-feed"></div>
-      <button type="button" class="more h-more" id="h-more">Show earlier reports</button>
-    </aside>
+  const stageHtml = () => `<main class="stage h-stage h-solo" id="h2-stage">
+    <section class="map-wrap" id="map-wrap"><div id="h-map"></div><div class="legend" id="h-legend"></div><div class="map-chip" id="h2-chip"></div></section>
   </main>`;
 
   function wireChrome() {
@@ -426,119 +544,82 @@
     pick.onclick = (e) => { e.stopPropagation(); open(list.hidden); };
     document.addEventListener('click', (e) => { if (!list.contains(e.target)) open(false); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !list.hidden) { open(false); pick.focus(); } });
-    const tick = () => document.querySelectorAll('.stamp time[data-tz]').forEach((t) => { t.textContent = new Date().toLocaleTimeString('en-GB', { timeZone: t.dataset.tz, hourCycle: 'h23' }); });
-    tick(); setInterval(tick, 1000);
-    // The desks' own masthead menu and theme button (public/app.js).
+    // A desk opens its own page in one cross-fade (desk.css @view-transition).
+    list.addEventListener('click', (e) => { const a = e.target.closest('a'); if (a && a.getAttribute('aria-current')) { e.preventDefault(); open(false); } });
+    window.addEventListener('pageshow', () => open(false));
+    // The desks' own masthead menu (public/app.js); the theme is picked there.
     try { const f = app('installMast'); if (f) f(); } catch (e) { console.error(e); }
-    try { const f = app('installThemeButton'); if (f) f(); } catch (e) { console.error(e); }
-    // The theme lives on <html>; the maps follow it.
-    new MutationObserver(() => { if (tiles) tiles.setUrl(tileUrl()); minis.forEach((m) => m._hTiles.setUrl(tileUrl())); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    // The theme lives on <html>; the maps and their colours follow it.
+    new MutationObserver(() => {
+      if (tiles) tiles.setUrl(tileUrl());
+      minis.forEach((m) => m._hTiles.setUrl(tileUrl()));
+      INK.clear(); restyleControl(); drawLegend(); drawMarks();
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
   function stampUpd() {
     const el = $('h2-upd');
     if (el && D.asOf) el.textContent = 'Updated ' + new Date(D.asOf).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   }
 
-  /* ---------- The toolbar: a day, the whole war or a period ---------- */
+  /* ---------- The toolbar: a day, the whole war or a period, as on the desks ---------- */
   function syncToolbar() {
-    const d = S.day || today();
-    const date = $('map-date');
-    date.max = today(); date.value = d;
-    $('map-from').max = today(); $('map-to').max = today();
-    $('btn-day-today').classList.toggle('on', S.mode === 'day' && d === today());
+    const d = S.day || today(), max = today();
+    const date = $('map-date'), to = $('map-to'), box = $('tf-range');
+    date.max = max; to.max = max;
+    date.value = S.mode === 'range' ? S.from : d;
+    if (S.mode === 'range') to.value = S.to;
+    box.hidden = S.mode !== 'range';
+    $('btn-day-today').classList.toggle('on', S.mode === 'day' && d === max);
     $('btn-conflict-all').classList.toggle('on', S.mode === 'all');
-    $('btn-day-next').disabled = S.mode === 'day' && d >= today();
+    $('btn-period').classList.toggle('on', S.mode === 'range');
+    $('btn-period').setAttribute('aria-expanded', String(S.mode === 'range'));
+    // Forward only on a day before today (user, 17 Oct), as on the desks.
+    $('btn-day-next').hidden = S.mode !== 'day' || d >= max;
+    $('btn-day-prev').disabled = S.mode === 'day' && d <= WAR_FROM;
   }
   function setView(mode, a, b) {
     S.mode = mode;
     if (mode === 'day') S.day = a;
     if (mode === 'range') { S.from = a <= b ? a : b; S.to = a <= b ? b : a; }
-    syncToolbar(); drawMarks(); drawChip();
-    // A day before the live pins, the whole war or a period: the war's pins, read once.
+    syncToolbar(); drawMarks();
+    // A day before the live pins, the whole war or a period: the war's pins (read soon after the page is up).
     const oldest = D.events.filter((e) => !e.researched).reduce((m, e) => (e.at < m ? e.at : m), '9');
-    const need = mode === 'all' || (mode === 'day' && a < dayOf(oldest)) || (mode === 'range' && S.from < dayOf(oldest));
-    if (need) loadWar().then((ok) => { if (ok) { drawMarks(); } });
+    const need = !warIn && (mode === 'all' || (mode === 'day' && a < dayOf(oldest)) || (mode === 'range' && S.from < dayOf(oldest)));
+    if (need) { chipEl.textContent = 'Loading the whole war’s pins…'; loadWar().then((ok) => { if (ok) drawMarks(); }); }
   }
   function wireToolbar() {
-    const date = $('map-date');
+    const date = $('map-date'), to = $('map-to');
     $('btn-day-prev').onclick = () => setView('day', shift(S.mode === 'day' ? (S.day || today()) : today(), -1));
     $('btn-day-next').onclick = () => { const n = shift(S.day || today(), 1); if (n <= today()) setView('day', n); };
     $('btn-day-today').onclick = () => setView('day', today());
     $('btn-conflict-all').onclick = () => setView('all');
-    date.onchange = () => { if (date.value) setView('day', date.value); };
-    const per = $('btn-period'), rng = $('tf-range'), f = $('map-from'), t = $('map-to');
-    per.onclick = () => {
-      rng.hidden = !rng.hidden; per.setAttribute('aria-expanded', String(!rng.hidden)); per.classList.toggle('on', !rng.hidden);
-      if (!rng.hidden && !f.value) { f.value = shift(today(), -6); t.value = today(); }
+    const keep = (v) => (v < WAR_FROM ? WAR_FROM : v > today() ? today() : v);
+    // The period's first day is the day's own date box, its last a second one beside it (user, 17 Oct).
+    date.onchange = () => {
+      if (!date.value) return;
+      if (S.mode === 'range') setView('range', keep(date.value), keep(to.value || today()));
+      else setView('day', keep(date.value));
     };
-    const apply = () => { if (f.value && t.value) setView('range', f.value, t.value); };
-    f.onchange = apply; t.onchange = apply;
+    to.onchange = () => { if (to.value) setView('range', keep(date.value || today()), keep(to.value)); };
+    $('btn-period').onclick = () => {
+      if (S.mode === 'range') { setView('day', today()); return; }
+      const end = S.mode === 'day' ? (S.day || today()) : today();
+      setView('range', S.mode === 'day' && S.day && S.day !== today() ? S.day : keep(shift(end, -6)), end);
+    };
   }
-
-  /* ---------- The reports column follows the desk and the story ---------- */
-  const STEP = () => (phone() ? 6 : 14);
-  function drawRail() {
-    const note = $('h2-railnote'), head = document.querySelector('#h2-stage .rail-head h2');
-    let list = null, trump = null;
-    if (S.topic && TOPIC[S.topic]) {
-      const t = TOPIC[S.topic];
-      head.textContent = 'Latest on ' + t.short;
-      note.hidden = false;
-      note.innerHTML = `<span>${deskTag(t.desk)}</span><button type="button" data-clear-topic>All latest reports ✕</button>`;
-      if (t.trump) trump = t.trump; else list = t.cards;
-    } else {
-      head.textContent = 'Latest reports'; note.hidden = true;
-      list = D.reports.filter((r) => S.desk === 'all' || r.desks.includes(S.desk));
-    }
-    const n = S.shown || STEP();
-    const feed = $('h-feed');
-    if (trump) feed.innerHTML = trump.slice(0, n).map((s, i) => trumpCard(s, { body: i < 3 })).join('');
-    else feed.innerHTML = list.length ? list.slice(0, n).map((x) => card(x)).join('') : '<p class="h-empty">No reports on this yet.</p>';
-    $('h-more').hidden = (trump || list).length <= n;
-  }
-  function drawChip() {
+  /* The box at the map's top right, as on the desks: how many events the map shows, and when. */
+  function drawChip(n) {
     const d = S.day || today();
-    const when = S.mode === 'all' ? 'Whole war' : S.mode === 'range' ? `${dayName(S.from)} to ${dayName(S.to)}` : d === today() ? `Today, ${dayName(d)}` : dayName(d);
-    let h;
-    if (S.topic && TOPIC[S.topic]) h = `<b>${esc(TOPIC[S.topic].short)}</b> · ${esc(when)}`;
-    else if (S.desk !== 'all') h = `${FLAG[S.desk]}<b>${esc(HD[S.desk].name)}</b> · ${esc(when)}`;
-    else h = `All desks · ${esc(when)}`;
-    chipEl.innerHTML = h;
-  }
-
-  /* ---------- Desks in place ---------- */
-  function pickDesk(d, o) {
-    const opts = o || {};
-    if (!(d === 'all' || HD[d])) d = 'all';
-    const from = S.view;
-    const run = () => { S.view = d; doPick(d, opts); if (from !== d) renderBody(d); };
-    if (from !== d && !opts.noPush) history.pushState({ desk: d }, '', d === 'all' ? location.pathname + location.search : '#' + d);
-    document.title = d === 'all' ? 'The Situation Room' : HD[d].name + ' · The Situation Room';
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (from !== d && document.startViewTransition && !reduce && !opts.instant) {
-      const vt = document.startViewTransition(run);
-      vt.ready.catch(() => {}); vt.finished.catch(() => {});
-    } else run();
-  }
-  function doPick(d, opts) {
-    S.desk = d; S.shown = 0; S.topic = null;
-    $('h2-dl').textContent = d === 'all' ? 'All desks' : HD[d].name;
-    document.querySelectorAll('.h2-pick').forEach((b) => { b.classList.toggle('on', b.dataset.pick === d); b.setAttribute('aria-current', b.dataset.pick === d ? 'true' : 'false'); });
-    if (map && !opts.noFly) map.flyToBounds(d === 'all' ? REGION : DESK_BOUNDS[d], { duration: opts.instant ? 0 : 0.9, animate: !opts.instant });
-    if (opts.scroll) scrollToMap();
-    drawRail(); drawChip(); drawMarks();
+    const many = `${n.toLocaleString('en-GB')} event${n === 1 ? '' : 's'}`;
+    chipEl.textContent = S.mode === 'all'
+      ? (n ? `${many} on the map since ${longDay(WAR_FROM)}` : 'No event on the map')
+      : S.mode === 'range'
+        ? (n ? `${many} on the map, ${longDay(S.from)} to ${longDay(S.to)}` : `No event on the map, ${longDay(S.from)} to ${longDay(S.to)}`)
+        : (n ? `${many} on the map on ${longDay(d)}` : `No event on the map on ${longDay(d)}`);
   }
   function scrollToMap() {
     const el = document.querySelector('.toolbar');
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 6, behavior: 'smooth' });
-  }
-  function focusTopic(id) {
-    const t = TOPIC[id];
-    if (!t) return;
-    S.topic = id; S.shown = 0;
-    scrollToMap();
-    map.flyToBounds(t.bounds, { duration: 0.9 });
-    drawRail(); drawChip();
   }
 
   /* ---------- Small maps for the stories ---------- */
@@ -548,8 +629,8 @@
     const m = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false, tap: false });
     m._hTiles = L.tileLayer(tileUrl(), { noWrap: true }).addTo(m);
     m.fitBounds(t.bounds, { padding: [6, 6] });
-    t.events.forEach((e) => L.circleMarker([e.lat, e.lng], { radius: 3.6, weight: 1, color: '#fff', opacity: 0.8, fillColor: PIN_INK[e.kind], fillOpacity: 0.95, interactive: false }).addTo(m));
-    el.addEventListener('click', () => focusTopic(id));
+    t.events.forEach((e) => L.circleMarker([e.lat, e.lng], { radius: 3.6, weight: 1, color: '#fff', opacity: 0.8, fillColor: inkOf(e), fillOpacity: 0.95, interactive: false }).addTo(m));
+    el.addEventListener('click', () => { scrollToMap(); map.flyToBounds(t.bounds, { duration: 0.9 }); });
     minis.push(m);
   }
   const mini = (id) => `<div class="h2-mini-map" data-mini="${id}" role="button" tabindex="0" aria-label="${esc(TOPIC[id].name)} on the big map"></div>`;
@@ -559,73 +640,12 @@
     root.querySelectorAll('[data-mini]').forEach((el) => miniMap(el, el.dataset.mini));
   }
 
-  /* ---------- Latest developments: most important first ---------- */
-  const MAX_DEVS = 6;
-  /* A desk's points in its brief's importance bands (rank-points.ts), the writer's order kept inside a band. */
-  function deskPoints(desk) {
-    const b = D.briefs[desk], s = b && b.situation;
-    if (!s || !Array.isArray(s.points)) return [];
-    return s.points.map((p, i) => ({ p, i, band: Array.isArray(s.bands) ? s.bands[i] : 2, desk, refs: s.refs || [] }))
-      .sort((a, c) => a.band - c.band || a.i - c.i);
-  }
-  function devPoints(view) {
-    if (view !== 'all') return deskPoints(view).slice(0, MAX_DEVS);
-    // Both desks as one list: band first, then each desk's own order, the two desks taking turns.
-    const all = [...deskPoints('yemen').map((x, k) => ({ ...x, k })), ...deskPoints('iran').map((x, k) => ({ ...x, k }))];
-    return all.sort((a, c) => a.band - c.band || a.k - c.k || (a.desk === 'yemen' ? -1 : 1)).slice(0, MAX_DEVS);
-  }
-  function devsHtml(view) {
-    const pts = devPoints(view);
-    if (!pts.length) return '';
-    // The references renumbered for the list shown: one number per report.
-    const refs = [], idx = new Map();
-    const num = (x, n) => {
-      const r = x.refs[n - 1];
-      if (!r) return null;
-      const key = r.url || r.fp;
-      if (!idx.has(key)) { refs.push(r); idx.set(key, refs.length); }
-      return idx.get(key);
-    };
-    const text = (x) => {
-      const t = String(x.p).replace(/((?:\[\[\d+\]\])+)([.,;:!?])/g, '$2$1');
-      return esc(t).replace(/(?:\[\[\d+\]\])+/g, (run) => {
-        const ns = [...run.matchAll(/\[\[(\d+)\]\]/g)].map((m) => num(x, Number(m[1]))).filter(Boolean);
-        return ns.length ? `<sup class="ref-n">${ns.map((n) => `<a class="ref-btn" href="${esc(refs[n - 1].url)}" target="_blank" rel="noopener">${n}</a>`).join('<span aria-hidden="true">,</span>')}</sup>` : '';
-      });
-    };
-    const items = pts.map((x) => `<li>${view === 'all' ? deskTag(x.desk) + ' ' : ''}${text(x)}</li>`).join('');
-    const next = [view === 'all' || view === 'yemen' ? D.briefs.yemen : null, view === 'all' || view === 'iran' ? D.briefs.iran : null].filter(Boolean).map((b) => b.nextUpdateAt).filter(Boolean).sort()[0];
-    const nx = next ? new Date(next) : null;
-    const when = nx ? ` · Updates ${nx.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}${dayOf(nx) === today() ? '' : ', ' + dayName(dayOf(nx))}` : '';
-    const refLine = (r, i) => `<li><a class="ref-btn ref-line" href="${esc(r.url)}" target="_blank" rel="noopener"><span class="ref-num">${i + 1}</span>${esc(r.trump ? 'Trump, ' + r.source : srcName(r.source))}, ${esc(fmt(r.at).split(' · ').reverse().join(', '))}</a></li>`;
-    return `<section class="situation h-situation" id="h-devs">
-      <div class="sit-head"><h2>Latest developments</h2></div>
-      <p class="cadence at-head">${view === 'all' ? 'Based on latest reports from both desks' : 'Based on latest reports'}${esc(when)}</p>
-      <div class="sit-body"><ol class="pts">${items}</ol>
-        ${refs.length ? `<button type="button" class="toggle-sit h-toggle" aria-expanded="false">Read more</button><div class="refs-box"><ol class="refs" aria-label="References">${refs.map(refLine).join('')}</ol></div>` : ''}
-      </div>
-    </section>`;
-  }
-  function wireDevs(root) {
-    root.querySelectorAll('.h-toggle').forEach((b) => {
-      b.onclick = () => {
-        const box = b.closest('.situation');
-        const open = box.classList.toggle('sit-open');
-        b.textContent = open ? 'Show less' : 'Read more';
-        b.setAttribute('aria-expanded', String(open));
-      };
-    });
-  }
-
   /* ---------- Follow a story ---------- */
   function ordered() {
     const byTime = T.filter((t) => !PICKS.includes(t.id)).sort((a, b) => ((latestOf(b) || '') > (latestOf(a) || '') ? 1 : -1));
     return [...PICKS.map((id) => TOPIC[id]).filter(Boolean), ...byTime];
   }
-  const deskLinks = (t) => {
-    const ds = (t.desk === 'both' ? ['iran', 'yemen'] : [t.desk]).filter((d) => d !== S.view);
-    return ds.length ? `<div class="h2-links">${ds.map((d) => `<button type="button" class="h2-go h2-go-desk" data-zoom-desk="${d}">${FLAG[d]}${HD[d].short} desk →</button>`).join('')}</div>` : '';
-  };
+  const deskLinks = (t) => `<div class="h2-links">${(t.desk === 'both' ? ['iran', 'yemen'] : [t.desk]).map((d) => `<a class="h2-go h2-go-desk" href="${HD[d].href}">${FLAG[d]}${HD[d].short} desk →</a>`).join('')}</div>`;
   function show(id) {
     const t = TOPIC[id];
     if (!t) return;
@@ -633,9 +653,8 @@
     document.querySelectorAll('#index button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.i === id)));
     let left, right;
     if (t.trump) {
-      const list = t.trump.filter((s) => S.view === 'all' || s.desks.includes(S.view));
-      left = list[0] ? quote(list[0]) : '';
-      right = list.length > 1 ? `<h4>Earlier</h4><div class="feed">${list.slice(1, 5).map((s) => trumpCard(s)).join('')}</div>` : '';
+      left = t.trump[0] ? quote(t.trump[0]) : '';
+      right = t.trump.length > 1 ? `<h4>Earlier</h4><div class="feed">${t.trump.slice(1, 5).map((s) => trumpCard(s)).join('')}</div>` : '';
     } else if (t.oil) {
       left = oilHtml(t.oil);
       right = t.cards.length ? `<h4>Latest reports</h4><div class="feed">${t.cards.slice(0, 4).map((r) => card(r, { noReply: true })).join('')}</div>` : '';
@@ -647,14 +666,10 @@
     $('panel').innerHTML = `${kicker(t)}<h3>${esc(t.name)}</h3><div class="g-body"><div>${left}</div><div>${right}</div></div>${deskLinks(t)}`;
     mountMinis($('panel'));
   }
-  function renderBody(view) {
-    const devs = $('devs');
-    devs.innerHTML = devsHtml(view);
-    wireDevs(devs);
-    const items = view === 'all' ? ordered() : ordered().filter((t) => t.desk === view || t.desk === 'both');
+  function renderStories() {
+    const items = ordered();
     const idx = $('index');
     idx.innerHTML = items.map((t) => `<button type="button" role="tab" data-i="${t.id}" aria-selected="false">${kicker(t)}<b>${esc(t.name)}</b><time>${esc(timeOf(latestOf(t)))}</time><p>${esc(lastLine(t))}</p></button>`).join('');
-    idx.scrollLeft = 0; idx.scrollTop = 0;
     edges();
     const keep = items.find((t) => t.id === S.story);
     if (items.length) show(keep ? keep.id : items[0].id); else $('panel').innerHTML = '';
@@ -669,7 +684,6 @@
   /* ---------- Start ---------- */
   function bodyHtml() {
     return `<div id="g-body">
-      <div id="devs"></div>
       <section class="h2-sec">
         <h2>Follow a story</h2>
         <div class="g-wrap">
@@ -689,23 +703,33 @@
   async function startHome() {
     const root = $('home-root');
     if (!root || root.dataset.on) return;
-    if (!window.L) { setTimeout(startHome, 150); return; }
+    if (!window.L || !app('sidePinIcon')) { setTimeout(startHome, 150); return; }
     root.dataset.on = '1';
     started = true;
     root.innerHTML = `<div id="chrome">${chromeHtml()}</div><div id="toolbar">${toolbarHtml()}</div><div id="stage">${stageHtml()}</div>${bodyHtml()}`;
     wireChrome();
     chipEl = $('h2-chip');
     legendBox = $('h-legend');
-    if (phone()) legendBox.classList.add('collapsed');
-    map = L.map($('h-map'), { zoomControl: true, attributionControl: true, worldCopyJump: false, minZoom: 3 });
+    if (phone()) legendCollapsed = true;
+    map = L.map($('h-map'), { zoomControl: true, attributionControl: true, worldCopyJump: false, minZoom: 3, zoomSnap: 0.25, closePopupOnClick: false });
     tiles = L.tileLayer(tileUrl(), { maxZoom: 18, noWrap: true, attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ' }).addTo(map);
     map.fitBounds(REGION);
     marks = L.layerGroup().addTo(map);
+    // A note's "Read more", its pictures and videos, as on the desks.
+    map.on('popupopen', (e) => {
+      const el = e.popup.getElement();
+      if (!el) return;
+      try { const w = app('wireMediaClicks'); if (w) w(el); L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); } catch (err) { /* plain note */ }
+      const btn = el.querySelector('.pop-toggle'), full = el.querySelector('.pop-full');
+      if (btn && full) btn.onclick = (ev) => { ev.preventDefault(); const open = !full.classList.contains('open'); full.classList.toggle('open', open); btn.textContent = open ? 'Hide detail' : 'Read more'; try { e.popup._updateLayout(); e.popup._updatePosition(); } catch (err) { /* laid out */ } };
+    });
     wireToolbar();
+    wireLegend();
     S.day = today();
     syncToolbar();
-    drawLegend(); drawChip();
-    $('h-feed').innerHTML = '<p class="h-empty">Loading the latest reports…</p>';
+    drawLegend();
+    drawBanners(); wireBanners();
+    chipEl.textContent = 'Loading the map…';
 
     wrap = $('idx'); idxEl = $('index');
     idxEl.addEventListener('scroll', edges, { passive: true });
@@ -715,40 +739,29 @@
     // A small nudge the first time the row comes into view on a phone, so it reads as something to swipe.
     new IntersectionObserver((es, o) => { if (es[0].isIntersecting && phone()) { wrap.classList.add('hinting'); o.disconnect(); } }, { threshold: 0.6 }).observe(wrap);
     idxEl.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) show(b.dataset.i); });
-    $('h-more').onclick = () => { S.shown = (S.shown || STEP()) + STEP(); drawRail(); };
-    root.addEventListener('click', (ev) => {
-      const p = ev.target.closest('[data-pick]');
-      if (p) { $('h2-desk-list').hidden = true; document.querySelector('.desk-pick').setAttribute('aria-expanded', 'false'); pickDesk(p.dataset.pick); return; }
-      if (ev.target.closest('[data-clear-topic]')) { S.topic = null; S.shown = 0; map.flyToBounds(S.desk === 'all' ? REGION : DESK_BOUNDS[S.desk], { duration: 0.9 }); drawRail(); drawChip(); }
-    });
-    // Desk links anywhere, the map's notes among them (Leaflet puts those in the map pane).
-    document.addEventListener('click', (ev) => {
-      const z = ev.target.closest('[data-zoom-desk]');
-      if (!z || !document.getElementById('home-root')) return;
-      ev.preventDefault();
-      if (map) map.closePopup();
-      pickDesk(z.dataset.zoomDesk, { scroll: !z.closest('#h2-stage') });
-    });
 
-    addEventListener('popstate', () => pickDesk((history.state && history.state.desk) || (HD[location.hash.slice(1)] ? location.hash.slice(1) : 'all'), { noPush: true }));
-    const start = location.hash.slice(1);
-    history.replaceState({ desk: HD[start] ? start : 'all' }, '');
-
+    const ctrl = drawControl();
     await load();
     buildTopics();
     stampUpd();
-    if (HD[start]) { S.view = start; doPick(start, { noPush: true, instant: true }); document.title = HD[start].name + ' · The Situation Room'; }
-    else { drawRail(); drawMarks(); }
-    renderBody(S.view);
+    drawMarks();
+    drawLegend();
+    renderStories();
+    await ctrl;
+    restyleControl();
+    drawLegend();
+    // The whole war's pins come in behind the page, so Whole war and older days open at once.
+    const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1200));
+    idle(() => loadWar().then((ok) => { if (ok && S.mode !== 'day') drawMarks(); }));
 
-    // New reports every two minutes while the page is in view; the developments and stories with them.
+    // New reports every two minutes while the page is in view.
     setInterval(async () => {
       if (document.hidden) return;
       await load();
       buildTopics();
       stampUpd();
-      drawRail(); drawMarks();
-      if (!document.querySelector('#g-body .sit-open')) renderBody(S.view);
+      drawMarks();
+      renderStories();
     }, 120_000);
   }
   window.startHome = startHome;

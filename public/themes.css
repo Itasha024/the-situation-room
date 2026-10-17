@@ -808,3 +808,8 @@ html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","No
 .legend{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .legend:not(.collapsed) .leg-body{max-height:none}
 @media (max-width:720px){.legend .leg-hint{display:none}}
+
+/* Latest developments as the other sections (user, 17 Oct): the title and the update line above,
+   the points in a box like the fronts' and the numbers'. */
+html[data-set="broadsheet"] .situation{background:transparent;padding:.75rem 1rem 1rem}
+html[data-set="broadsheet"] .situation .sit-body{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-radius:4px;padding:.8rem 1rem .9rem;margin-top:.45rem}

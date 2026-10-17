@@ -19,7 +19,7 @@ const THEME_BOOT = `try{var t=localStorage.getItem("desk-theme");if(t!=="broadsh
 // The desks and the home page made ready when a reader points at a link to one (user, 17 Oct: going
 // between desks shows no page loading): the map flies over, and the page is there when it lands.
 const SPECULATION = JSON.stringify({
-  prerender: [{ where: { href_matches: ["/", "/yemen-conflict-desk", "/iran-conflict-desk"] }, eagerness: "moderate" }],
+  prerender: [{ where: { href_matches: ["/", "/yemen-conflict-desk", "/iran-conflict-desk"] }, eagerness: "immediate" }],
 });
 
 // A cross-fade the browser skips (a quick second click, a resize) is no error: its promises are caught.

@@ -6866,22 +6866,21 @@ const flagSvg = (d) => FLAG_ART[d.id] ? `<svg class="flag flag-${d.id}" viewBox=
 const SITE_PAGES = () => desksShown().map((d) => [d.href, d.name, d.sub, d.kids, d]);
 
 /*
- * The header reads "Desks:" and a button for each desk by its country, its
- * flag faded behind the name (user, 17 Oct); more desks than fit scroll
- * sideways. "Desks:" leads to every desk on one map. Picking a desk goes
- * over to it on the map: the map flies in to the desk's part, or out to the
- * whole region, and the desk carries on from there (deskGo, deskArrive).
+ * The header reads "Desks:", then All and a button for each desk by its country,
+ * a round flag beside the name (user, 17 Oct); more desks than fit scroll
+ * sideways. Picking one goes over to it on the map (deskGo).
  */
 const DESK_COUNTRY = { yemen: 'Yemen', iran: 'Iran' };
-/** A desk's flag as a button's backdrop: the full drawing, cropped to fill. */
+/** A desk's flag in its button: the full drawing, cropped to a circle. */
 const flagFill = (d) => (FLAG_ART[d.id]
   ? `<svg class="dt-flag" viewBox="0 0 630 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${FLAG_ART[d.id]().replace(/irf-/g, 'irb-')}</svg>`
   : `<svg class="dt-flag" viewBox="0 0 18 12" preserveAspectRatio="none" aria-hidden="true">${d.flag.map((c, i) => `<rect y="${i * 4}" width="18" height="4" fill="${c}"/>`).join('')}</svg>`);
 function deskTabsHtml(hereId) {
   const desks = desksShown().slice().sort((a, b) => (DESK_COUNTRY[a.id] || a.short).localeCompare(DESK_COUNTRY[b.id] || b.short));
-  // "Desks:" leads to all desks from anywhere but the all-desks page itself.
-  const label = deskPath(location.href) !== '/' ? `<a class="dt-label" href="/" data-desk-go title="${escapeHtml(T('All desks'))}">${escapeHtml(T('Desks'))}:</a>` : `<span class="dt-label">${escapeHtml(T('Desks'))}:</span>`;
-  return `${label}<span class="dt-row">${desks.map((d) => `<a class="dt-btn" href="${d.href}" data-desk-go${d.id === hereId ? ' aria-current="page"' : ''}>${flagFill(d)}<span class="dt-name">${escapeHtml(T(DESK_COUNTRY[d.id] || d.short))}</span></a>`).join('')}</span>`;
+  // "All" first: every desk on one map (user, 17 Oct).
+  const home = deskPath(location.href) === '/';
+  const all = `<a class="dt-btn dt-all" href="/" data-desk-go${home ? ' aria-current="page"' : ''} title="${escapeHtml(T('All desks'))}"><svg class="dt-flag dt-globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/></svg><span class="dt-name">${escapeHtml(T('All'))}</span></a>`;
+  return `<span class="dt-label">${escapeHtml(T('Desks'))}:</span><span class="dt-row">${all}${desks.map((d) => `<a class="dt-btn" href="${d.href}" data-desk-go${d.id === hereId ? ' aria-current="page"' : ''}>${flagFill(d)}<span class="dt-name">${escapeHtml(T(DESK_COUNTRY[d.id] || d.short))}</span></a>`).join('')}</span>`;
 }
 function installDeskPicker() {
   const h = document.querySelector('.top h1.desk-label');
@@ -6894,34 +6893,39 @@ function installDeskPicker() {
   h.innerHTML = deskTabsHtml(here ? here.id : null);
 }
 
-/* Going between desks on the map (user, 17 Oct: no page load seen; the map zooms in to a desk, out to all desks). */
+/*
+ * Going between desks on the map (user, 17 Oct: much smoother). One flight on the page being left,
+ * ending on the very view the next page opens on (its own first view, below), so the page that comes
+ * in, made ready ahead (speculation rules), shows the same map and only cross-fades in. Desk to
+ * desk, Leaflet's flight rises out and comes down again in one move.
+ */
 const DESK_GO = {
-  '/': [[11.5, 32.5], [38.5, 61]],
-  '/yemen-conflict-desk': [[12.3, 38.0], [25.0, 48.0]],
-  '/iran-conflict-desk': [[20.0, 33.0], [40.0, 63.0]],
+  '/': { b: [[11.5, 32.5], [38.5, 61]], fit: {} },
+  '/yemen-conflict-desk': { b: [[12.3, 38.0], [25.0, 48.0]], fit: { paddingTopLeft: [6, 44], paddingBottomRight: [6, 6] } },
+  '/iran-conflict-desk': { b: [[12.0, 31.5], [40.5, 63.5]], fit: { padding: [6, 6] } },
 };
 const deskPath = (href) => { try { return new URL(href, location.href).pathname.replace(/\/+$/, '') || '/'; } catch (e) { return ''; } };
 let deskGoing = false;
-/** Fly the map there, then open the page; the page opens on the same view (deskArrive). */
+/** Fly the map to where the next page opens, then open it. */
 function deskGo(href, m) {
   const to = deskPath(href), here = deskPath(location.href);
   if (deskGoing) return;
   if (!DESK_GO[to] || to === here) { if (to !== here) location.href = href; return; }
   deskGoing = true;
-  // In from all desks to a desk's part; out to the whole region from a desk, and in again at the other desk.
-  const via = here === '/' ? DESK_GO[to] : DESK_GO['/'];
-  try { sessionStorage.setItem('desk-go', JSON.stringify({ to, via, then: here !== '/' && to !== '/' ? DESK_GO[to] : null, t: Date.now() })); } catch (e) {}
+  try { sessionStorage.setItem('desk-go', JSON.stringify({ to, t: Date.now() })); } catch (e) {}
   const go = () => { location.href = href; };
   const box = m && m.getContainer && m.getContainer().getBoundingClientRect();
   const seen = box && box.bottom > 120 && box.top < innerHeight - 120;
   if (!seen || matchMedia('(prefers-reduced-motion: reduce)').matches) { go(); return; }
+  const secs = here !== '/' && to !== '/' ? 1.35 : 1.05;
+  document.documentElement.style.setProperty('--desk-go-s', secs + 's');
   document.documentElement.classList.add('desk-going');
   let done = false;
   const fin = () => { if (!done) { done = true; go(); } };
-  m.once('moveend', () => setTimeout(fin, 40));
-  setTimeout(fin, 1500);
   try { m.closePopup(); } catch (e) {}
-  m.flyToBounds(via, { duration: 0.85, easeLinearity: 0.25, padding: [6, 6] });
+  m.once('moveend', () => setTimeout(fin, 30));
+  setTimeout(fin, secs * 1000 + 700);
+  m.flyToBounds(DESK_GO[to].b, { ...DESK_GO[to].fit, duration: secs, easeLinearity: 0.2 });
 }
 /** Any link marked data-desk-go goes over on the map. */
 function wireDeskGo(getMap) {
@@ -6937,23 +6941,9 @@ function wireDeskGo(getMap) {
   // Back to this page: it shows as it was left.
   window.addEventListener('pageshow', () => { deskGoing = false; document.documentElement.classList.remove('desk-going'); });
 }
-/**
- * The page opened from another desk: the map starts where that one ended and, from desk to desk,
- * flies on in. A page made ready ahead (speculation rules) does it when it is shown.
- */
-function deskArrive(m, touched) {
-  const run = () => {
-    let rec = null;
-    try { rec = JSON.parse(sessionStorage.getItem('desk-go') || 'null'); } catch (e) {}
-    if (!rec || rec.to !== deskPath(location.href) || Date.now() - rec.t > 10000) return;
-    try { sessionStorage.removeItem('desk-go'); } catch (e) {}
-    if (touched) touched();
-    m.invalidateSize();
-    m.fitBounds(rec.via, { animate: false, padding: [6, 6] });
-    if (rec.then) setTimeout(() => m.flyToBounds(rec.then, { duration: 0.9, easeLinearity: 0.25, padding: [6, 6] }), 140);
-  };
-  if (document.prerendering) document.addEventListener('prerenderingchange', run, { once: true });
-  else run();
+/** The page opened from another desk: it already shows the view that desk flew to; only the note goes. */
+function deskArrive() {
+  try { sessionStorage.removeItem('desk-go'); } catch (e) {}
 }
 function installMast() {
   const el = document.querySelector('.mast-date');

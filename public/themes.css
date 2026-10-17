@@ -21,7 +21,7 @@ html[data-set="broadsheet"] .ts-pips i{border-radius:0}
 html[data-set="broadsheet"] .ts-pips i.on{background:var(--accent-ui)}
 /* Phone: the button ends the clock line, on its right; the headline keeps the full width. */
 @media (max-width:720px){.top .stamp{align-self:stretch;flex-wrap:nowrap}.theme-step{margin-inline-start:auto}}
-::view-transition-old(root),::view-transition-new(root){animation-duration:.32s;animation-timing-function:ease}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.45s;animation-timing-function:ease}
 
 /* The section menu: a labelled tab in its own left gutter (it covers nothing), a "Sections"
    small labelled pill at the bottom left that stays with the reader */
@@ -837,11 +837,16 @@ html .top h1.desk-tabs{display:flex;align-items:center;gap:.65rem;min-width:0;pa
 .dt-btn:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px}
 .dt-btn[aria-current="page"]{border-color:var(--accent-ui);background:var(--accent-ui);color:var(--t-bg,#1b1918);cursor:default;transform:none;box-shadow:none}
 .dt-btn[aria-current="page"]::after{content:none}
+.dt-btn .dt-globe{padding:.12rem;fill:none;stroke:currentColor;stroke-width:1.6;box-shadow:none;background:color-mix(in srgb,var(--t-strong,#e5e7eb) 10%,transparent)}
+.dt-btn[aria-current="page"] .dt-globe{background:color-mix(in srgb,var(--t-bg,#1b1918) 14%,transparent)}
 .dt-btn[aria-current="page"] .dt-name{font-weight:700}
 @media (max-width:720px){.dt-btn{height:1.9rem;gap:.4rem;padding:0 .65rem 0 .25rem}.dt-btn .dt-flag{width:1.3rem;height:1.3rem}.dt-btn::after{display:none}html .top h1.desk-tabs{gap:.45rem}}
 
 /* Going between desks: the map flies, the rest of the page steps back (app.js deskGo). */
-html.desk-going .stage>:not(.map-wrap),html.desk-going .stage~*,html.desk-going #g-body{opacity:.15;transition:opacity .5s ease}
+/* Going between desks: the rest of the page eases back while the map flies, then the next page cross-fades in on the same map (user, 17 Oct: much smoother) */
+html.desk-going .stage>:not(.map-wrap),html.desk-going .stage~*,html.desk-going #g-body,html.desk-going .toolbar{opacity:.35;transition:opacity var(--desk-go-s,1s) cubic-bezier(.4,0,.2,1)}
+::view-transition-group(deskmap){animation-duration:.5s;animation-timing-function:cubic-bezier(.2,.7,.2,1)}
+::view-transition-old(deskmap),::view-transition-new(deskmap){animation-duration:.5s;animation-timing-function:ease;height:100%;object-fit:cover}
 .map-wrap{view-transition-name:deskmap}
 @media (prefers-reduced-motion:reduce){html.desk-going *{transition:none!important}}
 

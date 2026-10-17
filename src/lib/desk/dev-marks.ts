@@ -144,6 +144,9 @@ export function pinSideOf(e: { type?: string | null; label?: string | null; text
   const rep = repelAttacker(full);
   if (rep) return rep;
   if (houthiAttack(e)) return "houthi";
+  // "Civilian killed by Houthi mortar shell": the side after "by" acted.
+  const by = new RegExp(String.raw`\b(?:killed|wounded|injured|hit|struck|targeted|shelled|attacked)\s+by\s+(?:an?\s+|the\s+)?${SIDE_NAME}`, "i").exec(full);
+  if (by) return sideOfName(by[1]);
   // "Aden security: two Houthi missiles land…": the words after the speaker first.
   const colon = /^[^:]{2,60}:\s+/.exec(full);
   // "Warplanes shell Houthi positions": aircraft as the subject are the coalition's (or the US's), whoever they hit.

@@ -44,6 +44,7 @@ test("alerts, interceptions and attacks in Saudi Arabia are the Houthis' (17 Oct
   assert.equal(side("Explosions reported in Abha, Khamis Mushait and Jazan", "combat"), "houthi");
   assert.equal(side("French frigate Languedoc shoots down drone targeting container ship in Bab al-Mandab", "vessel"), "houthi");
   assert.equal(side("Missile fired from Ibb towards Taiz"), "houthi");
+  assert.equal(side("Civilian killed by Houthi mortar shell in Lahj", "combat"), "houthi");
   assert.equal(side("2 missiles hit airport in Yemen's port city of Aden, officials say"), "houthi");
 });
 

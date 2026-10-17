@@ -98,3 +98,45 @@ test("a busy day's sea and energy cards are all read, not the newest 30 (5 Oct: 
   assert.ok(LEDGER_DOCS >= 80);
   assert.equal(ledgerDocs(cards).length, 80);
 });
+
+/* ---------------- the stored figures checked again (numbers-recheck.ts) ---------------- */
+import { dropIranShips, dropUnfounded } from "./numbers-recheck.ts";
+
+test("stored figures their card does not state are dropped; a sound one stays", () => {
+  const tally = {
+    since: "2026-07-13",
+    killed: { houthi: 72, gov: 251, saudi: 19, civilians: null },
+    injured: { houthi: 125, gov: null, saudi: 364, civilians: null },
+    idp: null,
+    refugees: null,
+    from: {
+      "killed.houthi": { name: "Al-Masirah", url: "https://sheba/1", date: "2026-10-03" },
+      "injured.houthi": { name: "Al-Masirah", url: "https://sheba/1", date: "2026-10-03" },
+      "killed.gov": { name: "Fares al-Hemyari", url: "https://x/251", date: "2026-09-28" },
+      "killed.saudi": { name: "coalition", url: "https://www.khabaragency.net/news254418.html", date: "2026-10-16" },
+    },
+    updatedAt: "2026-10-16T00:00:00Z",
+  };
+  const claims = { fields: { "killed.houthi": { gov: { value: 700, name: "Majed al-Nuzaili", url: "https://www.khabaragency.net/news254418.html", date: "2026-10-16" } } }, updatedAt: "" };
+  const cards = [
+    { at: "2026-10-03T16:09:00Z", url: "https://sheba/1", summary: "Airstrikes target fortified missile tunnels", text: "" },
+    { at: "2026-10-16T20:49:00Z", url: "https://www.khabaragency.net/news254418.html", summary: "Forces repel attack, inflicting 700 Houthi casualties", text: "" },
+  ] as never[];
+  const out = dropUnfounded(tally as never, claims as never, cards);
+  assert.equal(out.tally!.killed.houthi, null, "72 is not in its card");
+  assert.equal(out.tally!.injured.houthi, null);
+  assert.equal(out.tally!.killed.gov, 251, "its card was not read: it stands");
+  assert.equal(out.tally!.killed.saudi, null, "one battle's card is no running count");
+  assert.equal(out.claims!.fields["killed.houthi"]?.gov, undefined);
+});
+
+test("the Iran war's ships stored in the Yemen ledger are dropped", () => {
+  const ledger = { since: "2026-07-13", ships: [
+    { id: "2026-10-14-near-the-strait", date: "2026-10-14", place: "near the strait", what: "sunk" },
+    { id: "2026-10-16-gulf", date: "2026-10-16", place: "78 nm NE of Al Jubail", what: "attacked" },
+    { id: "2026-10-10-red-sea", date: "2026-10-10", place: "Red Sea, off Hodeidah", what: "attacked" },
+  ], sites: [], figures: [], notices: [], updatedAt: "" };
+  const out = dropIranShips(ledger as never)!;
+  assert.deepEqual(out.ships.map((s) => s.id), ["2026-10-10-red-sea"]);
+  assert.equal(dropIranShips(out), null);
+});

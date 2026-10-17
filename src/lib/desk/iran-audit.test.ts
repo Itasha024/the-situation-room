@@ -89,3 +89,21 @@ test("Houthi fire on Saudi airports is the Yemen desk's, whoever relays it", () 
   const v = verdict("Hezbollah says it struck Riyadh, Najran and Khamis Mushait airports with missiles", "القوات المسلحة اليمنية مطار الرياض نجران خميس مشيط t.me/army21ye", { event_type: "missile_launch" });
   assert.equal(v.kind, "reject");
 });
+
+// 17 Oct: the rule's regex had lost its backslashes (\b written as a backspace), so it never matched.
+import { rivalRelay } from "./speaker-press.ts";
+test("one country's media retold by another country's outlet is a relay", () => {
+  assert.match(String(rivalRelay("Hebrew media: IDF prepares for a wider operation", "Al-Alam", "axis")), /^relay: Israel's media/);
+  assert.equal(rivalRelay("Iranian media: US strike hit a school in Minab", "Tasnim", "axis"), null);
+});
+
+// 17 Oct: the IAEA's Fukushima release went out with another item's reading (Khatibzadeh on the NPT).
+import { misplaced } from "./reader.ts";
+test("a reading of another item in the batch is not published under this one", () => {
+  const fuku = "IAEA-led team samples ALPS-treated water at Fukushima Daiichi Nuclear Power Station under additional measures.";
+  const khat = "Deputy FM Khatibzadeh says the NPT is dehydrated and the IAEA is under scrutiny for not condemning attacks on nuclear sites; the war opened three wounds in the non-proliferation regime.";
+  const r = { publish: true, headline: "Iran's Deputy FM Khatibzadeh: NPT is dehydrated, IAEA under scrutiny for not condemning attacks on nuclear sites", body: "He said the war opened three wounds in the non-proliferation regime." };
+  assert.ok(misplaced(r, fuku, [fuku, khat]));
+  assert.ok(!misplaced(r, khat, [fuku, khat]));
+  assert.ok(!misplaced({ ...r, publish: false }, fuku, [fuku, khat]));
+});

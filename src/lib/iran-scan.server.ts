@@ -28,6 +28,9 @@ import { scanTrump } from "./trump-feed.server.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
 import { refreshIranBrief } from "./desk/iran-brief.ts";
 import { refreshOfac } from "./desk/ofac.ts";
+import { refreshIranLive, type NumbersFile } from "./desk/iran-live.ts";
+import { refreshIranReports } from "./desk/iran-live-model.ts";
+import IRAN_NUMBERS from "../../public/iran-numbers.json" with { type: "json" };
 import {
   type DeskPipe,
   shapeCards,
@@ -429,6 +432,10 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   void refreshIranBrief(store).catch((err) => console.error("[iran-brief]", err instanceof Error ? err.message : err));
   // US sanctions from OFAC's own list, once an hour (user, 17 Oct: the 15 Oct sanctions never reached the numbers).
   void refreshOfac(store).catch((err) => console.error("[ofac]", err instanceof Error ? err.message : err));
+  // Every other box of the numbers from its own source, and the rest from the reports every 6 hours (user, 17 Oct: "everything should be automatic").
+  void refreshIranLive(store, IRAN_NUMBERS as NumbersFile)
+    .then(() => refreshIranReports(store, IRAN_NUMBERS as NumbersFile))
+    .catch((err) => console.error("[iran-live]", err instanceof Error ? err.message : err));
   await trump;
   const tookMs = Date.now() - started;
   try {

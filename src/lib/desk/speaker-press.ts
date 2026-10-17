@@ -180,7 +180,7 @@ export function rivalRelay(headline: string, source: string, lean = "", own = fa
   if (!who) return null;
   const mine = sourceNation(s, lean);
   // A country's media retold by another country's outlet ("Israeli Channel 12: …" from Iran International, 9 Oct).
-  if (MEDIA_SPEAKER.test(speaker) && mine !== who) return `relay: ${NAME[who]}'s media are read directly, not ${s}'s retelling`;
+  if (MEDIA_SPEAKER.test(speaker) && mine && mine !== who) return `relay: ${NAME[who]}'s media are read directly, not ${s}'s retelling`;
   // Israel's words from Israel's own sources only, whoever retells them (user, 9 Oct: "for the 100th time").
   if (who === "israel" && mine !== "israel") return `relay: Israel is told from its own sources (the IDF, Israeli officials, Israeli media), not ${s}`;
   // Iran's opposition outlets too (user, 9 Oct): Iran International and VOA Farsi
@@ -199,7 +199,7 @@ export function officialVoice(source: string): Nation | null {
 }
 
 /** A speaker that is an outlet: "Israeli Channel 12", "Hebrew media", "Iranian state TV". */
-const MEDIA_SPEAKER = /(?:media|channel|newspaper|daily|TV|television|radio|outlet|press|broadcaster|Channel d+|Kan|Ynet|Haaretz|Maariv|Walla)/i;
+const MEDIA_SPEAKER = /\b(?:media|channel|newspaper|daily|TV|television|radio|outlet|press|broadcaster|Channel \d+|Kan|Ynet|Haaretz|Maariv|Walla)\b/i;
 const NAME: Record<Nation, string> = { us: "the US", iran: "Iran", israel: "Israel", saudi: "Saudi Arabia", uae: "the UAE", qatar: "Qatar", oman: "Oman", iraq: "Iraq", lebanon: "Lebanon", yemen: "Yemen", russia: "Russia", uk: "Britain" };
 
 /** Where in Lebanon a strike lands. */

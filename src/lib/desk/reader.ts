@@ -1702,3 +1702,24 @@ export function attributeVerdict(headline: string, lean = ""): string {
   const who = VERDICT_TELLER[lean] ?? "A source";
   return `${who}: ${h.charAt(0).toUpperCase()}${h.slice(1)}`;
 }
+
+/**
+ * The reading is of this item (17 Oct: the IAEA's Fukushima release went out
+ * with Khatibzadeh's words on the NPT, another item's reading under its id).
+ * A reading that shares at most one word of five letters or more with its own
+ * item but three or more with another item of the same batch is that one's.
+ * A rejection carries no headline, so it is not checked.
+ */
+const FIT_COMMON = new Set(["about", "after", "again", "against", "being", "between", "could", "every", "first", "their", "there", "these", "those", "under", "where", "which", "while", "would", "other", "since", "still", "says", "said", "report", "reports", "reported", "statement", "official", "officials", "people", "iranian", "israeli"]);
+const readWords = (t: string) => new Set((String(t || "").toLowerCase().match(/[a-z]{5,}/g) ?? []).filter((w) => !FIT_COMMON.has(w)));
+export function sharedWords(r: Pick<Reading, "headline" | "body">, text: string): number {
+  const have = readWords(text);
+  let n = 0;
+  for (const w of readWords(`${r.headline || ""} ${r.body || ""}`)) if (have.has(w) || have.has(w.replace(/s$/, "")) || have.has(`${w}s`)) n++;
+  return n;
+}
+export function misplaced(r: Pick<Reading, "publish" | "headline" | "body">, own: string, others: string[]): boolean {
+  if (!r.publish) return false;
+  if (sharedWords(r, own) > 1) return false;
+  return others.some((t) => t !== own && sharedWords(r, t) >= 3);
+}

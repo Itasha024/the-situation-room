@@ -26,6 +26,7 @@ import { anyAwake, type ChainModel, WRITER_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { refreshClaims, refreshTally } from "./tally.ts";
 import { refreshLedger } from "./ledger.ts";
+import { recheckNumbers } from "./numbers-recheck.ts";
 import { CONTROL_LIVE_KEY, type ControlLive, mergedControl, updateControlLive } from "./control-live.ts";
 import { refreshTimelineNow } from "./timeline-now.ts";
 import { placeKey, placeProse } from "./prose-places.ts";
@@ -220,6 +221,8 @@ async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof bri
   } catch (err) {
     console.error("[desk] timeline now failed:", err instanceof Error ? err.message : err);
   }
+  // The stored figures checked against their cards again (17 Oct); the first time, three weeks re-read, in the background.
+  void recheckNumbers(store, all, now).catch((err) => console.error("[desk] numbers recheck failed:", err instanceof Error ? err.message : err));
   return { brief, built: true };
 }
 

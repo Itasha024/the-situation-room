@@ -187,6 +187,9 @@ function setField(t: Tally, f: Field, v: number) {
   }
 }
 
+/** Cards whose figures are one battle's or one day's toll, read as running counts before Round 34 (17 Oct): never a count again. */
+export const NOT_RUNNING = new Set(["https://www.khabaragency.net/news254418.html", "https://www.sawt-alasima.net/news/120654"]);
+
 /** The number is written in the text: "4,481", "4481", "٤٤٨١", "217 thousand", "1.2 million". */
 export function hasNumber(raw: string, n: number): boolean {
   const text = String(raw || "").replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x6f0)).replace(/٬/g, ",");
@@ -210,6 +213,7 @@ export function applyUpdates(current: Tally, updates: Update[], docs: Doc[], now
     // Official means an official body: a journalist's or an outlet's count is not (Fares al-Hemyari, 1 Oct).
     if (!isOfficialBody(u.source || doc.name)) continue;
     const value = Math.round(u.value);
+    if (NOT_RUNNING.has(doc.url)) continue;
     // The figure is in the document it cites (17 Oct: eight cells cited one Khabar card that held none of them).
     if (!hasNumber(doc.text, value)) continue;
     const prev = getField(next, u.field);
@@ -284,6 +288,7 @@ export function applyClaims(current: Claims, updates: ClaimUpdate[], docs: Doc[]
     if (!doc) continue;
     if (u.field.endsWith(".civilians") && !/civilian|مدني/i.test(doc.text)) continue;
     const value = Math.round(u.value);
+    if (NOT_RUNNING.has(doc.url)) continue;
     // The figure is in the card it cites (17 Oct: 72 and 125 cited cards that did not hold them).
     if (!hasNumber(doc.text, value)) continue;
     const prev = next.fields[u.field]?.[u.by];

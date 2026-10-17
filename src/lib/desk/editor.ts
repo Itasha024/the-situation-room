@@ -51,6 +51,7 @@ import {
   fallbackKey,
   readBatch,
   readerKey,
+  misplaced,
   READER_MODELS,
   YEMEN_PROMPT,
   type ReaderPrompt,
@@ -415,7 +416,8 @@ export async function editCandidates(
     else if (model) modelNote = `read by ${model}`;
     batch.forEach((c, n) => {
       const r = readings.get(String(n));
-      if (!r) {
+      // Another item's reading under this one's id is read again next time (17 Oct).
+      if (!r || misplaced(r, c.text, batch.map((x) => x.text))) {
         stillQueued.push(c);
         return;
       }

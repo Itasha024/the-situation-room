@@ -6,7 +6,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { fixBase, seaTwins, skeleton } = require("../../../scripts/iran-research/pin-rules.cjs");
 
-const pin = (o: Record<string, unknown>) => ({ fp: "x", day: "2026-08-03", actor: "israel", place: "", lat: 0, lng: 0, label: "", source: "", url: "", also: [], ...o });
+const pin = (o: Record<string, unknown>): any => ({ fp: "x", day: "2026-08-03", actor: "israel", place: "", lat: 0, lng: 0, label: "", source: "", url: "", also: [], ...o });
 
 test("a village two sources spell two ways is one pin", () => {
   assert.equal(skeleton("Al Mansuri"), skeleton("Al-Mansouri"));
@@ -38,7 +38,7 @@ test("a place named after its city sits in that city, and a day out of its chann
 });
 
 test("a ship attack told twice, timed and untimed, at sea the same day is one pin", () => {
-  const base = [
+  const base: { also: { source: string }[] }[] = [
     pin({ fp: "u", place: "Strait of Hormuz", lat: 26.57, lng: 56.25, actor: "unclear", source: "Sabereen News", url: "https://t.me/SabrenNewss/227060", label: "Explosions at sea in the Strait of Hormuz" }),
     pin({ fp: "t", place: "Strait of Hormuz", lat: 26.6, lng: 56.3, actor: "iran", at: "2026-09-30T06:33:00Z", source: "UKMTO", url: "https://ukmto.org/145", label: "Inbound tanker struck" }),
   ];

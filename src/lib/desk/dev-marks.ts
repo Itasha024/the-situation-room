@@ -129,7 +129,7 @@ const WEAPON_RE = /\b(?:ballistic|missiles?|drones?|UAVs?|rockets?|projectiles?)
 /** A missile or drone the text gives to another side: "US drone strike", "government drone strikes". */
 const OTHERS_WEAPON = /\b(?:Saudi|coalition|US|U\.S\.|American|Israeli|Emirati|UAE|government|army|Giants|southern|STC)(?:[- ]led(?:\s+coalition)?)?\s+(?:\w+\s+)?(?:drones?|missiles?|rockets?|UAVs?)\b/i;
 const SAUDI_PLACE = /\b(?:Abha|Khamis Mushait|Jazan|Jizan|Najran|Yanbu|Jeddah|Riyadh|Taif|Dhahran|Sharurah|Asir|Dammam|Ras Tanura|Saudi Arabia)\b/i;
-const IN_SAUDI_HIT_RE = /\b(?:attacks?|strikes?|struck|hit|hits|target\w*|explosions?|blasts?|impact|debris|shrapnel|fragments|missiles?|drones?|barrage|wounded|injured|injures?|kill\w*)\b/i;
+const IN_SAUDI_HIT_RE = /\b(?:smoke|fires?|ablaze|burn\w*|attacks?|strikes?|struck|hit|hits|target\w*|explosions?|blasts?|impact|debris|shrapnel|fragments|missiles?|drones?|barrage|wounded|injured|injures?|kill\w*)\b/i;
 /** North of the border with Yemen, by the pin's own spot (Riyadh, Yanbu, Jazan, Najran). */
 const SAUDI_BOX = (lat: number, lng: number) => lng > 36 && lng < 52 && (lat > 17.6 || (lat > 16.4 && lng < 43.15)) && lat < 28.5;
 export function houthiAttack(e: { label?: string | null; place?: string | null; lat?: number | null; lng?: number | null }): boolean {
@@ -164,7 +164,7 @@ export function yemenPinSide(e: { type?: string | null; label?: string | null; t
  * forces" (17 Oct: "Yemeni government forces liberate Dhubab Airport, the only site held by Saudi
  * militias", drawn as the government's). With no Houthi named, the side acting is the Houthis.
  */
-const SAUDI_FOE = /\b(?:Saudi(?:[- ](?:backed|aligned|led))?\s+(?:forces|militias?|mercenaries|mobili[sz]ations?|infiltrations?|government forces|targets|troops|concentrations|build-?ups?|gatherings|reinforcements|deployments|crowd|positions|columns)|pro-Saudi\s+\w+|Saudi\s+militias?)\b/i;
+const SAUDI_FOE = /\b(?:coalition[- ]backed\s+(?:forces|militias?|groups?)|Saudi(?:[- ](?:backed|aligned|led))?\s+(?:forces|militias?|mercenaries|mobili[sz]ations?|infiltrations?|government forces|targets|troops|concentrations|build-?ups?|gatherings|reinforcements|deployments|crowd|positions|columns)|pro-Saudi\s+\w+|Saudi\s+militias?)\b/i;
 export function houthiTelling(label: string): boolean {
   if (/\bHouthis?\b|Ansar ?Allah/i.test(label) || !SAUDI_FOE.test(label)) return false;
   return /\bYemeni\s+(?:government\s+|armed\s+)?(?:forces|army|military)\b|\bYemen forces\b|^(?:[^:]{0,40}:\s*)?Saudi(?:[- ](?:backed|aligned|led))?\s+\w+\s+(?:driven out|expelled|flee|fled|repelled)\b/i.test(label);

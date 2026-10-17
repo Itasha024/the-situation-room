@@ -270,7 +270,6 @@
     TOPIC = Object.fromEntries(T.map((t) => [t.id, t]));
   }
   const latestOf = (t) => [t.cards[0] && t.cards[0].at, t.trump && t.trump[0] && t.trump[0].at, t.oil && t.oil.rows[0].at, t.pts && t.pts[0] && t.pts[0].ref && t.pts[0].ref.at].filter(Boolean).sort().pop();
-  const lastLine = (t) => (t.trump ? (t.trump[0] ? 'Trump: ' + t.trump[0].h : '') : t.oil ? oilLine(t.oil) : t.pts && t.pts[0] ? t.pts[0].t : t.cards[0] ? t.cards[0].h : '');
   const timeOf = (at) => (at ? fmt(at) : '');
   const kicker = (t) => `<span class="h2-kick">${t.desk === 'both' ? `${FLAG.iran}${FLAG.yemen}<span>Both desks</span>` : `${FLAG[t.desk]}<span>${HD[t.desk].short} desk</span>`}</span>`;
 
@@ -740,7 +739,7 @@
   function renderStories() {
     const items = ordered();
     const idx = $('index');
-    idx.innerHTML = items.map((t) => `<button type="button" role="tab" data-i="${t.id}" aria-selected="false">${kicker(t)}<b>${esc(t.name)}</b><time>${esc(timeOf(latestOf(t)))}</time><p>${esc(lastLine(t))}</p></button>`).join('');
+    idx.innerHTML = items.map((t) => `<button type="button" role="tab" data-i="${t.id}" aria-selected="false">${kicker(t)}<b>${esc(t.name)}</b><time>${esc(timeOf(latestOf(t)))}</time></button>`).join('');
     edges();
     const keep = items.find((t) => t.id === S.story);
     if (items.length) show(keep ? keep.id : items[0].id); else $('panel').innerHTML = '';

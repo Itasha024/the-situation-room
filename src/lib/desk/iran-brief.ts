@@ -24,6 +24,7 @@ import type { DeskStore } from "./store.ts";
 import { shownCard, TRUMP_KEY, type TrumpFeed, type TrumpStatement } from "./trump.ts";
 import type { LiveReport } from "./types.ts";
 import { topReports } from "./brief-store.ts";
+import { rankPoints } from "./rank-points.ts";
 
 export const IRAN_BRIEF_KEY = "brief:iran";
 const HOURS = 3;
@@ -63,7 +64,7 @@ const RETRY_MS = 10 * 60_000;
 const SYSTEM = `You are the editor of a live news desk on the Iran war (the US–Iran war since 28 February 2026: the strikes, the Strait of Hormuz, the talks, the nuclear file, sanctions, Iran's allies, and the war at home in Iran, the US, Israel and the Gulf).
 You get the reports published in the last ${HOURS} hours, and Trump's own statements on Iran in that time. Each line is: [its id] outlet (its group): headline — body. Trump's own statements have the ids t1, t2…
 Write in English wire style (Reuters/AP):
-- "points": the latest developments of these ${HOURS} hours as a numbered list for a reader with a minute: 3-8 points, each ONE development in 1-2 short sentences (at most 40 words), ordered from the most important to the least. Importance is what changes the war most. What a leader or government actually said or decided outranks reports of what they might do: Trump's own words on Iran usually come first, unless they are minor. Strikes and their deaths, attacks at sea, decisions on war and on talks come before reactions, commentary and local items, which come last or are left out. Two reports of one event are one point.
+- "points": the latest developments of these ${HOURS} hours as a numbered list for a reader with a minute: 4-6 points (fewer only when less happened), each ONE development in 1-2 short sentences (at most 40 words), ordered from the most important to the least. Importance is what changes the war most. What a leader or government actually said or decided outranks reports of what they might do: Trump's own words on Iran usually come first, unless they are minor. Strikes and their deaths, attacks at sea, decisions on war and on talks come before reactions, commentary and local items, which come last or are left out. Two reports of one event are one point.
 - "arenas": for each arena id below, a list of 0-4 points on that arena from these ${HOURS} hours, most important first, written the same way. Only reports that belong to that arena; [] when none does. A report goes in the one arena it is most about (two at most): Trump's words go where their subject is, not in every arena. Commentary and analysis go nowhere.
 ARENAS:
 ${ARENAS.map((a) => `- ${a.id} = ${a.name}: ${a.about}`).join("\n")}
@@ -105,7 +106,7 @@ export function fromAnswer(j: Record<string, unknown>, refOf: Record<string, Ref
   // Each country's words and acts from its own sources (user, 9 Oct): never Iran's outlets retelling America or Israel.
   const look = (id: string, point = "") => ownRef(point, refOf[id]);
   const outlets = Object.values(refOf).map((r) => r.source);
-  const pts = marked(numberRefs(onePointEach(cleanPoints(j.points, 10).filter((p) => !yemenOnly(stripRefs(p))), outlets).slice(0, 8), look));
+  const pts = marked(numberRefs(rankPoints(onePointEach(cleanPoints(j.points, 10).filter((p) => !yemenOnly(stripRefs(p))), outlets)), look));
   const aj = (j.arenas && typeof j.arenas === "object" ? j.arenas : {}) as Record<string, unknown>;
   const arenas: Record<string, { points: string[]; refs: Ref[] }> = {};
   // A report serves two arenas at most: Trump's one post was in five (9 Oct).

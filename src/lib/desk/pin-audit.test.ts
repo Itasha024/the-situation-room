@@ -140,3 +140,37 @@ test("a ship's aftermath and a week's roundup are no pins on the Iran map", () =
   ]) assert.equal(notEvent({ label }), true, label);
   assert.equal(notEvent({ label: "UKMTO: tanker hit by unknown projectile while transiting Strait of Hormuz; crew safe, no environmental impact" }), false);
 });
+
+test("round 2: hometowns, goals and two-place cards do not move a pin; a loose spelling never crosses governorates", () => {
+  const at = "2026-10-12T10:00:00Z";
+  const place = (label: string, p: { lat: number; lng: number; place: string }, type = "combat") => servePins([{ fp: "x", at, type, label, ...p }])[0]?.place;
+  // Where fighters come from, or what an operation aims at, is not where it happened.
+  assert.equal(place("Al-Dhale emergency forces commander Moaz al-Maida killed trying to advance towards Bab al-Mandab", { lat: 12.7, lng: 43.47, place: "Bab al-Mandab" }), "Bab al-Mandab");
+  assert.equal(place("Two military commanders from Al-Dhale killed in battles to liberate Bab al-Mandab and Mayun island", { lat: 12.67, lng: 43.42, place: "Mayun" }), "Mayun");
+  assert.equal(place("Yemeni government forces launch Operation Fajr al-Yemen to retake Sanaa", { lat: 12.913, lng: 43.477, place: "Dhubab" }), "Dhubab");
+  // Taiz's Al-Hujariyah is not Hadramawt's Hajar.
+  assert.equal(place("Houthi forces capture Al-Hujariyah district in Taiz, activists say fighters withdrew and left weapons behind", { lat: 13.35, lng: 44.1, place: "Al-Hujariyah" }), "Al-Hujariyah");
+  // A card naming two places keeps each pin on its own.
+  assert.equal(place("Saudi-led coalition air strikes hit Kamaran island and Al-Qanawis district in Hodeidah", { lat: 15.36, lng: 42.58, place: "Kamaran" }, "strike"), "Kamaran");
+  assert.equal(place("Houthi forces announce strikes on Aramco in Dhahran, King Khalid airport and Riyadh refinery", { lat: 24.9586, lng: 46.711, place: "King Khalid International Airport" }, "strike"), "King Khalid International Airport");
+  assert.equal(place("Three killed in Riyadh airport attack, two in Sanaa", { lat: 24.7136, lng: 46.6753, place: "Riyadh" }, "strike"), "Riyadh");
+  // A ship at sea stays at sea.
+  assert.equal(place("UKMTO reports small boat fires two shots at LNG tanker 140 miles southeast of Al-Mukalla", { lat: 12.8883, lng: 50.8363, place: "Al-Mukalla" }, "vessel"), "Al-Mukalla");
+});
+
+test("round 2: burials, condemnations and halted flights are no pins; a funeral fired on is", () => {
+  for (const label of [
+    "Al-Mansurah in Aden buries fighter Ibrahim Al-Mallahi killed on West Coast front",
+    "Southern Transitional Council condemns Saudi air strike that destroyed Ahmed bin Hanbal school in Al-Mudaribah district, Lahj",
+    "Saudi civil defence says threat over in Abha",
+    "Air traffic halted at Taif airport in Saudi Arabia",
+    "Hamdan, Sanhan and other tribes in Sanaa announce national mobilization to support armed forces",
+    "Shabwa Defense Forces defuse four IEDs in Arma district",
+    "Saudi strikes hit multiple provinces in Yemen",
+  ]) assert.equal(notEvent({ label }), true, label);
+  for (const label of [
+    "Child wounded by Houthi gunfire during funeral in Hodeidah",
+    "Yemeni government forces recapture Al-Mansurah and Al-Mashbak mountains as Houthis withdraw heavy equipment",
+    "Houthi forces withdraw from Al-Khokha and Red Sea islands towards Hodeidah",
+  ]) assert.equal(notEvent({ label }), false, label);
+});

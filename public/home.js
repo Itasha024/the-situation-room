@@ -670,9 +670,8 @@
   }
   function miniMap(el, id) {
     const t = TOPIC[id];
-    const touch = matchMedia('(pointer: coarse)').matches;
-    // It moves and zooms as the big one, but the page still scrolls past it on a phone (one finger scrolls).
-    const m = L.map(el, { zoomControl: true, attributionControl: false, dragging: !touch, scrollWheelZoom: false, doubleClickZoom: true, boxZoom: false, keyboard: false, touchZoom: true, tap: true, zoomSnap: 0.25 });
+    // It moves and zooms as the big one, on a phone too (user, 17 Oct: move around in the story maps).
+    const m = L.map(el, { zoomControl: true, attributionControl: false, dragging: true, scrollWheelZoom: false, doubleClickZoom: true, boxZoom: false, keyboard: false, touchZoom: true, tap: true, zoomSnap: 0.25 });
     m._hTiles = L.tileLayer(tileUrl(), { noWrap: true }).addTo(m);
     m.fitBounds(t.bounds, { padding: [6, 6] });
     miniControl(m);

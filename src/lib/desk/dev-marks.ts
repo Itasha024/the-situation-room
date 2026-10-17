@@ -143,6 +143,7 @@ export function houthiAttack(e: { label?: string | null; place?: string | null; 
 /** A Yemen map pin's side as served: from the part of its headline about its own place, the Houthis' for attacks only they make, else as stored. */
 export function yemenPinSide(e: { type?: string | null; label?: string | null; text?: string | null; source?: string | null; place?: string | null; lat?: number | null; lng?: number | null; actor?: string | null }): string {
   const label = String(e.label || "");
+  if (houthiTelling(label)) return "houthi";
   const c = clauseOf(label, e.place);
   const x = c ? { ...e, label: c } : e;
   if (houthiAttack(x)) return "houthi";
@@ -155,6 +156,18 @@ export function yemenPinSide(e: { type?: string | null; label?: string | null; t
   const said = pinSideOf(e);
   if (said && !/\b(?:clash\w*|battles?|fighting|between|engage\w*)\b/i.test(label)) return said;
   return e.actor && e.actor !== "unclear" ? e.actor : said ?? "unclear";
+}
+
+/**
+ * The Houthis' own telling, translated: their outlets call their forces "the Yemeni armed forces", which
+ * came out as "Yemeni government forces", and their enemy "Saudi forces", "Saudi militias", "pro-Saudi
+ * forces" (17 Oct: "Yemeni government forces liberate Dhubab Airport, the only site held by Saudi
+ * militias", drawn as the government's). With no Houthi named, the side acting is the Houthis.
+ */
+const SAUDI_FOE = /\b(?:Saudi(?:[- ](?:backed|aligned|led))?\s+(?:forces|militias?|mercenaries|mobili[sz]ations?|infiltrations?|government forces|targets|troops|concentrations|build-?ups?|gatherings|reinforcements|deployments|crowd|positions|columns)|pro-Saudi\s+\w+|Saudi\s+militias?)\b/i;
+export function houthiTelling(label: string): boolean {
+  if (/\bHouthis?\b|Ansar ?Allah/i.test(label) || !SAUDI_FOE.test(label)) return false;
+  return /\bYemeni\s+(?:government\s+|armed\s+)?(?:forces|army|military)\b|\bYemen forces\b|^(?:[^:]{0,40}:\s*)?Saudi(?:[- ](?:backed|aligned|led))?\s+\w+\s+(?:driven out|expelled|flee|fled|repelled)\b/i.test(label);
 }
 
 /** Forces the Houthis' outlets name by their backer. */

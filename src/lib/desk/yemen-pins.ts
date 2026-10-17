@@ -17,7 +17,7 @@
 import { ADM2 } from "./adm2-centres.ts";
 import { governorateAt } from "./adm1.ts";
 import { placeKey } from "./prose-places.ts";
-import { PLACE_BY_NAME } from "./gazetteer.ts";
+import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
 
 export type YemenPin = { fp?: string; at?: string; type?: string | null; lat?: number; lng?: number; place?: string | null; label?: string | null };
 
@@ -157,7 +157,7 @@ const GOVS: [string, RegExp, number, number, string][] = [
 ];
 /** Fronts the press names without their governorate, all Taiz's: "forces holding positions in Jabal Han" sat near Dhamar (15 Oct). */
 const FRONTS: [RegExp, string][] = [
-  [/\b(?:Jabal|Mount) Han\b|\bAl-Shaq[ae]?b\b|\bAl-Shuqa?b\b|\bAl-Aqro?u?dh?\b|\bAl-Sarari\b|\bJabal Sabr\b|\bAl-Hawban\b|\bAl-Dhabab\b|\bAl-Ahkum\b|\bAl-Turba[h]?\b|\bAl-Shamaya?tayn\b/i, "YE-TA"],
+  [/\b(?:Jabal|Mount) Han\b|\bAl-Shaq[ae]?b\b|\bAl-Shuqa?b\b|\bAl-Aqro?u?dh?\b|\bAl-Sarari\b|\bJabal Sabr\b|\bAl-Hawban\b|\bAl-Dhabab\b|\bAl-Ahkum\b|\bAl-Turba[h]?\b|\bAl-Shamaya?tayn\b|\bAl-S[ai]lw\b|\b(?:Jabal|Mount) M[ou]t[r]?an\b|\bBani Yusuf\b|\bAl-Kadha\b|\bHadh?ran\b|\bAl-Wafi\b|\bJabal Habashi\b|\bAl-Ma'?a?fi[r]\b|\bAl-Mawasit\b/i, "YE-TA"],
 ];
 /** The governorates the words name; "Gulf of Aden" is the sea, "Sanaa forces" the Houthis. */
 export function govsIn(t: string): Set<string> {
@@ -606,6 +606,40 @@ export function shopName(place: string): boolean {
   return /\b(?:shop|store|hardware|library|restaurant|hotel|pharmacy|bakery|salon|company|trading|building materials?|mall|cafe|café|office|est\.?|supermarket|clinic|showroom|workshop|agency|services|centre for|center for)\b/i.test(place);
 }
 
+/**
+ * A Houthi attack on Saudi Arabia set down in Yemen, where it was fired from (17 Oct: "Houthi forces
+ * launched ballistic missiles and drones at Aramco in Riyadh and Khurais" sat in Amran): the first
+ * Saudi place its words name, when they name no governorate of Yemen as the place hit.
+ */
+export function saudiTargetPin(e: YemenPin): { name: string; lat: number; lng: number } | null {
+  if (typeof e.lat !== "number" || typeof e.lng !== "number" || !governorateAt(e.lat, e.lng) || e.type === "vessel") return null;
+  const label = String(e.label || "");
+  if (govsWhere(label).size || placeNamed(e.place, label)) return null;
+  if (!/\b(?:missiles?|drones?|ballistic|strikes?|attacks?|target\w*|hit)\b/i.test(label)) return null;
+  const saudi = placesIn(label).find((p) => p.country === "Saudi Arabia");
+  return saudi ? { name: saudi.name, lat: saudi.lat, lng: saudi.lng } : null;
+}
+
+/**
+ * A ship "60 nautical miles south of Mocha" set down on Mocha: moved out to sea by the distance and
+ * bearing its words give (the page did this for cards; the pins kept the town, 5 Oct).
+ */
+const BEARING: Record<string, [number, number]> = { north: [1, 0], south: [-1, 0], east: [0, 1], west: [0, -1], northeast: [0.707, 0.707], northwest: [0.707, -0.707], southeast: [-0.707, 0.707], southwest: [-0.707, -0.707] };
+export function offshorePin(e: YemenPin): { lat: number; lng: number } | null {
+  if (typeof e.lat !== "number" || typeof e.lng !== "number") return null;
+  const label = String(e.label || "");
+  if (e.type !== "vessel" && !SHIP.test(label)) return null;
+  // Only a pin still on the land (one put out to sea already stays).
+  const known = PLACE_BY_NAME[String(e.place || "")];
+  if (!governorateAt(e.lat, e.lng) && !(known && known.country !== "sea" && kmTo(e.lat, e.lng, known.lat, known.lng) < 5)) return null;
+  const m = /\b(\d{1,3}(?:\.\d+)?)\s*(nautical miles?|nm|miles?|km|kilomet(?:re|er)s?)\s+(north|south|east|west)[- ]?(east|west)?\s+of\b/i.exec(label);
+  if (!m) return null;
+  const km = Number(m[1]) * (/^n/i.test(m[2]) ? 1.852 : /^mile/i.test(m[2]) ? 1.609 : 1);
+  const b = BEARING[(m[3] + (m[4] ?? "")).toLowerCase()];
+  if (!b || km > 400) return null;
+  return { lat: e.lat + (b[0] * km) / 111, lng: e.lng + (b[1] * km) / (111 * Math.cos((e.lat * Math.PI) / 180)) };
+}
+
 /** Saudi Arabia's and the region's places, and the seas: a headline naming one is not about Yemen alone. */
 const ABROAD = /\b(?:Saudi Arabia|Saudi|Riyadh|Jeddah|Jazan|Jizan|Najran|Abha|Khamis Mushait|Yanbu|Taif|Dhahran|Dammam|Mecca|Makkah|Medina|Madinah|Sharurah|Asir|Aramco|Kharj|Tabuk|Red Sea|Gulf of Aden|Arabian Sea|Eritrea|Djibouti|Somalia|Oman|UAE|Emirates|Abu Dhabi|Dubai|Israel|Eilat|Iran|Hormuz)\b/i;
 /** A pin set down abroad whose words name only Yemen's governorates or fronts: the first of them (14 Oct: "Houthi shelling kills two in Jabal Sabr" sat in Riyadh). */
@@ -636,14 +670,16 @@ const SAUDI_BACKED_WORDS = /\b(?:Saudi|coalition)[- ](?:backed|aligned|funded|su
 /** Every rule above, in order. */
 export function servePins<T extends YemenPin>(pins: T[]): T[] {
   const moved = strayExtraPins(pins.filter((e) => !notEvent(e) && !countryPin(e))).flatMap((e) => {
-    const d = spotPin(e) ?? districtPin(e) ?? areaInDistrict(e) ?? namedGovPin(e) ?? abroadPin(e);
+    const d = spotPin(e) ?? saudiTargetPin(e) ?? districtPin(e) ?? areaInDistrict(e) ?? namedGovPin(e) ?? abroadPin(e);
     // A shop's or an office's pin whose words name no place we know: not on the map.
     if (!d && shopName(String(e.place || ""))) return [];
     // Abroad, for an event its words put "in Yemen" without a place: no place to pin
     // ("Pakistani fighter jets targeted Houthi targets in Yemen as part of Mecca alliance" sat on Mecca).
     if (!d && typeof e.lat === "number" && !governorateAt(e.lat, e.lng ?? 0) && /\bin Yemen\b/i.test(String(e.label || "")) && !/\b(?:Houthi|Yemeni)\s+(?:\w+\s+)?(?:missiles?|drones?|attacks?|strikes?)\b/i.test(String(e.label || ""))) return [];
     const type = pinType(e);
-    const moved = { ...e, ...(d ? { place: d.name, lat: d.lat, lng: d.lng } : {}), ...(type !== e.type ? { type } : {}) };
+    const at = { ...e, ...(d ? { place: d.name, lat: d.lat, lng: d.lng } : {}), ...(type !== e.type ? { type } : {}) };
+    const sea = offshorePin(at);
+    const moved = sea ? { ...at, ...sea } : at;
     // A garbled name the place search gave ("Qma Jbl Sbr") is shown as the site or district it lies in.
     const name = garbled(String(moved.place || "")) ? plainName(moved) : null;
     return [name ? { ...moved, place: name } : moved];

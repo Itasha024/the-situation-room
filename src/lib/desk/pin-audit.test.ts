@@ -207,3 +207,22 @@ test("round 3: one capture told all day is one pin; lost and garbled places; pho
     "Houthis construct defensive berm near Dhubab in Taiz",
   ]) assert.equal(notEvent({ label: l }), true, l);
 });
+
+test("round 4: the Houthis' own telling, an attack on Saudi Arabia pinned where it was fired, a ship pinned on the town it was off", async () => {
+  const { houthiTelling, yemenPinSide } = await import("./dev-marks.ts");
+  assert.equal(houthiTelling("Yemeni government forces liberate Dhubab Airport, the only site held by Saudi militias this morning"), true);
+  assert.equal(houthiTelling("Yemeni government forces launch three strikes on Saudi targets"), true);
+  assert.equal(houthiTelling("Yemeni government forces repel Houthi attack north of Dhubab airport"), false);
+  assert.equal(houthiTelling("Saudi-backed columns withdraw from Taiz axis toward Aden"), false);
+  assert.equal(yemenPinSide({ label: "Yemeni government forces expel Saudi infiltrations in Dhubab and seize equipment after Giants Brigades forces flee", place: "Dhubab", lat: 12.94, lng: 43.41, actor: "government" }), "houthi");
+  const at = "2026-10-05T10:00:00Z";
+  const one = (label: string, p: { lat: number; lng: number; place: string }, type = "strike") => servePins([{ fp: "x", at, type, label, ...p }])[0];
+  assert.equal(one("Houthi Armed Forces spokesperson: Houthi forces launched ballistic missiles and drones at Aramco in Riyadh and Khurais", { lat: 15.663, lng: 43.943, place: "'Amran" })?.place, "Riyadh");
+  const ship = one("Explosions reported near oil tanker 60 nautical miles south of Mocha, crew safe", { lat: 13.32, lng: 43.25, place: "Mocha" }, "vessel");
+  assert.ok(ship && ship.lat! < 12.4 && Math.abs(ship.lng! - 43.25) < 0.01);
+  // Already at sea: it stays.
+  const far = one("UKMTO reports small boat fires two shots at LNG tanker 140 miles southeast of Al-Mukalla", { lat: 12.8883, lng: 50.8363, place: "Al-Mukalla" }, "vessel");
+  assert.equal(far?.lat, 12.8883);
+  // Taiz's fronts named alone: "Jabal Matran and Al-Salw" is Taiz, not Saada's Salah.
+  assert.equal(one("Houthi forces claim control of Jabal Matran and expulsion of coalition forces from Al-Salw", { lat: 16.877, lng: 43.386, place: "Salah" }, "combat")?.place, "Taiz");
+});

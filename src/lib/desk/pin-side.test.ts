@@ -28,3 +28,8 @@ test("an air strike with no one named is the coalition's; nothing named is not s
   assert.equal(side("Landmine explosion kills woman and wounds three family members in Al-Shamaitin district of Taiz", "combat"), null);
   assert.equal(side("Israeli strikes hit Hodeidah port"), "israel");
 });
+
+test("warplanes are the coalition's whoever they hit; the Houthi spokesman's claims are theirs", () => {
+  assert.equal(side("Warplanes shell Houthi positions around Jabal Han west of Taiz"), "saudi");
+  assert.equal(pinSideOf({ type: "strike", label: "Strikes hit Saudi build-ups in Al-Yatemah in Al-Jawf", source: "Yahya Saree" }), "houthi");
+});

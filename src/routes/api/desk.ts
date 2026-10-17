@@ -58,7 +58,7 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     // The Iran desk's filter buttons go by the source's group.
     if (desk === "iran") (r as Record<string, unknown>).lean = iranLeanOfSource(String(r.source ?? ""));
     // Who acted, for its map pin's colour (user, 17 Oct): the Yemen map draws its pins from the cards.
-    if (desk === "yemen" && !r.actor) (r as Record<string, unknown>).actor = pinSideOf({ type: String(r.type ?? ""), label: String(r.summary ?? ""), text: String(r.text ?? "") }) ?? "unclear";
+    if (desk === "yemen" && !r.actor) (r as Record<string, unknown>).actor = pinSideOf({ type: String(r.type ?? ""), label: String(r.summary ?? ""), text: String(r.text ?? ""), source: String(r.source ?? "") }) ?? "unclear";
   }
   // The Iran map's own pins pass its scope as they are served, so a pin stored under older rules never shows.
   if (desk === "iran" && Array.isArray((slice as { events?: unknown[] }).events)) {

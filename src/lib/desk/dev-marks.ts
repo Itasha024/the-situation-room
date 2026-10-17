@@ -119,17 +119,23 @@ function sideIn(s: string): PinSide | null {
   if (y >= 0 && !firstSide(s.slice(0, y))) return "houthi";
   return firstSide(s);
 }
-export function pinSideOf(e: { type?: string | null; label?: string | null; text?: string | null }): PinSide | null {
+export function pinSideOf(e: { type?: string | null; label?: string | null; text?: string | null; source?: string | null }): PinSide | null {
   const full = String(e.label || "");
   const rep = repelAttacker(full);
   if (rep) return rep;
   // "Aden security: two Houthi missiles land…": the words after the speaker first.
   const colon = /^[^:]{2,60}:\s+/.exec(full);
+  // "Warplanes shell Houthi positions": aircraft as the subject are the coalition's (or the US's), whoever they hit.
+  const head = colon ? full.slice(colon[0].length) : full;
+  if (/^(?:(?:Saudi|coalition|Saudi-led coalition|US|U\.S\.|American)\s+)?(?:warplanes?|fighter jets?|aircraft|air ?strikes?|air ?raids?)\b/i.test(head)) return /^(?:US|U\.S\.|American)\b/i.test(head) ? "us" : "saudi";
   const side = (colon ? sideIn(full.slice(colon[0].length)) : null) ?? sideIn(full);
   if (side) return side;
   // Only the coalition, the US and Israel fly strike aircraft over Yemen.
   if (/\b(air ?strikes?|air ?raids?|warplanes?|fighter jets?|cluster bombs?)\b/i.test(full)) return /\b(US|U\.S\.|American)\b/.test(full) ? "us" : "saudi";
-  return sideIn(String(e.text || "").slice(0, 300));
+  const body = sideIn(String(e.text || "").slice(0, 300));
+  if (body) return body;
+  // The Houthis' military spokesman speaks only of their own attacks.
+  return /\bYahya Sar(?:e|i|ee|ea)\b/i.test(String(e.source || "")) ? "houthi" : null;
 }
 
 /** "shoot down a Saudi ScanEagle drone", "intercepted two Houthi missiles". */

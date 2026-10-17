@@ -46,3 +46,14 @@ test("a pin on a whole country's centre goes; the same label twice on one spot i
   const z = { at, type: "strike", lat: 33.32, lng: 35.47, label: "Israeli warplane drops bomb on roof of a building in Zoutar al-Sharqiya, south Lebanon" };
   assert.equal(onePinPerEvent([z, { ...z, lat: 33.321 }]).length, 1);
 });
+
+test("one card's district pin and its own pin on the same named place are one pin; footage is not an event", () => {
+  const at = "2026-10-17T07:33:14.000Z";
+  const label = "Houthi shelling on residential areas in south-east Taiz kills one person and wounds 5 others";
+  const out = servePins([
+    { fp: "a-pin-x", at, type: "combat", lat: 13.47, lng: 43.89, place: "Jabal Habashi", label },
+    { fp: "a", at, type: "combat", lat: 13.475, lng: 43.873, place: "Jabal Habashi", label },
+    { fp: "b", at, type: "strike", lat: 13.0, lng: 44.9, place: "Al-Mudaribah", label: "Southern Giants Brigades publish footage of targeting a Houthi vehicle" },
+  ]);
+  assert.equal(out.length, 1);
+});

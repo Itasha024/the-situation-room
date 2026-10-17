@@ -13,7 +13,8 @@ declare global {
   }
 }
 
-export function DeskDoc({ title, lede, children }: { title: string; lede?: ReactNode; children: ReactNode }) {
+/** `back`: where the foot's link goes, the desk the page belongs to or, for the site's own pages, every desk. */
+export function DeskDoc({ title, lede, children, back = { href: "/yemen-conflict-desk", label: "Back to the live desk" } }: { title: string; lede?: ReactNode; children: ReactNode; back?: { href: string; label: string } }) {
   useEffect(() => {
     let tries = 0;
     const boot = () => {
@@ -38,9 +39,8 @@ export function DeskDoc({ title, lede, children }: { title: string; lede?: React
       </div>
       <header className="top doc-top">
         <div className="brand">
-          <a className="desk-label-link" href="/yemen-conflict-desk">
-            <h1 className="desk-label"><span className="dl-pre">Desk:</span> <span className="dl-name">Yemen conflict</span></h1>
-          </a>
+          {/* "Desks:" and a button per desk (public/app.js installDeskPicker). */}
+          <h1 className="desk-label"><span className="dl-pre">Desks:</span></h1>
         </div>
       </header>
       <main className="doc">
@@ -49,7 +49,7 @@ export function DeskDoc({ title, lede, children }: { title: string; lede?: React
         {children}
       </main>
       <footer className="doc-foot">
-        <a href="/yemen-conflict-desk">Back to the live desk</a>
+        <a href={back.href}>{back.label}</a>
       </footer>
     </div>
   );

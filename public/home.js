@@ -42,7 +42,6 @@
     return `<svg class="flag" viewBox="0 0 18 12" aria-hidden="true">${c.map((x, i) => `<rect y="${i * 4}" width="18" height="4" fill="${x}"/>`).join('')}</svg>`;
   };
   const FLAG = { iran: flagOf('iran'), yemen: flagOf('yemen') };
-  const ALL_FLAG = '<svg class="flag" viewBox="0 0 18 12" aria-hidden="true"><rect width="18" height="12" rx="1" fill="none" stroke="currentColor" stroke-opacity=".55"/><path d="M3 4h12M3 6h12M3 8h8" stroke="currentColor" stroke-opacity=".55"/></svg>';
   const ICON_EXT = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>';
 
   /* ---------- Times: the reader's own clock, as on the desks; the map's days on the desks' clock ---------- */
@@ -115,15 +114,18 @@
   }
 
   async function load() {
-    const [di, dy, bi, by, ti, ty, oil] = await Promise.all([
+    const [di, dy, bi, by, ti, ty, oil, sy, si] = await Promise.all([
       getJson('/api/desk?desk=iran'), getJson('/api/desk?desk=yemen'), getJson('/api/brief?desk=iran'), getJson('/api/brief?desk=yemen'),
       getJson('/api/trump'), getJson('/api/trump?desk=yemen'), getJson('/api/oil'),
+      getJson('/api/scan?only=time', { cache: 'no-cache' }), getJson('/api/scan?desk=iran&only=time', { cache: 'no-cache' }),
     ]);
     if (di || dy) {
       D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports)]);
       byFp = new Map(D.reports.map((r) => [r.fp, r]));
       addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events)], true);
-      D.asOf = [di && di.updatedAt, dy && dy.updatedAt].filter(Boolean).sort().pop() || D.asOf;
+      // When the desks last looked, as each desk shows it, not the newest report's time.
+      const t = Math.max(...[di && di.updatedAt, dy && dy.updatedAt, sy && sy.scannedAt, si && si.scannedAt].map((x) => Date.parse(x || '') || 0));
+      if (t) D.asOf = new Date(t).toISOString();
     }
     if (bi && bi.ok !== false && !bi.pending) D.arenas = bi.arenas || D.arenas;
     if (by && by.ok !== false) {
@@ -176,7 +178,7 @@
   /* ---------- Small pieces ---------- */
   const deskTag = (desk) => (desk === 'both'
     ? `<span class="h-tags">${deskTag('iran')}${deskTag('yemen')}</span>`
-    : `<a class="h-tag h-tag-${desk}" href="${HD[desk].href}" title="${esc(HD[desk].desk)}">${FLAG[desk]}<span>${esc(HD[desk].short)}</span></a>`);
+    : `<a class="h-tag h-tag-${desk}" href="${HD[desk].href}" data-desk-go title="${esc(HD[desk].desk)}">${FLAG[desk]}<span>${esc(HD[desk].short)}</span></a>`);
   const deskOfReport = (r) => (r.desks.includes('iran') && r.desks.includes('yemen') ? 'both' : r.desks[0]);
 
   function card(r, o) {
@@ -217,34 +219,48 @@
   let T = [], TOPIC = {};
   function buildTopics() {
     T = [
-      { id: 'hormuz', name: 'Strait of Hormuz', desk: 'iran', bounds: [[24.3, 54.6], [27.8, 59]], pts: ptsOf(arena('hormuz')),
+      { id: 'hormuz', name: 'Strait of Hormuz', desk: 'iran', bounds: [[24.3, 54.6], [27.8, 59]], erx: /hormuz|strait|tanker|vessel|ship|bandar abbas|qeshm|fujairah/i, pts: ptsOf(arena('hormuz')),
         cards: uniq([...flagged('arena:hormuz'), ...re(/hormuz/i)]) },
-      { id: 'bab', name: 'Bab al-Mandab and the Red Sea', short: 'Bab al-Mandab', desk: 'yemen', bounds: [[11.4, 40.8], [16.4, 45.8]], pts: ptsOf(front('bab')),
+      { id: 'bab', name: 'Bab al-Mandab and the Red Sea', short: 'Bab al-Mandab', desk: 'yemen', bounds: [[11.4, 40.8], [16.4, 45.8]], erx: /red sea|bab al-mandab|hodeidah|ship|vessel|tanker|island/i, pts: ptsOf(front('bab')),
         cards: uniq(re(/red sea|bab al-mandab|hodeidah|yanbu/i)) },
-      { id: 'oil', name: 'Oil prices', desk: 'both', bounds: [[16, 44], [30.5, 60]], oil: D.oil,
+      { id: 'oil', name: 'Oil prices', desk: 'both', bounds: [[16, 44], [30.5, 60]], geo: false, oil: D.oil,
         cards: uniq(re(/\boil prices?\b|\bbrent\b|\bwti\b|crude (?:price|futures|oil price)|per barrel|\bopec\b|oil market/i)) },
-      { id: 'trump', name: 'Trump’s latest', desk: 'both', bounds: REGION, trump: D.trump, cards: [] },
-      { id: 'energy', name: 'Energy sites under fire', short: 'Energy', desk: 'both', bounds: [[16.5, 38], [28.5, 56]],
+      { id: 'trump', name: 'Trump’s latest', desk: 'both', bounds: REGION, geo: false, trump: D.trump, cards: [] },
+      { id: 'energy', name: 'Energy sites under fire', short: 'Energy', desk: 'both', bounds: [[16.5, 38], [28.5, 56]], erx: /aramco|refiner|pipeline|oil (?:field|facilit|terminal)|power (?:station|plant)|gas field|energy/i,
         cards: uniq(re(/aramco|refiner|pipeline|oil (field|facilit|terminal)|power (station|plant)|gas field/i)) },
-      { id: 'shipping', name: 'Shipping and attacks at sea', short: 'Shipping', desk: 'both', bounds: [[11, 37], [28.5, 60]],
+      { id: 'shipping', name: 'Shipping and attacks at sea', short: 'Shipping', desk: 'both', bounds: [[11, 37], [28.5, 60]], erx: /\bships?\b|vessel|tanker|ukmto/i,
         cards: uniq([...flagged('arena:hormuz').filter((r) => /\bship|vessel|tanker/i.test(r.h)), ...re(/\bships?\b|vessel|tanker|ukmto|freight|shipping/i)]) },
-      { id: 'saudi', name: 'Saudi Arabia under Houthi fire', short: 'Saudi Arabia', desk: 'yemen', bounds: [[16, 36], [29, 56]], pts: ptsOf(front('saudi-home')),
+      { id: 'saudi', name: 'Saudi Arabia under Houthi fire', short: 'Saudi Arabia', desk: 'yemen', bounds: [[16, 36], [29, 56]], erx: /saudi arabia|riyadh|dhahran|jizan|jazan|najran|yanbu|abha|khamis mushait/i, pts: ptsOf(front('saudi-home')),
         cards: uniq(re(/saudi|riyadh|dhahran|jizan|jazan|najran|yanbu|abha|khamis mushait/i).filter((r) => r.desks.includes('yemen'))) },
-      { id: 'lebanon', name: 'Lebanon and Israel', short: 'Lebanon', desk: 'iran', bounds: [[32.4, 34.6], [34.7, 36.9]], pts: ptsOf(arena('lebanon')),
+      { id: 'lebanon', name: 'Lebanon and Israel', short: 'Lebanon', desk: 'iran', bounds: [[32.4, 34.6], [34.7, 36.9]], erx: /./, pts: ptsOf(arena('lebanon')),
         cards: uniq([...flagged('arena:lebanon'), ...re(/lebanon|hezbollah|bint jbeil|beirut|galilee|litani|nabatieh|tyre/i)]) },
-      { id: 'talks', name: 'Talks and mediation', short: 'Talks', desk: 'both', bounds: REGION, pts: ptsOf(arena('talks')),
+      { id: 'talks', name: 'Talks and mediation', short: 'Talks', desk: 'both', bounds: REGION, geo: false, pts: ptsOf(arena('talks')),
         cards: uniq([...flagged('arena:talks'), ...re(/\btalks\b|negotiat|ceasefire|truce|mediat|envoy/i)]) },
-      { id: 'nuclear', name: 'Iran’s nuclear file', short: 'Nuclear', desk: 'iran', bounds: [[25, 44], [39.8, 63]], pts: ptsOf(arena('nuclear')),
+      { id: 'nuclear', name: 'Iran’s nuclear file', short: 'Nuclear', desk: 'iran', bounds: [[25, 44], [39.8, 63]], erx: /nuclear|fordow|natanz|bushehr|arak|enrich/i, pts: ptsOf(arena('nuclear')),
         cards: uniq([...flagged('arena:nuclear'), ...re(/nuclear|uranium|iaea|enrich|fordow|natanz/i)]) },
-      { id: 'fronts', name: 'Yemen’s front lines', short: 'Yemen fronts', desk: 'yemen', bounds: [[12.4, 42.6], [17.2, 46.6]],
+      { id: 'fronts', name: 'Yemen’s front lines', short: 'Yemen fronts', desk: 'yemen', bounds: [[12.4, 42.6], [17.2, 46.6]], erx: /./,
         pts: ['west-taiz', 'marib', 'dhale', 'lahj', 'jawf'].map(front).filter(Boolean).map((f) => { const p = ptsOf(f)[0]; return p && { ...p, t: f.name + ': ' + p.t }; }).filter(Boolean),
         cards: uniq(re(/taiz|marib|dhale|lahj|jawf|saada|bayda|\bfront\b/i).filter((r) => r.desks.includes('yemen'))) },
-      { id: 'inside', name: 'Inside Iran', desk: 'iran', bounds: [[25, 44], [39.8, 63]], pts: ptsOf(arena('inside-iran')),
+      { id: 'inside', name: 'Inside Iran', desk: 'iran', bounds: [[25, 44], [39.8, 63]], erx: /./, pts: ptsOf(arena('inside-iran')),
         cards: uniq([...flagged('arena:inside-iran'), ...re(/tehran|irgc|iranian (army|parliament|official)|khamenei|pezeshkian/i).filter((r) => r.desks.includes('iran'))]) },
     ];
+    // One report, and one point, in one story only (user, 17 Oct: Hormuz news was in Hormuz and in Inside Iran):
+    // the story about a place before the wider ones.
+    const seenCard = new Set(), seenPt = [];
+    ['hormuz', 'bab', 'lebanon', 'saudi', 'nuclear', 'energy', 'shipping', 'oil', 'talks', 'fronts', 'inside'].map((id) => T.find((t) => t.id === id)).filter(Boolean).forEach((t) => {
+      t.cards = t.cards.filter((r) => !seenCard.has(r.fp) && !seenCard.has(r.url));
+      t.cards.forEach((r) => { seenCard.add(r.fp); if (r.url) seenCard.add(r.url); });
+      if (t.pts) {
+        t.pts = t.pts.filter((p) => !seenPt.some((q) => (p.ref && q.ref && p.ref.url && p.ref.url === q.ref.url) || alike(p.t, q.t)));
+        seenPt.push(...t.pts);
+      }
+    });
     T.forEach((t) => {
       t.short = t.short || t.name;
-      t.events = D.events.filter((e) => !e.researched && inB(e, t.bounds) && (t.desk === 'both' || e.desk === t.desk));
+      // A small map only for a story whose own events are on the map (user, 17 Oct): the pins of its reports,
+      // or, for a place, the pins on that place.
+      const fps = new Set(t.cards.map((r) => r.fp));
+      t.events = t.geo === false ? [] : D.events.filter((e) => !e.researched && inB(e, t.bounds) && (t.desk === 'both' || e.desk === t.desk) && (fps.has(e.fp) || (t.erx && t.erx.test(`${e.label || ''} ${e.place || ''}`))));
     });
     // A story with nothing in it is not shown.
     T = T.filter((t) => (t.trump ? t.trump.length : t.oil || t.cards.length || (t.pts && t.pts.length)));
@@ -312,7 +328,7 @@
       const f = app('popupHtml');
       body = f ? f(e) : esc(e.label);
     }
-    return `${body}<p class="pop-desk"><a href="${HD[e.desk].href}#pin=${encodeURIComponent(e.fp)}">On the ${esc(HD[e.desk].desk)} →</a></p>`;
+    return `${body}<p class="pop-desk"><a data-desk-go href="${HD[e.desk].href}#pin=${encodeURIComponent(e.fp)}">On the ${esc(HD[e.desk].desk)} →</a></p>`;
   }
   function drawMarks() {
     if (!map) return;
@@ -411,7 +427,7 @@
     const dx = Math.round(sx * b.out * k), dy = Math.round(sy * b.drop * k);
     return `<span class="h-co-dot" aria-hidden="true"></span>
       <svg class="h-co-line" aria-hidden="true" width="1" height="1"><path d="M0 0H${dx}V${dy}"/></svg>
-      <a class="h-co h-co-${sx < 0 ? 'l' : 'r'}${sy < 0 ? 't' : 'b'}" href="${HD[b.desk].href}" style="left:${dx}px;top:${dy}px" aria-label="Open the ${esc(HD[b.desk].desk)}">
+      <a class="h-co h-co-${sx < 0 ? 'l' : 'r'}${sy < 0 ? 't' : 'b'}" href="${HD[b.desk].href}" data-desk-go style="left:${dx}px;top:${dy}px" aria-label="Open the ${esc(HD[b.desk].desk)}">
         <span class="h-co-flag" aria-hidden="true">${FLAG[b.desk]}</span>
         <span class="h-co-body">
           <span class="h-co-kick"><span class="h-co-live"></span>Live desk</span>
@@ -472,11 +488,11 @@
       <p class="leg-sub">Where</p>
       ${[['land', 'On land', '#e7dcc8'], ['sea', 'At sea', '#bfdbfe']].map(([k, n, c]) => row(c, n, p.where[k] !== false, `data-where="${k}"`)).join('')}`;
   }
-  let legendCollapsed = false;
+  let legendCollapsed = true; // Closed at first, as on the desks (user, 17 Oct).
   function drawLegend() {
     const d = S.legend;
     legendBox.classList.toggle('collapsed', legendCollapsed);
-    legendBox.innerHTML = `<div class="leg-head"><span class="leg-title">${d === 'iran' ? 'Attacks legend' : 'Legend'}</span><button type="button" class="leg-collapse" aria-label="${legendCollapsed ? 'Expand legend' : 'Collapse legend'}" aria-expanded="${legendCollapsed ? 'false' : 'true'}">${legendCollapsed ? '▸' : '▾'}</button></div>
+    legendBox.innerHTML = `<div class="leg-head"><span class="leg-title">Legend</span><button type="button" class="leg-collapse" aria-label="${legendCollapsed ? 'Expand legend' : 'Collapse legend'}" aria-expanded="${legendCollapsed ? 'false' : 'true'}">${legendCollapsed ? '▸' : '▾'}</button></div>
       <div class="h-leg-pick" role="tablist" aria-label="Whose legend">${['yemen', 'iran'].map((k) => `<button type="button" role="tab" data-leg="${k}" aria-selected="${k === d}">${FLAG[k]}<span>${HD[k].short}</span></button>`).join('')}</div>
       <div class="leg-body"><p class="leg-hint">Tick to show, untick to hide.</p>${legendBody(d)}</div>`;
   }
@@ -505,7 +521,6 @@
 
   /* ---------- The page's frame ---------- */
   function chromeHtml() {
-    const item = (k, name, flag, href) => `<li><a href="${href}"${k === 'all' ? ' aria-current="page"' : ''}>${flag}<span>${esc(name)}</span></a></li>`;
     return `<div class="mast">
       <span class="mast-date"></span>
       <div class="mast-mid"><a class="mast-name" href="/" aria-label="The Situation Room"><span class="mn">The Situation Room</span></a><span class="mast-line">Open-source intelligence</span></div>
@@ -513,10 +528,7 @@
     </div>
     <header class="top">
       <div class="brand">
-        <h1 class="desk-label"><span class="dl-pre">Desk:</span> <span class="dl-name"><button type="button" class="desk-pick" aria-haspopup="true" aria-expanded="false" aria-controls="h2-desk-list">All desks<svg class="dp-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"></path></svg></button></span></h1>
-        <ul class="desk-list h-desk-list" id="h2-desk-list" hidden>
-          ${item('all', 'All desks', ALL_FLAG, '/')}${item('yemen', 'Yemen conflict', FLAG.yemen, HD.yemen.href)}${item('iran', 'Iran conflict', FLAG.iran, HD.iran.href)}
-        </ul>
+        <h1 class="desk-label desk-tabs" aria-label="All desks">${A('deskTabsHtml')(null) || ''}</h1>
       </div>
       <div class="stamp"><span class="pulse" aria-hidden="true"></span><span id="h2-upd"></span></div>
     </header>`;
@@ -535,18 +547,12 @@
     </div>
   </div>`;
   const stageHtml = () => `<main class="stage h-stage h-solo" id="h2-stage">
-    <section class="map-wrap" id="map-wrap"><div id="h-map"></div><div class="legend" id="h-legend"></div><div class="map-chip" id="h2-chip"></div></section>
+    <section class="map-wrap" id="map-wrap"><div id="h-map"></div><button type="button" class="map-full" id="h-focus" aria-pressed="false" aria-label="Full screen map" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="mf-open" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path class="mf-close" d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button><div class="legend" id="h-legend"></div><div class="map-chip" id="h2-chip"></div></section>
   </main>`;
 
   function wireChrome() {
-    const pick = document.querySelector('.desk-pick'), list = $('h2-desk-list');
-    const open = (on) => { list.hidden = !on; pick.setAttribute('aria-expanded', String(on)); };
-    pick.onclick = (e) => { e.stopPropagation(); open(list.hidden); };
-    document.addEventListener('click', (e) => { if (!list.contains(e.target)) open(false); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !list.hidden) { open(false); pick.focus(); } });
-    // A desk opens its own page in one cross-fade (desk.css @view-transition).
-    list.addEventListener('click', (e) => { const a = e.target.closest('a'); if (a && a.getAttribute('aria-current')) { e.preventDefault(); open(false); } });
-    window.addEventListener('pageshow', () => open(false));
+    // A desk's button, callout or link flies the map in to that desk, which carries on from there (app.js deskGo).
+    A('wireDeskGo')(() => map);
     // The desks' own masthead menu (public/app.js); the theme is picked there.
     try { const f = app('installMast'); if (f) f(); } catch (e) { console.error(e); }
     // The theme lives on <html>; the maps and their colours follow it.
@@ -558,7 +564,7 @@
   }
   function stampUpd() {
     const el = $('h2-upd');
-    if (el && D.asOf) el.textContent = 'Updated ' + new Date(D.asOf).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    if (el && D.asOf) el.textContent = 'Updated ' + (app('fmtClock') ? app('fmtClock')(D.asOf) : new Date(D.asOf).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
   }
 
   /* ---------- The toolbar: a day, the whole war or a period, as on the desks ---------- */
@@ -645,7 +651,7 @@
     const byTime = T.filter((t) => !PICKS.includes(t.id)).sort((a, b) => ((latestOf(b) || '') > (latestOf(a) || '') ? 1 : -1));
     return [...PICKS.map((id) => TOPIC[id]).filter(Boolean), ...byTime];
   }
-  const deskLinks = (t) => `<div class="h2-links">${(t.desk === 'both' ? ['iran', 'yemen'] : [t.desk]).map((d) => `<a class="h2-go h2-go-desk" href="${HD[d].href}">${FLAG[d]}${HD[d].short} desk →</a>`).join('')}</div>`;
+  const deskLinks = (t) => `<div class="h2-links">${(t.desk === 'both' ? ['iran', 'yemen'] : [t.desk]).map((d) => `<a class="h2-go h2-go-desk" href="${HD[d].href}" data-desk-go>${FLAG[d]}${HD[d].short} desk →</a>`).join('')}</div>`;
   function show(id) {
     const t = TOPIC[id];
     if (!t) return;
@@ -659,12 +665,17 @@
       left = oilHtml(t.oil);
       right = t.cards.length ? `<h4>Latest reports</h4><div class="feed">${t.cards.slice(0, 4).map((r) => card(r, { noReply: true })).join('')}</div>` : '';
     } else {
-      left = mini(id) + (t.pts && t.pts.length ? `<h4 style="margin-top:.8rem">The latest</h4><ol class="pts">${t.pts.slice(0, 4).map((p) => `<li>${esc(p.t)}</li>`).join('')}</ol>` : '');
+      // The latest: its first point, the rest behind Read more (user, 17 Oct).
+      const pts = (t.pts || []).slice(0, 4);
+      const more = pts.length > 1 ? `<ol class="pts h2-more" start="2" hidden>${pts.slice(1).map((p) => `<li>${esc(p.t)}</li>`).join('')}</ol><button type="button" class="h2-readmore toggle-sit" aria-expanded="false">Read more</button>` : '';
+      left = (t.events.length ? mini(id) : '') + (pts.length ? `<h4${t.events.length ? ' style="margin-top:.8rem"' : ''}>The latest</h4><ol class="pts"><li>${esc(pts[0].t)}</li></ol>${more}` : '');
       const list = rest(t).slice(0, 4);
       right = list.length ? `<h4>Latest reports</h4><div class="feed">${list.map((r) => card(r, { noReply: true })).join('')}</div>` : '';
     }
     $('panel').innerHTML = `${kicker(t)}<h3>${esc(t.name)}</h3><div class="g-body"><div>${left}</div><div>${right}</div></div>${deskLinks(t)}`;
     mountMinis($('panel'));
+    const rm = $('panel').querySelector('.h2-readmore');
+    if (rm) rm.onclick = () => { const ol = $('panel').querySelector('.h2-more'); const open = ol.hidden; ol.hidden = !open; rm.textContent = open ? 'Show less' : 'Read more'; rm.setAttribute('aria-expanded', String(open)); };
   }
   function renderStories() {
     const items = ordered();
@@ -714,7 +725,22 @@
     map = L.map($('h-map'), { zoomControl: true, attributionControl: true, worldCopyJump: false, minZoom: 3, zoomSnap: 0.25, closePopupOnClick: false });
     tiles = L.tileLayer(tileUrl(), { maxZoom: 18, noWrap: true, attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ' }).addTo(map);
     map.fitBounds(REGION);
+    // Back from a desk: the map starts where the desk's flight out ended.
+    A('deskArrive')(map);
     marks = L.layerGroup().addTo(map);
+    // Full screen, as on the desks (user, 17 Oct): the map alone under the header; Escape or the button again leaves it.
+    const fb = $('h-focus');
+    const focus = (on) => {
+      document.body.classList.toggle('map-focus', on);
+      fb.setAttribute('aria-pressed', String(on));
+      fb.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen map');
+      fb.title = on ? 'Exit full screen' : 'Full screen';
+      if (on) $('map-wrap').scrollIntoView({ block: 'start' });
+      setTimeout(() => { map.invalidateSize(); placeBanners(); }, 60);
+    };
+    L.DomEvent.disableClickPropagation(fb);
+    fb.onclick = () => focus(!document.body.classList.contains('map-focus'));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('map-focus') && !document.querySelector('.leaflet-popup')) focus(false); });
     // A note's "Read more", its pictures and videos, as on the desks.
     map.on('popupopen', (e) => {
       const el = e.popup.getElement();

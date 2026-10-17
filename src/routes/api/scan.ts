@@ -19,13 +19,16 @@ export const Route = createFileRoute("/api/scan")({
         try {
           // One scan feeds every desk; each is sent only its own cards (Round 30).
           // The Iran desk's scan box is its own scan's: its sources, its verdicts.
-          const desk = deskParam(new URL(request.url).searchParams.get("desk"));
+          const q = new URL(request.url).searchParams;
+          const desk = deskParam(q.get("desk"));
           const payload =
             desk === "iran"
               ? ((await (await getStore()).getJson<ScanPayload>(IRAN_PAYLOAD)) ?? { ok: true as const, scannedAt: "", reports: [], sourcesTried: 0, sourcesOk: 0, rawHits: [], sourceStatus: [] })
               : await scanYemenSources();
           if (desk !== "iran") payload.reports = payload.reports.filter((r) => onDesk(r, desk));
-          return new Response(JSON.stringify(payload), {
+          // The home page asks only when each desk last looked (user, 17 Oct: its clock is the desks' clock).
+          const body = q.get("only") === "time" ? { ok: true, scannedAt: payload.scannedAt } : payload;
+          return new Response(JSON.stringify(body), {
             headers: {
               "content-type": "application/json; charset=utf-8",
               // Short: the tick can land at any moment and readers should see

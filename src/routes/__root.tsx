@@ -16,6 +16,15 @@ const LANG_BOOT = `try{var q=/[?&]lang=(en|he|ar)\\b/.exec(location.search),g=q?
 // broadsheet pair's two fonts.
 const THEME_BOOT = `try{var t=localStorage.getItem("desk-theme");if(t!=="broadsheet-day"&&t!=="broadsheet-night")t=matchMedia("(prefers-color-scheme: light)").matches?"broadsheet-day":"broadsheet-night";{var d=document.documentElement;d.dataset.theme=t;d.dataset.set="broadsheet";var l=document.createElement("link");l.id="desk-fonts";l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap";document.head.appendChild(l)}}catch(e){}`;
 
+// The desks and the home page made ready when a reader points at a link to one (user, 17 Oct: going
+// between desks shows no page loading): the map flies over, and the page is there when it lands.
+const SPECULATION = JSON.stringify({
+  prerender: [{ where: { href_matches: ["/", "/yemen-conflict-desk", "/iran-conflict-desk"] }, eagerness: "moderate" }],
+});
+
+// A cross-fade the browser skips (a quick second click, a resize) is no error: its promises are caught.
+const VT_QUIET = `(function(){function q(e){var v=e.viewTransition;if(v){v.ready.catch(function(){});v.finished.catch(function(){});if(v.updateCallbackDone)v.updateCallbackDone.catch(function(){})}}addEventListener("pagereveal",q);addEventListener("pageswap",q)})()`;
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -58,6 +67,8 @@ function RootDocument() {
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <script dangerouslySetInnerHTML={{ __html: LANG_BOOT }} />
+        <script dangerouslySetInnerHTML={{ __html: VT_QUIET }} />
+        <script type="speculationrules" dangerouslySetInnerHTML={{ __html: SPECULATION }} />
       </head>
       <body>
         <PreviewHostBridge />

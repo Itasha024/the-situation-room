@@ -608,6 +608,9 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 .meth-part .rel-foot{margin-top:.7rem;color:var(--t-muted,#a99d93);font-size:.85rem}
 .meth-part .rel-foot a{color:var(--t-link,#f4a58a);font-weight:600;text-decoration:none}
 .meth-part .to-map-meth{vertical-align:baseline;padding:0;margin-inline-start:.2rem}
+.meth-desk{margin:0 0 1.6rem;scroll-margin-top:1rem}
+.meth-desk-h{margin:1.4rem 0 0;padding:0 0 .45rem;border-bottom:2px solid var(--accent-ui);font:700 .78rem/1.2 var(--f-body,inherit);letter-spacing:.12em;text-transform:uppercase;color:var(--t-strong,#fff)}
+.meth-part{scroll-margin-top:1rem}
 
 /* "Sources reliability methodology": the link under the side buttons and its pop-up (1 Oct) */
 .feed-rel{margin:-.1rem 0 .55rem}
@@ -813,3 +816,31 @@ html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","No
    the points in a box like the fronts' and the numbers'. */
 html[data-set="broadsheet"] .situation{background:transparent;padding:.75rem 1rem 1rem}
 html[data-set="broadsheet"] .situation .sit-body{background:var(--t-surface-1);border:1px solid var(--t-line-strong);border-radius:4px;padding:.8rem 1rem .9rem;margin-top:.45rem}
+
+/* The header: "Desks:" and a button per desk by its country, its real flag faded behind the name
+   (user, 17 Oct); more than fit scroll sideways. */
+html .top h1.desk-tabs{display:flex;align-items:center;gap:.65rem;min-width:0;padding:0;text-box:none}
+.top .brand:has(.desk-tabs){min-width:0;flex:1 1 auto}
+.desk-tabs .dt-label{flex:none;color:var(--t-muted,#8b98a8);font-weight:500;text-decoration:none}
+.desk-tabs a.dt-label:hover,.desk-tabs a.dt-label:focus-visible{color:var(--t-strong);outline:none;text-decoration:underline;text-underline-offset:.25em;text-decoration-thickness:1px}
+.desk-tabs .dt-row{display:flex;gap:.45rem;min-width:0;overflow-x:auto;scrollbar-width:none;padding:2px;scroll-snap-type:x proximity}
+.desk-tabs .dt-row::-webkit-scrollbar{display:none}
+.dt-btn{position:relative;isolation:isolate;flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:5.8rem;height:2.05rem;padding:0 1rem;overflow:hidden;border:1px solid var(--t-line-strong,#334155);border-radius:3px;color:var(--t-strong);text-decoration:none;scroll-snap-align:start;transition:border-color .15s,box-shadow .15s}
+.dt-btn .dt-flag{position:absolute;inset:0;z-index:-2;width:100%;height:100%;transition:transform .35s ease}
+.dt-btn::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--t-bg,#1b1918);opacity:.66;transition:opacity .2s}
+.dt-btn .dt-name{font:inherit;letter-spacing:.11em;text-shadow:0 0 .5em var(--t-bg,#1b1918),0 0 .15em var(--t-bg,#1b1918)}
+.dt-btn:hover::before,.dt-btn:focus-visible::before{opacity:.5}
+.dt-btn:hover .dt-flag{transform:scale(1.06)}
+.dt-btn:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px}
+.dt-btn[aria-current="page"]{border-color:var(--accent-ui);box-shadow:inset 0 -2px 0 var(--accent-ui)}
+.dt-btn[aria-current="page"]::before{opacity:.42}
+@media (max-width:720px){.dt-btn{min-width:4.6rem;height:1.85rem;padding:0 .7rem}html .top h1.desk-tabs{gap:.45rem}}
+
+/* Going between desks: the map flies, the rest of the page steps back (app.js deskGo). */
+html.desk-going .stage>:not(.map-wrap),html.desk-going .stage~*,html.desk-going #g-body{opacity:.15;transition:opacity .5s ease}
+.map-wrap{view-transition-name:deskmap}
+@media (prefers-reduced-motion:reduce){html.desk-going *{transition:none!important}}
+
+/* Every map's legend at the top left, under the zoom buttons, opening downwards (17 Oct): closed at first,
+   it sat at the bottom left under the Sections button. */
+html .map-wrap .legend{top:84px;bottom:auto;max-height:calc(100% - 96px)}

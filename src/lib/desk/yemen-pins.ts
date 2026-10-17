@@ -77,8 +77,8 @@ export function pinType(e: YemenPin): string | null | undefined {
   return e.type === "vessel" && e.label && !SHIP.test(e.label) ? "strike" : e.type;
 }
 
-const NOT_EVENT = /:\s*(?:why|how|what)\b|\?\s*$|\b(?:analysis|explainer|inspects?|inspected|tours?|toured)\b/i;
-/** An analysis piece or an official's visit: not an event on the map. */
+const NOT_EVENT = /:\s*(?:why|how|what)\b|\?\s*$|\b(?:analysis|explainer|inspects?|inspected|tours?|toured)\b|\b(?:publish\w*|releases?|released|shows?|airs?|aired)\s+(?:new\s+)?footage\b|\bfootage\s+(?:shows|of)\b|\btransfers?\s+\d+\s*(?:percent|%)/i;
+/** An analysis piece, an official's visit, footage of an attack already pinned, or a move of staff: not an event on the map (17 Oct). */
 export function notEvent(e: YemenPin): boolean {
   return NOT_EVENT.test(String(e.label || ""));
 }
@@ -100,7 +100,9 @@ export function onePinPerEvent<T extends YemenPin>(pins: T[]): T[] {
     const twin = kept.some((k) =>
       k.type === p.type && dayOf(k.at) === dayOf(p.at) &&
       typeof k.lat === "number" && typeof p.lat === "number" &&
-      Math.abs(k.lat - p.lat) < 0.01 && Math.abs((k.lng ?? 0) - (p.lng ?? 0)) < 0.01 &&
+      // The same spot, or the same place by name: one card's district pin and its own pin (17 Oct).
+      ((Math.abs(k.lat - p.lat) < 0.01 && Math.abs((k.lng ?? 0) - (p.lng ?? 0)) < 0.01) ||
+        (!!k.place && String(k.place).toLowerCase() === String(p.place || "").toLowerCase())) &&
       alike(String(k.label || ""), String(p.label || "")));
     if (!twin) kept.push(p);
   }

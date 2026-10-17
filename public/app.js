@@ -227,7 +227,7 @@ function iranKindOf(ev) {
   if (ev.type === 'combat' || IRAN_GROUND_RE.test(s)) return 'combat';
   return 'strike';
 }
-const IRAN_KIND_LABEL = { strike: 'Strike or launch', combat: 'Ground fighting', vessel: 'At sea', port: 'Energy site hit', nuclear: 'Nuclear site hit' };
+const IRAN_KIND_LABEL = { strike: 'Strike / launch / alert', combat: 'Ground fighting', vessel: 'At sea', port: 'Energy site hit', nuclear: 'Nuclear site hit' };
 /** A legend row for a kind of event: the mark on a plain disc, since the colour now says who acted. */
 function kindLegendRow(cat, label, on, attr) {
   return `<button type="button" class="leg-item${on ? ' on' : ''}" ${attr} aria-pressed="${on ? 'true' : 'false'}"><span class="leg-ico kind">${EVENT_SVG[cat] || ''}</span>${escapeHtml(label)}</button>`;
@@ -376,7 +376,7 @@ let saudiGeoCache = null;
 let brief = null;
 
 let layersOn = { houthi: true, plc: true, saudi: true, contested: true, combat: true, strike: true, vessel: true, port: true };
-let legendCollapsed = false;
+let legendCollapsed = true; // Every legend starts closed (user, 17 Oct).
 let legendWasOpen = true; // the state to restore when the map shrinks again
 let frontFloatTimer = null;
 let frontFloatIdx = null;
@@ -5544,6 +5544,7 @@ function ensureMap(d) {
   // Again once the page has its final layout, unless the reader has moved the map.
   let touched = false;
   map.getContainer().addEventListener('pointerdown', () => { touched = true; }, { once: true });
+  deskArrive(map, () => { touched = true; });
   const again = () => { if (!touched && map) { map.invalidateSize(); map.fitBounds(START, FIT); } };
   if (document.readyState === 'complete') setTimeout(again, 400);
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
@@ -6322,13 +6323,11 @@ function renderLegend(d) {
     };
   });
 }
-/** The Yemen legend's events: what happened (the mark), then who acted (the colour). The home page's map shows the same rows. */
-const YEMEN_KINDS = [['combat', 'Ground fighting'], ['strike', 'Launch/strike/alert'], ['vessel', 'Maritime incident'], ['port', 'Energy incident']];
-function yemenEventRows(kindOn = (k) => !!layersOn[k], sideOn = (k) => yemenSidesOn[k] !== false) {
+/** The Yemen legend's events, by their mark (user, 17 Oct: no "Who acted" part; the pins take the colours of the ground's sides). The home page's map shows the same rows. */
+const YEMEN_KINDS = [['combat', 'Ground fighting'], ['strike', 'Strike / launch / alert'], ['vessel', 'Maritime incident'], ['port', 'Energy incident']];
+function yemenEventRows(kindOn = (k) => !!layersOn[k]) {
   return `<div class="leg-sec">Events</div>
-      ${YEMEN_KINDS.map(([k, n]) => kindLegendRow(k, n, kindOn(k), `data-layer="${k}"`)).join('')}
-      <div class="leg-sec">Who acted</div>
-      ${YEMEN_PIN_SIDES().map(([k, c, n]) => sideLegendRow(c, n, sideOn(k), `data-side="${k}"`)).join('')}`;
+      ${YEMEN_KINDS.map(([k, n]) => kindLegendRow(k, n, kindOn(k), `data-layer="${k}"`)).join('')}`;
 }
 
 function syncDayNav() {
@@ -6839,8 +6838,8 @@ try { setFavicon(THEME); } catch (e) {}
  * page once with ?desks=1.
  */
 const DESKS = [
-  { id: 'yemen', name: 'Yemen Conflict Desk', short: 'Yemen conflict', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden', kids: [['/yemen-conflict-desk/methodology', 'Methodology']] },
-  { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Live', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran', kids: [] },
+  { id: 'yemen', name: 'Yemen Conflict Desk', short: 'Yemen conflict', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden', kids: [['/methodology#yemen', 'Methodology']] },
+  { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Live', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran', kids: [['/methodology#iran', 'Methodology']] },
 ];
 function deskOf() {
   const el = document.querySelector('[data-desk]');
@@ -6867,42 +6866,95 @@ const flagSvg = (d) => FLAG_ART[d.id] ? `<svg class="flag flag-${d.id}" viewBox=
 const SITE_PAGES = () => desksShown().map((d) => [d.href, d.name, d.sub, d.kids, d]);
 
 /*
- * The header reads "Desk: Iran conflict" (user, 9 Oct): "Desk:" stays, the
- * conflict's name opens a list of the desks, each with a small flag; picking
- * one fades this page out and opens that desk. Only once there is more than
- * one desk to show.
+ * The header reads "Desks:" and a button for each desk by its country, its
+ * flag faded behind the name (user, 17 Oct); more desks than fit scroll
+ * sideways. "Desks:" leads to every desk on one map. Picking a desk goes
+ * over to it on the map: the map flies in to the desk's part, or out to the
+ * whole region, and the desk carries on from there (deskGo, deskArrive).
  */
+const DESK_COUNTRY = { yemen: 'Yemen', iran: 'Iran' };
+/** A desk's flag as a button's backdrop: the full drawing, cropped to fill. */
+const flagFill = (d) => (FLAG_ART[d.id]
+  ? `<svg class="dt-flag" viewBox="0 0 630 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${FLAG_ART[d.id]().replace(/irf-/g, 'irb-')}</svg>`
+  : `<svg class="dt-flag" viewBox="0 0 18 12" preserveAspectRatio="none" aria-hidden="true">${d.flag.map((c, i) => `<rect y="${i * 4}" width="18" height="4" fill="${c}"/>`).join('')}</svg>`);
+function deskTabsHtml(hereId) {
+  const desks = desksShown().slice().sort((a, b) => (DESK_COUNTRY[a.id] || a.short).localeCompare(DESK_COUNTRY[b.id] || b.short));
+  // "Desks:" leads to all desks from anywhere but the all-desks page itself.
+  const label = deskPath(location.href) !== '/' ? `<a class="dt-label" href="/" data-desk-go title="${escapeHtml(T('All desks'))}">${escapeHtml(T('Desks'))}:</a>` : `<span class="dt-label">${escapeHtml(T('Desks'))}:</span>`;
+  return `${label}<span class="dt-row">${desks.map((d) => `<a class="dt-btn" href="${d.href}" data-desk-go${d.id === hereId ? ' aria-current="page"' : ''}>${flagFill(d)}<span class="dt-name">${escapeHtml(T(DESK_COUNTRY[d.id] || d.short))}</span></a>`).join('')}</span>`;
+}
 function installDeskPicker() {
   const h = document.querySelector('.top h1.desk-label');
-  const desks = desksShown();
-  if (!h || h.querySelector('.desk-pick') || desks.length < 2) return;
-  const here = deskOf();
-  const name = h.querySelector('.dl-name') || h;
-  name.innerHTML = `<button type="button" class="desk-pick" aria-haspopup="true" aria-expanded="false" aria-controls="desk-list">${escapeHtml(name.textContent.trim())}<svg class="dp-car" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3"/></svg></button>`;
-  const list = document.createElement('ul');
-  list.id = 'desk-list';
-  list.className = 'desk-list';
-  list.hidden = true;
-  // The home page first: every desk on one map (17 Oct).
-  list.innerHTML = `<li><a href="/"><svg class="flag" viewBox="0 0 18 12" aria-hidden="true"><rect width="18" height="12" rx="1" fill="none" stroke="currentColor" stroke-opacity=".55"/><path d="M3 4h12M3 6h12M3 8h8" stroke="currentColor" stroke-opacity=".55"/></svg><span>${escapeHtml(T('All desks'))}</span></a></li>` + desks.map((d) => `<li><a href="${d.href}"${d.id === here.id ? ' aria-current="page"' : ''}>${flagSvg(d)}<span>${escapeHtml(T(d.short || d.name))}</span></a></li>`).join('');
-  h.parentElement.appendChild(list);
-  const btn = h.querySelector('.desk-pick');
-  const open = (on) => { list.hidden = !on; btn.setAttribute('aria-expanded', String(on)); };
-  btn.addEventListener('click', (e) => { e.stopPropagation(); open(list.hidden); });
-  document.addEventListener('click', (e) => { if (!list.contains(e.target)) open(false); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !list.hidden) { open(false); btn.focus(); } });
-  list.addEventListener('click', (e) => {
-    const a = e.target.closest('a');
-    if (!a) return;
+  if (!h || h.dataset.tabs) return;
+  // A desk's own page marks its button; the site's pages (the methodology) mark none.
+  const el = document.querySelector('[data-desk]');
+  const here = el ? DESKS.find((d) => d.id === el.dataset.desk) : null;
+  h.dataset.tabs = '1';
+  h.classList.add('desk-tabs');
+  h.setAttribute('aria-label', here ? T(here.name) : T('Desks'));
+  h.innerHTML = deskTabsHtml(here ? here.id : null);
+}
+
+/* Going between desks on the map (user, 17 Oct: no page load seen; the map zooms in to a desk, out to all desks). */
+const DESK_GO = {
+  '/': [[11.5, 32.5], [38.5, 61]],
+  '/yemen-conflict-desk': [[12.3, 38.0], [25.0, 48.0]],
+  '/iran-conflict-desk': [[20.0, 33.0], [40.0, 63.0]],
+};
+const deskPath = (href) => { try { return new URL(href, location.href).pathname.replace(/\/+$/, '') || '/'; } catch (e) { return ''; } };
+let deskGoing = false;
+/** Fly the map there, then open the page; the page opens on the same view (deskArrive). */
+function deskGo(href, m) {
+  const to = deskPath(href), here = deskPath(location.href);
+  if (deskGoing) return;
+  if (!DESK_GO[to] || to === here) { if (to !== here) location.href = href; return; }
+  deskGoing = true;
+  // In from all desks to a desk's part; out to the whole region from a desk, and in again at the other desk.
+  const via = here === '/' ? DESK_GO[to] : DESK_GO['/'];
+  try { sessionStorage.setItem('desk-go', JSON.stringify({ to, via, then: here !== '/' && to !== '/' ? DESK_GO[to] : null, t: Date.now() })); } catch (e) {}
+  const go = () => { location.href = href; };
+  const box = m && m.getContainer && m.getContainer().getBoundingClientRect();
+  const seen = box && box.bottom > 120 && box.top < innerHeight - 120;
+  if (!seen || matchMedia('(prefers-reduced-motion: reduce)').matches) { go(); return; }
+  document.documentElement.classList.add('desk-going');
+  let done = false;
+  const fin = () => { if (!done) { done = true; go(); } };
+  m.once('moveend', () => setTimeout(fin, 40));
+  setTimeout(fin, 1500);
+  try { m.closePopup(); } catch (e) {}
+  m.flyToBounds(via, { duration: 0.85, easeLinearity: 0.25, padding: [6, 6] });
+}
+/** Any link marked data-desk-go goes over on the map. */
+function wireDeskGo(getMap) {
+  if (wireDeskGo.on) return;
+  wireDeskGo.on = true;
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[data-desk-go]');
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    if (a.getAttribute('aria-current')) { open(false); return; }
-    // The page goes over to the desk in one cross-fade where the browser can (desk.css @view-transition), else a short fade out.
-    if ('onpagereveal' in window) { location.href = a.href; return; }
-    document.documentElement.classList.add('desk-leaving');
-    setTimeout(() => { location.href = a.href; }, 180);
+    if (a.getAttribute('aria-current') === 'page') return;
+    deskGo(a.href, getMap());
   });
-  // Back from the other desk, this page shows again as it was left.
-  window.addEventListener('pageshow', () => { document.documentElement.classList.remove('desk-leaving'); open(false); });
+  // Back to this page: it shows as it was left.
+  window.addEventListener('pageshow', () => { deskGoing = false; document.documentElement.classList.remove('desk-going'); });
+}
+/**
+ * The page opened from another desk: the map starts where that one ended and, from desk to desk,
+ * flies on in. A page made ready ahead (speculation rules) does it when it is shown.
+ */
+function deskArrive(m, touched) {
+  const run = () => {
+    let rec = null;
+    try { rec = JSON.parse(sessionStorage.getItem('desk-go') || 'null'); } catch (e) {}
+    if (!rec || rec.to !== deskPath(location.href) || Date.now() - rec.t > 10000) return;
+    try { sessionStorage.removeItem('desk-go'); } catch (e) {}
+    if (touched) touched();
+    m.invalidateSize();
+    m.fitBounds(rec.via, { animate: false, padding: [6, 6] });
+    if (rec.then) setTimeout(() => m.flyToBounds(rec.then, { duration: 0.9, easeLinearity: 0.25, padding: [6, 6] }), 140);
+  };
+  if (document.prerendering) document.addEventListener('prerenderingchange', run, { once: true });
+  else run();
 }
 function installMast() {
   const el = document.querySelector('.mast-date');
@@ -6917,7 +6969,7 @@ function installMast() {
     <nav class="sm-panel" aria-label="Site">
       <div class="sm-head"><a class="sm-logo" href="/" aria-label="The Situation Room" title="The Situation Room"><img class="sm-logo-n" src="/favicon.svg?v=sr1" alt=""><img class="sm-logo-d" src="/favicon-day.svg?v=sr1" alt=""></a><button type="button" class="sm-x" data-close aria-label="Close menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <p class="sm-date">${escapeHtml(new Date().toLocaleDateString(LOC, { timeZone: VIEW_TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p>
-      <ul>${SITE_PAGES().map(([href, name, sub, kids, d]) => `<li><a class="sm-desk" href="${href}"${href === here ? ' aria-current="page"' : ''}>${flagSvg(d)}<span class="sm-t"><b>${name}</b><small>${sub}</small></span></a>${(kids || []).length ? `<ul class="sm-sub">${kids.map(([h, n]) => `<li><a href="${h}"${h === here ? ' aria-current="page"' : ''}>${n}</a></li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>
+      <ul>${SITE_PAGES().map(([href, name, sub, kids, d]) => `<li><a class="sm-desk" href="${href}" data-desk-go${href === here ? ' aria-current="page"' : ''}>${flagSvg(d)}<span class="sm-t"><b>${name}</b><small>${sub}</small></span></a>${(kids || []).length ? `<ul class="sm-sub">${kids.map(([h, n]) => `<li><a href="${h}"${h === here ? ' aria-current="page"' : ''}>${n}</a></li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>
       <div class="sm-theme" role="group" aria-label="Theme">${[['broadsheet-night', 'Dark'], ['broadsheet-day', 'Light']].map(([t, n]) => `<button type="button" data-theme="${t}" aria-pressed="${t === THEME}">${THEME_ICONS[t][1]}<span>${n}</span></button>`).join('')}</div>
     </nav>`;
   panel.querySelectorAll('.sm-theme button').forEach((b) => b.addEventListener('click', () => setTheme(b.dataset.theme)));
@@ -7098,7 +7150,7 @@ const REL_HTML = `<h3 id="rel-pop-h">Sources reliability methodology</h3>
 <li><b>The more reports, the more the record counts</b> over the start.</li>
 <li><b>Statements count only if the speaker denies saying them.</b></li>
 </ul>
-<p class="rel-foot">Ratings update every 24h. <a href="/yemen-conflict-desk/sources">Sources list →</a></p>`;
+<p class="rel-foot">Ratings update every 24h. <a href="/yemen-conflict-desk/sources">Sources list →</a> · <a class="meth-full" href="/methodology#meth-reliability">Full methodology →</a></p>`;
 
 /* How the control shares under the bars are made (user, 2 Oct). */
 const SHARE_HTML = `<h3 id="share-pop-h">Control share methodology</h3>
@@ -7108,7 +7160,8 @@ const SHARE_HTML = `<h3 id="share-pop-h">Control share methodology</h3>
 <li><b>Each district counts whole</b> for the side the map shows holding it: Houthi forces, the government, or contested.</li>
 <li><b>A share is that side's area</b> out of all of Yemen, rounded.</li>
 <li><b>Land, not people.</b> A large desert district counts for more than a small, crowded city.</li>
-</ul>`;
+</ul>
+<p class="rel-foot"><a class="meth-full" href="/methodology#meth-shares">Full methodology →</a></p>`;
 
 /* How the map's colours are set and changed (user, 2 Oct). The rule is control-live.ts's. */
 const MAP_HTML = `<h3 id="map-pop-h">Map methodology</h3>
@@ -7123,7 +7176,7 @@ const MAP_HTML = `<h3 id="map-pop-h">Map methodology</h3>
 <li><b>A side's gains inside a district it already holds</b> change nothing.</li>
 <li><b>The same rule draws the flags</b> on the Latest developments and Fronts maps. A capture reported by one side only is drawn as an advance.</li>
 </ul>
-<p class="rel-foot">Colours update every 6h.</p>`;
+<p class="rel-foot">Colours update every 6h. <a class="meth-full" href="/methodology#meth-map">Full methodology →</a></p>`;
 
 /*
  * One pop-up per text, opened from any button that names it: hover on a PC,
@@ -7232,6 +7285,40 @@ function wirePop(btn, id, html) {
   btn.addEventListener('click', (e) => { e.stopPropagation(); if (!s.pop.hidden && s.pinned && s.btn === btn) s.close(); else s.open(btn, true); });
 }
 
+/*
+ * The Iran desk's methodologies (user, 17 Oct), on the Yemen desk's pattern: its map and its sources.
+ * The rules are the desk's own: iran-sources.ts, iran-scan.server.ts, iran-places.ts and map-pack.cjs.
+ */
+const IRAN_MAP_HTML = `<h3 id="ir-map-pop-h">Map methodology</h3>
+<ul>
+<li><b>Countries</b> take the colour of their side in this war: Iran, Hezbollah's Lebanon, the Iraqi and Syrian militias' Iraq, Israel, and the Gulf states and others.</li>
+<li><b>Each pin is one attack</b> a report tells of.
+<ul>
+<li>Its colour is the side that carried it out, as the report names it;</li>
+<li>its mark is what happened: a strike, launch or alert; ground fighting; at sea; an energy site hit; a nuclear site hit.</li>
+</ul></li>
+<li><b>Only a place the report names</b> gets a pin, never a country's or a province's centre.</li>
+<li><b>Not stated:</b> air defence fire, interceptions, sirens and blasts heard over Iran when no attacker is named.</li>
+<li><b>At sea:</b> a ship, a boat or a place "off" a coast, or a point more than 3 km out from the shore.</li>
+<li><b>From 28 Feb until the desk began reading,</b> the pins are the war's researched attacks.</li>
+<li><b>A day</b> is a day in Israel's and Iran's time.</li>
+</ul>
+<p class="rel-foot">Pins come in with the reports. <a class="meth-full" href="/methodology#iran-map">Full methodology →</a></p>`;
+const IRAN_SRC_HTML = `<h3 id="ir-src-pop-h">Sources methodology</h3>
+<p>The desk reads more than 100 sources of every side: agencies, outlets, Telegram channels and official accounts.</p>
+<ul>
+<li><b>Six groups.</b> Each source is in one: Iran and Axis-aligned, Iranian opposition, Israeli, US, Gulf and Arab, International. The menu above Latest reports shows one group at a time.</li>
+<li><b>Read every 5 to 30 minutes,</b> each source on its own clock. Google News is searched every hour, in English, Arabic and Persian, for what none of them carried.</li>
+<li><b>Only the war and its economy</b> go on. An item more than a day old is not news and is not read.</li>
+<li><b>Israeli outlets:</b> their own reporting stays; a report that only repeats a foreign outlet does not, and the original is read instead.</li>
+<li><b>One report, its source linked,</b> and the other outlets that carried it listed under it.</li>
+<li><b>Ratings:</b> this desk's sources are not yet rated 1–5 as the Yemen desk's are.</li>
+</ul>
+<p class="rel-foot"><a class="meth-full" href="/methodology#iran-sources">Full methodology →</a></p>`;
+function installIranMethPops() {
+  wirePop(document.getElementById('btn-ir-map-meth'), 'ir-map-pop', IRAN_MAP_HTML);
+  wirePop(document.getElementById('btn-ir-src'), 'ir-src-pop', IRAN_SRC_HTML);
+}
 function installRelPop() {
   wirePop(document.getElementById('btn-rel'), 'rel-pop', REL_HTML);
   const mapBtn = document.getElementById('btn-map-meth');
@@ -7258,7 +7345,7 @@ async function bootYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
   if (deskOf().id !== 'yemen') return bootOtherDesk(el);
-  try { installDeskPicker(); } catch (e) { console.error(e); }
+  try { installDeskPicker(); wireDeskGo(() => map); } catch (e) { console.error(e); }
   try { installMast(); } catch (e) { console.error(e); }
   try { installLangSwitch(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
@@ -7346,8 +7433,9 @@ async function bootYemenDesk() {
  * a plain map of its region. Its parts arrive stage by stage.
  */
 function bootOtherDesk(el) {
-  try { installDeskPicker(); } catch (e) { console.error(e); }
+  try { installDeskPicker(); wireDeskGo(() => map); } catch (e) { console.error(e); }
   try { installMast(); } catch (e) { console.error(e); }
+  try { installIranMethPops(); } catch (e) { console.error(e); }
   try { installLangSwitch(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
   try { startYemenClock(); } catch (e) { console.error(e); }
@@ -7366,6 +7454,7 @@ function bootOtherDesk(el) {
   baseTiles = L.tileLayer(TILE_URL, { maxZoom: 18, noWrap: true, attribution: TILE_ATTR || baseAttr }).addTo(map);
   let touched = false;
   map.getContainer().addEventListener('pointerdown', () => { touched = true; }, { once: true });
+  deskArrive(map, () => { touched = true; });
   const again = () => { if (map && !touched) { map.invalidateSize(); map.fitBounds(START, FIT); } };
   if (document.readyState === 'complete') setTimeout(again, 400);
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
@@ -7432,7 +7521,7 @@ const IRAN_PIN_SIDES = [
 ];
 const IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));
 const IRAN_MAP_FROM = '2026-02-28';
-const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), kinds: {}, where: { land: true, sea: true }, collapsed: false, day: null, range: null, countries: null, focus: false };
+const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), kinds: {}, where: { land: true, sea: true }, collapsed: true, day: null, range: null, countries: null, focus: false };
 /** The day an attack belongs to, in Israel and Iran's part of the world: the researched ones carry only their day. */
 // One formatter, and each pin's day kept once worked out: the whole war's 22,000 pins are filtered by day on every redraw.
 const IRAN_DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' });
@@ -7753,7 +7842,7 @@ function renderIranLegend() {
   legend.classList.toggle('collapsed', iranPins.collapsed);
   legend.innerHTML = `
     <div class="leg-head">
-      <span class="leg-title">Attacks legend</span>
+      <span class="leg-title">Legend</span>
       <button type="button" class="leg-collapse" aria-label="${iranPins.collapsed ? 'Expand legend' : 'Collapse legend'}" aria-expanded="${iranPins.collapsed ? 'false' : 'true'}">${iranPins.collapsed ? '▸' : '▾'}</button>
     </div>
     <div class="leg-body">
@@ -7867,6 +7956,47 @@ function drawIranPins() {
   }
   renderIranFeed();
 }
+/*
+ * "Show on map" on the Iran desk opens the small map, as on the Yemen desk (user, 17 Oct): beside
+ * the button on a wide screen, a sheet on a phone, the report's pins pulsing among that day's
+ * others; only its "Show on the main map" moves the big map.
+ */
+function openIranMapPop(evs, title, anchor, go) {
+  if (!evs.length || !window.L) return;
+  clearTimeout(pinPopTimer);
+  // A click elsewhere, or Escape, closes the one beside the button (the Yemen desk wires the same in its start).
+  if (!frontFloatWired) {
+    frontFloatWired = true;
+    const off = () => { const ps = document.getElementById('pin-sheet'); if (ps && ps.classList.contains('show')) hideFrontFloat(); };
+    document.addEventListener('click', (ev) => { if (Date.now() - frontFloatOpenedAt < 400 || !ev.target || ev.target.closest('#pin-sheet, .front-map-btn, .card-map')) return; const ps = document.getElementById('pin-sheet'); if (ps && ps.classList.contains('as-pop')) off(); });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') off(); });
+  }
+  const mine = new Set(evs.map((e) => String(e.fp)));
+  const days = [...new Set(evs.map(iranDayOf))];
+  // One day: that day's other pins too, as the Yemen pop-up shows them. More days: the report's own.
+  const others = days.length === 1 ? iranPins.events.filter((e) => !mine.has(String(e.fp)) && iranDayOf(e) === days[0] && !e.researched) : [];
+  const all = [...others, ...evs];
+  const sides = IRAN_PIN_SIDES.filter(([k]) => all.some((e) => iranSideOf(e) === k));
+  const legend = sides.length ? `<div class="pop-legend">${sides.map(([, c, n]) => `<span><i class="sw" style="background:${c}"></i>${escapeHtml(n)}</span>`).join('')}</div>` : '';
+  openMapPop({
+    title,
+    anchor: window.innerWidth < 720 ? null : anchor,
+    legend,
+    go,
+    build: (m) => {
+      if (iranPins.countryGeo) L.geoJSON(iranPins.countryGeo, { style: iranCountryStyle, interactive: false }).addTo(m);
+      all.forEach((e) => {
+        const me = mine.has(String(e.fp));
+        L.marker([e.lat, e.lng], { icon: sidePinIcon(iranKindOf(e), IRAN_PIN_INK[iranSideOf(e)], me ? ' pin-pulse' : '', escapeHtml(e.label || '')), zIndexOffset: me ? 2000 : 0 })
+          .bindPopup(iranPopupHtml(e), { maxWidth: 260 }).addTo(m);
+      });
+      const b = L.latLngBounds(evs.map((e) => [e.lat, e.lng]));
+      m.fitBounds(b.pad(evs.length > 1 ? 0.35 : 0), { maxZoom: 6.5, animate: false });
+    },
+  });
+}
+/** A report's pins (one report can be pinned on several places). */
+const iranPinsOf = (fp) => iranPins.events.filter((e) => String(e.fp).split('-pin-')[0] === String(fp));
 function showIranPin(fp) {
   const m = iranPins.byFp.get(fp);
   if (!m || !map) return;
@@ -7917,7 +8047,7 @@ function renderIranFeed() {
     card.title = IRAN_GROUP_NAMES[lean] || '';
     wireFeedCard(card);
     const mb = card.querySelector('.card-map');
-    if (mb) { mb.onmouseenter = null; mb.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); showIranPin(card.dataset.fp); }; }
+    if (mb) { mb.onmouseenter = null; mb.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); const fp = card.dataset.fp; openIranMapPop(iranPinsOf(fp), (r && r.summary) || '', mb, () => showIranPin(fp)); }; }
   });
   const more = document.getElementById('iran-more');
   if (more) more.addEventListener('click', () => { iranDesk.shown += MORE_STEP; renderIranFeed(); });
@@ -8262,9 +8392,11 @@ function renderIranNumbers() {
   const live = iranBrief.b && (iranBrief.b.numbers || iranBrief.b.sanctions);
   const swap = live && Array.isArray(live.boxes) ? new Map(live.boxes.map((b) => [b.title, b])) : null;
   const set = swap ? { ...found, boxes: found.boxes.map((b) => swap.get(b.title) || b) } : found;
-  const head = iranBrief.b && iranBrief.b.numbers && live.through ? `Updated automatically from the sources · last change ${escapeHtml(fmtStamp(live.through))}` : `Researched from the sources · as of ${escapeHtml(fmtDay(d.asOf))}`;
+  // The same line as the Yemen desk's numbers (user, 17 Oct), with the time the Iran desk's numbers next update.
+  const nextAt = live && Date.parse(live.nextAt || '') > Date.now() ? live.nextAt : iranBrief.b && iranBrief.b.nextUpdateAt;
+  const head = cadenceStamp(true, nextAt ? { nextUpdateAt: nextAt } : null);
   const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${d.sets.map((s) => `<button type="button" data-cat="${s.key}" aria-pressed="${s.key === set.key}"${s.key === set.key ? ' class="on"' : ''}>${escapeHtml(s.name)}</button>`).join('')}</div>`;
-  el.innerHTML = `<p class="cadence at-head">${head}</p>${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
+  el.innerHTML = `${head}${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
   wirePager(el, 0, () => { hideSpot(); irClamp(el); });
   wireSpots(el);
   irClamp(el);
@@ -8401,7 +8533,7 @@ function renderIranBrief() {
     wireBoxToggle(card, card.querySelector('.toggle-front'), 'open');
     wireRefs(card, arenas[i].refs);
     const mb = card.querySelector('.ir-arena-map');
-    if (mb) mb.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); showIranArena(arenas[i].refs); };
+    if (mb) mb.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); openIranMapPop(iranArenaPins(arenas[i].refs), arenas[i].name || '', mb, () => showIranArena(arenas[i].refs)); };
   });
 }
 /** "#pin=<fp>" (a pin's note on the home page's map links to the pin here): its day on the map, the pin open. */
@@ -8444,7 +8576,7 @@ function showIranArena(refs) {
 
 window.startYemenDesk = startYemenDesk;
 // The Sources list page: the masthead and the theme button, nothing else.
-window.startDeskDoc = () => { installMast(); installMethodology(); };
+window.startDeskDoc = () => { installMast(); try { installDeskPicker(); wireDeskGo(() => null); } catch (e) { console.error(e); } installMethodology(); };
 
 /*
  * The desk's Methodology page (user, 2 Oct): the three pop-ups' texts, one
@@ -8455,7 +8587,14 @@ function installMethodology() {
   if (!el || el.dataset.filled) return;
   el.dataset.filled = '1';
   const part = (id, html) => `<section class="meth-part" id="${id}">${html.replace(/<h3 id="[^"]*">/, '<h3>')}</section>`;
-  el.innerHTML = part('meth-reliability', REL_HTML) + part('meth-shares', SHARE_HTML) + part('meth-map', MAP_HTML);
+  // One page for the site (user, 17 Oct): each desk's methodologies under its name, the pop-ups' own texts.
+  const desk = (id, name, parts) => `<section class="meth-desk" id="${id}"><h2 class="meth-desk-h">${name}</h2>${parts}</section>`;
+  el.innerHTML = desk('yemen', 'Yemen conflict desk', part('meth-reliability', REL_HTML) + part('meth-shares', SHARE_HTML) + part('meth-map', MAP_HTML))
+    + desk('iran', 'Iran conflict desk', part('iran-sources', IRAN_SRC_HTML) + part('iran-map', IRAN_MAP_HTML));
+  // Its own "Full methodology" links lead nowhere new here.
+  el.querySelectorAll('.meth-full').forEach((a) => { const prev = a.previousSibling; if (prev && prev.nodeType === 3 && /·\s*$/.test(prev.textContent)) prev.textContent = prev.textContent.replace(/\s*·\s*$/, ''); a.remove(); });
+  // The address's part, now that it is there.
+  if (location.hash) { const t = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (t) setTimeout(() => t.scrollIntoView({ block: 'start' }), 60); }
   el.querySelectorAll('.to-map-meth').forEach((b) => b.addEventListener('click', () => document.getElementById('meth-map').scrollIntoView({ behavior: 'smooth', block: 'start' })));
 }
 // The Methodology and About pages: the masthead date and the theme button, nothing else.

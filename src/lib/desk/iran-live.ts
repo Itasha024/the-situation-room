@@ -498,9 +498,12 @@ export function refreshIranLive(store: DeskStore, file: NumbersFile, now = new D
 }
 
 /** What the page swaps in: every box a reader has made, and the newest day any of them reached. */
-export function liveNumbers(live: IranLive | null, extra: Box[] = []): { boxes: Box[]; through: string } | null {
+export function liveNumbers(live: IranLive | null, extra: Box[] = []): { boxes: Box[]; through: string; nextAt: string } | null {
   const boxes = [...Object.values(live?.boxes ?? {}).filter((b) => !extra.some((x) => x.title === b.title)), ...extra];
   if (!boxes.length) return null;
   const through = Object.values(live?.at ?? {}).sort().pop() || "";
-  return { boxes, through };
+  // When the next reader is due: the time the numbers' line names, as the Yemen desk's names its next update (user, 17 Oct).
+  const due = READERS.map((r) => Date.parse(live?.tried?.[r.id] || "") + r.every).filter(Number.isFinite);
+  const nextAt = due.length ? new Date(Math.min(...due)).toISOString() : "";
+  return { boxes, through, nextAt };
 }

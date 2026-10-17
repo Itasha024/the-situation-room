@@ -1211,8 +1211,9 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 /* Every map's pin (user, 17 Oct): the mark says what happened, the colour who did it.
    A white mark on a dark side colour, a near-black one on a light one; the legend's
    marks for the kinds of event sit on a plain disc, since the colour is the side's. */
+/* The kinds' marks: white on a slate disc, clear in day and night (user, 17 Oct: a white mark on a pale disc did not show). */
+html .leg-ico.kind,html[data-set] .leg-ico.kind{background:#475569;color:#fff;box-shadow:none}
 .ev.ink-light .ev-glyph{color:#fff}
-.leg-ico.kind{background:#e2e8f0;color:#0b0f14}
 /* A period: the day's own date box is its first day, a second one like it beside it its last (user, 17 Oct). */
 .time-filter .tf-range{display:inline-flex;flex-basis:auto;align-items:center;gap:.35rem;padding:0}
 .time-filter .tf-range[hidden]{display:none}

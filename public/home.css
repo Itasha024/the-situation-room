@@ -392,6 +392,8 @@ a{color:inherit}
 .g-panel{padding:1rem 1.1rem 1.2rem;min-width:0}
 .g-panel h3{margin:.35rem 0 .3rem;font:600 2rem/1.05 var(--f-head);color:var(--t-strong)}
 .g-panel .blurb{margin:0 0 .8rem;font:italic 1rem/1.4 var(--f-prose);color:var(--t-muted)}
+.g-body .pts.h2-more{margin-top:-.3rem}
+.g-body .h2-readmore{display:block;margin:0 0 .6rem}
 .g-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:1rem}
 .g-body .h2-mini-map{height:260px}
 .g-body .pts{margin:0 0 .6rem;padding-inline-start:1.2rem;font:400 1.04rem/1.5 var(--f-prose);color:var(--t-text)}
@@ -470,6 +472,7 @@ a{color:inherit}
 .h-leg-pick{display:flex;gap:.25rem;margin:.35rem 0 .1rem}
 .h-leg-pick button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .45rem;border:1px solid var(--t-line-strong);border-radius:3px;font:700 .56rem/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--t-muted)}
 .h-leg-pick button[aria-selected="true"]{color:var(--t-strong);border-color:var(--accent-ui);background:var(--t-surface-2)}
+.legend.collapsed .h-leg-pick{display:none}
 .h-leg-pick button:focus-visible{outline:2px solid var(--accent-ui);outline-offset:1px}
 .h-leg-pick .flag{width:14px;height:10px}
 .legend.collapsed .h-leg-pick{display:none}
@@ -510,3 +513,22 @@ a{color:inherit}
 @media (prefers-reduced-motion: reduce){.h-co-dot::after,.h-co-live{animation:none}}
 @media (max-width:720px){.h-co{min-width:0}.h-co-flag{padding-left:.4rem}.h-co-flag .flag{width:22px;height:15px}.h-co-body{padding:.32rem .5rem .34rem .45rem;gap:.1rem}.h-co b{font-size:.72rem}.h-co-kick{font-size:.46rem}.h-co-foot{font-size:.55rem;gap:.5rem}.h-co-foot>span{display:none}.h-co-foot{border-top:0;padding-top:0}}
 .h-co-foot>span{white-space:nowrap}
+/* The callouts in the Day theme (user, 17 Oct: "Open desk" was claret on near-black): the theme's paper
+   card and ink, and the way in as a filled claret button. */
+html[data-theme="broadsheet-day"] .h-co{color:#33302e;background:linear-gradient(180deg,rgba(255,247,239,.97),rgba(251,236,222,.97));border-color:rgba(51,48,46,.22);box-shadow:0 10px 24px rgba(77,45,28,.22),0 1px 0 rgba(255,255,255,.7) inset}
+html[data-theme="broadsheet-day"] .h-co b{color:#1a1817}
+html[data-theme="broadsheet-day"] .h-co-kick,html[data-theme="broadsheet-day"] .h-co-foot{color:#66605c}
+html[data-theme="broadsheet-day"] .h-co-foot{border-top-color:rgba(51,48,46,.14)}
+html[data-theme="broadsheet-day"] .h-co-flag .flag{box-shadow:0 0 0 1px rgba(51,48,46,.25)}
+html[data-theme="broadsheet-day"] .h-co-foot em{color:#fff;background:var(--accent-ui);padding:.3rem .5rem .28rem;border-radius:2px}
+html[data-theme="broadsheet-day"] .h-co:hover,html[data-theme="broadsheet-day"] .h-co:focus-visible{box-shadow:0 14px 28px rgba(77,45,28,.3),0 0 0 1px var(--accent-ui)}
+html[data-theme="broadsheet-day"] .h-co-dot{box-shadow:0 0 0 2px rgba(255,247,239,.9)}
+html[data-theme="broadsheet-day"] .h-co-line path{filter:drop-shadow(0 1px 1px rgba(255,255,255,.7))}
+@media (max-width:720px){html[data-theme="broadsheet-day"] .h-co-foot em{padding:.2rem .38rem}}
+
+/* The map on a phone leaves the start of what is below it in sight (user, 17 Oct). */
+@media (max-width:720px){.h-solo .map-wrap{height:min(52svh,440px);min-height:300px}}
+/* Full screen, as on the desks. */
+body.map-focus #g-body{display:none}
+body.map-focus .h-solo .map-wrap{height:calc(100svh - 110px)}
+@media (max-width:720px){body.map-focus .h-solo .map-wrap{height:calc(100svh - 100px)}}

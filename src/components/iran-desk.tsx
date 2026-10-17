@@ -60,7 +60,6 @@ const IRAN_HTML = `
     <button type="button" id="btn-conflict-all" class="on" aria-label="The whole war, since 28 Feb 2026"><span class="tf-long">Whole war</span><span class="tf-short">All</span></button>
     <button type="button" id="btn-period" aria-expanded="false" aria-controls="tf-range" aria-label="Pick a period">Period</button>
   </div>
-  <button type="button" class="rel-btn map-meth" id="btn-ir-map-meth" aria-expanded="false" aria-haspopup="dialog">Map methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button>
 </div>
 <main class="stage" id="stage">
   <section class="map-wrap" id="map-wrap">
@@ -94,7 +93,6 @@ const IRAN_HTML = `
       ${LEANS.map(([k, c, n]) => `<button type="button" class="lean-f" data-lean="${k}" aria-pressed="false" disabled><span class="sw" style="background:${c}"></span>${n}</button>`).join("\n      ")}
       </div>
     </div>
-    <div class="feed-rel"><button type="button" class="rel-btn" id="btn-ir-src" aria-expanded="false" aria-haspopup="dialog">Sources methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div>
     <div id="feed" class="feed">${SOON("reports from every side, each with its source's rating.")}</div>
   </aside>
 </main>

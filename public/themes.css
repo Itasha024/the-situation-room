@@ -825,16 +825,20 @@ html .top h1.desk-tabs{display:flex;align-items:center;gap:.65rem;min-width:0;pa
 .desk-tabs a.dt-label:hover,.desk-tabs a.dt-label:focus-visible{color:var(--t-strong);outline:none;text-decoration:underline;text-underline-offset:.25em;text-decoration-thickness:1px}
 .desk-tabs .dt-row{display:flex;gap:.45rem;min-width:0;overflow-x:auto;scrollbar-width:none;padding:2px;scroll-snap-type:x proximity}
 .desk-tabs .dt-row::-webkit-scrollbar{display:none}
-.dt-btn{position:relative;isolation:isolate;flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:5.8rem;height:2.05rem;padding:0 1rem;overflow:hidden;border:1px solid var(--t-line-strong,#334155);border-radius:3px;color:var(--t-strong);text-decoration:none;scroll-snap-align:start;transition:border-color .15s,box-shadow .15s}
-.dt-btn .dt-flag{position:absolute;inset:0;z-index:-2;width:100%;height:100%;transition:transform .35s ease}
-.dt-btn::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--t-bg,#1b1918);opacity:.66;transition:opacity .2s}
-.dt-btn .dt-name{font:inherit;letter-spacing:.11em;text-shadow:0 0 .5em var(--t-bg,#1b1918),0 0 .15em var(--t-bg,#1b1918)}
-.dt-btn:hover::before,.dt-btn:focus-visible::before{opacity:.5}
-.dt-btn:hover .dt-flag{transform:scale(1.06)}
+/* Desk buttons as pills (user, 17 Oct: the faded flags looked old): a round flag, the name, a lift and an arrow on hover; the open desk filled */
+.dt-btn{flex:none;display:inline-flex;align-items:center;gap:.5rem;height:2.1rem;padding:0 .85rem 0 .3rem;border:1px solid var(--t-line-strong,#334155);border-radius:999px;background:color-mix(in srgb,var(--t-strong,#e5e7eb) 4%,transparent);color:var(--t-strong);text-decoration:none;scroll-snap-align:start;cursor:pointer;transition:border-color .15s,background .15s,transform .15s,box-shadow .15s}
+.dt-btn .dt-flag{flex:none;width:1.5rem;height:1.5rem;border-radius:50%;box-shadow:0 0 0 1px color-mix(in srgb,var(--t-strong,#e5e7eb) 22%,transparent);transition:transform .2s}
+.dt-btn .dt-name{font:inherit;font-size:.8em;letter-spacing:.09em}
+.dt-btn::after{content:"→";font-size:.85em;margin-inline-start:-.15rem;opacity:.45;transition:opacity .15s,transform .15s}
+.dt-btn:hover,.dt-btn:focus-visible{border-color:var(--accent-ui);background:color-mix(in srgb,var(--accent-ui) 12%,transparent);transform:translateY(-1px);box-shadow:0 3px 10px -4px color-mix(in srgb,var(--accent-ui) 60%,transparent)}
+.dt-btn:hover::after,.dt-btn:focus-visible::after{opacity:1;transform:translateX(2px)}
+.dt-btn:hover .dt-flag{transform:scale(1.08)}
+.dt-btn:active{transform:translateY(0)}
 .dt-btn:focus-visible{outline:2px solid var(--accent-ui);outline-offset:2px}
-.dt-btn[aria-current="page"]{border-color:var(--accent-ui);box-shadow:inset 0 -2px 0 var(--accent-ui)}
-.dt-btn[aria-current="page"]::before{opacity:.42}
-@media (max-width:720px){.dt-btn{min-width:4.6rem;height:1.85rem;padding:0 .7rem}html .top h1.desk-tabs{gap:.45rem}}
+.dt-btn[aria-current="page"]{border-color:var(--accent-ui);background:var(--accent-ui);color:var(--t-bg,#1b1918);cursor:default;transform:none;box-shadow:none}
+.dt-btn[aria-current="page"]::after{content:none}
+.dt-btn[aria-current="page"] .dt-name{font-weight:700}
+@media (max-width:720px){.dt-btn{height:1.9rem;gap:.4rem;padding:0 .65rem 0 .25rem}.dt-btn .dt-flag{width:1.3rem;height:1.3rem}.dt-btn::after{display:none}html .top h1.desk-tabs{gap:.45rem}}
 
 /* Going between desks: the map flies, the rest of the page steps back (app.js deskGo). */
 html.desk-going .stage>:not(.map-wrap),html.desk-going .stage~*,html.desk-going #g-body{opacity:.15;transition:opacity .5s ease}

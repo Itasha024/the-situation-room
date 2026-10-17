@@ -3715,7 +3715,7 @@ function renderBars(d) {
     </div>`;
   }).join('');
   // Drawn in the numbers column, under "Territory".
-  const html = rows ? `<div class="bars">${rows}<div class="bars-meth"><button type="button" class="rel-btn" id="btn-share-meth" aria-expanded="false" aria-haspopup="dialog">Control share methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div></div>` : '';
+  const html = rows ? `<div class="bars">${rows}</div>` : '';
   if (html === controlHtml) return;
   controlHtml = html;
   if (numCat === 'control') renderCasualties();
@@ -6838,8 +6838,8 @@ try { setFavicon(THEME); } catch (e) {}
  * page once with ?desks=1.
  */
 const DESKS = [
-  { id: 'yemen', name: 'Yemen Conflict Desk', short: 'Yemen conflict', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden', kids: [['/methodology#yemen', 'Methodology']] },
-  { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Live', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran', kids: [['/methodology#iran', 'Methodology']] },
+  { id: 'yemen', name: 'Yemen Conflict Desk', short: 'Yemen conflict', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden' },
+  { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Live', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran' },
 ];
 function deskOf() {
   const el = document.querySelector('[data-desk]');
@@ -6886,9 +6886,8 @@ function deskTabsHtml(hereId) {
 function installDeskPicker() {
   const h = document.querySelector('.top h1.desk-label');
   if (!h || h.dataset.tabs) return;
-  // A desk's own page marks its button; the site's pages (the methodology) mark none.
-  const el = document.querySelector('[data-desk]');
-  const here = el ? DESKS.find((d) => d.id === el.dataset.desk) : null;
+  // A desk's own page marks its button; other pages mark none.
+  const here = DESKS.find((d) => deskPath(d.href) === deskPath(location.href)) || null;
   h.dataset.tabs = '1';
   h.classList.add('desk-tabs');
   h.setAttribute('aria-label', here ? T(here.name) : T('Desks'));
@@ -7146,6 +7145,10 @@ function installSectionNav() {
   mark();
 }
 
+/*
+ * Off the site for now (user, 17 Oct): the methodology buttons, their links and the /methodology page
+ * are gone; the texts below stay unused until they come back (git tag methodology-aside holds it all).
+ */
 /*
  * "Sources reliability methodology" beside the report column (user, 1 Oct): a
  * short account of how each source's 1–5 rating is made, and the only way to the

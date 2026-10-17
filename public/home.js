@@ -668,14 +668,21 @@
       // The latest: its first point, the rest behind Read more (user, 17 Oct).
       const pts = (t.pts || []).slice(0, 4);
       const more = pts.length > 1 ? `<ol class="pts h2-more" start="2" hidden>${pts.slice(1).map((p) => `<li>${esc(p.t)}</li>`).join('')}</ol><button type="button" class="h2-readmore toggle-sit" aria-expanded="false">Read more</button>` : '';
-      left = (t.events.length ? mini(id) : '') + (pts.length ? `<h4${t.events.length ? ' style="margin-top:.8rem"' : ''}>The latest</h4><ol class="pts"><li>${esc(pts[0].t)}</li></ol>${more}` : '');
+      left = (t.events.length ? mini(id) : '') + (pts.length ? `<div class="h2-latest${more ? ' h2-tap' : ''}"><h4${t.events.length ? ' style="margin-top:.8rem"' : ''}>The latest</h4><ol class="pts"><li>${esc(pts[0].t)}</li></ol>${more}</div>` : '');
       const list = rest(t).slice(0, 4);
       right = list.length ? `<h4>Latest reports</h4><div class="feed">${list.map((r) => card(r, { noReply: true })).join('')}</div>` : '';
     }
     $('panel').innerHTML = `${kicker(t)}<h3>${esc(t.name)}</h3><div class="g-body"><div>${left}</div><div>${right}</div></div>${deskLinks(t)}`;
     mountMinis($('panel'));
-    const rm = $('panel').querySelector('.h2-readmore');
-    if (rm) rm.onclick = () => { const ol = $('panel').querySelector('.h2-more'); const open = ol.hidden; ol.hidden = !open; rm.textContent = open ? 'Show less' : 'Read more'; rm.setAttribute('aria-expanded', String(open)); };
+    // The whole Latest area opens and closes it, not only the button (user, 17 Oct).
+    const rm = $('panel').querySelector('.h2-readmore'), tap = $('panel').querySelector('.h2-tap');
+    if (rm && tap) tap.onclick = (e) => {
+      if (e.target.closest('a') || String(getSelection()).trim()) return;
+      const ol = $('panel').querySelector('.h2-more'), open = ol.hidden;
+      ol.hidden = !open;
+      rm.textContent = open ? 'Show less' : 'Read more';
+      rm.setAttribute('aria-expanded', String(open));
+    };
   }
   function renderStories() {
     const items = ordered();

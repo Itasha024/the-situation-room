@@ -478,6 +478,26 @@
       "label": "Houthi forces advance to the area overlooking Al-Misrakh district centre in Taiz",
       "side": "houthi",
       "why": "Houthi-aligned outlet: its \"Yemeni forces\" are the Houthis (5-7 Oct review)"
+    },
+    "live-www-newarab-com-news-irgc-say-tanker-exploded-after-hitting-mine-hormuz-": {
+      "cat": "strike",
+      "why": "missiles on Aden airport and Badr camp; the tanker in the article hit a mine in Hormuz, not off Aden (user, 17 Oct)"
+    },
+    "live-www-adngad-net-news-889200": {
+      "remove": true,
+      "why": "the French frigate drone of 1-2 Oct, told again (one event, one pin: Le Monde first)"
+    },
+    "live-www-adngad-net-news-889141": {
+      "remove": true,
+      "why": "the French frigate drone of 1-2 Oct, told again (one event, one pin: Le Monde first)"
+    },
+    "live-www-alayyam-info-news-asdmesis-88bobq-3d32": {
+      "remove": true,
+      "why": "the French frigate drone of 1-2 Oct, told again (one event, one pin: Le Monde first)"
+    },
+    "live-maritime-executive-com-article-report-french-frigate-downed-drone-threat": {
+      "remove": true,
+      "why": "the French frigate drone of 1-2 Oct, told again (one event, one pin: Le Monde first)"
     }
   }
 }

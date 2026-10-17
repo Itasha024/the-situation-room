@@ -6,7 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 const pub = path.join(__dirname, '..', '..', 'public');
-const base = JSON.parse(fs.readFileSync(path.join(pub, 'iran-strikes-baseline.json'), 'utf8'));
+// The audit's rules (pin-rules.cjs, 17 Oct): days in post order, places by their city, demolitions, one event one pin.
+const base = require('./pin-rules.cjs').fixBase(JSON.parse(fs.readFileSync(path.join(pub, 'iran-strikes-baseline.json'), 'utf8')), (n) => console.log('[map-pack] rules:', JSON.stringify(n)));
 const year = base[0] ? base[0].day.slice(0, 4) : '2026';
 if (base.some((p) => p.day.slice(0, 4) !== year)) throw new Error('map-pack: pins from more than one year');
 // Air defence fire, interceptions, sirens and blasts heard over Iran are not Iran's attacks (user, 12 Oct):
@@ -36,7 +37,7 @@ const ENERGY = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel
 const GROUND = /\b(?:artillery|shelling|tanks? fire|sniper|clash|clashes|ground (?:assault|incursion|raid)|gunfight|firefight)\b/i;
 const kindOf = (p, sea) => { const s = `${p.label || ''} ${p.place || ''}`; return NUCLEAR.test(s) ? 4 : ENERGY.test(s) && !/tanker/i.test(s) ? 3 : sea ? 2 : GROUND.test(s) ? 1 : 0; };
 // [MM-DD, actor, lat, lng, HH:MM (UTC) or 0, 1 at sea or 0, kind]
-const pins = base.map((p) => {
+let pins = base.map((p) => {
   const w = SEA.place(p, lookup);
   if (w.sea) seaN++;
   if (w.moved) { movedN++; if (process.env.SEA_DBG) console.log('[sea]', p.fp, '|', p.place, '|', w.moved, '|', p.lat, p.lng, '->', w.lat, w.lng); }
@@ -78,7 +79,11 @@ function seaWords(l) {
     .replace(/\s+—\s+(?:the\s+)?(.+?)\s+attack claim$/i, ' ($1)')
     .replace(/\s+,/g, ',').replace(/\s{2,}/g, ' ').replace(/[.,]\s*$/, '').trim();
 }
-const notes = base.map((p) => [p.fp, seaWords(p.place).replace(/^the /, ''), relabel(p), p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
+// A ship attack told twice, timed and untimed, at sea the same day: one pin (pin-rules.cjs).
+const twins = require('./pin-rules.cjs').seaTwins(base, pins.map((r) => r[5] === 1));
+console.log('[map-pack] sea twins folded:', twins.size);
+pins = pins.filter((r, i) => !twins.has(i));
+const notes = base.filter((p, i) => !twins.has(i)).map((p) => [p.fp, seaWords(p.place).replace(/^the /, ''), relabel(p), p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
 fs.writeFileSync(path.join(pub, 'iran-map-pins.json'), JSON.stringify({ year, n: pins.length, pins }));
 fs.writeFileSync(path.join(pub, 'iran-map-notes.json'), JSON.stringify({ n: notes.length, notes }));
 console.log('[map-pack]', pins.length, 'pins,', seaN, 'at sea,', movedN, 'moved to or out to sea;', unstated, "of Iran's own air defence and alarms shown as not stated");

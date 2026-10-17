@@ -103,7 +103,7 @@ export function notEvent(e: YemenPin): boolean {
  * Told about an event, not the event (17 Oct): burials and mourning, condemnations, a threat declared
  * over, a mobilisation announced, devices defused, rifts among leaders, flights halted.
  */
-const ASIDE = /\b(?:bur(?:y|ies|ied|ial)|funerals?|mourn\w*|laid to rest|condemn\w*|denounc\w*|threat (?:is )?over|all clear|announce\w* (?:a |the )?(?:national |general )?mobili[sz]ation|defus\w*|dismantl\w* (?:\w+ )?(?:IEDs?|explosive|devices?|mines?)|rifts?|defect\w*|(?:mass\w*|gather\w*) (?:\w+ ){0,3}fighters|issue\w* (?:a )?message|recruit\w*|conscript\w*|move\w* casualties|denies|denied|highlights|threat\b.{0,30}\b(?:has )?ended|urges? (?:\w+ )?(?:Americans|citizens|nationals|travellers|travelers)|travel advisory|publish\w* (?:a |the )?photos?|photos? from|mine-clearing|clear\w* (?:hundreds of |dozens of )?(?:Houthi )?(?:land)?mines|launch\w* (?:a )?campaign|dig\w* (?:\w+ ){0,2}trenches|(?:defensive )?berm|on high alert|high (?:state of )?readiness|(?:return\w*|hand\w* over|recover\w*|retriev\w*|collect\w*|remov\w*) (?:[\w'’]+ ){0,4}bod(?:y|ies))\b/i;
+const ASIDE = /\b(?:bur(?:y|ies|ied|ial)|funerals?|mourn\w*|laid to rest|condemn\w*|denounc\w*|threat (?:is )?over|all clear|announce\w* (?:a |the )?(?:national |general )?mobili[sz]ation|defus\w*|dismantl\w* (?:\w+ )?(?:IEDs?|explosive|devices?|mines?)|rifts?|defect\w*|danger (?:has )?(?:passed|removed|over)|travel warning|^moment of|food convoy|visit\w* (?:the )?wounded|offload\w*|sends? (?:over |more than )?[\d,]+ fighters|reinforc(?:es|ed|ing) (?:its |their )?(?:\w+ )?presence|plans? to expand|carriers shift|(?:mass\w*|gather\w*) (?:\w+ ){0,3}fighters|issue\w* (?:a )?message|recruit\w*|conscript\w*|move\w* casualties|denies|denied|highlights|threat\b.{0,30}\b(?:has )?ended|urges? (?:\w+ )?(?:Americans|citizens|nationals|travellers|travelers)|travel advisory|publish\w* (?:a |the )?photos?|photos? from|mine-clearing|clear\w* (?:hundreds of |dozens of )?(?:Houthi )?(?:land)?mines|launch\w* (?:a )?campaign|dig\w* (?:\w+ ){0,2}trenches|(?:defensive )?berm|on high alert|high (?:state of )?readiness|(?:return\w*|hand\w* over|recover\w*|retriev\w*|collect\w*|remov\w*) (?:[\w'’]+ ){0,4}bod(?:y|ies))\b/i;
 const ANALYSIS = /\b(?:tensions? (?:surface|rise|mount|grow)\w*|stockpil\w*|wartime high|record high|raises? (?:\w+ )?concerns?|faces? (?:\w+ )?challenges|counteroffensive stalls|since (?:January|February|March|April|May|June|July|August|September|October|November|December|the war began|the start of the war)|steps? up (?:its |their )?campaign|attacks? surge|surge in attacks|shipping slows|vessels crossed|transits? (?:fell|fall|drop\w*))\b/i;
 const DIRECT = /\b(?:infiltrat\w*|blow\w* up|intercept\w*|kill\w*|wound\w*|injur\w*|explosions?|launch\w*|strikes?\s+on|attacks?\s+on|bomb\w*|shell\w*|struck|hits?|advanc\w*)\b/i;
 
@@ -111,7 +111,7 @@ const DIRECT = /\b(?:infiltrat\w*|blow\w* up|intercept\w*|kill\w*|wound\w*|injur
  * Not an event at a place (17 Oct): what an attack led to (flights cancelled, events put off, debris
  * floating), troops moved, drills, arrests and raids on homes, praise and mediation, finds of weapons.
  */
-const AFTER = /\b(?:satellite imagery|for (?:a )?second consecutive day|closes?|closed|closure|disruptions?|halted|halts|grounded|disruption to air navigation|no aircraft in (?:the )?airspace|flight tracking|cancels?|cancell?ed|cancellations?|suspends?|suspended|suspension|delays?|delayed|postpones?|postponed|resumes?|resumed|remains? (?:shut|closed)|reopens?|reopened|insurance|premiums?|stopped public|leak\w* fuel|float\w*|gather\w* cargo|controlled (?:explosion|detonation)|lifts?\s+(?:the\s+)?(?:emergency\s+|security\s+)?(?:alerts?|warnings?))\b/i;
+const AFTER = /\b(?:satellite (?:imagery|images?)|for (?:a )?second consecutive day|closes?|closed|closure|disruptions?|halted|halts|grounded|disruption to air navigation|no aircraft in (?:the )?airspace|flight tracking|cancels?|cancell?ed|cancellations?|suspends?|suspended|suspension|delays?|delayed|postpones?|postponed|resumes?|resumed|remains? (?:shut|closed)|reopens?|reopened|insurance|premiums?|stopped public|leak\w* fuel|float\w*|gather\w* cargo|controlled (?:explosion|detonation)|lifts?\s+(?:the\s+)?(?:emergency\s+|security\s+)?(?:alerts?|warnings?))\b/i;
 const NEW_ATTACK = /\b(?:fresh|new|another|renewed)\s+(?:\w+\s+){0,2}(?:strikes?|attacks?|barrage|missiles?)\b/i;
 const NO_FIGHT = /\b(?:military movements?|reinforcements?|deploys?|deployed|deployment|transfers?|transferred|mobili[sz]\w*|redeploy\w*|dispatch\w*|arrives?|arrived|drills?|exercises?|manoeuvres?|maneuvers?|parades?|graduat\w*|forms? new|leaflets?|graffiti|abduct\w*|kidnap\w*|arrests?|arrested|detains?|detained|detention|loot\w*|storms? (?:a |the )?(?:citizen'?s? )?(?:home|house)|raid (?:and \w+ )?(?:over \d+ )?(?:homes|houses)|praises?|praised|mediations?|flares?|ammunition trucks|finds?|found)\b/i;
 const FIGHT = /\b(?:recaptur\w*|retak\w*|seiz\w*|advanc\w*|liberat\w*|massacre|withdraw\w*|take control|took control|strikes?|struck|hits?|attack\w*|clash\w*|kill\w*|wound\w*|injur\w*|shell\w*|repel\w*|fire[sd]?|firing|target\w*|destroy\w*|captur\w*|ambush\w*|battles?|fight\w*|besieg\w*|bomb\w*|explo\w*|expel\w*|expuls\w*|pursu\w*|clear(?:s|ed|ing)?|thwart\w*|foil\w*|decapitat\w*|executed|dead|bod(?:y|ies)|operations?)\b/i;
@@ -123,7 +123,7 @@ export function roundup(t: string): boolean {
   // A count of ships or attacks over a day or a week: "12 vessels hit in a week", "six vessels hit in one day".
   if (/\b(?:\d+|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|several|multiple)\s+(?:\w+\s+)?(?:vessels|ships|tankers|attacks|strikes)\s+(?:\w+\s+)?(?:hit|struck|targeted|attacked)?\s*in (?:a|one|the past|the last) (?:single )?(?:week|day)\b/i.test(t)) return true;
   // "Houthi forces kill second teacher in 24 hours": one event, the second of its kind.
-  if (!target && !/\b(?:second|third|fourth|fifth|another)\b/i.test(t) && /\b(?:past|last|over|previous|within|in)\s+(?:the\s+)?(?:24|48|72|96|twenty-four|forty-eight|seventy-two)[\s-]*hours?\b|\b(?:past|last|over)\s+(?:two|three|four|few|several)\s+(?:days|weeks)\b|\b(?:past|in a|this|one)\s+week\b|\bin (?:one|a single) day\b|\bsince (?:the start|dawn|morning)\b/i.test(t)) return true;
+  if (!target && !/\b(?:second|third|fourth|fifth|another)\b/i.test(t) && /\b(?:past|last|over|previous|within|in)\s+(?:the\s+)?(?:24|48|72|96|twenty-four|forty-eight|seventy-two)[\s-]*hours?\b|\b(?:past|last|over|in)\s+(?:two|three|four|few|several)\s+(?:days|weeks)\b|\b(?:past|in a|this|one)\s+week\b|\bin (?:one|a single) day\b|\bsince (?:the start|dawn|morning)\b/i.test(t)) return true;
   // A front's toll in hundreds, with no one attack named: "168 Houthi fighters killed and 210 wounded in clashes in Taiz".
   if (!target && /\b\d{3,}[\d,]*\s+(?:[\w-]+\s+){0,3}(?:killed|dead|wounded|casualties|neutrali[sz]ed)\b/i.test(t)) return true;
   if (/\b\d{2,}[\d,]*\s+(?:(?:Houthi|Saudi|coalition|military|air|precise|enemy|targeted|combat|separate)\s+){0,2}(?:operations|violations|strikes|airstrikes|air strikes|raids|attacks|breaches|targets)\b/i.test(t)) return true;
@@ -593,6 +593,34 @@ export function spotPin(e: YemenPin & { text?: string | null }): { name: string;
   }
   return null;
 }
+/**
+ * A pin on a district's name set down far from that district (22 Sep: Razih at 16.15 N, 90 km from Saada's
+ * Razih), or on a garbled name ("Mdrsa" for a school in Al-Modarba) whose words name a district: that district.
+ * Only a name one district bears and the desk's gazetteer does not place elsewhere.
+ */
+export function misplacedDistrict(e: YemenPin): { name: string; lat: number; lng: number } | null {
+  if (typeof e.lat !== "number" || typeof e.lng !== "number" || e.type === "vessel") return null;
+  const place = String(e.place || "").replace(/\s+district$/i, "");
+  if (PLACE_BY_NAME[place]) return null;
+  const label = String(e.label || "");
+  // Never into another governorate than the words name ("Al-Wadi district in Marib" is not Abyan's Al Wadi').
+  const govs = govsWhere(label);
+  const fits = (d: { gov: string }) => !govs.size || govs.has(d.gov) || (govs.has("YE-SA") && d.gov === "YE-SN");
+  const k = ALIAS[placeKey(place)] ?? placeKey(place);
+  const same = ALL_DISTRICTS.filter((d) => d.key === k);
+  if (same.length === 1 && placeNamed(e.place, label) && fits(same[0]) && kmTo(e.lat, e.lng, same[0].lat, same[0].lng) > 25) return same[0];
+  if (!garbled(String(e.place || ""))) return null;
+  // The district the garbled name itself spells ("Al-Skn Hrf Sfyan" is Harf Sufyan), then one its words name.
+  const b = bones(placeKey(String(e.place || "")));
+  const inName = ALL_DISTRICTS.filter((d) => d.bones.length >= 4 && b.includes(d.bones) && fits(d));
+  if (inName.length === 1 && kmTo(e.lat, e.lng, inName[0].lat, inName[0].lng) > 15) return inName[0];
+  for (const run of runsOf(label)) {
+    const key = ALIAS[placeKey(run)] ?? placeKey(run);
+    const d = ALL_DISTRICTS.filter((x) => x.key === key);
+    if (d.length === 1 && fits(d[0]) && kmTo(e.lat, e.lng, d[0].lat, d[0].lng) > 15) return d[0];
+  }
+  return null;
+}
 /** The site within 5 km, else the district within 20 km, a garbled name stands for. */
 function plainName(e: YemenPin): string | null {
   if (typeof e.lat !== "number" || typeof e.lng !== "number") return null;
@@ -677,7 +705,7 @@ const SAUDI_BACKED_WORDS = /\b(?:Saudi|coalition)[- ](?:backed|aligned|funded|su
 /** Every rule above, in order. */
 export function servePins<T extends YemenPin>(pins: T[]): T[] {
   const moved = strayExtraPins(pins.filter((e) => !notEvent(e) && !countryPin(e))).flatMap((e) => {
-    const d = spotPin(e) ?? saudiTargetPin(e) ?? districtPin(e) ?? areaInDistrict(e) ?? namedGovPin(e) ?? abroadPin(e);
+    const d = spotPin(e) ?? saudiTargetPin(e) ?? districtPin(e) ?? areaInDistrict(e) ?? misplacedDistrict(e) ?? namedGovPin(e) ?? abroadPin(e);
     // A shop's or an office's pin whose words name no place we know: not on the map.
     if (!d && shopName(String(e.place || ""))) return [];
     // Abroad, for an event its words put "in Yemen" without a place: no place to pin

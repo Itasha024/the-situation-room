@@ -226,3 +226,17 @@ test("round 4: the Houthis' own telling, an attack on Saudi Arabia pinned where 
   // Taiz's fronts named alone: "Jabal Matran and Al-Salw" is Taiz, not Saada's Salah.
   assert.equal(one("Houthi forces claim control of Jabal Matran and expulsion of coalition forces from Al-Salw", { lat: 16.877, lng: 43.386, place: "Salah" }, "combat")?.place, "Taiz");
 });
+
+test("round 6: a district's name pinned far from it goes to it; the all-clear, travel warnings and satellite pictures are no pins", async () => {
+  const { misplacedDistrict } = await import("./yemen-pins.ts");
+  assert.equal(misplacedDistrict({ lat: 16.154, lng: 43.424, place: "Razih", label: "Houthi media: Saudi air strikes target civilians in Razih, Ghamr and Al-Dhaher" })?.name, "Razih");
+  // Marib's Al-Wadi district is not Abyan's Al Wadi'.
+  assert.equal(misplacedDistrict({ lat: 15.55, lng: 45.35, place: "Al-Wadi district", label: "Houthi ballistic missile targets Al-Wadi district in Marib" }), null);
+  for (const l of [
+    "Saudi Civil Defence: danger has passed in Najran region",
+    "US State Department renews travel warning after Houthi ballistic missile targets Riyadh",
+    "Satellite images show damage to Italian Typhoon aircraft hangars at King Fahd Air Base in Saudi Arabia",
+    "Abyan sends over 1,400 fighters to frontlines in Taiz and Al-Subaiha",
+    "Fighting between Houthis and Saudi-backed forces kills 154 in two days",
+  ]) assert.equal(notEvent({ label: l }), true, l);
+});

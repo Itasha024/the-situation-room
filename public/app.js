@@ -2964,6 +2964,7 @@ function devBaseMap(m, withSaudi) {
     L.geoJSON(saudiGeoCache, { interactive: false, style: { fillColor: COLORS.saudi, fillOpacity: 0.3, color: EDGE, weight: 0.8, opacity: 0.7 } }).addTo(m);
   }
   saudiCityLayer(m);
+  drawAdminLayer(m, YEMEN_MAP_SKIP);
 }
 
 /** Yemen's mainland, for framing a pop-up on the country. */
@@ -4413,6 +4414,7 @@ async function buildFrontMap(m, front, d) {
   layer.eachLayer((l) => { if (ids.has(l.feature.properties.shapeISO)) l.bringToFront(); });
   govNameLayer(m, mainland.features, byIso);
   saudiCityLayer(m);
+  drawAdminLayer(m, YEMEN_MAP_SKIP);
   // A front opened from several clusters in one governorate has a spot for each.
   for (const spot of frontSpots(front.mapFocus)) lit.extend(L.latLng(spot).toBounds((front.mapFocus.spotRadius || 15000) * 3));
   // Everything recorded on this front, played as on the developments' map.
@@ -5179,6 +5181,7 @@ function openPinSheet(pin, anchor) {
         L.geoJSON(mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(m);
         govNameLayer(m, mainland.features, byIso);
         saudiCityLayer(m);
+        drawAdminLayer(m, YEMEN_MAP_SKIP);
       }
       const ymd = jerusalemYmd(pin.at);
       [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
@@ -6024,6 +6027,7 @@ async function drawGeo(d) {
   if (govNamesLayer) { try { map.removeLayer(govNamesLayer); } catch (e) {} }
   govNamesLayer = govNameLayer(map, split.mainland.features, byIso);
   if (!saudiCitiesLayer) saudiCitiesLayer = saudiCityLayer(map);
+  drawAdminLayer(map, YEMEN_MAP_SKIP);
 
   try {
     if (!saudiGeoCache) {
@@ -7722,10 +7726,22 @@ async function drawIranCountries() {
  * as the map zooms in; each level's markers are on the map only from its zoom on.
  */
 const IR_ADM_ZOOM = { adm1: 5.5, adm1Names: 6.5, adm2: 7.5, adm2Names: 9, t2: 6, t3: 7.25, t4: 8.5 };
-async function drawIranAdmin() {
-  if (!map || iranPins.adm) return;
-  const m = map;
-  iranPins.adm = {};
+/*
+ * Place names on every map, in every country of both wars, as a professional map does (user, 18 Oct):
+ * the capitals and biggest cities from the start, then provinces, towns and districts as the map zooms in.
+ * `skip` leaves out what a map already draws its own way: the Yemen maps their governorates, their
+ * district fills and the Saudi cities.
+ */
+const ADM_FILES = new Map();
+const admFile = (u) => {
+  if (!ADM_FILES.has(u)) ADM_FILES.set(u, fetch(`${u}?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+  return ADM_FILES.get(u);
+};
+const YEMEN_MAP_SKIP = { adm1: ['YEM'], adm1Names: ['YEM'], adm2: ['YEM'], cities: ['SA'] };
+async function drawAdminLayer(m, skip = {}) {
+  if (!m || m._admDrawn) return;
+  m._admDrawn = true;
+  const out = (k, c) => (skip[k] || []).includes(c);
   if (!m.getPane('irAdm')) {
     m.createPane('irAdm');
     m.getPane('irAdm').style.zIndex = 360;
@@ -7736,7 +7752,7 @@ async function drawIranAdmin() {
     m.getPane('govNames').style.zIndex = 460;
     m.getPane('govNames').style.pointerEvents = 'none';
   }
-  const get = (u) => fetch(`${u}?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const only = (g, k) => (g ? { ...g, features: g.features.filter((f) => !out(k, f.properties && f.properties.c)) } : g);
   const line = (w, o, dash) => () => ({ pane: 'irAdm', color: EDGE, weight: w, opacity: o, dashArray: dash, fill: false, interactive: false });
   const names = (g, cls, prio, from) => {
     const group = L.layerGroup();
@@ -7751,6 +7767,7 @@ async function drawIranAdmin() {
     return { group, entries };
   };
   const levels = [];
+  m._adm = {};
   // A level is on the map from its zoom on, off below it.
   const sync = () => {
     const z = m.getZoom();
@@ -7763,17 +7780,17 @@ async function drawIranAdmin() {
   };
   const add = (key, layer, from, entries) => {
     levels.push({ layer, from });
-    iranPins.adm[key] = layer;
+    m._adm[key] = layer;
     if (entries) registerLabels(m, key, entries);
     sync();
   };
   m.on('zoomend', sync);
-  const [cities, adm1] = await Promise.all([get('/iran-cities.json'), get('/iran-adm1.geojson')]);
-  if (map !== m) return;
+  const [cities, adm1] = await Promise.all([admFile('/iran-cities.json'), admFile('/iran-adm1.geojson')]);
+  if (!m.getContainer().isConnected) return;
   if (cities) {
     for (const tier of [1, 2, 3, 4]) {
       const group = L.layerGroup();
-      const entries = (cities.cities || []).filter((c) => c[3] === tier).map(([n, lat, lng]) => ({
+      const entries = (cities.cities || []).filter((c) => c[3] === tier && !out('cities', c[4])).map(([n, lat, lng]) => ({
         prio: tier === 1 ? 0 : tier + 1,
         marker: L.marker([lat, lng], { pane: 'govNames', interactive: false, keyboard: false, icon: L.divIcon({ className: `sa-city ir-city t${Math.min(tier, 3)}`, html: `<i></i><span>${escapeHtml(T(n))}</span>`, iconSize: null }) }).addTo(group),
       }));
@@ -7781,22 +7798,27 @@ async function drawIranAdmin() {
     }
   }
   if (adm1) {
-    add('adm1', L.geoJSON(adm1, { pane: 'irAdm', interactive: false, style: line(0.7, 0.55, '3 3') }), IR_ADM_ZOOM.adm1);
-    const n1 = names(adm1, 'ir-adm1', 1, IR_ADM_ZOOM.adm1Names);
+    add('adm1', L.geoJSON(only(adm1, 'adm1'), { pane: 'irAdm', interactive: false, style: line(0.7, 0.55, '3 3') }), IR_ADM_ZOOM.adm1);
+    const n1 = names(only(adm1, 'adm1Names'), 'ir-adm1', 1, IR_ADM_ZOOM.adm1Names);
     add('adm1Names', n1.group, IR_ADM_ZOOM.adm1Names, n1.entries);
   }
   // The districts are many: read the first time the map is zoomed in to them.
   const loadAdm2 = async () => {
-    if (iranPins.adm.adm2 || iranPins.adm.adm2Loading || m.getZoom() < IR_ADM_ZOOM.adm2) return;
-    iranPins.adm.adm2Loading = true;
-    const adm2 = await get('/iran-adm2.geojson');
-    if (!adm2 || map !== m) return;
-    add('adm2', L.geoJSON(adm2, { pane: 'irAdm', interactive: false, style: line(0.5, 0.4, '1 3') }), IR_ADM_ZOOM.adm2);
-    const n2 = names(adm2, 'ir-adm2', 5, IR_ADM_ZOOM.adm2Names);
+    if (m._adm.adm2 || m._adm.adm2Loading || m.getZoom() < IR_ADM_ZOOM.adm2) return;
+    m._adm.adm2Loading = true;
+    const adm2 = await admFile('/iran-adm2.geojson');
+    if (!adm2) return;
+    add('adm2', L.geoJSON(only(adm2, 'adm2'), { pane: 'irAdm', interactive: false, style: line(0.5, 0.4, '1 3') }), IR_ADM_ZOOM.adm2);
+    const n2 = names(only(adm2, 'adm2Names'), 'ir-adm2', 5, IR_ADM_ZOOM.adm2Names);
     add('adm2Names', n2.group, IR_ADM_ZOOM.adm2Names, n2.entries);
   };
   m.on('zoomend', loadAdm2);
   loadAdm2();
+}
+function drawIranAdmin() {
+  if (!map || iranPins.adm) return;
+  iranPins.adm = true;
+  return drawAdminLayer(map);
 }
 function iranCountryStyle(f) {
   const side = f && f.properties && f.properties.side;
@@ -8068,6 +8090,7 @@ function openIranMapPop(evs, title, anchor, go) {
     go,
     build: (m) => {
       if (iranPins.countryGeo) L.geoJSON(iranPins.countryGeo, { style: iranCountryStyle, interactive: false }).addTo(m);
+      drawAdminLayer(m);
       all.forEach((e) => {
         const me = mine.has(String(e.fp));
         L.marker([e.lat, e.lng], { icon: sidePinIcon(iranKindOf(e), IRAN_PIN_INK[iranSideOf(e)], me ? ' pin-pulse' : '', escapeHtml(e.label || '')), zIndexOffset: me ? 2000 : 0 })

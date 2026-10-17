@@ -11,8 +11,11 @@ const dir = process.argv[2];
 if (!dir) throw new Error("usage: adm-pack.cjs <dir with the downloads>");
 // The coloured countries (scripts/iran-countries.mjs). Kuwait's and Qatar's ADM2 are city blocks and
 // zone numbers, not districts; the UAE and Bahrain have none.
-const ISO = { IRN: "IR", ISR: "IL", LBN: "LB", IRQ: "IQ", SAU: "SA", ARE: "AE", QAT: "QA", BHR: "BH", KWT: "KW", OMN: "OM" };
-const NO_ADM2 = new Set(["KWT", "QAT"]);
+// Every country on the maps, the Yemen war's too (user, 18 Oct: districts and towns as you zoom, on every map):
+// Yemen from the desk's own shapes (public/yemen-adm1/adm2, saved under these names), so the names match its map.
+const ISO = { IRN: "IR", ISR: "IL", LBN: "LB", IRQ: "IQ", SAU: "SA", ARE: "AE", QAT: "QA", BHR: "BH", KWT: "KW", OMN: "OM", YEM: "YE", SYR: "SY", JOR: "JO", PSE: "PS", EGY: "EG", ERI: "ER", DJI: "DJ", SOM: "SO" };
+// Egypt's districts are thousands of city blocks; only its governorates.
+const NO_ADM2 = new Set(["KWT", "QAT", "EGY"]);
 // Lebanon's governorates carry their French names in the source.
 const LB = { "Beyrouth": "Beirut", "Liban-Nord": "North Lebanon", "Mont-Liban": "Mount Lebanon", "Liban-Sud": "South Lebanon", "Nabatîyé": "Nabatieh", "Béqaa": "Bekaa", "Aakkâr": "Akkar" };
 
@@ -100,7 +103,7 @@ cities.sort((a, b) => b[6] - a[6] || a[3] - b[3] || b[4] - a[4]);
 // A town within 8 km of a bigger one is its suburb (New Mosul by Mosul): only the bigger is named.
 const near = (a, b) => Math.hypot((a[1] - b[1]) * 111, (a[2] - b[2]) * 111 * Math.cos(a[1] * Math.PI / 180)) < 8;
 for (let i = cities.length - 1; i > 0; i--) if (cities.slice(0, i).some((b) => near(cities[i], b))) cities.splice(i, 1);
-fs.writeFileSync("public/iran-cities.json", JSON.stringify({ cities: cities.map((c) => c.slice(0, 4)) }));
+fs.writeFileSync("public/iran-cities.json", JSON.stringify({ cities: cities.map((c) => [...c.slice(0, 4), c[5]]) }));
 const kb = (f) => Math.round(fs.statSync(f).size / 1024) + " KB";
 console.log(`provinces ${adm1.features.length} (${kb("public/iran-adm1.geojson")}), districts ${adm2.features.length} (${kb("public/iran-adm2.geojson")}), cities ${cities.length} (${kb("public/iran-cities.json")})`);
 

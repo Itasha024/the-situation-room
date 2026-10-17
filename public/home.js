@@ -221,6 +221,8 @@
   const front = (id) => D.fronts.find((f) => f.id === id);
   const inB = (e, b) => e.lat >= b[0][0] && e.lat <= b[1][0] && e.lng >= b[0][1] && e.lng <= b[1][1];
   const PICKS = ['hormuz', 'bab', 'oil', 'trump'];
+  // Yemen's governorate and district lines are drawn with its control colours here already; their names are not.
+  const HOME_ADM_SKIP = { adm1: ['YEM'], adm2: ['YEM'] };
   /* Ships go to the sea they are in (user, 18 Oct: no Shipping story beside Hormuz and Bab al-Mandab, they repeated it). */
   const SHIP_RE = /\b(?:ships?|vessels?|tankers?|freighters?|ukmto|seafarers?|crew)\b/i;
   const GULF_SEA_RE = /hormuz|gulf of oman|persian gulf|arabian gulf|\bthe gulf\b|fujairah|khor fakkan|bandar abbas|qeshm|ras al-khaimah|jask|chabahar|kharg/i;
@@ -707,6 +709,7 @@
       go: () => showPin(fp),
       build: (m) => {
         miniControl(m);
+        A('drawAdminLayer')(m, HOME_ADM_SKIP);
         [...others, ...mine].forEach((e) => {
           const me = fps.has(e.fp);
           const mk = icon
@@ -751,6 +754,7 @@
     m._hTiles = L.tileLayer(tileUrl(), { noWrap: true }).addTo(m);
     m.fitBounds(t.bounds, { padding: [6, 6] });
     miniControl(m);
+    A('drawAdminLayer')(m, HOME_ADM_SKIP);
     // Zooms with the wheel too, once clicked, so the page still scrolls past it; pinch and double-click always (user, 18 Oct).
     m.on('click mousedown focus', () => m.scrollWheelZoom.enable());
     m.on('mouseout blur', () => m.scrollWheelZoom.disable());
@@ -867,6 +871,8 @@
     // Back from a desk: the map starts where the desk's flight out ended.
     A('deskArrive')(map);
     marks = L.layerGroup().addTo(map);
+    // Place names by zoom in every country, as on the desks (user, 18 Oct).
+    A('drawAdminLayer')(map, HOME_ADM_SKIP);
     // Full screen, as on the desks (user, 17 Oct): the map alone under the header; Escape or the button again leaves it.
     const fb = $('h-focus');
     const focus = (on) => {

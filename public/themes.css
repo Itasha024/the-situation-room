@@ -803,5 +803,8 @@ html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","No
 .tf-range label{display:inline-flex;align-items:center;gap:.4rem;font:600 .64rem/1 var(--f-body,inherit);letter-spacing:.07em;text-transform:uppercase;color:var(--t-muted,#8fa0b4)}
 .tf-range input[type="date"]{font:inherit;font-size:.78rem;letter-spacing:0;text-transform:none;color:var(--t-text,#eaf0f6);background:transparent;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:var(--r-btn,6px);padding:.25rem .4rem}
 .legend .leg-sub{margin:.35rem 0 .15rem;padding-top:.3rem;border-top:1px solid var(--t-line,#1c2836);font:600 .58rem/1 var(--f-body,inherit);letter-spacing:.08em;text-transform:uppercase;color:var(--t-muted,#8fa3b6)}
-/* On a phone the Iran map's day row wraps instead of scrolling sideways (its All and Period were cut off at 375 px). */
-@media (max-width:720px){.toolbar .time-filter:has(#btn-period){flex-wrap:wrap!important;overflow:visible}}
+/* On a phone the map's day row stays on one line and scrolls sideways, on both desks (user, 17 Oct). */
+/* A legend taller than the map scrolls instead of losing its bottom rows (user, 17 Oct: the Iran legend was cut). */
+.legend{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.legend:not(.collapsed) .leg-body{max-height:none}
+@media (max-width:720px){.legend .leg-hint{display:none}}

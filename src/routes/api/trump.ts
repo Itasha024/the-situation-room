@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { metered } from "@/lib/desk/cpu-meter";
 import { getStore } from "@/lib/desk/store";
-import { TRUMP_KEY, type TrumpFeed, desksOf, plainCard, shownCard } from "@/lib/desk/trump";
+import { TRUMP_KEY, type TrumpFeed, desksOf, plainCard, shownCard, shownYet } from "@/lib/desk/trump";
 
 /**
  * A desk's Trump feed (stage 5): his own words on its war, newest first, as
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/trump")({
               const d = s.desks ?? desksOf(s.text);
               return d.includes(desk) || (desk === "iran" && !d.length);
             };
-            m = { at: Date.now(), body: JSON.stringify({ ok: true, statements: feed.statements.filter((s) => !s.off && onDesk(s)).map(({ tries: _t, off: _o, desks: _d, ...s }) => (s.headline ? { ...s, ...shownCard({ headline: s.headline, body: s.body }) } : { ...s, ...plainCard(s) })), checkedAt: feed.checkedAt ?? null, down: feed.down ?? [] }) };
+            m = { at: Date.now(), body: JSON.stringify({ ok: true, statements: feed.statements.filter((s) => shownYet(s) && onDesk(s)).map(({ tries: _t, off: _o, desks: _d, ...s }) => (s.headline ? { ...s, ...shownCard({ headline: s.headline, body: s.body }) } : { ...s, ...plainCard(s) })), checkedAt: feed.checkedAt ?? null, down: feed.down ?? [] }) };
             memo.set(desk, m);
           }
           return new Response(m.body, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60", "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=60" } });

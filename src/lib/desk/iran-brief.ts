@@ -216,7 +216,7 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
   const { reports } = await store.recentDesk(1500, undefined, { events: false, desk: "iran" });
   const cards = (reports as unknown as LiveReport[]).filter((r) => inWin(String(r.at || "")));
   const feed = (await store.getJson<TrumpFeed>(TRUMP_KEY)) ?? { statements: [] };
-  const trump = feed.statements.filter((s) => !s.off && inWin(s.at));
+  const trump = feed.statements.filter((s) => !s.off && !s.in && inWin(s.at));
 
   const { lines, refOf } = writerInput(cards, trump);
   let answer: { json: Record<string, unknown>; model: string } | null = null;

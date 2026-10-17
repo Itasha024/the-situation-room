@@ -209,8 +209,10 @@ test("Factbase's day is US time: the desk's first sight of it is kept inside tha
   const ga = parseFactbaseList(FB_LIST)[2];
   // Seen at 23:30 UTC on the 16th, during the rally: that time.
   assert.equal(new Date(factbaseTime(ga, Date.parse("2026-10-16T23:30:00Z"))).toISOString(), "2026-10-16T23:30:00.000Z");
-  // First seen days later (the first run): no later than 02:00 the next morning, US Eastern.
-  assert.equal(new Date(factbaseTime(ga, Date.parse("2026-10-19T10:00:00Z"))).toISOString(), "2026-10-17T06:00:00.000Z");
+  // Seen the night after, by 02:00 US Eastern: that time.
+  assert.equal(new Date(factbaseTime(ga, Date.parse("2026-10-17T05:30:00Z"))).toISOString(), "2026-10-17T05:30:00.000Z");
+  // First seen days later (read late, 18 Oct): a rally is that evening, 20:00 US Eastern.
+  assert.equal(new Date(factbaseTime(ga, Date.parse("2026-10-19T10:00:00Z"))).toISOString(), "2026-10-17T00:00:00.000Z");
 });
 
 const GAGGLE =

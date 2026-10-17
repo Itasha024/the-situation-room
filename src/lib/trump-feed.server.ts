@@ -72,7 +72,7 @@ const TRUMP_MODELS: ChainModel[] = [
 /** Each new statement's headline and body (9 Oct): his main points in his voice, only the relevant parts below. */
 export async function writeStatements(list: TrumpStatement[], most = 4): Promise<number> {
   let wrote = 0;
-  for (const s of list.filter((x) => !x.headline && !x.off && (x.tries ?? 0) < 3).slice(0, most)) {
+  for (const s of list.filter((x) => !x.headline && !x.off && !x.in && (x.tries ?? 0) < 3).slice(0, most)) {
     const words = s.id.startsWith("rr-") ? clipWords(s.text) : withoutSignOff(s.text);
     const what = s.source === "Truth Social" ? "His Truth Social post" : s.id.startsWith("fb-") ? `What he said (${s.source}), from the transcript` : s.id.startsWith("ap-") ? `What he said (${s.source}), from the transcript or the reports of it` : "His words on camera";
     const got = await askChain("trump", TRUMP_SYSTEM, `${what}:
@@ -113,49 +113,64 @@ const SAID_DEPS: SearchDeps = {
  * hours after it is listed, as it is filled in, then kept.
  */
 const FB_KEY = "trump:factbase";
-const FB_LIST = "https://rollcall.com/wp-json/factbase/v1/search?q=&media=&type=&sort=date&location=all&place=all&page=1&format=json";
+const fbList = (page: number) => `https://rollcall.com/wp-json/factbase/v1/search?q=&media=&type=&sort=date&location=all&place=all&page=${page}&format=json`;
 const FB_EVERY_MS = 15 * 60_000 - 20_000;
-/** Older appearances were put in the column by hand (16 Oct). */
-const FB_FROM = Date.parse("2026-10-16T00:00:00-04:00");
+/**
+ * Every appearance from the feed's first day (8 Oct) is read, however late:
+ * before 18 Oct only those from 16 Oct were, and the 8-15 Oct rallies,
+ * gaggles and interviews were never in the column, or were typed in by hand.
+ */
+const FB_FROM = Date.parse(deskById("iran").feedFrom ?? "2026-10-08T00:00:00+03:00");
 const FB_PER_RUN = 4;
-type FbState = { at: number; entries: FactbaseEntry[]; seen: Record<string, { first: number; tries: number; done?: boolean }> };
+type FbSeen = { first: number; tries: number; done?: boolean; day?: number };
+type FbState = { at: number; entries: FactbaseEntry[]; seen: Record<string, FbSeen> };
 let factbaseNow: FactbaseEntry[] = [];
 
-export async function readFactbase(store: Store, now = Date.now()): Promise<FactbaseEntry[]> {
+export async function readFactbase(store: Store, now = Date.now(), fetchPage: (url: string, ms: number) => Promise<string | null> = fetchText, words: (url: string) => Promise<string> = (u) => pageWords(u, 45_000)): Promise<FactbaseEntry[]> {
   const st: FbState = (await store.getJson<FbState>(FB_KEY)) ?? { at: 0, entries: [], seen: {} };
   if (now - st.at < FB_EVERY_MS) return st.entries;
   st.at = now;
-  const raw = await fetchText(FB_LIST, 30_000);
+  // The list's first page holds about a week; the next pages while it does not reach the feed's first day.
   let list: ReturnType<typeof parseFactbaseList> = [];
-  try {
-    list = raw ? parseFactbaseList(JSON.parse(raw)) : [];
-  } catch {
-    list = [];
+  for (let page = 1; page <= 3; page++) {
+    const raw = await fetchPage(fbList(page), 30_000);
+    let got: ReturnType<typeof parseFactbaseList> = [];
+    try {
+      got = raw ? parseFactbaseList(JSON.parse(raw)) : [];
+    } catch {
+      got = [];
+    }
+    list = [...list, ...got.filter((r) => !list.some((x) => x.slug === r.slug))];
+    const oldest = Math.min(...got.map((r) => Date.parse(`${r.date}T00:00:00-04:00`)));
+    if (!got.length || !(oldest > FB_FROM)) break;
   }
   if (!list.length) console.log("[trump] Factbase's list did not answer");
   let read = 0;
   for (const r of list) {
     const day = Date.parse(`${r.date}T00:00:00-04:00`);
-    if (!(day >= FB_FROM) || now - day > 4 * 86400_000) continue;
+    if (!(day >= FB_FROM)) continue;
     const s = (st.seen[r.slug] ??= { first: now, tries: 0 });
+    s.day = day;
     if (s.done || read >= FB_PER_RUN) continue;
     read += 1;
     s.tries += 1;
-    const words = factbaseWords(await pageWords(r.url, 45_000), true);
-    if (!words) {
+    const said = factbaseWords(await words(r.url), true);
+    if (!said) {
       if (s.tries >= 16) s.done = true;
       continue;
     }
-    if (now - s.first >= 3 * 3600_000) s.done = true;
-    const text = iranParts(words);
+    // A transcript is filled in for some hours after it is listed; one listed days ago is final.
+    if (now - s.first >= 3 * 3600_000 || now - day > 2 * 86400_000) s.done = true;
+    const text = iranParts(said);
     // Dated by the first post of his lines there the desk read, else by when Factbase listed it.
     const listed = factbaseTime(r, s.first);
     const posted = text ? firstPost(text, recentReads(now), day, listed) : null;
     const entry: FactbaseEntry = { ...factbaseLabel(r), slug: r.slug, title: r.title, url: r.url, at: posted ?? listed, text };
     st.entries = [...st.entries.filter((e) => e.slug !== r.slug), entry];
   }
-  st.entries = st.entries.filter((e) => now - e.at < 5 * 86400_000);
-  for (const [k, v] of Object.entries(st.seen)) if (now - v.first > 6 * 86400_000) delete st.seen[k];
+  // Kept five days after it was read: its entry stays in the column after.
+  st.entries = st.entries.filter((e) => now - (st.seen[e.slug]?.first ?? e.at) < 5 * 86400_000);
+  for (const [k, v] of Object.entries(st.seen)) if (v.day ? v.day < FB_FROM : now - v.first > 30 * 86400_000) delete st.seen[k];
   await store.putJson(FB_KEY, st);
   if (read) console.log(`[trump] Factbase: ${read} transcript(s) read, ${st.entries.filter((e) => e.text).length} with his words on Iran or Yemen`);
   return st.entries;

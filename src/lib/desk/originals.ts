@@ -76,17 +76,17 @@ export async function translateKeys(keys: string[], lang: string): Promise<strin
 type FxStatus = { url?: string; id?: string; text?: string; raw_text?: { text?: string }; created_timestamp?: number; author?: { screen_name?: string }; reposted_by?: unknown };
 
 /** The speaker's own post on X that carries the words, through FxTwitter. */
-async function ownPost(sp: Speaker, keys: string[], reportAt: number): Promise<Hit | null> {
+async function ownPost(sp: Speaker, keys: string[], reportAt: number, story: string): Promise<Hit | null> {
   // Trump speaks on Truth Social, not X (8 Oct: his gasoline post went out
   // from Vahid Online and Clash Report, "citing Donald Trump").
   if (sp.name === "Donald Trump") {
-    const t = await truthPost(keys, reportAt);
+    const t = story ? await truthPost(story, reportAt) : null;
     if (t) return t;
   }
   return sp.x ? accountPost(sp.x, sp.name, keys, reportAt) : null;
 }
 
-type Truth = { url: string; at: number; text: string };
+export type Truth = { url: string; at: number; text: string };
 let truthFeed: { at: number; posts: Truth[] } | null = null;
 
 /** Trump's Truth Social posts, from trumpstruth.org's feed (read once a few minutes). */
@@ -99,15 +99,9 @@ export function parseTruthFeed(xml: string): Truth[] {
   })).filter((p) => p.url && Number.isFinite(p.at) && p.text);
 }
 
-/** The post of his, from the two days before the relay, that carries the story's words. */
-export function truthMatch(posts: Truth[], keys: string[], reportAt: number): Hit | null {
-  const best = posts
-    .filter((p) => p.at >= reportAt - 48 * 3600_000 && p.at <= reportAt + 3600_000 && shared(p.text, keys) >= (keys.length >= 5 ? 3 : 2))
-    .sort((a, b) => shared(b.text, keys) - shared(a.text, keys) || b.at - a.at)[0];
-  return best ? { url: best.url, source: "Truth Social (Trump)", title: best.text.slice(0, 140) } : null;
-}
-
-async function truthPost(keys: string[], reportAt: number): Promise<Hit | null> {
+async function truthPost(story: string, reportAt: number): Promise<Hit | null> {
+  // trump-said.ts reads origin.ts, which reads this file: loaded when first needed.
+  const { truthMatch } = await import("./trump-said.ts");
   if (!truthFeed || Date.now() - truthFeed.at > 3 * 60_000) {
     try {
       const res = await fetch("https://www.trumpstruth.org/feed", { signal: AbortSignal.timeout(8000), headers: { "user-agent": "YemenDesk/2.0 (OSINT desk)" } });
@@ -116,7 +110,7 @@ async function truthPost(keys: string[], reportAt: number): Promise<Hit | null> 
       truthFeed = { at: Date.now(), posts: [] };
     }
   }
-  return truthMatch(truthFeed.posts, keys, reportAt);
+  return truthMatch(truthFeed.posts, story, reportAt);
 }
 
 /**
@@ -186,9 +180,9 @@ export function speakerOutlet(sp: Pick<Speaker, "country" | "official">, host: s
  * Among the matches, the earliest: the first report of an interview is
  * nearest to it.
  */
-export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[], reportAt: number, isIsraeli: (outlet: string) => boolean, spokeTo: string[] = []): Promise<Hit | null> {
+export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[], reportAt: number, isIsraeli: (outlet: string) => boolean, spokeTo: string[] = [], story = ""): Promise<Hit | null> {
   const all = [...new Set([...trKeys, ...keys])];
-  const post = await ownPost(sp, all, reportAt);
+  const post = await ownPost(sp, all, reportAt, story);
   if (post) return post;
   const name = surname(sp);
   const k3 = (ks: string[]) => ks.filter((k) => !new RegExp(`^${name}$`, "i").test(k)).slice(0, 3).join(" ");

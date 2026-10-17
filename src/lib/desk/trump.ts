@@ -29,6 +29,8 @@ export type TrumpStatement = {
   tries?: number;
   /** The desks it is shown on: Iran, Yemen or both (17 Oct); none means worked out from its words. */
   desks?: ("iran" | "yemen")[];
+  /** A clip whose words are in this transcript entry: shown once, there (18 Oct). */
+  in?: string;
 };
 
 export type TrumpFeed = { statements: TrumpStatement[]; checkedAt?: string; down?: string[]; lastClipId?: string };
@@ -127,7 +129,9 @@ export function parseTruthFeed(xml: string): TrumpStatement[] {
  * `.@POTUS on Iran: "…"`: those on Iran are his statements; its clips of
  * other officials, and its own lines, are not.
  */
-const HIS_CLIP = /^\s*(?:🚨\s*)?(?:\.?@POTUS|President\s+(?:Donald\s+J\.?\s+)?Trump|PRESIDENT\s+(?:DONALD\s+J\.?\s+)?TRUMP)\b[^:"“\n]{0,60}[:：]?\s*["“]/;
+// A reporter's question may open it (13 Oct: '"Have you made a decision on striking the Houthis?" @POTUS: "They're behaving very badly…"').
+const ASKED = /^\s*(?:🚨\s*)?(?:Q:\s*)?["“]([^"”\n]{3,240}\?)["”]\s*/;
+const HIS_CLIP = /^\s*(?:🚨\s*)?(?:(?:Q:\s*)?["“][^"”\n]{3,240}\?["”]\s*)?(?:\.?@POTUS|President\s+(?:Donald\s+J\.?\s+)?Trump|PRESIDENT\s+(?:DONALD\s+J\.?\s+)?TRUMP)\b[^:"“\n]{0,60}[:：]?\s*["“]/;
 export function clipStatement(post: { url: string; text: string; at: string }, source = "Rapid Response 47"): TrumpStatement | null {
   const id = /\/status\/(\d+)/.exec(post.url)?.[1];
   if (!id || !HIS_CLIP.test(post.text)) return null;
@@ -182,18 +186,30 @@ export function quoteBody(paras: string[]): string {
   return ps.join("\n\n");
 }
 
+/**
+ * Shown on the page: written, or past the writer's tries. A long transcript's
+ * parts wait for the writer (18 Oct: a week of rallies and gaggles read at
+ * once), as its first sentence alone may be a rally's aside.
+ */
+export const shownYet = (s: TrumpStatement) => !s.off && !s.in && (!!s.headline || !/^(?:fb|ap)-/.test(s.id) || (s.tries ?? 0) >= 3);
+
 /** A card as the page shows it, whichever form it was written in. */
 export const shownCard = (c: { headline: string; body?: string }) => {
   const body = c.body ? quoteBody(c.body.split(/\n\n+/)) : "";
   return { headline: headlineWords(c.headline), ...(body ? { body } : {}) };
 };
 
-/** A clip's words: what follows 'President Trump on Iran:'. */
-export const clipWords = (text: string) => text.replace(/^[^"“]*["“]/, "").replace(/["”]\s*$/, "").trim();
+/** A clip's words: what follows 'President Trump on Iran:'; a question before it kept as "Question: …", for the writer. */
+export const clipWords = (text: string) => {
+  const q = ASKED.exec(text);
+  const words = (q ? text.slice(q[0].length) : text).replace(/^[^"“]*["“]/, "").replace(/["”]\s*$/, "").trim();
+  return q ? `Question: ${q[1]}\n${words}` : words;
+};
 
 /** Without a writer: his first sentence as the headline, all his words as the body. */
 export function plainCard(s: TrumpStatement): { headline: string; body?: string } {
-  const words = s.id.startsWith("rr-") ? clipWords(s.text) : withoutSignOff(s.text);
+  // A transcript's reporter questions are there for the writer, never shown as his words.
+  const words = (s.id.startsWith("rr-") ? clipWords(s.text) : withoutSignOff(s.text)).replace(/(?:^|\s)Question: [^?\n]*\?\s*/g, (m) => (m.startsWith("\n") ? "\n" : " ")).replace(/[ \t]+/g, " ").trim();
   const first = /^[\s\S]{20,220}?[.!?](?=\s|$)/.exec(words)?.[0] ?? words.slice(0, 200).replace(/\s+\S*$/, "…");
   const rest = words.slice(first.length).trim();
   return shownCard({ headline: `Trump: ${first}`, ...(rest.length > 40 ? { body: words } : {}) });

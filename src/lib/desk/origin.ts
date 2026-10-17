@@ -1141,7 +1141,7 @@ ${text}`.trim(),
     }
     if (sp) {
       if (!e.trKeys) e.trKeys = await translateKeys(e.keys, sp.lang);
-      const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o), e.cited.spokeTo ?? []);
+      const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o), e.cited.spokeTo ?? [], `${e.report.summary}\n${e.report.text ?? ""}`);
       return hit && !ISRAELI_HOST.test(hostOf(hit.url)) ? { url: hit.url, source: hit.source, title: hit.title, ...(hit.told ? { exclusive: true } : {}) } : null;
     }
     const claim = `${e.report.summary}. ${e.report.text ?? ""}`.trim();

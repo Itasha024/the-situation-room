@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { decideIranForTest } from "./editor.ts";
-import { parseTruthFeed, truthMatch } from "./originals.ts";
+import { parseTruthFeed } from "./originals.ts";
+import { truthMatch } from "./trump-said.ts";
 import { repairable } from "./reader.ts";
 import { attackTeller } from "./speaker-press.ts";
 
@@ -16,12 +17,13 @@ const feed = `<rss><channel><pubDate>Thu, 08 Oct 2026 18:59:10 +0000</pubDate>
 test("Trump's words relayed are traced to his own Truth Social post", () => {
   const posts = parseTruthFeed(feed);
   assert.equal(posts.length, 2);
-  const hit = truthMatch(posts, ["gasoline", "price", "nuclear", "temporary", "Iran"], at);
+  const story = "Trump: A temporary rise in gasoline prices is a small price for Iran not having a nuclear weapon";
+  const hit = truthMatch(posts, story, at);
   assert.equal(hit?.url, "https://www.trumpstruth.org/statuses/42204");
   assert.equal(hit?.source, "Truth Social (Trump)");
   // Another day's words, or a post on something else, are not his original.
-  assert.equal(truthMatch(posts, ["gasoline", "price", "nuclear", "temporary", "Iran"], at + 3 * 86400_000), null);
-  assert.equal(truthMatch(posts, ["Hormuz", "tanker", "blockade"], at), null);
+  assert.equal(truthMatch(posts, story, at + 3 * 86400_000), null);
+  assert.equal(truthMatch(posts, "Trump: tankers trying to break the Hormuz blockade will be stopped", at), null);
 });
 
 test("a government's own post turned away as commentary is sent back as its words", () => {

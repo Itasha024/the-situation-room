@@ -1795,6 +1795,8 @@ async function fillArchiveTo(ymd, maxPages = 20) {
  * small; the cards behind them are still paged in only when asked for.
  */
 let allPinsLoaded = null;
+// Read once, well or not: till then the whole war's count is not shown (user, 17 Oct: 1,175, then 3,308).
+let allPinsRead = false;
 function loadAllPins() {
   allPinsLoaded ??= fetch('/api/desk?since=' + CONFLICT_START)
     .then((res) => (res.ok ? res.json() : null))
@@ -1809,7 +1811,8 @@ function loadAllPins() {
       data.events = [...fresh, ...(data.events || [])];
       return true;
     })
-    .catch((e) => { console.warn('map pins', e); allPinsLoaded = null; return false; });
+    .catch((e) => { console.warn('map pins', e); allPinsLoaded = null; return false; })
+    .finally(() => { allPinsRead = true; });
   return allPinsLoaded;
 }
 
@@ -1817,7 +1820,8 @@ function loadAllPins() {
 function fillMapDay() {
   const from = mapMode === 'day' ? (mapDate || todayYmd()) : mapMode === 'range' ? mapDateFrom : mapMode === 'all' ? CONFLICT_START : null;
   if (mapMode === 'range' || mapMode === 'all') {
-    loadAllPins().then((added) => { if (added) applyMapFilters(); });
+    // Drawn again when they are in, the count with them.
+    loadAllPins().then(() => applyMapFilters());
     return;
   }
   fillArchiveTo(from, 20).then((added) => { if (added) { applyMapFilters(); renderFeed(data); } }).catch(() => {});
@@ -5483,7 +5487,8 @@ function renderEvents(d) {
     if (mapMode === 'all') label = `${fmtDay(CONFLICT_START)} – ${fmtDay(today)}`;
     else if (mapMode === 'range') label = `${fmtDay(mapDateFrom || CONFLICT_START)} – ${fmtDay(mapDateTo || today)}`;
     else label = fmtDay(effectiveMapDate());
-    chip.textContent = pins.length
+    const waiting = (mapMode === 'all' || mapMode === 'range') && !allPinsRead;
+    chip.textContent = waiting ? T('Loading the events of {d}…', { d: label }) : pins.length
       ? T('{n} on {d} · click a mark for detail', { n: N('event', pins.length), d: label })
       : T('No mapped events for {d}', { d: label });
   }
@@ -8001,7 +8006,10 @@ function drawIranPins() {
   if (chip) {
     const n = `${kept.length} attack${kept.length === 1 ? '' : 's'}`;
     const where = w.land && w.sea ? '' : w.sea ? ' at sea' : w.land ? ' on land' : '';
-    chip.textContent = r
+    // The whole war's count only once its researched pins are in too (user, 17 Oct: a count that jumped).
+    chip.textContent = !iranPins.past && !iranPins.day
+      ? (r ? `Loading the attacks of ${fmtDay(r.from)} to ${fmtDay(r.to)}…` : 'Loading the attacks since 28 Feb 2026…')
+      : r
       ? (kept.length ? `${n}${where} on the map, ${fmtDay(r.from)} to ${fmtDay(r.to)}` : `No attack${where} on the map, ${fmtDay(r.from)} to ${fmtDay(r.to)}`)
       : iranPins.day
         ? (kept.length ? `${n}${where} on the map on ${fmtDay(iranPins.day)}` : `No attack${where} on the map on ${fmtDay(iranPins.day)}`)

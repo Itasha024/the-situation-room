@@ -240,10 +240,8 @@ a{color:inherit}
 .h2-rows a{font:500 .94rem/1.35 var(--f-card);color:var(--t-strong);text-decoration:none}
 .h2-rows a:hover{text-decoration:underline}
 .h2-rows small{grid-column:2;font-size:.64rem;color:var(--t-muted)}
-.h2-mini-map{position:relative;height:150px;border:1px solid var(--t-line-strong);cursor:pointer;background:var(--t-surface-2);overflow:hidden}
-.h2-mini-map::after{content:"";position:absolute;right:6px;bottom:6px;z-index:500;width:24px;height:24px;background:var(--t-glass) no-repeat center/14px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7'/%3E%3C/svg%3E");border:1px solid var(--t-line-strong)}
-.h2-mini-map:hover{border-color:var(--accent-ui)}
-.h2-mini-map:hover::after{color:var(--accent-ui);border-color:var(--accent-ui)}
+.h2-mini-map{position:relative;height:150px;border:1px solid var(--t-line-strong);background:var(--t-surface-2);overflow:hidden}
+.h2-mini-map .leaflet-control-zoom a{width:26px;height:26px;line-height:26px;font-size:15px}
 .h2-mini-map .leaflet-container{background:transparent}
 
 /* Oil */
@@ -396,7 +394,7 @@ a{color:inherit}
 .g-body .h2-readmore{display:block;margin:0 0 .6rem}
 .g-body .h2-tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .g-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:1rem}
-.g-body .h2-mini-map{height:260px}
+.g-body .h2-mini-map{height:320px}
 .g-body .pts{margin:0 0 .6rem;padding-inline-start:1.2rem;font:400 1.04rem/1.5 var(--f-prose);color:var(--t-text)}
 .g-body .pts li+li{margin-top:.3rem}
 .g-body h4{margin:0 0 .45rem;font:700 .6rem/1 var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--t-muted)}
@@ -423,7 +421,7 @@ a{color:inherit}
   .g-index p,.g-index time{display:none}
   .g-panel{padding:1rem 16px}
   .g-panel h3{font-size:1.55rem}
-  .g-body .h2-mini-map{height:180px}
+  .g-body .h2-mini-map{height:260px}
 }
 
 /* ===== Mock H · Dashboard ===== */

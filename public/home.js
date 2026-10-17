@@ -374,7 +374,7 @@
   }
 
   /* ---------- The control colours: Yemen's districts, the Iran war's countries ---------- */
-  let yeDistricts = null, yeGovs = null, irCountries = null, irGeo = null;
+  let yeDistricts = null, yeGovs = null, irCountries = null, irGeo = null, yeMain = null;
   async function drawControl() {
     if (!map) return;
     if (!map.getPane('hCtrl')) { map.createPane('hCtrl'); map.getPane('hCtrl').style.zIndex = 350; map.getPane('hCtrl').style.pointerEvents = 'none'; }
@@ -399,11 +399,13 @@
       const adm1 = await A('loadAdm1')();
       const split = adm1 && app('splitIslandFeatures') ? app('splitIslandFeatures')(adm1) : null;
       const st1 = app('styleFeature');
+      if (split) yeMain = split.mainland;
       if (split && st1) {
         if (yeGovs) map.removeLayer(yeGovs);
         yeGovs = L.geoJSON(split.mainland, { pane: 'hCtrl', interactive: false, style: (f) => st1(f, byIso) }).addTo(map);
       }
     } catch (e) { console.warn('yemen control', e); }
+    minis.forEach(miniControl);
   }
   function restyleControl() {
     const byIso = A('controlByIso')(D.ydata || {}) || {};
@@ -564,8 +566,9 @@
     // The theme lives on <html>; the maps and their colours follow it.
     new MutationObserver(() => {
       if (tiles) tiles.setUrl(tileUrl());
-      minis.forEach((m) => m._hTiles.setUrl(tileUrl()));
       INK.clear(); restyleControl(); drawLegend(); drawMarks();
+      // The stories' maps are drawn again in the new colours.
+      if ($('panel') && minis.length) mountMinis($('panel'));
     }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   }
   function stampUpd() {
@@ -655,16 +658,41 @@
 
   /* ---------- Small maps for the stories ---------- */
   let minis = [];
+  /* A story's map is the big map in small (user, 17 Oct): the same control colours, the same pins and notes. */
+  function miniControl(m) {
+    if (!m.getPane('hCtrl')) { m.createPane('hCtrl'); m.getPane('hCtrl').style.zIndex = 350; m.getPane('hCtrl').style.pointerEvents = 'none'; }
+    (m._hCtrl || []).forEach((l) => m.removeLayer(l));
+    m._hCtrl = [];
+    const byIso = A('controlByIso')(D.ydata || {}) || {};
+    const add = (geo, style) => { if (geo && style) m._hCtrl.push(L.geoJSON(geo, { pane: 'hCtrl', interactive: false, style }).addTo(m)); };
+    try { add(irGeo, app('iranCountryStyle')); } catch (e) { /* not yet */ }
+    try { const st = app('districtStyle'); add(app('districtGeo'), st && ((f) => st(f, byIso))); } catch (e) { /* not yet */ }
+    try { const st1 = app('styleFeature'); add(yeMain, st1 && ((f) => st1(f, byIso))); } catch (e) { /* not yet */ }
+  }
   function miniMap(el, id) {
     const t = TOPIC[id];
-    const m = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false, tap: false });
+    const touch = matchMedia('(pointer: coarse)').matches;
+    // It moves and zooms as the big one, but the page still scrolls past it on a phone (one finger scrolls).
+    const m = L.map(el, { zoomControl: true, attributionControl: false, dragging: !touch, scrollWheelZoom: false, doubleClickZoom: true, boxZoom: false, keyboard: false, touchZoom: true, tap: true, zoomSnap: 0.25 });
     m._hTiles = L.tileLayer(tileUrl(), { noWrap: true }).addTo(m);
     m.fitBounds(t.bounds, { padding: [6, 6] });
-    t.events.forEach((e) => L.circleMarker([e.lat, e.lng], { radius: 3.6, weight: 1, color: '#fff', opacity: 0.8, fillColor: inkOf(e), fillOpacity: 0.95, interactive: false }).addTo(m));
-    el.addEventListener('click', () => { scrollToMap(); map.flyToBounds(t.bounds, { duration: 0.9 }); });
+    miniControl(m);
+    const icon = app('sidePinIcon'), lean = app('popLeanClass'), jit = app('jitter') || ((lat, lng) => [lat, lng]);
+    const atSpot = new Map();
+    t.events.slice().sort((a, b) => (a.at < b.at ? -1 : 1)).forEach((e) => {
+      const k = `${Math.round(e.lat * 100)},${Math.round(e.lng * 100)}`;
+      const n = atSpot.get(k) || 0;
+      atSpot.set(k, n + 1);
+      const ageH = (Date.now() - Date.parse(e.at)) / 3600e3;
+      const mk = icon
+        ? L.marker(n ? jit(e.lat, e.lng, n) : [e.lat, e.lng], { icon: icon(e.cat, inkOf(e), ageH <= 6 ? ' fresh' : '', esc(e.label || '')), zIndexOffset: Math.round(1000 - ageH), riseOnHover: true })
+        : L.circleMarker([e.lat, e.lng], { radius: 4, weight: 1, color: '#fff', fillColor: inkOf(e), fillOpacity: 0.95 });
+      mk.bindPopup(() => noteHtml(e), { className: e.desk === 'yemen' && lean ? lean(e) : '', maxWidth: 260, maxHeight: 300, autoPan: true });
+      mk.addTo(m);
+    });
     minis.push(m);
   }
-  const mini = (id) => `<div class="h2-mini-map" data-mini="${id}" role="button" tabindex="0" aria-label="${esc(TOPIC[id].name)} on the big map"></div>`;
+  const mini = (id) => `<div class="h2-mini-map" data-mini="${id}" aria-label="${esc(TOPIC[id].name)}: map of its events"></div>`;
   function mountMinis(root) {
     minis.forEach((m) => { try { m.remove(); } catch (e) { /* gone */ } });
     minis = [];

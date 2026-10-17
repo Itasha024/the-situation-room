@@ -30,6 +30,7 @@ import {
   factbaseTime,
   factbaseWords,
   findTrumpWords,
+  firstPost,
   parseFactbaseList,
   inColumn,
   iranParts,
@@ -146,7 +147,11 @@ export async function readFactbase(store: Store, now = Date.now()): Promise<Fact
       continue;
     }
     if (now - s.first >= 3 * 3600_000) s.done = true;
-    const entry: FactbaseEntry = { ...factbaseLabel(r), slug: r.slug, title: r.title, url: r.url, at: factbaseTime(r, s.first), text: iranParts(words) };
+    const text = iranParts(words);
+    // Dated by the first post of his lines there the desk read, else by when Factbase listed it.
+    const listed = factbaseTime(r, s.first);
+    const posted = text ? firstPost(text, recentReads(now), day, listed) : null;
+    const entry: FactbaseEntry = { ...factbaseLabel(r), slug: r.slug, title: r.title, url: r.url, at: posted ?? listed, text };
     st.entries = [...st.entries.filter((e) => e.slug !== r.slug), entry];
   }
   st.entries = st.entries.filter((e) => now - e.at < 5 * 86400_000);

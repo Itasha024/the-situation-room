@@ -246,3 +246,32 @@ test("each appearance with his words on the wars is an entry; the entry from rep
   assert.equal(addFactbase(statements, [more]), 1);
   assert.equal(addFactbase(statements, [more]), 0);
 });
+
+test("an appearance on both wars is an entry per desk, each with its own parts (17 Oct: the gaggle's Houthi answer under an oil headline)", async () => {
+  const { addFactbase, factbaseWords } = await import("./trump-said.ts");
+  const oil = "Well, oil prices are gonna come down very soon. When the war ends with Iran, they won't have a nuclear weapon. And oil prices are gonna drop like a rock. I love the new car. It is very fast. The paint is red. The seats are great. The wheels are big. The engine is loud. The roof opens.";
+  const text = iranParts(`${oil}\n${factbaseWords(GAGGLE, true)}`);
+  const statements: Parameters<typeof addFactbase>[0] = [];
+  assert.equal(addFactbase(statements, [{ kind: "remarks", label: "Remarks to reporters", slug: "gag", title: "Press Gaggle", url: "https://rollcall.com/g/", at: Date.parse("2026-10-16T17:00:00Z"), text }]), 2);
+  const [iran, yemen] = statements;
+  assert.equal(iran.id, "fb-gag");
+  assert.deepEqual(iran.desks, ["iran"]);
+  assert.match(iran.text, /drop like a rock/);
+  assert.doesNotMatch(iran.text, /Houthi/);
+  assert.equal(yemen.id, "fb-gag-yemen");
+  assert.deepEqual(yemen.desks, ["yemen"]);
+  assert.match(yemen.text, /Houthi rebels\? I think they will, sure\./);
+  assert.doesNotMatch(yemen.text, /oil prices/);
+});
+
+test("an appearance is dated by the first post of its lines, not by Factbase's listing hours later", async () => {
+  const { firstPost } = await import("./trump-said.ts");
+  const text = "Question: Mr. President, do you think Saudi Arabia should accept the help that Israel is offering to fight the Houthi rebels? I think they will, sure. Israel's been very helpful to Saudi Arabia.";
+  const reads = [
+    { source: "Clash Report", url: "https://x.com/clashreport/status/1", at: Date.parse("2026-10-16T17:32:00Z"), text: "Q: Do you think that Saudi Arabia should accept the help that Israel is offering to fight the Houthi rebels? Trump: I think they will, sure. Israel's been very helpful to Saudi Arabia." },
+    { source: "Clash Report", url: "https://x.com/clashreport/status/2", at: Date.parse("2026-10-16T15:00:00Z"), text: "Trump: Iran will never have a nuclear weapon." },
+    { source: "Al Jazeera", url: "https://aljazeera.com/x", at: Date.parse("2026-10-16T17:00:00Z"), text: "Trump says Saudi Arabia should accept Israel's help fighting the Houthi rebels; Israel very helpful" },
+  ];
+  assert.equal(firstPost(text, reads as never, Date.parse("2026-10-16T04:00:00Z"), Date.parse("2026-10-16T23:00:00Z")), Date.parse("2026-10-16T17:32:00Z"));
+  assert.equal(firstPost(text, reads as never, Date.parse("2026-10-16T18:00:00Z"), Date.parse("2026-10-16T23:00:00Z")), null);
+});

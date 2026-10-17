@@ -17,7 +17,7 @@
 
 import { searchKeys } from "./origin.ts";
 import { shared } from "./originals.ts";
-import { aboutIran, desksOf, onTopic, type TrumpStatement } from "./trump.ts";
+import { aboutIran, aboutYemen, desksOf, onTopic, type TrumpStatement } from "./trump.ts";
 import type { Read } from "./recent-reads.ts";
 import type { GnewsItem } from "./gnews.ts";
 
@@ -247,11 +247,11 @@ export function factbaseTime(r: FactbaseRecord, firstSeen: number): number {
  * say "they" ("…their main thing that they ask in negotiation is, 'Will you
  * please allow us to live?'"), with "Iran" a few sentences off.
  */
-export function iranParts(text: string, max = 9000): string {
+export function iranParts(text: string, max = 9000, about: (s: string) => boolean = onTopic): string {
   const sents = text.replace(/\s+/g, " ").split(/(?<=[.!?]["”]?)\s+(?=[A-Z"“])/);
   const keep = new Set<number>();
   sents.forEach((s, i) => {
-    if (onTopic(s)) for (let j = i - 4; j <= i + 4; j++) if (j >= 0 && j < sents.length) keep.add(j);
+    if (about(s)) for (let j = i - 4; j <= i + 4; j++) if (j >= 0 && j < sents.length) keep.add(j);
   });
   let out = "";
   let last = -2;
@@ -515,23 +515,52 @@ export function addFactbase(statements: TrumpStatement[], entries: FactbaseEntry
   let n = 0;
   for (const e of entries) {
     if (e.text.length < 80) continue;
-    const id = `fb-${e.slug}`;
-    const at = new Date(e.at).toISOString();
-    const had = statements.find((s) => s.id === id);
-    if (had) {
-      if (had.text === e.text) continue;
-      // Dated by the first report of it (trump-feed.server.ts), it keeps that time.
-      Object.assign(had, { text: e.text, at: Date.parse(had.at) < e.at ? had.at : at, desks: desksOf(e.text) });
-      delete had.headline, delete had.body, delete had.off, delete had.tries;
+    // An entry per desk, each with only its war's parts: the 16 Oct gaggle's Houthi answer
+    // stood on the Yemen desk under a headline on Iran's oil (17 Oct).
+    for (const desk of desksOf(e.text)) {
+      const id = desk === "iran" ? `fb-${e.slug}` : `fb-${e.slug}-${desk}`;
+      const text = iranParts(e.text, 9000, desk === "iran" ? aboutIran : aboutYemen);
+      if (text.length < 80) continue;
+      const at = new Date(e.at).toISOString();
+      const had = statements.find((s) => s.id === id);
+      if (had) {
+        const earlier = Date.parse(had.at) < e.at ? had.at : at;
+        if (had.text === text) {
+          if (had.at !== earlier) had.at = earlier;
+          continue;
+        }
+        // Dated by the first report of it, it keeps that time.
+        Object.assign(had, { text, at: earlier, desks: [desk] });
+        delete had.headline, delete had.body, delete had.off, delete had.tries;
+        n += 1;
+        continue;
+      }
+      for (let i = statements.length - 1; i >= 0; i--) {
+        const s = statements[i];
+        if (s.id.startsWith("ap-") && s.source === e.label && Math.abs(Date.parse(s.at) - e.at) < 20 * 3600_000 && (s.desks ?? desksOf(s.text)).every((d) => d === desk)) statements.splice(i, 1);
+      }
+      statements.push({ id, at, text, url: e.url, source: e.label, desks: [desk] });
       n += 1;
-      continue;
     }
-    for (let i = statements.length - 1; i >= 0; i--) {
-      const s = statements[i];
-      if (s.id.startsWith("ap-") && s.source === e.label && Math.abs(Date.parse(s.at) - e.at) < 20 * 3600_000) statements.splice(i, 1);
-    }
-    statements.push({ id, at, text: e.text, url: e.url, source: e.label, desks: desksOf(e.text) });
-    n += 1;
   }
   return n;
+}
+
+/**
+ * When he said it: Factbase lists an appearance hours after it (the 16 Oct
+ * gaggle at 22:51 UTC, its Houthi answer posted by 17:32), so the first post
+ * of his lines there among what the desk read, from his own accounts or
+ * Clash Report, dates it.
+ */
+export function firstPost(text: string, reads: Read[], from: number, to: number): number | null {
+  const said = text.toLowerCase();
+  let best: number | null = null;
+  for (const r of reads) {
+    if (r.at < from || r.at > to || !OWN.test(r.source) || !/\bTrump\b|POTUS/i.test(r.text)) continue;
+    // The post's unusual words, found in the transcript: most of them, three at least.
+    const keys = tellingKeys(r.text).filter((k) => !HIS_WAR_WORDS.has(k.toLowerCase()));
+    const hit = keys.filter((k) => said.includes(k.toLowerCase())).length;
+    if (hit >= 3 && hit * 2 >= keys.length && (best === null || r.at < best)) best = r.at;
+  }
+  return best;
 }

@@ -129,18 +129,58 @@ const WEAPON_RE = /\b(?:ballistic|missiles?|drones?|UAVs?|rockets?|projectiles?)
 /** A missile or drone the text gives to another side: "US drone strike", "government drone strikes". */
 const OTHERS_WEAPON = /\b(?:Saudi|coalition|US|U\.S\.|American|Israeli|Emirati|UAE|government|army|Giants|southern|STC)(?:[- ]led(?:\s+coalition)?)?\s+(?:\w+\s+)?(?:drones?|missiles?|rockets?|UAVs?)\b/i;
 const SAUDI_PLACE = /\b(?:Abha|Khamis Mushait|Jazan|Jizan|Najran|Yanbu|Jeddah|Riyadh|Taif|Dhahran|Sharurah|Asir|Dammam|Ras Tanura|Saudi Arabia)\b/i;
-const IN_SAUDI_HIT_RE = /\b(?:attacks?|strikes?|struck|hit|hits|target\w*|explosions?|blasts?|impact)\b/i;
-export function houthiAttack(e: { label?: string | null; place?: string | null }): boolean {
+const IN_SAUDI_HIT_RE = /\b(?:attacks?|strikes?|struck|hit|hits|target\w*|explosions?|blasts?|impact|debris|shrapnel|fragments|missiles?|drones?|barrage|wounded|injured|injures?|kill\w*)\b/i;
+/** North of the border with Yemen, by the pin's own spot (Riyadh, Yanbu, Jazan, Najran). */
+const SAUDI_BOX = (lat: number, lng: number) => lng > 36 && lng < 52 && (lat > 17.6 || (lat > 16.4 && lng < 43.15)) && lat < 28.5;
+export function houthiAttack(e: { label?: string | null; place?: string | null; lat?: number | null; lng?: number | null }): boolean {
   const t = String(e.label || "");
-  const inSaudi = SAUDI_PLACE.test(`${t} ${e.place || ""}`) && !/\bSaudi\s+(?:air ?strikes?|warplanes?|artillery|shelling)\b/i.test(t);
+  // A pin in Saudi Arabia (17 Oct: "Saudi civil defence: resident wounded by missile fragments in Riyadh" was drawn as Saudi).
+  const there = typeof e.lat === "number" && typeof e.lng === "number" && SAUDI_BOX(e.lat, e.lng) && !governorateAt(e.lat, e.lng);
+  const inSaudi = (there || SAUDI_PLACE.test(`${t} ${e.place || ""}`)) && !/\bSaudi\s+(?:air ?strikes?|warplanes?|artillery|shelling)\b/i.test(t);
   if (DEFENCE_RE.test(t) && (WEAPON_RE.test(t) || inSaudi)) return true;
   return inSaudi && IN_SAUDI_HIT_RE.test(t) && !/\b(?:coalition|Saudi-led)\s+(?:air ?strikes?|raids?)\b|\bair ?strikes?\b/i.test(t);
 }
+/** A Yemen map pin's side as served: from the part of its headline about its own place, the Houthis' for attacks only they make, else as stored. */
+export function yemenPinSide(e: { type?: string | null; label?: string | null; text?: string | null; source?: string | null; place?: string | null; lat?: number | null; lng?: number | null; actor?: string | null }): string {
+  const label = String(e.label || "");
+  const c = clauseOf(label, e.place);
+  const x = c ? { ...e, label: c } : e;
+  if (houthiAttack(x)) return "houthi";
+  if (c) {
+    const s = pinSideOf(x);
+    if (s) return s;
+  }
+  // The headline's own subject over what was stored (17 Oct: "Houthis claim missile attacks on King Khalid
+  // airport" was drawn as Saudi), unless it tells of both sides fighting.
+  const said = pinSideOf(e);
+  if (said && !/\b(?:clash\w*|battles?|fighting|between|engage\w*)\b/i.test(label)) return said;
+  return e.actor && e.actor !== "unclear" ? e.actor : said ?? "unclear";
+}
+
+/** Forces the Houthis' outlets name by their backer. */
+export const SAUDI_BACKED = /\b(?:Saudi|coalition)[- ](?:backed|aligned|funded|supported)\s+(?:forces|troops|fighters|militias?|mercenaries)\b/gi;
+
+/** A name's consonants, for a place spelt two ways ("Durayhimi", "Duraihimi"). */
+const consonants = (w: string) => w.toLowerCase().replace(/^(?:al|el|ad|as|ash|ar|at|az|an)[- ]/, "").replace(/[^a-z]/g, "").replace(/[aeiouyw]/g, "");
+/**
+ * The part of a headline that tells of the pin's own place, when the headline tells of several:
+ * "Coalition intercepts missile over Yanbu as air strikes target Taif area in Al-Durayhimi" (17 Oct).
+ */
+export function clauseOf(label: string, place: string | null | undefined): string | null {
+  const parts = String(label).split(/\s*[;,]\s*|\s+(?:as|while|amid|whereas)\s+|\s+and\s+(?=(?:explosions?|blasts?|air ?strikes?|warplanes?|missiles?|drones?|artillery|shelling|Saudi|Houthi|coalition|government)\b)/i).filter((s) => s.trim());
+  if (parts.length < 2) return null;
+  const names = String(place || "").split(",")[0].split(/[\s()]+/).map(consonants).filter((b) => b.length >= 3);
+  if (!names.length) return null;
+  const hit = parts.filter((p) => p.split(/[\s.:()]+/).some((w) => names.includes(consonants(w))));
+  return hit.length === 1 ? hit[0] : null;
+}
+
 /** A missile or drone with no one named: only the Houthis fire them unnamed in this war. */
 const unnamedWeapon = (t: string) => WEAPON_RE.test(t) && !OTHERS_WEAPON.test(t);
 
 export function pinSideOf(e: { type?: string | null; label?: string | null; text?: string | null; source?: string | null; place?: string | null }): PinSide | null {
-  const full = String(e.label || "");
+  // "Saudi-backed forces mortar fire wounds two" is the government's (17 Oct).
+  const full = String(e.label || "").replace(SAUDI_BACKED, "government forces");
   const rep = repelAttacker(full);
   if (rep) return rep;
   if (houthiAttack(e)) return "houthi";

@@ -9,9 +9,9 @@ import { respell } from "@/lib/desk/spelling";
 import { rightOffice } from "@/lib/desk/offices";
 import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
-import { districtSeat, heardInside, iranEventAllowed, ownSkyOnly, seaPlace } from "@/lib/desk/iran-places";
-import { countryPin, onePinPerEvent, servePins } from "@/lib/desk/yemen-pins";
-import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
+import { districtSeat, heardInside, iranEventAllowed, lebanonFire, ownSkyOnly, seaPlace, syrianQuneitra } from "@/lib/desk/iran-places";
+import { countryPin, notEvent, onePinPerEvent, servePins, strayExtraPins } from "@/lib/desk/yemen-pins";
+import { houthiAttack, pinSideOf, yemenPinSide } from "@/lib/desk/dev-marks";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -85,11 +85,15 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     // Iran's own air defence and alarms, with no attacker named: side not stated.
     s.events = s.events.map((e) => (ownSkyOnly(e) ? { ...e, actor: "unclear" } : e));
     // "Hostile artillery fire targeted…": the Lebanese outlets' word for Israel's fire in Lebanon (17 Oct).
+    // Any fire into south Lebanon with no side named, and Syria's Quneitra off the Lebanese village of its name (17 Oct).
     s.events = s.events.map((e) => {
       const x = e as typeof e & { lat?: number; lng?: number };
-      const inLebanon = typeof x.lat === "number" && typeof x.lng === "number" && x.lat > 33.03 && x.lat < 34.7 && x.lng > 35.1 && x.lng < 36.65;
-      return inLebanon && (!e.actor || e.actor === "unclear") && /\b(?:hostile|enemy)\b/i.test(String(e.label ?? "")) ? { ...e, actor: "israel" } : e;
+      const q = syrianQuneitra(x);
+      const y = q ? { ...e, ...q } : e;
+      return lebanonFire(y as typeof x) ? { ...y, actor: "israel" } : y;
     });
+    // No analysis, aftermath or roundup, and no extra pin on a place the report does not name (yemen-pins.ts).
+    s.events = strayExtraPins(s.events.filter((e) => (e.desks ?? []).includes("yemen") || !notEvent(e)) as Parameters<typeof strayExtraPins>[0]) as typeof s.events;
     // At sea or on land, a sea pin in its sea and off the land: the researched pins' rule.
     s.events = s.events.map((e) => {
       const x = e as typeof e & { lat?: number; lng?: number; type?: string | null };
@@ -103,13 +107,36 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   // The Yemen map's pins: on the district a report names, one per event, no analysis or visits (yemen-pins.ts).
   if (desk === "yemen" && Array.isArray((slice as { events?: unknown[] }).events)) {
     const s = slice as unknown as { events: Parameters<typeof servePins>[0] };
-    s.events = servePins(s.events);
-    // Who acted, for the pin's colour (user, 17 Oct); "unclear" when the report does not say.
-    s.events = s.events.map((e) => {
+    // Who acted, for the pin's colour (user, 17 Oct); "unclear" when the report does not say. Read
+    // before the pins of one event are joined (two sides are two events), and again once each sits on its place.
+    const side = (e: (typeof s.events)[number]) => {
       const x = e as typeof e & { actor?: string | null; type?: string | null; label?: string | null; text?: string | null; place?: string | null };
-      if (houthiAttack(x)) return { ...e, actor: "houthi" };
-      return x.actor && x.actor !== "unclear" ? e : { ...e, actor: pinSideOf(x) ?? "unclear" };
-    });
+      const actor = yemenPinSide(x);
+      return actor === x.actor ? e : { ...e, actor };
+    };
+    const stored = s.events;
+    s.events = servePins(stored.map(side)).map(side);
+    // The page also draws a pin from each card with a place: a card whose pin was folded into another
+    // event's, or is no event, is drawn by none; the rest take their pin's place and side. Only cards
+    // as late as the pins read here are judged; older ones are judged when their own day is read.
+    type Served = { fp?: string; lat?: number; lng?: number; place?: string | null; actor?: string | null; twins?: string[] };
+    const kept = new Map((s.events as Served[]).map((e) => [String(e.fp ?? ""), e]));
+    const headOf = new Map<string, string>();
+    for (const e of s.events as Served[]) for (const t of e.twins ?? []) headOf.set(t, String(e.fp));
+    const oldest = stored.reduce((m, e) => Math.min(m, Date.parse(String((e as { at?: string }).at)) || Infinity), Infinity);
+    for (const r of slice.reports as Record<string, unknown>[]) {
+      if (typeof r.lat !== "number" || !(Date.parse(String(r.at)) >= oldest)) continue;
+      const k = kept.get(String(r.fp));
+      if (!k) {
+        r.noMap = true;
+        // "Show on map" on a card told by others too opens the one pin of their event.
+        const head = headOf.get(String(r.fp));
+        if (head) r.pinFp = head;
+        continue;
+      }
+      if (typeof k.lat === "number") Object.assign(r, { lat: k.lat, lng: k.lng, place: k.place ?? r.place });
+      if (k.actor) r.actor = k.actor;
+    }
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }

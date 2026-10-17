@@ -2249,7 +2249,7 @@ function wireProsePins(root) {
   root.querySelectorAll('.prose-pin').forEach((a) => {
     a.onclick = (ev) => {
       ev.preventDefault();
-      const pin = mappableByFp.get(a.dataset.fp);
+      const pin = pinOf(a.dataset.fp);
       if (pin) goToPinOnMainMap(pin, { note: false });
     };
   });
@@ -3749,7 +3749,7 @@ function feedCardHtml(r, i) {
       <div class="meta">
         <time datetime="${escapeHtml(ts)}">${escapeHtml(fmtStamp(ts))}</time>
         <span class="src-wrap">${srcHtml}</span>
-        ${mappableByFp.has(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
+        ${pinOf(fp) ? '<button type="button" class="card-map">Show on map</button>' : ''}
       </div>
       ${replyQuote(r)}
       <p class="headline">${escapeHtml(sum)}</p>
@@ -3801,7 +3801,7 @@ function openPendingPin() {
   if (!pendingPin) return;
   if (Date.now() > pendingPin.until) { pendingPin = null; return; }
   const fp = pendingPin.fp;
-  const pin = mappableByFp.get(fp) || mappableByFp.get(fp.split('-pin-')[0]);
+  const pin = pinOf(fp);
   if (!pin) return;
   pendingPin = null;
   setTimeout(() => goToPinOnMainMap(pin, { note: true }), 0);
@@ -3905,7 +3905,7 @@ function wireFeedCard(card) {
       if (!window.matchMedia('(hover: hover)').matches || window.innerWidth < 720) return;
       clearTimeout(pinPopTimer);
       pinPopTimer = setTimeout(() => {
-        const pin = mappableByFp.get(card.dataset.fp);
+        const pin = pinOf(card.dataset.fp);
         if (pin && map) openPinSheet(pin, mapBtn);
       }, 250);
     };
@@ -5039,11 +5039,18 @@ function clearEvents() {
  * phone. Only the pop-up's own "Show on the main map" moves the big map.
  */
 let mappableByFp = new Map();
+/** A card whose event others told first: the fp of that event's one pin (user, 17 Oct: one event, one pin). */
+const pinAlias = new Map();
+/** A card's pin: its own, its place's, or the one pin of the event it tells. */
+function pinOf(fp) {
+  const f = String(fp || '');
+  return mappableByFp.get(f) || mappableByFp.get(f.split('-pin-')[0]) || (pinAlias.has(f) ? mappableByFp.get(pinAlias.get(f)) : undefined);
+}
 let markerByFp = new Map();
 let sheetMap = null;
 
 function showReportOnMap(fp, anchor) {
-  const pin = mappableByFp.get(fp);
+  const pin = pinOf(fp);
   if (!pin || !map) return;
   clearTimeout(pinPopTimer);
   if (window.innerWidth < 720) return openPinSheet(pin);
@@ -5229,12 +5236,17 @@ function buildMapPins(d) {
     const other = keep === pin ? prev : pin;
     if ((!keep.media || !keep.media.length) && other.media && other.media.length) keep.media = other.media;
     if ((!keep.actor || keep.actor === 'unclear') && other.actor) keep.actor = other.actor;
+    // The served pin's place, side and other tellings win over its card's (17 Oct).
+    const ev = pin.fromEv ? pin : prev.fromEv ? prev : null;
+    if (ev && ev !== keep) Object.assign(keep, { lat: ev.lat, lng: ev.lng, place: ev.place, actor: ev.actor || keep.actor, also: ev.also, mapCat: ev.mapCat, fromEv: true });
     byFp.set(fp, keep);
   };
 
   // noMap: a reader audit found the item is not a physical event (a statement,
   // a condemnation, a video, a build-up). It stays in the feed, off the map.
   sortedReports(d).forEach((r) => {
+    // A card whose event another outlet's pin shows opens that pin.
+    if (r.pinFp) pinAlias.set(String(r.fp), String(r.pinFp));
     if (r.noMap) return;
     const fix = MAP_FIXES[r.fp] || null;
     if (fix && fix.remove) return;
@@ -5313,6 +5325,9 @@ function buildMapPins(d) {
       mapOnly: !!ev.mapOnly,
       media: collectMedia(ev),
       actor: ev.actor,
+      // The same event told by other outlets (user, 17 Oct: one event, one pin).
+      also: Array.isArray(ev.also) ? ev.also : undefined,
+      fromEv: true,
       // Headline and body together: the attack is often named only in the headline.
       classText: [rawLabel, blob].filter(Boolean).join('\n'),
     });
@@ -5398,7 +5413,10 @@ function popupHtml(ev) {
     const name = canonicalSourceName(sourceOf(ev)) || hostLabelFromUrl(ev.url) || 'Read the report';
     anchors = `<a class="src-link" href="${escapeHtml(ev.url)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>`;
   }
-  const srcLine = anchors ? `<p class="pop-src">Source: ${anchors}</p>` : '';
+  // The same event told by other outlets, each linked to its own report.
+  const also = (ev.also || []).filter((x) => x && x.url && x.source).slice(0, 4)
+    .map((x) => `<a class="src-link" href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(x.source) || x.source)}</a>`).join(' · ');
+  const srcLine = anchors ? `<p class="pop-src">Source: ${anchors}${also ? `<br>${escapeHtml(T('Also told by'))}: ${also}` : ''}</p>` : '';
   const cat = ev.mapCat || classifyForMap(ev.text || '', ev.type) || pinCategory(ev.type);
   const catLabel = cat === 'strike'
     ? strikeKind(`${ev.label || ''} ${ev.text || ''}`)

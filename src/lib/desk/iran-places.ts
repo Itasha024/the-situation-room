@@ -442,3 +442,29 @@ const SEA_RULE = makeSea((LAND as { polys: Parameters<typeof makeSea>[0] }).poly
 export function seaPlace(e: { lat: number; lng: number; place?: string | null; label?: string | null; type?: string | null }) {
   return SEA_RULE.place(e, (name) => { const p = PLACE_BY_NAME.get(name) ?? iranPlacesIn(name)[0]; return p ? [p.lat, p.lng] : null; });
 }
+
+/** In Lebanon, by the pin's spot. */
+export const inLebanon = (lat: number, lng: number) => lat > 33.03 && lat < 34.7 && lng > 35.1 && lng < 36.65;
+
+/**
+ * Syria's Quneitra, set down on the Lebanese village of Qnaitra by the place search (17 Oct: "Israeli
+ * forces shell Jabata al-Khashab nature reserve in northern Quneitra countryside" pinned near Nabatieh).
+ */
+export function syrianQuneitra(e: { lat?: number; lng?: number; label?: string | null }): { place: string; lat: number; lng: number } | null {
+  if (typeof e.lat !== "number" || typeof e.lng !== "number" || !inLebanon(e.lat, e.lng)) return null;
+  const t = String(e.label ?? "");
+  if (!/\bQu?n[ae]itr[ae]h?\b/i.test(t) || !/\b(?:Syria|Syrian|countryside|Golan|Kodana|Kudnah|Jabata|Khashab|Hamidiyah|Rafid)\b/i.test(t)) return null;
+  return { place: "Quneitra countryside, Syria", lat: 33.1257, lng: 35.8241 };
+}
+
+/**
+ * Fire into south Lebanon with no side named is Israel's: only its forces shell, bulldoze and raid there
+ * in this war (17 Oct: "Shelling of Ain al-Samahiya between Zoutar al-Sharqiya and Mifdun" had no colour).
+ */
+export function lebanonFire(e: { lat?: number; lng?: number; label?: string | null; actor?: string | null }): boolean {
+  if (typeof e.lat !== "number" || typeof e.lng !== "number" || !inLebanon(e.lat, e.lng)) return false;
+  if (e.actor && e.actor !== "unclear") return false;
+  const t = String(e.label ?? "");
+  if (/\b(?:Hezbollah|Islamic Resistance|resistance fighters|rocket fire (?:at|toward|on) (?:northern )?Israel)\b/i.test(t)) return false;
+  return /\b(?:hostile|enemy|shell\w*|artillery|Merkava|tank (?:fire|shell)|demoli\w*|bulldoz\w*|incursion|sweep|combing|flares?|machine-?gun|air ?strikes?|drone strikes?|warplanes?)\b/i.test(t);
+}

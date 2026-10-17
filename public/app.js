@@ -6699,6 +6699,7 @@ async function paint(first, shown, briefP) {
   renderCasualties(data);
   renderFeed(data);
   revealHashCard();
+  if (!revealHashCard.on) { revealHashCard.on = true; addEventListener('hashchange', revealHashCard); }
   // After the feed: its render builds the pin index the prose links to.
   renderSituation(data);
   // New cards since the last refresh flash once.
@@ -6894,10 +6895,10 @@ function installDeskPicker() {
 }
 
 /*
- * Going between desks on the map (user, 17 Oct: much smoother). One flight on the page being left,
- * ending on the very view the next page opens on (its own first view, below), so the page that comes
- * in, made ready ahead (speculation rules), shows the same map and only cross-fades in. Desk to
- * desk, Leaflet's flight rises out and comes down again in one move.
+ * Going between desks on the map (user, 17 Oct). The page changes at once, in a short cross-fade,
+ * and the new page's map opens where the old one was, then flies to its own part: in to a desk,
+ * out to all desks, or desk to desk in one rise and fall. The flight runs on the page arrived at,
+ * with its own pins on, so nothing jumps when the page changes.
  */
 const DESK_GO = {
   '/': { b: [[11.5, 32.5], [38.5, 61]], fit: {} },
@@ -6906,26 +6907,19 @@ const DESK_GO = {
 };
 const deskPath = (href) => { try { return new URL(href, location.href).pathname.replace(/\/+$/, '') || '/'; } catch (e) { return ''; } };
 let deskGoing = false;
-/** Fly the map to where the next page opens, then open it. */
+/** Note where the map is, and open the page. */
 function deskGo(href, m) {
   const to = deskPath(href), here = deskPath(location.href);
-  if (deskGoing) return;
-  if (!DESK_GO[to] || to === here) { if (to !== here) location.href = href; return; }
+  if (deskGoing || to === here) return;
   deskGoing = true;
-  try { sessionStorage.setItem('desk-go', JSON.stringify({ to, t: Date.now() })); } catch (e) {}
-  const go = () => { location.href = href; };
-  const box = m && m.getContainer && m.getContainer().getBoundingClientRect();
-  const seen = box && box.bottom > 120 && box.top < innerHeight - 120;
-  if (!seen || matchMedia('(prefers-reduced-motion: reduce)').matches) { go(); return; }
-  const secs = here !== '/' && to !== '/' ? 1.35 : 1.05;
-  document.documentElement.style.setProperty('--desk-go-s', secs + 's');
-  document.documentElement.classList.add('desk-going');
-  let done = false;
-  const fin = () => { if (!done) { done = true; go(); } };
-  try { m.closePopup(); } catch (e) {}
-  m.once('moveend', () => setTimeout(fin, 30));
-  setTimeout(fin, secs * 1000 + 700);
-  m.flyToBounds(DESK_GO[to].b, { ...DESK_GO[to].fit, duration: secs, easeLinearity: 0.2 });
+  let from = null;
+  try {
+    const box = m && m.getContainer().getBoundingClientRect();
+    // Only a map in sight: one scrolled away has nothing to carry over.
+    if (box && box.bottom > 120 && box.top < innerHeight - 120) { const c = m.getCenter(); from = { c: [c.lat, c.lng], z: m.getZoom() }; }
+  } catch (e) {}
+  try { sessionStorage.setItem('desk-go', JSON.stringify({ to, from, t: Date.now() })); } catch (e) {}
+  location.href = href;
 }
 /** Any link marked data-desk-go goes over on the map. */
 function wireDeskGo(getMap) {
@@ -6939,11 +6933,28 @@ function wireDeskGo(getMap) {
     deskGo(a.href, getMap());
   });
   // Back to this page: it shows as it was left.
-  window.addEventListener('pageshow', () => { deskGoing = false; document.documentElement.classList.remove('desk-going'); });
+  window.addEventListener('pageshow', () => { deskGoing = false; });
 }
-/** The page opened from another desk: it already shows the view that desk flew to; only the note goes. */
-function deskArrive() {
-  try { sessionStorage.removeItem('desk-go'); } catch (e) {}
+/**
+ * The page opened from another desk: the map starts on the view that desk left and flies to its own.
+ * A page made ready ahead (speculation rules) does it when it is shown.
+ */
+function deskArrive(m, touched) {
+  const run = () => {
+    let rec = null;
+    try { rec = JSON.parse(sessionStorage.getItem('desk-go') || 'null'); sessionStorage.removeItem('desk-go'); } catch (e) {}
+    const own = DESK_GO[deskPath(location.href)];
+    if (!rec || !rec.from || !own || rec.to !== deskPath(location.href) || Date.now() - rec.t > 15000) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // The page's own later refit would cut the flight short.
+    if (touched) touched();
+    m.invalidateSize();
+    m.setView(rec.from.c, rec.from.z, { animate: false });
+    const far = Math.abs(m.getBoundsZoom(own.b) - rec.from.z) > 1.5 || !m.getBounds().intersects(L.latLngBounds(own.b));
+    setTimeout(() => { m.invalidateSize(); m.flyToBounds(own.b, { ...own.fit, duration: far ? 1.25 : 0.9, easeLinearity: 0.2 }); }, 260);
+  };
+  if (document.prerendering) document.addEventListener('prerenderingchange', run, { once: true });
+  else run();
 }
 function installMast() {
   const el = document.querySelector('.mast-date');
@@ -7788,7 +7799,8 @@ async function loadIranPins() {
       drawIranPins();
       // The arenas' "Show on map" buttons need the pins.
       if (iranBrief.b && !iranBrief.pinned) { iranBrief.pinned = true; renderIranBrief(); }
-      openIranHashPin();
+      // Once the war's pins are in too: drawing them again closed a note opened before.
+      if (iranPins.past) openIranHashPin();
     };
     merge();
     if (!iranPins.past) { iranPins.past = await pastP; merge(); }
@@ -8547,6 +8559,7 @@ function renderIranBrief() {
 }
 /** "#pin=<fp>" (a pin's note on the home page's map links to the pin here): its day on the map, the pin open. */
 function openIranHashPin() {
+  if (!openIranHashPin.on) { openIranHashPin.on = true; addEventListener('hashchange', openIranHashPin); }
   const pm = /^#pin=([^&]+)/.exec(location.hash || '');
   if (!pm) return;
   const fp = decodeURIComponent(pm[1]);

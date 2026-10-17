@@ -181,6 +181,8 @@
     : `<a class="h-tag h-tag-${desk}" href="${HD[desk].href}" data-desk-go title="${esc(HD[desk].desk)}">${FLAG[desk]}<span>${esc(HD[desk].short)}</span></a>`);
   const deskOfReport = (r) => (r.desks.includes('iran') && r.desks.includes('yemen') ? 'both' : r.desks[0]);
 
+  /** A report's pins on the map (one report can be pinned on several places). */
+  const pinsOf = (fp) => D.events.filter((e) => !e.researched && (e.fp === fp || e.fp.split('-pin-')[0] === fp));
   function card(r, o) {
     const opts = o || {};
     const parent = r.replyTo && byFp.get(String(r.replyTo));
@@ -192,6 +194,7 @@
         <time datetime="${esc(r.at)}">${esc(fmt(r.at))}</time>
         <span class="src-wrap"><a class="src-link" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.src)}</a><a class="src-go" href="${esc(r.url)}" target="_blank" rel="noopener" aria-label="Open source">${ICON_EXT}</a></span>
         ${deskTag(deskOfReport(r))}
+        ${pinsOf(r.fp).length ? `<button type="button" class="card-map" data-pin-of="${esc(r.fp)}">Show on map</button>` : ''}
       </div>
       ${reply}
       <p class="headline">${esc(r.h)}</p>
@@ -330,11 +333,13 @@
     }
     return `${body}<p class="pop-desk"><a data-desk-go href="${HD[e.desk].href}#pin=${encodeURIComponent(e.fp)}">On the ${esc(HD[e.desk].desk)} →</a></p>`;
   }
+  const markOf = new Map();
   function drawMarks() {
     if (!map) return;
     // All the pins are put in off the map, then the layer goes on once: one drawing, not one per pin.
     map.removeLayer(marks);
     marks.clearLayers();
+    markOf.clear();
     // Every event its own pin, never one mark with a number (user, 17 Oct). Newest on top.
     const evs = shownEvents().sort((a, b) => (a.at < b.at ? -1 : 1));
     // The whole war is thousands of pins: the same pins, drawn on one canvas.
@@ -360,6 +365,7 @@
         p.notesP = p.notesP || A('loadIranNotes')();
         Promise.resolve(p.notesP).then(() => { if (mk.isPopupOpen()) mk.setPopupContent(noteHtml(e)); });
       });
+      markOf.set(e.fp, mk);
       marks.addLayer(mk);
     }
     marks.addTo(map);
@@ -623,6 +629,25 @@
         ? (n ? `${many} on the map, ${longDay(S.from)} to ${longDay(S.to)}` : `No event on the map, ${longDay(S.from)} to ${longDay(S.to)}`)
         : (n ? `${many} on the map on ${longDay(d)}` : `No event on the map on ${longDay(d)}`);
   }
+  /** "Show on map" on a story's report: its pin on this map, on its day, its note open (user, 17 Oct). */
+  function showPin(fp) {
+    const e = pinsOf(fp)[0];
+    if (!e || !map) return;
+    if (S.mode !== 'day' || (S.day || today()) !== evDay(e)) setView('day', evDay(e));
+    scrollToMap();
+    setTimeout(() => {
+      try { map.invalidateSize(); } catch (err) { /* gone */ }
+      const mk = markOf.get(e.fp);
+      map.once('moveend', () => { if (mk) mk.openPopup(); });
+      map.flyTo([e.lat, e.lng], Math.max(map.getZoom(), 7), { duration: 0.8 });
+    }, 380);
+  }
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest && ev.target.closest('.card-map[data-pin-of]');
+    if (!b) return;
+    ev.preventDefault();
+    showPin(b.dataset.pinOf);
+  });
   function scrollToMap() {
     const el = document.querySelector('.toolbar');
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 6, behavior: 'smooth' });

@@ -394,8 +394,7 @@ a{color:inherit}
 .g-panel .blurb{margin:0 0 .8rem;font:italic 1rem/1.4 var(--f-prose);color:var(--t-muted)}
 .g-body .pts.h2-more{margin-top:-.3rem}
 .g-body .h2-readmore{display:block;margin:0 0 .6rem}
-.g-body .h2-tap{cursor:pointer;margin:0 -.5rem;padding:0 .5rem .05rem;border-radius:4px;transition:background .15s}
-.g-body .h2-tap:hover{background:color-mix(in srgb,var(--t-strong,#e5e7eb) 5%,transparent)}
+.g-body .h2-tap{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .g-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:1rem}
 .g-body .h2-mini-map{height:260px}
 .g-body .pts{margin:0 0 .6rem;padding-inline-start:1.2rem;font:400 1.04rem/1.5 var(--f-prose);color:var(--t-text)}

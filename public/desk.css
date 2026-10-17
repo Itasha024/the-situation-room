@@ -1222,5 +1222,5 @@ html .leg-ico.kind,html[data-set] .leg-ico.kind{background:#475569;color:#fff;bo
 /* Going from one desk, or the home page, to another is one cross-fade (user, 17 Oct): the masthead stays put. */
 @view-transition{navigation:auto}
 .mast{view-transition-name:mast}
-::view-transition-old(root),::view-transition-new(root){animation-duration:.45s}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.3s}
 @media (prefers-reduced-motion: reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}

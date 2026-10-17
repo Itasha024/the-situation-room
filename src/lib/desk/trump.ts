@@ -219,7 +219,7 @@ export function checkWritten(json: Record<string, unknown>): { headline: string;
   const words = h.replace(/^Trump:\s*/, "");
   const raw = typeof json.body === "string" ? json.body.trim() : "";
   // '"One." "Two."' in one paragraph is two of his sentences: a paragraph each.
-  const body = raw ? raw.replace(/\\"/g, '"').replace(/["”]\s+["“]/g, "\n").split(/\n+/).map((x) => x.trim()).filter(Boolean).join("\n\n") : "";
+  const body = raw ? raw.replace(/\\"/g, '"').replace(/["”]\s+["“]/g, "\n").split(/\n+/).map((x) => x.trim().replace(/^["“]+|["”]+$/g, "").trim()).filter(Boolean).join("\n\n") : "";
   const bare = (x: string) => x.replace(/[“”"\s]/g, "");
   return shownCard({ headline: `Trump: ${words}`, ...(body && bare(body) !== bare(words) ? { body } : {}) });
 }

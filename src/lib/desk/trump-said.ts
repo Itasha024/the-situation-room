@@ -250,8 +250,12 @@ export function factbaseTime(r: FactbaseRecord, firstSeen: number): number {
 export function iranParts(text: string, max = 9000, about: (s: string) => boolean = onTopic): string {
   const sents = text.replace(/\s+/g, " ").split(/(?<=[.!?]["”]?)\s+(?=[A-Z"“])/);
   const keep = new Set<number>();
+  // A reporter's question opens a new exchange: the words around one answer never run into the next
+  // (17 Oct: the gaggle's oil answer took in the Houthi question after it).
+  let n = 0;
+  const exchange = sents.map((s) => (s.startsWith("Question: ") ? ++n : n));
   sents.forEach((s, i) => {
-    if (about(s)) for (let j = i - 4; j <= i + 4; j++) if (j >= 0 && j < sents.length) keep.add(j);
+    if (about(s)) for (let j = i - 4; j <= i + 4; j++) if (j >= 0 && j < sents.length && exchange[j] === exchange[i]) keep.add(j);
   });
   let out = "";
   let last = -2;

@@ -249,7 +249,8 @@ test("each appearance with his words on the wars is an entry; the entry from rep
 
 test("an appearance on both wars is an entry per desk, each with its own parts (17 Oct: the gaggle's Houthi answer under an oil headline)", async () => {
   const { addFactbase, factbaseWords } = await import("./trump-said.ts");
-  const oil = "Well, oil prices are gonna come down very soon. When the war ends with Iran, they won't have a nuclear weapon. And oil prices are gonna drop like a rock. I love the new car. It is very fast. The paint is red. The seats are great. The wheels are big. The engine is loud. The roof opens.";
+  // His oil answer right before the Houthi question, as in the gaggle: the question starts the next exchange.
+  const oil = "Question: What is your message to Americans filling up their gas tanks? Well, oil prices are gonna come down very soon. When the war ends with Iran, they won't have a nuclear weapon. And oil prices are gonna drop like a rock.";
   const text = iranParts(`${oil}\n${factbaseWords(GAGGLE, true)}`);
   const statements: Parameters<typeof addFactbase>[0] = [];
   assert.equal(addFactbase(statements, [{ kind: "remarks", label: "Remarks to reporters", slug: "gag", title: "Press Gaggle", url: "https://rollcall.com/g/", at: Date.parse("2026-10-16T17:00:00Z"), text }]), 2);

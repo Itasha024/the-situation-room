@@ -174,3 +174,36 @@ test("round 2: burials, condemnations and halted flights are no pins; a funeral 
     "Houthi forces withdraw from Al-Khokha and Red Sea islands towards Hodeidah",
   ]) assert.equal(notEvent({ label }), false, label);
 });
+
+test("round 3: one capture told all day is one pin; lost and garbled places; photos, mines cleared and defections are no pins", async () => {
+  const { garbled } = await import("./yemen-pins.ts");
+  const at = (h: string) => `2026-10-10T${h}:00Z`;
+  const G = { type: "combat", actor: "government" };
+  const pins = onePinPerEvent([
+    { ...G, fp: "a", at: at("05:57"), lat: 12.65, lng: 43.414, place: "Mayun", label: "Government forces capture Bab al-Mandab strait and Mayun island in 'Fajr al-Yemen' operation" },
+    { ...G, fp: "b", at: at("11:50"), lat: 12.65, lng: 43.414, place: "Mayun", label: "Yemeni government forces announce clearing Bab al-Mandab and Mayun island of Houthi presence" },
+    { ...G, fp: "c", at: at("18:40"), lat: 12.65, lng: 43.414, place: "Mayun", label: "Giants Brigades recapture Mayun island and secure Bab al-Mandab" },
+  ]);
+  assert.equal(pins.length, 1);
+  // One card's two pins moved onto one spot are one pin, whatever side each part of the sentence reads as.
+  const label = "Yemeni government forces and Houthi fighters report conflicting territorial control in Jabal Habashi, Al-Maafir, and Al-Mawasit districts of Taiz";
+  assert.equal(onePinPerEvent([
+    { fp: "x-pin-Taiz", at: at("18:14"), place: "Jabal Habashi", lat: 13.475, lng: 43.873, type: "combat", actor: "houthi", label },
+    { fp: "x", at: at("18:14"), place: "Jabal Habashi", lat: 13.47, lng: 43.89, type: "combat", actor: "government", label },
+  ]).length, 1);
+  assert.equal(garbled("Qma Jbl Sbr"), true);
+  assert.equal(garbled("Jabal Sabr"), false);
+  const place = (l: string, p: { lat: number; lng: number; place: string }) => servePins([{ fp: "y", at: at("10:00"), type: "combat", label: l, ...p }])[0]?.place;
+  assert.equal(place("Yemeni government forces continue advance on western coastal fronts and reinforce positions", { lat: 25.025, lng: 37.266, place: "Al-Sahl Al-Ghrby" }), "Yemen's west coast (Mocha)");
+  assert.equal(place("Houthi forces advance on Jabal Sabr overlooking Taiz", { lat: 13.5183, lng: 44.0521, place: "Qma Jbl Sbr" }), "Jabal Sabr");
+  assert.equal(servePins([{ fp: "z", at: at("10:00"), type: "strike", actor: "saudi", label: "Pakistani fighter jets targeted Houthi targets in Yemen as part of Mecca alliance", lat: 21.389, lng: 39.858, place: "Mecca" }]).length, 0);
+  for (const l of [
+    "Yemeni journalist publishes photo from Bab al-Mandab following armed forces' takeover",
+    "Giants Brigades engineering team clears hundreds of Houthi mines in Dhubab",
+    "Two Houthi commanders defect to government forces in Marib",
+    "ICRC recovers dozens of Houthi fighters' bodies from Bab al-Mandab and West Coast after heavy fighting",
+    "Saudi Arabia closes Riyadh airport after Houthi attack",
+    "Saudi-led coalition launches wide military operation against Houthi forces",
+    "Houthis construct defensive berm near Dhubab in Taiz",
+  ]) assert.equal(notEvent({ label: l }), true, l);
+});

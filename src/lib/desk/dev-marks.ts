@@ -208,7 +208,7 @@ const DOWNED_RE = /\b(?:shot|shoots?|shooting|downed|downs?|intercept\w*)\s+(?:d
 const SIDE_NAME = "(Houthis?|Ansar ?Allah|government|pro-government|army|Giants(?: Brigades)?|National Resistance|Nation'?s Shield|Yemeni forces|southern|STC|Security Belt|Saudi|coalition)";
 const sideOfName = (w: string): DevSide =>
   /^(?:US|U\.S\.|American)$/i.test(w) ? "us" : /^emirati$/i.test(w) ? "saudi" : /^(houthi|ansar)/i.test(w) ? "houthi" : /^(southern|stc|security belt)/i.test(w) ? "southern" : /^(saudi|coalition)/i.test(w) ? "saudi" : "government";
-const REPEL = String.raw`(?:repel\w*|repuls\w*|foil\w*|thwart\w*|beats? back|push(?:ed|es)? back|fend\w* off|fought off)`;
+const REPEL = String.raw`(?:repel\w*|repuls\w*|foil\w*|thwart\w*|beats? back|push(?:ed|es)? back|fend\w* off|fought off|counter(?:s|ed)?(?= (?:an? |the )?(?:\w+ )?attack))`;
 const AFTER_REPEL = new RegExp(String.raw`\b${REPEL}\s+(?:(?:an?|the|several|wide-scale|repeated|multiple|renewed|fresh|major|large-scale|multi-axis|\d+)\s+)*${SIDE_NAME}`, "i");
 const ATTACK_THEN = new RegExp(String.raw`\b${SIDE_NAME}(?:\s+[\w'-]+){0,2}\s+(?:attack|infiltration|assault|advance|offensive|incursion|attempt)\w*\b.{0,60}\b(?:${REPEL}|fail\w*)`, "i");
 const SUBJECT_REPELS = new RegExp(String.raw`\b${SIDE_NAME}(?:\s+[\w'-]+){0,2}\s+${REPEL}`, "i");

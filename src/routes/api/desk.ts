@@ -9,9 +9,8 @@ import { respell } from "@/lib/desk/spelling";
 import { rightOffice } from "@/lib/desk/offices";
 import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
-import { districtSeat, heardInside, iranEventAllowed, lebanonFire, ownSkyOnly, seaPlace, syrianQuneitra } from "@/lib/desk/iran-places";
-import { countryPin, notEvent, onePinPerEvent, servePins, strayExtraPins } from "@/lib/desk/yemen-pins";
-import { houthiAttack, pinSideOf, yemenPinSide } from "@/lib/desk/dev-marks";
+import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
+import { serveIranPins, serveYemenPins } from "@/lib/desk/serve-map-pins";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -66,56 +65,16 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     }
   }
   // The Iran map's own pins pass its scope as they are served, so a pin stored under older rules never shows.
+  // The Iran map's own pins pass its scope as they are served (serve-map-pins.ts).
   if (desk === "iran" && Array.isArray((slice as { events?: unknown[] }).events)) {
-    const s = slice as unknown as { events: { desks?: string[]; actor?: string | null; place?: string | null; label?: string | null }[] };
-    s.events = s.events.filter((e) => (e.desks ?? []).includes("yemen") || iranEventAllowed(e));
-    // A pin on a place heard inside a longer one's name: a card's extra pin goes, its own pin moves to the longer place.
-    s.events = s.events.flatMap((e) => {
-      const host = (e.desks ?? []).includes("yemen") ? null : heardInside(e);
-      if (!host) return [e];
-      const x = e as typeof e & { fp?: string; lat?: number; lng?: number };
-      return String(x.fp ?? "").includes("-pin-") ? [] : [{ ...x, place: host.name, lat: host.lat, lng: host.lng }];
-    });
-    // A pin on a district's seat moves to the village its label names.
-    s.events = s.events.map((e) => {
-      if ((e.desks ?? []).includes("yemen")) return e;
-      const v = districtSeat(e);
-      return v ? { ...e, place: v.name, lat: v.lat, lng: v.lng } : e;
-    });
-    // Iran's own air defence and alarms, with no attacker named: side not stated.
-    s.events = s.events.map((e) => (ownSkyOnly(e) ? { ...e, actor: "unclear" } : e));
-    // "Hostile artillery fire targeted…": the Lebanese outlets' word for Israel's fire in Lebanon (17 Oct).
-    // Any fire into south Lebanon with no side named, and Syria's Quneitra off the Lebanese village of its name (17 Oct).
-    s.events = s.events.map((e) => {
-      const x = e as typeof e & { lat?: number; lng?: number };
-      const q = syrianQuneitra(x);
-      const y = q ? { ...e, ...q } : e;
-      return lebanonFire(y as typeof x) ? { ...y, actor: "israel" } : y;
-    });
-    // No analysis, aftermath or roundup, and no extra pin on a place the report does not name (yemen-pins.ts).
-    s.events = strayExtraPins(s.events.filter((e) => (e.desks ?? []).includes("yemen") || !notEvent(e)) as Parameters<typeof strayExtraPins>[0]) as typeof s.events;
-    // At sea or on land, a sea pin in its sea and off the land: the researched pins' rule.
-    s.events = s.events.map((e) => {
-      const x = e as typeof e & { lat?: number; lng?: number; type?: string | null };
-      if ((e.desks ?? []).includes("yemen") || typeof x.lat !== "number" || typeof x.lng !== "number") return e;
-      const w = seaPlace({ ...x, lat: x.lat, lng: x.lng });
-      return { ...e, lat: w.lat, lng: w.lng, sea: w.sea };
-    });
-    // No pin on a whole country's centre, and one pin per event (yemen-pins.ts).
-    s.events = onePinPerEvent(s.events.filter((e) => !countryPin(e)) as Parameters<typeof onePinPerEvent>[0]) as typeof s.events;
+    const s = slice as unknown as { events: Parameters<typeof serveIranPins>[0] };
+    s.events = serveIranPins(s.events);
   }
-  // The Yemen map's pins: on the district a report names, one per event, no analysis or visits (yemen-pins.ts).
+  // The Yemen map's pins: on the place a report names, one per event, no analysis or visits (serve-map-pins.ts).
   if (desk === "yemen" && Array.isArray((slice as { events?: unknown[] }).events)) {
-    const s = slice as unknown as { events: Parameters<typeof servePins>[0] };
-    // Who acted, for the pin's colour (user, 17 Oct); "unclear" when the report does not say. Read
-    // before the pins of one event are joined (two sides are two events), and again once each sits on its place.
-    const side = (e: (typeof s.events)[number]) => {
-      const x = e as typeof e & { actor?: string | null; type?: string | null; label?: string | null; text?: string | null; place?: string | null };
-      const actor = yemenPinSide(x);
-      return actor === x.actor ? e : { ...e, actor };
-    };
+    const s = slice as unknown as { events: Parameters<typeof serveYemenPins>[0] };
     const stored = s.events;
-    s.events = servePins(stored.map(side)).map(side);
+    s.events = serveYemenPins(stored);
     // The page also draws a pin from each card with a place: a card whose pin was folded into another
     // event's, or is no event, is drawn by none; the rest take their pin's place and side. Only cards
     // as late as the pins read here are judged; older ones are judged when their own day is read.

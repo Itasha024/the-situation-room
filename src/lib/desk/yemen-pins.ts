@@ -91,6 +91,8 @@ export function notEvent(e: YemenPin): boolean {
   // (A funeral struck or fired on is an event: "Child wounded by Houthi gunfire during funeral".)
   const atFuneral = /\b(?:during|at|on) (?:a |the )?funeral\b|\bfuneral\s+(?:\w+\s+)?(?:hit|struck|targeted|bombed|attacked|shelled)\b/i.test(t);
   if (NOT_EVENT.test(t) || ANALYSIS.test(t) || (ASIDE.test(t) && !atFuneral) || roundup(t)) return true;
+  // An operation announced with no place: "Saudi-led coalition launches wide military operation against Houthi forces".
+  if (/\blaunch\w* (?:a |the |new )?(?:wide|wide-scale|large-scale|major|broad|new|full-scale)?[- ]?(?:scale )?(?:military )?(?:operation|offensive|campaign)\b/i.test(t) && !govsIn(t).size && !/\b(?:in|on|at|towards?|near|around|across)\s+(?:the\s+)?[A-Z]/.test(t)) return true;
   // What followed an attack, unless the words tell the attack too: "Air traffic suspended and explosions shake Riyadh".
   if (AFTER.test(t) && !NEW_ATTACK.test(t) && !DIRECT.test(t.split(/\b(?:following|after|days before|days after)\b/i)[0])) return true;
   if (/\bunexploded ordnance\b/i.test(t) && !/\b(?:kill\w*|wound\w*|injur\w*|dead|died)\b/i.test(t)) return true;
@@ -101,7 +103,7 @@ export function notEvent(e: YemenPin): boolean {
  * Told about an event, not the event (17 Oct): burials and mourning, condemnations, a threat declared
  * over, a mobilisation announced, devices defused, rifts among leaders, flights halted.
  */
-const ASIDE = /\b(?:bur(?:y|ies|ied|ial)|funerals?|mourn\w*|laid to rest|condemn\w*|denounc\w*|threat (?:is )?over|all clear|announce\w* (?:a |the )?(?:national |general )?mobili[sz]ation|defus\w*|dismantl\w* (?:\w+ )?(?:IEDs?|explosive|devices?|mines?)|rifts?)\b/i;
+const ASIDE = /\b(?:bur(?:y|ies|ied|ial)|funerals?|mourn\w*|laid to rest|condemn\w*|denounc\w*|threat (?:is )?over|all clear|announce\w* (?:a |the )?(?:national |general )?mobili[sz]ation|defus\w*|dismantl\w* (?:\w+ )?(?:IEDs?|explosive|devices?|mines?)|rifts?|defect\w*|urges? (?:\w+ )?(?:Americans|citizens|nationals|travellers|travelers)|travel advisory|publish\w* (?:a |the )?photos?|photos? from|mine-clearing|clear\w* (?:hundreds of |dozens of )?(?:Houthi )?(?:land)?mines|launch\w* (?:a )?campaign|dig\w* (?:\w+ ){0,2}trenches|(?:defensive )?berm|on high alert|high (?:state of )?readiness|(?:recover\w*|retriev\w*|collect\w*|remov\w*) (?:[\w'’]+ ){0,4}bod(?:y|ies))\b/i;
 const ANALYSIS = /\b(?:stockpil\w*|wartime high|record high|raises? (?:\w+ )?concerns?|faces? (?:\w+ )?challenges|counteroffensive stalls|since (?:January|February|March|April|May|June|July|August|September|October|November|December|the war began|the start of the war)|steps? up (?:its |their )?campaign|attacks? surge|surge in attacks|shipping slows|vessels crossed|transits? (?:fell|fall|drop\w*))\b/i;
 const DIRECT = /\b(?:infiltrat\w*|blow\w* up|intercept\w*|kill\w*|wound\w*|injur\w*|explosions?|launch\w*|strikes?\s+on|attacks?\s+on|bomb\w*|shell\w*|struck|hits?|advanc\w*)\b/i;
 
@@ -109,7 +111,7 @@ const DIRECT = /\b(?:infiltrat\w*|blow\w* up|intercept\w*|kill\w*|wound\w*|injur
  * Not an event at a place (17 Oct): what an attack led to (flights cancelled, events put off, debris
  * floating), troops moved, drills, arrests and raids on homes, praise and mediation, finds of weapons.
  */
-const AFTER = /\b(?:halted|halts|grounded|disruption to air navigation|no aircraft in (?:the )?airspace|flight tracking|cancels?|cancell?ed|cancellations?|suspends?|suspended|suspension|delays?|delayed|postpones?|postponed|resumes?|resumed|remains? (?:shut|closed)|reopens?|reopened|insurance|premiums?|stopped public|leak\w* fuel|float\w*|gather\w* cargo|controlled (?:explosion|detonation)|lifts?\s+(?:the\s+)?(?:emergency\s+|security\s+)?(?:alerts?|warnings?))\b/i;
+const AFTER = /\b(?:closes?|closed|closure|disruptions?|halted|halts|grounded|disruption to air navigation|no aircraft in (?:the )?airspace|flight tracking|cancels?|cancell?ed|cancellations?|suspends?|suspended|suspension|delays?|delayed|postpones?|postponed|resumes?|resumed|remains? (?:shut|closed)|reopens?|reopened|insurance|premiums?|stopped public|leak\w* fuel|float\w*|gather\w* cargo|controlled (?:explosion|detonation)|lifts?\s+(?:the\s+)?(?:emergency\s+|security\s+)?(?:alerts?|warnings?))\b/i;
 const NEW_ATTACK = /\b(?:fresh|new|another|renewed)\s+(?:\w+\s+){0,2}(?:strikes?|attacks?|barrage|missiles?)\b/i;
 const NO_FIGHT = /\b(?:reinforcements?|deploys?|deployed|deployment|transfers?|transferred|mobili[sz]\w*|redeploy\w*|dispatch\w*|arrives?|arrived|drills?|exercises?|manoeuvres?|maneuvers?|parades?|graduat\w*|forms? new|leaflets?|graffiti|abduct\w*|kidnap\w*|arrests?|arrested|detains?|detained|detention|loot\w*|storms? (?:a |the )?(?:citizen'?s? )?(?:home|house)|raid (?:and \w+ )?(?:over \d+ )?(?:homes|houses)|praises?|praised|mediations?|flares?|ammunition trucks|finds?|found)\b/i;
 const FIGHT = /\b(?:recaptur\w*|retak\w*|seiz\w*|advanc\w*|liberat\w*|massacre|withdraw\w*|take control|took control|strikes?|struck|hits?|attack\w*|clash\w*|kill\w*|wound\w*|injur\w*|shell\w*|repel\w*|fire[sd]?|firing|target\w*|destroy\w*|captur\w*|ambush\w*|battles?|fight\w*|besieg\w*|bomb\w*|explo\w*|expel\w*|expuls\w*|pursu\w*|clear(?:s|ed|ing)?|thwart\w*|foil\w*|decapitat\w*|executed|dead|bod(?:y|ies)|operations?)\b/i;
@@ -255,7 +257,7 @@ const ACTIONS: [string, RegExp][] = [
   ["missile", /\b(?:missiles?|ballistic|rockets?|projectiles?|barrage)\b/i],
   ["drone", /\b(?:drones?|UAVs?)\b/i],
   ["shell", /\b(?:shell\w*|artillery|mortars?|snip\w*|gunfire|machine-?guns?|tank fire)\b/i],
-  ["ground", /\b(?:clash\w*|assault\w*|offensive|advance\w*|repel\w*|repuls\w*|infiltrat\w*|battles?|fighting|storm\w*|captur\w*|retak\w*|seiz\w*|ambush\w*|thwart\w*|foil\w*|incursion)\b/i],
+  ["ground", /\b(?:counter\w*|clash\w*|assault\w*|offensive|advance\w*|repel\w*|repuls\w*|infiltrat\w*|battles?|fighting|storm\w*|captur\w*|retak\w*|seiz\w*|ambush\w*|thwart\w*|foil\w*|incursion)\b/i],
   ["mine", /\b(?:landmines?|mines?|explosive devices?|IEDs?)\b/i],
   ["alert", /\b(?:sirens?|alerts?|warnings?|intercept\w*|shot down|shoots? down|explosions?|blasts?|debris|shrapnel|fragments)\b/i],
 ];
@@ -316,18 +318,34 @@ const sideOk = (a?: string | null, b?: string | null) => !a || !b || a === "uncl
 const inSaudi = (p: YemenPin) => typeof p.lat === "number" && typeof p.lng === "number" && p.lng > 36 && p.lng < 52 && p.lat < 28.5 && (p.lat > 17.5 || (p.lat > 16.35 && p.lng < 43.2)) && !governorateAt(p.lat, p.lng) && !(p.lat > 24.4 && p.lng > 50.3);
 const hours = (a?: string, b?: string) => Math.abs(Date.parse(String(a)) - Date.parse(String(b))) / 3600e3;
 
+/** The places a headline says were taken: "capture Bab al-Mandab and Mayun island" gives bab al-mandab, mayun. */
+function taken(t: string): Set<string> {
+  const out = new Set<string>();
+  for (const m of t.matchAll(/\b(?:captur\w*|recaptur\w*|seiz\w*|retak\w*|tak\w* (?:full )?control of|took (?:full )?control of|control of|clear\w*|secur\w*|liberat\w*)\s+((?:the\s+)?[A-Z][\w'-]+(?:[\s-]+(?:al-)?[A-Z][\w'-]+)?(?:\s+(?:and|,)\s+[A-Z][\w'-]+(?:[\s-]+(?:al-)?[A-Z][\w'-]+)?)*)/g)) {
+    for (const n of m[1].split(/\s+and\s+|,\s*/)) {
+      const k = n.replace(/^the\s+/i, "").replace(/\s+(?:island|strait|district|front|camp|airport|city)$/i, "").trim().toLowerCase();
+      if (k.length >= 4 && !/^(?:houthi|houthis|government|saudi|the)$/.test(k)) out.add(k);
+    }
+  }
+  return out;
+}
 /** Blasts heard and nothing more, with no side named. */
 const heardOnly = (p: FullPin) => (!p.actor || p.actor === "unclear") && /\b(?:explosions?|blasts?|booms?)\b/i.test(String(p.label || "")) && !/\b(?:kill\w*|wound\w*|injur\w*|strikes?|struck|hits?|missiles?|drones?|shell\w*)\b/i.test(String(p.label || ""));
 /** Two pins that tell one event. */
 export function oneEvent(k: FullPin, p: FullPin): boolean {
+  // One card's two pins moved onto one spot are one pin, whatever side each part of its sentence reads as.
+  if (k.fp && baseFp(k) === baseFp(p)) return samePlace(k, p) || (near(k, p) && dayOf(k.at) === dayOf(p.at));
   if (dayOf(k.at) !== dayOf(p.at) || !sideOk(k.actor, p.actor)) return false;
-  if (k.fp && baseFp(k) === baseFp(p)) return samePlace(k, p);
   const a = String(k.label || ""), b = String(p.label || "");
   const tk = targetsOf(a), tp = targetsOf(b);
   const shareTarget = [...tp].some((x) => tk.has(x));
   const ta = tollOf(a), tb = tollOf(b);
   // The same dead and wounded at the same target, wherever each outlet set it down: Aden's palace, pinned on Sanaa's (16 Oct).
   if (shareTarget && [...ta].some((x) => x[0] === "k" && tb.has(x)) && [...ta].some((x) => x[0] === "w" && tb.has(x))) return true;
+  // One side's capture of one place, told all day ("capture Bab al-Mandab strait and Mayun island",
+  // "announce clearing Bab al-Mandab and Mayun island", "Giants recapture Mayun island", 10 Oct).
+  const ca = taken(a), cb = taken(b);
+  if (k.actor && k.actor === p.actor && k.actor !== "unclear" && [...ca].some((x) => cb.has(x)) && typeof k.lat === "number" && typeof p.lat === "number" && kmTo(k.lat, k.lng ?? 0, p.lat, p.lng ?? 0) < 60) return true;
   if (!near(k, p)) {
     // One telling, set down at two spots of one front (14 Oct: a commander killed "in Marib" and "on Al-Jubah, Marib").
     return typeof k.lat === "number" && typeof p.lat === "number" && kmTo(k.lat, k.lng ?? 0, p.lat, p.lng ?? 0) < 60 && sharedWords(a, b) >= 4 && sameWords(a, b) && sharesName(a, b, [String(k.place || ""), String(p.place || "")]);
@@ -381,8 +399,8 @@ export function onePinPerEvent<T extends YemenPin>(pins: T[]): T[] {
     // That day's events, and the day before's for a ship attack told across midnight.
     const prev = dayOf(new Date(Date.parse(String(p.at)) - 864e5).toISOString());
     const ev = [...(byDay.get(d) ?? []), ...(byDay.get(prev) ?? [])].find((g) => {
-      if (s && g.side && s !== g.side) return false;
       const f = list[g.first];
+      if (s && g.side && s !== g.side && !(f.fp && baseFp(f) === baseFp(p))) return false;
       return oneEvent(f, p) || shipTwin(f, p);
     });
     if (ev) { ev.ids.push(i); ev.side ||= s; continue; }
@@ -537,6 +555,9 @@ const SPOTS: [RegExp, string, number, number][] = [
   [/\bAl-Anad\b/i, "Al-Anad air base", 13.18, 44.77],
   [/\bRas (?:al-)?Ara\b/i, "Ras al-Ara", 12.65, 43.91],
   [/\bSaudi capital\b/i, "Riyadh", 24.7136, 46.6753],
+  // Yemen's "western coast" front, not Saudi Arabia's west coast; Saudi Arabia's Eastern Province oil region.
+  [/\b(?:western coast(?:al)?(?: fronts?)?|West(?:ern)? Coast(?: front)?|western coastal)\b/i, "Yemen's west coast (Mocha)", 13.32, 43.25],
+  [/\bEastern Province\b/i, "Eastern Province, Saudi Arabia", 26.1, 49.9],
   [/\bAramco\b[^.]{0,40}\bDhahran\b|\bDhahran\b[^.]{0,40}\bAramco\b/i, "Dhahran", 26.29, 50.11],
 ];
 /** A pin on a broad place, a shop or a library, or outside Yemen with only Yemen's places named, moves to the site its words name. */
@@ -548,11 +569,13 @@ export function spotPin(e: YemenPin & { text?: string | null }): { name: string;
   const broad = !here || BROAD.has(here) || /\b(?:governorate|province)\b/i.test(String(e.place || "")) || shop;
   // A village or town the words name is the pin's own place: it stays ("Ras Isa and As-Sabahah", "Kamaran island").
   if (!broad && placeNamed(e.place, label)) return null;
-  const spots = SPOTS.filter(([re]) => re.test(label));
+  const at = governorateAt(e.lat, e.lng);
+  // A pin the place search lost: a shop, a garbled name, or abroad on a place the words do not name.
+  const lost = shop || garbled(String(e.place || "")) || (!at && !placeNamed(e.place, label));
+  const spots = SPOTS.filter(([re, name]) => re.test(label) && (lost || !LOST_ONLY.has(name)));
   if (!spots.length) return null;
   // One near already: it stays.
   if (spots.some(([, , lat, lng]) => kmTo(e.lat!, e.lng!, lat, lng) < 30)) return null;
-  const at = governorateAt(e.lat, e.lng);
   for (const [, name, lat, lng] of spots) {
     // A governorate's centre moves only to a site in that governorate ("Sanaa and Ras Isa" is two places).
     // (A site on the shore, outside the drawn coastline, counts as its nearest governorate's within 100 km.)
@@ -562,6 +585,21 @@ export function spotPin(e: YemenPin & { text?: string | null }): { name: string;
     return { name, lat, lng };
   }
   return null;
+}
+/** The site within 5 km, else the district within 20 km, a garbled name stands for. */
+function plainName(e: YemenPin): string | null {
+  if (typeof e.lat !== "number" || typeof e.lng !== "number") return null;
+  const spot = SPOTS.find(([, , lat, lng]) => kmTo(e.lat!, e.lng!, lat, lng) < 5);
+  if (spot) return spot[1];
+  const gov = governorateAt(e.lat, e.lng);
+  const d = ALL_DISTRICTS.filter((x) => !gov || x.gov === gov).map((x) => ({ x, km: kmTo(e.lat!, e.lng!, x.lat, x.lng) })).sort((a, b) => a.km - b.km)[0];
+  return d && d.km < 20 ? d.x.name : null;
+}
+/** Sites that only take a pin the place search lost ("western coastal fronts" in Saudi Arabia's west). */
+const LOST_ONLY = new Set(["Yemen's west coast (Mocha)", "Eastern Province, Saudi Arabia"]);
+/** A place name the place search spelt without its vowels: "Qma Jbl Sbr", "Al-Shrqyh", "Fndhkh". */
+export function garbled(place: string): boolean {
+  return String(place).split(/[\s,()'`-]+/).some((w) => w.length >= 3 && !/[aeiouAEIOU]/.test(w) && !/^[A-Z0-9]+$/.test(w));
 }
 /** A place search's hit on a shop, a library or an office: no place a report names. */
 export function shopName(place: string): boolean {
@@ -601,8 +639,14 @@ export function servePins<T extends YemenPin>(pins: T[]): T[] {
     const d = spotPin(e) ?? districtPin(e) ?? areaInDistrict(e) ?? namedGovPin(e) ?? abroadPin(e);
     // A shop's or an office's pin whose words name no place we know: not on the map.
     if (!d && shopName(String(e.place || ""))) return [];
+    // Abroad, for an event its words put "in Yemen" without a place: no place to pin
+    // ("Pakistani fighter jets targeted Houthi targets in Yemen as part of Mecca alliance" sat on Mecca).
+    if (!d && typeof e.lat === "number" && !governorateAt(e.lat, e.lng ?? 0) && /\bin Yemen\b/i.test(String(e.label || "")) && !/\b(?:Houthi|Yemeni)\s+(?:\w+\s+)?(?:missiles?|drones?|attacks?|strikes?)\b/i.test(String(e.label || ""))) return [];
     const type = pinType(e);
-    return [{ ...e, ...(d ? { place: d.name, lat: d.lat, lng: d.lng } : {}), ...(type !== e.type ? { type } : {}) }];
+    const moved = { ...e, ...(d ? { place: d.name, lat: d.lat, lng: d.lng } : {}), ...(type !== e.type ? { type } : {}) };
+    // A garbled name the place search gave ("Qma Jbl Sbr") is shown as the site or district it lies in.
+    const name = garbled(String(moved.place || "")) ? plainName(moved) : null;
+    return [name ? { ...moved, place: name } : moved];
   });
   return onePinPerEvent(moved);
 }

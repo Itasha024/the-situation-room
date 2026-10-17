@@ -6169,6 +6169,12 @@ function syncDayNav() {
   if (next) next.hidden = mapMode !== 'day' ? true : day >= today;
   const todayBtn = document.getElementById('btn-day-today');
   if (todayBtn) todayBtn.classList.toggle('on', mapMode === 'day' && day === today);
+  // The period's dates stay open only while the map shows a period the reader chose.
+  const per = document.getElementById('btn-period');
+  const box = document.getElementById('tf-range');
+  const picked = mapMode === 'range' && !focusFps;
+  if (box && !picked) box.hidden = true;
+  if (per) { per.classList.toggle('on', picked); per.setAttribute('aria-expanded', String(!!box && !box.hidden)); }
 }
 
 function enterDayMode(ymd) {
@@ -6270,6 +6276,51 @@ function wireUi(d) {
     applyMapFilters();
     fillMapDay();
   };
+  // A period (user, 16 Oct), as the Iran desk's: from one day to another, both kept within the conflict.
+  const per = document.getElementById('btn-period');
+  const box = document.getElementById('tf-range');
+  const from = document.getElementById('map-from');
+  const to = document.getElementById('map-to');
+  const setRange = () => {
+    if (!from || !to || !from.value || !to.value) return;
+    let a = clampMapDate(from.value), b = clampMapDate(to.value);
+    if (a > b) [a, b] = [b, a];
+    if (focusFps) clearMapHighlight({});
+    mapMode = 'range';
+    mapDateFrom = a;
+    mapDateTo = b;
+    activeEpoch = null;
+    activeControlYmd = null;
+    try { document.body.classList.remove('ctrl-mode'); } catch (e) {}
+    clearControlOverlays();
+    from.value = a;
+    to.value = b;
+    markDayBtn('btn-period');
+    syncDayNav();
+    applyMapFilters();
+    fillMapDay();
+  };
+  if (per && box && from && to) {
+    per.onclick = (ev) => {
+      ev.preventDefault();
+      const open = box.hidden;
+      for (const x of [from, to]) { x.min = MAP_ROUND_START; x.max = todayYmd(); }
+      if (open) {
+        box.hidden = false;
+        // It opens on the last seven days, or on the day shown, and shows them at once.
+        if (mapMode === 'range' && !focusFps) { from.value = mapDateFrom; to.value = mapDateTo; }
+        else {
+          const end = mapMode === 'day' ? (mapDate || todayYmd()) : todayYmd();
+          from.value = mapMode === 'day' && mapDate && mapDate !== todayYmd() ? mapDate : clampMapDate(shiftYmd(end, -6));
+          to.value = end;
+          setRange();
+        }
+      } else box.hidden = true;
+      syncDayNav();
+    };
+    from.onchange = setRange;
+    to.onchange = setRange;
+  }
 
   syncDayNav();
   wireFeedSearch();
@@ -7226,7 +7277,8 @@ function wireIranMapTools() {
     const max = iranToday();
     if (inp) { inp.min = IRAN_MAP_FROM; inp.max = max; inp.value = iranPins.day || max; }
     if (prev) prev.disabled = !!iranPins.day && iranPins.day <= IRAN_MAP_FROM;
-    if (next) next.disabled = !iranPins.day || iranPins.day >= max;
+    // Forward shows only on a day before today, as on the Yemen map (user, 17 Oct).
+    if (next) next.hidden = !!iranPins.range || !iranPins.day || iranPins.day >= max;
     if (today) today.classList.toggle('on', !iranPins.range && iranPins.day === max);
     if (all) all.classList.toggle('on', !iranPins.range && !iranPins.day);
     if (per) { per.classList.toggle('on', !!iranPins.range); per.setAttribute('aria-expanded', String(!!box && !box.hidden)); }

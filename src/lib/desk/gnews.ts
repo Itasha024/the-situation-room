@@ -11,7 +11,7 @@ export function cleanUrl(u: string): string {
   try {
     const url = new URL(u);
     for (const k of [...url.searchParams.keys()]) {
-      if (/^(?:utm_.*|smid|smtyp|ref|oc|fbclid|gclid|cmpid|mod|taid)$/i.test(k)) url.searchParams.delete(k);
+      if (/^(?:utm_.*|smid|smtyp|ref|oc|fbclid|gclid|cmpid|mod|taid|traffic_source)$/i.test(k)) url.searchParams.delete(k);
     }
     url.hash = "";
     return url.toString();
@@ -44,13 +44,60 @@ export const resolveCount = () => resolves;
 export const isGnews = (u: string) => /^https:\/\/news\.google\.com\/rss\/articles\//.test(u);
 
 /**
+ * Google answers about thirty look-ups a half hour, then 429 and a half-hour
+ * rest. The scan alone asked thirty a tick, the Iran desk ten and the origin
+ * search fifteen (18 Oct): Google rested most of the day, and most links were
+ * never resolved. Every caller now spends from one budget, the most needed
+ * first: an article about to be read ("lead"), then a relay's original
+ * ("trace"), then a stored card's link ("card"), then old cards ("backlog").
+ * Each need leaves the needs above it that many look-ups.
+ */
+export const RESOLVE_WINDOW_MS = 30 * 60_000;
+export const RESOLVE_LIMIT = 26;
+export type ResolveNeed = "lead" | "trace" | "card" | "backlog";
+const RESERVE: Record<ResolveNeed, number> = { lead: 0, trace: 4, card: 6, backlog: 14 };
+const spentAt: number[] = [];
+/** Each Google id's article, once found: one link seen by both desks and on every tick costs once. */
+const found = new Map<string, string>();
+const FOUND_MAX = 3000;
+
+/** Look-ups left in the current half hour. */
+export function resolvesLeft(now = Date.now()): number {
+  while (spentAt.length && now - spentAt[0] > RESOLVE_WINDOW_MS) spentAt.shift();
+  return RESOLVE_LIMIT - spentAt.length;
+}
+
+/** May a look-up for this need go out now? */
+export function canResolve(need: ResolveNeed = "lead", now = Date.now()): boolean {
+  return now >= restUntil && resolvesLeft(now) > RESERVE[need];
+}
+
+/** The article already found for this Google link, or "". Costs nothing. */
+export function knownResolve(link: string): string {
+  const id = /\/articles\/([^?/]+)/.exec(link)?.[1];
+  return (id && found.get(id)) || "";
+}
+
+/** Tests: an empty budget and cache. */
+export function resetResolver(): void {
+  spentAt.length = 0;
+  found.clear();
+  restUntil = 0;
+}
+
+/**
  * The article a Google News link stands for. The link carries an opaque id;
  * Google's own page gives a signature for it, and its batchexecute endpoint
- * trades id + signature for the publisher's URL. "" when that fails.
+ * trades id + signature for the publisher's URL. "" when that fails, or when
+ * the budget has nothing left for this need.
  */
-export async function resolveGoogleNews(link: string): Promise<string> {
+export async function resolveGoogleNews(link: string, need: ResolveNeed = "lead"): Promise<string> {
   const id = /\/articles\/([^?/]+)/.exec(link)?.[1];
-  if (!id || resolverResting()) return "";
+  if (!id) return "";
+  const had = found.get(id);
+  if (had) return had;
+  if (!canResolve(need)) return "";
+  spentAt.push(Date.now());
   resolves += 1;
   try {
     const page = await fetch(`https://news.google.com/articles/${id}`, {
@@ -79,9 +126,15 @@ export async function resolveGoogleNews(link: string): Promise<string> {
       body: "f.req=" + encodeURIComponent(JSON.stringify([[["Fbv4je", inner, null, "generic"]]])),
       signal: AbortSignal.timeout(8000),
     });
+    if (res.status === 429) restUntil = Date.now() + REST_MS;
     const text = await res.text();
     const url = /garturlres\\",\\"(https?:[^"\\]+)/.exec(text)?.[1] ?? "";
-    return /^https?:\/\/(?!news\.google\.)/.test(url) && !isSectionFront(url) ? url : "";
+    const real = /^https?:\/\/(?!news\.google\.)/.test(url) && !isSectionFront(url) ? url : "";
+    if (real) {
+      if (found.size >= FOUND_MAX) found.delete(found.keys().next().value as string);
+      found.set(id, real);
+    }
+    return real;
   } catch {
     return "";
   }
@@ -173,6 +226,13 @@ const HOST_NAMES: Record<string, string> = {
   "timesofisrael.com": "Times of Israel",
   "jpost.com": "Jerusalem Post",
   "bostonglobe.com": "The Boston Globe",
+  "aljazeera.com": "Al Jazeera",
+  "aljazeera.net": "Al Jazeera",
+  "alarabiya.net": "Al Arabiya",
+  "aawsat.com": "Asharq Al-Awsat",
+  "apnews.com": "AP",
+  "eremnews.com": "Erem News",
+  "al-akhbar.com": "Al-Akhbar",
 };
 
 /**

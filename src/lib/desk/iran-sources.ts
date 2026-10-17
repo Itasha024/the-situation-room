@@ -322,6 +322,8 @@ export const SHARED_RSS: Record<string, IranLean> = {
   "The National": "gulf",
   "Al-Araby Al-Jadeed": "gulf",
   "Asharq Al-Awsat": "gulf",
+  "Al Jazeera": "gulf",
+  "Al Arabiya": "gulf",
   "Al-Akhbar": "axis",
   "Erem News": "gulf",
   Alhurra: "us",

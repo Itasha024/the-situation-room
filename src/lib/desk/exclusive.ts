@@ -13,6 +13,9 @@ const GENERIC = [
   // "خاص" alone is "especially"; as a label it stands at the head or before «outlet».
   /(?:^|[\n|:])\s*خاص\s*(?:[|:\-–—]|ب\s*«|لـ?\s*«)/,
   /(?:^|[\n|:])\s*«?خاص»?\s*$/m,
+  // "مقابلة خاصة | ماجد الأنصاري: …": an interview given to the outlet alone
+  // (Al Arabiya, 17 Oct) — not "لقاء خاص", which is as often a private meeting.
+  /(?:مقابلة|حوار)\s+خاص(?:ة)?(?![؀-ۿ])/,
 ];
 
 /**
@@ -29,6 +32,9 @@ const OWN_NAMES: Record<string, { en: string[]; ar: string[] }> = {
   "Al-Akhbar": { en: ["Al-Akhbar"], ar: ["الأخبار"] },
   Alhurra: { en: ["Alhurra", "Al-Hurra", "Al Hurra"], ar: ["الحرة"] },
   "Arab News": { en: ["Arab News"], ar: ["عرب نيوز"] },
+  // Their websites (18 Oct); their channels are posts, not sites, and pass as before.
+  "Al Jazeera": { en: ["Al Jazeera"], ar: ["الجزيرة نت", "الجزيرة"] },
+  "Al Arabiya": { en: ["Al Arabiya"], ar: ["العربية نت", "العربية.نت", "العربية"] },
 };
 export const OWN_ONLY = new Set(Object.keys(OWN_NAMES));
 

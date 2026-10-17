@@ -16,10 +16,16 @@ import { type ChainModel, askChain } from "./models.ts";
 
 export type Titled = { id: string; title: string; desc?: string; source: string };
 
-/** Headlines per model call. */
-export const TRIAGE_BATCH = 60;
+/**
+ * Headlines per model call. Sixty, with a 120-character teaser each, was too
+ * large for the free tiers' tokens a minute: Groq answered 413 or 429 to four
+ * calls in five on 17 Oct, and the keywords judged instead.
+ */
+export const TRIAGE_BATCH = 25;
+/** Characters of each headline's teaser the model sees. */
+const DESC_CHARS = 70;
 /** Model calls per tick; what does not fit waits for the next tick. */
-export const TRIAGE_CALLS = 5;
+export const TRIAGE_CALLS = 8;
 /** Triage never holds a tick longer than this: the tick has 300 seconds in all. */
 const TRIAGE_MS = 45_000;
 
@@ -85,7 +91,7 @@ export async function triage(
   // limit tokens per minute, and parallel calls spent it at once.
   for (const [n, batch] of batches.entries()) {
     const models = [...TRIAGE_MODELS.slice(n % TRIAGE_MODELS.length), ...TRIAGE_MODELS.slice(0, n % TRIAGE_MODELS.length)];
-    const lines = batch.map((t) => `${t.id} | ${t.source} | ${t.title}${t.desc ? ` — ${t.desc.slice(0, 120)}` : ""}`);
+    const lines = batch.map((t) => `${t.id} | ${t.source} | ${t.title}${t.desc ? ` — ${t.desc.slice(0, DESC_CHARS)}` : ""}`);
     // Past the call budget or the time budget, the keywords decide for now.
     const res =
       n < TRIAGE_CALLS && Date.now() < until

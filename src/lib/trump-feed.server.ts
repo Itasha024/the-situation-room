@@ -100,7 +100,7 @@ const SAID_DEPS: SearchDeps = {
     return xml ? truthPosts(xml) : [];
   },
   search: (q) => searchGoogleNews(q, "en"),
-  resolve: (link) => resolveGoogleNews(link),
+  resolve: (link) => resolveGoogleNews(link, "trace"),
   page: pageWords,
   usLean: (name) => iranLeanOf(name) === "us",
   factbase: () => factbaseNow,
@@ -191,7 +191,7 @@ async function appearanceEntry(app: DayAppearance): Promise<TrumpStatement | nul
   if (!text) {
     const parts: string[] = [];
     for (const i of app.items.slice(0, 4)) {
-      const real = i.url.includes("news.google.com") ? await resolveGoogleNews(i.url).catch(() => "") : i.url;
+      const real = i.url.includes("news.google.com") ? await resolveGoogleNews(i.url, "trace").catch(() => "") : i.url;
       const words = real ? iranParts(await pageWords(real), 3000) : "";
       if (words.length > 150) {
         parts.push(`${i.title}\n${words}`);

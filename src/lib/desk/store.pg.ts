@@ -337,6 +337,33 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       return out;
     },
 
+    async gnewsLinks(limit, skip = []) {
+      const sql = await sqlProvider();
+      const rows = await sql<{ fp: string; url: string; source: string | null; at: unknown }>`
+        select fp, url, source, at from desk_report
+         where url like 'https://news.google.com/%' and not (fp = any(${skip}::text[]))
+         order by at desc limit ${limit}
+      `;
+      dbMeter.queries += 1;
+      return rows.map((r) => ({ fp: r.fp, url: r.url, source: r.source ?? "", at: r.at instanceof Date ? r.at.toISOString() : String(r.at) }));
+    },
+
+    async relink(fp, url, source) {
+      const sql = await sqlProvider();
+      // The article's address is another card's already: that card stands, this one keeps Google's link.
+      const done = await sql<{ fp: string; old: string }>`
+        update desk_report r set url = ${url}, source = ${source}
+          from (select url as old from desk_report where fp = ${fp}) o
+         where r.fp = ${fp} and r.url like 'https://news.google.com/%'
+           and not exists (select 1 from desk_report d where d.url = ${url})
+        returning r.fp, o.old
+      `;
+      dbMeter.queries += 1;
+      if (!done.length) return false;
+      await sql`update desk_event set url = ${url}, source = ${source} where (fp = ${fp} or fp like ${fp + "-%"}) and url = ${done[0].old}`;
+      return true;
+    },
+
     async placeUnplaced(since, placeOf) {
       const sql = await sqlProvider();
       const rows = await sql<{ fp: string; at: unknown; type: string; summary: string; body: string | null; source: string | null; url: string | null; desks: string[] }>`

@@ -22,7 +22,8 @@ import { remember } from "./desk/recent-reads.ts";
 import { combineSystem } from "./desk/combine.ts";
 import { isExclusive } from "./desk/exclusive.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
-import { cleanUrl, isGnews, outletFromHost, resolveGoogleNews } from "./desk/gnews.ts";
+import { canResolve, cleanUrl, isGnews, knownResolve, outletFromHost, resolvesLeft } from "./desk/gnews.ts";
+import { bingLeft } from "./desk/bing.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 import { scanTrump } from "./trump-feed.server.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
@@ -37,6 +38,7 @@ import {
   IRAN_INBOX,
   IRAN_PAYLOAD,
   type RawHit,
+  articleOf,
   extractLead,
   fetchText,
   fpOf,
@@ -106,8 +108,8 @@ const MAX_AGE_MS = 24 * 3600_000;
 const FIRST_SIGHT_MS = 4 * 3600_000;
 const SEEN_KEEP_MS = 3 * 24 * 3600_000;
 /** Articles opened a tick (a teaser is not enough to read). */
-const LEADS_PER_TICK = 15;
-const GNEWS_PER_TICK = 10;
+const LEADS_PER_TICK = 40;
+const GNEWS_PER_TICK = 4;
 const PAYLOAD_REPORTS = 300;
 const RAW_HITS = 200;
 const RAW_HITS_MS = 3 * 3600_000;
@@ -314,16 +316,20 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
 
   // 4. A teaser is not enough to read: the article is opened (Google's links
   //    resolved first), a few a tick, newest first.
+  // Google's links wait on the budget every caller shares (gnews.ts), so they
+  // no longer take the turns of articles that open at once: on 17 Oct the newest
+  // fifteen were mostly Google links during Google's rest, and the desk opened
+  // 159 articles in a day of 21,500 shared items.
   let opened = 0;
   let resolved = 0;
+  const gnBudget = Math.min(GNEWS_PER_TICK, canResolve("lead") ? resolvesLeft() : bingLeft());
   await Promise.allSettled(
     hits
-      .filter((h) => !h.fromTg && h.text.length < 600)
+      .filter((h) => !h.fromTg && h.text.length < 600 && (!isGnews(h.url) || !!knownResolve(h.url) || resolved++ < gnBudget))
       .slice(0, LEADS_PER_TICK)
       .map(async (h) => {
         if (isGnews(h.url)) {
-          if (resolved++ >= GNEWS_PER_TICK) return;
-          const real = await resolveGoogleNews(h.url);
+          const real = await articleOf(h);
           if (!real) return;
           h.url = cleanUrl(real);
           if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;

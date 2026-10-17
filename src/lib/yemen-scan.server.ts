@@ -20,7 +20,8 @@ import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { desksOf } from "./desk/desk-route.ts";
-import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
+import { type ResolveNeed, canResolve, cleanUrl, isGnews, knownResolve, outletFromHost, resolveGoogleNews, resolvesLeft } from "./desk/gnews.ts";
+import { bingLeft, bingResolve } from "./desk/bing.ts";
 import { placeFromWords } from "./desk/yemen-pins.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
@@ -34,6 +35,7 @@ import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { nearerSource } from "./desk/speaker-press.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
+import { relinkStoredCards } from "./desk/relink.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
 import { listenToVideos } from "./desk/listen.ts";
 import { triage } from "./desk/triage.ts";
@@ -60,7 +62,7 @@ export type Cadence = { everyMin: number } | { everyHours: number } | { atHours:
 type ChannelScan = Channel & { cadence: Cadence };
 /** `whole`: the site's own listing of everything, triaged by a model. */
 /** `html`: no feed; the site's section page is read and every link matching this pattern is an article. */
-type RssFeed = { url: string; name: string; id: string; cadence: Cadence; whole?: boolean; ua?: string; site?: string; lang?: "ar"; html?: RegExp };
+export type RssFeed = { url: string; name: string; id: string; cadence: Cadence; whole?: boolean; ua?: string; site?: string; lang?: "ar"; html?: RegExp };
 
 const C5: Cadence = { everyMin: 5 };
 const C15: Cadence = { everyMin: 15 };
@@ -431,7 +433,18 @@ const RSS: RssFeed[] = [
   { id: "almashhad", lang: "ar", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5, whole: true, site: "almashhad.news" },
   // A browser's user agent is refused (403); a plain client is served.
   { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss.xml", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C5, whole: true, site: "alaraby.co.uk" },
-  { id: "aawsat", lang: "ar", url: gnews("site:aawsat.com when:1h", "ar", "SA", "SA:ar"), name: "Asharq Al-Awsat", cadence: C10, whole: true, site: "aawsat.com" },
+  // Its own feed opens to the server again (300 items, about a day and a half,
+  // 18 Oct), and so do its articles: no Google link to resolve. Should it close
+  // again, the read falls back to Google News's listing of the site by itself.
+  { id: "aawsat", lang: "ar", url: "https://aawsat.com/feed", name: "Asharq Al-Awsat", cadence: C10, whole: true, site: "aawsat.com" },
+  // Al Jazeera and Al Arabiya, their websites (18 Oct): their channels were read,
+  // their sites never, so an article's own sources, interviews and exclusives
+  // never reached the desk. Al Jazeera's feeds open; Al Arabiya's site refuses
+  // the server (Cloudflare), so Google News lists it, nothing bypassed.
+  { id: "aljazeera-ar", lang: "ar", url: "https://www.aljazeera.net/aljazeerarss/a7c186be-1baa-4bd4-9d80-a84db769f779/73d0e1b4-532f-45ef-b135-bfdff8b8cab9", name: "Al Jazeera", cadence: C10, whole: true, site: "aljazeera.net" },
+  { id: "aljazeera-en", url: "https://www.aljazeera.com/xml/rss/all.xml", name: "Al Jazeera", cadence: C10, whole: true, site: "aljazeera.com" },
+  { id: "alarabiya-ar", lang: "ar", url: gnews("site:alarabiya.net when:2h", "ar", "SA", "SA:ar"), name: "Al Arabiya", cadence: C10, whole: true, site: "alarabiya.net" },
+  { id: "alarabiya-en", url: gnews("site:english.alarabiya.net when:2h"), name: "Al Arabiya", cadence: C15, whole: true, site: "english.alarabiya.net" },
   // Once a day, when the morning paper is out, a day wide: the site is behind
   // Cloudflare, and its channel (every 15 minutes) carries each story's
   // headline as it is published.
@@ -554,6 +567,9 @@ const RSS: RssFeed[] = [
     cadence: C15,
   },
 ];
+
+/** A site's listing as the desk reads it, by its id (tests run real articles through it). */
+export const feedById = (id: string): RssFeed | undefined => RSS.find((f) => f.id === id);
 
 const LEARNED_NAME = "Learned outlets";
 /** The rows the Yemen scan hands the Iran scan, one per tick (iran-scan.server.ts takes them). */
@@ -928,11 +944,20 @@ export function extractLead(html: string, cap = ARTICLE_CHARS): string {
   const payload = html.includes("\\u003cp")
     ? html.replace(/\\u003c/g, "<").replace(/\\u003e/g, ">").replace(/\\u0026/g, "&").replace(/\\"/g, '"').replace(/\\n/g, " ")
     : "";
-  const paras = [...`${body} ${payload}`.matchAll(/<p([^>]*)>([\s\S]*?)<\/p>/gi)]
+  // A page that keeps its story in an <article> is read there alone: Asharq
+  // Al-Awsat's pages run the next stories below it, and the Aden airport
+  // piece came with an Egypt piece's and a Lahj piece's paragraphs, their
+  // "told Asharq Al-Awsat" taken for its own (18 Oct).
+  const article = /<article\b[^>]*>([\s\S]*?)<\/article>/i.exec(body)?.[1] ?? "";
+  const longParas = (s: string) => [...s.matchAll(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/gi)].filter((m) => decodeEntities(m[1]).length > 50).length;
+  const scope = longParas(article) >= 2 ? article : `${body} ${payload}`;
+  // `<p` alone also opened `<path>` and `<picture>`: Al Jazeera's articles came
+  // with their menu ("play البث الحي … Navigation menu") read as a paragraph (18 Oct).
+  const paras = [...scope.matchAll(/<p(\s[^>]*)?>([\s\S]*?)<\/p>/gi)]
     // A muted paragraph is another story's teaser: Sawt al-Asima's "related
     // news" under its STC mobilisation piece became two cards on Al-Aghbara
     // under that piece's link (1 Oct).
-    .filter((m) => !/class=["'][^"']*\btext-muted\b/i.test(m[1]))
+    .filter((m) => !/class=["'][^"']*\btext-muted\b/i.test(m[1] ?? ""))
     .map((m) => decodeEntities(m[2]))
     .filter((p) => p.length > 50 && !/copyright|subscribe|cookie|javascript|sign in|all rights reserved/i.test(p));
   const parts: string[] = [];
@@ -1104,9 +1129,41 @@ const LEAD_KEEP_MS = 7 * 24 * 3600 * 1000;
 /** `pub`: when the article page says it was published (ms), for listings with no dates. */
 type LeadCache = Record<string, { lead: string; at: number; real?: string; tries?: number; pub?: number }>;
 /** Google News links resolved to their article per cycle (two requests each). */
-const GNEWS_RESOLVES = 30;
+const GNEWS_RESOLVES = 8;
+/** A headline triage has not judged by this age keeps its keyword verdict. */
+const KEYWORD_FINAL_MS = 3 * 3600_000;
 /** A Google News item waits this many cycles for its article's address. */
 const GNEWS_HOLD_TRIES = 3;
+/** The wires and the big papers and channels: their articles are opened before a smaller site's. */
+const MAJOR_OUTLET = /^(?:Reuters|AP|AFP|Bloomberg|WSJ|NYT|Washington Post|Financial Times|Axios|CNN|The Guardian|BBC|Al Jazeera|Al Arabiya|Asharq Al-Awsat|Al-Akhbar|Al-Araby Al-Jadeed|Erem News|SPA)$/;
+
+/**
+ * A Google item's article: Google's own answer when its budget allows, else
+ * Bing News's item on the outlet's site under the same headline. "" when
+ * neither says.
+ */
+export async function articleOf(h: Pick<RawHit, "url" | "title" | "site">, need: ResolveNeed = "lead"): Promise<string> {
+  const known = knownResolve(h.url);
+  if (known) return known;
+  const g = canResolve(need) ? await resolveGoogleNews(h.url, need) : "";
+  if (g || !h.title || !h.site) return g;
+  return bingResolve(h.title, h.site);
+}
+
+/** Items given the lead (and the article's address) a read of their link found. */
+export function withLeads(items: RawHit[], cache: LeadCache): void {
+  for (const h of items) {
+    const c = cache[h.url];
+    if (!c) continue;
+    if (c.lead.length > 80 && !h.text.includes(c.lead.slice(0, 60))) h.text = `${h.text}\n${c.lead}`.slice(0, ITEM_CHARS);
+    if (c.real) h.url = cleanUrl(c.real);
+  }
+}
+
+/** Which article is opened first when not all can be: an exclusive, then what triage picked, then a major outlet's. */
+export function fetchRank(h: Pick<RawHit, "picked" | "source">, exclusive: boolean): number {
+  return (exclusive ? 4 : 0) + (h.picked ? 2 : 0) + (MAJOR_OUTLET.test(h.source) ? 1 : 0);
+}
 /** Below this many characters an article page has given the desk a teaser. */
 const AMP_RETRY_UNDER = 700;
 /** Below this, the page is walled or empty and the story is looked for elsewhere. */
@@ -1136,6 +1193,8 @@ export type RawHit = {
   media?: Media;
   /** A newspaper's X post that linked this article (its id orders the account's posts). */
   xPost?: string;
+  /** The outlet's site behind a Google News link: where its article is looked for when Google will not say (bing.ts). */
+  site?: string;
 };
 
 /* ------------------------------------------------------------------ *
@@ -1184,15 +1243,26 @@ async function saveSeen(seen: Seen): Promise<void> {
 }
 
 /** One listed article as a raw item. Google News titles carry " - Outlet". */
-function listedHit(it: Listed, feed: RssFeed, firstSeen?: number): RawHit | null {
+export function listedHit(it: Listed, feed: RssFeed, firstSeen?: number): RawHit | null {
   let title = decodeEntities(it.title);
   let source = feed.name;
   if (isGnews(it.url)) ({ title, source } = outletFromGoogleTitle(title, feed.name));
-  const url = it.url.trim();
+  // The article's own address, its tracking tags dropped (Al Jazeera's ?traffic_source=rss), so its relays' links meet it.
+  const url = isGnews(it.url.trim()) ? it.url.trim() : cleanUrl(it.url.trim());
   if (title.length < 12 || !/^https?:\/\//i.test(url) || isIsraeliSource(source, url)) return null;
   const desc = decodeEntities(it.desc);
   const at = Number.isFinite(it.at) ? jerusalemIso(new Date(it.at)) : jerusalemIso(firstSeen ? new Date(firstSeen) : undefined);
-  return { source, url, text: `${title} ${desc}`.trim().slice(0, 1200), at, lean: "", fromTg: false, title, ...(Number.isFinite(it.at) ? {} : { undated: true }), ...(it.body ? { feedBody: decodeEntities(it.body) } : {}) };
+  const site = isGnews(url) ? siteHost(it.site || "") || feed.site : undefined;
+  return { source, url, text: `${title} ${desc}`.trim().slice(0, 1200), at, lean: "", fromTg: false, title, ...(Number.isFinite(it.at) ? {} : { undated: true }), ...(it.body ? { feedBody: decodeEntities(it.body) } : {}), ...(site ? { site } : {}) };
+}
+
+/** "https://www.alarabiya.net" → "alarabiya.net". */
+function siteHost(u: string): string {
+  try {
+    return new URL(u).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
+  }
 }
 
 function outletFromGoogleTitle(title: string, fallback: string): { title: string; source: string } {
@@ -2434,6 +2504,8 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   // rest are remembered as judged and never fetched. Headlines no model got to
   // (a spent quota) are judged by keyword now and asked about again next tick.
   if (unjudged.length) {
+    // The newest headlines first: what no call reaches this tick is the oldest.
+    unjudged.sort((x, y) => (Date.parse(y.hit.at) || now) - (Date.parse(x.hit.at) || now));
     const { picked, judged } = await triage(
       unjudged.map((u, i) => ({ id: String(i), title: u.hit.title ?? "", desc: u.hit.text.slice((u.hit.title ?? "").length).trim(), source: u.feed.name })),
     );
@@ -2442,7 +2514,12 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
       const id = String(i);
       // An exclusive on this war is always read, whatever the triage made of it.
       const forced = !picked.has(id) && isExclusive(u.hit.text, u.feed.name) && THIS_WAR.test(u.hit.text);
-      if (judged.has(id) || forced) seen[u.feed.id][u.key] = picked.has(id) || forced ? now : 0;
+      // A headline no model got to for hours keeps the keyword verdict it had all
+      // along: unjudged, every listing's headlines went round again each tick,
+      // and the pile grew past what the models could take (18 Oct: 1,100
+      // waiting, four ticks in five with no model answer).
+      const settled = now - (Date.parse(u.hit.at) || now) > KEYWORD_FINAL_MS;
+      if (judged.has(id) || forced || settled) seen[u.feed.id][u.key] = picked.has(id) || forced ? now : 0;
       if (!picked.has(id) && !forced) return;
       hits.push({ ...u.hit, picked: true });
       pickedBy[u.feed.id] = (pickedBy[u.feed.id] ?? 0) + 1;
@@ -2496,19 +2573,36 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
       datePage(h, cached.pub);
       // The card links the publisher's article, not Google's redirect.
       if (cached.real) h.url = cleanUrl(cached.real);
+      // Google is never the teller: the article's own site is.
+      if (cached.real && h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
     } else toFetch.push(h);
   }
   // Google News items first need their article's address: a few per cycle,
   // since each costs two requests to Google.
   let resolves = 0;
   let rescues = 0;
-  // What triage picked from a whole site is opened first.
-  toFetch.sort((a, b) => Number(!!b.picked) - Number(!!a.picked));
-  const fetchable = toFetch.filter((h) => !isGnews(h.url) || resolves++ < GNEWS_RESOLVES).slice(0, BODY_FETCHES);
+  // What triage picked from a whole site is opened first, an exclusive first of all.
+  toFetch.sort((a, b) => fetchRank(b, exclusive(b)) - fetchRank(a, exclusive(a)));
+  // A Google link costs from the budget all callers share (gnews.ts) unless it was found before.
+  // Google refusing (its robot check), Bing News is asked under the headline instead (bing.ts).
+  const gnBudget = Math.min(GNEWS_RESOLVES, canResolve("lead") ? resolvesLeft() : bingLeft());
+  // A site that only gives its own news, behind Cloudflare and so known only by
+  // Google's teaser (Al Arabiya, Erem): the teaser is all there will ever be,
+  // and a teaser with nothing of its own is left out below without a look-up.
+  const worthLookup = (h: RawHit) => !(OWN_ONLY.has(h.source) && !ownInformation(h.text, h.source));
+  const fetchable = toFetch.filter((h) => !isGnews(h.url) || !!knownResolve(h.url) || (worthLookup(h) && resolves++ < gnBudget)).slice(0, BODY_FETCHES);
+  // A Google item left for want of budget has waited a cycle all the same: after
+  // GNEWS_HOLD_TRIES it goes on under Google's link, which the stored-card pass
+  // (relinkStoredCards) turns into the article's own later.
+  for (const h of toFetch) {
+    if (!isGnews(h.url) || fetchable.includes(h)) continue;
+    leadCache[h.url] = { lead: leadCache[h.url]?.lead ?? "", at: now, tries: (leadCache[h.url]?.tries ?? 0) + 1 };
+    leadChanged.add(h.url);
+  }
   await Promise.allSettled(
     fetchable.map(async (h) => {
       const key = h.url;
-      const real = isGnews(key) ? await resolveGoogleNews(key) : "";
+      const real = isGnews(key) ? await articleOf(h) : "";
       if (isGnews(key) && !real) {
         leadCache[key] = { lead: "", at: now, tries: (leadCache[key]?.tries ?? 0) + 1 };
         leadChanged.add(key);
@@ -2559,9 +2653,13 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
       addLead(h, lead);
       datePage(h, pub);
       if (real) h.url = cleanUrl(real);
+      if (real && h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
     }),
   );
   await saveLeadCache(leadCache, leadChanged);
+  // What the Iran desk is handed goes with the article this scan opened and the
+  // address it found: it was handed the listing's teaser and Google's link alone.
+  withLeads(iranInbox, leadCache);
   // A section page lists old articles beside new ones: one its page dates
   // before the window is old news, not a new card.
   {
@@ -3270,6 +3368,13 @@ export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | 
     console.warn("[pins] placing cards failed", err);
   }
   lap("place cards");
+  // Cards stored under Google's link take their article's own, a few a tick (relink.ts).
+  try {
+    const moved = await relinkStoredCards(store);
+    if (moved) console.log(`[relink] ${moved} card(s) moved from Google's link to the article's own (${resolvesLeft()} look-ups left this half hour)`);
+  } catch (err) {
+    console.warn("[relink] failed", err);
+  }
   // Carry the gazetteer misses into the payload so the scan box can show them.
   if (merge.unplaced.length) payload.unplaced = merge.unplaced.slice(0, 20);
   state.lastTickAt = Date.now();

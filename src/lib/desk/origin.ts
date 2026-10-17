@@ -22,7 +22,7 @@
  * Code finds the citation and checks the match; no model call is spent.
  */
 
-import { BROWSER_UA, type Edition, type GnewsItem, resolveCount, resolveGoogleNews, resolverResting, searchCount, searchGoogleNews } from "./gnews.ts";
+import { BROWSER_UA, type Edition, type GnewsItem, canResolve, resolveCount, resolveGoogleNews, searchCount, searchGoogleNews } from "./gnews.ts";
 import { FULL_TEXT_MAX } from "./reader.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
@@ -794,7 +794,7 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
       );
     // A video page or a section front is not the article: try the next fit.
     for (const hit of ranked.slice(0, 2)) {
-      const url = await resolveGoogleNews(hit.link);
+      const url = await resolveGoogleNews(hit.link, "trace");
       if (!url || !articlePath(url) || ISRAELI.test(hit.outlet) || ISRAELI_HOST.test(hostOf(url)) || DROPPED_OUTLET.test(` ${hit.outlet} ${hostOf(url)} `)) continue;
       // Three of the story's own words in the headline is the story; fewer —
       // "China Expands Drug Chemicals Control" for "China expands secret
@@ -926,7 +926,7 @@ async function reconstruct(f: Found, c: Coverage): Promise<string> {
     .slice(0, 4);
   const accounts = await Promise.all(
     items.map(async (i) => {
-      const url = await resolveGoogleNews(i.link);
+      const url = await resolveGoogleNews(i.link, "trace");
       const text = url && !ISRAELI_HOST.test(hostOf(url)) ? articleText(await page(url)) : "";
       return text.length >= 300 ? `[${i.outlet}] ${text.slice(0, Math.floor(FULL_TEXT_MAX / 4))}` : "";
     }),
@@ -970,7 +970,7 @@ export async function readOriginal(
     (i) => i.outlet && i.outlet !== f.source && !fromOutlet(i, f.source) && sameTitle(i.title, f.title!),
   );
   for (const i of copies.slice(0, 3)) {
-    const url = await resolveGoogleNews(i.link);
+    const url = await resolveGoogleNews(i.link, "trace");
     const text = url ? articleText(await page(url)) : "";
     if (text.length >= Math.min(enough, 1500)) return note("copy"), text;
   }
@@ -1076,7 +1076,7 @@ export async function traceOrigins(
       if (route === "coverage") covers -= 1;
     }, cover));
     if (text.length < (f.text ? 40 : 400)) {
-      if (resolverResting()) return; // not the page's fault: tried again next tick
+      if (!canResolve("trace")) return; // not the page's fault: tried again next tick
       f.fails = (f.fails ?? 0) + 1;
       f.nextReadAt = now + RETRY_MS * 2 ** (f.fails - 1);
       e.report ??= { ...r };
@@ -1149,7 +1149,7 @@ ${text}`.trim(),
       if (!e.cited.site || !opts.listingOf || !canWork()) return null;
       const cands = ownCandidates(await opts.listingOf(e.cited.site), e.keys, at);
       if (!cands.length) return null;
-      const urls = await Promise.all(cands.map(async (c) => (/news\.google\.com/.test(c.url) ? await resolveGoogleNews(c.url) : c.url)));
+      const urls = await Promise.all(cands.map(async (c) => (/news\.google\.com/.test(c.url) ? await resolveGoogleNews(c.url, "trace") : c.url)));
       const texts = await Promise.all(urls.map(async (u) => (u ? articleText(await page(u)) : "")));
       const i = await whichCarries(claim, texts.map((t, j) => `${cands[j].title}\n${t || cands[j].desc}`));
       return i >= 0 && urls[i] ? { url: urls[i], source: e.cited.name, title: cands[i].title } : null;
@@ -1186,7 +1186,7 @@ ${text}`.trim(),
    * wait without losing their turn (30 Sep: the rest stopped every retry for
    * hours).
    */
-  const googleOnly = (c: Cited) => resolverResting() && !c.x && !c.speaker && !(c.site && opts.knownHost?.(c.site));
+  const googleOnly = (c: Cited) => !canResolve("trace") && !c.x && !c.speaker && !(c.site && opts.knownHost?.(c.site));
 
   /** Held speaker reports still waiting: a second channel's account of the same words waits with them. */
   const heldSpeakers = () =>

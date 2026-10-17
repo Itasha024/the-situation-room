@@ -84,13 +84,28 @@ search. Every read takes only what the desk has not judged before (the
 headlines (`triage.ts`: free Groq models, then Gemma) and picks those that could
 concern this war; each pick is opened and read in full (up to 5,000
 characters), and the reader writes the card from the whole article. Headlines no
-model got to are judged by keyword for now and asked about again next read.
+model got to are judged by keyword for now and asked about again next read; after
+three hours the keyword verdict stands.
+
+Erem, Asharq Al-Awsat, Al-Araby Al-Jadeed, Al-Akhbar, Alhurra, Arab News, and the
+Al Jazeera and Al Arabiya websites give only what they have on their own: an
+exclusive or exclusive interview, their own sources or correspondent, words said
+to them. Their channels are read as before.
+
+A Google News link is turned into the article's own address within one shared
+budget (about thirty look-ups a half hour, the article about to be read first,
+then a relay's original, then stored cards' links). While Google refuses, Bing
+News's public search under the same headline gives the address, only on the
+outlet's own site. Cards stored under Google's link get the article's own a few
+at a time.
 
 | Site | Listing read | How often |
 |---|---|---|
 | Almashhad | `almashhad.news/feed` | 5 min |
 | Al-Araby Al-Jadeed | `alaraby.co.uk/rss.xml` (answers a plain client, 403 to a browser) | 30 min |
-| Asharq Al-Awsat | Google News, `site:aawsat.com` alone, last hour (Cloudflare 403) | 30 min |
+| Asharq Al-Awsat | `aawsat.com/feed` (its own feed opens again, 18 Oct; Google News `site:aawsat.com` if it closes) | 10 min |
+| Al Jazeera (AR, EN) | `aljazeera.net` news feed, `aljazeera.com/xml/rss/all.xml` | 10 min |
+| Al Arabiya (AR, EN) | Google News, `site:alarabiya.net` / `site:english.alarabiya.net` alone, 2 h (Cloudflare 403) | 10–15 min |
 | Erem News | Google News, `site:eremnews.com` alone, 2 h (Cloudflare 403) | 30 min |
 | Al-Akhbar | English edition `en.al-akhbar.com`: the front page and the Yemen, Arabian Peninsula, Arab, World and Politics pages, full text (its sitemap has no headlines); the Arabic site, and its PDF edition, through Google News `site:al-akhbar.com` alone, 1 day (Cloudflare 403); its channel every 15 min | front page and Yemen every 30 min; the other pages daily 07:00 |
 | Alhurra | `alhurra.com/rss` | 30 min |

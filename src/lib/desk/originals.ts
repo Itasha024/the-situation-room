@@ -211,7 +211,7 @@ export async function searchSpeaker(sp: Speaker, keys: string[], trKeys: string[
       .filter((i) => !i.site || speakerOutlet(sp, hostOfSite(i.site)) || toldHere(i.outlet))
       .sort((a, b) => a.at - b.at);
     for (const hit of fit.slice(0, 2)) {
-      const url = await resolveGoogleNews(hit.link);
+      const url = await resolveGoogleNews(hit.link, "trace");
       if (url && (speakerOutlet(sp, hostOfSite(url)) || toldHere(hit.outlet))) return { url, source: hit.outlet || sp.name, title: hit.title };
     }
   }

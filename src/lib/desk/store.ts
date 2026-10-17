@@ -82,6 +82,11 @@ export interface DeskStore {
    */
   placeUnplaced?(since: string, placeOf: (summary: string, type: string) => { name: string; lat: number; lng: number } | null): Promise<number>;
 
+  /** Cards stored under a Google News link, newest first, but those in `skip` (relink.ts gives them their article's own). */
+  gnewsLinks?(limit: number, skip?: string[]): Promise<{ fp: string; url: string; source: string; at: string }[]>;
+  /** A card (and its pins) moved from Google's link to the article's; false when another card holds that address. */
+  relink?(fp: string, url: string, source: string): Promise<boolean>;
+
   /** When each of these cards was first published (fp → ISO), for those stored. */
   timesOf?(fps: string[]): Promise<Record<string, string>>;
 

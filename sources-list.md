@@ -344,3 +344,8 @@ The lists below show where each source was before today.
 - Israel Hayom (Web)
 - Kan (Web)
 - Channel 13 (Web)
+
+## Added 18 Oct 2026 (both desks)
+- Al Jazeera (Web): aljazeera.net news feed and aljazeera.com all-news feed
+- Al Arabiya (Web): alarabiya.net and english.alarabiya.net through Google News (the site refuses the server)
+- Asharq Al-Awsat (Web) is now read from its own feed, aawsat.com/feed, not Google News

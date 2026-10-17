@@ -13,7 +13,8 @@
  */
 
 /** `body`: the whole article, when the feed carries it (Axios's `content:encoded`). */
-export type Listed = { url: string; title: string; desc: string; at: number; body?: string };
+/** `site`: the outlet's home a Google News item names (`<source url>`). */
+export type Listed = { url: string; title: string; desc: string; at: number; body?: string; site?: string };
 
 function decode(s: string): string {
   return s
@@ -58,7 +59,8 @@ export function parseListing(xml: string): Listed[] {
     const desc = tag(b, "description") || tag(b, "summary") || tag(b, "media:description");
     const at = Date.parse(tag(b, "pubDate") || tag(b, "published") || tag(b, "updated") || tag(b, "dc:date"));
     const body = tag(b, "content:encoded");
-    if (url && /^https?:\/\//i.test(url) && title) out.push({ url, title, desc: desc.slice(0, 600), at, ...(body.length > 700 ? { body: body.slice(0, 12_600) } : {}) });
+    const site = (/<source[^>]+url=["']([^"']+)["']/i.exec(b) || [])[1] || "";
+    if (url && /^https?:\/\//i.test(url) && title) out.push({ url, title, desc: desc.slice(0, 600), at, ...(body.length > 700 ? { body: body.slice(0, 12_600) } : {}), ...(site ? { site } : {}) });
   }
   return out;
 }

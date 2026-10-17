@@ -44,6 +44,7 @@ import type { DeskId } from "./desks.ts";
 import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranDeskItem } from "./desk/iran-reader.ts";
 import { remember } from "./desk/recent-reads.ts";
+import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
 import { attributeVerdict, colonSpeaker, tidySpeaker } from "./desk/reader.ts";
 
 export { checkLinks, namedSpeaker, speakerKey };
@@ -2706,6 +2707,18 @@ export async function readYemen(state: ScanState, prev: ScanPayload | null, got:
   }
   // Items read from the queue — seen in an earlier cycle, read only now.
   for (const [url, v] of verdicts) if (v.kind === "publish" && !pre.has(url)) reports.push(v.report);
+  // A report of Trump's words goes to the Trump column, matched there to where he said it, never to the feed (17 Oct, as on the Iran desk).
+  const said = reports.filter((r) => trumpSaid(r));
+  if (said.length) {
+    try {
+      const store = await getStore();
+      await store.putJson(SAID_QUEUE, enqueueSaid((await store.getJson<SaidItem[]>(SAID_QUEUE)) ?? [], said.map((r) => ({ fp: r.fp, at: r.at, summary: r.summary, text: r.text, url: r.url, source: r.source })), now));
+      for (const r of said) reports.splice(reports.indexOf(r), 1);
+      console.log(`[yemen] ${said.length} report(s) of Trump's words sent to the Trump column`);
+    } catch (err) {
+      console.error("[yemen] Trump's words:", err instanceof Error ? err.message : err);
+    }
+  }
   const { uniqReports, touched, combined, combineTried } = await shapeCards({ ...YEMEN_PIPE, hint: (h) => hintOutlets(state, h, now) }, reports, hits, prev, now, floor);
   if (prev && Array.isArray(prev.rawHits)) {
     const haveH = new Set(rawHits.map((h) => linkKey(h.url)));

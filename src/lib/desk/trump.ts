@@ -27,6 +27,8 @@ export type TrumpStatement = {
   off?: boolean;
   /** Times the writer was asked and gave nothing usable. */
   tries?: number;
+  /** The desks it is shown on: Iran, Yemen or both (17 Oct); none means worked out from its words. */
+  desks?: ("iran" | "yemen")[];
 };
 
 export type TrumpFeed = { statements: TrumpStatement[]; checkedAt?: string; down?: string[]; lastClipId?: string };
@@ -82,6 +84,19 @@ export function notHisWords(text: string, html: string): boolean {
 const WAR_WORDS = /\b(?:Hormuz|blockade|Ayatollah|the Strait|Islamic Republic|Hezbollah|nuclear weapons?)\b/i;
 export const aboutIran = (text: string) => IRAN_GATE.test(text) || WAR_WORDS.test(text);
 
+/** About Yemen and the Houthis' war (17 Oct: his words on the Houthis belong on the Yemen desk). */
+const YEMEN_WORDS = /\b(?:Houthis?|Yemen\w*|Sanaa|Sana'a|Hodeidah|Ansar Allah|Bab el-Mandeb|Bab al-Mandab|Red Sea)\b/i;
+export const aboutYemen = (text: string) => YEMEN_WORDS.test(text);
+/** On either desk's war. */
+export const onTopic = (text: string) => aboutIran(text) || aboutYemen(text);
+/** The desks his words belong on. */
+export function desksOf(text: string): ("iran" | "yemen")[] {
+  const out: ("iran" | "yemen")[] = [];
+  if (aboutIran(text)) out.push("iran");
+  if (aboutYemen(text)) out.push("yemen");
+  return out;
+}
+
 /**
  * His own part of a post: what follows "From Dick Morris: “…" is someone
  * else's, and Iran named only there is not his word on Iran (4 Oct).
@@ -98,7 +113,7 @@ export function parseTruthFeed(xml: string): TrumpStatement[] {
     const pub = (/<pubDate>([^<]+)</i.exec(b) || [])[1] ?? "";
     if (!id || !/^https:\/\/truthsocial\.com\//.test(url)) continue;
     const text = postText(html);
-    if (notHisWords(text, html) || !aboutIran(hisOwnPart(text))) continue;
+    if (notHisWords(text, html) || !onTopic(hisOwnPart(text))) continue;
     const t = Date.parse(pub);
     const at = truthTime(id) ?? (Number.isFinite(t) ? new Date(t).toISOString() : null);
     if (!at) continue;
@@ -117,7 +132,7 @@ export function clipStatement(post: { url: string; text: string; at: string }, s
   const id = /\/status\/(\d+)/.exec(post.url)?.[1];
   if (!id || !HIS_CLIP.test(post.text)) return null;
   const text = post.text.replace(/https?:\/\/\S+/g, " ").replace(/[ \t]+/g, " ").trim();
-  if (!aboutIran(text)) return null;
+  if (!onTopic(text)) return null;
   return { id: `rr-${id}`, at: post.at, text, url: post.url, source };
 }
 
@@ -184,13 +199,14 @@ export function plainCard(s: TrumpStatement): { headline: string; body?: string 
   return shownCard({ headline: `Trump: ${first}`, ...(rest.length > 40 ? { body: words } : {}) });
 }
 
-export const TRUMP_SYSTEM = `You edit a news desk's feed of Donald Trump's own words on Iran and the war with Iran.
-You get one thing he said (a Truth Social post or his words on camera). Return JSON only:
+export const TRUMP_SYSTEM = `You edit a news desk's feed of Donald Trump's own words on Iran and the war with Iran, and on Yemen and the Houthis.
+You get one thing he said (a Truth Social post or his words on camera), or what he said in an interview, at a rally or to reporters (a transcript, or reports of it: use only his own words, never the reporter's or anyone else's; a line starting "Question:" is a reporter's, there only so his answer can be understood). Return JSON only:
 {"relevant": true|false, "headline": "...", "body": "..."}
 
-- relevant: false only when nothing in it bears on Iran, the war, the Strait of Hormuz, the blockade, Iran's nuclear programme, the talks with Iran or the war's effects (gasoline and oil prices because of the war count).
-- headline: "Trump: " then his main points on Iran and the war, without quotation marks, as if he is speaking, in the first person. Build it from his own sentences, shortened; rephrase only where needed to join them or make the point clear. Lead with the hardest news in it (a decision, a threat, a deadline, a deal, a number). One or two sentences, at most 220 characters. No outlet, no "said", no "posted".
-- body: only the parts of what he said that bear on Iran and the war, in his own words, without quotation marks, a paragraph per point, separated by a blank line. Leave out every part on other subjects (elections, rivals, the media) unless it explains his point on Iran. Keep his facts and numbers. Put the capital letters he uses for emphasis in normal case. "" when the headline already holds everything relevant.
+- relevant: false only when nothing in it bears on Iran, the war, the Strait of Hormuz, the blockade, Iran's nuclear programme, the talks with Iran or the war's effects (gasoline and oil prices because of the war count), or on Yemen, the Houthis, their attacks and the war against them.
+- When he answers a question with a short "yes" or "I think so", the headline says what he agreed to, in his voice ("Trump: Saudi Arabia will accept Israel's help against the Houthis; Israel has been very helpful"). The body never holds a reporter's question or a sentence made from one: only sentences he spoke, as he spoke them ("I think they will, sure. Israel's been very helpful to Saudi Arabia.").
+- headline: "Trump: " then his main points on Iran and the war (or Yemen and the Houthis), without quotation marks, as if he is speaking, in the first person. Build it from his own sentences, shortened; rephrase only where needed to join them or make the point clear. Lead with the hardest news in it (a decision, a threat, a deadline, a deal, a number). One or two sentences, at most 220 characters. No outlet, no "said", no "posted".
+- body: only the parts of what he said that bear on Iran and the war (or Yemen and the Houthis), in his own words, without quotation marks, a paragraph per point, separated by a blank line. Leave out every part on other subjects (elections, rivals, the media) unless it explains his point on Iran. Keep his facts and numbers. Put the capital letters he uses for emphasis in normal case. "" when the headline already holds everything relevant.
 - Keep his meaning exactly: a question, a comparison or a "what if" stays one, and is never turned into a claim or a threat he did not make.
 - Each body paragraph is a whole sentence of his, starting with a capital letter.
 - Never add facts, context or comment of your own.`;

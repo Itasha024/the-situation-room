@@ -25,6 +25,7 @@ import { hearable, listenToVideos } from "./desk/listen.ts";
 import { cleanUrl, isGnews, outletFromHost, resolveGoogleNews } from "./desk/gnews.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 import { scanTrump } from "./trump-feed.server.ts";
+import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
 import { refreshIranBrief } from "./desk/iran-brief.ts";
 import {
   type DeskPipe,
@@ -367,12 +368,20 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   //    out kept, pictures, follow-ups and later facts (user, 8 Oct).
   const texts = new Map(readable.map((h) => [h.url, h]));
   const approved: LiveReport[] = [];
+  // Trump's own words go to the Trump column, not the feed (user, 16 Oct): the
+  // column finds where he said them and writes them from there.
+  const said: LiveReport[] = [];
   for (const [url, v] of verdicts) {
     if (v.kind !== "publish") continue;
     const h = texts.get(url);
     if (h && isExclusive(h.text, h.source)) v.report.flags = [...new Set([...(v.report.flags ?? []), "exclusive"])];
     v.report.desks = ["iran"];
-    approved.push(v.report);
+    if (trumpSaid(v.report)) said.push(v.report);
+    else approved.push(v.report);
+  }
+  if (said.length) {
+    await store.putJson(SAID_QUEUE, enqueueSaid((await store.getJson<SaidItem[]>(SAID_QUEUE)) ?? [], said.map((r) => ({ fp: r.fp, at: r.at, summary: r.summary, text: r.text, url: r.url, source: r.source })), now));
+    console.log(`[iran] ${said.length} report(s) of Trump's words sent to the Trump column`);
   }
   const { uniqReports, touched } = await shapeCards(IRAN_PIPE, approved, readable, prev, now);
   const before = new Set((prev?.reports ?? []).map((r) => r.fp));

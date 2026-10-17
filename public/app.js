@@ -7043,7 +7043,7 @@ async function bootYemenDesk() {
     // A tab in the background asks nothing; it catches up the moment it is shown.
     window.__yemenDeskTimer = setInterval(() => { if (!document.hidden) refresh(false); }, jsonMs);
     // Each finished scan shows within a minute, with no reload.
-    window.__yemenLiveTimer = setInterval(() => { if (!document.hidden) pullLive({ silent: true }); }, 60 * 1000);
+    window.__yemenLiveTimer = setInterval(() => { if (!document.hidden) { pullLive({ silent: true }); loadTrump(); } }, 60 * 1000);
     if (!window.__yemenVisHook) {
       window.__yemenVisHook = true;
       let hiddenAt = 0;
@@ -7098,6 +7098,7 @@ async function bootYemenDesk() {
 
   try {
     await refresh(true);
+    loadTrump();
     try { wireRailResize(); } catch (e) { console.error(e); }
     bootTimers();
   } catch (err) {
@@ -7702,7 +7703,8 @@ function renderIranScan() {
 const trumpFeed = { list: [], shown: 30, drawn: false };
 async function loadTrump() {
   try {
-    const res = await fetch('/api/trump', { cache: 'no-cache' });
+    // The Yemen desk shows his words on Yemen and the Houthis (17 Oct).
+    const res = await fetch(deskOf().id === 'yemen' ? '/api/trump?desk=yemen' : '/api/trump', { cache: 'no-cache' });
     if (!res.ok) return;
     const d = await res.json();
     const list = Array.isArray(d.statements) ? d.statements : [];
@@ -7733,7 +7735,7 @@ function renderTrumpPin() {
   const list = trumpFeed.list;
   const n = list.length;
   el.innerHTML = `<div class="tp-head"><b>Trump's latest</b>${PIN_ICON}</div>
-    ${n ? trumpCardHtml(list[0]) : '<p class="soon">Nothing yet: what he posts or says on Iran appears here within five minutes.</p>'}
+    ${n ? trumpCardHtml(list[0]) : `<p class="soon">Nothing yet: what he posts or says on ${deskOf().id === 'yemen' ? 'Yemen and the Houthis' : 'Iran'} appears here within five minutes.</p>`}
     ${n ? `<button type="button" class="tp-all" aria-haspopup="dialog">All his statements (${n}) <span aria-hidden="true">→</span></button>` : ''}`;
   el.querySelectorAll('.card').forEach(wireFeedCard);
   const all = el.querySelector('.tp-all');

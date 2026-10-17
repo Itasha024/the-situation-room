@@ -71,3 +71,8 @@ export function ownRead(o: Owner, keys: string[], reportAt: number, notUrl = "",
     .sort((a, b) => shared(b.text, telling) - shared(a.text, telling) || a.at - b.at);
   return fit[0] ?? null;
 }
+
+/** Everything read in the last two days (the Trump column looks for his words among it). */
+export function recentReads(now = Date.now()): Read[] {
+  return [...reads.values()].filter((r) => now - r.at <= KEEP_MS);
+}

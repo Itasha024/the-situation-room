@@ -9,7 +9,7 @@ import test from "node:test";
 
 import { credibility } from "./credibility.ts";
 import { type Candidate, toReport } from "./editor.ts";
-import { type Reading, PROMPT_VERSION, SYSTEM_PROMPT, checkReading, protocolOnly, figuresIn, nextPacificMidnight, pacificDay, repairable, stripSpellingNotes, wrongSpeaker } from "./reader.ts";
+import { type Reading, PROMPT_VERSION, SYSTEM_PROMPT, checkReading, protocolOnly, figuresIn, roleNamesInProse, nextPacificMidnight, pacificDay, repairable, stripSpellingNotes, wrongSpeaker } from "./reader.ts";
 
 function reading(over: Partial<Reading>): Reading {
   return {
@@ -675,4 +675,9 @@ test("protocol with no news of the war is not a report", () => {
   assert.equal(protocolOnly("Al-Alimi receives US envoy to discuss Houthi attacks on shipping"), false);
   const card = checkReading({ ...reading({}), headline: "Yemeni Presidential Council member Sultan al-Arada opens IT college building in Marib", body: "" } as Reading, "افتتح عضو مجلس القيادة الرئاسي سلطان العرادة مبنى كلية تقنية المعلومات في مأرب");
   assert.match(String(card), /protocol/);
+});
+
+test("a known name needs no 'official' before it (user, 17 Oct)", () => {
+  assert.equal(roleNamesInProse("US official Vance: 20 US troops were lost in the Iran conflict."), "Vance: 20 US troops were lost in the Iran conflict.");
+  assert.equal(roleNamesInProse("A US official said no decision was taken."), "A US official said no decision was taken.");
 });

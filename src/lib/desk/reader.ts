@@ -870,9 +870,14 @@ export function diplomatPost(headline: string, sourceText: string): string {
 }
 
 /** Running prose (the 6-hour brief): the same people by role, "Houthi leader" included. */
+/** "US official Vance", "Iranian official Araghchi": the reader knows them by name. */
+const KNOWN_AS_OFFICIAL = /\b(?:(?:the\s+)?(?:US|U\.S\.|American|Iranian|Israeli|Saudi)\s+)?officials?\s+(Vance|Rubio|Hegseth|Witkoff|Leavitt|Bessent|Trump|Netanyahu|Araghchi|Pezeshkian|Qalibaf|Baghaei|Khamenei)\b/gi;
+
 export function roleNamesInProse(text: string): string {
   let t = String(text || "").replace(/\b(?:the )?Houthi leader,? (?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi\b|\b(?:Sayyed |Sayyid )?Abdul[- ]?Malik (?:Badr al-Din |Badreddin )?al-Houthi\b/gi, "the Houthi leader");
   for (const [name, role] of ROLE_NAMES) t = t.replace(name, role);
+  // A known name needs no "official" before it (user, 17 Oct: "US official Vance").
+  t = t.replace(KNOWN_AS_OFFICIAL, "$1");
   // A sentence opens with a capital, whatever role now leads it.
   return t.replace(/(^|[.!?]\s+)the /g, "$1The ");
 }

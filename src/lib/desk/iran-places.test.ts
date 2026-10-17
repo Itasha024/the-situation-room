@@ -137,3 +137,8 @@ test("a sea pin sits in the sea it names and off the land; land pins stay on lan
   const port = seaPlace({ lat: 29.26, lng: 50.33, place: "Kharg Island", label: "US missiles strike tanker Belma docked at Kharg Island" });
   assert.ok(port.sea && port.lat === 29.26 && port.lng === 50.33, JSON.stringify(port));
 });
+
+test("Jubail is Saudi Arabia's port, not Lebanon's Jbeil (17 Oct)", () => {
+  const p = iranPins("Oil tanker hit by projectile near Jubail, Saudi Arabia", "استهداف ناقلة نفط بمقذوف قرب الجبيل في السعودية", true);
+  assert.equal(p[0]?.name, "Jubail");
+});

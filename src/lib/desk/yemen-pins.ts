@@ -77,7 +77,7 @@ export function pinType(e: YemenPin): string | null | undefined {
   return e.type === "vessel" && e.label && !SHIP.test(e.label) ? "strike" : e.type;
 }
 
-const NOT_EVENT = /:\s*(?:why|how|what)\b|\?\s*$|\b(?:analysis|explainer|inspects?|inspected|tours?|toured)\b|\b(?:publish\w*|releases?|released|shows?|airs?|aired)\s+(?:new\s+)?footage\b|\bfootage\s+(?:shows|of)\b|\btransfers?\s+\d+\s*(?:percent|%)/i;
+const NOT_EVENT = /:\s*(?:why|how|what)\b|\?\s*$|\b(?:analysis|explainer|inspects?|inspected|tours?|toured)\b|\b(?:publish\w*|releases?|released|shows?|airs?|aired)\s+(?:new\s+)?footage\b|\bfootage\s+(?:shows|of)\b|\btransfers?\s+\d+\s*(?:percent|%)|\bbodies\b.{0,60}\b(?:removed|recovered|retrieved|collected)\b|\b(?:alert|warning)s?\s+(?:lifted|ended)\b|\ball[- ]clear\b/i;
 /** An analysis piece, an official's visit, footage of an attack already pinned, or a move of staff: not an event on the map (17 Oct). */
 export function notEvent(e: YemenPin): boolean {
   return NOT_EVENT.test(String(e.label || ""));
@@ -94,6 +94,8 @@ function alike(a: string, b: string): boolean {
 const dayOf = (at?: string) => (at ? new Date(Date.parse(at) + 3 * 3600e3).toISOString().slice(0, 10) : "");
 
 /** The pins with one event told by several outlets kept once: the first one served (the newest) stays. */
+/** The sea a ship pin is in, by its longitude: the Red Sea, the Gulf of Aden, the Arabian Sea. */
+const seaOf = (e: YemenPin) => (typeof e.lng !== "number" ? "" : e.lng < 43.6 ? "red" : e.lng < 52 ? "aden" : "arabian");
 export function onePinPerEvent<T extends YemenPin>(pins: T[]): T[] {
   const kept: T[] = [];
   for (const p of pins) {
@@ -104,7 +106,10 @@ export function onePinPerEvent<T extends YemenPin>(pins: T[]): T[] {
       ((Math.abs(k.lat - p.lat) < 0.01 && Math.abs((k.lng ?? 0) - (p.lng ?? 0)) < 0.01) ||
         (!!k.place && String(k.place).toLowerCase() === String(p.place || "").toLowerCase())) &&
       alike(String(k.label || ""), String(p.label || "")));
-    if (!twin) kept.push(p);
+    // One ship attack the outlets each tell their way, some pinned on the nearest port (17 Oct): a ship
+    // attacked in the same sea within three hours is the same attack; the first kept is the latest told.
+    const shipTwin = p.type === "vessel" && kept.some((k) => k.type === "vessel" && Math.abs(Date.parse(String(k.at)) - Date.parse(String(p.at))) < 3 * 3600e3 && seaOf(k) === seaOf(p));
+    if (!twin && !shipTwin) kept.push(p);
   }
   return kept;
 }

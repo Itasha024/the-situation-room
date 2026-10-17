@@ -119,10 +119,31 @@ function sideIn(s: string): PinSide | null {
   if (y >= 0 && !firstSide(s.slice(0, y))) return "houthi";
   return firstSide(s);
 }
-export function pinSideOf(e: { type?: string | null; label?: string | null; text?: string | null; source?: string | null }): PinSide | null {
+/*
+ * Attacks only the Houthis make (user, 17 Oct: pins with no colour, alerts in Saudi Arabia drawn as Saudi):
+ * air defence, sirens and warnings at work, or a missile or drone shot down, are the attack they meet,
+ * whoever the report names as defending; and in Saudi Arabia's own cities every attack is the Houthis'.
+ */
+const DEFENCE_RE = /\b(?:intercept\w*|shoots?\s+down|shot\s+down|downed|air[- ]defen[cs]es?|early[- ]warnings?|emergency alerts?|alerts?|sirens?|warnings?\s+(?:issued|sounded))\b/i;
+const WEAPON_RE = /\b(?:ballistic|missiles?|drones?|UAVs?|rockets?|projectiles?)\b/i;
+/** A missile or drone the text gives to another side: "US drone strike", "government drone strikes". */
+const OTHERS_WEAPON = /\b(?:Saudi|coalition|US|U\.S\.|American|Israeli|Emirati|UAE|government|army|Giants|southern|STC)(?:[- ]led(?:\s+coalition)?)?\s+(?:\w+\s+)?(?:drones?|missiles?|rockets?|UAVs?)\b/i;
+const SAUDI_PLACE = /\b(?:Abha|Khamis Mushait|Jazan|Jizan|Najran|Yanbu|Jeddah|Riyadh|Taif|Dhahran|Sharurah|Asir|Dammam|Ras Tanura|Saudi Arabia)\b/i;
+const IN_SAUDI_HIT_RE = /\b(?:attacks?|strikes?|struck|hit|hits|target\w*|explosions?|blasts?|impact)\b/i;
+export function houthiAttack(e: { label?: string | null; place?: string | null }): boolean {
+  const t = String(e.label || "");
+  const inSaudi = SAUDI_PLACE.test(`${t} ${e.place || ""}`) && !/\bSaudi\s+(?:air ?strikes?|warplanes?|artillery|shelling)\b/i.test(t);
+  if (DEFENCE_RE.test(t) && (WEAPON_RE.test(t) || inSaudi)) return true;
+  return inSaudi && IN_SAUDI_HIT_RE.test(t) && !/\b(?:coalition|Saudi-led)\s+(?:air ?strikes?|raids?)\b|\bair ?strikes?\b/i.test(t);
+}
+/** A missile or drone with no one named: only the Houthis fire them unnamed in this war. */
+const unnamedWeapon = (t: string) => WEAPON_RE.test(t) && !OTHERS_WEAPON.test(t);
+
+export function pinSideOf(e: { type?: string | null; label?: string | null; text?: string | null; source?: string | null; place?: string | null }): PinSide | null {
   const full = String(e.label || "");
   const rep = repelAttacker(full);
   if (rep) return rep;
+  if (houthiAttack(e)) return "houthi";
   // "Aden security: two Houthi missiles land…": the words after the speaker first.
   const colon = /^[^:]{2,60}:\s+/.exec(full);
   // "Warplanes shell Houthi positions": aircraft as the subject are the coalition's (or the US's), whoever they hit.
@@ -135,7 +156,8 @@ export function pinSideOf(e: { type?: string | null; label?: string | null; text
   const body = sideIn(String(e.text || "").slice(0, 300));
   if (body) return body;
   // The Houthis' military spokesman speaks only of their own attacks.
-  return /\bYahya Sar(?:e|i|ee|ea)\b/i.test(String(e.source || "")) ? "houthi" : null;
+  if (/\bYahya Sar(?:e|i|ee|ea)\b/i.test(String(e.source || ""))) return "houthi";
+  return unnamedWeapon(full) ? "houthi" : null;
 }
 
 /** "shoot down a Saudi ScanEagle drone", "intercepted two Houthi missiles". */

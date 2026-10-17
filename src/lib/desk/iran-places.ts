@@ -154,6 +154,8 @@ export const IRAN_PLACES: IranPlace[] = [
   P("Sohar", 24.347, 56.709, "Oman", "port", ["صحار"]),
   P("Khasab", 26.1797, 56.2478, "Oman", "port", ["Musandam", "خصب", "مسندم"]),
   P("Ras Tanura", 26.644, 50.159, "Saudi Arabia", "port", ["رأس تنورة", "راس تنورة"]),
+  // Saudi Arabia's Jubail, never Lebanon's Jbeil (Byblos), which the same letters spell (17 Oct).
+  P("Jubail", 27.011, 49.658, "Saudi Arabia", "port", ["Jubayl", "Al Jubail", "الجبيل"]),
   // The seas.
   P("Strait of Hormuz", 26.5667, 56.25, "sea", "sea", ["Hormuz Strait", "مضيق هرمز", "تنگه هرمز"]),
   P("Gulf of Oman", 24.5, 58.5, "sea", "sea", ["خليج عمان", "دریای عمان"]),

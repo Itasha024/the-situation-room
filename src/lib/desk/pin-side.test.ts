@@ -24,7 +24,8 @@ test("a speaker before a colon is not who acted, nor are the dead", () => {
 
 test("an air strike with no one named is the coalition's; nothing named is not stated", () => {
   assert.equal(side("Air strikes target communications towers in Jabal Habashi district of Taiz"), "saudi");
-  assert.equal(side("Air defence alerts in Khamis Mushait"), null);
+  // An alert in Saudi Arabia meets a Houthi attack (user, 17 Oct: pins with no colour).
+  assert.equal(side("Air defence alerts in Khamis Mushait"), "houthi");
   assert.equal(side("Landmine explosion kills woman and wounds three family members in Al-Shamaitin district of Taiz", "combat"), null);
   assert.equal(side("Israeli strikes hit Hodeidah port"), "israel");
 });
@@ -32,4 +33,23 @@ test("an air strike with no one named is the coalition's; nothing named is not s
 test("warplanes are the coalition's whoever they hit; the Houthi spokesman's claims are theirs", () => {
   assert.equal(side("Warplanes shell Houthi positions around Jabal Han west of Taiz"), "saudi");
   assert.equal(pinSideOf({ type: "strike", label: "Strikes hit Saudi build-ups in Al-Yatemah in Al-Jawf", source: "Yahya Saree" }), "houthi");
+});
+
+test("alerts, interceptions and attacks in Saudi Arabia are the Houthis' (17 Oct)", () => {
+  assert.equal(side("Air defence alerts in Abha"), "houthi");
+  assert.equal(side("Early warning sirens sound in Khamis Mushait"), "houthi");
+  assert.equal(side("Saudi Civil Defense activates early warning in Jazan, Khamis Mushait and Abha after detecting missiles"), "houthi");
+  assert.equal(side("Yemeni attack targets Khamis Mushait, Saudi warning issued"), "houthi");
+  assert.equal(side("Missiles hit Aden airport, Saudi coalition intercepts ballistic missile targeting Yanbu"), "houthi");
+  assert.equal(side("Explosions reported in Abha, Khamis Mushait and Jazan", "combat"), "houthi");
+  assert.equal(side("French frigate Languedoc shoots down drone targeting container ship in Bab al-Mandab", "vessel"), "houthi");
+  assert.equal(side("Missile fired from Ibb towards Taiz"), "houthi");
+  assert.equal(side("2 missiles hit airport in Yemen's port city of Aden, officials say"), "houthi");
+});
+
+test("a strike others make stays theirs (17 Oct)", () => {
+  assert.equal(side("Houthi Armed Forces spokesperson: Saudi airstrikes on Sanaa, Taiz, Ibb, Lahj and Saada"), "saudi");
+  assert.equal(side("Yemeni government drone strikes target Houthi gatherings and military vehicles in Marib"), "government");
+  assert.equal(side("US drone strike hits vehicle in Marib"), "us");
+  assert.equal(side("Landmine explosion kills woman in Al-Shamaitin district of Taiz", "combat"), null);
 });

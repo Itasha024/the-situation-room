@@ -11,7 +11,7 @@ import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { districtSeat, heardInside, iranEventAllowed, ownSkyOnly, seaPlace } from "@/lib/desk/iran-places";
 import { countryPin, onePinPerEvent, servePins } from "@/lib/desk/yemen-pins";
-import { pinSideOf } from "@/lib/desk/dev-marks";
+import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -58,7 +58,12 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     // The Iran desk's filter buttons go by the source's group.
     if (desk === "iran") (r as Record<string, unknown>).lean = iranLeanOfSource(String(r.source ?? ""));
     // Who acted, for its map pin's colour (user, 17 Oct): the Yemen map draws its pins from the cards.
-    if (desk === "yemen" && !r.actor) (r as Record<string, unknown>).actor = pinSideOf({ type: String(r.type ?? ""), label: String(r.summary ?? ""), text: String(r.text ?? ""), source: String(r.source ?? "") }) ?? "unclear";
+    if (desk === "yemen") {
+      const x = { type: String(r.type ?? ""), label: String(r.summary ?? ""), text: String(r.text ?? ""), source: String(r.source ?? ""), place: String(r.place ?? "") };
+      const a = r.actor as string | null | undefined;
+      // An alert, an interception or an attack in Saudi Arabia is the Houthis' whatever was stored (17 Oct).
+      (r as Record<string, unknown>).actor = houthiAttack(x) ? "houthi" : a && a !== "unclear" ? a : pinSideOf(x) ?? "unclear";
+    }
   }
   // The Iran map's own pins pass its scope as they are served, so a pin stored under older rules never shows.
   if (desk === "iran" && Array.isArray((slice as { events?: unknown[] }).events)) {
@@ -79,6 +84,12 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     });
     // Iran's own air defence and alarms, with no attacker named: side not stated.
     s.events = s.events.map((e) => (ownSkyOnly(e) ? { ...e, actor: "unclear" } : e));
+    // "Hostile artillery fire targeted…": the Lebanese outlets' word for Israel's fire in Lebanon (17 Oct).
+    s.events = s.events.map((e) => {
+      const x = e as typeof e & { lat?: number; lng?: number };
+      const inLebanon = typeof x.lat === "number" && typeof x.lng === "number" && x.lat > 33.03 && x.lat < 34.7 && x.lng > 35.1 && x.lng < 36.65;
+      return inLebanon && (!e.actor || e.actor === "unclear") && /\b(?:hostile|enemy)\b/i.test(String(e.label ?? "")) ? { ...e, actor: "israel" } : e;
+    });
     // At sea or on land, a sea pin in its sea and off the land: the researched pins' rule.
     s.events = s.events.map((e) => {
       const x = e as typeof e & { lat?: number; lng?: number; type?: string | null };
@@ -95,8 +106,9 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     s.events = servePins(s.events);
     // Who acted, for the pin's colour (user, 17 Oct); "unclear" when the report does not say.
     s.events = s.events.map((e) => {
-      const x = e as typeof e & { actor?: string | null; type?: string | null; label?: string | null; text?: string | null };
-      return x.actor ? e : { ...e, actor: pinSideOf(x) ?? "unclear" };
+      const x = e as typeof e & { actor?: string | null; type?: string | null; label?: string | null; text?: string | null; place?: string | null };
+      if (houthiAttack(x)) return { ...e, actor: "houthi" };
+      return x.actor && x.actor !== "unclear" ? e : { ...e, actor: pinSideOf(x) ?? "unclear" };
     });
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };

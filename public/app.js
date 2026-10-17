@@ -5621,6 +5621,29 @@ function syncOpenNotes() {
   if (wrap) wrap.classList.toggle('popup-open', openNotes().length > 0);
 }
 
+/**
+ * Full screen: the map ends at the screen's foot, under the header it cannot scroll past (user, 17 Oct:
+ * the legend went off the bottom, the map being a full screen tall below the header).
+ */
+function fitFocusMap(on) {
+  const w = document.getElementById('map-wrap');
+  if (!w) return;
+  if (!fitFocusMap.wired) {
+    fitFocusMap.wired = true;
+    addEventListener('resize', () => { if (document.body.classList.contains('map-focus')) fitFocusMap(true); });
+  }
+  if (!on) { w.style.removeProperty('height'); w.style.removeProperty('min-height'); }
+  else {
+    // After the scroll to the map; a timer, not a frame, so a page in the background does it too.
+    setTimeout(() => {
+      const h = Math.max(320, Math.round(innerHeight - Math.max(0, w.getBoundingClientRect().top) - 8));
+      w.style.height = h + 'px';
+      w.style.minHeight = h + 'px';
+      if (map) map.invalidateSize();
+    }, 30);
+  }
+}
+
 /** An element's box in map-container pixels. */
 function boxInMap(el) {
   const mc = map && map.getContainer();
@@ -6525,6 +6548,7 @@ function wireUi(d) {
     fb.setAttribute('aria-label', mapFocus ? 'Exit full screen' : 'Full screen map');
     fb.title = mapFocus ? 'Exit full screen' : 'Full screen';
     if (mapFocus) document.getElementById('map-wrap').scrollIntoView({ block: 'start' });
+    fitFocusMap(mapFocus);
     // On a phone the expanded map is nearly all the screen there is, so the key
     // folds itself away and the reader opens it if they want it. On a desktop
     // there is room for both and the legend is left alone. Shrinking puts back
@@ -7086,20 +7110,27 @@ function installSectionNav() {
     <ol class="sec-list" id="sec-list">${items.map(([id, name]) => `<li><a href="#${id}" data-sec="${id}">${name}</a></li>`).join('')}</ol>`;
   document.body.appendChild(nav);
   document.documentElement.classList.add('has-sec-nav');
-  // The pill sits at the screen's bottom left: when it is over the map's corner, the legend there rises above it.
+  // The legend keeps to the bottom left of the part of the map in sight (user, 17 Oct: it went missing):
+  // a map taller than the screen, or scrolled, would leave it below the screen's foot, and the pill at the
+  // screen's bottom left would cover it.
   const liftLegend = () => {
-    const tab = nav.querySelector('.sec-tab'), wrap = document.getElementById('map-wrap');
-    if (!tab || !wrap) return;
-    const n = tab.getBoundingClientRect(), w = wrap.getBoundingClientRect();
-    const over = n.width && n.top < w.bottom && n.bottom > w.top && n.left < w.left + 200;
-    // Only near the map's foot: scrolled further, the legend keeps to the map's corner.
-    const lift = over ? Math.round(w.bottom - n.top + 8 - 12) : 0;
-    wrap.style.setProperty('--leg-lift', (lift > 0 && lift <= 70 ? lift : 0) + 'px');
+    const tab = nav.querySelector('.sec-tab'), wrap = document.getElementById('map-wrap'), leg = document.getElementById('legend');
+    if (!wrap) return;
+    const w = wrap.getBoundingClientRect();
+    let floor = innerHeight;
+    const n = tab && tab.getBoundingClientRect();
+    if (n && n.width && n.left < w.left + 200 && n.top < floor) floor = n.top - 8;
+    const room = w.height - ((leg && leg.offsetHeight) || 40) - 70;
+    const lift = Math.max(0, Math.min(Math.round(w.bottom - 12 - floor), room));
+    wrap.style.setProperty('--leg-lift', lift + 'px');
   };
   let liftRaf = 0;
   const liftSoon = () => { cancelAnimationFrame(liftRaf); liftRaf = requestAnimationFrame(liftLegend); };
   window.addEventListener('scroll', liftSoon, { passive: true });
   window.addEventListener('resize', liftSoon);
+  // Opened, closed or full screen: the legend's height or the map's changed.
+  document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#legend, #btn-focus-map')) setTimeout(liftLegend, 260); });
+  setInterval(liftLegend, 2000);
   setTimeout(liftLegend, 0);
   setTimeout(liftLegend, 800);
   const tab = nav.querySelector('.sec-tab');
@@ -7629,6 +7660,7 @@ function wireIranMapTools() {
       fb.setAttribute('aria-label', iranPins.focus ? 'Exit full screen' : 'Full screen map');
       fb.title = iranPins.focus ? 'Exit full screen' : 'Full screen';
       if (iranPins.focus) document.getElementById('map-wrap').scrollIntoView({ block: 'start' });
+      fitFocusMap(iranPins.focus);
       setTimeout(() => { if (map) map.invalidateSize(); }, 50);
     };
     fb.onclick = toggle;

@@ -57,3 +57,16 @@ test("one card's district pin and its own pin on the same named place are one pi
   ]);
   assert.equal(out.length, 1);
 });
+
+test("one ship attack told three ways is one pin; aftermath and an alert lifted are no pins (17 Oct)", () => {
+  const pins = onePinPerEvent([
+    { fp: "a", at: "2026-10-17T14:37:43Z", type: "vessel", lat: 12.89, lng: 50.84, place: "Al-Mukalla", label: "UKMTO reports small boat fires two shots at LNG tanker 140 miles southeast of Al-Mukalla" },
+    { fp: "b", at: "2026-10-17T13:21:31Z", type: "vessel", lat: 12.79, lng: 45.02, place: "Aden", label: "UKTMO: LNG tanker fired on by boat off Hadramawt coast" },
+    { fp: "c", at: "2026-10-17T13:20:25Z", type: "vessel", lat: 12.79, lng: 45.02, place: "Aden", label: "Attack on a ship in the Gulf of Aden" },
+    { fp: "d", at: "2026-10-16T11:42:00Z", type: "vessel", lat: 12.7, lng: 43.47, place: "Bab al-Mandab", label: "French frigate shoots down drone targeting container ship" },
+  ]);
+  assert.deepEqual(pins.map((p) => p.fp), ["a", "d"]);
+  assert.equal(notEvent({ label: "Eyewitnesses: 250 bodies of Houthi fighters removed from Al-Dhabab front in Taiz" }), true);
+  assert.equal(notEvent({ label: "Saudi Civil Defense: Emergency alert lifted in Jazan" }), true);
+  assert.equal(notEvent({ label: "Houthi shelling in Al-Masrakh district of Taiz wounds three children" }), false);
+});

@@ -193,8 +193,8 @@
       <div class="meta">
         <time datetime="${esc(r.at)}">${esc(fmt(r.at))}</time>
         <span class="src-wrap"><a class="src-link" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.src)}</a><a class="src-go" href="${esc(r.url)}" target="_blank" rel="noopener" aria-label="Open source">${ICON_EXT}</a></span>
-        ${deskTag(deskOfReport(r))}
         ${pinsOf(r.fp).length ? `<button type="button" class="card-map" data-pin-of="${esc(r.fp)}">Show on map</button>` : ''}
+        ${deskTag(deskOfReport(r))}
       </div>
       ${reply}
       <p class="headline">${esc(r.h)}</p>
@@ -485,15 +485,13 @@
       const row = app('sideLegendRow');
       const ctl = ((D.ydata && D.ydata.control) || []).map((c) => row(A('sideColor')(c), A('controlShortName')(c), !!lo[A('controlLayerKey')(c.id)], `data-layer="${esc(A('controlLayerKey')(c.id))}"`)).join('');
       const colors = app('COLORS') || {};
-      return `<div class="leg-sec">Territory</div>${ctl}${row(colors.saudi, 'Saudi Arabia', !!lo.saudi, 'data-layer="saudi"')}${A('yemenEventRows')() || ''}`;
+      return `<div class="leg-sec">Who</div>${ctl}${row(colors.saudi, 'Saudi Arabia', !!lo.saudi, 'data-layer="saudi"')}${A('yemenEventRows')() || ''}`;
     }
     const p = irPins();
     const sides = (app('IRAN_PIN_SIDES') || []).filter(([k]) => k !== 'other' || D.events.some((e) => e.desk === 'iran' && A('iranSideOf')(e) === 'other'));
     const row = app('sideLegendRow');
-    return `${sides.map(([k, c, n]) => row(c, n, p.on[k] !== false, `data-side="${k}"`)).join('')}
-      ${A('iranKindRows')() || ''}
-      <p class="leg-sub">Where</p>
-      ${[['land', 'On land', '#e7dcc8'], ['sea', 'At sea', '#bfdbfe']].map(([k, n, c]) => row(c, n, p.where[k] !== false, `data-where="${k}"`)).join('')}`;
+    return `<p class="leg-sub leg-who">Who</p>${sides.map(([k, c, n]) => row(c, n, p.on[k] !== false, `data-side="${k}"`)).join('')}
+      ${A('iranKindRows')() || ''}`;
   }
   let legendCollapsed = true; // Closed at first, as on the desks (user, 17 Oct).
   function drawLegend() {
@@ -508,8 +506,9 @@
     legendBox.addEventListener('click', (ev) => {
       ev.preventDefault(); ev.stopPropagation();
       const t = ev.target;
-      if (t.closest('.leg-collapse')) { legendCollapsed = !legendCollapsed; drawLegend(); return; }
       const pick = t.closest('[data-leg]');
+      // Opens from a click anywhere on it, closes from its head (user, 18 Oct).
+      if (t.closest('.leg-head') || (legendCollapsed && !pick)) { legendCollapsed = !legendCollapsed; drawLegend(); return; }
       if (pick) { S.legend = pick.dataset.leg; drawLegend(); return; }
       const b = t.closest('.leg-item');
       if (!b) return;
@@ -518,8 +517,7 @@
         else if (b.dataset.layer) { const lo = yeLayers(); lo[b.dataset.layer] = !lo[b.dataset.layer]; }
       } else {
         const p = irPins();
-        if (b.dataset.where) p.where[b.dataset.where] = !p.where[b.dataset.where];
-        else if (b.dataset.kind) p.kinds[b.dataset.kind] = p.kinds[b.dataset.kind] === false;
+        if (b.dataset.kind) p.kinds[b.dataset.kind] = p.kinds[b.dataset.kind] === false;
         else if (b.dataset.side) p.on[b.dataset.side] = !p.on[b.dataset.side];
       }
       drawLegend(); restyleControl(); drawMarks();
@@ -550,7 +548,7 @@
       <button type="button" id="btn-day-today">Today</button>
       <span class="tf-sep" aria-hidden="true"></span>
       <button type="button" id="btn-conflict-all" aria-label="The whole war"><span class="tf-long">Whole war</span><span class="tf-short">All</span></button>
-      <button type="button" id="btn-period" aria-expanded="false" aria-controls="tf-range">Period</button>
+      <button type="button" id="btn-period" aria-expanded="false" aria-controls="tf-range" aria-label="Pick your own dates">Custom</button>
     </div>
   </div>`;
   const stageHtml = () => `<main class="stage h-stage h-solo" id="h2-stage">
@@ -644,11 +642,52 @@
       map.flyTo([e.lat, e.lng], Math.max(map.getZoom(), 7), { duration: 0.8 });
     }, 380);
   }
+  /*
+   * "Show on map" opens the small map, as on the desks (user, 18 Oct): beside the button on a wide
+   * screen, a sheet on a phone, the report's pins pulsing among that day's others on its desk; only
+   * its "Show on the main map" moves the big map.
+   */
+  let popWired = false;
+  function showPinPop(fp, anchor) {
+    const mine = pinsOf(fp);
+    const open = app('openMapPop');
+    if (!mine.length || !open || !window.L) return showPin(fp);
+    if (!popWired) {
+      popWired = true;
+      const off = () => { const ps = document.getElementById('pin-sheet'); if (ps && ps.classList.contains('show')) A('closePinSheet')(); };
+      document.addEventListener('click', (ev) => { if (!ev.target || ev.target.closest('#pin-sheet, .card-map')) return; const ps = document.getElementById('pin-sheet'); if (ps && ps.classList.contains('as-pop')) off(); });
+      document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') off(); });
+    }
+    const fps = new Set(mine.map((e) => e.fp));
+    const day = evDay(mine[0]);
+    const others = D.events.filter((e) => !e.researched && !fps.has(e.fp) && e.desk === mine[0].desk && evDay(e) === day);
+    const r = byFp.get(fp);
+    const icon = app('sidePinIcon'), lean = app('popLeanClass');
+    open({
+      title: (r && r.h) || mine[0].label || '',
+      anchor: window.innerWidth < 720 ? null : anchor,
+      legend: '',
+      go: () => showPin(fp),
+      build: (m) => {
+        miniControl(m);
+        [...others, ...mine].forEach((e) => {
+          const me = fps.has(e.fp);
+          const mk = icon
+            ? L.marker([e.lat, e.lng], { icon: icon(e.cat, inkOf(e), me ? ' pin-pulse' : '', esc(e.label || '')), zIndexOffset: me ? 2000 : 0 })
+            : L.circleMarker([e.lat, e.lng], { radius: me ? 6 : 4, weight: 1, color: '#fff', fillColor: inkOf(e), fillOpacity: 0.95 });
+          mk.bindPopup(() => noteHtml(e), { className: e.desk === 'yemen' && lean ? lean(e) : '', maxWidth: 260, maxHeight: 300 }).addTo(m);
+        });
+        const b = L.latLngBounds(mine.map((e) => [e.lat, e.lng]));
+        m.fitBounds(b.pad(0.5), { maxZoom: 7, animate: false });
+      },
+    });
+  }
   document.addEventListener('click', (ev) => {
     const b = ev.target.closest && ev.target.closest('.card-map[data-pin-of]');
     if (!b) return;
     ev.preventDefault();
-    showPin(b.dataset.pinOf);
+    ev.stopPropagation();
+    showPinPop(b.dataset.pinOf, b);
   });
   function scrollToMap() {
     const el = document.querySelector('.toolbar');
@@ -675,6 +714,9 @@
     m._hTiles = L.tileLayer(tileUrl(), { noWrap: true }).addTo(m);
     m.fitBounds(t.bounds, { padding: [6, 6] });
     miniControl(m);
+    // Zooms with the wheel too, once clicked, so the page still scrolls past it; pinch and double-click always (user, 18 Oct).
+    m.on('click mousedown focus', () => m.scrollWheelZoom.enable());
+    m.on('mouseout blur', () => m.scrollWheelZoom.disable());
     const icon = app('sidePinIcon'), lean = app('popLeanClass'), jit = app('jitter') || ((lat, lng) => [lat, lng]);
     const atSpot = new Map();
     t.events.slice().sort((a, b) => (a.at < b.at ? -1 : 1)).forEach((e) => {
@@ -805,7 +847,15 @@
       if (!el) return;
       try { const w = app('wireMediaClicks'); if (w) w(el); L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); } catch (err) { /* plain note */ }
       const btn = el.querySelector('.pop-toggle'), full = el.querySelector('.pop-full');
-      if (btn && full) btn.onclick = (ev) => { ev.preventDefault(); const open = !full.classList.contains('open'); full.classList.toggle('open', open); btn.textContent = open ? 'Hide detail' : 'Read more'; try { e.popup._updateLayout(); e.popup._updatePosition(); } catch (err) { /* laid out */ } };
+      if (!btn || !full) return;
+      const toggle = () => { const open = !full.classList.contains('open'); full.classList.toggle('open', open); btn.textContent = open ? 'Hide detail' : 'Read more'; try { e.popup._updateLayout(); e.popup._updatePosition(); } catch (err) { /* laid out */ } };
+      btn.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); toggle(); };
+      // Anywhere on the note opens and closes it, as on the desks (user, 18 Oct).
+      const content = el.querySelector('.leaflet-popup-content');
+      if (content) {
+        content.style.cursor = 'pointer';
+        content.onclick = (ev) => { if (ev.target.closest('a, button, img, video, .media') || String(window.getSelection() || '')) return; toggle(); };
+      }
     });
     wireToolbar();
     wireLegend();

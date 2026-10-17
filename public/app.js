@@ -227,7 +227,7 @@ function iranKindOf(ev) {
   if (ev.type === 'combat' || IRAN_GROUND_RE.test(s)) return 'combat';
   return 'strike';
 }
-const IRAN_KIND_LABEL = { strike: 'Strike / launch / alert', combat: 'Ground fighting', vessel: 'At sea', port: 'Energy site hit', nuclear: 'Nuclear site hit' };
+const IRAN_KIND_LABEL = { strike: 'Strike / launch / alert', combat: 'Ground fighting', vessel: 'Maritime', port: 'Energy', nuclear: 'Nuclear' };
 /** A legend row for a kind of event: the mark on a plain disc, since the colour now says who acted. */
 function kindLegendRow(cat, label, on, attr) {
   return `<button type="button" class="leg-item${on ? ' on' : ''}" ${attr} aria-pressed="${on ? 'true' : 'false'}"><span class="leg-ico kind">${EVENT_SVG[cat] || ''}</span>${escapeHtml(label)}</button>`;
@@ -5614,7 +5614,9 @@ function ensureMap(d) {
       content.onclick = (ev) => {
         const t = ev.target;
         if (!t) return;
-        if (t.closest('a, button, .pop-full')) return;
+        // Anywhere on the note opens and closes it, its open text too (user, 18 Oct); links, pictures and a selection keep theirs.
+        if (t.closest('a, button, img, video, .media')) return;
+        if (String(window.getSelection() || '')) return;
         toggle();
       };
     }
@@ -6337,7 +6339,7 @@ function renderLegend(d) {
     </div>
     <div class="leg-body">
       <p class="leg-hint">Tick to show, untick to hide.</p>
-      <div class="leg-sec">Territory</div>
+      <div class="leg-sec">Who</div>
       ${controlRows}
       ${row('saudi', COLORS.saudi, 'Saudi Arabia')}
       ${yemenEventRows()}
@@ -6347,11 +6349,14 @@ function renderLegend(d) {
     legendFitWired = true;
     window.addEventListener('resize', fitLegend);
   }
-  legend.querySelector('.leg-collapse').onclick = (ev) => {
+  // The legend opens from a click anywhere on it, and closes from its head (user, 18 Oct).
+  const flip = (ev) => {
     if (ev) { ev.preventDefault(); ev.stopPropagation(); }
     legendCollapsed = !legendCollapsed;
     renderLegend(d);
   };
+  legend.querySelector('.leg-head').onclick = flip;
+  legend.onclick = (ev) => { if (legendCollapsed) flip(ev); };
   legend.querySelectorAll('.leg-item').forEach((btn) => {
     btn.onclick = (ev) => {
       if (ev) { ev.preventDefault(); ev.stopPropagation(); }
@@ -6370,9 +6375,9 @@ function renderLegend(d) {
   });
 }
 /** The Yemen legend's events, by their mark (user, 17 Oct: no "Who acted" part; the pins take the colours of the ground's sides). The home page's map shows the same rows. */
-const YEMEN_KINDS = [['combat', 'Ground fighting'], ['strike', 'Strike / launch / alert'], ['vessel', 'Maritime incident'], ['port', 'Energy incident']];
+const YEMEN_KINDS = [['combat', 'Ground fighting'], ['strike', 'Strike / launch / alert'], ['vessel', 'Maritime'], ['port', 'Energy']];
 function yemenEventRows(kindOn = (k) => !!layersOn[k]) {
-  return `<div class="leg-sec">Events</div>
+  return `<div class="leg-sec">What</div>
       ${YEMEN_KINDS.map(([k, n]) => kindLegendRow(k, n, kindOn(k), `data-layer="${k}"`)).join('')}`;
 }
 
@@ -7923,20 +7928,18 @@ function renderIranLegend() {
     </div>
     <div class="leg-body">
       <p class="leg-hint">Tick to show, untick to hide.</p>
+      <p class="leg-sub leg-who">Who</p>
       ${rows}
       ${iranKindRows()}
-      <p class="leg-sub">Where</p>
-      ${[['land', 'On land'], ['sea', 'At sea']].map(([k, n]) => `<button type="button" class="leg-item leg-where${iranPins.where[k] ? ' on' : ''}" data-where="${k}" aria-pressed="${iranPins.where[k] ? 'true' : 'false'}"><span class="sw ink-dark" style="background:${k === 'sea' ? '#bfdbfe' : '#e7dcc8'}"><span class="tick">✓</span></span>${n}</button>`).join('')}
     </div>`;
-  legend.querySelector('.leg-collapse').onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); iranPins.collapsed = !iranPins.collapsed; renderIranLegend(); };
+  // Opens from a click anywhere on it, closes from its head (user, 18 Oct). No "Where" part (user, 18 Oct).
+  const flip = (ev) => { ev.preventDefault(); ev.stopPropagation(); iranPins.collapsed = !iranPins.collapsed; renderIranLegend(); };
+  legend.querySelector('.leg-head').onclick = flip;
+  legend.onclick = (ev) => { if (iranPins.collapsed) flip(ev); };
   legend.querySelectorAll('.leg-item').forEach((b) => {
     b.onclick = async (ev) => {
       ev.preventDefault(); ev.stopPropagation();
-      if (b.dataset.where) {
-        iranPins.where[b.dataset.where] = !iranPins.where[b.dataset.where];
-        renderIranLegend();
-        await loadIranLand();
-      } else if (b.dataset.kind) {
+      if (b.dataset.kind) {
         iranPins.kinds[b.dataset.kind] = iranPins.kinds[b.dataset.kind] === false;
       } else iranPins.on[b.dataset.side] = !iranPins.on[b.dataset.side];
       drawIranPins();
@@ -7946,7 +7949,7 @@ function renderIranLegend() {
 }
 /** The Iran legend's kinds of event (the marks). The home page's map shows the same rows. */
 function iranKindRows(on = (k) => iranPins.kinds[k] !== false) {
-  return `<p class="leg-sub">What happened</p>
+  return `<p class="leg-sub">What</p>
       ${IRAN_KINDS.map((k) => kindLegendRow(k, IRAN_KIND_LABEL[k], on(k), `data-kind="${k}"`)).join('')}`;
 }
 /** The note: the report as the card tells it, its time and place, its source. Nothing more to open. */
@@ -8455,9 +8458,11 @@ function irBox(b, i = 0) {
     body = `<div class="stat3 solo"><div><b>${irLink(b.value)}</b><span>${escapeHtml(b.caption || '')}</span></div></div>`;
   } else if (b.type === 'list' || b.type === 'incidents') {
     const th = `<tr>${b.cols.map(([h, cls]) => `<th scope="col" class="${cls || 'l'}">${escapeHtml(h)}</th>`).join('')}</tr>`;
-    const rows = b.rows.map((r) => `<tr>${r.map((c, j) => `<td class="${(b.cols[j] && b.cols[j][1]) || 'l'}">${c && typeof c === 'object' ? irLink(c) : escapeHtml(c == null ? '' : String(c))}</td>`).join('')}</tr>`);
+    // The first rows show; the rest open under them with Read more (user, 18 Oct: the Sanctions lists never closed, as no row was marked to hide).
+    const rows = b.rows.map((r, i) => `<tr${i >= SHOW ? ' class="led-rest"' : ''}>${r.map((c, j) => `<td class="${(b.cols[j] && b.cols[j][1]) || 'l'}">${c && typeof c === 'object' ? irLink(c) : escapeHtml(c == null ? '' : String(c))}</td>`).join('')}</tr>`);
     const stats = b.stats ? `<div class="stat3">${b.stats.map(([v, l]) => `<div><b>${irLink(v)}</b><span>${escapeHtml(l)}</span></div>`).join('')}</div>` : '';
-    body = `<div class="led-more expandable"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div><button type="button" class="toggle-sit led-tog" aria-expanded="false">Read more</button></div>`;
+    const tog = rows.length > SHOW ? '<button type="button" class="toggle-sit led-tog" aria-expanded="false">Read more</button>' : '';
+    body = `<div class="led-more${tog ? ' expandable' : ''}"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div>${tog}</div>`;
   }
   return `<div class="tally-box claims ledger ir${b.type === 'table' && b.rows.length > SHOW ? ' rows-more' : ''}">${head}${body}${spark}${note}</div>`;
 }

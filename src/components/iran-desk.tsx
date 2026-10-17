@@ -58,7 +58,7 @@ const IRAN_HTML = `
     <button type="button" id="btn-day-today">Today</button>
     <span class="tf-sep" aria-hidden="true"></span>
     <button type="button" id="btn-conflict-all" class="on" aria-label="The whole war, since 28 Feb 2026"><span class="tf-long">Whole war</span><span class="tf-short">All</span></button>
-    <button type="button" id="btn-period" aria-expanded="false" aria-controls="tf-range" aria-label="Pick a period">Period</button>
+    <button type="button" id="btn-period" aria-expanded="false" aria-controls="tf-range" aria-label="Pick your own dates">Custom</button>
   </div>
 </div>
 <main class="stage" id="stage">

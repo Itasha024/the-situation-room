@@ -17,6 +17,8 @@ a{color:inherit}
 .h-tag .flag{width:13px;height:9px;flex:none}
 .h-tag:hover{color:var(--accent-ui);border-color:var(--accent-ui)}
 .card .meta .h-tag,.card .meta .h-tags{margin-inline-start:auto}
+/* "Show on map" sits just left of the desk's tag, the tag staying top right (user, 18 Oct). */
+.card .meta .card-map+.h-tag,.card .meta .card-map+.h-tags{margin-inline-start:.45rem}
 .pts .h-tag{margin-inline-end:.15rem}
 
 /* The map and the reports, as on a desk */
@@ -526,7 +528,7 @@ html[data-theme="broadsheet-day"] .h-co-line path{filter:drop-shadow(0 1px 1px r
 @media (max-width:720px){html[data-theme="broadsheet-day"] .h-co-foot em{padding:.2rem .38rem}}
 
 /* The map on a phone leaves the start of what is below it in sight (user, 17 Oct). */
-@media (max-width:720px){.h-solo .map-wrap{height:min(52svh,440px);min-height:300px}}
+@media (max-width:720px){.h-solo .map-wrap{height:var(--map-h);min-height:300px}}
 /* Full screen, as on the desks. */
 body.map-focus #g-body{display:none}
 body.map-focus .h-solo .map-wrap{height:calc(100svh - 110px)}

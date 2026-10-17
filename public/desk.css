@@ -23,7 +23,9 @@ h1{margin:0;font-size:1.15rem}
 .layers button,.ghost,.more{background:var(--t-surface-2,#121a24);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.28rem .7rem;font:inherit;cursor:pointer;font-size:.75rem}
 .layers button.on{color:var(--t-strong,#fff);border-color:var(--t-line-strong,#334155);background:var(--t-surface-3,#1a2433)}
 .ghost{border-radius:8px}
-.stage{display:grid;grid-template-columns:minmax(0,1fr) 8px var(--rail-w, 360px);align-items:stretch;min-height:0;height:clamp(280px, calc(100dvh - 12.5rem), 78vh)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 8px var(--rail-w, 360px);align-items:stretch;min-height:0;height:var(--map-h)}
+/* The map ends about three quarters down the screen on every screen, phone or desktop, so the start of what is below it shows (user, 18 Oct). 190px is the header and toolbar above it. */
+:root{--map-h:max(300px, calc(74svh - 190px))}
 .map-wrap{position:relative;min-height:0;height:100%;border-inline-end:1px solid var(--line);overflow:hidden}
 #map{position:absolute;inset:0;background:var(--t-surface-1,#0a1018)}
 /* Never scrolls. It is a key, read at a glance; a scrollbar over the map turns
@@ -139,7 +141,7 @@ body.map-focus .map-wrap{min-height:calc(100vh - 110px)}
 .now-tag{display:inline-block;margin-right:.3rem;padding:.05rem .4rem;border-radius:999px;background:#14532d;color:var(--t-text,#bbf7d0);font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;vertical-align:.1em}
 footer{padding:.55rem 1rem .9rem;color:var(--muted);font-size:.65rem;line-height:1.4;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:.2rem}
 
-.situation{padding:.55rem 1rem;border-bottom:1px solid var(--line);background:var(--t-surface-1,#0c1219)}
+.situation{padding:.55rem 1rem;background:var(--t-surface-1,#0c1219)}
 .situation > h2{margin:0 0 .25rem;font-size:1.05rem;font-weight:700;color:var(--t-strong,#fff)}
 .situation p{margin:0;font-size:.82rem;line-height:1.45}
 .srcs{margin-top:.35rem;color:var(--muted);font-size:.68rem}
@@ -520,9 +522,9 @@ html{scroll-behavior:smooth}
     gap: 0;
   }
   .map-wrap {
-    min-height: 380px;
-    height: 46vh;
-    max-height: 520px;
+    min-height: 300px;
+    height: var(--map-h);
+    max-height: none;
     border-left: none;
     border-bottom: 1px solid var(--line);
     order: -1;

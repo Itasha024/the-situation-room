@@ -3,6 +3,23 @@
 Every mistake the operator (or a review) found, the rule that now catches it, and its test.
 Newest round first.
 
+## Round 34 (the numbers' misses, 17 Oct)
+
+User: "find the things the desk didnt pick and fix the mechanisms so itll find them next time". Audit of 3–17 Oct in the shared notes (`iran-numbers-audit.md`, `yemen-numbers-audit.md`).
+
+| Mistake | Rule now | Where | Test |
+|---|---|---|---|
+| Iran: the Treasury's 15 Oct sanctions (16 people, 10 firms) never reached the numbers; the cards did. The Iran numbers are a researched file (11 Oct) that nothing updates | OFAC's own Recent Actions list is read once an hour; each Iran or Hezbollah action's page is counted entry by entry (its program tag), put on top of the US sanctions box and added to the totals | `ofac.ts`, `iran-scan.server.ts`, `/api/brief?desk=iran` `sanctions`, `app.js renderIranNumbers` | `ofac.test.ts` |
+| Iran: maritime incidents (IMO: 113 to 14 Oct, panel 100), the 13 Oct Dhahran hit, UK's 12 Oct listings, Saudi dead | — (still the 11 Oct file: needs readers like OFAC's, e.g. the IMO's incident page, GOV.UK's content API) | — | — |
+| Yemen: cells cited cards that did not hold their figure (eight on one Khabar card; 72/125 on unrelated posts) | A figure is kept only when the card it cites holds it (Arabic digits, "233 thousand" read) | `tally.ts hasNumber`, `applyUpdates`, `applyClaims` | `numbers-17oct.test.ts` |
+| Yemen: the coalition's 19 Saudi dead dropped as "under 20" | Saudi rows have no under-20 rule | `numbers.ts tooSmall` | `numbers-17oct.test.ts` |
+| Yemen: Sawt al-Asima's one-day 26 replaced al-Hemyari's 251 | A newer count under half the standing one, from another voice, is a day's toll: the running count stays | `numbers.ts newer` | `numbers-17oct.test.ts` |
+| Yemen: the health ministry's 124 killed / 327 wounded "since 3 Sep" skipped; IOM spelled out, "UN:" and Arabic counts never reached the reader | A running count from a later start in the round counts; the official filter knows IOM, WHO, civil defence, Arabic bodies and digits | `tally.ts` SYSTEM, CLAIMS_SYSTEM, `OFFICIAL_RE`, `NUMBER_RE` | `numbers-17oct.test.ts` |
+| Yemen: one Dhahran hit in ten energy rows; Al-Sabaha in five, Bajil in four, Shedgum in three | Known names for Dhahran (Aramco HQ), Shedgum, Shaybah, Ghawar, Tanajib, Al-Sabaha, Bajil; stored rows join them on read | `ledger.ts KNOWN_SITES`, `withBaseline` | `numbers-17oct.test.ts` |
+| Yemen: two Hormuz ships ("near the strait") and a tanker off Al Jubayl in the Yemen sea ledger | The Saudi Gulf coast is the Iran war's; a vague place is judged by the card's text | `ledger.ts offYemenShip` | `numbers-17oct.test.ts` |
+| Yemen: about 119 sea and energy cards never read (the newest 30 a window only; 73 on 5 Oct) | 90 a window | `ledger.ts LEDGER_DOCS` | `numbers-17oct.test.ts` |
+| Yemen: wrong figures already stored (700 one-battle "Houthi killed", 72/125) | — (they stand until a newer figure replaces them; clearing them is a live database write, not done) | — | — |
+
 ## Round 29 (operator's review of 3 Oct)
 
 | Mistake | Rule now | Where | Test |

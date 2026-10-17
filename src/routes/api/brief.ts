@@ -4,6 +4,8 @@ import { briefWindow } from "@/lib/desk/brief";
 import { refreshBrief } from "@/lib/desk/brief-store";
 import { IRAN_BRIEF_KEY, type IranBrief } from "@/lib/desk/iran-brief";
 import { IRAN_NOW_KEY, type IranTimelineNow } from "@/lib/desk/iran-timeline-now";
+import { liveSanctionBoxes, OFAC_KEY, type OfacStore } from "@/lib/desk/ofac";
+import IRAN_NUMBERS from "../../../public/iran-numbers.json" with { type: "json" };
 import { metered } from "@/lib/desk/cpu-meter";
 import { deskParam } from "@/lib/desk/desk-route";
 import { deskById } from "@/lib/desks";
@@ -33,7 +35,9 @@ export const Route = createFileRoute("/api/brief")({
             const st = desk === "iran" ? await getStore() : null;
             const ib = st ? await st.getJson<IranBrief>(IRAN_BRIEF_KEY) : null;
             // The Timeline's Now box rides with the brief, as on the Yemen desk.
-            if (ib) return json({ ...ib, timelineNow: (await st!.getJson<IranTimelineNow>(IRAN_NOW_KEY)) ?? null }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=60");
+            // The US sanctions boxes as OFAC's own list stands (ofac.ts), over the researched file.
+            const sanctions = st ? liveSanctionBoxes(IRAN_NUMBERS as Parameters<typeof liveSanctionBoxes>[0], await st.getJson<OfacStore>(OFAC_KEY).catch(() => null)) : null;
+            if (ib) return json({ ...ib, timelineNow: (await st!.getJson<IranTimelineNow>(IRAN_NOW_KEY)) ?? null, sanctions }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=60");
             return json({ ok: true, desk, pending: true, ...briefWindow(new Date(), deskById(desk).cadenceHours) }, 200, "public, max-age=60", "public, s-maxage=300");
           }
           const store = await getStore();

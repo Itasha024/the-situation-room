@@ -47,7 +47,7 @@ const IRAN_ACTS =
 export const OFF_YEMEN_SEA =
   /\b(?:Persian Gulf|Arabian Gulf|the Gulf\b(?! of Aden)|Hormuz|Gulf of Oman|Qatar|Bahrain|Kuwait|Fujairah|Khor Fakkan|Ras Tanura|Ras Laffan|Jebel Ali|Dubai|Abu Dhabi|Sharjah|Muscat|Sohar|Iran|Iranian|Bandar Abbas|Kharg|Basra)\b|الخليج العربي|الخليج الفارسي|هرمز|خليج عمان|قطر|البحرين|الكويت|الفجيرة|إيران/i;
 // A ship card that names none of these is not Yemen's, whatever kept it.
-const YEMEN_SEA = /\b(?:Yemen\w*|Houthis?|Ansar ?Allah|Red Sea|Bab (?:al|el)[- ]Mand[ae]b|Gulf of Aden|Arabian Sea|Hodeidah|Mocha|Aden|Salif|Ras Isa|Socotra|Mukalla)\b|اليمن|الحوثي|أنصار الله|البحر الأحمر|باب المندب|خليج عدن|الحديدة/i;
+export const YEMEN_SEA = /\b(?:Yemen\w*|Houthis?|Ansar ?Allah|Red Sea|Bab (?:al|el)[- ]Mand[ae]b|Gulf of Aden|Arabian Sea|Hodeidah|Mocha|Aden|Salif|Ras Isa|Socotra|Mukalla)\b|اليمن|الحوثي|أنصار الله|البحر الأحمر|باب المندب|خليج عدن|الحديدة/i;
 
 export function isIranCard(r: Pick<LiveReport, "summary" | "text">): boolean {
   const text = `${r.summary}\n${r.text ?? ""}`.replace(IRAN_LABEL, " ");

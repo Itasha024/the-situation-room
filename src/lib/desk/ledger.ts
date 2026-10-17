@@ -14,7 +14,20 @@ import { askChain, COMBINE_MODELS } from "./models.ts";
 import type { DeskStore } from "./store.ts";
 import { outletSide } from "./digest.ts";
 import { LEDGER_BASELINE } from "./ledger-baseline.ts";
-import { OFF_YEMEN_SEA } from "./desk-route.ts";
+import { OFF_YEMEN_SEA, YEMEN_SEA } from "./desk-route.ts";
+
+/** Saudi Arabia's Gulf coast: its waters are the Iran war's too (17 Oct: a tanker off Al Jubayl). */
+const SAUDI_GULF = /\b(?:Jubail|Jubayl|Dammam|Ras Tanura|Khobar|Eastern Province|east(?:ern)? coast of Saudi)/i;
+/**
+ * A ship off Yemen's seas: its place names the Gulf, or the place says neither
+ * and the card is about the Gulf or Hormuz alone (14 Oct: two ships sunk "near
+ * the strait" were Hormuz's).
+ */
+export function offYemenShip(place: string, text: string): boolean {
+  if (OFF_YEMEN_SEA.test(place) || SAUDI_GULF.test(place)) return true;
+  if (YEMEN_SEA.test(place)) return false;
+  return (OFF_YEMEN_SEA.test(text) || SAUDI_GULF.test(text)) && !YEMEN_SEA.test(text);
+}
 import { notNewEvent } from "./pin-rule.ts";
 
 export const LEDGER_KEY = "ledger";
@@ -130,6 +143,14 @@ export const KNOWN_SITES: KnownSite[] = [
   { id: "jeddah", name: "Jeddah bulk plant", kind: "terminal", country: "Saudi Arabia", re: /Jeddah|Jiddah|جدة/i },
   { id: "ras-tanura", name: "Ras Tanura", kind: "terminal", country: "Saudi Arabia", re: /Ras Tanura|رأس تنورة/i },
   { id: "abqaiq", name: "Abqaiq", kind: "processing plant", country: "Saudi Arabia", re: /Abqaiq|بقيق/i },
+  // 13 Oct: one hit on Aramco's head office in ten rows ("Aramco HQ", "Aramco building in Dhahran"...).
+  { id: "dhahran-aramco", name: "Aramco headquarters, Dhahran", kind: "headquarters", country: "Saudi Arabia", re: /Dhahran|الظهران|Aramco(?:'s)? (?:headquarters|HQ|head office)|(?:headquarters|HQ|head office) of (?:Saudi )?Aramco|مقر (?:شركة )?أرامكو/i },
+  { id: "shedgum", name: "Shedgum gas plant", kind: "gas plant", country: "Saudi Arabia", re: /Shedgum|Shadqam|Shedgam|شدقم/i },
+  { id: "shaybah", name: "Shaybah oilfield", kind: "oilfield", country: "Saudi Arabia", re: /Shaybah|Shaibah|شيبة/i },
+  { id: "ghawar", name: "Ghawar oilfield", kind: "oilfield", country: "Saudi Arabia", re: /Ghawar|الغوار/i },
+  { id: "tanajib", name: "Tanajib gas plant", kind: "gas plant", country: "Saudi Arabia", re: /Tanajib|تناجيب/i },
+  { id: "sabaha-sanaa", name: "Al-Sabaha oil depot, Sanaa", kind: "fuel depot", country: "Yemen", re: /Sabaha|الصباحة/i },
+  { id: "bajil-fuel", name: "Fuel depot, Bajil (Hodeidah)", kind: "fuel depot", country: "Yemen", re: /Bajil|باجل/i },
   // The depot by King Khalid airport only when a report says depot or tanks and no refinery.
   { id: "riyadh-depot", name: "Riyadh fuel depot (King Khalid airport)", kind: "fuel depot", country: "Saudi Arabia", re: /^(?![\s\S]*(?:refiner|مصف))[\s\S]*(?:(?:fuel|oil|Aramco) (?:depot|tanks?|storage)[^.]{0,40}Riyadh|Riyadh[^.]{0,40}(?:fuel|oil|Aramco) (?:depot|tanks?|storage)|خزان[^.]{0,30}الرياض)/i },
   // Any other Aramco site in Riyadh is the refinery (user, 3 Oct: nine names, one attack).
@@ -248,6 +269,8 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
   // A strike their own camp alone reports stays their claim, rows stored before this rule too.
   for (const x of out.ships) if (houthiOutlet(x.src.name)) x.src.claim = true;
   for (const x of out.sites) for (const h of x.hits) if (houthiOutlet(h.name)) h.claim = true;
+  // Gulf waters are the Iran war's, rows stored before the rule too (17 Oct: a tanker off Al Jubayl).
+  out.ships = out.ships.filter((x) => !offYemenShip(x.place, "") || /houthi|ansar ?allah|الحوثي|أنصار الله/i.test(x.attacker ?? ""));
   // A site stored under another name before its known names were added ("Taibah power
   // plant") joins its known row.
   for (const x of [...out.sites]) {
@@ -335,7 +358,7 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
     if (s.ship && !nameInText(d.text, s.ship)) continue;
     // The Gulf, Hormuz and the Gulf of Oman are the Iran war's, not Yemen's,
     // unless the Houthis did it (8 Oct: the tanker Acers off Qatar counted here).
-    if (OFF_YEMEN_SEA.test(s.place) && !/houthi|ansar ?allah|الحوثي|أنصار الله/i.test(s.attacker ?? "")) continue;
+    if (offYemenShip(s.place, d.text) && !/houthi|ansar ?allah|الحوثي|أنصار الله/i.test(s.attacker ?? "")) continue;
     const date = strikeDay(s.date, d.date);
     // One incident, one row: the same ship within a day; a ship with no name
     // is the one off the same town that day. A later report of an attack
@@ -444,11 +467,14 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
 /** A card about the sea or energy. */
 export const SEA_ENERGY = /\b(?:ships?|vessels?|tankers?|carriers?|freighters?|bulkers?|UKMTO|JMIC|Aspides|Atalanta|CMF|shipping|transits?|Bab (?:al|el)[- ]Mand[ae]b|Red Sea|Gulf of Aden|Suez|pipeline|pump(?:ing)? station|refiner(?:y|ies)|terminal|Aramco|oil|crude|exports?|barrels?|bpd|LNG|gas plant|power (?:station|plant)|desalination)\b|سفين|سفن|ناقلة|الملاحة|باب المندب|البحر الأحمر|أرامكو|مصفاة|خط أنابيب|محطة ضخ|النفط|صادرات|برميل/i;
 
-function ledgerDocs(reports: LiveReport[]): Doc[] {
+export const LEDGER_DOCS = 90;
+
+export function ledgerDocs(reports: LiveReport[]): Doc[] {
   return reports
     .filter((r) => SEA_ENERGY.test(`${r.summary || ""} ${r.text || ""}`))
     .sort((a, b) => Date.parse(String(b.at)) - Date.parse(String(a.at)))
-    .slice(0, 30)
+    // 30 left about 119 cards of 3–17 Oct unread (73 on 5 Oct alone).
+    .slice(0, LEDGER_DOCS)
     .map((r) => ({
       name: String(r.source || "desk report"),
       url: String(r.url || ""),

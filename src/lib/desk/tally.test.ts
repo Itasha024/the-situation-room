@@ -7,7 +7,8 @@ import test from "node:test";
 
 import { TALLY_SEED, applyUpdates } from "./tally.ts";
 
-const docs = [{ name: "IOM update #6", url: "https://reliefweb.int/x", date: "2026-09-19", text: "" }];
+// The card holds every figure the tests file from it: a figure must be in the card it cites (17 Oct).
+const docs = [{ name: "IOM update #6", url: "https://reliefweb.int/x", date: "2026-09-19", text: "118,086 displaced; 70 wounded; 100 killed; 420 killed; 4,500,000 displaced; 5000 refugees" }];
 const now = new Date("2026-09-21T12:00:00Z");
 
 test("a higher official figure replaces the old one and names its source", () => {
@@ -89,7 +90,7 @@ test("each side keeps its own figure for the same field", () => {
 });
 
 test("a claim never goes down unless the same voice revises it, and a side must be named", () => {
-  const d = [{ name: "x", url: "u", date: "2026-09-21", text: "" }];
+  const d = [{ name: "x", url: "u", date: "2026-09-21", text: "900 killed; 500 killed; 950 killed" }];
   const one = applyClaims(CLAIMS_SEED, [{ field: "killed.gov", by: "houthi", value: 900, source: "Yahya Saree", doc: 0 }], d, now);
   const lower = applyClaims(one, [{ field: "killed.gov", by: "houthi", value: 500, source: "Al-Masirah", doc: 0 }], d, now);
   assert.equal(lower.fields["killed.gov"]?.houthi?.value, 900);

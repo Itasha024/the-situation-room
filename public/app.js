@@ -8002,9 +8002,14 @@ function renderIranNumbers() {
   const d = iranNums.d;
   if (!el || !d || !Array.isArray(d.sets)) return;
   if (!iranNums.cat) iranNums.cat = d.sets[0].key;
-  const set = d.sets.find((s) => s.key === iranNums.cat) || d.sets[0];
+  const found = d.sets.find((s) => s.key === iranNums.cat) || d.sets[0];
+  // The US sanctions boxes as OFAC's own list now stands, read by the server (user, 17 Oct).
+  const live = iranBrief.b && iranBrief.b.sanctions;
+  const swap = live && Array.isArray(live.boxes) ? new Map(live.boxes.map((b) => [b.title, b])) : null;
+  const set = swap && found.key === 'sanc' ? { ...found, boxes: found.boxes.map((b) => swap.get(b.title) || b) } : found;
+  const ofacAt = swap && set.key === 'sanc' && live.through ? ` · US sanctions read from OFAC to ${escapeHtml(fmtDay(live.through))}` : '';
   const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${d.sets.map((s) => `<button type="button" data-cat="${s.key}" aria-pressed="${s.key === set.key}"${s.key === set.key ? ' class="on"' : ''}>${escapeHtml(s.name)}</button>`).join('')}</div>`;
-  el.innerHTML = `<p class="cadence at-head">Researched from the sources · as of ${escapeHtml(fmtDay(d.asOf))}</p>${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
+  el.innerHTML = `<p class="cadence at-head">Researched from the sources · as of ${escapeHtml(fmtDay(d.asOf))}${ofacAt}</p>${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
   wirePager(el, 0, () => { hideSpot(); irClamp(el); });
   wireSpots(el);
   irClamp(el);
@@ -8078,12 +8083,13 @@ async function loadIranBrief() {
     if (!res.ok) return;
     const b = await res.json();
     if (!b || !b.ok || b.pending) return;
-    const sig = `${b.updatedAt}|${b.proseTriedAt || ''}`;
+    const sig = `${b.updatedAt}|${b.proseTriedAt || ''}|${(b.sanctions && b.sanctions.through) || ''}`;
     if (sig === iranBrief.sig) return;
     iranBrief.b = b;
     iranBrief.sig = sig;
     renderIranBrief();
     renderIranTimeline();
+    renderIranNumbers();
   } catch (e) { console.warn('iran brief', e); }
 }
 /** Read more on a box: the button, or a click anywhere in it that is not a link or a button. */

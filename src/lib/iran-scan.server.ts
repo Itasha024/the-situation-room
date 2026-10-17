@@ -27,6 +27,7 @@ import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/t
 import { scanTrump } from "./trump-feed.server.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
 import { refreshIranBrief } from "./desk/iran-brief.ts";
+import { refreshOfac } from "./desk/ofac.ts";
 import {
   type DeskPipe,
   shapeCards,
@@ -426,6 +427,8 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   await store.putJson(STATE_KEY, state);
   // The 3-hour brief (stage 6): built once its window closes, never held for by the cycle.
   void refreshIranBrief(store).catch((err) => console.error("[iran-brief]", err instanceof Error ? err.message : err));
+  // US sanctions from OFAC's own list, once an hour (user, 17 Oct: the 15 Oct sanctions never reached the numbers).
+  void refreshOfac(store).catch((err) => console.error("[ofac]", err instanceof Error ? err.message : err));
   await trump;
   const tookMs = Date.now() - started;
   try {

@@ -83,8 +83,8 @@ const RELIEFWEB_RSS =
 
 /** Statements from bodies whose count is official, as the desk logged them. */
 const OFFICIAL_RE =
-  /ministry of (?:public )?health|health ministry|human rights ministry|coalition|Saudi Press Agency|\bSPA\b|OCHA|WHO\b|IOM\b|UNHCR|UNICEF|OHCHR|United Nations|UN (?:agency|office|envoy)/i;
-const NUMBER_RE = /\b\d[\d,]*\b.{0,40}\b(?:killed|dead|deaths|wounded|injured|casualties|displaced|refugees)\b/i;
+  /ministry of (?:public )?health|health ministry|human rights ministry|coalition|Saudi Press Agency|\bSPA\b|OCHA|WHO\b|World Health Organi[sz]ation|IOM\b|International Organi[sz]ation for Migration|UNHCR|UNICEF|OHCHR|United Nations|\bUN(?::| (?:agency|office|envoy|says|said|report))|Civil Defen[cs]e|الدفاع المدني|وزارة الصحة|التحالف|منظمة الهجرة|المفوضية/i;
+const NUMBER_RE = /\b\d[\d,]*\b.{0,40}\b(?:killed|dead|deaths|wounded|injured|casualties|displaced|refugees)\b|[\d٠-٩][\d٠-٩,٬]*.{0,40}(?:قتيل|قتلى|شهيد|شهداء|جريح|جرحى|مصاب|نازح|نزوح)/i;
 
 type Doc = { name: string; url: string; date: string; text: string };
 
@@ -157,7 +157,8 @@ Fields:
 - killed.total / injured.total: a total for all sides together that the document does not split by side or call civilians (e.g. "nearly 700 people killed")
 - idp: people internally displaced inside Yemen in this round
 - refugees: people who fled Yemen in this round
-Never add up single incidents yourself, never estimate, never use totals for the whole war since 2014/2015. If a document gives nothing usable, return no update for it.
+Never add up single incidents yourself, never estimate, never use totals for the whole war since 2014/2015. A body's running count from a later start in this round ("since 3 September") is cumulative too: take it. A count for one day, one attack or one battle is not.
+If a document gives nothing usable, return no update for it.
 Return JSON {"updates":[{"field":"killed.houthi","value":123,"source":"<body that issued the number>","doc":<document index>}]}.`;
 
 type Update = { field: Field; value: number; source: string; doc: number };
@@ -186,8 +187,16 @@ function setField(t: Tally, f: Field, v: number) {
   }
 }
 
-/** The number is written in the text: "4,481", "4481". */
-const hasNumber = (text: string, n: number) => text.includes(n.toLocaleString("en-US")) || new RegExp(`\\b${n}\\b`).test(text);
+/** The number is written in the text: "4,481", "4481", "٤٤٨١", "217 thousand", "1.2 million". */
+export function hasNumber(raw: string, n: number): boolean {
+  const text = String(raw || "").replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x660)).replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x6f0)).replace(/٬/g, ",");
+  // Whole numbers only: "1,282" is not 128, "12.5" is not 12.
+  for (const form of new Set([n.toLocaleString("en-US"), String(n)])) {
+    if (new RegExp(`(?<![\\d.,])${form}(?![\\d]|[.,]\\d)`).test(text)) return true;
+  }
+  const k = n / 1000, m = n / 1e6;
+  return (Number.isInteger(k) && new RegExp(`\\b${k}\\s*(?:thousand|k\\b|ألف|الف)`, "i").test(text)) || (m >= 1 && new RegExp(`\\b${+m.toFixed(2)}\\s*(?:million|m\\b|مليون)`, "i").test(text));
+}
 
 /** Apply model updates. Pure, so the rules are testable. */
 export function applyUpdates(current: Tally, updates: Update[], docs: Doc[], now: Date): Tally {
@@ -201,6 +210,8 @@ export function applyUpdates(current: Tally, updates: Update[], docs: Doc[], now
     // Official means an official body: a journalist's or an outlet's count is not (Fares al-Hemyari, 1 Oct).
     if (!isOfficialBody(u.source || doc.name)) continue;
     const value = Math.round(u.value);
+    // The figure is in the document it cites (17 Oct: eight cells cited one Khabar card that held none of them).
+    if (!hasNumber(doc.text, value)) continue;
     const prev = getField(next, u.field);
     const prevFrom = next.from[u.field];
     // A count only moves backwards when the body that issued it revises it
@@ -256,7 +267,7 @@ You get the CURRENT claims and NEW documents. Return a figure only when a docume
 - by "gov": the Yemeni government, its army or army media, the Saudi-led coalition, Saudi officials, or their outlets
 Neutral bodies (UN agencies, news agencies reporting their own count) are NOT a side: skip them.
 "by" is who STATES the figure, never whose losses it counts: Erem News, Almashhad, Al Arabiya, Al Hadath, Asharq Al-Awsat, Okaz, Saudi and Emirati media and the government's army media state "gov" figures, even about Houthi losses; Al-Masirah, Saba, Al-Mayadeen and the Houthi-aligned Telegram channels state "houthi" figures.
-A count for one day, one battle or one front ("63 killed in 24 hours", "90 killed at Kahbub") is not a cumulative total: skip it.
+A count for one day, one battle or one front ("63 killed in 24 hours", "90 killed at Kahbub") is not a cumulative total: skip it. A running count from a later start in this round ("the health ministry: 124 killed since 3 September") is cumulative: take it.
 Fields: killed.houthi / injured.houthi (people on the Houthi side), killed.gov / injured.gov (government side), killed.saudi / injured.saudi (in or from Saudi Arabia), killed.civilians / injured.civilians (only when the text says civilians), killed.total / injured.total (an unsplit total), idp, refugees.
 A side's claim about the other side's losses counts (the coalition saying 1,200 Houthis were killed is killed.houthi by "gov"). Never add up single incidents, never estimate, never use whole-war totals since 2014/2015.
 Return JSON {"updates":[{"field":"killed.houthi","by":"gov","value":1200,"source":"<who stated it>","doc":<document index>}]}.`;
@@ -273,6 +284,8 @@ export function applyClaims(current: Claims, updates: ClaimUpdate[], docs: Doc[]
     if (!doc) continue;
     if (u.field.endsWith(".civilians") && !/civilian|مدني/i.test(doc.text)) continue;
     const value = Math.round(u.value);
+    // The figure is in the card it cites (17 Oct: 72 and 125 cited cards that did not hold them).
+    if (!hasNumber(doc.text, value)) continue;
     const prev = next.fields[u.field]?.[u.by];
     // The same rules as the official count: never backwards unless the same
     // voice revises itself, and a tenfold jump is a whole-war figure.

@@ -116,7 +116,13 @@ const newer = (a: Cell | undefined, b: Cell | undefined): Cell | undefined => {
   // One figure from two records: keep the one that links to its source.
   if (a.value === b.value && Boolean(a.url) !== Boolean(b.url)) return a.url ? a : b;
   const d = String(a.date).localeCompare(String(b.date));
-  if (d) return d > 0 ? a : b;
+  if (d) {
+    const [late, early] = d > 0 ? [a, b] : [b, a];
+    // A running count does not fall to under half from someone else: that is one
+    // day's or one battle's toll (17 Oct: Sawt al-Asima's 26 over Fares al-Hemyari's 251).
+    if (late.value * 2 < early.value && late.name !== early.name) return early;
+    return late;
+  }
   return a.value >= b.value ? a : b;
 };
 
@@ -128,8 +134,11 @@ const host = (url: string | undefined) => {
   }
 };
 
-/** One day's or one battle's toll, filed as if it were a total. */
-const tooSmall = (cell: Cell) => cell.value < 20;
+/**
+ * One day's or one battle's toll, filed as if it were a total. Saudi Arabia's
+ * dead and wounded are few: 19 is its total (17 Oct: the coalition's 19 killed was dropped).
+ */
+const tooSmall = (cell: Cell, key = "") => cell.value < 20 && !key.endsWith(".saudi");
 
 /**
  * The panel's cells: the baseline under the live figures, newer wins. A claim
@@ -148,7 +157,7 @@ export function mergeNumbers(tally: Tally | null, claims: Claims | null, base: N
   const putTally = (key: string, cell: Cell) => {
     if (isOfficialBody(cell.name)) return put(key, "official", cell);
     const side = sideOf(cell.name);
-    if (side && !tooSmall(cell)) put(key, side, cell);
+    if (side && !tooSmall(cell, key)) put(key, side, cell);
   };
   if (tally) {
     for (const group of ["killed", "injured"] as const) {
@@ -165,7 +174,7 @@ export function mergeNumbers(tally: Tally | null, claims: Claims | null, base: N
   }
   for (const [key, bySide] of Object.entries(claims?.fields ?? {})) {
     for (const [col, claim] of Object.entries(bySide ?? {}) as [Column, Cell][]) {
-      if (!claim || tooSmall(claim)) continue;
+      if (!claim || tooSmall(claim, key)) continue;
       // The same figure from the same site already stands in another column.
       if (Object.values(cells[key] ?? {}).some((x) => x && x.value === claim.value && host(x.url) && host(x.url) === host(claim.url))) continue;
       const side = sideOf(claim.name);

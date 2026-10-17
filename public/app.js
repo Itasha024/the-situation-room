@@ -7086,6 +7086,22 @@ function installSectionNav() {
     <ol class="sec-list" id="sec-list">${items.map(([id, name]) => `<li><a href="#${id}" data-sec="${id}">${name}</a></li>`).join('')}</ol>`;
   document.body.appendChild(nav);
   document.documentElement.classList.add('has-sec-nav');
+  // The pill sits at the screen's bottom left: when it is over the map's corner, the legend there rises above it.
+  const liftLegend = () => {
+    const tab = nav.querySelector('.sec-tab'), wrap = document.getElementById('map-wrap');
+    if (!tab || !wrap) return;
+    const n = tab.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    const over = n.width && n.top < w.bottom && n.bottom > w.top && n.left < w.left + 200;
+    // Only near the map's foot: scrolled further, the legend keeps to the map's corner.
+    const lift = over ? Math.round(w.bottom - n.top + 8 - 12) : 0;
+    wrap.style.setProperty('--leg-lift', (lift > 0 && lift <= 70 ? lift : 0) + 'px');
+  };
+  let liftRaf = 0;
+  const liftSoon = () => { cancelAnimationFrame(liftRaf); liftRaf = requestAnimationFrame(liftLegend); };
+  window.addEventListener('scroll', liftSoon, { passive: true });
+  window.addEventListener('resize', liftSoon);
+  setTimeout(liftLegend, 0);
+  setTimeout(liftLegend, 800);
   const tab = nav.querySelector('.sec-tab');
   const list = nav.querySelector('.sec-list');
   const open = (on) => { nav.classList.toggle('open', on); tab.setAttribute('aria-expanded', String(on)); };

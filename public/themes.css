@@ -841,6 +841,6 @@ html.desk-going .stage>:not(.map-wrap),html.desk-going .stage~*,html.desk-going 
 .map-wrap{view-transition-name:deskmap}
 @media (prefers-reduced-motion:reduce){html.desk-going *{transition:none!important}}
 
-/* Every map's legend at the top left, under the zoom buttons, opening downwards (17 Oct): closed at first,
-   it sat at the bottom left under the Sections button. */
-html .map-wrap .legend{top:84px;bottom:auto;max-height:calc(100% - 96px)}
+/* Every map's legend at the bottom left (user, 17 Oct), lifted just clear of the Sections button
+   when that button is over the map's corner (app.js liftLegend). */
+html .map-wrap .legend{top:auto;bottom:calc(12px + var(--leg-lift,0px))}

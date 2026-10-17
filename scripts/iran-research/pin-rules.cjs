@@ -153,4 +153,11 @@ function seaTwins(base, sea) {
   return drop;
 }
 
-module.exports = { fixBase, seaTwins, skeleton };
+/*
+ * A nuclear site hit: a named nuclear site, not the town it is near (user, 18 Oct: 143 of 219 "nuclear" pins
+ * were Bushehr's air base, naval base, barracks or the town itself; Arak and Isfahan are cities too).
+ * The same words as public/app.js IRAN_NUCLEAR_RE, which reads the live pins.
+ */
+const NUCLEAR_SITE = /\bnuclear (?:site|facilit|plant|power|reactor|complex|installation)|\b(?:fordow|natanz|khondab|heavy[- ]water|enrichment|uranium|yellowcake|ardakan|saghand|IR-40|tehran research reactor|(?:bushehr|arak|isfahan|karaj) (?:nuclear|reactor|power plant|npp|uranium|ucf))\b|محطة بوشهر النووية|نطنز|فوردو|نیروگاه اتمی بوشهر/i;
+
+module.exports = { fixBase, seaTwins, skeleton, NUCLEAR_SITE };

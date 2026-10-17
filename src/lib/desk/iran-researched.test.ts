@@ -46,3 +46,9 @@ test("a ship attack told twice, timed and untimed, at sea the same day is one pi
   assert.deepEqual([...drop], [0]);
   assert.equal(base[1].also[0].source, "Sabereen News");
 });
+
+test("a nuclear site hit names the site, not the town near it", () => {
+  const { NUCLEAR_SITE } = require("../../../scripts/iran-research/pin-rules.cjs");
+  for (const s of ["Attack on Bushehr nuclear plant", "Strike on Natanz", "US strike on Fordow", "Khondab heavy water reactor hit", "Ardakan yellowcake plant", "Isfahan uranium conversion facility struck", "Taleghan nuclear site"]) assert.ok(NUCLEAR_SITE.test(s), s);
+  for (const s of ["US strike on Bushehr air base", "Attack on IRGC barracks, Bushehr", "Explosions heard in Bushehr", "Drone strike on Arak", "Air strike on Isfahan airport", "Iranian nuclear scientist's car hit in Tehran"]) assert.ok(!NUCLEAR_SITE.test(s), s);
+});

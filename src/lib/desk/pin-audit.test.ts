@@ -251,3 +251,9 @@ test("a card stored with no place takes one from its own headline; one naming no
   assert.equal(placeFromWords("Six Saudi soldiers killed in Yemeni attack", "combat"), null);
   assert.equal(placeFromWords("Houthi Armed Forces spokesperson: Saudi coalition conducted 101 airstrikes in 24 hours", "strike"), null);
 });
+
+test("the damage an earlier attack did is no new pin; a strike that hits is one (18 Oct: SNN's Bushehr airport terminal)", () => {
+  assert.equal(notEvent({ label: "US attack caused serious damage to Bushehr airport terminal" }), true);
+  assert.equal(notEvent({ label: "Officials assess the damage at Hodeidah port after Saudi raids" }), true);
+  assert.equal(notEvent({ label: "US strike hits Bushehr airport terminal" }), false);
+});

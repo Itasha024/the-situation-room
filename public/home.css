@@ -242,6 +242,7 @@ a{color:inherit}
 .h2-rows a{font:500 .94rem/1.35 var(--f-card);color:var(--t-strong);text-decoration:none}
 .h2-rows a:hover{text-decoration:underline}
 .h2-rows small{grid-column:2;font-size:.64rem;color:var(--t-muted)}
+.h2-map-note{margin:0 0 .3rem;font:400 .74rem/1.3 var(--f-body);color:var(--t-muted)}
 .h2-mini-map{position:relative;height:150px;border:1px solid var(--t-line-strong);background:var(--t-surface-2);overflow:hidden}
 .h2-mini-map .leaflet-control-zoom a{width:26px;height:26px;line-height:26px;font-size:15px}
 .h2-mini-map .leaflet-container{background:transparent}

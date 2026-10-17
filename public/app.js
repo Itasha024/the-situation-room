@@ -215,7 +215,8 @@ const yemenSideOf = (ev) => (YEMEN_PIN_SIDES().some(([k]) => k === ev.actor) ? e
 const yemenInk = (ev) => YEMEN_PIN_SIDES().find(([k]) => k === yemenSideOf(ev))[1];
 /* What happened on the Iran map: the researched pins carry it (map-pack.cjs), the live ones are read the same way. */
 const IRAN_KINDS = ['strike', 'combat', 'vessel', 'port', 'nuclear'];
-const IRAN_NUCLEAR_RE = /\bnuclear (?:site|facilit|plant|reactor|complex)|\b(?:fordow|natanz|bushehr|arak|isfahan nuclear|enrichment (?:site|plant|facilit))/i;
+// A named nuclear site, not the town near it (user, 18 Oct); the same words as scripts/iran-research/pin-rules.cjs NUCLEAR_SITE.
+const IRAN_NUCLEAR_RE = /\bnuclear (?:site|facilit|plant|power|reactor|complex|installation)|\b(?:fordow|natanz|khondab|heavy[- ]water|enrichment|uranium|yellowcake|ardakan|saghand|IR-40|tehran research reactor|(?:bushehr|arak|isfahan|karaj) (?:nuclear|reactor|power plant|npp|uranium|ucf))\b|محطة بوشهر النووية|نطنز|فوردو|نیروگاه اتمی بوشهر/i;
 const IRAN_ENERGY_RE = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel (?:depot|tank|storage)|storage tank|pipeline|power (?:station|plant)|gas (?:field|plant|facilit)|petrochem|\blng\b|desalination|electricity (?:station|grid)|south pars|kharg|ras tanura|abqaiq/i;
 const IRAN_GROUND_RE = /\b(?:artillery|shelling|tanks? fire|sniper|clash|clashes|ground (?:assault|incursion|raid)|gunfight|firefight)\b/i;
 function iranKindOf(ev) {

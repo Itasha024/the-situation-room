@@ -32,7 +32,7 @@ let movedN = 0;
 // What happened, for the pin's mark (user, 17 Oct: the mark says what happened, the colour who did it):
 // 0 a strike or launch, 1 fighting on the ground, 2 at sea, 3 an energy site hit, 4 a nuclear site hit.
 // The same words as public/app.js iranKindOf, which reads the live pins.
-const NUCLEAR = /\bnuclear (?:site|facilit|plant|reactor|complex)|\b(?:fordow|natanz|bushehr|arak|isfahan nuclear|enrichment (?:site|plant|facilit))/i;
+const NUCLEAR = require('./pin-rules.cjs').NUCLEAR_SITE;
 const ENERGY = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel (?:depot|tank|storage)|storage tank|pipeline|power (?:station|plant)|gas (?:field|plant|facilit)|petrochem|\blng\b|desalination|electricity (?:station|grid)|south pars|kharg|ras tanura|abqaiq/i;
 const GROUND = /\b(?:artillery|shelling|tanks? fire|sniper|clash|clashes|ground (?:assault|incursion|raid)|gunfight|firefight)\b/i;
 const kindOf = (p, sea) => { const s = `${p.label || ''} ${p.place || ''}`; return NUCLEAR.test(s) ? 4 : ENERGY.test(s) && !/tanker/i.test(s) ? 3 : sea ? 2 : GROUND.test(s) ? 1 : 0; };

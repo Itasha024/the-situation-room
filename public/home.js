@@ -219,42 +219,63 @@
   const front = (id) => D.fronts.find((f) => f.id === id);
   const inB = (e, b) => e.lat >= b[0][0] && e.lat <= b[1][0] && e.lng >= b[0][1] && e.lng <= b[1][1];
   const PICKS = ['hormuz', 'bab', 'oil', 'trump'];
+  /* Ships go to the sea they are in (user, 18 Oct: no Shipping story beside Hormuz and Bab al-Mandab, they repeated it). */
+  const SHIP_RE = /\b(?:ships?|vessels?|tankers?|freighters?|ukmto|seafarers?|crew)\b/i;
+  const GULF_SEA_RE = /hormuz|gulf of oman|persian gulf|arabian gulf|\bthe gulf\b|fujairah|khor fakkan|bandar abbas|qeshm|ras al-khaimah|jask|chabahar|kharg/i;
+  const RED_SEA_RE = /red sea|bab al-mandab|bab el-mandeb|gulf of aden|hodeidah|mocha|aden|yanbu|jeddah|eritrea|djibouti/i;
+  /* Inside Iran is Iran's land; Hormuz, its waters and islands (user, 18 Oct: the two stories repeated each other). */
+  const AT_SEA_RE = /hormuz|strait|tanker|\bships?\b|vessel|naval|navy|gulf of oman|persian gulf|seized? (?:a )?(?:ship|tanker)/i;
+  const STRAIT_ISLE_RE = /hormuz|strait|qeshm|larak|hengam|abu musa|tunbs?\b|island/i;
+  const inRing = (lng, lat, ring) => { let x = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) x = !x; } return x; };
+  /** The country a pin is in, from the Iran desk's map of the war's countries; null at sea or before the map is read. */
+  function countryAt(e) {
+    if (!irGeo || !irGeo.features) return null;
+    for (const f of irGeo.features) {
+      const g = f.geometry; const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+      if (polys.some((p) => inRing(e.lng, e.lat, p[0]) && !p.slice(1).some((h) => inRing(e.lng, e.lat, h)))) return f.properties.name;
+    }
+    return null;
+  }
+  const atSea = (e) => !!e.sea || e.cat === 'vessel' || A('iranAtSea')(e) === true;
+  const placeText = (e) => `${e.label || ''} ${e.place || ''}`;
+  // On Iran's land and not on the strait's islands; Iran's strikes on the Kurds in Iraq belong here too.
+  const onIranLand = (e) => !atSea(e) && !STRAIT_ISLE_RE.test(placeText(e)) && (countryAt(e) === 'Iran' || (countryAt(e) === 'Iraq' && e.actor === 'iran'));
+  const inStrait = (e) => atSea(e) || STRAIT_ISLE_RE.test(placeText(e));
   let T = [], TOPIC = {};
   function buildTopics() {
     T = [
-      { id: 'hormuz', name: 'Strait of Hormuz', desk: 'iran', bounds: [[24.3, 54.6], [27.8, 59]], erx: /hormuz|strait|tanker|vessel|ship|bandar abbas|qeshm|fujairah/i, pts: ptsOf(arena('hormuz')),
-        cards: uniq([...flagged('arena:hormuz'), ...re(/hormuz/i)]) },
+      { id: 'hormuz', name: 'Strait of Hormuz', desk: 'iran', bounds: [[24.3, 54.6], [27.8, 59]], erx: /hormuz|strait|tanker|vessel|ship|bandar abbas|qeshm|fujairah/i, where: inStrait, pts: ptsOf(arena('hormuz')),
+        cards: uniq([...flagged('arena:hormuz'), ...re(/hormuz/i), ...re(SHIP_RE).filter((r) => GULF_SEA_RE.test(r.h))]) },
       { id: 'bab', name: 'Bab al-Mandab and the Red Sea', short: 'Bab al-Mandab', desk: 'yemen', bounds: [[11.4, 40.8], [16.4, 45.8]], erx: /red sea|bab al-mandab|hodeidah|ship|vessel|tanker|island/i, pts: ptsOf(front('bab')),
-        cards: uniq(re(/red sea|bab al-mandab|hodeidah|yanbu/i)) },
+        cards: uniq([...re(/red sea|bab al-mandab|hodeidah|yanbu|gulf of aden/i), ...re(SHIP_RE).filter((r) => RED_SEA_RE.test(r.h))]) },
       { id: 'oil', name: 'Oil prices', desk: 'both', bounds: [[16, 44], [30.5, 60]], geo: false, oil: D.oil,
         cards: uniq(re(/\boil prices?\b|\bbrent\b|\bwti\b|crude (?:price|futures|oil price)|per barrel|\bopec\b|oil market/i)) },
       { id: 'trump', name: 'Trump’s latest', desk: 'both', bounds: REGION, geo: false, trump: D.trump, cards: [] },
       { id: 'energy', name: 'Energy sites under fire', short: 'Energy', desk: 'both', bounds: [[16.5, 38], [28.5, 56]], erx: /aramco|refiner|pipeline|oil (?:field|facilit|terminal)|power (?:station|plant)|gas field|energy/i,
         cards: uniq(re(/aramco|refiner|pipeline|oil (field|facilit|terminal)|power (station|plant)|gas field/i)) },
-      { id: 'shipping', name: 'Shipping and attacks at sea', short: 'Shipping', desk: 'both', bounds: [[11, 37], [28.5, 60]], erx: /\bships?\b|vessel|tanker|ukmto/i,
-        cards: uniq([...flagged('arena:hormuz').filter((r) => /\bship|vessel|tanker/i.test(r.h)), ...re(/\bships?\b|vessel|tanker|ukmto|freight|shipping/i)]) },
       { id: 'saudi', name: 'Saudi Arabia under Houthi fire', short: 'Saudi Arabia', desk: 'yemen', bounds: [[16, 36], [29, 56]], erx: /saudi arabia|riyadh|dhahran|jizan|jazan|najran|yanbu|abha|khamis mushait/i, pts: ptsOf(front('saudi-home')),
         cards: uniq(re(/saudi|riyadh|dhahran|jizan|jazan|najran|yanbu|abha|khamis mushait/i).filter((r) => r.desks.includes('yemen'))) },
       { id: 'lebanon', name: 'Lebanon and Israel', short: 'Lebanon', desk: 'iran', bounds: [[32.4, 34.6], [34.7, 36.9]], erx: /./, pts: ptsOf(arena('lebanon')),
         cards: uniq([...flagged('arena:lebanon'), ...re(/lebanon|hezbollah|bint jbeil|beirut|galilee|litani|nabatieh|tyre/i)]) },
       { id: 'talks', name: 'Talks and mediation', short: 'Talks', desk: 'both', bounds: REGION, geo: false, pts: ptsOf(arena('talks')),
         cards: uniq([...flagged('arena:talks'), ...re(/\btalks\b|negotiat|ceasefire|truce|mediat|envoy/i)]) },
-      { id: 'nuclear', name: 'Iran’s nuclear file', short: 'Nuclear', desk: 'iran', bounds: [[25, 44], [39.8, 63]], erx: /nuclear|fordow|natanz|bushehr|arak|enrich/i, pts: ptsOf(arena('nuclear')),
+      { id: 'nuclear', name: 'Iran’s nuclear file', short: 'Nuclear', desk: 'iran', bounds: [[23.5, 44], [39.8, 63]], erx: /nuclear|fordow|natanz|bushehr|arak|enrich/i, pts: ptsOf(arena('nuclear')),
         cards: uniq([...flagged('arena:nuclear'), ...re(/nuclear|uranium|iaea|enrich|fordow|natanz/i)]) },
       { id: 'fronts', name: 'Yemen’s front lines', short: 'Yemen fronts', desk: 'yemen', bounds: [[12.4, 42.6], [17.2, 46.6]], erx: /./,
         pts: ['west-taiz', 'marib', 'dhale', 'lahj', 'jawf'].map(front).filter(Boolean).map((f) => { const p = ptsOf(f)[0]; return p && { ...p, t: f.name + ': ' + p.t }; }).filter(Boolean),
         cards: uniq(re(/taiz|marib|dhale|lahj|jawf|saada|bayda|\bfront\b/i).filter((r) => r.desks.includes('yemen'))) },
-      { id: 'inside', name: 'Inside Iran', desk: 'iran', bounds: [[25, 44], [39.8, 63]], erx: /./, pts: ptsOf(arena('inside-iran')),
-        cards: uniq([...flagged('arena:inside-iran'), ...re(/tehran|irgc|iranian (army|parliament|official)|khamenei|pezeshkian/i).filter((r) => r.desks.includes('iran'))]) },
+      { id: 'inside', name: 'Inside Iran', desk: 'iran', bounds: [[25, 44], [39.8, 63]], erx: /./, where: onIranLand, pts: ptsOf(arena('inside-iran')).filter((p) => !AT_SEA_RE.test(p.t)),
+        cards: uniq([...flagged('arena:inside-iran'), ...re(/tehran|irgc|iranian (army|parliament|official)|khamenei|pezeshkian/i).filter((r) => r.desks.includes('iran'))]).filter((r) => !AT_SEA_RE.test(r.h)) },
     ];
     // One report, and one point, in one story only (user, 17 Oct: Hormuz news was in Hormuz and in Inside Iran):
     // the story about a place before the wider ones.
     const seenCard = new Set(), seenPt = [];
-    ['hormuz', 'bab', 'lebanon', 'saudi', 'nuclear', 'energy', 'shipping', 'oil', 'talks', 'fronts', 'inside'].map((id) => T.find((t) => t.id === id)).filter(Boolean).forEach((t) => {
-      t.cards = t.cards.filter((r) => !seenCard.has(r.fp) && !seenCard.has(r.url));
+    ['hormuz', 'bab', 'lebanon', 'saudi', 'nuclear', 'energy', 'oil', 'talks', 'fronts', 'inside'].map((id) => T.find((t) => t.id === id)).filter(Boolean).forEach((t) => {
+      // Inside one story no report twice either: the same event from several outlets is shown once.
+      t.cards = t.cards.filter((r) => !seenCard.has(r.fp) && !seenCard.has(r.url)).filter((r, i, all) => !all.slice(0, i).some((q) => alike(q.h, r.h)));
       t.cards.forEach((r) => { seenCard.add(r.fp); if (r.url) seenCard.add(r.url); });
       if (t.pts) {
-        t.pts = t.pts.filter((p) => !seenPt.some((q) => (p.ref && q.ref && p.ref.url && p.ref.url === q.ref.url) || alike(p.t, q.t)));
+        t.pts = t.pts.filter((p, i, all) => !seenPt.some((q) => (p.ref && q.ref && p.ref.url && p.ref.url === q.ref.url) || alike(p.t, q.t)) && !all.slice(0, i).some((q) => alike(p.t, q.t)));
         seenPt.push(...t.pts);
       }
     });
@@ -263,7 +284,17 @@
       // A small map only for a story whose own events are on the map (user, 17 Oct): the pins of its reports,
       // or, for a place, the pins on that place.
       const fps = new Set(t.cards.map((r) => r.fp));
-      t.events = t.geo === false ? [] : D.events.filter((e) => !e.researched && inB(e, t.bounds) && (t.desk === 'both' || e.desk === t.desk) && (fps.has(e.fp) || (t.erx && t.erx.test(`${e.label || ''} ${e.place || ''}`))));
+      // The maps show today's events; the nuclear file's, every attack on a nuclear site since 28 Feb (user, 18 Oct).
+      const day = today();
+      t.mapNote = t.id === 'nuclear' ? 'Attacks on nuclear sites since 28 Feb' : 'Today’s events';
+      t.events = t.geo === false ? [] : t.id === 'nuclear'
+        ? D.events.filter((e) => e.desk === 'iran' && A('iranKindOf')(e) === 'nuclear')
+        : D.events.filter((e) => !e.researched && evDay(e) === day && inB(e, t.bounds) && (t.desk === 'both' || e.desk === t.desk) && (fps.has(e.fp) || (t.erx && t.erx.test(`${e.label || ''} ${e.place || ''}`))) && (!t.where || t.where(e)));
+      // A story both desks share is one desk's when all its reports are that desk's (user, 18 Oct: an Emirati plane landing in Tehran is no Yemen news).
+      if (t.desk === 'both' && t.cards.length && !t.trump && !t.oil) {
+        const ds = new Set(t.cards.flatMap((r) => r.desks));
+        if (ds.size === 1) t.desk = [...ds][0];
+      }
     });
     // A story with nothing in it is not shown.
     T = T.filter((t) => (t.trump ? t.trump.length : t.oil || t.cards.length || (t.pts && t.pts.length)));
@@ -761,7 +792,8 @@
       // The latest: its first point, the rest behind Read more (user, 17 Oct).
       const pts = (t.pts || []).slice(0, 4);
       const more = pts.length > 1 ? `<ol class="pts h2-more" start="2" hidden>${pts.slice(1).map((p) => `<li>${esc(p.t)}</li>`).join('')}</ol><button type="button" class="h2-readmore toggle-sit" aria-expanded="false">Read more</button>` : '';
-      left = (t.events.length ? mini(id) : '') + (pts.length ? `<div class="h2-latest${more ? ' h2-tap' : ''}"><h4${t.events.length ? ' style="margin-top:.8rem"' : ''}>The latest</h4><ol class="pts"><li>${esc(pts[0].t)}</li></ol>${more}</div>` : '');
+      // What the map shows, in a short plain line above it (user, 18 Oct).
+      left = (t.events.length ? `<p class="h2-map-note">${esc(t.mapNote || '')}</p>${mini(id)}` : '') +(pts.length ? `<div class="h2-latest${more ? ' h2-tap' : ''}"><h4${t.events.length ? ' style="margin-top:.8rem"' : ''}>The latest</h4><ol class="pts"><li>${esc(pts[0].t)}</li></ol>${more}</div>` : '');
       const list = rest(t).slice(0, 4);
       right = list.length ? `<h4>Latest reports</h4><div class="feed">${list.map((r) => card(r, { noReply: true })).join('')}</div>` : '';
     }
@@ -884,9 +916,13 @@
     await ctrl;
     restyleControl();
     drawLegend();
-    // The whole war's pins come in behind the page, so Whole war and older days open at once.
+    // The countries' map is read now: Inside Iran's map can tell Iran's land from the rest.
+    buildTopics();
+    renderStories();
+    // The whole war's pins come in behind the page, so Whole war and older days open at once,
+    // and the nuclear file's map has every attack on a nuclear site since 28 Feb.
     const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1200));
-    idle(() => loadWar().then((ok) => { if (ok && S.mode !== 'day') drawMarks(); }));
+    idle(() => loadWar().then((ok) => { if (!ok) return; if (S.mode !== 'day') drawMarks(); buildTopics(); renderStories(); }));
 
     // New reports every two minutes while the page is in view.
     setInterval(async () => {

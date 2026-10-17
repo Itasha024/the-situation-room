@@ -170,6 +170,8 @@
         addEvents(out);
       }
       warIn = true;
+      // The nuclear file's map has every attack on a nuclear site since 28 Feb once these are in.
+      if (T.length) { buildTopics(); renderStories(); }
       return true;
     }).catch(() => { warP = null; return false; });
     return warP;
@@ -225,7 +227,8 @@
   const RED_SEA_RE = /red sea|bab al-mandab|bab el-mandeb|gulf of aden|hodeidah|mocha|aden|yanbu|jeddah|eritrea|djibouti/i;
   /* Inside Iran is Iran's land; Hormuz, its waters and islands (user, 18 Oct: the two stories repeated each other). */
   const AT_SEA_RE = /hormuz|strait|tanker|\bships?\b|vessel|naval|navy|gulf of oman|persian gulf|seized? (?:a )?(?:ship|tanker)/i;
-  const STRAIT_ISLE_RE = /hormuz|strait|qeshm|larak|hengam|abu musa|tunbs?\b|island/i;
+  const NUKE_HEAD = /nuclear|uranium|iaea|grossi|enrich|centrifug|fordow|natanz|khondab|heavy[- ]water|\bnpt\b|non-?proliferation|atomic|weapons?-grade|warhead|institute for science/i;
+  const STRAIT_ISLE_RE =/hormuz|strait|qeshm|larak|hengam|abu musa|tunbs?\b|island/i;
   const inRing = (lng, lat, ring) => { let x = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) x = !x; } return x; };
   /** The country a pin is in, from the Iran desk's map of the war's countries; null at sea or before the map is read. */
   function countryAt(e) {
@@ -260,7 +263,8 @@
       { id: 'talks', name: 'Talks and mediation', short: 'Talks', desk: 'both', bounds: REGION, geo: false, pts: ptsOf(arena('talks')),
         cards: uniq([...flagged('arena:talks'), ...re(/\btalks\b|negotiat|ceasefire|truce|mediat|envoy/i)]) },
       { id: 'nuclear', name: 'Iran’s nuclear file', short: 'Nuclear', desk: 'iran', bounds: [[23.5, 44], [39.8, 63]], erx: /nuclear|fordow|natanz|bushehr|arak|enrich/i, pts: ptsOf(arena('nuclear')),
-        cards: uniq([...flagged('arena:nuclear'), ...re(/nuclear|uranium|iaea|enrich|fordow|natanz/i)]) },
+        // A report the reader put under the nuclear file must say so in its headline (user, 18 Oct: "Iran's missile capability" was there).
+        cards: uniq([...flagged('arena:nuclear').filter((r) => NUKE_HEAD.test(r.h)), ...re(/nuclear|uranium|iaea|enrich|fordow|natanz/i)]) },
       { id: 'fronts', name: 'Yemen’s front lines', short: 'Yemen fronts', desk: 'yemen', bounds: [[12.4, 42.6], [17.2, 46.6]], erx: /./,
         pts: ['west-taiz', 'marib', 'dhale', 'lahj', 'jawf'].map(front).filter(Boolean).map((f) => { const p = ptsOf(f)[0]; return p && { ...p, t: f.name + ': ' + p.t }; }).filter(Boolean),
         cards: uniq(re(/taiz|marib|dhale|lahj|jawf|saada|bayda|\bfront\b/i).filter((r) => r.desks.includes('yemen'))) },
@@ -269,11 +273,12 @@
     ];
     // One report, and one point, in one story only (user, 17 Oct: Hormuz news was in Hormuz and in Inside Iran):
     // the story about a place before the wider ones.
-    const seenCard = new Set(), seenPt = [];
+    const seenCard = new Set(), seenPt = [], seenH = [];
     ['hormuz', 'bab', 'lebanon', 'saudi', 'nuclear', 'energy', 'oil', 'talks', 'fronts', 'inside'].map((id) => T.find((t) => t.id === id)).filter(Boolean).forEach((t) => {
       // Inside one story no report twice either: the same event from several outlets is shown once.
-      t.cards = t.cards.filter((r) => !seenCard.has(r.fp) && !seenCard.has(r.url)).filter((r, i, all) => !all.slice(0, i).some((q) => alike(q.h, r.h)));
-      t.cards.forEach((r) => { seenCard.add(r.fp); if (r.url) seenCard.add(r.url); });
+      // Nor in two stories told by two outlets (user, 18 Oct: Ebnolreza's missile power in Nuclear and in Inside Iran).
+      t.cards = t.cards.filter((r) => !seenCard.has(r.fp) && !seenCard.has(r.url) && !seenH.some((h) => alike(h, r.h))).filter((r, i, all) => !all.slice(0, i).some((q) => alike(q.h, r.h)));
+      t.cards.forEach((r) => { seenCard.add(r.fp); if (r.url) seenCard.add(r.url); seenH.push(r.h); });
       if (t.pts) {
         t.pts = t.pts.filter((p, i, all) => !seenPt.some((q) => (p.ref && q.ref && p.ref.url && p.ref.url === q.ref.url) || alike(p.t, q.t)) && !all.slice(0, i).some((q) => alike(p.t, q.t)));
         seenPt.push(...t.pts);
@@ -318,7 +323,8 @@
   const quote = (s) => `<figure class="h2-quote big"><blockquote>“${esc(said(s, 2))}”</blockquote><figcaption><b>${esc(s.h)}</b><span>${esc(fmt(s.at))} · <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.src)}</a></span></figcaption></figure>`;
 
   /* The reports under a story's lines, without the ones the lines came from. */
-  const words = (s) => new Set(String(s).toLowerCase().match(/[a-z]{4,}/g) || []);
+  // Each word by its consonants, so two spellings of a name are one word (Ebnolreza, Ebnelreza; defence, defense).
+  const words = (s) => new Set((String(s).toLowerCase().match(/[a-z]{4,}/g) || []).map((w) => w.replace(/c/g, 's').replace(/[aeiouy]/g, '')).filter((w) => w.length > 1));
   const alike = (a, b) => { const X = words(a), Y = words(b); let n = 0; X.forEach((w) => Y.has(w) && n++); return n / Math.max(1, Math.min(X.size, Y.size)) > 0.6; };
   const rest = (t) => { const shown = (t.pts || []).slice(0, 4); const urls = new Set(shown.map((p) => p.ref && p.ref.url)); return t.cards.filter((r) => !urls.has(r.url) && !shown.some((p) => alike(r.h, p.t))); };
 
@@ -780,6 +786,7 @@
     const t = TOPIC[id];
     if (!t) return;
     S.story = id;
+    if (id === 'nuclear' && !warIn) loadWar();
     document.querySelectorAll('#index button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.i === id)));
     let left, right;
     if (t.trump) {
@@ -921,8 +928,9 @@
     renderStories();
     // The whole war's pins come in behind the page, so Whole war and older days open at once,
     // and the nuclear file's map has every attack on a nuclear site since 28 Feb.
-    const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1200));
-    idle(() => loadWar().then((ok) => { if (!ok) return; if (S.mode !== 'day') drawMarks(); buildTopics(); renderStories(); }));
+    // An idle moment, or four seconds at most (a page in a background tab may never be idle).
+    const idle = window.requestIdleCallback ? (f) => requestIdleCallback(f, { timeout: 4000 }) : (f) => setTimeout(f, 1200);
+    idle(() => loadWar().then((ok) => { if (ok && S.mode !== 'day') drawMarks(); }));
 
     // New reports every two minutes while the page is in view.
     setInterval(async () => {

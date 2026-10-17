@@ -1,10 +1,10 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { ASSET_V } from "@/lib/asset-version";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Yemen Conflict Desk";
-const ASSET_V = "desk-en-190";
 // The reader's language before anything is drawn: ?lang= or the one they chose. Hebrew and
 // Arabic load their labels (public/i18n) ahead of app.js, read right to left, and add their fonts.
 const LANG_FONTS: Record<string, string> = {

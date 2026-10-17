@@ -2,8 +2,8 @@
  * The site's addresses. Each desk lives under its own path on the one domain —
  * thesituationroom.live/yemen-conflict-desk now, others later — so:
  *
- * - `/` sends readers to the Yemen desk, for as long as it is the only one
- *   (a temporary redirect: `/` becomes the list of desks later).
+ * - `/` is the home page of every desk (17 Oct; it sent readers to the Yemen
+ *   desk while that was the only one).
  * - The old per-desk subdomain, yemen.thesituationroom.live, moves
  *   permanently to the path address, keeping whatever followed it.
  */
@@ -29,9 +29,6 @@ export default function deskAddress(
   // The old /yemen address with a page after it (/yemen/methodology).
   if (pathname.startsWith("/yemen/")) {
     return new Response(null, { status: 301, headers: { location: `/yemen-conflict-desk${pathname.slice(6)}${search}` } });
-  }
-  if (pathname === "/") {
-    return new Response(null, { status: 302, headers: { location: `/yemen-conflict-desk${search}` } });
   }
   return next();
 }

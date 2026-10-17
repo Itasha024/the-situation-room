@@ -5331,9 +5331,8 @@ function renderEvents(d) {
       ? T('{n} on {d} · click a mark for detail', { n: N('event', pins.length), d: label })
       : T('No mapped events for {d}', { d: label });
   }
-  // The pins on one spot (most reports carry only their town's centre): a few are set
-  // round it; more than STACK_AT are one mark with their number, whose note lists
-  // every one of them (17 Oct: Taiz's 842 events of the war, each in its place).
+  // The pins on one spot (most reports carry only their town's centre) are set round it,
+  // every pin on its own, however many (user, 17 Oct: no numbered marks on any map).
   const atSpot = new Map();
   pins.forEach((ev) => {
     const t = (ev.type || '').toLowerCase();
@@ -5345,59 +5344,12 @@ function renderEvents(d) {
     atSpot.get(key).push({ ...ev, mapCat: cat });
   });
   for (const list of atSpot.values()) {
-    if (list.length > STACK_AT) { placeStackPin(list); continue; }
     list.forEach((ev, n) => {
       const [lat, lng] = n ? jitter(ev.lat, ev.lng, n) : [ev.lat, ev.lng];
       placeMapPin({ ...ev, lat, lng });
     });
   }
   drawIslands(d);
-}
-
-/** More pins on one spot than this are drawn as one mark with their number. */
-const STACK_AT = 12;
-
-/**
- * One mark for many events on one spot: the kind most of them are, with their
- * number; its note lists them all, newest first, each with its time, kind and
- * source, and opens any of them in full.
- */
-function placeStackPin(list) {
-  if (!map || !list.length) return;
-  const kinds = {};
-  for (const ev of list) kinds[ev.mapCat] = (kinds[ev.mapCat] || 0) + 1;
-  const cat = Object.keys(kinds).sort((a, b) => kinds[b] - kinds[a])[0];
-  const newest = list.reduce((a, b) => (Date.parse(b.at) > Date.parse(a.at) ? b : a));
-  const ageH = (Date.now() - Date.parse(newest.at)) / 3600000;
-  const place = T(newest.place || '') || '';
-  const title = `${place ? place + ': ' : ''}${N('event', list.length)}`;
-  const icon = L.divIcon({
-    className: 'ev-wrap',
-    html: eventIconHtml(cat, ageH <= 6 ? ' fresh' : '', escapeHtml(title)).replace('<span class="ev-stem"', `<b class="ev-count">${list.length}</b><span class="ev-stem"`),
-    iconSize: [34, 42],
-    iconAnchor: [17, 40],
-  });
-  const note = () => {
-    const rows = [...list].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((ev, i) => {
-      const k = ev.mapCat === 'strike' ? strikeKind(`${ev.label || ''} ${ev.text || ''}`) : (CATEGORY_LABEL[ev.mapCat] || CATEGORY_LABEL.combat);
-      return `<li><button type="button" class="stack-open" data-i="${i}">${escapeHtml(ev.label || headlineFrom(ev.text || ''))}</button><span class="pop-meta">${escapeHtml(fmtStamp(ev.at))} · ${escapeHtml(T(k))}</span></li>`;
-    });
-    return `<p class="pop-h">${escapeHtml(title)}</p><ol class="stack-list">${rows.join('')}</ol>`;
-  };
-  const m = L.marker([newest.lat, newest.lng], { icon, zIndexOffset: Math.round(1000 - ageH) + 500, riseOnHover: true })
-    .bindPopup(note, { className: 'pop-stack', maxWidth: 320, maxHeight: 360, autoPan: false, keepInView: false, closeOnClick: false });
-  // A line of the list opens that event's own note on the same spot.
-  m.on('popupopen', (e) => {
-    const sorted = [...list].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
-    e.popup.getElement()?.querySelectorAll('.stack-open').forEach((btn) => btn.addEventListener('click', () => {
-      const ev = sorted[Number(btn.dataset.i)];
-      if (!ev) return;
-      L.popup({ className: popLeanClass(ev), maxWidth: (ev.media && ev.media.length) ? 320 : 300, maxHeight: 360, autoPan: false, closeOnClick: false })
-        .setLatLng(m.getLatLng()).setContent(popupHtml(ev)).openOn(map);
-    }));
-  });
-  m.addTo(map);
-  eventLayers.push(m);
 }
 
 function fmtDay(ymd) {
@@ -6756,7 +6708,8 @@ function installDeskPicker() {
   list.id = 'desk-list';
   list.className = 'desk-list';
   list.hidden = true;
-  list.innerHTML = desks.map((d) => `<li><a href="${d.href}"${d.id === here.id ? ' aria-current="page"' : ''}>${flagSvg(d)}<span>${escapeHtml(T(d.short || d.name))}</span></a></li>`).join('');
+  // The home page first: every desk on one map (17 Oct).
+  list.innerHTML = `<li><a href="/"><svg class="flag" viewBox="0 0 18 12" aria-hidden="true"><rect width="18" height="12" rx="1" fill="none" stroke="currentColor" stroke-opacity=".55"/><path d="M3 4h12M3 6h12M3 8h8" stroke="currentColor" stroke-opacity=".55"/></svg><span>${escapeHtml(T('All desks'))}</span></a></li>` + desks.map((d) => `<li><a href="${d.href}"${d.id === here.id ? ' aria-current="page"' : ''}>${flagSvg(d)}<span>${escapeHtml(T(d.short || d.name))}</span></a></li>`).join('');
   h.parentElement.appendChild(list);
   const btn = h.querySelector('.desk-pick');
   const open = (on) => { list.hidden = !on; btn.setAttribute('aria-expanded', String(on)); };
@@ -7672,7 +7625,14 @@ function drawIranPins() {
   // The whole war is thousands of pins (Round 31 1f): drawn on one canvas, not one element each.
   const many = kept.length > 1500;
   if (many && !iranPins.canvas) iranPins.canvas = L.canvas({ padding: 0.3 });
-  for (const ev of kept) {
+  // Pins on one spot are set round it, every pin on its own (user, 17 Oct), as on the Yemen map.
+  const atSpot = new Map();
+  for (const ev0 of kept) {
+    const k = `${Math.round(ev0.lat * 100)},${Math.round(ev0.lng * 100)}`;
+    const n = atSpot.get(k) || 0;
+    atSpot.set(k, n + 1);
+    const [lat, lng] = n ? jitter(ev0.lat, ev0.lng, n) : [ev0.lat, ev0.lng];
+    const ev = n ? { ...ev0, lat, lng } : ev0;
     const ageH = (Date.now() - new Date(ev.at).getTime()) / 3600000;
     if (many) {
       const m = L.circleMarker([ev.lat, ev.lng], { renderer: iranPins.canvas, radius: 6, weight: 2, color: '#fff', fillColor: IRAN_PIN_INK[iranSideOf(ev)], fillOpacity: 1 })

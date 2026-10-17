@@ -12,6 +12,7 @@ import { deskParam } from "@/lib/desk/desk-route";
 import { deskById } from "@/lib/desks";
 import { getStore } from "@/lib/desk/store";
 import { mergeNumbers } from "@/lib/desk/numbers";
+import { band } from "@/lib/desk/rank-points";
 import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally";
 import { type Ledger, readLedger, readTransits, type Transits } from "@/lib/desk/ledger";
 import { TIMELINE_NOW_KEY, type TimelineNow } from "@/lib/desk/timeline-now";
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/api/brief")({
             const sanctions = st ? liveSanctionBoxes(IRAN_NUMBERS as Parameters<typeof liveSanctionBoxes>[0], await st.getJson<OfacStore>(OFAC_KEY).catch(() => null)) : null;
             // Every other box its reader has made (iran-live.ts), the sanctions boxes among them.
             const numbers = st ? liveNumbers(await st.getJson<IranLive>(IRAN_LIVE_KEY).catch(() => null), (sanctions?.boxes ?? []) as unknown as Box[]) : null;
-            if (ib) return json({ ...ib, timelineNow: (await st!.getJson<IranTimelineNow>(IRAN_NOW_KEY)) ?? null, sanctions, numbers }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=60");
+            if (ib) return json({ ...ib, situation: banded(ib.situation), timelineNow: (await st!.getJson<IranTimelineNow>(IRAN_NOW_KEY)) ?? null, sanctions, numbers }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=60");
             return json({ ok: true, desk, pending: true, ...briefWindow(new Date(), deskById(desk).cadenceHours) }, 200, "public, max-age=60", "public, s-maxage=300");
           }
           const store = await getStore();
@@ -67,7 +68,13 @@ function ok(brief: Brief, tally: Tally, claims: Claims, timelineNow: TimelineNow
   // minute only: the page asks again every ten, and a brief rebuilt inside a
   // window (district control, a rewrite) must reach an open page without a
   // reload — held for half an hour, it did not.
-  return json({ ...brief, tally, claims, figures: mergeNumbers(tally, claims), timelineNow, controlLive, ledger, transits }, 200, "public, max-age=60", `public, s-maxage=${age}, stale-while-revalidate=60`);
+  return json({ ...brief, situation: banded(brief.situation), tally, claims, figures: mergeNumbers(tally, claims), timelineNow, controlLive, ledger, transits }, 200, "public, max-age=60", `public, s-maxage=${age}, stale-while-revalidate=60`);
+}
+
+/** Each point's importance band (rank-points.ts), so the home page can rank both desks' points as one list. */
+function banded<T>(s: T): T {
+  const pts = (s as { points?: unknown } | null | undefined)?.points;
+  return Array.isArray(pts) ? { ...s, bands: pts.map((p) => band(String(p))) } : s;
 }
 
 function json(body: unknown, status = 200, cache = "no-store", cdn?: string) {

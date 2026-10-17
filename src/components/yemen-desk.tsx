@@ -26,16 +26,6 @@ const DESK_HTML = `
     <span id="updated">Connecting…</span>
   </div>
 </header>
-<section class="bars" id="bars"></section>
-<section class="situation" id="situation" tabindex="-1"></section>
-<section class="live-scan" id="live-scan-box">
-  <details id="live-scan-details">
-    <summary>
-      <span class="ls-title">Live scan</span>
-    </summary>
-    <div class="ls-list" id="live-scan-list"></div>
-  </details>
-</section>
 <div class="toolbar">
   <div class="time-filter" id="time-filter" title="Pick a day, or show the whole conflict">
     <span class="tf-label">Map:</span>
@@ -75,6 +65,7 @@ const DESK_HTML = `
     <button type="button" class="more" id="btn-more-reports" hidden>Show earlier reports</button>
   </aside>
 </main>
+<section class="situation" id="situation" tabindex="-1"></section>
 <section class="fronts-wrap" id="fronts-wrap">
   <h2>Fronts</h2>
   <div id="fronts-stamp"></div>

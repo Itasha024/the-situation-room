@@ -3142,8 +3142,11 @@ function numCell(c, cls) {
  * Energy (the ledger, src/lib/desk/ledger.ts, and IMF PortWatch's daily ship
  * counts, both in /api/brief). Every load opens on Casualties, like Killed.
  */
-const NUM_CATS = [['cas', 'Casualties'], ['sea', 'Maritime'], ['energy', 'Energy']];
-let numCat = 'cas';
+// Territorial control first: its shares moved here from the top of the page (user, 17 Oct).
+const NUM_CATS = [['control', 'Territory'], ['cas', 'Casualties'], ['sea', 'Maritime'], ['energy', 'Energy']];
+let numCat = 'control';
+/** The control shares' bars, drawn by renderBars once the map's layers are in. */
+let controlHtml = '';
 const numBoxOf = { cas: 0, sea: 0, energy: 0 };
 
 const SITE_STATUS = { working: 'Working', reduced: 'Reduced', down: 'Down', unknown: 'Unknown' };
@@ -3492,7 +3495,8 @@ function renderCasualties() {
   const el = document.getElementById('casualties');
   if (!el) return;
   let slides;
-  if (numCat === 'sea') slides = seaBoxes(brief && brief.ledger, brief && brief.transits);
+  if (numCat === 'control') slides = [['Territory', `<div class="tally-box ctrl-box">${controlHtml || '<p class="ctrl-wait">Working out the shares…</p>'}</div>`]];
+  else if (numCat === 'sea') slides = seaBoxes(brief && brief.ledger, brief && brief.transits);
   else if (numCat === 'energy') slides = energyBoxes(brief && brief.ledger, brief && brief.transits);
   else {
     const nums = (brief && brief.figures && brief.figures.cells ? brief.figures : null) || fallbackNumbers((brief && brief.tally) || TALLY_FALLBACK);
@@ -3510,6 +3514,7 @@ function renderCasualties() {
     <div class="tally one">${pagerHtml('numbers', slides.map((s) => s[1]), idx, slides.map((s) => s[0]))}</div>
 `;
   wirePager(el, idx, (i) => { numBoxOf[numCat] = i; hideSpot(); });
+  wirePop(document.getElementById('btn-share-meth'), 'share-pop', SHARE_HTML);
   wireMore(el);
   wireSpots(el);
   el.querySelectorAll('.num-cat button').forEach((b) => {
@@ -3572,8 +3577,11 @@ function renderBars(d) {
       <div class="track"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
     </div>`;
   }).join('');
-  document.getElementById('bars').innerHTML = rows ? `${rows}<div class="bars-meth"><button type="button" class="rel-btn" id="btn-share-meth" aria-expanded="false" aria-haspopup="dialog">Control share methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div>` : '';
-  wirePop(document.getElementById('btn-share-meth'), 'share-pop', SHARE_HTML);
+  // Drawn in the numbers column, under "Territory".
+  const html = rows ? `<div class="bars">${rows}<div class="bars-meth"><button type="button" class="rel-btn" id="btn-share-meth" aria-expanded="false" aria-haspopup="dialog">Control share methodology<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.6"/><path d="M10 9v5M10 6.2v.1"/></svg></button></div></div>` : '';
+  if (html === controlHtml) return;
+  controlHtml = html;
+  if (numCat === 'control') renderCasualties();
 }
 
 function feedCardHtml(r, i) {
@@ -6761,9 +6769,9 @@ function installThemeButton() {
 /* Section menu: a slim tab on the left edge (a round button at the foot of the screen on a
  * phone) that opens a short list of the page's sections and marks the one in view. */
 const SECTIONS = [
-  ['situation', 'Latest developments'],
   ['map-wrap', 'Map'],
   ['rail', 'Latest reports'],
+  ['situation', 'Latest developments'],
   ['fronts-wrap', 'Fronts'],
   ['cas-wrap', 'The conflict in numbers'],
   ['timeline-wrap', 'Timeline'],

@@ -48,18 +48,6 @@ const IRAN_HTML = `
     <span id="updated">Being built</span>
   </div>
 </header>
-<section class="situation" id="situation" tabindex="-1">
-  <h2>Latest developments</h2>
-  ${SOON("the main developments, most important first, every 3 hours.")}
-</section>
-<section class="live-scan" id="live-scan-box">
-  <details id="live-scan-details">
-    <summary>
-      <span class="ls-title">Live scan</span>
-    </summary>
-    <div class="ls-list" id="live-scan-list">${SOON("the sources the desk reads, as it reads them.")}</div>
-  </details>
-</section>
 <div class="toolbar">
   <div class="time-filter" id="time-filter" title="Pick a day, or show the whole war">
     <span class="tf-label">Map:</span>
@@ -111,6 +99,10 @@ const IRAN_HTML = `
     <div id="feed" class="feed">${SOON("reports from every side, each with its source's rating.")}</div>
   </aside>
 </main>
+<section class="situation" id="situation" tabindex="-1">
+  <h2>Latest developments</h2>
+  ${SOON("the main developments, most important first, every 3 hours.")}
+</section>
 <section class="fronts-wrap" id="fronts-wrap">
   <h2>Arenas</h2>
   ${SOON("a short overview of each arena, every 3 hours.")}

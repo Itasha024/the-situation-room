@@ -10,6 +10,7 @@ import { rightOffice } from "@/lib/desk/offices";
 import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { districtSeat, heardInside, iranEventAllowed, ownSkyOnly, seaPlace } from "@/lib/desk/iran-places";
+import { countryPin, onePinPerEvent, servePins } from "@/lib/desk/yemen-pins";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -82,6 +83,13 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
       const w = seaPlace({ ...x, lat: x.lat, lng: x.lng });
       return { ...e, lat: w.lat, lng: w.lng, sea: w.sea };
     });
+    // No pin on a whole country's centre, and one pin per event (yemen-pins.ts).
+    s.events = onePinPerEvent(s.events.filter((e) => !countryPin(e)) as Parameters<typeof onePinPerEvent>[0]) as typeof s.events;
+  }
+  // The Yemen map's pins: on the district a report names, one per event, no analysis or visits (yemen-pins.ts).
+  if (desk === "yemen" && Array.isArray((slice as { events?: unknown[] }).events)) {
+    const s = slice as unknown as { events: Parameters<typeof servePins>[0] };
+    s.events = servePins(s.events);
   }
   return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
 }

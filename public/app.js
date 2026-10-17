@@ -296,11 +296,11 @@ let controlOverlayLayers = [];
 const MAP_ROUND_START = '2026-07-13';
 const CONFLICT_START = '2026-07-13';
 const FRONT_HOME_VIEW = [15.35, 46.15, 6];
-const MAX_MAP_PINS = 80;
+const MAX_MAP_PINS = 600;
 // A range or "all" view must show the whole war, not the newest slice of it:
 // the old 220 cut every pin from July and most of August. This only guards
 // against a runaway feed.
-const MAX_MAP_PINS_RANGE = 3000;
+const MAX_MAP_PINS_RANGE = 20000;
 
 /* West-coast strips that changed hands in this round (Tihama and Bab). */
 const COAST_AREAS = [
@@ -1384,9 +1384,14 @@ function pinCategory(typeOrText) {
   return classifyForMap(typeOrText, '') || 'combat';
 }
 
+/*
+ * The i-th pin on one spot, set round it on a widening spiral: each has its own
+ * place, however many there are (17 Oct: the old ring held 40 and laid the rest
+ * on top of them, so a town's hundreds of events read as a few pins).
+ */
 function jitter(lat, lng, i) {
-  const a = (i % 8) * 0.785;
-  const r = 0.012 + (i % 5) * 0.004;
+  const a = i * 2.39996;
+  const r = 0.01 * Math.sqrt(i);
   return [lat + Math.sin(a) * r, lng + Math.cos(a) * r];
 }
 
@@ -5170,21 +5175,11 @@ function buildMapPins(d) {
     return y === (day || today);
   }).sort((a, b) => new Date(b.at) - new Date(a.at));
 
-  const seen = new Map();
-  const deduped = [];
-  for (const p of pins) {
-    if (p.lat == null || p.lng == null) continue;
-    const cat = p.mapCat || classifyForMap(p.text || '', p.type) || pinCategory(p.type);
-    const k = [jerusalemYmd(p.at), Math.round(p.lat * 100) / 100, Math.round(p.lng * 100) / 100, cat].join('|');
-    const prev = seen.get(k);
-    if (!prev) { seen.set(k, p); deduped.push(p); continue; }
-    if ((p.mapOnly && !prev.mapOnly) || String(p.text || '').length > String(prev.text || '').length) {
-      const i = deduped.indexOf(prev);
-      if (i >= 0) deduped[i] = p;
-      seen.set(k, p);
-    }
-  }
-  const single = oneEventOnePin(deduped);
+  // Every event its own pin. Pins of one day, one spot and one kind used to fold into one,
+  // and most reports carry only their town's centre: 2,862 of 4,712 pins of the war were
+  // hidden, 842 in Taiz alone, so the whole war stood near 900-1,800 (user, 17 Oct). Only
+  // reports of the same event, told in the same words, still fold (oneEventOnePin).
+  const single = oneEventOnePin(pins.filter((p) => p.lat != null && p.lng != null), true);
   return (focusFps ? single.filter((p) => focusFps.has(p.fp)) : single).slice(0, (mapMode === 'range' || mapMode === 'all') ? MAX_MAP_PINS_RANGE : MAX_MAP_PINS);
 }
 
@@ -5217,8 +5212,8 @@ function oneEventOnePin(pins, sorted = false) {
     let twin = -1;
     for (let i = out.length - 1; i >= 0; i--) {
       const b = of(out[i]);
-      // Pins in time order (the Iran map's): nothing further back can be a twin.
-      if (sorted && a.t - b.t > 12 * 3600e3) break;
+      // Pins in time order, either way (the Iran map's oldest first, the Yemen map's newest first): nothing further back can be a twin.
+      if (sorted && Math.abs(a.t - b.t) > 12 * 3600e3) break;
       if (Math.abs(a.t - b.t) > 6 * 3600e3) continue;
       if (a.cat !== b.cat || a.base === b.base || !a.w.size || !b.w.size) continue;
       // Researched pins were made one per attack already: two villages struck the same day, or three
@@ -5282,8 +5277,9 @@ function placeMapPin(ev) {
     iconSize: [34, 42],
     iconAnchor: [17, 40],
   });
+  // The note is written when it is opened: the whole war's thousands of pins drew in seconds less (17 Oct).
   const m = L.marker([ev.lat, ev.lng], { icon, zIndexOffset: Math.round(1000 - ageH), riseOnHover: true })
-    .bindPopup(popupHtml(ev), {
+    .bindPopup(() => popupHtml(ev), {
       className: popLeanClass(ev),
       maxWidth: (ev.media && ev.media.length) ? 320 : 300,
       maxHeight: 360,
@@ -5335,19 +5331,73 @@ function renderEvents(d) {
       ? T('{n} on {d} · click a mark for detail', { n: N('event', pins.length), d: label })
       : T('No mapped events for {d}', { d: label });
   }
-  const placeCount = {};
+  // The pins on one spot (most reports carry only their town's centre): a few are set
+  // round it; more than STACK_AT are one mark with their number, whose note lists
+  // every one of them (17 Oct: Taiz's 842 events of the war, each in its place).
+  const atSpot = new Map();
   pins.forEach((ev) => {
     const t = (ev.type || '').toLowerCase();
     const cat = ev.mapCat || classifyForMap(ev.text || ev.label || '', t) || pinCategory(t);
     if (!['strike', 'combat', 'vessel', 'port'].includes(cat)) return;
     if (!layersOn[cat]) return;
-    const key = ev.place || (ev.lat + ',' + ev.lng);
-    const n = placeCount[key] || 0;
-    placeCount[key] = n + 1;
-    const [lat, lng] = n ? jitter(ev.lat, ev.lng, n) : [ev.lat, ev.lng];
-    placeMapPin({ ...ev, lat, lng, mapCat: cat });
+    const key = `${Math.round(ev.lat * 100)},${Math.round(ev.lng * 100)}`;
+    if (!atSpot.has(key)) atSpot.set(key, []);
+    atSpot.get(key).push({ ...ev, mapCat: cat });
   });
+  for (const list of atSpot.values()) {
+    if (list.length > STACK_AT) { placeStackPin(list); continue; }
+    list.forEach((ev, n) => {
+      const [lat, lng] = n ? jitter(ev.lat, ev.lng, n) : [ev.lat, ev.lng];
+      placeMapPin({ ...ev, lat, lng });
+    });
+  }
   drawIslands(d);
+}
+
+/** More pins on one spot than this are drawn as one mark with their number. */
+const STACK_AT = 12;
+
+/**
+ * One mark for many events on one spot: the kind most of them are, with their
+ * number; its note lists them all, newest first, each with its time, kind and
+ * source, and opens any of them in full.
+ */
+function placeStackPin(list) {
+  if (!map || !list.length) return;
+  const kinds = {};
+  for (const ev of list) kinds[ev.mapCat] = (kinds[ev.mapCat] || 0) + 1;
+  const cat = Object.keys(kinds).sort((a, b) => kinds[b] - kinds[a])[0];
+  const newest = list.reduce((a, b) => (Date.parse(b.at) > Date.parse(a.at) ? b : a));
+  const ageH = (Date.now() - Date.parse(newest.at)) / 3600000;
+  const place = T(newest.place || '') || '';
+  const title = `${place ? place + ': ' : ''}${N('event', list.length)}`;
+  const icon = L.divIcon({
+    className: 'ev-wrap',
+    html: eventIconHtml(cat, ageH <= 6 ? ' fresh' : '', escapeHtml(title)).replace('<span class="ev-stem"', `<b class="ev-count">${list.length}</b><span class="ev-stem"`),
+    iconSize: [34, 42],
+    iconAnchor: [17, 40],
+  });
+  const note = () => {
+    const rows = [...list].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((ev, i) => {
+      const k = ev.mapCat === 'strike' ? strikeKind(`${ev.label || ''} ${ev.text || ''}`) : (CATEGORY_LABEL[ev.mapCat] || CATEGORY_LABEL.combat);
+      return `<li><button type="button" class="stack-open" data-i="${i}">${escapeHtml(ev.label || headlineFrom(ev.text || ''))}</button><span class="pop-meta">${escapeHtml(fmtStamp(ev.at))} · ${escapeHtml(T(k))}</span></li>`;
+    });
+    return `<p class="pop-h">${escapeHtml(title)}</p><ol class="stack-list">${rows.join('')}</ol>`;
+  };
+  const m = L.marker([newest.lat, newest.lng], { icon, zIndexOffset: Math.round(1000 - ageH) + 500, riseOnHover: true })
+    .bindPopup(note, { className: 'pop-stack', maxWidth: 320, maxHeight: 360, autoPan: false, keepInView: false, closeOnClick: false });
+  // A line of the list opens that event's own note on the same spot.
+  m.on('popupopen', (e) => {
+    const sorted = [...list].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    e.popup.getElement()?.querySelectorAll('.stack-open').forEach((btn) => btn.addEventListener('click', () => {
+      const ev = sorted[Number(btn.dataset.i)];
+      if (!ev) return;
+      L.popup({ className: popLeanClass(ev), maxWidth: (ev.media && ev.media.length) ? 320 : 300, maxHeight: 360, autoPan: false, closeOnClick: false })
+        .setLatLng(m.getLatLng()).setContent(popupHtml(ev)).openOn(map);
+    }));
+  });
+  m.addTo(map);
+  eventLayers.push(m);
 }
 
 function fmtDay(ymd) {

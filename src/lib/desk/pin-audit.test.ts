@@ -240,3 +240,14 @@ test("round 6: a district's name pinned far from it goes to it; the all-clear, t
     "Fighting between Houthis and Saudi-backed forces kills 154 in two days",
   ]) assert.equal(notEvent({ label: l }), true, l);
 });
+
+test("a card stored with no place takes one from its own headline; one naming none, or no event, stays unplaced", async () => {
+  const { placeFromWords } = await import("./yemen-pins.ts");
+  assert.equal(placeFromWords("Saudi Arabia strikes Haifan directorate in Taiz with series of raids", "strike")?.name, "Hayfan");
+  assert.equal(placeFromWords("Houthi ballistic missile targets market near Kahbub in Lahj governorate", "strike")?.name, "Kahbub");
+  assert.equal(placeFromWords("Houthi forces take control of Mount Rasin in Taiz", "combat")?.name, "Taiz");
+  assert.equal(placeFromWords("Smoke reported above Riyadh airport after Houthi-claimed attack", "strike")?.name, "Riyadh");
+  assert.equal(placeFromWords("Houthi spokesperson: Saudi warplanes launched from Khamis Mushait and Taif bases", "strike"), null);
+  assert.equal(placeFromWords("Six Saudi soldiers killed in Yemeni attack", "combat"), null);
+  assert.equal(placeFromWords("Houthi Armed Forces spokesperson: Saudi coalition conducted 101 airstrikes in 24 hours", "strike"), null);
+});

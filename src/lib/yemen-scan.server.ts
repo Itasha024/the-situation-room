@@ -21,6 +21,7 @@ import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading 
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
 import { desksOf } from "./desk/desk-route.ts";
 import { cleanUrl, isGnews, resolveGoogleNews } from "./desk/gnews.ts";
+import { placeFromWords } from "./desk/yemen-pins.ts";
 import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, traceOrigins } from "./desk/origin.ts";
 import { isOfficialBody } from "./desk/numbers.ts";
 import { leadSpeaker } from "./desk/speakers.ts";
@@ -3260,6 +3261,15 @@ export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | 
   const merge = await store.mergeIntoDesk([...payload.reports, ...(payload.touched ?? [])]);
   delete payload.touched;
   lap("save cards");
+  // Cards stored with no place get one from their own headline, and their pin (17 Oct). The whole
+  // war's are read each tick; a card its words cannot place is left as it was.
+  try {
+    const placed = await store.placeUnplaced?.("2026-07-13T00:00:00+03:00", placeFromWords);
+    if (placed) console.log(`[pins] ${placed} cards with no place given one from their headline`);
+  } catch (err) {
+    console.warn("[pins] placing cards failed", err);
+  }
+  lap("place cards");
   // Carry the gazetteer misses into the payload so the scan box can show them.
   if (merge.unplaced.length) payload.unplaced = merge.unplaced.slice(0, 20);
   state.lastTickAt = Date.now();

@@ -113,7 +113,7 @@ const DIRECT = /\b(?:infiltrat\w*|blow\w* up|intercept\w*|kill\w*|wound\w*|injur
  */
 const AFTER = /\b(?:satellite (?:imagery|images?)|for (?:a )?second consecutive day|closes?|closed|closure|disruptions?|halted|halts|grounded|disruption to air navigation|no aircraft in (?:the )?airspace|flight tracking|cancels?|cancell?ed|cancellations?|suspends?|suspended|suspension|delays?|delayed|postpones?|postponed|resumes?|resumed|remains? (?:shut|closed)|reopens?|reopened|insurance|premiums?|stopped public|leak\w* fuel|float\w*|gather\w* cargo|controlled (?:explosion|detonation)|lifts?\s+(?:the\s+)?(?:emergency\s+|security\s+)?(?:alerts?|warnings?))\b/i;
 const NEW_ATTACK = /\b(?:fresh|new|another|renewed)\s+(?:\w+\s+){0,2}(?:strikes?|attacks?|barrage|missiles?)\b/i;
-const NO_FIGHT = /\b(?:military movements?|reinforcements?|deploys?|deployed|deployment|transfers?|transferred|mobili[sz]\w*|redeploy\w*|dispatch\w*|arrives?|arrived|drills?|exercises?|manoeuvres?|maneuvers?|parades?|graduat\w*|forms? new|leaflets?|graffiti|abduct\w*|kidnap\w*|arrests?|arrested|detains?|detained|detention|loot\w*|storms? (?:a |the )?(?:citizen'?s? )?(?:home|house)|raid (?:and \w+ )?(?:over \d+ )?(?:homes|houses)|praises?|praised|mediations?|flares?|ammunition trucks|finds?|found)\b/i;
+const NO_FIGHT = /\b(?:vows?|vowed|military movements?|reinforcements?|deploys?|deployed|deployment|transfers?|transferred|mobili[sz]\w*|redeploy\w*|dispatch\w*|arrives?|arrived|drills?|exercises?|manoeuvres?|maneuvers?|parades?|graduat\w*|forms? new|leaflets?|graffiti|abduct\w*|kidnap\w*|arrests?|arrested|detains?|detained|detention|loot\w*|storms? (?:a |the )?(?:citizen'?s? )?(?:home|house)|raid (?:and \w+ )?(?:over \d+ )?(?:homes|houses)|praises?|praised|mediations?|flares?|ammunition trucks|finds?|found)\b/i;
 const FIGHT = /\b(?:recaptur\w*|retak\w*|seiz\w*|advanc\w*|liberat\w*|massacre|withdraw\w*|take control|took control|strikes?|struck|hits?|attack\w*|clash\w*|kill\w*|wound\w*|injur\w*|shell\w*|repel\w*|fire[sd]?|firing|target\w*|destroy\w*|captur\w*|ambush\w*|battles?|fight\w*|besieg\w*|bomb\w*|explo\w*|expel\w*|expuls\w*|pursu\w*|clear(?:s|ed|ing)?|thwart\w*|foil\w*|decapitat\w*|executed|dead|bod(?:y|ies)|operations?)\b/i;
 /** A tally or a round of the war across the land: "219 violations over 48 hours", "strikes on Sanaa, Taiz, Ibb and Saada". */
 export function roundup(t: string): boolean {
@@ -701,6 +701,40 @@ export function abroadPin(e: YemenPin): { name: string; lat: number; lng: number
   return { name: g[4], lat: g[2], lng: g[3] };
 }
 const SAUDI_BACKED_WORDS = /\b(?:Saudi|coalition)[- ](?:backed|aligned|funded|supported|led)\b/gi;
+
+/**
+ * A place for a card stored with none (17 Oct: 1,775 strike, fight and ship cards since 18 Sep had no
+ * pin, "Saudi Arabia strikes Haifan directorate in Taiz", "Houthi forces take control of Mount Rasin in
+ * Taiz"): from its own headline, by the rules above — a site, a Saudi place a Houthi attack hit, a place
+ * the desk knows inside the governorate named, a district, a Taiz front, else the one governorate named.
+ * Null when the words name none, or tell no event.
+ */
+export function placeFromWords(label: string, type?: string | null): { name: string; lat: number; lng: number } | null {
+  const t = String(label || "");
+  if (!t || notEvent({ label: t })) return null;
+  const spot = SPOTS.find(([re, name]) => re.test(t) && !LOST_ONLY.has(name));
+  if (spot) return { name: spot[1], lat: spot[2], lng: spot[3] };
+  const govs = govsWhere(t);
+  const known = placesIn(t).filter((p) => p.kind !== "governorate" && p.kind !== "country" && p.kind !== "sea");
+  // A Houthi attack on Saudi Arabia: the Saudi place hit.
+  // (Not the bases a raid flew from: "Saudi warplanes launched from Khamis Mushait and Taif bases".)
+  const saudi = known.find((p) => p.country === "Saudi Arabia" && !new RegExp(String.raw`\b(?:from|off from)\s+(?:the\s+)?${p.name}`, "i").test(t));
+  if (saudi && !govs.size && !/\b(?:launched|took off|taking off|flew|flying|strikes?)\s+from\b/i.test(t) && /\b(?:Houthi|Yemeni|missiles?|drones?|ballistic|intercept\w*|alerts?|sirens?|explosions?)\b/i.test(t)) return { name: saudi.name, lat: saudi.lat, lng: saudi.lng };
+  const yemen = known.filter((p) => p.country === "Yemen" && (!govs.size || govs.has(governorateAt(p.lat, p.lng) ?? "")));
+  if (yemen.length) return { name: yemen[0].name, lat: yemen[0].lat, lng: yemen[0].lng };
+  for (const run of runsOf(t)) {
+    const k = ALIAS[placeKey(run)] ?? placeKey(run);
+    const d = ALL_DISTRICTS.filter((x) => x.key === k && !BROAD.has(x.key) && (!govs.size || govs.has(x.gov) || (govs.has("YE-SA") && x.gov === "YE-SN")));
+    if (d.length === 1) return { name: d[0].name, lat: d[0].lat, lng: d[0].lng };
+  }
+  if (type === "vessel") return null;
+  if (!govs.size && FRONTS.some(([re]) => re.test(t))) return { name: "Taiz", lat: 13.58, lng: 44.02 };
+  if (govs.size === 1) {
+    const g = GOVS.find(([i]) => govs.has(i))!;
+    return { name: g[4], lat: g[2], lng: g[3] };
+  }
+  return null;
+}
 
 /** Every rule above, in order. */
 export function servePins<T extends YemenPin>(pins: T[]): T[] {

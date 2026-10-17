@@ -337,6 +337,33 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       return out;
     },
 
+    async placeUnplaced(since, placeOf) {
+      const sql = await sqlProvider();
+      const rows = await sql<{ fp: string; at: unknown; type: string; summary: string; body: string | null; source: string | null; url: string | null; desks: string[] }>`
+        select fp, at, type, summary, body, source, url, desks from desk_report
+         where lat is null and type in ('strike', 'combat', 'vessel', 'port') and at >= ${since}::timestamptz
+           and 'yemen' = any(desks)
+           and not exists (select 1 from desk_event e where e.fp = desk_report.fp)
+      `;
+      dbMeter.queries += 1;
+      let n = 0;
+      for (const r of rows) {
+        const p = placeOf(String(r.summary ?? ""), r.type);
+        if (!p) continue;
+        const placed = await sql<{ fp: string }>`
+          update desk_report set place = ${p.name}, lat = ${p.lat}, lng = ${p.lng} where fp = ${r.fp} and lat is null returning fp
+        `;
+        if (!placed.length) continue;
+        await sql`
+          insert into desk_event (fp, at, type, lat, lng, place, label, body, source, url, map_only, desks)
+          values (${r.fp}, ${r.at as string}, ${r.type}, ${p.lat}, ${p.lng}, ${p.name}, ${r.summary}, ${r.body}, ${r.source}, ${r.url}, false, ${r.desks}::text[])
+          on conflict (fp) do nothing
+        `;
+        n += 1;
+      }
+      return n;
+    },
+
     async mergeIntoDesk(reports: LiveReport[]): Promise<MergeResult> {
       const out: MergeResult = { reportsAdded: 0, eventsAdded: 0, unplaced: [] };
       try {

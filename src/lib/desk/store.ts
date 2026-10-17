@@ -76,6 +76,12 @@ export interface DeskStore {
    */
   mergeIntoDesk(reports: LiveReport[]): Promise<MergeResult>;
 
+  /**
+   * Yemen desk cards of a pin's kind stored with no place since `since`: each one its words place
+   * (`placeOf`) is given that place and its pin (17 Oct: 1,775 such cards had no pin). Returns how many.
+   */
+  placeUnplaced?(since: string, placeOf: (summary: string, type: string) => { name: string; lat: number; lng: number } | null): Promise<number>;
+
   /** When each of these cards was first published (fp → ISO), for those stored. */
   timesOf?(fps: string[]): Promise<Record<string, string>>;
 

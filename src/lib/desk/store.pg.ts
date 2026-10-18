@@ -371,6 +371,32 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       return true;
     },
 
+    async tmeLinks(since, limit, skip = []) {
+      const sql = await sqlProvider();
+      const rows = await sql<{ fp: string; url: string; summary: string | null; body: string | null; at: unknown }>`
+        select fp, url, summary, body, at from desk_report
+         where url like 'https://t.me/%' and at >= ${since}::timestamptz and not (fp = any(${skip}::text[]))
+         order by at desc limit ${limit}
+      `;
+      dbMeter.queries += 1;
+      return rows.map((r) => ({ fp: r.fp, url: r.url, headline: r.summary ?? "", body: r.body ?? "", at: r.at instanceof Date ? r.at.toISOString() : String(r.at) }));
+    },
+
+    async repost(fp, from, to) {
+      const sql = await sqlProvider();
+      // The post is another card's already: that card stands, this one keeps its link.
+      const done = await sql<{ fp: string }>`
+        update desk_report r set url = ${to}
+         where r.fp = ${fp} and r.url = ${from}
+           and not exists (select 1 from desk_report d where d.url = ${to})
+        returning r.fp
+      `;
+      dbMeter.queries += 1;
+      if (!done.length) return false;
+      await sql`update desk_event set url = ${to} where (fp = ${fp} or fp like ${fp + "-%"}) and url = ${from}`;
+      return true;
+    },
+
     async placeUnplaced(since, placeOf, desk = "yemen") {
       const sql = await sqlProvider();
       const rows = await sql<{ fp: string; at: unknown; type: string; summary: string; body: string | null; source: string | null; url: string | null; desks: string[]; flags: unknown }>`

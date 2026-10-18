@@ -306,3 +306,36 @@ test("page rules, 18 Oct: search X, box-only toggle, no map over the menu, edge 
     assert.match(readFileSync(f, "utf8"), /stale-while-revalidate=86400/, f);
   }
 });
+
+test("post-fit: a stored card linked to the post beside its own takes its own", async () => {
+  const { tmePost, channelPosts, betterPost, fixStoredPosts } = await import("./post-fit.ts");
+  const post = (id: number, text: string) =>
+    `<div class="tgme_widget_message_wrap js-widget_message_wrap"><div class="tgme_widget_message" data-post="craterSky/${id}"><div class="tgme_widget_message_text js-message_text" dir="auto">${text}</div></div></div>`;
+  const html = [
+    post(500, "وصول تعزيزات عسكرية إلى عدن"),
+    post(501, "مقتل 3 جنود في هجوم حوثي على مواقع في مقبنة غرب تعز"),
+    post(502, "الرئيس يلتقي السفير الأمريكي"),
+  ].join("");
+  assert.deepEqual(tmePost("https://t.me/craterSky/502"), { ch: "craterSky", id: 502 });
+  assert.equal(tmePost("https://example.com/x/1"), null);
+  const posts = channelPosts(html, "craterSky");
+  assert.equal(posts.length, 3);
+  const card = { headline: "Houthi attack kills 3 soldiers in Maqbanah, west of Taiz", body: "" };
+  // Linked to 502 (the president's meeting): 501 tells it.
+  assert.equal(betterPost(card, posts[2], posts.filter((p) => p.id !== 502)), 501);
+  // Linked to its own post: it stays.
+  assert.equal(betterPost(card, posts[1], posts.filter((p) => p.id !== 501)), null);
+
+  const moves: string[] = [];
+  let saved: unknown = null;
+  const store = {
+    getJson: async () => null,
+    putJson: async (_k: string, v: unknown) => { saved = v; },
+    tmeLinks: async () => [{ fp: "c1", url: "https://t.me/craterSky/502", headline: card.headline, body: "", at: "2026-10-18T10:00:00Z" }],
+    repost: async (fp: string, from: string, to: string) => { moves.push(`${fp} ${from} ${to}`); return true; },
+  } as unknown as import("./store.ts").DeskStore;
+  const n = await fixStoredPosts(store, { page: async () => html }, Date.parse("2026-10-18T12:00:00Z"));
+  assert.equal(n, 1);
+  assert.deepEqual(moves, ["c1 https://t.me/craterSky/502 https://t.me/craterSky/501"]);
+  assert.deepEqual(saved, { c1: 1 });
+});

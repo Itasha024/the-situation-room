@@ -37,6 +37,7 @@ import { nearerSource } from "./desk/speaker-press.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { relinkStoredCards } from "./desk/relink.ts";
+import { fixStoredPosts } from "./desk/post-fit.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
 import { listenToVideos } from "./desk/listen.ts";
 import { triage } from "./desk/triage.ts";
@@ -3440,6 +3441,13 @@ export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | 
     if (moved) console.log(`[relink] ${moved} card(s) moved from Google's link to the article's own (${resolvesLeft()} look-ups left this half hour)`);
   } catch (err) {
     console.warn("[relink] failed", err);
+  }
+  // Stored cards linked to the post beside their own take their own, a few a tick (post-fit.ts).
+  try {
+    const moved = await fixStoredPosts(store, { page: (u) => fetchText(u) });
+    if (moved) console.log(`[post-fit] ${moved} card(s) moved to their own post`);
+  } catch (err) {
+    console.warn("[post-fit] failed", err);
   }
   // Carry the gazetteer misses into the payload so the scan box can show them.
   if (merge.unplaced.length) payload.unplaced = merge.unplaced.slice(0, 20);

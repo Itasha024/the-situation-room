@@ -86,6 +86,10 @@ export interface DeskStore {
   gnewsLinks?(limit: number, skip?: string[]): Promise<{ fp: string; url: string; source: string; at: string }[]>;
   /** A card (and its pins) moved from Google's link to the article's; false when another card holds that address. */
   relink?(fp: string, url: string, source: string): Promise<boolean>;
+  /** Cards since `since` linked to a Telegram post, newest first, but those in `skip` (post-fit.ts checks each is its own post). */
+  tmeLinks?(since: string, limit: number, skip?: string[]): Promise<{ fp: string; url: string; headline: string; body: string; at: string }[]>;
+  /** A card (and its pins) moved from one post's link to its own; false when another card holds that link. */
+  repost?(fp: string, from: string, to: string): Promise<boolean>;
 
   /** When each of these cards was first published (fp → ISO), for those stored. */
   timesOf?(fps: string[]): Promise<Record<string, string>>;

@@ -65,7 +65,8 @@
   /* ---------- The data ---------- */
   const D = { asOf: null, reports: [], events: [], trump: [], arenas: [], fronts: [], oil: null, ydata: null, ybrief: null };
   let byFp = new Map();
-  const getJson = (u, o) => fetch(u, o).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  // No request holds the page up for long: one that has not answered in 40 seconds counts as none (it is asked again with the next refresh).
+  const getJson = (u, o) => fetch(u, { ...(o || {}), signal: AbortSignal.timeout ? AbortSignal.timeout(40_000) : undefined }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const srcName = (s) => { const f = app('canonicalSourceName'); return f ? f(s) : String(s || ''); };
   function leanCls(r) {
     if (r.desks[0] === 'iran' && r.lean) return 'ir-' + r.lean;
@@ -114,9 +115,17 @@
   }
 
   async function load() {
-    const [di, dy, bi, by, ti, ty, oil, sy, si] = await Promise.all([
+    // The oil prices come in on their own: the stories never wait on them (user, 18 Oct: a slow price read left
+    // Follow a story with no stories, no maps and no oil box). They fill the oil box when they come.
+    getJson('/api/oil').then((oil) => {
+      if (!(oil && oil.ok && oil.rows && oil.rows.length)) return;
+      const had = !!D.oil;
+      D.oil = oil;
+      if (!had && T.length) { buildTopics(); renderStories(); }
+    });
+    const [di, dy, bi, by, ti, ty, sy, si] = await Promise.all([
       getJson('/api/desk?desk=iran'), getJson('/api/desk?desk=yemen'), getJson('/api/brief?desk=iran'), getJson('/api/brief?desk=yemen'),
-      getJson('/api/trump'), getJson('/api/trump?desk=yemen'), getJson('/api/oil'),
+      getJson('/api/trump'), getJson('/api/trump?desk=yemen'),
       getJson('/api/scan?only=time', { cache: 'no-cache' }), getJson('/api/scan?desk=iran&only=time', { cache: 'no-cache' }),
     ]);
     if (di || dy) {
@@ -144,7 +153,6 @@
       }));
       D.trump = [...m.values()].sort((a, b) => (a.at < b.at ? 1 : -1));
     }
-    if (oil && oil.ok && oil.rows && oil.rows.length) D.oil = oil;
   }
 
   /* The whole war's pins, read once, soon after the page is up, so a longer view comes at once. */

@@ -58,9 +58,11 @@ for f in /srv/desk/migrations/0*.sql; do
 done
 PREV=$(readlink -f /srv/desk/current)
 # A scan under way finishes first (up to 4 minutes): a restart cut it off.
-for i in $(seq 80); do systemctl is-active --quiet desk-tick.service || break; [ $i = 1 ] && echo "[deploy] waiting for the scan to finish"; sleep 3; done
+for i in $(seq 80); do systemctl is-active --quiet desk-tick.service || systemctl is-active --quiet desk-iran-tick.service || break; [ $i = 1 ] && echo "[deploy] waiting for the scan to finish"; sleep 3; done
 ln -sfn $R /srv/desk/current
 sudo systemctl restart desk-server
+# The scans run in their own process (desk-worker, port 3001, 18 Oct), so the site never waits on one.
+if systemctl list-unit-files desk-worker.service >/dev/null 2>&1; then sudo systemctl restart desk-worker; fi
 ok=
 for i in $(seq 30); do
   sleep 3
@@ -69,6 +71,7 @@ done
 if [ -z "$ok" ]; then
   ln -sfn $PREV /srv/desk/current
   sudo systemctl restart desk-server
+  if systemctl list-unit-files desk-worker.service >/dev/null 2>&1; then sudo systemctl restart desk-worker; fi
   echo "[deploy] new release did not answer /api/status — back on $PREV"
   exit 1
 fi

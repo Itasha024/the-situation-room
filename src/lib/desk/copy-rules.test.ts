@@ -454,9 +454,10 @@ test("a speaker a reader does not know is named by role; a famous name stays bar
   assert.equal(speakerByRole("Hezbollah: fighters struck a tank", ""), "Hezbollah: fighters struck a tank");
   assert.equal(speakerByRole("Naderi: our missiles are ready", "He spoke in Tehran."), "Naderi: our missiles are ready");
   // Stored cards as served.
-  const card: Record<string, unknown> = { summary: "Ghaempanah: despite US and Israeli threats, Iran will remain united and steadfast", type: "statement", source: "SNN" };
+  const card: Record<string, unknown> = { summary: "Ghaempanah: despite US and Israeli threats, Iran will remain united and steadfast", type: "statement", source: "SNN", alsoReportedBy: [{ source: "Tasnim", summary: "Akhlaghi: measures in place against possible US GBU-43 strike on Iran" }] };
   assert.ok(serveCard(card, "iran"));
   assert.equal(card.summary, "Iran's executive vice president Ghaempanah: despite US and Israeli threats, Iran will remain united and steadfast");
+  assert.equal((card.alsoReportedBy as { summary: string }[])[0].summary, "Iran's defence minister Akhlaghi: measures in place against possible US GBU-43 strike on Iran");
 });
 
 test("who congratulated whom: the IRGC commander Vahidi congratulated the new defence minister (ILNA, 18 Oct)", () => {

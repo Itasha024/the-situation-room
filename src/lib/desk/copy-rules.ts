@@ -563,6 +563,10 @@ export function serveCard(r: Row, desk: "yemen" | "iran"): boolean {
   let h = speakerByRole(ungarble(fix(summary)), text);
   if (desk === "yemen" && houthi) h = houthiClaim(h, type, source);
   r.summary = h;
+  // The other outlets' lines under the card get the same offices and titles.
+  if (Array.isArray(r.alsoReportedBy)) {
+    for (const a of r.alsoReportedBy as Row[]) if (a && typeof a.summary === "string") a.summary = ungarble(officeTitles(a.summary));
+  }
   if (text) r.text = cleanBody(fix(text), source);
   const t = rightType(type, h);
   if (t !== type) r.type = t;

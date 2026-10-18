@@ -84,6 +84,7 @@ import {
   relayOf,
   rightType,
   ungarble,
+  speakerByRole,
   wrongSource,
   xPostTime,
   yemenOnIran,
@@ -853,7 +854,7 @@ ${raw.body}`, c.text) : null;
   // build-ups" Saudi forces, "liberate" take; Lebanon's "hostile" fire Israel's; offices; the speaker twice.
   const houthiSrc = outletSide(c.source, c.lean) === "houthi" || HOUTHI_OUTLET.test(c.source);
   const lebanon = lebanonContext(`${r.headline} ${r.body}`, c.source);
-  r.headline = ungarble(officeTitles(partisanWords(houthiWords(r.headline, houthiSrc), lebanon)));
+  r.headline = byRole(r, ungarble(officeTitles(partisanWords(houthiWords(r.headline, houthiSrc), lebanon))), c.text);
   r.body = cleanBody(officeTitles(partisanWords(houthiWords(r.body, houthiSrc), lebanon)), c.source);
   // Their own claim of a Houthi attack or a downed drone has its teller (Saree's "shoot down" went out bare).
   if (houthiSrc) r.headline = houthiClaim(r.headline, r.event_type, c.source);
@@ -917,6 +918,17 @@ function reviewReject(r: Reading, c: Candidate, desk: DeskId, strict: boolean): 
   const g = garbled(r.headline, c.text);
   if (g && (strict || !/written twice/.test(g))) return { kind: "reject", reason: "reader-check", note: sentence(g) };
   return null;
+}
+
+/**
+ * A speaker a reader does not know is named by role (user, 18 Oct: "Dar:",
+ * "Ghaempanah:"): the role from the title table or the card's own copy, and
+ * the speaker_lead with it.
+ */
+function byRole(r: Reading, headline: string, sourceText: string): string {
+  const h = speakerByRole(headline, `${r.body}\n${sourceText}`);
+  if (h !== headline && r.speaker_lead && headline.startsWith(`${r.speaker_lead}:`)) r.speaker_lead = h.slice(0, h.indexOf(":"));
+  return h;
 }
 
 function sentence(s: string): string {
@@ -1175,7 +1187,7 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // One side's outlet relaying the other side's voice: that side's own sources tell it (user, 8 Oct).
   const review = r.publish ? reviewReject(r, c, "iran", strict) : null;
   if (review) return review;
-  r.headline = ungarble(r.headline);
+  r.headline = byRole(r, ungarble(r.headline), c.text);
   r.body = cleanBody(r.body, c.source);
   const rival = r.publish ? rivalRelay(r.headline, c.source, c.lean ?? "", isExclusive(c.text, c.source)) : null;
   if (rival) return { kind: "reject", reason: "reader", note: sentence(rival) };

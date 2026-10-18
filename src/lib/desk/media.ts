@@ -132,7 +132,7 @@ const MAX_FOOTAGE_SECONDS = 240;
  * told about a video he cannot see.
  */
 const ABOUT_FOOTAGE =
-  /^(?:(?:new |purported |unverified )?(?:footage|video|videos|images|photos|pictures|satellite (?:images?|imagery))\b)|\b(?:footage|video|videos|images|photos|pictures|satellite (?:images?|imagery)) (?:shows?|showing|appears? to show|purports? to show|of the|captures?|reveals?)\b|\bon (?:camera|video)\b|\bfilmed\b/i;
+  /^(?:(?:new |purported |unverified )?(?:footage|video|videos|images|photos|pictures|satellite (?:images?|imagery))\b)|\b(?:footage|video|videos|images|photos|pictures|satellite (?:images?|imagery)) (?:shows?|showing|appears? to show|purports? to show|of the|captures?|reveals?)\b|\bon (?:camera|video)\b|\bfilmed\b|\b(?:publish|releas|air|broadcast|show|shar|post|distribut|circulat|issu|reveal)(?:e|es|s|ed|ing)? (?:new |fresh |rare |recent |more |further |purported |unverified |the |a )?(?:footage|videos?|video clips?|clips?|scenes|images|photos|pictures)\b|\b(?:new|fresh|recent) (?:footage|scenes|videos?) (?:of|from|shows?)\b/i;
 export function aboutFootage(r: Pick<LiveReport, "summary">): boolean {
   return ABOUT_FOOTAGE.test(String(r.summary || ""));
 }

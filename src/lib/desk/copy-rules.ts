@@ -7,6 +7,7 @@
  */
 import { anglicise } from "./anglicise.ts";
 import type { DeskType } from "./digest.ts";
+import { aboutFootage } from "./media.ts";
 import { respell } from "./spelling.ts";
 import { isWireSource, officialVoice, sourceNation, subjectNation } from "./speaker-press.ts";
 
@@ -308,13 +309,87 @@ export function gulfCoastShip(type: string, copy: string): boolean {
  * ------------------------------------------------------------------ */
 
 /** Offices as the cards themselves and the wires give them, 18 Oct. A change of office is a change here. */
-const IRAN_OFFICES: { name: string; office: string }[] = [
+const IRAN_OFFICES: { name: string; office: string; first?: string }[] = [
   { name: "Araghchi", office: "Iran's foreign minister" },
   { name: "Khatibzadeh", office: "Iran's deputy foreign minister" },
   { name: "Gharibabadi", office: "Iran's deputy foreign minister" },
   { name: "Ebnolreza", office: "Iran's acting defence minister" },
   { name: "Baghaei", office: "Iran's foreign ministry spokesman" },
+  // ILNA, 18 Oct: "سرلشکر وحیدی، فرمانده کل سپاه".
+  { name: "Vahidi", office: "IRGC commander", first: "Ahmad |General |Major General " },
+  // SNN and VOA Farsi, 18 Oct: "معاون اجرایی رئیس‌جمهور" Mohammad Jafar Ghaempanah.
+  { name: "Ghaempanah", office: "Iran's executive vice president", first: "Mohammad Jafar |Mohammad-Jafar |Mohammad |Jafar " },
+  { name: "Dar", office: "Pakistani FM", first: "Ishaq |Mohammad Ishaq |Muhammad Ishaq " },
+  // Al Mayadeen and ILNA, 18 Oct: "وزير الدفاع مهرداد أخلاقي", voted in by the Majlis.
+  { name: "Akhlaghi", office: "Iran's defence minister", first: "Mehrdad " },
+  // Akhbar-e Fori, 18 Oct: "حسن قشقاوی، سخنگوی کمیسیون امنیت ملی مجلس".
+  { name: "Qashqavi", office: "Iran's parliament security committee spokesman", first: "Hassan |Hasan " },
+  // Iran International, 18 Oct: "حمیدرضا حاجی‌بابایی، نایب‌رییس مجلس".
+  { name: "Hajibabaei", office: "Iran's deputy parliament speaker", first: "Hamidreza |Hamid Reza " },
+  // IMNA, 18 Oct: "محسن رضایی … دبیر شورای عالی امنیت ملی".
+  { name: "Rezaei", office: "Iran's Supreme National Security Council secretary", first: "Mohsen " },
+  // Iran International, 18 Oct: "نقدی، مشاور عالی فرمانده‌کل سپاه".
+  { name: "Naghdi", office: "IRGC commander's senior adviser", first: "Mohammad Reza |Mohammadreza |General " },
+  // Iran International, 18 Oct: Hossein Shariatmadari, Kayhan's editor.
+  { name: "Shariatmadari", office: "Kayhan editor", first: "Hossein " },
 ];
+
+/**
+ * Figures a reader of the news knows by surname: a headline may open with
+ * the bare name. Anyone else is named by role (user, 18 Oct: "Dar:",
+ * "Ghaempanah:", "Vahidi:" told the reader nothing).
+ */
+export const FAMOUS = /^(?:Trump|Vance|Rubio|Hegseth|Witkoff|Bessent|Leavitt|Kushner|Netanyahu|Katz|Saar|Zamir|Herzog|Khamenei|Mojtaba Khamenei|Pezeshkian|Araghchi|Ghalibaf|Larijani|Qalibaf|Grossi|Guterres|Grundberg|Putin|Lavrov|Erdogan|Macron|Starmer|Merz|Xi|Modi|Sharif|Bin Salman|MBS|Abdulsalam|Saree|Qassem|Naim Qassem|Aoun|Berri|Nawaf Salam|Al-Alimi|al-Alimi|Al-Houthi|al-Houthi|Sanders|Schumer|Johnson|Graham|Cruz)$/;
+
+/**
+ * The role the card's own copy gives a bare-surname speaker: "Ghaempanah:
+ * …" with "Iran's executive vice president, Mohammad Jafar Ghaempanah, said"
+ * in the body. Null when the copy gives none.
+ */
+export function roleInCopy(name: string, copy: string): string | null {
+  const n = escRe(name);
+  const job = "(?:[Mm]inister|[Ss]pokes(?:man|person|woman)|[Cc]ommander|[Pp]resident|[Aa]mbassador|[Ee]nvoy|[Ss]peaker|[Gg]overnor|[Aa]dviser|[Cc]hief)";
+  // A nation's word first ("Iran's", "Pakistani"), then up to three words of the office.
+  const ROLE = `((?:[A-Z][a-z]+(?:['’]s)?) (?:(?!said |told |and )[A-Za-z-]+ ){0,3}${job})`;
+  const before = new RegExp(`${ROLE},? (?:[A-Z][\\p{L}'-]+ ){0,2}${n}\\b`, "u").exec(copy);
+  const after = before ? null : new RegExp(`\\b${n}, (?:the )?${ROLE}\\b`, "u").exec(copy);
+  const role = (before ?? after)?.[1];
+  // The word before the office names a country or a side: "Iran's", "Pakistani", "IRGC".
+  return role && (subjectNation(role) || /^(?:IRGC|Hezbollah|Houthi)\b/.test(role)) ? role : null;
+}
+
+/** A bare-surname lead with no role: its role from the table, or from the card's copy. */
+export function speakerByRole(headline: string, copy = ""): string {
+  const h = String(headline || "");
+  const m = /^([A-Z][\p{L}'’-]+(?: [A-Z][\p{L}'’-]+)?):\s/u.exec(h);
+  if (!m || FAMOUS.test(m[1])) return h;
+  const surname = m[1].split(" ").pop()!;
+  if (IRAN_OFFICES.some((o) => o.name === surname)) return h; // officeTitles does those
+  // A body, a country or a group is not a person: "Hezbollah:", "IRGC:", "Iran:".
+  if (subjectNation(m[1]) || /^(?:IRGC|IDF|CENTCOM|Hezbollah|Hamas|UN|UNIFIL|IAEA|EU|NATO|OPEC|UKMTO|Houthis?|Kataib|Nujaba|Treasury|Pentagon|Kremlin|Ansarallah)$/i.test(m[1])) return h;
+  const role = roleInCopy(surname, String(copy || ""));
+  return role ? `${role[0].toUpperCase()}${role.slice(1)} ${surname}:${h.slice(m[0].length - 1)}` : h;
+}
+
+/**
+ * A message of congratulations told the wrong way round: "IRGC commander
+ * congratulates Vahidi on appointment as defence minister" (ILNA, 18 Oct)
+ * when Vahidi IS the IRGC commander and congratulated the new minister. The
+ * table's office says who sent it: written again with the sender first.
+ */
+export function rightWayRound(headline: string): string {
+  const h = String(headline || "");
+  const m = /^(.{2,60}?) (congratulat(?:es|ed)) (?:(?:General|Major General|Mr|Dr)\.? )?(?:[A-Z][\p{L}'-]+ )?([A-Z][\p{L}'-]+) on (?:his |her |the )?(appointment|election|confirmation) as (.+)$/u.exec(h);
+  if (!m) return h;
+  const [, who, verb, name, what, post] = m;
+  const known = IRAN_OFFICES.find((o) => o.name === name);
+  if (!known) return h;
+  const office = known.office.replace(/^Iran's /, "").toLowerCase();
+  const sender = who.replace(/^Iran's |^Iranian /i, "").toLowerCase();
+  // The one congratulated holds the sender's office, not the new post: the roles are swapped.
+  if (sender !== office || post.toLowerCase().includes(office)) return h;
+  return `${known.office[0].toUpperCase()}${known.office.slice(1)} ${name} ${verb} new ${post.replace(/^(?:the |new )/i, "")} on ${what === "appointment" ? "his appointment" : what}`;
+}
 
 /**
  * Titles (7 and 8, Iran): Araghchi is foreign minister, not UN ambassador;
@@ -328,9 +403,12 @@ export function officeTitles(s: string): string {
   // "Acting defence minister Sardar Ebnolreza": the office says it. Elsewhere Sardar is General.
   out = out.replace(/\b((?:minister|commander|chief|spokesman|adviser|deputy|head)\s+)Sardar\s+/gi, "$1");
   out = out.replace(/\bSardar\s+(?=[A-Z])/g, "General ");
-  for (const { name, office } of IRAN_OFFICES) {
-    out = out.replace(new RegExp(`^(?:Saeed |Said |Kazem |Majid |Abbas |Esmaeil |Ismail )?${name}:`), `${office[0].toUpperCase()}${office.slice(1)} ${name}:`);
+  // A famous name keeps its bare surname ("Araghchi: …"); anyone else is named by role.
+  for (const { name, office, first } of IRAN_OFFICES) {
+    if (FAMOUS.test(name)) continue;
+    out = out.replace(new RegExp(`^(?:${first ?? "Saeed |Said |Kazem |Majid |Abbas |Esmaeil |Ismail "})?${name}:`), `${office[0].toUpperCase()}${office.slice(1)} ${name}:`);
   }
+  out = rightWayRound(out);
   return out;
 }
 
@@ -344,8 +422,34 @@ export function officeTitles(s: string): string {
  * government: Yemen calls on"); an outlet's own body calling itself
  * "Houthi-aligned media"; a dateline with nothing after it.
  */
-export function ungarble(headline: string): string {
+/** Verbs that tell what a finding means: the second verb of "X restricted access … strengthens speculation". */
+const MEANS = "strengthens|strengthen|fuels|raises|suggests|signals|indicates|sparks|deepens|heightens|boosts|adds to|points to|shows|confirms|reinforces|feeds|stokes";
+/** Words that join two clauses: with one of them the headline is no garble. */
+const JOINER = /(?:,|;|:|—|–|\b(?:and|but|that|which|who|as|after|while|when|because|since|amid|so|or|if|than|where)\b)/i;
+
+/**
+ * Two finite verbs with no joiner (Iran International, 17 Oct): "Institute
+ * for Science and International Security restricted access to Kuh-e Kolang
+ * nuclear site strengthens speculation on stored materials". The name before
+ * the first verb is the speaker: "Institute for Science and International
+ * Security: restricted access to Kuh-e Kolang nuclear site strengthens
+ * speculation …". Null when the headline is not of that kind.
+ */
+export function twoVerbs(headline: string): string | null {
   const h = String(headline || "");
+  if (h.includes(":")) return null;
+  const m = new RegExp(`^((?:[A-Z][\\p{L}'’.-]*|of|for|and|the|on|in)(?: (?:[A-Z][\\p{L}'’.-]*|of|for|and|the|on|in)){0,8}) ([a-z]+ed) (.+?) (${MEANS})\\b(.*)$`, "u").exec(h);
+  if (!m) return null;
+  const [, who, verb, mid, means, rest] = m;
+  // The name ends in a name word, and nothing between the two verbs joins them.
+  if (!/[A-Z][\p{L}'’.-]*$/u.test(who) || JOINER.test(` ${mid} `)) return null;
+  // "has", "was" … before the first verb make it a finite verb of its own: no garble.
+  if (/\b(?:has|have|had|was|were|is|are|been|be)$/i.test(who)) return null;
+  return `${who}: ${verb} ${mid} ${means}${rest}`;
+}
+
+export function ungarble(headline: string): string {
+  const h = twoVerbs(headline) ?? String(headline || "");
   const m = /^([^:]{2,60}):\s+((?:the )?(?:Yemen(?:i|'s)?|Houthis?|Iran(?:ian|'s)?|Saudi|US|Israel(?:i)?)(?: government| forces| armed forces| army)?)\s+(\S+)(.*)$/.exec(h);
   if (!m) return h;
   const [, lead, again, next, rest] = m;
@@ -454,7 +558,9 @@ export function serveCard(r: Row, desk: "yemen" | "iran"): boolean {
     if (desk === "yemen") out = houthiWords(out, houthi);
     return out;
   };
-  let h = ungarble(fix(summary));
+  // A card about its footage is shown with that footage or not at all (user, 18 Oct: "Houthi media publishes new footage …" with no video).
+  if (aboutFootage({ summary }) && !r.media) return false;
+  let h = speakerByRole(ungarble(fix(summary)), text);
   if (desk === "yemen" && houthi) h = houthiClaim(h, type, source);
   r.summary = h;
   if (text) r.text = cleanBody(fix(text), source);

@@ -134,3 +134,17 @@ test("a card written about its footage goes out with it, and any still that is n
   assert.equal(tooLong({ kind: "video", duration: 150 }), true);
   assert.equal(tooLong({ kind: "video", duration: 150 }, true), false);
 });
+
+test("'X publishes / releases / airs new footage of …' is a card about its footage (18 Oct)", async () => {
+  const { aboutFootage } = await import("./media.ts");
+  for (const summary of [
+    "Houthi media publishes new footage of attacks on Saudi Aramco facilities",
+    "Saudi-led coalition publishes footage of targeted Houthi ballistic missile launchers",
+    "Nation's Shield forces release footage of clashes with Houthis in Al-Subayhah",
+    "Iranian state TV aired footage claiming to show an oil tanker exploding",
+    "Taiz axis command publishes footage documenting Houthi 23mm machine gun targeted",
+    "IDF releases video of strike on Hezbollah launcher",
+    "Houthis show new scenes of the downed MQ-9",
+  ]) assert.equal(aboutFootage({ summary }), true, summary);
+  for (const summary of ["Houthi missiles strike Saudi Aramco facilities", "Ministry publishes casualty figures for Taiz", "IDF releases soldier's name"]) assert.equal(aboutFootage({ summary }), false, summary);
+});

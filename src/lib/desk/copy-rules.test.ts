@@ -419,3 +419,72 @@ test("ships off Jubail are the Iran desk's; the Gulf of Aden is not Aden; a body
   assert.equal(respell("Broojerdi: If US uses mother of all bombs"), "Boroujerdi: If US uses mother of all bombs");
   assert.equal(respell("Lebanese Foreign Minister Yusuf Raji in Baghdad"), "Lebanese Foreign Minister Yusuf Raggi in Baghdad");
 });
+
+/* Round 2 of 18 Oct: footage, titles, who congratulated whom, two verbs. */
+import { roleInCopy, rightWayRound, speakerByRole, twoVerbs } from "./copy-rules.ts";
+
+test("a card about its footage is served with its video or not at all (Shajab News, 18 Oct)", () => {
+  const bare: Record<string, unknown> = { summary: "Houthi media publishes new footage of attacks on Saudi Aramco facilities", type: "strike", source: "Shajab News" };
+  assert.equal(serveCard(bare, "yemen"), false);
+  for (const summary of [
+    "Saudi-led coalition publishes footage of targeted Houthi ballistic missile launchers",
+    "Nation's Shield forces release footage of clashes with Houthis in Al-Subayhah",
+    "Iranian state TV aired footage claiming to show an oil tanker exploding after hitting a naval mine in the Strait of Hormuz",
+    "Houthi forces broadcast footage of an AH-6i attack helicopter downed off Najran",
+  ]) assert.equal(serveCard({ summary, type: "strike", source: "X" }, "yemen"), false, summary);
+  const shown: Record<string, unknown> = { ...bare, media: { kind: "video", from: "tg", post: "u", thumb: "t" } };
+  assert.ok(serveCard(shown, "yemen"));
+  assert.ok(serveCard({ summary: "Houthi missiles strike Saudi Aramco facilities in Jazan", type: "strike", source: "Masirah" }, "yemen"));
+});
+
+test("a speaker a reader does not know is named by role; a famous name stays bare (Dar, Ghaempanah, Vahidi, 18 Oct)", () => {
+  assert.equal(officeTitles("Dar: discussed regional issues during a phone call with Iranian Foreign Minister Araghchi[[3]]."), "Pakistani FM Dar: discussed regional issues during a phone call with Iranian Foreign Minister Araghchi[[3]].");
+  assert.equal(officeTitles("Ghaempanah: Iran's daily gas shortfall reaches 530 million cubic metres"), "Iran's executive vice president Ghaempanah: Iran's daily gas shortfall reaches 530 million cubic metres");
+  assert.equal(officeTitles("Mohammad Jafar Ghaempanah: despite US and Israeli threats, Iran will remain united"), "Iran's executive vice president Ghaempanah: despite US and Israeli threats, Iran will remain united");
+  assert.equal(officeTitles("Vahidi: the IRGC is ready"), "IRGC commander Vahidi: the IRGC is ready");
+  assert.equal(officeTitles("Akhlaghi: let our people be assured Israel will not dare attack us"), "Iran's defence minister Akhlaghi: let our people be assured Israel will not dare attack us");
+  assert.equal(officeTitles("Qashqavi: All claims about opening the Strait of Hormuz are pure lies"), "Iran's parliament security committee spokesman Qashqavi: All claims about opening the Strait of Hormuz are pure lies");
+  assert.equal(officeTitles("Sanders: we will do whatever it takes to stop the illegal war with Iran"), "Sanders: we will do whatever it takes to stop the illegal war with Iran");
+  assert.equal(officeTitles("Araghchi: Iran will not negotiate under threat"), "Araghchi: Iran will not negotiate under threat");
+  assert.equal(officeTitles("Araghchi holds phone call with Pakistani foreign minister Dar"), "Araghchi holds phone call with Pakistani foreign minister Dar");
+  // Not in the table: the role the card's own copy gives.
+  assert.equal(roleInCopy("Naderi", "Iran's deputy defence minister, Ahmad Naderi, said the missiles were ready."), "Iran's deputy defence minister");
+  assert.equal(speakerByRole("Naderi: our missiles are ready", "Iran's deputy defence minister Ahmad Naderi said the missiles were ready."), "Iran's deputy defence minister Naderi: our missiles are ready");
+  assert.equal(speakerByRole("Netanyahu: Israel will act", "Israeli Prime Minister Benjamin Netanyahu said"), "Netanyahu: Israel will act");
+  assert.equal(speakerByRole("Hezbollah: fighters struck a tank", ""), "Hezbollah: fighters struck a tank");
+  assert.equal(speakerByRole("Naderi: our missiles are ready", "He spoke in Tehran."), "Naderi: our missiles are ready");
+  // Stored cards as served.
+  const card: Record<string, unknown> = { summary: "Ghaempanah: despite US and Israeli threats, Iran will remain united and steadfast", type: "statement", source: "SNN" };
+  assert.ok(serveCard(card, "iran"));
+  assert.equal(card.summary, "Iran's executive vice president Ghaempanah: despite US and Israeli threats, Iran will remain united and steadfast");
+});
+
+test("who congratulated whom: the IRGC commander Vahidi congratulated the new defence minister (ILNA, 18 Oct)", () => {
+  const wrong = "IRGC commander congratulates Vahidi on appointment as defence minister";
+  assert.equal(rightWayRound(wrong), "IRGC commander Vahidi congratulates new defence minister on his appointment");
+  assert.equal(rightWayRound("IRGC commander Vahidi congratulates Akhlaghi on appointment as defence minister"), "IRGC commander Vahidi congratulates Akhlaghi on appointment as defence minister");
+  assert.equal(rightWayRound("Pezeshkian congratulates Akhlaghi on appointment as defence minister"), "Pezeshkian congratulates Akhlaghi on appointment as defence minister");
+  const card: Record<string, unknown> = { summary: wrong, type: "statement", source: "ILNA" };
+  assert.ok(serveCard(card, "iran"));
+  assert.equal(card.summary, "IRGC commander Vahidi congratulates new defence minister on his appointment");
+  // A new card: the reader's copy is turned the right way round.
+  const v = decideIranForTest(reading({ headline: wrong, speaker_lead: "" }), "فرمانده کل سپاه انتصاب وزیر دفاع و پشتیبانی نیروهای مسلح را تبریک گفت سرلشکر وحیدی، فرمانده کل سپاه پاسداران انقلاب اسلامی با صدور پیامی ضمن تبریک انتصاب آقای مهرداد اخلاقی به سمت وزیر دفاع", "ILNA", "state");
+  if (v.kind === "publish") assert.ok(!/congratulates Vahidi/.test(v.report.summary), v.report.summary);
+});
+
+test("two verbs with no joiner: the name before the first is the speaker (Iran International, 17 Oct)", () => {
+  const h = "Institute for Science and International Security restricted access to Kuh-e Kolang nuclear site strengthens speculation on stored materials";
+  assert.equal(twoVerbs(h), "Institute for Science and International Security: restricted access to Kuh-e Kolang nuclear site strengthens speculation on stored materials");
+  assert.equal(ungarble(h), twoVerbs(h));
+  const card: Record<string, unknown> = { summary: h, type: "statement", source: "Iran International" };
+  assert.ok(serveCard(card, "iran"));
+  assert.equal(card.summary, twoVerbs(h));
+  // Joined clauses and plain sentences pass untouched.
+  for (const ok of [
+    "IAEA said access to Fordow was restricted, which raises concern",
+    "US Treasury sanctioned 12 tankers and signals more to come",
+    "Saudi air defences intercepted a missile over Jazan",
+    "Iran restricted access to Kuh-e Kolang site",
+    "Araghchi: restricted access suggests nothing",
+  ]) assert.equal(twoVerbs(ok), null, ok);
+});

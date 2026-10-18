@@ -3,12 +3,14 @@
  *
  * The writers are asked to rank their points, and some do not: on 17 Oct the
  * Iran desk opened on Araghchi's remark on Hormuz, with two tanker attacks
- * under it. This puts the points in four bands and keeps the writer's order
+ * under it. This puts the points in five bands and keeps the writer's order
  * inside each band, so a writer that ranks well is left as it is:
  *   0  deaths, attacks on ships, energy sites or Saudi Arabia; Trump's own words
  *   1  other attacks and fighting; decisions: sanctions, mobilisation, talks, a ceasefire
  *   2  meetings, visits, calls; prices and costs
  *   3  what someone said, rejected or warned, with no act in it
+ *   4  no new fact: condemned, congratulated, discussed issues, solidarity (18 Oct);
+ *      dropped whenever a point of a stronger band is there
  */
 
 export const MAX_POINTS = 6;
@@ -22,13 +24,32 @@ const MEETING = /\b(?:met|meets|meeting|visit(?:s|ed)?|to visit|call(?:ed)? with
 const DEED = /\b(?:struck|seized|sank|launched|fired|shot down|intercepted|captured|targeted|hit|killed|imposed|declared|ordered|announced|deployed)\b/i;
 const WORDS = /\b(?:rejects?|rejected|denies|denied|condemn(?:s|ed)?|prais(?:es|ed)|warns?|warned|says?|said|claims?|claimed|calls? for|urged?|vows?|vowed|threaten(?:s|ed)?|insists?|stresses|stressed|footage)\b/i;
 
-const plain = (p: string) => p.replace(/\s*\[[^\]]*\]/g, "").trim();
+/**
+ * Words that carry no new fact (user, 18 Oct: "Condemned navigation
+ * disruptions in the Strait of Hormuz and Bab al-Mandab", "Dar: discussed
+ * regional issues during a phone call with Araghchi"): a condemnation, a
+ * talk on "issues", congratulations, support, solidarity, a slogan.
+ */
+const EMPTY =
+  /\b(?:condemn(?:s|ed|ing)?|denounc(?:es|ed|ing)|deplor(?:es|ed)|congratulat(?:es|ed|ing)|discuss(?:es|ed|ing) (?:the )?(?:regional|bilateral|recent|latest|mutual|common|current|international)? ?(?:issues|ties|relations|developments|situation|matters|cooperation|topics)|exchang(?:es|ed) views|express(?:es|ed) (?:its |his |her |their )?(?:support|solidarity|concern|condolences|sympathy|appreciation|gratitude)|(?:re)?affirm(?:s|ed) (?:its |his |her |their )?(?:support|solidarity|commitment|stance|position)|stress(?:es|ed) the (?:importance|need)|will remain (?:united|steadfast|strong|firm)|stands? (?:with|by)|in solidarity with)\b/i;
+/** A fact that makes such a point news after all: a toll, a deed, a decision. */
+const NEWS_IN_IT = /\b(?:killed|killing|dead|deaths?|wounded|injured|\d[\d,.]*\s*(?:people|civilians|soldiers|killed|dead|wounded|ships|tankers|missiles|drones|per ?cent|%|billion|million)|agreed|agreement|deal|ceasefire|truce|sanction(?:s|ed)?|ordered|announced|declared|decided|approved|imposed|expelled|recalled|suspended|closed|deadline|proposal|withdr[ae]w\w*)\b/i;
 
-/** The band a point falls in, 0 (most important) to 3. */
+const plain = (p: string) => p.replace(/\s*\[[^\]]*\]+/g, "").trim();
+
+/** A point with no new fact in it: band 4, dropped when any stronger point is there. */
+export function emptyPoint(point: string): boolean {
+  const p = plain(point);
+  const said = p.replace(/^[^:.]{2,60}:\s/, "");
+  return EMPTY.test(said) && !NEWS_IN_IT.test(said) && !DEED.test(said);
+}
+
+/** The band a point falls in, 0 (most important) to 4 (no new fact). */
 export function band(point: string): number {
   const p = plain(point);
   const speaker = p.match(/^([^:.]{2,60}):\s/);
   if (/^Trump\b/.test(p)) return 0;
+  if (emptyPoint(p)) return 4;
   // Someone's words: a band of their own, unless they tell a deed of theirs or a decision.
   if (speaker && !DEED.test(p.slice(speaker[0].length)) && !DECISION.test(p.slice(speaker[0].length))) return 3;
   // A claim with no deed in it ("spokesmen claim increased defence capabilities") is words.
@@ -43,9 +64,15 @@ export function band(point: string): number {
 
 /** The points from the most important to the least, the writer's order kept inside a band, at most `max`. */
 export function rankPoints(points: string[], max = MAX_POINTS): string[] {
-  return points
+  return dropEmpty(points)
     .map((p, i) => ({ p, i, b: band(p) }))
     .sort((a, b) => a.b - b.b || a.i - b.i)
     .slice(0, max)
     .map((x) => x.p);
+}
+
+/** The points with no new fact go when a point with one is there; a list of only such points is kept. */
+export function dropEmpty<T extends string>(points: T[]): T[] {
+  const kept = points.filter((p) => !emptyPoint(p));
+  return kept.length ? kept : points;
 }

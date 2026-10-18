@@ -352,9 +352,17 @@ WHO DID WHAT TO WHOM — never infer, never assume
   cannot tell the roles apart, confident_roles=false and targets=[].
 - targets/origins: each place exactly as the text writes it, in the text's own
   language (e.g. "تعز"). Places only — no descriptions.
+- A message (congratulations, condolences, thanks) is sent BY the one who
+  signed or issued it, TO the one it names: read who issued it ("بعث برقية",
+  "با صدور پیامی") before writing. Never turn the sender into the one
+  congratulated.
 
 WRITING
 - English wire style. headline <= 110 characters, sentence case, no full stop.
+- One clause per headline, its subject first: a body's finding is that body
+  with a colon ("ISIS: restricted access to the Kolang site suggests stored
+  materials"), never two verbs with nothing joining them ("X restricted
+  access to the site strengthens speculation").
 - Spell each place once, the usual English way, and never explain the
   spelling: no "also spelled", "also written", "also known as" or a second
   spelling in brackets.

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { band, rankPoints, MAX_POINTS } from "./rank-points.ts";
+import { band, dropEmpty, emptyPoint, rankPoints, MAX_POINTS } from "./rank-points.ts";
 
 // The Iran desk's points as published on 17 Oct: a remark first, the tanker attacks under it.
 const IRAN_17OCT = [
@@ -49,4 +49,26 @@ test("bands", () => {
 
 test("fewer than six points are all kept", () => {
   assert.equal(rankPoints(IRAN_17OCT.slice(0, 3)).length, 3);
+});
+
+test("points with no new fact go to band 4 and are dropped when stronger points exist (18 Oct)", () => {
+  const condemn = "Condemned navigation disruptions in the Strait of Hormuz and Bab al-Mandab[[2]].";
+  const dar = "Dar: discussed regional issues during a phone call with Iranian Foreign Minister Araghchi[[3]].";
+  assert.equal(band(condemn), 4);
+  assert.equal(band(dar), 4);
+  assert.equal(band("IRGC commander congratulated the new defence minister [r1]."), 4);
+  assert.equal(band("Bahraini foreign minister condemns Houthi attacks on civilian objects in Saudi Arabia [r2]."), 4);
+  assert.ok(emptyPoint("Iran's executive vice president: despite US and Israeli threats, Iran will remain united and steadfast [r3]."));
+  // A condemnation with a toll or a decision in it is news.
+  assert.equal(emptyPoint("Bahrain condemned the strike on Riyadh airport that killed two [r4]."), false);
+  assert.equal(emptyPoint("Pakistan condemned the attack and announced it would send troops [r5]."), false);
+  const talks = [
+    "Iran urged the US to accept a proposal to reopen the Strait of Hormuz[[1]].",
+    "Russian Foreign Minister Lavrov arrived in Bahrain to ease Gulf tensions, with a planned visit to Tehran next[[2]].",
+    dar,
+  ];
+  assert.deepEqual(dropEmpty(talks), talks.slice(0, 2));
+  assert.equal(rankPoints([condemn, ...talks]).length, 2);
+  // A list of only such points is kept: the arena is not left empty.
+  assert.deepEqual(dropEmpty([condemn, dar]), [condemn, dar]);
 });

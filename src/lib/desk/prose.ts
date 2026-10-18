@@ -18,7 +18,7 @@ import { outletSide } from "./digest.ts";
 import { CONTROL, CONTROL_AS_OF } from "./control-data.ts";
 import { CADENCE_HOURS } from "./brief.ts";
 import { pointList, type Ref, refOfReport, stripRefs } from "./refs.ts";
-import { rankPoints } from "./rank-points.ts";
+import { dropEmpty, rankPoints } from "./rank-points.ts";
 
 const GOV_NAME: Record<string, string> = {
   "YE-TA": "Taiz", "YE-LA": "Lahj", "YE-DA": "Al-Dhale", "YE-MA": "Marib", "YE-JA": "Al-Jawf", "YE-BA": "Al-Bayda",
@@ -77,7 +77,7 @@ const H = `${CADENCE_HOURS} hours`;
 const SYSTEM = `You are the editor of a live news desk on the current round of the Yemen war (from 13 July 2026, the strike on Sanaa airport: the Houthis against the Yemeni government and the Saudi-led coalition).
 You get the reports published in the last ${H} and the text that stood before. Each report line is: [its id] outlet [whose word it is, if only one side reports it] {the front ids it belongs to}: headline — body.
 Write in English wire style (Reuters/AP):
-- "points": the latest developments of these ${H}, as a numbered list for a reader with a minute: 4-6 points (fewer only when less happened), each ONE development in 1-2 short sentences (at most 40 words), ordered from the most important to the least. Importance is what changes the war most: a front moving, a big strike and its deaths, attacks on Saudi Arabia, on shipping or on oil and energy sites, a leader's decision or threat, talks. What a leader or government actually said or decided outranks reports of what they might do. Minor or local items come last or are left out. Two reports of one event are one point.
+- "points": the latest developments of these ${H}, as a numbered list for a reader with a minute: 4-6 points (fewer only when less happened), each ONE development in 1-2 short sentences (at most 40 words), ordered from the most important to the least. Importance is what changes the war most: a front moving, a big strike and its deaths, attacks on Saudi Arabia, on shipping or on oil and energy sites, a leader's decision or threat, talks. What a leader or government actually said or decided outranks reports of what they might do. Minor or local items come last or are left out. A point with no new fact (someone condemned, congratulated, discussed "regional issues", expressed support or solidarity, or a general statement) is the least important and is left out whenever there are points with a fact. Two reports of one event are one point.
   Bird's-eye but concrete: every point names its front, governorate or region and who acted ("Houthi forces pressed on the Marib front and took ground north of Hays"); no villages or units unless the point is about that place; never vague ("multiple fronts", "several fronts", "various areas", "remain targeted", "across several areas", "intense fighting continued").
   After the words each report supports, put that report's id in square brackets, before the full stop: "Saudi airstrikes hit Sanaa airport [r4]." Every point carries at least one id, and only ids from the REPORTS. When several reports tell the same fact, give the id of ONE: the speaker's or the country's own account first (the party's own channel, its ministry or army, its state agency), then a wire agency, then the fullest report. Two ids in a point only when it joins two different facts.
 - "fronts": for each front id given, a list of 1-4 points: the main developments on that front in these ${H}, most important first, each 1-2 short sentences with the same ids in square brackets. Concrete places and who did what, never vague. A front is a governorate (or the Bab al-Mandab strait, the Red Sea coast from Mocha to Hodeidah, or Saudi Arabia): say where inside it each thing happened ("in western Taiz, at Al-Wazi'iyah", "north of Marib city"). A front with nothing new gets one point with its current state from the previous text, stated positively, with no id.
@@ -318,7 +318,7 @@ export async function writeProse(
   const fj = (j.fronts && typeof j.fronts === "object" ? j.fronts : {}) as Record<string, unknown>;
   const fm = (j.front_maps && typeof j.front_maps === "object" ? j.front_maps : {}) as Record<string, unknown>;
   for (const f of fronts) {
-    const fp = onePointEach(cleanPoints(fj[f.id], 4), outlets);
+    const fp = dropEmpty(onePointEach(cleanPoints(fj[f.id], 4), outlets));
     out.frontPoints![f.id] = fp;
     out.fronts[f.id] = fp.map(stripRefs).join(" ");
     const marks = cleanDevMap(fm[f.id], out.fronts[f.id]);

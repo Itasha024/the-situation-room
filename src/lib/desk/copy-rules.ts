@@ -219,6 +219,8 @@ export const lebanonContext = (copy: string, source: string): boolean => LEBANES
  */
 export function partisanWords(s: string, lebanon: boolean, iranDesk = false): string {
   let out = String(s || "");
+  // "Hostile Israeli drone dropped two rockets on Mifdun" (NBN, 18 Oct): the word says nothing more.
+  out = out.replace(/\b[Hh]ostile (Israeli)\b/g, "$1");
   if (lebanon) out = out.replace(/\b[Hh]ostile (artillery|shelling|fire|drones?|aircraft|warplanes?|forces|army|strikes?|raids?|bulldozers?|incursion|troops)\b/g, "Israeli $1");
   if (iranDesk) {
     out = out

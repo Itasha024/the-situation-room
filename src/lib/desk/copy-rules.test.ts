@@ -228,6 +228,7 @@ test("partisan words: hostile artillery is Israeli; 'opponents' is the speaker's
   assert.equal(partisanWords("Iran fires missiles at non-compliant ships in Strait of Hormuz", false, true), 'Iran fires missiles at "non-compliant" ships in Strait of Hormuz');
   assert.equal(partisanWords("Army says it identified a burning smuggled oil tanker in Gulf of Oman", false, true), 'Army says it identified a burning "smuggled" oil tanker in Gulf of Oman');
   assert.equal(partisanWords("IRGC-N unauthorized tanker disabled tracking systems", false, true), 'IRGC-N "unauthorized" tanker disabled tracking systems');
+  assert.equal(partisanWords("Hostile Israeli drone dropped two rockets on a residential building in Mifdun", true), "Israeli drone dropped two rockets on a residential building in Mifdun");
   // Elsewhere, "hostile" and quoted words stay.
   assert.equal(partisanWords("Hostile takeover bid for shipping firm", false), "Hostile takeover bid for shipping firm");
   assert.equal(partisanWords('IRGC seizes "non-compliant" tanker', false, true), 'IRGC seizes "non-compliant" tanker');

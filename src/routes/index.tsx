@@ -17,7 +17,14 @@ export const Route = createFileRoute("/")({
           "Live open-source reporting on the wars with Iran and in Yemen: strikes on every side, the Strait of Hormuz, the Red Sea, oil and the talks, from every side's sources.",
       },
     ],
-    links: [{ rel: "stylesheet", href: `/home.css?v=${ASSET_V}` }],
+    links: [
+      { rel: "stylesheet", href: `/home.css?v=${ASSET_V}` },
+      // The page's script and the two desks' data start with the page, not after the app is up
+      // (user, 18 Oct: a first visit waited seconds for the pins).
+      { rel: "preload", as: "script", href: `/home.js?v=${ASSET_V}` },
+      { rel: "preload", as: "fetch", href: "/api/desk?desk=iran", crossOrigin: "anonymous" },
+      { rel: "preload", as: "fetch", href: "/api/desk?desk=yemen", crossOrigin: "anonymous" },
+    ],
   }),
   component: Home,
   // The page is a shell: its news comes from the cached APIs.

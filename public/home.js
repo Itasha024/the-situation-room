@@ -294,10 +294,19 @@
       const fps = new Set(t.cards.map((r) => r.fp));
       // The maps show today's events; the nuclear file's, every attack on a nuclear site since 28 Feb (user, 18 Oct).
       const day = today();
-      t.mapNote = t.id === 'nuclear' ? 'Attacks on nuclear sites since 28 Feb' : 'Today’s events';
-      t.events = t.geo === false ? [] : t.id === 'nuclear'
-        ? D.events.filter((e) => e.desk === 'iran' && A('iranKindOf')(e) === 'nuclear')
-        : D.events.filter((e) => !e.researched && evDay(e) === day && inB(e, t.bounds) && (t.desk === 'both' || e.desk === t.desk) && (fps.has(e.fp) || (t.erx && t.erx.test(`${e.label || ''} ${e.place || ''}`))) && (!t.where || t.where(e)));
+      const mine = (e) => !e.researched && inB(e, t.bounds) && (t.desk === 'both' || e.desk === t.desk) && (fps.has(e.fp) || (t.erx && t.erx.test(`${e.label || ''} ${e.place || ''}`))) && (!t.where || t.where(e));
+      if (t.geo === false) t.events = [];
+      else if (t.id === 'nuclear') {
+        t.mapNote = 'Attacks on nuclear sites since 28 Feb';
+        t.events = D.events.filter((e) => e.desk === 'iran' && A('iranKindOf')(e) === 'nuclear');
+      } else {
+        // Today's events; early in the day, before any, the latest day that had some (user, 18 Oct: a story is never without its map).
+        const all = D.events.filter(mine);
+        const last = all.reduce((m, e) => (evDay(e) > m ? evDay(e) : m), '');
+        const shown = all.some((e) => evDay(e) === day) ? day : last;
+        t.events = shown ? all.filter((e) => evDay(e) === shown) : [];
+        t.mapNote = shown === day ? 'Today’s events' : shown ? `Latest events: ${dayName(shown)}` : '';
+      }
       // A story both desks share is one desk's when all its reports are that desk's (user, 18 Oct: an Emirati plane landing in Tehran is no Yemen news).
       if (t.desk === 'both' && t.cards.length && !t.trump && !t.oil) {
         const ds = new Set(t.cards.flatMap((r) => r.desks));

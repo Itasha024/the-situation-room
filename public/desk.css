@@ -1198,7 +1198,8 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
   #casualties .num-cat button.on{background:#f8fafc}
   html[data-set="broadsheet"] #casualties .num-cat button.on{background:var(--t-strong)}
 }
-.tally-box.ir table.list.sanc td.l:not(.w),.tally-box.ir table.list.sanc th.l:not(.w){width:2.6rem;min-width:0;white-space:nowrap}
+/* A short "By" (EU, UN) stays on one line; a long "Who" (the US list: "17 tankers, 17 firms...") wraps, so no box needs a sideways scroll on a phone (user, 18 Oct). */
+.tally-box.ir table.list.sanc td.l:not(.w),.tally-box.ir table.list.sanc th.l:not(.w){width:auto;min-width:2.6rem;max-width:40%;white-space:normal;overflow-wrap:anywhere}
 .tally-box.ir table.list.sanc td.l.w,.tally-box.ir table.list.sanc th.l.w{width:auto}
 /* The timeline's sources: a list that opens on a click (user, 12 Oct). */
 .src-list{margin-top:.25rem}

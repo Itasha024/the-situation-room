@@ -3,6 +3,34 @@
 Every mistake the operator (or a review) found, the rule that now catches it, and its test.
 Newest round first.
 
+## Round 35 (review of the latest 400 cards per desk, 18 Oct)
+
+Notes: `review-18oct-findings.md` (Iran sections 2–12, Yemen 2–10; duplicates are copies.ts's, done apart). Every rule is in `copy-rules.ts`, applied to new cards (`editor.ts` decide/decideIran, `reviewReject`) and to stored cards as served (`serveCard` in `/api/desk`: off-desk cards hidden, words and types fixed; the rows are left as they are). Test: `copy-rules.test.ts`.
+
+| Mistake | Rule now | Where |
+|---|---|---|
+| Iran: price ticks ("Brent crude oil price reaches $110", five a day), market wraps (OilPrice, The National, Kpler spreads, tanker rates), forecasts ("Sanctions relief unlikely to ease tanker crisis", "US war has cost average household"), Emtedad's "Summary of recent maritime attacks" | Not news, any source, either desk | `notNews` |
+| Iran: Friday-prayer imams (Tehran, 16-17 Oct); "armed forces on high alert to respond to any threat", "many achievements", "depends on one person" | A sermon or a vow with nothing new is no card | `notNews` FRIDAY, RHETORIC |
+| Yemen: Citrinowicz, Andreas Craig, Nusbacher, Al-Nasi, ex-PM Saeed, a writer, a journalist; "Reuters warns…" | Commentary by role, by name, by the body's "a former … officer"; an outlet's own assessment | `notNews` COMMENTATOR_* , OUTLET_ANALYSIS |
+| Yemen: condolences, attending an OIC session, "discusses regional developments with X counterpart"; tribes' and scholars' mobilisation; pet owners, a survivor recalls, "Why a trade route is at risk"; a 2024 message to Sinwar; satellite pictures of old damage; earthquakes, weather, executions, a blood drive | Protocol, clerics and tribes, features, old news, off-topic | `notNews` |
+| Iran: rain in Bashagard, schools, a cleric's murder, Ahvaz workers' protest, the water crisis, the Afghanistan corridor, Armenia trade, Evin, January-protest arrests | Iran's home affairs with nothing of the war in the headline are not the Iran desk's | `homeAffairs` |
+| CENTCOM, the Treasury, the Pentagon through Al Jazeera, VOA Farsi, Al Hadath, Radio Farda, the MEK, Shin Persian; Trump and Vance through Clash Report, MTV Lebanon, Asharq; Hegseth and Rubio through Bin Saeed, Naya, Clash Report | A US voice from a non-US, non-wire outlet is a relay (its own account, US press or a wire tells it; an exclusive stays) | `relayOf` |
+| UKMTO through Ali Bk, OSINTdefender, Hellenic Shipping, IRIB, Yemenat, Sawt al-Asima, Al-Ayyam, Yemen Monitor | Any copy telling UKMTO's notice from another outlet is a relay | `relayOf` |
+| Netanyahu through Vahid Online; "Israeli media report" through VOA Farsi | Israel from Israeli sources only (now also "likens", "report") | `relayOf` |
+| Yemen desk: Al-Alam, IRNA, ISNA, IRIB, Press TV, Tasnim, Iran International relaying the Houthi speaker, the health ministry, Saudi officials, Israel | An Iranian outlet on the Yemen desk carries Iran's own words only | `relayOf` |
+| Khatibzadeh's words under Trump's Truth Social post; the Pentagon card on Gen. Randy George linked to a page about Hegseth's visitor | A Truth Social card is Trump's; a read page must hold one of the headline's names | `wrongSource` |
+| "Yemeni attack by drone", "Yemeni ballistic missiles", "Yemeni air blockade" from Houthi outlets (Al-Mihwar, Naya, Shajab, Ali Bk, Saudi Civil Defence's own feed); "Saudi government forces"; "Saudi build-ups"; "liberate"; "Iran-backed Houthis" | Houthi missiles, government forces, Saudi forces, capture, Houthis | `houthiWords` (new and served) |
+| Alfaqaar, Saree, Ali Bk's own claims printed bare ("Houthi forces shoot down Saudi Karayel drone") | A Houthi outlet's claim (a downing too) is led by its teller | `houthiClaim` |
+| NBN, Ali Shoaib: "Hostile artillery fire targeted…"; "opponents" for العدو (Al Mayadeen, Al-Alam, LBCI); "non-compliant", "smuggled", "unauthorized" tankers | In Lebanon "hostile" is Israeli; on the Iran desk "the enemy" is quoted (Israeli in Lebanon); those ship words are quoted | `partisanWords` |
+| Tanker mined or on fire typed economy; explosions heard typed statement; strikes with dead typed statement; appeals, call-ups, police transfers, a house raided typed combat; "1,292 strikes in 24 hours" typed strike; UKMTO's weekly count and the IMO typed diplomacy | Typed by the headline | `rightType` (in `toReport`, and served) |
+| Iran desk: the human-rights minister in Berlin, the coalition's tallies, "explosions heard in Aden", the Swiss briefing ("Iranian arms" is a label) | The Houthis' war is the Iran desk's only with Iran or an Iranian actor in the headline or first sentence | `yemenOnIran` |
+| Yemen desk: five cards on the Jubail tankers and the eastern-coast ships | Ships off Saudi Arabia's Gulf coast are the Iran war's | `desk-route.ts OFF_YEMEN_SEA`, `gulfCoastShip` |
+| "Iran's UN ambassador Araghchi"; "Sardar Ebnelreza"; bare "Khatibzadeh:", "Gharibabadi:"; Iraq's PM as Al-Sudani (Ali al-Zaidi since 14 May); Ebnelreza/Ebnolreza, Kohestak/Kuhestak, Broojerdi, Raji/Raggi | Offices table (Araghchi, Khatibzadeh, Gharibabadi, Ebnolreza, Baghaei); Sardar dropped after an office, else General; one spelling | `officeTitles`, `spelling.ts` |
+| "Sanaa health official: 7 wounded … in Taiz" pinned on Sanaa; the LNG tanker off Al-Mukalla pinned on Aden ("Gulf of Aden") | A body's seat is not the place; a port inside a sea's name is the sea | `bodyPlaceOnly`, `maritime.ts seaPlace` |
+| "Houthi forces: Houthi missile…", "Yemen's information ministry: Yemeni government denies…", "linked to vehicle linked to"; CNBC's three-story headline; "sanctions" over a text about easing them; "KING FAHD INTERNATIONAL AIRPORT — " as a body; Al-Thawrah's own body saying "Houthi-aligned media said"; "وردنا" as a source | Speaker said once; phrase twice and mashups sent back; polarity checked against the text; no dateline without a body; the outlet's self-attribution dropped; a source name in Latin letters | `ungarble`, `garbled`, `cleanBody`, `serveCard` |
+| Kpler's 16 Oct post out on 18 Oct; Baghaei's a day late | An X post's time is its id's; an item older than 12 h when read is no card unless it is an original | `xPostTime`, `editCandidates` |
+| Not done: the WSJ's claim given to the Houthi spokesman (Yemen 62), "Hezbollah: armed elements…" written as Hezbollah speaking (124), the Quds Force title (306), the trader leaving Vitol (178), one Axios article in two cards (duplicates' session) | — | — |
+
 ## Round 34 (the numbers' misses, 17 Oct)
 
 User: "find the things the desk didnt pick and fix the mechanisms so itll find them next time". Audit of 3–17 Oct in the shared notes (`iran-numbers-audit.md`, `yemen-numbers-audit.md`).

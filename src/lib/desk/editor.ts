@@ -68,6 +68,26 @@ import { datelineOf } from "./wire-style.ts";
 import { mapsAsPin, normaliseArabic } from "./relevance.ts";
 import { iranPinAllowed, iranPins, tallyNotEvent } from "./iran-places.ts";
 import { copyKey } from "./copies.ts";
+import {
+  HOUTHI_OUTLET,
+  LATE_MS,
+  bodyPlaceOnly,
+  cleanBody,
+  garbled,
+  homeAffairs,
+  houthiClaim,
+  houthiWords,
+  lebanonContext,
+  notNews,
+  officeTitles,
+  partisanWords,
+  relayOf,
+  rightType,
+  ungarble,
+  wrongSource,
+  xPostTime,
+  yemenOnIran,
+} from "./copy-rules.ts";
 
 export type Candidate = {
   source: string;
@@ -570,6 +590,19 @@ export async function editCandidates(
     await store.putJson(cfg.missedKey, missed.slice(0, MISSED_MAX));
   }
 
+  // Late times (review of 18 Oct: Kpler's 16 Oct post went out on 18 Oct, Baghaei's a day late):
+  // an X post's time is in its id, and an item older than 12 hours when read is no card, unless
+  // it is an original found for a card already out (it takes that card over).
+  for (const c of all) {
+    const v = verdicts.get(c.url);
+    if (v?.kind !== "publish") continue;
+    const posted = xPostTime(c.url);
+    if (posted && posted < Date.parse(v.report.at) - 10 * 60_000) v.report.at = new Date(posted).toISOString();
+    if (now - Date.parse(v.report.at) > LATE_MS && !c.tags.includes("original")) {
+      verdicts.set(c.url, { kind: "reject", reason: "late", note: "Late: older than 12 hours when it was read." });
+    }
+  }
+
   // A field event the gazetteer could not place: look its target up instead.
   const jobs: NeedsPlace[] = [];
   for (const c of all) {
@@ -588,7 +621,8 @@ export async function editCandidates(
         report.place = hit.name;
         report.lat = hit.lat;
         report.lng = hit.lng;
-        report.text = `${hit.name.toUpperCase()} — ${report.text}`;
+        // No body, no dateline ("KING FAHD INTERNATIONAL AIRPORT — " was a whole card, 17 Oct).
+        if (report.text) report.text = `${hit.name.toUpperCase()} — ${report.text}`;
       },
     });
   }
@@ -815,6 +849,14 @@ ${raw.body}`, c.text) : null;
   r.headline = sideWords(r.headline, side);
   r.body = sideWords(r.body, side);
   if (r.speaker_lead) r.speaker_lead = sideWords(r.speaker_lead, side);
+  // The review of 18 Oct (copy-rules.ts): "Yemeni missiles" from Houthi outlets are Houthi, "Saudi
+  // build-ups" Saudi forces, "liberate" take; Lebanon's "hostile" fire Israel's; offices; the speaker twice.
+  const houthiSrc = outletSide(c.source, c.lean) === "houthi" || HOUTHI_OUTLET.test(c.source);
+  const lebanon = lebanonContext(`${r.headline} ${r.body}`, c.source);
+  r.headline = ungarble(officeTitles(partisanWords(houthiWords(r.headline, houthiSrc), lebanon)));
+  r.body = cleanBody(officeTitles(partisanWords(houthiWords(r.body, houthiSrc), lebanon)), c.source);
+  // Their own claim of a Houthi attack or a downed drone has its teller (Saree's "shoot down" went out bare).
+  if (houthiSrc) r.headline = houthiClaim(r.headline, r.event_type, c.source);
   // An outlet is never the speaker. A statement whose headline forgot its
   // speaker gets the speaker put first, and a colon that introduces no words
   // of theirs ("Trump: held a call") becomes a plain sentence.
@@ -850,11 +892,31 @@ ${raw.body}`, c.text) : null;
   }
   // A body that only says the headline again goes.
   if (redundantBody(r.headline, r.body, c.text)) r.body = "";
+  const review = r.publish ? reviewReject(r, c, "yemen", strict) : null;
+  if (review) return review;
   const problem = checkReading(r, c.text, strict);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   }
   return { kind: "publish", report: toReport(r, c) };
+}
+
+/**
+ * The review of 18 Oct's rules for a new card (copy-rules.ts): not news, Iran's
+ * home affairs, the Houthis' war on the Iran desk, a relay of a voice the desk
+ * reads first-hand, the wrong page linked, garbled copy.
+ */
+function reviewReject(r: Reading, c: Candidate, desk: DeskId, strict: boolean): EditorVerdict | null {
+  const why = notNews(r.headline, r.body, TYPE_OF[r.event_type] ?? String(r.event_type)) ?? (desk === "iran" ? homeAffairs(r.headline) : null);
+  if (why) return { kind: "reject", reason: "reader", note: sentence(why) };
+  if (desk === "iran" && yemenOnIran(r.headline, r.body)) return { kind: "reject", reason: "reader", note: "Yemen desk: the Houthis' war is the Iran desk's only when Iran or an Iranian actor is in the headline or first sentence." };
+  const relay = relayOf({ headline: r.headline, body: r.body, source: c.source, lean: c.lean, desk, own: isExclusive(c.text, c.source) || c.tags.includes("original") });
+  if (relay) return { kind: "reject", reason: "reader", note: sentence(relay) };
+  const wrong = wrongSource(r.headline, c.source, c.text);
+  if (wrong) return { kind: "reject", reason: "reader", note: sentence(wrong) };
+  const g = garbled(r.headline, c.text);
+  if (g && (strict || !/written twice/.test(g))) return { kind: "reject", reason: "reader-check", note: sentence(g) };
+  return null;
 }
 
 function sentence(s: string): string {
@@ -928,7 +990,8 @@ const namedIn = (headline: string, p: Place) => headline.toLowerCase().includes(
 
 export function toReport(r: Reading, c: Candidate): LiveReport {
   // A "maritime_attack" that names no ship is typed by what its copy says.
-  const type = maritimeType(TYPE_OF[r.event_type] ?? "statement", `${r.headline || ""} ${r.body || ""}`);
+  // And any card is typed by what its headline says: a ship hit is a vessel, explosions heard a strike (review of 18 Oct).
+  const type = rightType(maritimeType(TYPE_OF[r.event_type] ?? "statement", `${r.headline || ""} ${r.body || ""}`), r.headline || "");
   const spoken = type === "statement" || type === "diplomacy";
   // Statements are never pinned and carry no dateline: the desk knows what was
   // said, not where.
@@ -940,7 +1003,11 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
   // are all perfectly clear about *where*, and a pin asserts that something
   // happened there, not who caused it. Holding the place back on that gate kept
   // twelve such reports a day off the map for a fact none of them was unsure of.
-  const places = spoken ? [] : placesFor(r, c.text);
+  const found = spoken ? [] : placesFor(r, c.text);
+  // A body's seat is not the place ("Sanaa health official: 7 wounded in Taiz" was pinned on Sanaa, 17 Oct).
+  const copy = `${r.headline || ""} ${r.body || ""}`;
+  const elsewhere = found.filter((p) => !bodyPlaceOnly(p.name, copy));
+  const places = elsewhere.length ? elsewhere : found;
   const dateline = datelineOf(places);
   const body = String(r.body || "").trim();
   const side = outletSide(c.source, c.lean);
@@ -1073,7 +1140,9 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // The site's general copy rules, as on the Yemen desk (user, 8 Oct): Iran's
   // calendar out, one spelling per name, the outlet off its own copy, no
   // role the text did not give.
-  const fix = (s: string) => rightOffice(westernDates(iranReword(reword(respell(anglicise(s))))));
+  // The review of 18 Oct: Lebanon's "hostile" fire is Israel's, "the enemy" is the speaker's word, offices.
+  const lebanon = lebanonContext(`${raw.headline} ${raw.body}`, c.source);
+  const fix = (s: string) => officeTitles(partisanWords(rightOffice(westernDates(iranReword(reword(respell(anglicise(s)))))), lebanon, true));
   const r: Reading = { ...raw, headline: firstEvent(fixHeadline(fix(raw.headline))), body: fix(raw.body) };
   r.headline = dropInventedRole(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.text);
   r.body = stripOwnOutlet(r.body, c.source);
@@ -1104,6 +1173,10 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   const own = r.publish ? iranCopyProblem(r, c.text) : null;
   if (own) return { kind: "reject", reason: /^(?:commentary|yemen desk|not iran)/.test(own) ? "reader" : "reader-check", note: sentence(own) };
   // One side's outlet relaying the other side's voice: that side's own sources tell it (user, 8 Oct).
+  const review = r.publish ? reviewReject(r, c, "iran", strict) : null;
+  if (review) return review;
+  r.headline = ungarble(r.headline);
+  r.body = cleanBody(r.body, c.source);
   const rival = r.publish ? rivalRelay(r.headline, c.source, c.lean ?? "", isExclusive(c.text, c.source)) : null;
   if (rival) return { kind: "reject", reason: "reader", note: sentence(rival) };
   const problem = checkReading(r, c.text, strict);

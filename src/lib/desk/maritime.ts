@@ -35,8 +35,11 @@ export function maritimeType(type: DeskType, text: string): DeskType {
  * places named it is not pinned at all.
  */
 export function seaPlace(places: Place[]): Place | undefined {
+  // "The Gulf of Aden" names a sea, not Aden: an attack there was pinned on the city (17 Oct, an LNG tanker off Al-Mukalla).
+  const seas = places.filter((p) => p.country === "sea");
+  const inSea = (p: Place) => seas.some((s) => s !== p && s.name.toLowerCase().includes(p.name.replace(/^the /i, "").toLowerCase()));
   return (
-    places.find((p) => p.kind === "port city") ||
+    places.find((p) => p.kind === "port city" && !inSea(p)) ||
     places.find((p) => p.country === "sea" || p.kind === "strait" || p.kind === "island" || p.kind === "islands")
   );
 }

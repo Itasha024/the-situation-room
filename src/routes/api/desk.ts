@@ -11,6 +11,7 @@ import { getStore } from "@/lib/desk/store";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
 import { serveIranPins, serveYemenPins } from "@/lib/desk/serve-map-pins";
+import { serveCard } from "@/lib/desk/copy-rules";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -49,6 +50,9 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   // Cards stored before the link rules keep their row; a link that
   // breaks the rules is just not shown (links.ts).
   checkLinks(slice.reports as never[], slice.reports as never[]);
+  // The review of 18 Oct's rules on stored cards (copy-rules.ts): not news, Iran's home affairs and
+  // the other desk's cards are not shown here; Houthi and partisan words, offices and types are fixed.
+  if (!since) slice.reports = (slice.reports as Record<string, unknown>[]).filter((r) => serveCard(r, desk)) as typeof slice.reports;
   // A word a model glued to a name is shown split, and a name in the
   // desk's one spelling; the row is left as it is.
   for (const r of slice.reports) {

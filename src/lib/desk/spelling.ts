@@ -95,6 +95,10 @@ export const PEOPLE: Person[] = [
   { en: "Mokhber", ar: ["محمد مخبر"], variants: [String.raw`Mukhber`] },
   { en: "Hatami", ar: ["حاتمی", "حاتمي"] },
   { en: "Ahmadian", ar: ["احمدیان", "أحمديان"] },
+  // Review of 18 Oct: one spelling each (Ebnelreza/Ebnolreza, Broojerdi; Lebanon's foreign minister Raggi/Raji).
+  { en: "Ebnolreza", ar: ["ابن‌الرضا", "ابن الرضا"], variants: [String.raw`Ebn?[eo]l[- ]?[Rr]eza`, String.raw`Ibn ?al-?Reza`].map((v) => String.raw`(?!Ebnolreza\b)${v}`) },
+  { en: "Boroujerdi", ar: ["بروجردی", "بروجردي"], variants: [String.raw`Broojerdi`, String.raw`Borujerdi`, String.raw`Boroojerdi`] },
+  { en: "Raggi", ar: ["يوسف رجي"], variants: [String.raw`(?<=(?:Yusuf|Youssef|Yousef|Joe|[Mm]inister) )Raj+i`] },
   { en: "Kpler", ar: ["کپلر", "كبلر"], variants: [String.raw`Capler(?: Analytics)?`, String.raw`Kepler(?= (?:data|Analytics|figures|says|said|estimates))`] },
 ];
 
@@ -124,6 +128,7 @@ export const IRAN_PLACES: Person[] = [
   { en: "Tabriz", ar: ["تبریز", "تبريز"] },
   { en: "Shiraz", ar: ["شیراز", "شيراز"] },
   { en: "Nikshahr", ar: ["نیکشهر", "نيكشهر"], variants: [String.raw`Nik[- ]Shahr`] },
+  { en: "Kuhestak", ar: ["کوهستک", "كوهستك"], variants: [String.raw`Kohestak`, String.raw`Koohestak`] },
 ];
 
 /** Place spellings that are other names, not other spellings: never swapped. */

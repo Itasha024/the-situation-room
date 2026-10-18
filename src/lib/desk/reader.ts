@@ -1183,7 +1183,7 @@ export function transliterated(headline: string): boolean {
 
 /** Failures a second writing can fix; anything else is a judgement, and stands. */
 export function repairable(problem: string): boolean {
-  return /headline length|empty body|points dropped|unfamiliar name|casualties dropped|killed not in source|figure not in source|does not lead with its speaker|leads with outlet|written as|banned phrase|source-language|wrong speaker|own words/i.test(problem);
+  return /headline length|empty body|points dropped|unfamiliar name|casualties dropped|killed not in source|figure not in source|does not lead with its speaker|leads with outlet|written as|banned phrase|source-language|wrong speaker|own words|garbled|headline against the text/i.test(problem);
 }
 
 const PLC_HEAD = /رئيس\s+مجلس\s+القيادة|العليمي|فخامة\s+(?:الأخ\s+)?الرئيس|Presidential (?:Leadership )?Council (?:head|chairman|president)|al-Alimi/i;

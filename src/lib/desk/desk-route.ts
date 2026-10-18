@@ -43,9 +43,9 @@ export const IRAN_LABEL =
 const IRAN_ACTS =
   /\b(?:Iran|Iranian|Iranians|Tehran|IRGC|Revolutionary Guards?|Khamenei|Pezeshkian|Araghchi|Hormuz|Bandar Abbas|Kharg|Natanz|Fordow|Isfahan)\b|[إا]يران|الإيراني|طهران|الحرس الثوري|خامنئي|بزشكيان|عراقجي|هرمز|ایران|تهران|سپاه|خامنه‌ای|پزشکیان|عراقچی/i;
 
-/** Seas that belong to the Iran desk: the Gulf, Hormuz, the Gulf of Oman and the Gulf states' coasts. */
+/** Seas that belong to the Iran desk: the Gulf, Hormuz, the Gulf of Oman and the Gulf states' coasts, Saudi Arabia's too (Jubail, 17 Oct). */
 export const OFF_YEMEN_SEA =
-  /\b(?:Persian Gulf|Arabian Gulf|the Gulf\b(?! of Aden)|Hormuz|Gulf of Oman|Qatar|Bahrain|Kuwait|Fujairah|Khor Fakkan|Ras Tanura|Ras Laffan|Jebel Ali|Dubai|Abu Dhabi|Sharjah|Muscat|Sohar|Iran|Iranian|Bandar Abbas|Kharg|Basra)\b|الخليج العربي|الخليج الفارسي|هرمز|خليج عمان|قطر|البحرين|الكويت|الفجيرة|إيران/i;
+  /\b(?:Persian Gulf|Jubail|Jubayl|Dammam|Khafji|Ras al-Khair|east(?:ern)? coast of Saudi Arabia|Saudi Gulf coast|Arabian Gulf|the Gulf\b(?! of Aden)|Hormuz|Gulf of Oman|Qatar|Bahrain|Kuwait|Fujairah|Khor Fakkan|Ras Tanura|Ras Laffan|Jebel Ali|Dubai|Abu Dhabi|Sharjah|Muscat|Sohar|Iran|Iranian|Bandar Abbas|Kharg|Basra)\b|الخليج العربي|الخليج الفارسي|هرمز|خليج عمان|قطر|البحرين|الكويت|الفجيرة|إيران/i;
 // A ship card that names none of these is not Yemen's, whatever kept it.
 export const YEMEN_SEA = /\b(?:Yemen\w*|Houthis?|Ansar ?Allah|Red Sea|Bab (?:al|el)[- ]Mand[ae]b|Gulf of Aden|Arabian Sea|Hodeidah|Mocha|Aden|Salif|Ras Isa|Socotra|Mukalla)\b|اليمن|الحوثي|أنصار الله|البحر الأحمر|باب المندب|خليج عدن|الحديدة/i;
 

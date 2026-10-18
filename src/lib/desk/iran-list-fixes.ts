@@ -13,7 +13,7 @@ type Row = [Cell, ...unknown[]];
 export type ListFix = {
   list: "Incidents" | "Attacks on energy sites";
   match?: { date: string; site: string };
-  /** A row the list missed: added once, unless a row of that day already names the ship or site. */
+  /** A row the list missed: added once to the whole list, unless a row of that day names the same ship or site and place. */
   add?: Row;
   why: string;
   drop?: boolean;
@@ -45,9 +45,11 @@ export function fixRows(title: string, rows: Row[], fixes: ListFix[] = LIST_FIXE
     out.push(next);
   }
   const key = (v: unknown) => String(v ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  // A missing row goes into the whole list (back to the war's first days), once: the same day, ship and place.
+  const whole = out.some((r) => String(r[0]?.date) <= "2026-03-15");
   for (const f of mine) {
-    if (!f.add) continue;
-    if (out.some((r) => String(r[0]?.date) === String(f.add![0]?.date) && key(r[1]) === key(f.add![1]))) continue;
+    if (!f.add || !whole) continue;
+    if (out.some((r) => String(r[0]?.date) === String(f.add![0]?.date) && key(r[1]) === key(f.add![1]) && key(r[2]) === key(f.add![2]))) continue;
     out.push(structuredClone(f.add));
   }
   return out;

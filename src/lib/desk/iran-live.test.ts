@@ -25,13 +25,14 @@ test("IMO: the ships the panel missed after 9 Oct join the list, and the stats m
   for (const ship of ["GFS Pride", "GFS Giselle", "Al Saadiyat", "Petro Dolphin", "Valthera", "Ever Vict", "Kition M", "DP World Kaveri", "Al Maqam", "Angola Prosperity"]) {
     assert.ok(names.some((n) => n.toLowerCase() === ship.toLowerCase()), ship);
   }
-  // 148 less the four unnamed press reports of 10 and 11 Oct the IMO's named ships take in (tidyShips).
-  assert.equal((b.rows as unknown[]).length, 144);
+  // 148 less the four unnamed press reports of 10 and 11 Oct the IMO's named ships take in (tidyShips),
+  // then the 18 Oct audit's drops and missed rows (iran-list-fixes.ships.json).
+  assert.equal((b.rows as unknown[]).length, 143);
   assert.match(String(b.note), /IMO confirms 113 incidents to 14 Oct, with 24 seafarers killed/);
   const stats = Object.fromEntries((b.stats as [Cell, string][]).map(([c, l]) => [l, c.v]));
-  assert.equal(stats["Since 28 Feb"], "144");
+  assert.equal(stats["Since 28 Feb"], "143");
   // Newest first, as the list reads.
-  assert.equal((b.rows as [Cell][])[0][0].date, "2026-10-13");
+  assert.equal((b.rows as [Cell][])[0][0].date, "2026-10-16", "UKMTO's 16 Oct warnings, added by the audit");
 });
 
 test("IMO: a ship a report already put on the list is not listed twice, and becomes official", () => {
@@ -143,7 +144,7 @@ test("reports: a new attack is listed once, and an old one retold (the June Ras 
     ],
   }, docs, NOW);
   assert.deepEqual(out.map((b) => b.title), ["Incidents"]);
-  const top = (out[0].rows as [Cell, string][])[0];
+  const top = (out[0].rows as [Cell, string][]).find((r) => r[1] === "GFS Pride")!;
   assert.deepEqual([top[0].v, top[1]], ["13 Oct", "GFS Pride"]);
   // The IMO's row for the same ship and day: no second row.
   const withImo = imoIncidents(box("Incidents"), parseImo(IMO_17OCT, NOW)!, NOW);
@@ -167,7 +168,7 @@ test("the page gets every box a reader made, the sanctions boxes on top", () => 
 });
 
 // The audit of 18 Oct: every ship and energy row checked against its source.
-import { officialBody, seaOf, shipNamed, stateOf, stateText, tellerOf, tidyList } from "./iran-live.ts";
+import { officialBody, seaOf, shipNamed, stateOf, stateText, tellerOf, tidyList, tidyShips } from "./iran-live.ts";
 
 test("lists: official only from an official body, never a channel (17 Oct: Akhbar-e Fori, Bin Saeed)", () => {
   assert.ok(officialBody("IMO, confirmed incidents"));
@@ -193,7 +194,7 @@ test("lists: one mine blast told by three channels is one row; words that descri
     [c("Akhbar-e Fori"), "supertanker with over 2 million barrels", "Strait of Hormuz", "mine", "hit a mine, causing explosion and fire"],
     [c("Bin Saeed"), "another giant oil tanker", "Strait of Hormuz", "sea mine", "exploded after hitting a sea mine"],
   ] } as Box;
-  const out = tidyList(b).rows as [Cell, string][];
+  const out = tidyShips(b).rows as [Cell, string][];
   assert.equal(out.length, 1);
   assert.equal(out[0][0].k, "unoff");
 });
@@ -209,7 +210,7 @@ test("lists: the IMO's named ship takes in the unnamed report of it; an Iranian 
     imo("2026-09-12", "El Gaia (Panama)", "Strait of Hormuz"),
     rep("2026-09-12", "unknown Iranian commercial vessel (Iran)", "near Qeshm Island", "Projectile", "Struck; 1 killed"),
   ] } as Box;
-  const rows = tidyList(b).rows as unknown[][];
+  const rows = tidyShips(b).rows as unknown[][];
   assert.equal(rows.length, 5);
   assert.equal(rows.find((r) => r[1] === "Valthera")![3], "Projectile (type not stated)", "the report's weapon where the IMO gives none");
   assert.ok(rows.some((r) => /military forces/.test(String(r[4]))), "a tanker and military forces is not the drone on Petro Dolphin");
@@ -287,13 +288,13 @@ test("UKMTO's own warnings become rows by code, official; a channel's earlier ro
 test("the rows found wrong stay fixed: dropped, set right or added, in the file and the stored lists (18 Oct audit)", async () => {
   const { fixRows, LIST_FIXES } = await import("./iran-list-fixes.ts");
   const c = (date: string): Cell => ({ v: date, k: "unoff", src: "x", url: "u", date });
-  const rows = [[c("2026-08-31"), "Al-Dura refinery, Baghdad", "Not stated", "Not stated", "smoke"], [c("2026-09-10"), "Pipeline", "By", "Drone", "Shut"]] as [Cell, ...unknown[]][];
+  const rows = [[c("2026-08-31"), "Al-Dura refinery, Baghdad", "Not stated", "Not stated", "smoke"], [c("2026-09-10"), "Pipeline", "By", "Drone", "Shut"], [c("2026-03-01"), "Old", "By", "Drone", "Shut"]] as [Cell, ...unknown[]][];
   const out = fixRows("Attacks on energy sites", rows, [
     { list: "Attacks on energy sites", match: { date: "2026-08-31", site: "Al-Dura refinery, Baghdad" }, why: "smoke with no attack", drop: true },
     { list: "Attacks on energy sites", match: { date: "2026-09-10", site: "Pipeline" }, why: "state", set: { "4": "Working: back" } },
     { list: "Attacks on energy sites", why: "missing", add: [c("2026-10-01"), "New site", "By", "Drone", "Not known"] },
   ]);
-  assert.deepEqual(out.map((r) => r[1]), ["Pipeline", "New site"]);
+  assert.deepEqual(out.map((r) => r[1]), ["Pipeline", "Old", "New site"]);
   assert.equal(out[0][4], "Working: back");
   // Once fixed, a second pass changes nothing.
   assert.deepEqual(fixRows("Attacks on energy sites", out, []), out);

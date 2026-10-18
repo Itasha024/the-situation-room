@@ -417,7 +417,11 @@ export function tidyShips(box: Box): Box {
   // One unnamed ship a day per stretch of sea ("the second supertanker" on 17 Oct was the IRGC's count since 11 Oct, not a second ship that day).
   const kept: ListRow[] = [];
   for (const r of byDayDesc(rows)) {
-    const twin = unnamed(r) && kept.find((k) => unnamed(k) && rowDay(k) === rowDay(r) && area(k) && area(k) === area(r));
+    // Two official rows are two incidents (UKMTO's 174-26 and 175-26: two tankers off Al Jubayl on 16 Oct),
+    // and so are two places a different distance out.
+    const miles = (x: ListRow) => /(\d+)\s?(?:NM|nm|nautical miles|miles)/.exec(String(x[2] ?? ""))?.[1];
+    const apart = (k: ListRow) => (cellOf(k[0])?.k === "off" && cellOf(r[0])?.k === "off") || (!!miles(k) && !!miles(r) && miles(k) !== miles(r));
+    const twin = unnamed(r) && kept.find((k) => unnamed(k) && rowDay(k) === rowDay(r) && area(k) && area(k) === area(r) && !apart(k));
     if (twin) {
       // The official teller leads.
       if (cellOf(r[0])?.k === "off" && cellOf(twin[0])?.k !== "off") kept[kept.indexOf(twin)] = r;

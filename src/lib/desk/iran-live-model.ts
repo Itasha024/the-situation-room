@@ -184,6 +184,8 @@ export function applyAnswer(boxes: Box[], answer: ModelAnswer, docs: Doc[], now:
     const key = shipKey(e.site);
     const near = (r: [Cell, ...unknown[]]) => Math.abs(Date.parse(String(r[0]?.date || "")) - Date.parse(e.date)) <= 86_400_000;
     const same = (r: [Cell, ...unknown[]]) => {
+      // "Tanker" and "tanker" are no one ship: an unnamed ship is matched by its day and waters below.
+      if (e.list === "ships" && !shipNamed(e.site)) return false;
       const k = shipKey(String(r[1]));
       return k === key || (words.length > 0 && words.some((w) => k.includes(w)));
     };
@@ -215,7 +217,7 @@ export function applyAnswer(boxes: Box[], answer: ModelAnswer, docs: Doc[], now:
     }
     if (e.list === "ships") {
       e.site = shipName(e.site);
-      if (rows.some((r) => sameShip(String(r[1]), String(r[0]?.date || ""), e.site, e.date))) continue;
+      if (shipNamed(e.site) && rows.some((r) => sameShip(String(r[1]), String(r[0]?.date || ""), e.site, e.date))) continue;
     }
     // An unnamed ship ("a tanker") is kept only with its place, once a day there.
     if (!named) {

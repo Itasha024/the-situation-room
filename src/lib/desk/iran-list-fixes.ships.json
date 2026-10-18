@@ -1,1 +1,516 @@
-[]
+[
+ {
+  "match": {
+   "date": "2026-10-17",
+   "site": "second oil tanker"
+  },
+  "why": "IRGC claim of a mine-struck \"second supertanker\" with no ship identified; no UKMTO/IMO record; same claim as rows 1 and 2",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-10-17",
+   "site": "supertanker with over 2 million barrels"
+  },
+  "why": "Same 17 Oct IRGC claim as row 0 (duplicate), no ship identified; Akhbar-e Fori is an outlet, was wrongly marked off",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-10-17",
+   "site": "another giant oil tanker"
+  },
+  "why": "Same 17 Oct IRGC claim as row 0 (duplicate), no ship identified; Bin Saeed is not official",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-10-16",
+   "site": "tanker"
+  },
+  "why": "UKMTO is the teller; OSINTdefender only relays UKMTO warning 174-26",
+  "set": {
+   "0": {
+    "v": "16 Oct",
+    "k": "off",
+    "src": "UKMTO (warning 174-26)",
+    "url": "https://x.com/UK_MTO/status/2111343387395919930",
+    "date": "2026-10-16"
+   },
+   "1": "Tanker",
+   "2": "68 NM northeast of Al Jubayl, Saudi Arabia",
+   "3": "Unknown projectile",
+   "4": "Struck by an unknown projectile; all crew evacuated and safe; no environmental impact"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-10-11",
+   "site": "Supertanker"
+  },
+  "why": "IRGC Navy claim (via Fars) of a mine-struck supertanker with no ship identified; no UKMTO/IMO match",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-10-11",
+   "site": "Tanker"
+  },
+  "why": "Duplicate of row 17: UKMTO advisory 163-26 (tanker and military forces, Gulf of Oman, incident date 10 Oct) is the CENTCOM strike on Ocean Molica",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-10-10",
+   "site": "Ocean Molika (Arika Sun) (Panama)"
+  },
+  "why": "CENTCOM is the teller (official); CENTCOM spells the ship Ocean Molica; it is a cargo ship",
+  "set": {
+   "0": {
+    "v": "10 Oct",
+    "k": "off",
+    "src": "gCaptain (CENTCOM)",
+    "url": "https://gcaptain.com/more-tankers-hit-in-hormuz-as-u-s-strikes-cargo-ship/",
+    "date": "2026-10-10"
+   },
+   "1": "Ocean Molica (Arika Sun) (Panama)",
+   "2": "Gulf of Oman, after leaving an Iranian port"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-10-08",
+   "site": "unidentified tanker"
+  },
+  "why": "Link is the Windward homepage; no UKMTO warning or report found for a tanker struck east of Fujairah on 8 Oct (press only mentions an unconfirmed Vanguard fire report)",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-10-08",
+   "site": "NV Sunshine (LPG carrier)"
+  },
+  "why": "IRGC Navy claim was made 9 Oct (Tasnim, IRGC statement); Alhurra link is a roundup",
+  "set": {
+   "0": {
+    "v": "9 Oct",
+    "k": "off",
+    "src": "Tasnim (IRGC Navy)",
+    "url": "https://www.tasnimnews.ir/en/news/2026/10/09/3718550/lpg-carrier-hit-catches-fire-in-strait-of-hormuz-irgc-navy/amp",
+    "date": "2026-10-09"
+   },
+   "2": "South of the Strait of Hormuz (route Iran calls unauthorised)"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-09-14",
+   "site": "ST HELENA (Djibouti)"
+  },
+  "why": "Matches UKMTO warning 135-26 (14 Sep 2040UTC, vessel struck, no damage; JMIC 097: general cargo); name ST HELENA not found in any source, link is Windward homepage",
+  "set": {
+   "0": {
+    "v": "14 Sep",
+    "k": "off",
+    "src": "UKMTO (warning 135-26)",
+    "url": "https://x.com/UK_MTO/status/2099789034218271124",
+    "date": "2026-09-14"
+   },
+   "1": "General cargo ship (unnamed)",
+   "2": "Strait of Hormuz",
+   "3": "Unknown projectile",
+   "4": "Struck by an unknown projectile; no damage reported"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-09-13",
+   "site": "unknown Iranian commercial vessel (Iran)"
+  },
+  "why": "CNN link does not open (451); AP report of the same Iranian state-media account",
+  "set": {
+   "0": {
+    "v": "13 Sep",
+    "k": "unoff",
+    "src": "AP (Iranian state media)",
+    "url": "https://abcnews.com/US/wireStory/iranian-commercial-ship-struck-strait-hormuz-1-dead-136399794",
+    "date": "2026-09-13"
+   }
+  }
+ },
+ {
+  "match": {
+   "date": "2026-09-09",
+   "site": "8 tankers + 2 US vessels (IRGC claim)"
+  },
+  "why": "Not one ship incident: an IRGC claim covering 8 tankers and 2 US vessels, none named",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-09-08",
+   "site": "5 Iranian tankers incl. Riesco (Iran-linked)"
+  },
+  "why": "Row lumps five ships; CENTCOM (8 Sep release) names Kaviz, Charminar, Horizon 1, Riesco (Gulf of Oman) and Derya (near Kharg); Horizon 1 is row 51; gCaptain does not name Riesco or say it sank. This row becomes Derya; others added",
+  "set": {
+   "0": {
+    "v": "8 Sep",
+    "k": "off",
+    "src": "CENTCOM",
+    "url": "https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/4593050/us-destroys-5-irgc-tankers-after-iran-targets-another-american-warship/",
+    "date": "2026-09-08"
+   },
+   "1": "Derya (Iran-linked)",
+   "2": "Near Kharg Island, Iran",
+   "3": "US military strike (munition not stated)",
+   "4": "Disabled by US forces after the crew was told to abandon ship"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-09-05",
+   "site": "Downy (Dauni), Stark 1, Kylo (Iran-linked)"
+  },
+  "why": "Row lumps three ships; CENTCOM 5 Sep release: Downy off Kharg, Stark 1 near Jask, Kylo (Noxen) destroyed in Gulf of Oman. This row becomes Downy; others added",
+  "set": {
+   "0": {
+    "v": "5 Sep",
+    "k": "off",
+    "src": "CENTCOM",
+    "url": "https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/4591744/centcom-destroys-3-irgc-oil-tankers-after-iran-targets-2-us-navy-warships/",
+    "date": "2026-09-05"
+   },
+   "1": "Downy (Iran-linked)",
+   "2": "Off Kharg Island, Iran",
+   "3": "US military strike (munition not stated)",
+   "4": "Permanently disabled by US forces"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-08-20",
+   "site": "AMARA (Liberia)"
+  },
+  "why": "Link was the Windward homepage; Marine Insight reports the Fars detention claim and the AIS link to Amara",
+  "set": {
+   "0": {
+    "v": "20 Aug",
+    "k": "unoff",
+    "src": "Marine Insight (Fars)",
+    "url": "https://www.marineinsight.com/iran-detains-uae-linked-tanker-crossing-strait-of-hormuz-near-qeshm-island/",
+    "date": "2026-08-20"
+   },
+   "2": "South of Qeshm Island, Iran"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-08-14",
+   "site": "TARIF (Liberia)"
+  },
+  "why": "Strike was 13 Aug (same UKMTO report as IMO row 66 NAVIG8 MESSI; Tarif named by Vanguard); link was the Windward homepage",
+  "set": {
+   "0": {
+    "v": "13 Aug",
+    "k": "unoff",
+    "src": "Deccan Chronicle",
+    "url": "https://www.deccanchronicle.com/west-asia/uae-blames-iran-for-drone-attacks-on-two-tankers-in-strait-of-hormuz-1979128",
+    "date": "2026-08-13"
+   },
+   "2": "Strait of Hormuz, outbound",
+   "4": "ADNOC-linked Aframax struck by a drone while leaving Hormuz; minor damage, continued under own power"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-08-08",
+   "site": "ADNOC-linked vessel (unconfirmed) (UAE)"
+  },
+  "why": "Teller is the UAE Foreign Ministry (official); link was the Windward homepage",
+  "set": {
+   "0": {
+    "v": "8 Aug",
+    "k": "off",
+    "src": "Al Jazeera (UAE Foreign Ministry)",
+    "url": "https://www.aljazeera.com/news/2026/8/8/uae-says-iran-targeted-adnoc-tanker-in-hormuz-no-casualties-2",
+    "date": "2026-08-08"
+   },
+   "2": "Strait of Hormuz"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-08-02",
+   "site": "unnamed"
+  },
+  "why": "UKMTO report was 1 Aug (tanker saw a large splash and explosion 21 NM NE of Khasab, no damage); link was the Windward homepage",
+  "set": {
+   "0": {
+    "v": "1 Aug",
+    "k": "off",
+    "src": "Libnanews (UKMTO)",
+    "url": "https://live.libnanews.com/event/ev-1785565626504-0f25",
+    "date": "2026-08-01"
+   },
+   "1": "Tanker (unnamed)",
+   "2": "21 NM northeast of Khasab, Oman",
+   "4": "Large splash and explosion close to the tanker; no damage"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-06-27",
+   "site": "Vessel (Qatar)"
+  },
+  "why": "Times of Israel is an Israeli outlet for an event in Qatar; teller is Qatar Interior Ministry; boat found early 28 Jun",
+  "set": {
+   "0": {
+    "v": "28 Jun",
+    "k": "off",
+    "src": "WAM (Qatar Interior Ministry)",
+    "url": "https://www.wam.ae/en/article/c0ybax1-qatari-citizen-martyred-resident-injured-shrapnel",
+    "date": "2026-06-28"
+   },
+   "1": "Boat (Qatar)",
+   "2": "Qatari waters (location not given)"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-04-18",
+   "site": "MEIN SCHIFF 4 / BHAGYA LAXMI / JAG ARNAV (Malta / Antigua and Barbuda / India)"
+  },
+  "why": "Row lumps three ships; only the Mein Schiff 4 splash is supported (UKMTO cruise-ship report ~3 NM east of Oman, named by Vanguard); Bhagya Laxmi and Jag Arnav gunfire not found; link was Windward homepage",
+  "set": {
+   "0": {
+    "v": "18 Apr",
+    "k": "off",
+    "src": "Cruise Arabia (UKMTO)",
+    "url": "https://cruise-arabia.com/2026/04/21/update-on-cruise-ship-allegedly-targetted-by-iran-while-exiting-the-arabian-gulf/amp/",
+    "date": "2026-04-18"
+   },
+   "1": "Mein Schiff 4 (Malta)",
+   "2": "About 3 NM east of Oman, Strait of Hormuz",
+   "3": "Projectile splash (no hit)",
+   "4": "Splash seen close to the cruise ship leaving the Gulf; no damage or injuries"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-03-18",
+   "site": "Unknown"
+  },
+  "why": "No Wikipedia; ship is named (Parimal, Palau); UKMTO reported it 11 NM off Khor Fakkan",
+  "set": {
+   "0": {
+    "v": "18 Mar",
+    "k": "off",
+    "src": "Airwars (UKMTO)",
+    "url": "https://airwars.org/incidents/memar260318a-march-18-2026",
+    "date": "2026-03-18"
+   },
+   "1": "Parimal (Palau)"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-03-10",
+   "site": "Unknown"
+  },
+  "why": "Wikipedia-only, no ship or place detail (\"Iraq, attacked\"); likely the 11 Mar Khor Al Zubair attack already in rows 131-132",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-03-10",
+   "site": "GH KAHLO (Bermuda)"
+  },
+  "why": "Link is Windward homepage; no report of a GH KAHLO near miss found",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-03-07",
+   "site": "Louise P (Marshall Islands)"
+  },
+  "why": "No Wikipedia; IRGC Navy claim reported by Iran International; IRGC spells it Louis P (UKMTO had a third-party incident 10 NM north of Jubail, possibly the ARABIA III rig, row 136)",
+  "set": {
+   "0": {
+    "v": "7 Mar",
+    "k": "unoff",
+    "src": "Iran International (IRGC Navy)",
+    "url": "https://www.iranintl.com/en/202603072513",
+    "date": "2026-03-07"
+   },
+   "1": "Louis P (Marshall Islands)"
+  }
+ },
+ {
+  "match": {
+   "date": "2026-03-03",
+   "site": "Tanker"
+  },
+  "why": "Wikipedia-only \"tanker off Iraq, attacked\" with no ship, place or source detail; nothing found",
+  "drop": true
+ },
+ {
+  "match": {
+   "date": "2026-03-03",
+   "site": "MSC Grace (Liberia)"
+  },
+  "why": "No Wikipedia; UKMTO reported an unknown projectile falling near a vessel 20 NM west of Dubai (METIS dates it 4 Mar, names MSC Grace)",
+  "set": {
+   "0": {
+    "v": "4 Mar",
+    "k": "off",
+    "src": "Newsquawk (UKMTO)",
+    "url": "https://www.newsquawk.com/headlines/ukmto-announces-that-an-unknown-projectile-fell-near-a-vessel-20nm-west-of-uaes-dubai",
+    "date": "2026-03-04"
+   }
+  }
+ },
+ {
+  "match": {
+   "date": "2026-03-01",
+   "site": "Athe Nova (Honduras)"
+  },
+  "why": "No Wikipedia; Reuters report of the IRGC claim is dated 2 Mar",
+  "set": {
+   "0": {
+    "v": "2 Mar",
+    "k": "unoff",
+    "src": "Al-Monitor (Reuters)",
+    "url": "https://www.al-monitor.com/originals/2026/03/fuel-tanker-ablaze-strait-hormuz-after-drone-strike-iran-revolutionary-guards-say",
+    "date": "2026-03-02"
+   }
+  }
+ },
+ {
+  "why": "Split from row 52 (CENTCOM 8 Sep; UKMTO advisory 129-26)",
+  "add": [
+   {
+    "v": "8 Sep",
+    "k": "off",
+    "src": "CENTCOM",
+    "url": "https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/4593050/us-destroys-5-irgc-tankers-after-iran-targets-another-american-warship/",
+    "date": "2026-09-08"
+   },
+   "Kaviz (Iran-linked)",
+   "Gulf of Oman",
+   "US military strike (munition not stated)",
+   "Disabled by US forces after the crew was told to abandon ship"
+  ]
+ },
+ {
+  "why": "Split from row 52 (CENTCOM 8 Sep; UKMTO advisory 129-26)",
+  "add": [
+   {
+    "v": "8 Sep",
+    "k": "off",
+    "src": "CENTCOM",
+    "url": "https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/4593050/us-destroys-5-irgc-tankers-after-iran-targets-another-american-warship/",
+    "date": "2026-09-08"
+   },
+   "Charminar (Iran-linked)",
+   "Gulf of Oman",
+   "US military strike (munition not stated)",
+   "Disabled by US forces after the crew was told to abandon ship"
+  ]
+ },
+ {
+  "why": "Split from row 52 (CENTCOM 8 Sep; UKMTO advisory 129-26)",
+  "add": [
+   {
+    "v": "8 Sep",
+    "k": "off",
+    "src": "CENTCOM",
+    "url": "https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/4593050/us-destroys-5-irgc-tankers-after-iran-targets-another-american-warship/",
+    "date": "2026-09-08"
+   },
+   "Riesco (Iran-linked)",
+   "Gulf of Oman",
+   "US military strike (munition not stated)",
+   "Disabled by US forces after the crew was told to abandon ship"
+  ]
+ },
+ {
+  "why": "Split from row 54",
+  "add": [
+   {
+    "v": "5 Sep",
+    "k": "off",
+    "src": "CENTCOM",
+    "url": "https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/4591744/centcom-destroys-3-irgc-oil-tankers-after-iran-targets-2-us-navy-warships/",
+    "date": "2026-09-05"
+   },
+   "Stark 1 (Iran-linked)",
+   "Near Jask, Iran (Gulf of Oman)",
+   "US military strike (munition not stated)",
+   "Permanently disabled by US forces"
+  ]
+ },
+ {
+  "why": "Split from row 54",
+  "add": [
+   {
+    "v": "5 Sep",
+    "k": "off",
+    "src": "CENTCOM",
+    "url": "https://www.centcom.mil/MEDIA/PUBLIC-RELEASES/Article/4591744/centcom-destroys-3-irgc-oil-tankers-after-iran-targets-2-us-navy-warships/",
+    "date": "2026-09-05"
+   },
+   "Kylo (Noxen) (Iran-linked)",
+   "Gulf of Oman",
+   "US military strike (munition not stated)",
+   "Unladen tanker destroyed after the crew was told to abandon ship"
+  ]
+ },
+ {
+  "why": "Missing: UKMTO warning 175-26",
+  "add": [
+   {
+    "v": "16 Oct",
+    "k": "off",
+    "src": "UKMTO (warning 175-26)",
+    "url": "https://x.com/UK_MTO/status/2111358532528591354",
+    "date": "2026-10-16"
+   },
+   "Tanker",
+   "78 NM northeast of Al Jubayl, Saudi Arabia",
+   "RPG fired from a small boat",
+   "Attacked by a small boat; aft port quarter damaged; crew safe"
+  ]
+ },
+ {
+  "why": "Missing: UKMTO 139-26 (time-late report of 16 Sep); no IMO row that day",
+  "add": [
+   {
+    "v": "16 Sep",
+    "k": "off",
+    "src": "UKMTO (warning 139-26)",
+    "url": "https://x.com/UK_MTO/status/2100855389034000842",
+    "date": "2026-09-16"
+   },
+   "Tanker",
+   "Strait of Hormuz, outbound",
+   "Unknown projectile",
+   "Struck by an unknown projectile; crew safe; continued"
+  ]
+ },
+ {
+  "why": "Missing: second vessel in UKMTO 133-26 / JMIC 096",
+  "add": [
+   {
+    "v": "10 Sep",
+    "k": "off",
+    "src": "UKMTO (warning 133-26)",
+    "url": "https://x.com/UK_MTO/status/2098153850389647403",
+    "date": "2026-09-10"
+   },
+   "Unnamed vessel (second of two)",
+   "About 4 NM west of Khasab, Oman",
+   "Unknown projectiles (two)",
+   "One of two vessels a master saw hit by projectiles; status unknown (the other is ROMANCE, row 46)"
+  ]
+ }
+]

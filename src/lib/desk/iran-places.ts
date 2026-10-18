@@ -256,7 +256,8 @@ const isName = (copy: string, run: string[]) => {
 const COUNTRY: Record<string, string> = { "United Arab Emirates": "UAE" };
 // The hand list's places are its own (its seas too): the wider list never stands in for them.
 const HAND = new Set(IRAN_PLACES.flatMap((p) => [p.name, ...(p.alt ?? [])]).map((n) => n.toLowerCase()));
-const GAZ = IRAN_GAZ.filter(([name]) => !HAND.has(name.toLowerCase()) && !/\b(?:Strait|Gulf|Sea|Ocean|off)\b/i.test(name)).map(([name, lat, lng, country, latin, native]) => ({
+// A village named as a group is never the group's place (18 Oct: "Islamic Jihad" pinned on Al-Jihad).
+const GAZ = IRAN_GAZ.filter(([name]) => !HAND.has(name.toLowerCase()) && !/\b(?:Strait|Gulf|Sea|Ocean|off)\b/i.test(name) && !/^(?:al-?\s?)?(?:jihad|amal)$/i.test(name)).map(([name, lat, lng, country, latin, native]) => ({
   place: { name, lat, lng, country: COUNTRY[country] ?? country, kind: "city", alt: [...latin, ...native] } as IranPlace,
   skeletons: new Set(latin.map((n) => skeleton(latinWords(n))).filter((k) => k.length >= 3)),
   sounds: new Set(native.map(nativeSound).filter((k) => k.length >= 3)),
@@ -341,12 +342,15 @@ export function tallyNotEvent(headline: string): boolean {
  * Never a fly-over, a round-up of attacks, a count of the dead with no attack,
  * or a tally over days.
  */
+// 18 Oct (the unplaced cards placed): warplanes at an altitude, mock raids, flares, a plane's emergency code,
+// GPS jamming, "new tactics", launches with no impact, planes turned back, a drone crossing airspace.
 const NOT_AN_ATTACK =
-  /\b(?:fl(?:y|ies|ew|ying)\s+(?:low\s+)?over|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?|evacuat\w*|unidentified (?:object|aircraft|drone))\b/i;
+  /\b(?:fl(?:y|ies|ew|ying)\s+(?:\w+\s+){0,3}(?:over|altitude)|mock (?:raids?|attacks?)|illuminat\w* (?:flares?|bombs?|shells?|rounds?)|flares?|squawk|GPS (?:disruption|jamming|interference|spoofing)|new tactics|no impacts?|turned back|cross(?:es|ed|ing)? (?:\w+ ){0,3}(?:into )?(?:\w+ )?airspace|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?|evacuat\w*|unidentified (?:object|aircraft|drone))\b/i;
 const ROUNDUP =
-  /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)|\bas\s+(?:Tehran|Iran|Washington|the US|Israel)\s+(?:tries|seeks|aims|moves|looks|struggles|presses)\b|\bin\s+(?:recent|past|the past)\s+(?:days|weeks|months)\b/i;
+  /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)|\bas\s+(?:Tehran|Iran|Washington|the US|Israel)\s+(?:tries|seeks|aims|moves|looks|struggles|presses)\b|\bin\s+(?:recent|past|the past)\s+(?:days|weeks|months)\b|\bin\s+(?:one|a single)\s+day\b|\b(?:two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:separate\s+)?attacks\b/i;
+// The Baluch insurgency's attacks on Iran's forces are Iran's unrest, not the war (user's rule: no Iran unrest pins).
 const INTERNAL =
-  /\b(?:police|roadside|gunmen|militants?|Jaish al-Adl|PJAK|PKK|Komala|protest(?:s|ers)?|riots?|unrest|clash(?:es)?|security forces|border guards?|assassinat\w*|executed|arrest(?:s|ed)?|MEK|PMOI|Mojahedin|resistance units|regime banners?)\b/i;
+  /\b(?:Sistan|Baluchestan|Zahedan|Mehrastan|Nikshahr|Saravan|Khash|Taftan|Rask|Iranshahr|police|roadside|gunmen|militants?|Jaish al-Adl|PJAK|PKK|Komala|protest(?:s|ers)?|riots?|unrest|clash(?:es)?|security forces|border guards?|assassinat\w*|executed|arrest(?:s|ed)?|MEK|PMOI|Mojahedin|resistance units|regime banners?)\b/i;
 /**
  * Not an attack of its own (Stage C, 12 Oct, the live pins read one by one): footage or a later look at
  * an attack already pinned ("IRGC releases footage of …", "still ablaze after the 1 Oct strike", "in
@@ -371,6 +375,18 @@ export function iranPinAllowed(actor: string | null | undefined, place: Pick<Ira
   if (AXIS.has(a)) return place.country !== "Iran" || (a === "iran" && AIR_DEFENCE.test(headline) && !INTERNAL.test(headline));
   if (PURSUERS[a]) return PURSUERS[a].has(place.country);
   return place.country !== "Syria" && !INTERNAL.test(headline);
+}
+
+/**
+ * A place for an Iran desk card stored with none (user, 18 Oct: 300 strike, fighting and ship cards had no pin,
+ * Israeli strikes on south Lebanon's villages among them): the first place its headline names that the map may
+ * show for its actor, as a new card is pinned (editor.ts pinIran).
+ */
+export function iranPlaceFromWords(summary: string, type: string, card?: { body?: string; flags?: string[] }): { name: string; lat: number; lng: number } | null {
+  const actor = (card?.flags ?? []).map((f) => /^actor:(.+)$/.exec(f)?.[1]).find(Boolean) ?? null;
+  // The source's own words are not kept with a stored card: its headline and text stand for them.
+  const p = iranPins(summary, `${summary}\n${card?.body ?? ""}`, type === "vessel").find((x) => iranPinAllowed(actor, x, summary));
+  return p ? { name: p.name, lat: p.lat, lng: p.lng } : null;
 }
 
 const PLACE_BY_NAME = new Map([...GAZ.map((g) => [g.place.name, g.place] as const), ...IRAN_PLACES.map((p) => [p.name, p] as const)]);

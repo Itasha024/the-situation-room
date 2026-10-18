@@ -257,3 +257,15 @@ test("the damage an earlier attack did is no new pin; a strike that hits is one 
   assert.equal(notEvent({ label: "Officials assess the damage at Hodeidah port after Saudi raids" }), true);
   assert.equal(notEvent({ label: "US strike hits Bushehr airport terminal" }), false);
 });
+
+test("an Iran card stored with no place gets one from its headline; fly-overs, flares, tallies, the Baluch insurgency and 'Islamic Jihad' get none (18 Oct)", async () => {
+  const { iranPlaceFromWords } = await import("./iran-places.ts");
+  const at = (s: string, actor: string, type = "strike") => iranPlaceFromWords(s, type, { flags: [`actor:${actor}`] })?.name ?? null;
+  assert.equal(at("Israeli air strike hits Qantara, south Lebanon", "israel"), "Qantara");
+  assert.equal(at("Israeli artillery shells outskirts of Meidoun in south Lebanon", "israel"), "Meidoun");
+  assert.equal(at("Israeli warplanes fly at medium altitude over Jezzine area, south Lebanon", "israel"), null);
+  assert.equal(at("Israeli forces fire illumination flares over Majdal Zoun, south Lebanon", "israel"), null);
+  assert.equal(at("Two killed in separate attacks in Mehrastan, Sistan and Baluchestan", "unclear"), null);
+  assert.equal(at("IDF and Shin Bet destroyed four Hamas and Islamic Jihad weapons warehouses in Gaza", "israel"), null);
+  assert.equal(at("Six ships attacked in Strait of Hormuz in one day; Kpler says oil flows fell", "iran", "vessel"), null);
+});

@@ -18,6 +18,7 @@ import { IRAN_RSS, IRAN_TG, IRAN_X, ISRAELI_MEDIA, LEBANESE_MEDIA, type IranLean
 import { isIranWar, passesIranOwnGate, passesIsraeliMediaGate, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
 import { type Candidate, IRAN_READER, USAGE_KEY, type Usage, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
+import { iranPlaceFromWords } from "./desk/iran-places.ts";
 import { remember } from "./desk/recent-reads.ts";
 import { combineSystem } from "./desk/combine.ts";
 import { isExclusive } from "./desk/exclusive.ts";
@@ -398,6 +399,13 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   const cards = uniqReports.filter((r) => !before.has(r.fp));
   const folded = approved.length - cards.length;
   const merge = uniqReports.length || touched.length ? await store.mergeIntoDesk([...uniqReports.slice(0, PAYLOAD_REPORTS), ...touched]) : { reportsAdded: 0, eventsAdded: 0, unplaced: [] };
+  // A strike, fighting or ship card stored with no place is given one from its own headline (user, 18 Oct), as on the Yemen desk.
+  try {
+    const placed = await store.placeUnplaced?.("2026-09-28T00:00:00+03:00", iranPlaceFromWords, "iran");
+    if (placed) console.log(`[iran pins] ${placed} cards with no place given one from their headline`);
+  } catch (err) {
+    console.warn("[iran pins] placing cards failed", err);
+  }
 
   // 7. The scan box: what came in and what became of it.
   const rawHits: RawScanHit[] = hits.map((h) => {

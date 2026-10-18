@@ -364,18 +364,19 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       return true;
     },
 
-    async placeUnplaced(since, placeOf) {
+    async placeUnplaced(since, placeOf, desk = "yemen") {
       const sql = await sqlProvider();
-      const rows = await sql<{ fp: string; at: unknown; type: string; summary: string; body: string | null; source: string | null; url: string | null; desks: string[] }>`
-        select fp, at, type, summary, body, source, url, desks from desk_report
+      const rows = await sql<{ fp: string; at: unknown; type: string; summary: string; body: string | null; source: string | null; url: string | null; desks: string[]; flags: unknown }>`
+        select fp, at, type, summary, body, source, url, desks, flags from desk_report
          where lat is null and type in ('strike', 'combat', 'vessel', 'port') and at >= ${since}::timestamptz
-           and 'yemen' = any(desks)
+           and ${desk} = any(desks)
            and not exists (select 1 from desk_event e where e.fp = desk_report.fp)
       `;
       dbMeter.queries += 1;
       let n = 0;
       for (const r of rows) {
-        const p = placeOf(String(r.summary ?? ""), r.type);
+        const flags = Array.isArray(r.flags) ? (r.flags as string[]) : [];
+        const p = placeOf(String(r.summary ?? ""), r.type, { body: String(r.body ?? ""), flags });
         if (!p) continue;
         const placed = await sql<{ fp: string }>`
           update desk_report set place = ${p.name}, lat = ${p.lat}, lng = ${p.lng} where fp = ${r.fp} and lat is null returning fp

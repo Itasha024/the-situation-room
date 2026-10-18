@@ -96,14 +96,18 @@ test("18 Oct: every appearance from the feed's first day is read, however late; 
   const failed = clip("https://x.com/RapidResponse47/status/2110036935628738623", "2026-10-13T15:56:22Z", '.@POTUS: "Iran is a failed country. They have no economy. They have 300% inflation. They have no money. They\'re not paying their troops. They\'re not paying anybody. We\'ll make a decision on Iran very soon." https://t.co/rgSXdh32FK');
   const houthis = clip("https://x.com/RapidResponse47/status/2110035064407076969", "2026-10-13T15:48:56Z", '"Have you made a decision on striking the Houthis?"\n\n@POTUS: "They\'re behaving very badly... If I told you I made a decision, that wouldn\'t be good." https://t.co/XutOay4vu9');
   assert.ok(failed && houthis, "both clips are his words; the second opens with the reporter's question");
+  // Live, only the first clip was in the column: the Houthi one came before the reader took question-first clips.
+  const only: TrumpStatement[] = [{ ...failed }];
+  addFactbase(only, entries);
+  assert.deepEqual(only.filter((s) => s.id.startsWith("fb-") && s.id.includes("october-13")).map((s) => s.at), ["2026-10-13T15:56:22.000Z", "2026-10-13T15:56:22.000Z"]);
   const column: TrumpStatement[] = [failed, houthis];
   addFactbase(column, entries);
   const iran = column.find((s) => s.id === `fb-${gaggle!.slug}`)!;
   const yemen = column.find((s) => s.id === `fb-${gaggle!.slug}-yemen`)!;
   assert.equal(failed.in, iran.id);
   assert.equal(houthis.in, yemen.id);
-  // The clip went out as he spoke: the entry takes its time.
-  assert.equal(iran.at, "2026-10-13T15:56:22.000Z");
+  // The clip went out as he spoke: the appearance takes the first clip's time, on both desks.
+  assert.equal(iran.at, "2026-10-13T15:48:56.000Z");
   assert.equal(yemen.at, "2026-10-13T15:48:56.000Z");
   assert.equal(shownYet(failed), false);
 });

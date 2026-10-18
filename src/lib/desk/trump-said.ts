@@ -622,6 +622,11 @@ export function addFactbase(statements: TrumpStatement[], entries: FactbaseEntry
       foldClips(statements, entry);
       n += 1;
     }
+    // One appearance, one time: its Iran and Yemen entries take the earliest either was given (18 Oct: the 13 Oct
+    // gaggle's Iran entry took its clip's 15:56, its Yemen entry kept the day's 19:00).
+    const own = statements.filter((s) => s.id === `fb-${e.slug}` || s.id === `fb-${e.slug}-yemen`);
+    const first = Math.min(...own.map((s) => Date.parse(s.at)));
+    for (const s of own) if (Date.parse(s.at) !== first) s.at = new Date(first).toISOString();
   }
   return n;
 }

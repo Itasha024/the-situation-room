@@ -30,6 +30,10 @@ const OWN_NAMES: Record<string, { en: string[]; ar: string[] }> = {
   "Asharq Al-Awsat": { en: ["Asharq Al-Awsat"], ar: ["الشرق الأوسط"] },
   "Al-Araby Al-Jadeed": { en: ["Al-Araby Al-Jadeed", "The New Arab", "Al-Araby"], ar: ["العربي الجديد"] },
   "Al-Akhbar": { en: ["Al-Akhbar"], ar: ["الأخبار"] },
+  // Lebanese papers (user, 18 Oct): "مصادر أميركية لـ«المدن»" is theirs; the agencies' news they carry is not.
+  "Al-Modon": { en: ["Al-Modon", "Almodon", "Al Modon"], ar: ["المدن"] },
+  "Nidaa al-Watan": { en: ["Nidaa al-Watan", "Nidaa Al Watan"], ar: ["نداء الوطن"] },
+  "Ad-Diyar": { en: ["Ad-Diyar", "Addiyar", "Al-Diyar"], ar: ["الديار"] },
   Alhurra: { en: ["Alhurra", "Al-Hurra", "Al Hurra"], ar: ["الحرة"] },
   "Arab News": { en: ["Arab News"], ar: ["عرب نيوز"] },
   // Their websites (18 Oct); their channels are posts, not sites, and pass as before.
@@ -137,7 +141,8 @@ export function isExclusive(text: string, source: string): boolean {
     .map((w) => w.replace(/^al-?/i, ""))
     .filter((w) => w.length >= 4);
   const ar: Record<string, string> = { akhbar: "الأخبار", suhail: "سهيل", sheba: "شبا", araby: "العربي", arabiya: "العربية", hadath: "الحدث", almashhad: "المشهد", erem: "إرم", jazeera: "الجزيرة", mayadeen: "الميادين", masirah: "المسيرة" };
-  const names = [...words, ...words.map((w) => ar[w.toLowerCase()]).filter(Boolean)];
+  // The own-news sites' Arabic names too: "مصادر أميركية لـ«المدن»" (user, 18 Oct).
+  const names = [...new Set([...words, ...words.map((w) => ar[w.toLowerCase()]).filter(Boolean), ...(OWN_NAMES[String(source || "").trim()]?.ar ?? [])])];
   for (const n of names) {
     const name = esc(n);
     if (new RegExp(String.raw`\b(?:told|tells)\s+(?:the\s+)?(?:al-?\s?)?${name}`, "i").test(t)) return true;
@@ -146,14 +151,15 @@ export function isExclusive(text: string, source: string): boolean {
     // can reveal", "officials who spoke to the Journal", "first reported by Axios".
     if (new RegExp(String.raw`\b${name}\b[^.\n]{0,30}\b(?:can reveal|can confirm|has seen|has reviewed|has obtained|understands)\b`, "i").test(t)) return true;
     if (new RegExp(String.raw`\b(?:seen|reviewed|obtained|viewed|verified)\s+by\s+(?:the\s+)?${name}\b|\b(?:spoke|speaking|talked)\s+(?:to|with)\s+(?:the\s+)?${name}\b|\bfirst\s+reported\s+by\s+(?:the\s+)?${name}\b`, "i").test(t)) return true;
-    if (new RegExp(String.raw`علمت\s*[«"]?\s*(?:ال)?${name}|مصادر[^.\n]{0,20}لـ?\s*[«"]?\s*(?:ال)?${name}|قالت?\s+مصادر[^.\n]{0,30}لـ?\s*[«"]?${name}`).test(t)) return true;
+    // One source too: 'مصدر لـ"المدن": …' (Al-Modon, 18 Oct).
+    if (new RegExp(String.raw`علمت\s*[«"“]?\s*(?:ال)?${name}|(?:مصادر|مصدر)[^.\n]{0,20}لـ?\s*[«"“]?\s*(?:ال)?${name}|قالت?\s+مصادر[^.\n]{0,30}لـ?\s*[«"“]?${name}`).test(t)) return true;
     // "أفادت مصادر استخباراتية في صنعاء، «الأخبار»، بأن": the verb takes the
     // outlet with no "لـ". The quote marks keep الأخبار "the news" out.
     if (new RegExp(String.raw`(?:أفاد|أفادت|أبلغ|أبلغت|أخبر|أخبرت)\s+(?:مصادر|مصدر|مسؤول|مسؤولون|قيادي|ضابط)[^.\n]{0,60}[«"“]\s*${name}\s*[»"”]`).test(t)) return true;
     // A teller and the outlet before the colon: "مسؤول أمريكي للجزيرة:", "مصدر أميركي للحدث:" (user, 8 Oct: Al Jazeera's US official is its own).
     const stem = n.replace(/^ال/, "");
     const head = t.replace(/^[\s‎‏|]*(?:عاجل|خاص|🔴|⭕️)?\s*\|?\s*/u, "").slice(0, 120);
-    if (/^ال/.test(n) && new RegExp(String.raw`^[^:\n]{2,80}\s(?:لل|لـ\s*ال|ل\s*ال)${esc(stem)}\s*:`).test(head)) return true;
+    if (/^ال/.test(n) && new RegExp(String.raw`^[^:\n]{2,80}\s(?:لل|لـ\s*[«"“]?\s*ال|ل\s*[«"“]?\s*ال)${esc(stem)}\s*[»"”]?\s*:`).test(head)) return true;
   }
   return false;
 }

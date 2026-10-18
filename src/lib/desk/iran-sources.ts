@@ -311,6 +311,9 @@ export const IRAN_X: IranSource[] = [
   { id: "MIshaqDar50", name: "Ishaq Dar (Pakistan's foreign minister)", lean: "intl", every: 15 },
   { id: "PakPMO", name: "Pakistan's prime minister's office", lean: "intl", every: 15 },
   { id: "CMShehbaz", name: "Shehbaz Sharif", lean: "intl", every: 15 },
+  // Lebanese papers whose sites turn the server away (user, 18 Oct): their posts carry each story's headline.
+  { id: "NidaaWatan", name: "Nidaa al-Watan", lean: "gulf", every: 15 },
+  { id: "AddiyarNews", name: "Ad-Diyar", lean: "axis", every: 15 },
 ];
 
 /** Websites and feeds the Yemen desk reads that the Iran desk reads too (by their names in the scanner). */
@@ -326,6 +329,10 @@ export const SHARED_RSS: Record<string, IranLean> = {
   "Al Jazeera": "gulf",
   "Al Arabiya": "gulf",
   "Al-Akhbar": "axis",
+  // Lebanese papers (user, 18 Oct): their own reporting and sources only (exclusive.ts).
+  "Al-Modon": "gulf",
+  "Nidaa al-Watan": "gulf",
+  "Ad-Diyar": "axis",
   "Erem News": "gulf",
   Alhurra: "us",
   SPA: "gulf",
@@ -421,6 +428,8 @@ export const IRAN_NOT_READ: { what: string; why: string }[] = [
   { what: "ukmto.org", why: "answers with a CAPTCHA; UKMTO is read from its X account (UK_MTO)" },
   { what: "the IAEA's Iran page", why: "Cloudflare; the IAEA is read from its news feed" },
   { what: "Telegram channels of Kan, Israel Hayom, Channel 13 and Channel 14", why: "none found that still posts" },
+  { what: "nidaalwatan.com and addiyar.com (their own pages)", why: "answer the server with Cloudflare's bot check (18 Oct); read through Google News's listing of each site and their X accounts" },
+  { what: "Ad-Diyar's Telegram (AddiyarNews)", why: "shows no posts to a reader not signed in" },
 ];
 
 /** The display names of the Israeli outlets and reporters (stage 4c). */

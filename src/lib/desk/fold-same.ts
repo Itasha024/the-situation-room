@@ -5,9 +5,10 @@
  * desk is read (foldServed), so the copies already stored fold too. Stored
  * rows are never changed by the read.
  *
- * - One official's remarks on one day are one card: the speaker's own channel
- *   leads, every other outlet's line goes into it (Araghchi at the OIC went out
- *   as 14 cards, Khatibzadeh's interview as 14, the army spokesman as 11).
+ * - One official's remarks on one occasion are one card: the speaker's own
+ *   channel leads, every other outlet's line goes into it (Araghchi at the OIC
+ *   went out as 14 cards, Khatibzadeh's interview as 14, the army spokesman as
+ *   11). Another occasion the same day is another card (user, 18 Oct).
  * - One ship incident is one card for 24 hours: the same named ship, or the
  *   same kind of ship in the same stretch of sea ("second supertanker hit a
  *   mine": 16 cards; the LNG tanker off Al-Mukalla: 10).
@@ -119,10 +120,54 @@ export function deskDay(at: string): string {
   return Number.isFinite(t) ? new Date(t + 3 * H).toISOString().slice(0, 10) : "";
 }
 
-/** One official's remarks on one desk day, whoever relays them. */
+/**
+ * One speaking occasion lasts a few hours: a speech, an interview, a press
+ * conference, a call. An official speaks more than once a day, on other things
+ * (user, 18 Oct: "why should it be one card"), so a day is not one occasion.
+ */
+export const REMARKS_MS = 3 * H;
+/** Later relays of the same words share their topic: three words of the line in common. */
+const SAME_TOPIC = 3;
+
+const OCCASION = [
+  // A call or a meeting: with whom.
+  /\b(?:(?:phone|telephone) (?:call|conversation)|call|talks|meeting|met|meets|received|receives|hosted|hosts)\s+(?:with\s+)?(?:his|her|their)?\s*(?:[a-z]+\s+){0,3}?([A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){0,3})/g,
+  // A venue: "at the OIC", "on the sidelines of the UN General Assembly".
+  /\b(?:at|on the sidelines of|before|addressing)\s+(?:the\s+)?([A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){0,4})/g,
+  // An interview: to whom.
+  /\b(?:interview(?:ed)? (?:with|to|by)|told|speaking to|spoke to|talking to)\s+(?:the\s+)?([A-Z][\w'’-]+(?:\s+[A-Z][\w'’-]+){0,2})/g,
+];
+const OCC_STOP = new Set(["the", "us", "u.s.", "iran", "israel", "tehran", "washington", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "president", "minister", "foreign"]);
+/** What occasion a card's words come from, as the names it gives it ("oic", "qatar", "al jazeera"). */
+export function occasionOf(r: Card): Set<string> {
+  const t = `${r.summary} ${String(r.text ?? "").slice(0, 400)}`;
+  const out = new Set<string>();
+  for (const re of OCCASION) for (const m of t.matchAll(re)) for (const w of m[1].toLowerCase().split(/\s+/)) if (w.length >= 3 && !OCC_STOP.has(w)) out.add(w);
+  if (/\b(?:press|news) conference\b|\bbriefing\b/i.test(t)) out.add("presser");
+  if (/\b(?:on|in a post on|wrote on) (?:X|Twitter|Telegram|Truth Social|Instagram)\b/.test(t)) out.add("post");
+  return out;
+}
+/** Two cards name their occasions and none is the same: two occasions. */
+function otherOccasion(x: Set<string>, y: Set<string>): boolean {
+  if (!x.size || !y.size) return false;
+  for (const w of x) if (y.has(w)) return false;
+  return true;
+}
+
+/**
+ * One official's remarks on one occasion, whoever relays them: within three
+ * hours of each other, or later the same day on the same topic, unless the
+ * two cards name different occasions (a call with Qatar, a speech at the OIC).
+ */
 export function sameRemarks(a: Card, b: Card): boolean {
   const k = remarksOwner(a);
-  return !!k && k === remarksOwner(b) && deskDay(a.at) === deskDay(b.at);
+  if (!k || k !== remarksOwner(b) || deskDay(a.at) !== deskDay(b.at)) return false;
+  return oneOccasion(a, b, Math.abs(Date.parse(b.at) - Date.parse(a.at)), occasionOf(a), occasionOf(b));
+}
+function oneOccasion(a: Card, b: Card, gap: number, oa: Set<string>, ob: Set<string>): boolean {
+  if (otherOccasion(oa, ob)) return false;
+  if (gap <= REMARKS_MS) return true;
+  return wordsInCommon(lineOf(a.summary), lineOf(b.summary)) >= SAME_TOPIC;
 }
 
 /**
@@ -530,6 +575,7 @@ type Sig = {
   ship: Ship | null;
   blast: { city: string; body: string } | null;
   remarks: string;
+  occ: Set<string>;
   mirror: string;
   head: string;
   burst: string;
@@ -570,6 +616,7 @@ function sig(r: Card): Sig {
       ship: shipIncident(r),
       blast: blastAt(r),
       remarks: remarksOwner(r),
+      occ: occasionOf(r),
       mirror: mirrorKey(r.url),
       head: headKey(r.summary),
       burst: /^([^:]{2,60}):\s/.exec(r.summary)?.[1].trim().toLowerCase() ?? "",
@@ -613,7 +660,7 @@ export function talkRule(a: Card, b: Card): Rule | null {
   if (a === b || a.fp === b.fp) return null;
   const sa = sig(a);
   const sb = sig(b);
-  if (sa.remarks && sa.remarks === sb.remarks && sa.day === sb.day) return "remarks";
+  if (sa.remarks && sa.remarks === sb.remarks && sa.day === sb.day && oneOccasion(a, b, Math.abs(sb.t - sa.t), sa.occ, sb.occ)) return "remarks";
   if (sa.burst && a.source === b.source && sa.burst === sb.burst && Math.abs(sb.t - sa.t) <= BURST_MS) return "burst";
   return null;
 }

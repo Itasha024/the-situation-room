@@ -453,6 +453,14 @@ const RSS: RssFeed[] = [
   // Cloudflare, and its channel (every 15 minutes) carries each story's
   // headline as it is published.
   { id: "akhbar", lang: "ar", url: gnews("site:al-akhbar.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: AKHBAR_DAILY, whole: true, site: "al-akhbar.com" },
+  // Lebanese papers (user, 18 Oct). Like Al-Akhbar, only what they have on
+  // their own goes on (exclusive.ts), on the Iran desk by its gate. Al-Modon's
+  // feed and articles open to the server. Nidaa al-Watan and Ad-Diyar answer
+  // the server with Cloudflare's bot check, so Google News lists them, nothing
+  // bypassed (as Al Arabiya), and their X accounts are read (iran-sources.ts).
+  { id: "almodon", lang: "ar", url: "https://www.almodon.com/rss", name: "Al-Modon", cadence: C10, whole: true, site: "almodon.com" },
+  { id: "nidaalwatan", lang: "ar", url: gnews("site:nidaalwatan.com when:2h", "ar", "LB", "LB:ar"), name: "Nidaa al-Watan", cadence: C10, whole: true, site: "nidaalwatan.com" },
+  { id: "addiyar", lang: "ar", url: gnews("site:addiyar.com when:2h", "ar", "LB", "LB:ar"), name: "Ad-Diyar", cadence: C10, whole: true, site: "addiyar.com" },
   { id: "erem", lang: "ar", url: gnews("site:eremnews.com when:2h", "ar", "AE", "AE:ar"), name: "Erem News", cadence: C10, whole: true, site: "eremnews.com" },
   { id: "alhurra", lang: "ar", url: "https://www.alhurra.com/rss", name: "Alhurra", cadence: C5, whole: true, site: "alhurra.com" },
   { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C5, whole: true, site: "arabnews.com" },

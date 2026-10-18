@@ -15,22 +15,38 @@ function card(at: string, source: string, summary: string, more: Partial<Card> =
 }
 const served = (cards: Card[]) => foldServed(cards).reports;
 
-test("one official's remarks on one day are one card, every relay's line in it", () => {
+test("one official's remarks on one occasion are one card, every relay's line in it", () => {
   const cards = [
     card("17T10:32", "ILNA", "Araghchi says Iran will not negotiate under threat but is ready for talks based on mutual respect and credible guarantees"),
     card("17T10:47", "Al-Alam", "Araghchi: Insecurity in Hormuz due to US and Israeli attacks since war began"),
+    card("17T11:26", "Abbas Araghchi", "Araghchi: Either we build regional security together, or we will bear insecurity together"),
     card("17T12:26", "Mehr News", "Araghchi: Either we build regional security together, or we will bear insecurity together"),
     card("17T12:29", "Al-Alam", "Iranian Foreign Minister Abbas Araghchi says Iran committed to international law, UN Charter and diplomacy, will not accept coercion, threats or intimidation, and will not relinquish sovereign rights under pressure"),
     card("17T13:07", "Al-Alam", "Araghchi: Iran will not accept coercion, threats or intimidation, and will not relinquish sovereign rights under pressure"),
-    card("17T14:43", "Abbas Araghchi", "Araghchi: Iran presented a seven-day plan to reopen the Strait of Hormuz to the US via Qatar", { type: "diplomacy" }),
   ];
   const out = served(cards);
   assert.equal(out.length, 1);
   // The speaker's own account leads; the relays' lines are in the card.
   assert.equal(out[0].source, "Abbas Araghchi");
-  assert.match(String(out[0].text), /Either we build regional security together/);
   assert.match(String(out[0].text), /Insecurity in Hormuz/);
   assert.ok(out[0].alsoReportedBy!.some((a) => a.source === "Mehr News"));
+});
+
+test("another occasion the same day is another card (user, 18 Oct: an official talks several times a day)", () => {
+  // The morning's remarks, then hours later a different thing: the Hormuz plan sent through Qatar.
+  const morning = card("17T10:32", "ILNA", "Araghchi says Iran will not negotiate under threat but is ready for talks based on mutual respect and credible guarantees");
+  const plan = card("17T14:43", "Abbas Araghchi", "Araghchi: Iran presented a seven-day plan to reopen the Strait of Hormuz to the US via Qatar", { type: "diplomacy" });
+  assert.equal(foldRule(morning, plan), null);
+  // Within the hour but on two named occasions: a call with Qatar, then a speech at the OIC.
+  const call = card("17T09:00", "IRNA", "Araghchi in a phone call with Qatar's Al Thani: the region's security is indivisible");
+  const oic = card("17T09:40", "Al-Alam", "Araghchi at the OIC meeting: Israel's attacks threaten the whole region");
+  assert.equal(foldRule(call, oic), null);
+  // The same words relayed late in the day still join their card.
+  const early = card("17T08:10", "Al-Alam", "Khatibzadeh: Washington's path has reached a dead end on the Hormuz talks");
+  const late = card("17T19:40", "Al Mayadeen", "Khatibzadeh: Washington's path on the Hormuz talks has reached a dead end");
+  assert.equal(foldRule(early, late), "remarks");
+  const late2 = card("17T19:45", "Tasnim", "Khatibzadeh: the talks on Hormuz reached a dead end because of Washington's path");
+  assert.equal(foldRule(early, late2), "remarks");
 });
 
 test("a speaker known by a title is the same speaker: Khatibzadeh, the army spokesman, Ebnelreza", () => {

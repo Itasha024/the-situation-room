@@ -233,6 +233,9 @@ const HOST_NAMES: Record<string, string> = {
   "apnews.com": "AP",
   "eremnews.com": "Erem News",
   "al-akhbar.com": "Al-Akhbar",
+  "almodon.com": "Al-Modon",
+  "nidaalwatan.com": "Nidaa al-Watan",
+  "addiyar.com": "Ad-Diyar",
 };
 
 /**

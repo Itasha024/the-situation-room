@@ -147,6 +147,10 @@ const CITABLE: [RegExp, Cited][] = [
   // Bare "الشرق الأوسط" is "the Middle East"; only the paper counts.
   [/صحيفة\s+"?الشرق الأوسط|Asharq Al-Awsat/i, O("Asharq Al-Awsat", "aawsat.com", "SA", { lang: "ar" })],
   [/الأخبار اللبنانية|صحيفة الأخبار|Al-Akhbar/i, O("Al-Akhbar", "al-akhbar.com", "LB", { lang: "ar" })],
+  // Lebanese papers (user, 18 Oct). Bare "المدن" is "the cities" and "الديار" "the homes": only the paper or site counts.
+  [/(?:موقع|صحيفة|جريدة)\s+[«"]?المدن|[«"]المدن[»"]|Al-?Modon/i, O("Al-Modon", "almodon.com", "LB", { lang: "ar" })],
+  [/نداء الوطن|Nidaa al-Watan|Nidaa Al Watan/i, O("Nidaa al-Watan", "nidaalwatan.com", "LB", { lang: "ar" })],
+  [/(?:صحيفة|جريدة)\s+[«"]?الديار|[«"]الديار[»"]|Ad-?Diyar|Al-Diyar/i, O("Ad-Diyar", "addiyar.com", "LB", { lang: "ar" })],
   [/وزارة الدفاع السعودية|الدفاع السعودية|Saudi (?:Defen[cs]e|defen[cs]e) Ministry|Saudi Ministry of Defen[cs]e/i, B("Saudi Defense Ministry", "spa.gov.sa", "SA")],
   [/المتحدث (?:الرسمي )?باسم (?:قوات )?التحالف|تحالف دعم الشرعية|coalition spokesman/i, B("Coalition (SPA)", "spa.gov.sa", "SA")],
   [/الخارجية السعودية|Saudi (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Saudi Foreign Ministry", "spa.gov.sa", "SA")],

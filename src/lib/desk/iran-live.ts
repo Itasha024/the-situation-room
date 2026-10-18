@@ -19,6 +19,7 @@
  */
 
 import type { DeskStore } from "./store.ts";
+import { fixRows } from "./iran-list-fixes.ts";
 
 export const IRAN_LIVE_KEY = "iran:live";
 
@@ -356,10 +357,177 @@ export function recount(box: Box, now: Date): Box {
   const stats = box.stats as [Cell, string][] | undefined;
   if (!stats) return box;
   const counts: Record<string, number> = { Today: n((d) => d === today), "Last 7 days": n((d) => d >= week && d <= today), "Since 28 Feb": n((d) => d >= "2026-02-28") };
-  return { ...box, stats: stats.map(([c, l]) => (l in counts ? [{ ...c, v: String(counts[l]), date: today }, l] : [c, l])) };
+  // The note says the span counted, as of the count (17 Oct: "Today" read "Ships attacked or seized on 11 Oct").
+  const imo = rows.filter((r) => /^IMO\b/.test(String(r?.[0]?.src || ""))).length;
+  const notes: Record<string, string> = { Today: dayLabel(today), "Last 7 days": `${dayLabel(week)}–${dayLabel(today)}`, "Since 28 Feb": box.title === "Incidents" ? `${imo} confirmed by the IMO` : "count of the list below" };
+  return { ...box, stats: stats.map(([c, l]) => (l in counts ? [{ ...c, v: String(counts[l]), date: today, note: notes[l] }, l] : [c, l])) };
 }
 /** Newest first, as the researched lists are. */
 export const byDayDesc = (rows: ListRow[]) => [...rows].sort((a, b) => rowDay(b).localeCompare(rowDay(a)));
+
+/* ---------------- the lists' own rules (ships and energy sites) ---------------- */
+
+/**
+ * Official: a body that speaks for a state, a navy, an operator or the IMO —
+ * never a channel or outlet (17 Oct: Akhbar-e Fori and Bin Saeed were marked
+ * official on a mine blast). The researched file's own label for "the operator
+ * or a government confirmed it" counts.
+ */
+export const OFFICIAL_BODY = /\b(?:IMO|UKMTO|JMIC|MARAD|CENTCOM|Aspides|EUNAVFOR|Atalanta|Combined Maritime Forces|Navy|Ministry|Ministry of|Government|Armed Forces|IRGC|Sepah|National Guard|Coast ?Guard|Civil Defen[cs]e|Saudi Press Agency|SPA|WAM|QNA|KUNA|BNA|Oman News Agency|Aramco|ADNOC|NIOC|QatarEnergy|Kuwait Petroleum|KPC|Bapco|Shana|IAEA)\b|Confirmed by the operator or a government|وزارة|وزارت|سپاه|الحرس الثوري/i;
+const OFFICIAL_WORDS = /\b(?:minist(?:er|ry)|governor|president|Media Office|authorities|police|military|Defen[cs]e Force|Security Media Cell|Compan(?:y|ies)|Corporation|operator|filing|IRNA|Petra|Interfax \(Rosatom\)|Rosatom|Bazan|QatarEnergy|TotalEnergies|Shell|Bapco|GPIC|SABIC|Dana Gas|KRG|state TV|Electric Corporation|officials?|utility|Special Economic Zone|Development Oman|civil aviation|Group|Rescue Service|Steel)\b|\((?:Saudi Arabia|UAE|Kuwait|Qatar|Bahrain|Oman|Iraq|Iran|Israel)\)/i;
+/** An official body by name, or an outlet carrying one: "Gulf News (Kuwait electricity ministry)". */
+export const officialBody = (src: string) => OFFICIAL_BODY.test(String(src || "")) || OFFICIAL_WORDS.test(String(src || ""));
+/** Words that describe a ship but name none: "second oil tanker", "another giant oil tanker", "supertanker with over 2 million barrels". */
+const SHIP_WORDS = /^(?:ship|ships|tanker|tankers|supertanker|vessel|vessels|carrier|container|cargo|bulk|bulker|freighter|boat|boats|dhow|oil|crude|gas|lng|lpg|chemical|product|products|vlcc|ulcc|aframax|suezmax|panamax|giant|large|small|second|third|first|another|other|one|two|three|four|five|several|unidentified|unknown|unnamed|commercial|merchant|foreign|iranian|iran|linked|flagged|flag|with|over|under|more|than|million|barrels|barrel|carrying|loaded|empty|and|the|an|of|in|at|near|off|incl|including|us|navy|military|warship|fishing|incident|plant|site|field|facility|refinery|station)$/i;
+/** The ship's own name in a row's ship cell, or "" when it names none. */
+export function shipNamed(s: string): string {
+  return String(s || "").replace(/\(.*?\)/g, " ").replace(/[^\p{L}\p{N} .-]+/gu, " ").split(/\s+/).filter((w) => w && !SHIP_WORDS.test(w.replace(/[.-]+$/, "")) && !/^\d+(?:\.\d+)?$/.test(w)).join(" ").trim();
+}
+/** The stretch of sea a place is in: one incident told from two places is one row. */
+const SEAS: [string, RegExp][] = [
+  ["gulf", /\bQatar|Ras Laffan|Jubail|Jubayl|Ras Tanura|Dammam|Kuwait|Bahrain|Kharg|Bushehr|Al-?Faw|Basra|Umm Qasr|Dubai|Jebel Ali|Port Rashid|Abu Dhabi|Ruwais|Das Island|Sharjah|Al Jazeera, UAE|Arabian Gulf|Persian Gulf|UAE waters/i],
+  ["hormuz", /Hormuz|Musandam|Khasab|Kumzar|Larak|Qeshm|Bandar Abbas|Ash Shishah|Umm Al-Fayarin|Limah|\bLima\b|Oman TTW|Jazirat/i],
+  ["oman-sea", /Gulf of Oman|Fujairah|Khor Fakkan|Dibba|Sohar|Jask|Chabahar|Gwadar|Muscat|Arabian Sea/i],
+  ["red-sea", /Red Sea|Bab (?:al|el)[- ]Mand[ae]b|Hodeidah|Mocha|Mukha|Yanbu|Jeddah|Jazan|Jizan/i],
+  ["aden", /Gulf of Aden|Aden|Mukalla|Hadramawt|Socotra/i],
+];
+export const seaOf = (place: string) => SEAS.find(([, re]) => re.test(String(place || "")))?.[0] ?? null;
+const cellOf = (c: unknown): Cell | null => (c && typeof c === "object" ? (c as Cell) : null);
+const isImo = (c: Cell | null) => !!c && /^IMO\b/.test(c.src);
+const DAY_MS = 86_400_000;
+const daysApart = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) / DAY_MS;
+
+/**
+ * The ship list's rules, run on every change and on every read, rows stored
+ * before them too:
+ * - official only from an official body;
+ * - an unnamed ship is one row a day in its stretch of sea (17 Oct: one mine
+ *   blast in Hormuz in three rows, from Sabereen, Akhbar-e Fori and Bin Saeed);
+ * - a ship the IMO confirms takes in the unnamed report of it, a day either
+ *   side, in its stretch of sea (11 Oct: "a tanker hit in Hormuz, UKMTO" and the
+ *   IMO's named ships of that day), its weapon kept where the IMO gives none.
+ */
+export function tidyShips(box: Box): Box {
+  let rows = (box.rows as ListRow[]).map((r) => {
+    const c = cellOf(r[0]);
+    return c && c.k === "off" && !officialBody(c.src) ? ([{ ...c, k: "unoff" }, ...r.slice(1)] as ListRow) : r;
+  });
+  const unnamed = (r: ListRow) => !shipNamed(String(r[1] ?? ""));
+  const area = (r: ListRow) => seaOf(String(r[2] ?? "")) ?? seaOf(String(r[1] ?? ""));
+  // One unnamed ship a day per stretch of sea ("the second supertanker" on 17 Oct was the IRGC's count since 11 Oct, not a second ship that day).
+  const kept: ListRow[] = [];
+  for (const r of byDayDesc(rows)) {
+    const twin = unnamed(r) && kept.find((k) => unnamed(k) && rowDay(k) === rowDay(r) && area(k) && area(k) === area(r));
+    if (twin) {
+      // The official teller leads.
+      if (cellOf(r[0])?.k === "off" && cellOf(twin[0])?.k !== "off") kept[kept.indexOf(twin)] = r;
+      continue;
+    }
+    kept.push(r);
+  }
+  rows = kept;
+  // The IMO's named ship takes in the unnamed report of it.
+  const used = new Set<ListRow>();
+  // The report's day is the IMO's, a day either side (a night attack, a card posted the next morning); an Iranian
+  // ship, a several-ship claim or a US strike is another kind of incident than the IMO row's.
+  const usStrike = (r: ListRow) => /\bUS\b|U\.S\.|American|blockade|CENTCOM|military forces|warplane|fighter jet/i.test(`${r[3] ?? ""} ${r[4] ?? ""}`);
+  const other = (r: ListRow) => /Iranian|Iran-linked|\d+ (?:tankers|ships|vessels)|IRGC claim/i.test(`${r[1] ?? ""}`);
+  for (const imo of rows.filter((r) => isImo(cellOf(r[0])))) {
+    const twin = rows.find((r) => {
+      if (used.has(r) || r === imo || isImo(cellOf(r[0])) || !unnamed(r) || other(r) || usStrike(r) !== usStrike(imo)) return false;
+      return !!area(r) && area(r) === area(imo) && daysApart(rowDay(imo), rowDay(r)) <= 1;
+    });
+    if (!twin) continue;
+    used.add(twin);
+    if (/^Not stated$/i.test(String(imo[3] ?? "")) && twin[3]) imo[3] = twin[3];
+  }
+  rows = rows.filter((r) => !used.has(r));
+  return { ...box, rows: byDayDesc(rows) };
+}
+
+export type SiteState = "working" | "reduced" | "down" | "unknown";
+const STATE_LABEL: Record<SiteState, string> = { working: "Working", reduced: "Partly working", down: "Shut", unknown: "Not known" };
+/** A site's state, read from the words of its state cell. */
+export function stateOf(text: string): SiteState {
+  const t = String(text || "");
+  if (/^(?:Not known|No (?:report|update|restart|repair|word|confirmed|damage|hit)|Explosions?|Drones? intercepted|Fire|Big fire|Tank fire|Damaged|Tanks? (?:seen )?(?:badly )?damaged)/i.test(t)) return "unknown";
+  if (/\b(?:partly|partially|reduced|below normal|half|about \d+% of|at \d+%|mostly|some units|bypass|limited)\b/i.test(t)) return "reduced";
+  if (/\b(?:shut|halted|stopped|suspended|offline|out of service|destroyed|being rebuilt|closed|down)\b/i.test(t)) return "down";
+  if (/\b(?:working|back in service|back to full|resumed|restarted|repaired|running|operating|normal|producing|full output|full capacity|back online)\b/i.test(t)) return "working";
+  return "unknown";
+}
+/** The state cell as the page writes it: its state first ("Working: …"), then what the source says. */
+export function stateText(text: string): string {
+  const t = String(text || "").trim();
+  const st = stateOf(t);
+  const label = STATE_LABEL[st];
+  if (new RegExp(`^${label}\\b`, "i").test(t)) return t;
+  const rest = t.replace(/^(?:Working normally|Working|Back in service|Back to full(?: output)?|Repaired|Partly back|Partly working|Partly restarted|Mostly working|Running at reduced rates|Running below normal|Shut|Not known)\b[:;,.]?\s*/i, "");
+  return rest ? `${label}: ${rest}` : label;
+}
+
+/** Outlets that name the site or ship themselves, by the link's site, when a row gives only a label or a bare domain. */
+const OUTLETS: Record<string, string> = {
+  "en.wikipedia.org": "Wikipedia", "khaleejtimes.com": "Khaleej Times", "kuwaittimes.com": "Kuwait Times", "en.shana.ir": "Shana (Iran oil ministry)", "kpler.com": "Kpler",
+  "engine.online": "Engine", "qna.org.qa": "QNA (Qatar News Agency)", "thenationalnews.com": "The National", "insurancejournal.com": "Insurance Journal", "nabzebourse.com": "Nabz-e Bourse",
+  "hamshahrionline.ir": "Hamshahri", "argusmedia.com": "Argus Media", "newarab.com": "The New Arab", "wam.ae": "WAM (UAE news agency)", "tasnimnews.ir": "Tasnim", "en-hrana.org": "HRANA",
+  "mehrnews.com": "Mehr", "today.lorientlejour.com": "L'Orient Today", "bloomberg.com": "Bloomberg", "caliber.az": "Caliber", "english.aawsat.com": "Asharq Al-Awsat", "reuters.com": "Reuters",
+  "iraq-businessnews.com": "Iraq Business News", "guest.meed.com": "MEED", "meed.com": "MEED", "iranwire.com": "IranWire", "al-monitor.com": "Al-Monitor", "windward.ai": "Windward", "insights.windward.ai": "Windward",
+  "aljazeera.com": "Al Jazeera", "aa.com.tr": "Anadolu", "presstv.ir": "Press TV", "presstv.co.uk": "Press TV", "saudiexchange.sa": "Saudi Exchange", "sec.gov": "US SEC", "iranintl.com": "Iran International",
+  "malaymail.com": "Malay Mail", "airwars.org": "Airwars", "tradearabia.com": "TradeArabia", "gulfnews.com": "Gulf News", "aljarida.com": "Al-Jarida", "thenewregion.com": "The New Region", "kurdistan24.net": "Kurdistan24",
+  "voiceofemirates.com": "Voice of Emirates", "entekhab.ir": "Entekhab", "timesofoman.com": "Times of Oman", "thesun.my": "The Sun (Malaysia)", "bairdmaritime.com": "Baird Maritime", "qcintel.com": "Quantum Commodity Intelligence",
+  "ndtv.com": "NDTV", "newsquawk.com": "Newsquawk", "offshore-technology.com": "Offshore Technology", "newsonair.gov.in": "All India Radio", "seatrade-maritime.com": "Seatrade Maritime", "rudaw.net": "Rudaw",
+  "egyptoil-gas.com": "Egypt Oil & Gas", "hrw.org": "Human Rights Watch", "in-cyprus.philenews.com": "Philenews", "iraqoilreport.com": "Iraq Oil Report", "english.alarabiya.net": "Al Arabiya", "gcaptain.com": "gCaptain",
+  "mees.com": "MEES", "timesofisrael.com": "Times of Israel", "chemxplore.com": "ChemXplore", "bcinsight.crugroup.com": "BCInsight", "gem.wiki": "Global Energy Monitor",
+};
+const TG_NAMES: Record<string, string> = { farsna: "Fars", irna_1313: "IRNA", akhbarefori: "Akhbar-e Fori", SabrenNewss: "Sabereen News", naya_foriraq: "Naya", Alibk3: "Ali Bk", Alomhoar: "Al-Mihwar", alhadath_brk: "Al Hadath", Tasnimnews: "Tasnim", bin_1saeed: "Bin Saeed" };
+/** A cell's teller by name: "t.me", "khaleejtimes.com" or "Reported by the media" become the outlet the link lands on. */
+export function tellerOf(c: Cell): string {
+  const src = String(c.src || "");
+  const label = /^(?:Confirmed by the operator or a government|Reported by the media)$/i.exec(src);
+  const bare = /^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i.test(src) || /^t\.me$/i.test(src) || /^x\.com$/i.test(src);
+  if (!label && !bare) return src;
+  let host = "", path = "";
+  try {
+    const u = new URL(c.url);
+    host = u.hostname.toLowerCase().replace(/^www\./, "");
+    path = u.pathname;
+  } catch {
+    return src;
+  }
+  let name = "";
+  if (host === "t.me") name = TG_NAMES[path.split("/")[1]] ?? (path.split("/")[1] || "");
+  else if (host === "x.com" || host === "twitter.com") name = path.split("/")[1] ? `@${path.split("/")[1]}` : "";
+  else name = OUTLETS[host] ?? Object.entries(OUTLETS).find(([h]) => host.endsWith(`.${h}`))?.[1] ?? host;
+  if (!name) return src;
+  return label && /^Confirmed/i.test(label[0]) ? `${name} (confirmed by the operator or a government)` : name;
+}
+
+/**
+ * The energy list's rules, on every change and every read: each state cell
+ * says the site's state first (working, partly working, shut, not known) as
+ * the Yemen ledger does, with its own source and date; every teller is named.
+ */
+export function tidyEnergy(box: Box): Box {
+  const rows = (box.rows as ListRow[]).map((r) => {
+    const out = [...r] as ListRow;
+    const first = cellOf(out[0]);
+    if (first) out[0] = { ...first, src: tellerOf(first), ...(first.k === "off" && !officialBody(first.src) ? { k: "unoff" as const } : {}) };
+    const st = cellOf(out[4]);
+    if (st) out[4] = { ...st, v: stateText(st.v), src: tellerOf(st) };
+    else if (typeof out[4] === "string") out[4] = stateText(out[4] as string);
+    return out;
+  });
+  return { ...box, rows };
+}
+/** Each list's rules by its title. */
+export function tidyList(box: Box): Box {
+  // The rows found wrong when checked against their sources (iran-list-fixes.ts) first.
+  if (box.title === "Incidents" || box.title === "Attacks on energy sites") box = { ...box, rows: fixRows(box.title, box.rows as ListRow[]) };
+  if (box.title === "Incidents") return tidyShips({ ...box, rows: (box.rows as ListRow[]).map((r) => { const c = cellOf(r[0]); return c ? ([{ ...c, src: tellerOf(c) }, ...r.slice(1)] as ListRow) : r; }) });
+  if (box.title === "Attacks on energy sites") return tidyEnergy(box);
+  return box;
+}
 
 export function imoIncidents(box: Box, page: ImoPage, now: Date): Box {
   const rows = [...(box.rows as ListRow[])];
@@ -375,7 +543,7 @@ export function imoIncidents(box: Box, page: ImoPage, now: Date): Box {
     rows.push([imo, title(r.ship), r.where, "Not stated", r.what]);
   }
   const note = `The IMO confirms ${page.confirmed} incidents to ${dayLabel(page.asAt)}${page.deaths != null ? `, with ${page.deaths} seafarers killed` : ""}. The list also has attacks reported by UKMTO and others that the IMO has not confirmed.`;
-  return recount({ ...box, rows: byDayDesc(rows), note }, now);
+  return recount(tidyList({ ...box, rows: byDayDesc(rows), note }), now);
 }
 
 /* ---------------- UK sanctions (GOV.UK) ---------------- */
@@ -448,8 +616,8 @@ export const READERS: Reader[] = [
   { id: "uk", box: "EU and UK sanctions since 28 Feb", every: 2 * H, run: async (b, g) => ukSanctions(b, ukAdds(await g(UK_LIST))) },
   { id: "iaea-days", box: "IAEA inspectors in Iran", every: 6 * H, run: async (b, _g, now) => daysSince(b, now) },
   // The lists' Today and Last 7 days move with the clock, new rows or not.
-  { id: "recount-energy", box: "Attacks on energy sites", every: 6 * H, run: async (b, _g, now) => recount(b, now) },
-  { id: "recount-sea", box: "Incidents", every: 6 * H, run: async (b, _g, now) => recount(b, now) },
+  { id: "recount-energy", box: "Attacks on energy sites", every: 6 * H, run: async (b, _g, now) => recount(tidyList(b), now) },
+  { id: "recount-sea", box: "Incidents", every: 6 * H, run: async (b, _g, now) => recount(tidyList(b), now) },
 ];
 
 /** A box as it now stands: the reader's last version, else the researched file's. */
@@ -499,7 +667,8 @@ export function refreshIranLive(store: DeskStore, file: NumbersFile, now = new D
 
 /** What the page swaps in: every box a reader has made, and the newest day any of them reached. */
 export function liveNumbers(live: IranLive | null, extra: Box[] = []): { boxes: Box[]; through: string; nextAt: string } | null {
-  const boxes = [...Object.values(live?.boxes ?? {}).filter((b) => !extra.some((x) => x.title === b.title)), ...extra];
+  // The lists' rules hold on every read, for rows stored before them too.
+  const boxes = [...Object.values(live?.boxes ?? {}).filter((b) => !extra.some((x) => x.title === b.title)).map(tidyList), ...extra];
   if (!boxes.length) return null;
   const through = Object.values(live?.at ?? {}).sort().pop() || "";
   // When the next reader is due: the time the numbers' line names, as the Yemen desk's names its next update (user, 17 Oct).

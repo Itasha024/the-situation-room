@@ -172,6 +172,7 @@ export const SHARED_X: Record<string, IranLean> = {
   SaudiNews50: "gulf",
   MoEnergy_Saudi: "gulf",
   Kpler: "intl",
+  Windward: "intl",
   TankerTrackers: "intl",
   MarineTraffic: "intl",
   vortexa: "intl",
@@ -363,6 +364,7 @@ export const SHARED_RSS: Record<string, IranLean> = {
   "Seatrade Maritime": "intl",
   "Hellenic Shipping News": "intl",
   Kpler: "intl",
+  Windward: "intl",
   // Sources first read for Yemen (user, 9 Oct: the sources are the site's, not a desk's): what of theirs is on this war goes to the Iran desk too, by its gate.
   "Sawt al-Asima": "gulf", Yemenat: "gulf", "Aden al-Ghad": "gulf", "Yemen Press Agency": "axis", "Al-Thawrah": "axis",
   "Sheba Intelligence": "intl", "Yemen Future": "gulf", "Crater Sky": "gulf", "Al-Ayyam": "gulf", "Yemen Monitor": "gulf",

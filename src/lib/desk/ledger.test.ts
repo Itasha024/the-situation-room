@@ -72,7 +72,7 @@ test("the research baseline sits under the stored ledger; a stored row wins; a H
   const { LEDGER_BASELINE } = await import("./ledger-baseline.ts");
   const merged = withBaseline(LEDGER_SEED);
   assert.equal(merged.ships.length, LEDGER_BASELINE.ships.length);
-  assert.ok(merged.sites.some((s) => s.id === "east-west-pipeline" && s.status === "reduced"));
+  assert.ok(merged.sites.some((s) => s.id === "east-west-pipeline" && s.status === "working"));
   // Every baseline row links its report, and no Israeli outlet.
   const urls = [...LEDGER_BASELINE.ships.map((s) => s.src.url), ...LEDGER_BASELINE.sites.flatMap((s) => s.hits.map((h) => h.url)), ...LEDGER_BASELINE.figures.map((f) => f.src.url), ...LEDGER_BASELINE.notices.map((n) => n.src.url)];
   assert.ok(urls.every((u) => /^https:\/\//.test(u)));
@@ -178,4 +178,109 @@ test("a ship attacked in the Gulf stays out of the Yemen sea count unless the Ho
   assert.equal(out.ships.length, 0);
   const red = applyLedger(LEDGER_SEED, { ships: [{ doc: 0, ship: "Acers", place: "off Qatar", what: "attacked", date: "2026-10-08", attacker: "the Houthis" }] }, [doc] as never, now);
   assert.equal(red.ships.length, 1);
+});
+
+test("one incident at sea, one row: three outlets on one tanker off Hadramawt (17 Oct); a tanker and a landing ship stay two", async () => {
+  const { sameIncident, seaArea } = await import("./ledger.ts");
+  assert.equal(seaArea("140 miles southeast of Al-Mukalla"), "aden");
+  assert.equal(seaArea("off Hadramawt coast"), "aden");
+  assert.equal(seaArea("Gulf of Aden"), "aden");
+  assert.equal(seaArea("Red Sea"), null);
+  const a = { date: "2026-10-17", place: "140 miles southeast of Al-Mukalla", type: "LNG tanker" };
+  assert.equal(sameIncident(a, { date: "2026-10-17", place: "off Hadramawt coast" }), true);
+  assert.equal(sameIncident(a, { date: "2026-10-17", place: "Gulf of Aden" }), true);
+  assert.equal(sameIncident(a, { date: "2026-10-17", place: "off Mocha" }), false);
+  assert.equal(sameIncident({ date: "2026-08-17", place: "40 nm south-east of Al Mukha", type: "cargo ship" }, { date: "2026-08-17", place: "off Mocha", type: "military landing ship" }), false);
+  // Read again from three reports: one row.
+  const docs = [
+    doc("UKMTO: an LNG tanker reported an approach 140 miles southeast of Al-Mukalla by a small craft; shots were fired.", "2026-10-17", "UKMTO"),
+    doc("حادثه امنیتی در خلیج عدن: a tanker in the Gulf of Aden.", "2026-10-17", "ISNA"),
+    doc("A tanker came under fire off the coast of Hadramawt.", "2026-10-17", "Al-Masdar Online"),
+  ];
+  const out = applyLedger(LEDGER_SEED, { ships: [
+    { doc: 1, date: "2026-10-17", place: "Gulf of Aden", what: "attacked", weapon: "drone" },
+    { doc: 0, date: "2026-10-17", place: "140 miles southeast of Al-Mukalla", what: "attacked", type: "LNG tanker", weapon: "missile" },
+    { doc: 2, date: "2026-10-17", place: "off Hadramawt coast", what: "attacked" },
+  ] }, docs, now);
+  assert.equal(out.ships.length, 1);
+  assert.equal(out.ships[0].src.name, "UKMTO", "the official teller leads");
+});
+
+test("piracy is not the war's: armed men in a skiff firing two shots (17 Oct), stored rows too", async () => {
+  const { piracy, withBaseline } = await import("./ledger.ts");
+  assert.equal(piracy({ weapon: "two shots" }), true);
+  assert.equal(piracy({ attacker: "Armed men in boat" }), true);
+  assert.equal(piracy({ weapon: "gunfire" }), true);
+  assert.equal(piracy({ attacker: "Houthis", weapon: "gunfire from a skiff" }), false);
+  assert.equal(piracy({ weapon: "Ballistic missile" }), false);
+  const stored = structuredClone(LEDGER_SEED);
+  stored.ships = [
+    { id: "a", date: "2026-10-17", place: "Gulf of Aden", what: "attacked", weapon: "gunfire", src: { name: "ISNA", url: "https://t.me/isna94/409167", date: "2026-10-17" } },
+    { id: "b", date: "2026-10-17", place: "off Hadramawt coast", what: "attacked", attacker: "Armed men in boat", src: { name: "Al-Masdar Online", url: "https://x.com/almasdaronline/status/2111507450830430339", date: "2026-10-17" } },
+  ];
+  assert.ok(!withBaseline(stored).ships.some((s) => s.date === "2026-10-17"));
+  const fresh = applyLedger(LEDGER_SEED, { ships: [{ doc: 0, date: "2026-10-17", place: "off Hadramawt coast", what: "attacked", attacker: "Armed men in boat" }] }, [doc("Armed men in a boat fired at a tanker off Hadramawt", "2026-10-17", "Al-Masdar Online")], now);
+  assert.equal(fresh.ships.length, 0);
+});
+
+test("a site's state never comes from the attacking side's own outlets (2 Oct: Al-Masirah's 'Yanbu down')", async () => {
+  const { withBaseline } = await import("./ledger.ts");
+  const stored = structuredClone(LEDGER_SEED);
+  stored.sites = [{ id: "yanbu", name: "Yanbu", kind: "terminal", country: "Saudi Arabia", hits: [], status: "down", statusSrc: { name: "Al-Masirah", url: "https://t.me/almasirah2/301147", date: "2026-10-02" } }];
+  const y = withBaseline(stored).sites.find((s) => s.id === "yanbu")!;
+  assert.equal(y.status, "working");
+  assert.match(y.statusSrc!.name, /Marine Insight/);
+  const docs = [doc("Al-Masirah: Yanbu's terminals are out of service after the strike.", "2026-10-02", "Al-Masirah")];
+  const out = applyLedger(withBaseline(LEDGER_SEED), { sites: [{ doc: 0, site: "Yanbu", country: "Saudi Arabia", status: "down" }] }, docs, now);
+  assert.equal(out.sites.find((s) => s.id === "yanbu")!.status, "working");
+});
+
+test("a site's other spellings are its row: 'Saudi Shaqam gas plant' is Shedgum (10 Oct)", () => {
+  assert.equal(siteOf("Saudi Shaqam gas plant")?.id, "shedgum");
+  assert.equal(siteOf("Shadgum")?.id, "shedgum");
+});
+
+test("a Google News link is swapped for its article, and 'Google News' for the outlet", async () => {
+  const { gnewsLinks, swapLinks } = await import("./ledger.ts");
+  const g = "https://news.google.com/rss/articles/CBMiabc?oc=5";
+  const l = structuredClone(LEDGER_SEED);
+  l.sites = [{ id: "dhahran-aramco", name: "Aramco headquarters, Dhahran", kind: "headquarters", country: "Saudi Arabia", hits: [{ name: "Google News", url: g, date: "2026-10-15" }], status: "reduced", statusSrc: { name: "Mathrubhumi English", url: g, date: "2026-10-14" } }];
+  assert.deepEqual(gnewsLinks(l), [g]);
+  const out = swapLinks(l, { [g]: "https://www.aa.com.tr/en/world/some-story/4087646" });
+  assert.equal(out.sites[0].hits[0].url, "https://www.aa.com.tr/en/world/some-story/4087646");
+  assert.equal(out.sites[0].hits[0].name, "Anadolu Ajansı");
+  assert.equal(out.sites[0].statusSrc!.name, "Mathrubhumi English");
+  assert.deepEqual(gnewsLinks(out), []);
+});
+
+test("the 18 Oct audit: wrong days, later reports and other names stay out; states checked by hand stand", async () => {
+  const { withBaseline } = await import("./ledger.ts");
+  assert.equal(siteOf("Saba oil station in Sanaa")?.id, "sabaha-sanaa");
+  assert.equal(siteOf("fuel warehouse in Sanaa")?.id, "sabaha-sanaa");
+  assert.equal(siteOf("Al-Ahsa gas plant")?.id, "shedgum");
+  const H = (name: string, url: string, date: string, claim = false) => ({ name, url, date, ...(claim ? { claim } : {}) });
+  const stored = structuredClone(LEDGER_SEED);
+  stored.ships = [
+    { id: "2026-10-01-yanbu-port-tanker", date: "2026-10-01", place: "Yanbu port", what: "hit", src: H("OSINT Hexagone", "https://x.com/osinthexagone/status/2105763243184603198", "2026-10-01") },
+    { id: "2026-10-15-cma-cgm-champs-elysee", date: "2026-10-15", ship: "CMA CGM Champs Elysee", place: "Red Sea", what: "near miss", src: H("The Maritime Executive", "https://maritime-executive.com/x", "2026-10-15") },
+    { id: "2026-10-04-60-nautical-miles-south-of-mocha-yemen", date: "2026-10-04", place: "60 nm south of Mocha", what: "near miss", src: { ...H("UKMTO", "https://x.com/UK_MTO/status/2106820205938692327", "2026-10-04"), tier: "official" } },
+  ];
+  stored.sites = [
+    { id: "dhahran-aramco", name: "Aramco headquarters, Dhahran", kind: "headquarters", country: "Saudi Arabia", status: "reduced", statusSrc: H("Anadolu Ajansı", "https://www.aa.com.tr/x/4087646", "2026-10-14"), hits: [H("Bloomberg", "https://www.bloomberg.com/x", "2026-10-13"), H("Anadolu Ajansı", "https://www.aa.com.tr/x/4087646", "2026-10-14"), H("Google News", "https://news.google.com/rss/articles/x", "2026-10-15", true)] },
+    { id: "saba-oil-station-in-sanaa", name: "Saba oil station in Sanaa", kind: "fuel station", country: "Yemen", status: "unknown", hits: [H("Al-Araby Al-Jadeed", "https://www.alaraby.co.uk/x", "2026-10-14")] },
+    { id: "jeddah", name: "Jeddah bulk plant", kind: "terminal", country: "Saudi Arabia", status: "unknown", hits: [H("Tasnim", "https://t.me/Tasnimnews_en/42377", "2026-10-11", true)] },
+  ];
+  const l = withBaseline(stored);
+  assert.ok(!l.ships.some((s) => s.id === "2026-10-01-yanbu-port-tanker"), "a projectile in the port is the site's hit");
+  assert.equal(l.ships.find((s) => /Champs/.test(s.ship ?? ""))?.date, "2026-10-01");
+  assert.equal(l.ships.filter((s) => /Champs/.test(s.ship ?? "")).length, 1);
+  assert.equal(l.ships.find((s) => s.date === "2026-10-04")?.ship, "Chrystal Sky");
+  const dh = l.sites.find((s) => s.id === "dhahran-aramco")!;
+  assert.deepEqual(dh.hits.map((h) => h.date), ["2026-10-13"]);
+  assert.equal(dh.status, "working");
+  assert.equal(dh.statusSrc?.name, "The National");
+  assert.deepEqual(l.sites.find((s) => s.id === "sabaha-sanaa")!.hits.map((h) => h.date), ["2026-10-13"]);
+  assert.ok(!l.sites.some((s) => s.id === "jeddah" || s.id === "saba-oil-station-in-sanaa"));
+  assert.equal(l.sites.find((s) => s.id === "taibah-medina")!.hits[0].date, "2026-09-29");
+  assert.equal(l.sites.find((s) => s.id === "riyadh-refinery")?.status ?? "unknown", "unknown");
 });

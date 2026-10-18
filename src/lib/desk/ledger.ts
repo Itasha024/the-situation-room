@@ -29,6 +29,7 @@ export function offYemenShip(place: string, text: string): boolean {
   return (OFF_YEMEN_SEA.test(text) || SAUDI_GULF.test(text)) && !YEMEN_SEA.test(text);
 }
 import { notNewEvent } from "./pin-rule.ts";
+import { cleanUrl, isGnews, outletFromHost, resolveGoogleNews } from "./gnews.ts";
 
 export const LEDGER_KEY = "ledger";
 export const TRANSITS_KEY = "ledger-transits";
@@ -94,7 +95,13 @@ export type LedgerNotice = { id: string; date: string; text: string; src: Ledger
  */
 export type LedgerWrong = { site?: string; ship?: string; date?: string; why: string; url?: string };
 export type LedgerFix = { site: string; hit: LedgerSource; why: string };
-export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string; wrong?: LedgerWrong[]; fixes?: LedgerFix[] };
+/**
+ * A site's state checked by hand against its sources: it stands until a newer
+ * report than its own source gives another (18 Oct: "reduced" on Riyadh from a
+ * story about Dhahran; "down" on Yanbu from Al-Masirah).
+ */
+export type LedgerState = { site: string; status: SiteStatus; statusSrc?: LedgerSource; why: string };
+export type Ledger = { since: string; ships: ShipIncident[]; sites: EnergySite[]; figures: LedgerFigure[]; notices: LedgerNotice[]; updatedAt: string; wrong?: LedgerWrong[]; fixes?: LedgerFix[]; states?: LedgerState[] };
 
 /** The war began with the strike on Sanaa airport, 13 July 2026. */
 export const WAR_START = "2026-07-13";
@@ -145,11 +152,11 @@ export const KNOWN_SITES: KnownSite[] = [
   { id: "abqaiq", name: "Abqaiq", kind: "processing plant", country: "Saudi Arabia", re: /Abqaiq|بقيق/i },
   // 13 Oct: one hit on Aramco's head office in ten rows ("Aramco HQ", "Aramco building in Dhahran"...).
   { id: "dhahran-aramco", name: "Aramco headquarters, Dhahran", kind: "headquarters", country: "Saudi Arabia", re: /Dhahran|الظهران|Aramco(?:'s)? (?:headquarters|HQ|head office)|(?:headquarters|HQ|head office) of (?:Saudi )?Aramco|مقر (?:شركة )?أرامكو/i },
-  { id: "shedgum", name: "Shedgum gas plant", kind: "gas plant", country: "Saudi Arabia", re: /Shedgum|Shadqam|Shedgam|شدقم/i },
+  { id: "shedgum", name: "Shedgum gas plant", kind: "gas plant", country: "Saudi Arabia", re: /Shedgum|Shadqam|Shedgam|Shaqam|Shadgum|Shugadam|Shedqam|Shidqam|شدقم|Al-?Ahsa gas|(?:gas|غاز)[^.]{0,20}(?:Al-?Ahsa|الأحساء)/i },
   { id: "shaybah", name: "Shaybah oilfield", kind: "oilfield", country: "Saudi Arabia", re: /Shaybah|Shaibah|شيبة/i },
   { id: "ghawar", name: "Ghawar oilfield", kind: "oilfield", country: "Saudi Arabia", re: /Ghawar|الغوار/i },
   { id: "tanajib", name: "Tanajib gas plant", kind: "gas plant", country: "Saudi Arabia", re: /Tanajib|تناجيب/i },
-  { id: "sabaha-sanaa", name: "Al-Sabaha oil depot, Sanaa", kind: "fuel depot", country: "Yemen", re: /Sabaha|الصباحة/i },
+  { id: "sabaha-sanaa", name: "Al-Sabaha oil depot, Sanaa", kind: "fuel depot", country: "Yemen", re: /Sabaha|الصباحة|Saba (?:oil|fuel) (?:station|depot)|(?:fuel|oil) (?:warehouse|stores?|depot|reserves?) in Sanaa|underground (?:reserve )?fuel/i },
   { id: "bajil-fuel", name: "Fuel depot, Bajil (Hodeidah)", kind: "fuel depot", country: "Yemen", re: /Bajil|باجل/i },
   // The depot by King Khalid airport only when a report says depot or tanks and no refinery.
   { id: "riyadh-depot", name: "Riyadh fuel depot (King Khalid airport)", kind: "fuel depot", country: "Saudi Arabia", re: /^(?![\s\S]*(?:refiner|مصف))[\s\S]*(?:(?:fuel|oil|Aramco) (?:depot|tanks?|storage)[^.]{0,40}Riyadh|Riyadh[^.]{0,40}(?:fuel|oil|Aramco) (?:depot|tanks?|storage)|خزان[^.]{0,30}الرياض)/i },
@@ -229,6 +236,46 @@ const sameTown = (a: string, b: string) => {
   const x = towns(a);
   return [...towns(b)].some((w) => x.has(w));
 };
+/**
+ * The stretch of sea a place is in, so one incident told from three towns is
+ * one row (17 Oct: "Gulf of Aden", "140 miles south-east of Al-Mukalla" and
+ * "off the Hadramawt coast" were one LNG tanker). Null for a bare "Red Sea".
+ */
+const SEA_AREAS: [string, RegExp][] = [
+  ["north-red-sea", /Yanbu|Jeddah|Jiddah|Rabigh|Umluj|Duba|Wajh|northern Red Sea|ينبع|جدة|رابغ/i],
+  ["jazan", /Jazan|Jizan|Shuqaiq|Midi\b|Farasan|جازان|جيزان|الشقيق|ميدي/i],
+  ["hodeidah", /Hodeidah|Hudaydah|Ras Isa|Salif|Kamaran|Luhayyah|Khokha|الحديدة|رأس عيسى|الصليف|كمران/i],
+  ["bab", /Mocha|Mokha|Mukha|Dhubab|Bab (?:al|el)[- ]Mand[ae]b|Perim|Mayun|Assab|Djibouti|المخا|ذباب|باب المندب|ميون/i],
+  ["aden", /Aden|Mukalla|Hadra?m(?:a|ou)w?t|Shabwa|Balhaf|Nishtun|Mahra|Ahwar|Abyan|Shihr|Socotra|Somalia|Berbera|عدن|المكلا|حضرموت|شبوة|بلحاف|المهرة|سقطرى/i],
+];
+export const seaArea = (place: string) => SEA_AREAS.find(([, re]) => re.test(String(place || "")))?.[0] ?? null;
+/** What kind of ship: a tanker and a landing ship off one town on one day are two incidents. */
+const SHIP_CLASSES: [string, RegExp][] = [
+  ["naval", /military|naval|navy|landing|warship|frigate|destroyer|coast ?guard|patrol/i],
+  ["boat", /dhow|fishing|boats?\b/i],
+  ["tanker", /tanker|LNG|LPG|gas carrier|crude/i],
+  ["cargo", /cargo|bulk|container|freighter|merchant|ro-?ro|car carrier/i],
+];
+const shipClass = (type?: string) => SHIP_CLASSES.find(([, re]) => re.test(String(type || "")))?.[0] ?? null;
+/** One incident: the same day (a day apart at most), unnamed or the same name, the same town or stretch of sea, the same kind of ship. */
+export function sameIncident(a: Pick<ShipIncident, "date" | "ship" | "place" | "type">, b: Pick<ShipIncident, "date" | "ship" | "place" | "type">): boolean {
+  if (Math.abs(dayMs(a.date) - dayMs(b.date)) > 86_400_000) return false;
+  if (a.ship && b.ship) return nameInText(a.ship, b.ship) || nameInText(b.ship, a.ship);
+  const ca = shipClass(a.type), cb = shipClass(b.type);
+  if (ca && cb && ca !== cb) return false;
+  const sa = seaArea(a.place), sb = seaArea(b.place);
+  return sameTown(a.place, b.place) || (!!sa && sa === sb);
+}
+/**
+ * Piracy is not this war's (the ledger's own rule since 30 Sep): armed men in
+ * a skiff firing at a ship, no side named (17 Oct: two shots at an LNG tanker
+ * 140 miles off Al-Mukalla, the guards fired back).
+ */
+export function piracy(x: { attacker?: string; weapon?: string; what?: string; place?: string; note?: string }): boolean {
+  const t = `${x.attacker ?? ""} ${x.weapon ?? ""} ${x.note ?? ""}`;
+  if (/houthi|ansar ?allah|الحوثي|أنصار الله|Yemeni (?:forces|armed forces|navy)|coalition|Saudi|Iran/i.test(t)) return false;
+  return /pirat|gunmen|armed (?:men|persons|individuals|people)|skiff|small (?:craft|boat)|مسلحين|قراصنة|زورق صغير/i.test(t) || /^(?:\w+ )?(?:shots?|gunfire|small arms(?: fire)?|rifles?|warning shots)$/i.test(String(x.weapon ?? "").trim());
+}
 const dayMs = (d: string) => Date.parse(`${String(d).slice(0, 10)}T00:00:00Z`);
 /** The strike's own day as the model gives it: up to 7 days before the report, else the report's day. */
 const strikeDay = (given: unknown, reported: string) => {
@@ -271,6 +318,30 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
   for (const x of out.sites) for (const h of x.hits) if (houthiOutlet(h.name)) h.claim = true;
   // Gulf waters are the Iran war's, rows stored before the rule too (17 Oct: a tanker off Al Jubayl).
   out.ships = out.ships.filter((x) => !offYemenShip(x.place, "") || /houthi|ansar ?allah|الحوثي|أنصار الله/i.test(x.attacker ?? ""));
+  // Piracy is out, and one incident told by three outlets is one row: rows stored before these rules too (17 Oct).
+  out.ships = out.ships.filter((x) => !piracy(x));
+  const baseIds = new Set(base.ships.map((s) => s.id));
+  for (const x of [...out.ships].sort((a, b) => RANK[sourceTier(b.src)] - RANK[sourceTier(a.src)])) {
+    if (!out.ships.includes(x)) continue;
+    for (const y of [...out.ships]) {
+      if (y === x || (baseIds.has(x.id) && baseIds.has(y.id)) || !sameIncident(x, y)) continue;
+      x.ship ??= y.ship;
+      x.flag ??= y.flag;
+      x.type ??= y.type;
+      x.attacker ??= y.attacker;
+      x.crew ??= y.crew;
+      x.weapon ??= y.weapon;
+      if (WHATS.indexOf(y.what) > WHATS.indexOf(x.what) && y.what !== "near miss" && y.what !== "suspicious approach") x.what = y.what;
+      out.ships.splice(out.ships.indexOf(y), 1);
+    }
+  }
+  // The attacking side's own outlets never give a site's state (2 Oct: Al-Masirah's "Yanbu down"); rows stored before the rule too.
+  for (const s of out.sites) {
+    if (s.statusSrc && (s.statusSrc.claim || houthiOutlet(s.statusSrc.name))) {
+      s.status = "unknown";
+      delete s.statusSrc;
+    }
+  }
   // A site stored under another name before its known names were added ("Taibah power
   // plant") joins its known row.
   for (const x of [...out.sites]) {
@@ -293,7 +364,8 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
     else if (betterSource(s.src, row.src)) Object.assign(row, structuredClone(s), { id: row.id, weapon: s.weapon ?? row.weapon });
     else row.weapon ??= s.weapon;
     // The same row by id: the hand-checked words stand (user, 3 Oct: "two dhow boats").
-    if (row && row.id === s.id) Object.assign(row, { ...(s.type ? { type: s.type } : {}), ...(s.note ? { note: s.note } : {}) });
+    // 18 Oct: the ship's name JMIC gave later, and the weapon as checked, too.
+    if (row && row.id === s.id) Object.assign(row, { ...(s.ship ? { ship: s.ship } : {}), ...(s.type ? { type: s.type } : {}), ...(s.weapon ? { weapon: s.weapon } : {}), ...(s.note ? { note: s.note } : {}) });
   }
   for (const s of base.sites) {
     const row = out.sites.find((x) => x.id === s.id);
@@ -327,6 +399,16 @@ export function withBaseline(l: Ledger, base: Ledger = LEDGER_BASELINE): Ledger 
     if (!row && k) out.sites.push((row = { id: k.id, name: k.name, kind: k.kind, country: k.country, hits: [], status: "unknown" }));
     if (!row) continue;
     row.hits = [...row.hits.filter((h) => h.date !== f.hit.date), { ...f.hit }].sort((a, b) => a.date.localeCompare(b.date));
+  }
+  // A state checked by hand stands over what was stored before it.
+  for (const st of base.states ?? []) {
+    const row = out.sites.find((s) => s.id === st.site);
+    if (!row) continue;
+    const since = st.statusSrc?.date ?? "";
+    if (row.statusSrc && since && dayMs(row.statusSrc.date) > dayMs(since) && !houthiOutlet(row.statusSrc.name)) continue;
+    row.status = st.status;
+    if (st.statusSrc) row.statusSrc = { ...st.statusSrc };
+    else delete row.statusSrc;
   }
   out.sites = out.sites.filter((s) => s.hits.length || s.statusSrc);
   // Whether a report is a new hit or an earlier one told again is read from the
@@ -363,10 +445,12 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
     // One incident, one row: the same ship within a day; a ship with no name
     // is the one off the same town that day. A later report of an attack
     // already told adds nothing new (5 Oct: the 4 Oct tanker off Mocha told again as "Red Sea").
+    if (piracy({ attacker: s.attacker, weapon: s.weapon })) continue;
     const retold = s.retold === true;
     const same = next.ships.find((x) =>
-      Math.abs(dayMs(x.date) - dayMs(date)) <= (retold ? 3 : 1) * 86_400_000 &&
-      (retold || (s.ship && x.ship ? nameInText(x.ship, s.ship) || nameInText(s.ship, x.ship) : sameTown(x.place, s.place as string))),
+      retold
+        ? Math.abs(dayMs(x.date) - dayMs(date)) <= 3 * 86_400_000
+        : sameIncident(x, { date, ship: s.ship || undefined, place: s.place as string, type: s.type || undefined }),
     );
     if (retold && !same) continue;
     if (same) {
@@ -422,8 +506,10 @@ export function applyLedger(current: Ledger, u: LedgerUpdates, docs: Doc[], now:
       else if (betterSource(src, row.hits[i])) row.hits[i] = src;
     }
     const status = STATUSES.includes(s.status as SiteStatus) ? (s.status as SiteStatus) : null;
-    // The latest word on a site stands; an older report never overrides it.
-    if (status && status !== "unknown" && (!row.statusSrc || dayMs(d.date) >= dayMs(row.statusSrc.date))) {
+    // The latest word on a site stands; an older report never overrides it. The
+    // attacking side's own outlets never set it (2 Oct: Al-Masirah's "Yanbu
+    // down" stood over Reuters' "loading resumed").
+    if (status && status !== "unknown" && !houthiOutlet(d.name) && (!row.statusSrc || dayMs(d.date) >= dayMs(row.statusSrc.date))) {
       row.status = status;
       row.statusSrc = srcOf(d);
     }
@@ -497,6 +583,30 @@ Saudi crude exports in total for a month: label "Saudi crude exports", period th
 A side's own figure (the Houthi transport ministry's ship count, the Houthis' count of tankers hit) is kept like any other; the source shows whose it is.
 Return JSON {"ships":[],"sites":[],"figures":[],"notices":[]}.`;
 
+/** Every source of the ledger: each ship's, each hit's, each site's state. */
+const sourcesOf = (l: Ledger): LedgerSource[] => [...l.ships.map((x) => x.src), ...l.sites.flatMap((s) => [...s.hits, ...(s.statusSrc ? [s.statusSrc] : [])])];
+/** Google News links in the ledger: a redirect, never the report itself (14 Oct: Mathrubhumi's Riyadh story, 15 Oct: "Google News" on Dhahran). */
+export const gnewsLinks = (l: Ledger): string[] => [...new Set(sourcesOf(l).map((s) => s.url).filter(isGnews))];
+/** Each Google News link swapped for its article, the outlet named from the article's site. */
+export function swapLinks(l: Ledger, real: Record<string, string>): Ledger {
+  const out = structuredClone(l);
+  for (const s of sourcesOf(out)) {
+    const to = real[s.url];
+    if (!to) continue;
+    s.url = to;
+    if (/^Google News$/i.test(s.name)) s.name = outletFromHost(to) || s.name;
+  }
+  return out;
+}
+async function realLinks(urls: string[], cap = 12): Promise<Record<string, string>> {
+  const real: Record<string, string> = {};
+  for (const u of urls.slice(0, cap)) {
+    const to = await resolveGoogleNews(u).catch(() => "");
+    if (to) real[u] = cleanUrl(to);
+  }
+  return real;
+}
+
 /** Refresh the stored ledger from the window's cards (and PortWatch, when due). */
 export async function refreshLedger(store: DeskStore, windowReports: LiveReport[], now = new Date()): Promise<Ledger> {
   try {
@@ -504,12 +614,25 @@ export async function refreshLedger(store: DeskStore, windowReports: LiveReport[
   } catch (err) {
     console.error("[ledger] transits failed:", err instanceof Error ? err.message : err);
   }
-  const current = withBaseline((await store.getJson<Ledger>(LEDGER_KEY)) ?? LEDGER_SEED);
+  let current = withBaseline((await store.getJson<Ledger>(LEDGER_KEY)) ?? LEDGER_SEED);
+  // Stored Google News links become their articles, a few a run.
+  const stored = gnewsLinks(current);
+  if (stored.length) current = swapLinks(current, await realLinks(stored, 6));
   const docs = ledgerDocs(windowReports);
-  if (!docs.length) return current;
+  const fresh = await realLinks([...new Set(docs.map((d) => d.url).filter(isGnews))]);
+  for (const d of docs) {
+    if (!fresh[d.url]) continue;
+    d.url = fresh[d.url];
+    if (/^Google News$/i.test(d.name)) d.name = outletFromHost(d.url) || d.name;
+  }
+  const keep = async () => {
+    if (stored.length) await store.putJson(LEDGER_KEY, current);
+    return current;
+  };
+  if (!docs.length) return keep();
   const user = JSON.stringify({ documents: docs.map((d, i) => ({ index: i, source: d.name, date: d.date, text: d.text })) });
   const got = await askChain("ledger", SYSTEM, user, { temperature: 0, models: COMBINE_MODELS });
-  if (!got) return current;
+  if (!got) return keep();
   const next = applyLedger(current, got.json as LedgerUpdates, docs, now);
   await store.putJson(LEDGER_KEY, next);
   return next;

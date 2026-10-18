@@ -23,16 +23,18 @@ const REUTERS_JODI_JUL = "https://www.reuters.com/business/energy/saudi-crude-oi
 const SAREE = (post: number, date: string, extra: Partial<LedgerSource> = {}) => S("Yahya Saree, Houthi military spokesman", `https://t.me/army21ye/${post}`, date, { claim: true, ...extra });
 const MOE = (id: string, date: string, extra: Partial<LedgerSource> = {}) => S("Saudi Energy Ministry", `https://x.com/MoEnergy_Saudi/status/${id}`, date, { tier: "official", ...extra });
 /** 1 Oct, Taibah: the coalition spokesman's own post (user, 3 Oct). */
-const CJFC_1OCT = S("Saudi-led coalition spokesman", "https://x.com/CJFCSpox/status/2105696227568353710", "2026-10-01", { tier: "official", weapon: "A drone", note: "A transformer damaged, the coalition says; the Houthis deny it." });
+const CJFC_1OCT = S("Saudi-led coalition spokesman", "https://x.com/CJFCSpox/status/2105696227568353710", "2026-09-29", { tier: "official", weapon: "A drone", note: "At 05:11 on 29 Sep, the coalition said on 1 Oct: a transformer taken out of service, the grid unharmed; the Houthis deny it." });
+/** 13 Oct: the coalition's strikes on Houthi fuel stores in Sanaa, Hodeidah and Dhamar, after its evacuation warning. */
+const CJFC_13OCT = (note: string) => S("Saudi-led coalition spokesman", "https://x.com/CJFCSpox/status/2110063548936184029", "2026-10-13", { tier: "official", weapon: "Air strikes", note });
 
 export const LEDGER_BASELINE: Ledger = {
   since: "2026-07-13",
   updatedAt: "2026-09-30T21:00:00+03:00",
   ships: [
+    // 1 Oct: the French frigate Languedoc (Aspides) shot down a drone threatening the ship; told on 15 Oct (Le Monde, the French general staff).
+    { id: "2026-10-01-cma-cgm-champs-elysee", date: "2026-10-01", ship: "CMA CGM Champs Elysee", type: "container ship", place: "southern Red Sea, near Bab al-Mandab", what: "near miss", weapon: "A drone, shot down by the French frigate Languedoc", note: "No one claimed it; UKMTO issued no warning.", src: S("The Maritime Executive", "https://maritime-executive.com/article/report-french-frigate-downed-drone-threatening-cma-cgm-ship-in-red-sea", "2026-10-15") },
     // 4 Oct: UKMTO's warning 151-26; a Houthi-aligned channel told it minutes before, Seatrade the next day.
-    { id: "2026-10-04-60-nautical-miles-south-of-mocha-yemen", date: "2026-10-04", type: "tanker", place: "60 nm south of Mocha", what: "near miss", crew: "Safe", weapon: "Explosions near the ship", note: "A Houthi-aligned channel said a naval cruise missile targeted a tanker near Bab al-Mandab.", src: UKMTO("151-26", "2106820205938692327", "2026-10-04") },
-    // 1 Oct: a security firm's alert (not UKMTO; UKMTO's warning that day, 147-26, was in Hormuz).
-    { id: "2026-10-01-yanbu-port-tanker", date: "2026-10-01", flag: "Liberia", type: "tanker", place: "Yanbu port", what: "hit", crew: "A fire; loading at the port stopped for a time", weapon: "Aerial projectile", note: "Houthi-aligned outlets said a missile hit Aramco's North Yanbu station in the port that evening.", src: S("OSINT Hexagone (a maritime security alert)", "https://x.com/osinthexagone/status/2105763243184603198", "2026-10-01") },
+    { id: "2026-10-04-60-nautical-miles-south-of-mocha-yemen", date: "2026-10-04", ship: "Chrystal Sky", type: "tanker", place: "60 nm south of Mocha", what: "near miss", crew: "Safe", weapon: "Explosions near the ship: an air burst within 100 m of the bow, then 7 or 8 smaller ones (JMIC)", note: "JMIC names the ship. A Houthi-aligned channel said a naval cruise missile targeted a tanker near Bab al-Mandab.", src: UKMTO("151-26", "2106820205938692327", "2026-10-04") },
     { id: "2026-09-15-yanbu-port-ship", date: "2026-09-15", type: "Saudi ship", place: "Yanbu port", what: "attacked", attacker: "Houthis", weapon: "During a missile and drone attack on Yanbu", note: "Houthi-aligned channels reported it; no word from the ship's side.", src: S("Shajab News", "https://t.me/shajab_news/67034", "2026-09-15", { claim: true }) },
     { id: "2026-08-31-red-sea-boats", date: "2026-08-31", type: "Saudi ships", place: "Red Sea", what: "attacked", attacker: "Houthis", weapon: "Four explosive boats", note: "Government forces said they destroyed a Houthi explosive boat on 30 Aug before it could be used against ships.", src: S("Shajab News", "https://t.me/shajab_news/66055", "2026-08-31", { claim: true }) },
     { id: "2026-09-06-nereida", date: "2026-09-06", ship: "Nereida", flag: "Comoros", type: "tanker", place: "off Ras Isa", what: "seized", attacker: "the Yemeni government coast guard", weapon: "None: boarded", note: "It had unloaded at Houthi-held Ras Isa without permission and is on the US sanctions list; Houthi outlets called it piracy.", src: S("Almashhad", "https://www.almashhad.news/news/493397", "2026-09-06") },
@@ -79,10 +81,10 @@ export const LEDGER_BASELINE: Ledger = {
         SAREE(3749, "2026-09-19", { weapon: "Many ballistic and cruise missiles and drones" }),
         SAREE(3768, "2026-09-24", { weapon: "Ballistic and cruise missiles and drones", note: "A ballistic missile and a drone shot down over Yanbu, Greek security sources say (eKathimerini). Satellite pictures of 25 to 27 Sep show storage tanks hit at the Yanbu gas plant (Fars, 30 Sep)." }),
         S("Al-Akhbar", "https://t.me/Alakhbar_News/96512", "2026-09-27", { claim: true, weapon: "Many ballistic missiles and drones", note: "Satellite pictures show damage to Aramco storage, the paper says; Saudi Arabia said nothing." }),
-        S("Sabereen News", "https://t.me/SabrenNewss/227278", "2026-10-01", { claim: true, weapon: "Missile", note: "Aramco's North Yanbu station in the industrial port. Smoke seen over the North Yanbu crude terminal that night (OSINT Hexagone); a tanker in the port reported a projectile and a fire." }),
+        S("The Maritime Executive (from Vanguard Tech)", "https://maritime-executive.com/article/explosion-and-fire-reported-at-yanbu", "2026-10-01", { weapon: "A projectile", note: "A projectile landed inside the port: an isolated fire by the tank farm, loading stopped for a time. Houthi-aligned channels named Aramco's North Yanbu station; the Houthis claimed nothing." }),
       ],
       status: "working",
-      statusSrc: S("Reuters", "https://www.reuters.com/business/energy/saudi-resumes-yanbu-oil-loading-after-pipeline-restart-2026-09-29/", "2026-09-29"),
+      statusSrc: S("Marine Insight", "https://www.marineinsight.com/unknown-projectile-hits-saudi-arabias-yanbu-port-causing-fire-halting-tanker-loading/", "2026-10-03"),
     },
     {
       id: "jazan",
@@ -242,12 +244,44 @@ export const LEDGER_BASELINE: Ledger = {
     { site: "rabigh", date: "2026-10-06", why: "the 5 Oct evening claim told again the next morning" },
     { site: "taibah-medina", date: "2026-10-06", why: "Qatar's condemnation, no new attack" },
     { site: "jeddah", date: "2026-10-06", why: "user, 7 Oct: no new attack on 6 Oct; the evening posts and footage are the 5 Oct fire" },
+    // The 18 Oct audit, each row against its source.
+    { ship: "2026-10-01-yanbu-port-tanker", why: "no tanker was hit: a projectile landed in Yanbu port (the site's 1 Oct hit); a tanker only stopped loading" },
+    { ship: "2026-10-15-cma-cgm-champs-elysee", why: "the 1 Oct drone, told on 15 Oct" },
+    { ship: "2026-10-07-red-sea", why: "shots from an unidentified small craft at the CUL Klang (Maritime Executive): no side's attack" },
+    { site: "taibah-medina", date: "2026-10-01", why: "the attack was on 29 Sep; the coalition told it on 1 Oct" },
+    { site: "riyadh-refinery", date: "2026-10-14", why: "Mathrubhumi's story is the Dhahran strike and debris in Riyadh, no hit on the refinery" },
+    { site: "jeddah", date: "2026-10-05", why: "the smoke over Rabigh, 150 km north; the Houthis named Rabigh" },
+    { site: "jeddah", date: "2026-10-11", why: "Tasnim's hearsay; the Houthis' 11 Oct statement named no Jeddah site" },
+    { site: "shaybah", date: "2026-10-10", why: "one line of Ali Bk's; no claim, Saudi word or satellite sign" },
+    { site: "shedgum", date: "2026-10-09", why: "Al-Mihwar's Al-Ahsa fire that night is the Shedgum strike of 10 Oct" },
+    { site: "bajil-fuel", date: "2026-10-11", why: "Crater Sky retells the 10 Oct strike" },
+    { site: "bajil-fuel", date: "2026-10-14", why: "Almashhad's fuel-rationing story; the stores were struck on 13 Oct" },
+    { site: "dhahran-aramco", date: "2026-10-14", why: "Anadolu's story names no Dhahran; one strike on the night of 13 Oct" },
+    { site: "dhahran-aramco", date: "2026-10-15", why: "AP's later report of the 13 Oct strike" },
+    { site: "sabaha-sanaa", date: "2026-10-14", why: "later reports of the 13 Oct strike (fuel rationing, the warning)" },
+    { site: "ras-isa", date: "2026-10-14", why: "the raids were on 13 Oct" },
     // Ships: the 4 Oct tanker off Mocha, told by a Houthi-aligned channel and the next day by Seatrade.
     { ship: "2026-10-04-near-bab-al-mandab", why: "the same tanker UKMTO reported 60 nm south of Mocha that night" },
     { ship: "2026-10-05-red-sea", why: "Seatrade's report of the 4 Oct tanker off Mocha" },
   ],
+  // States checked by hand (18 Oct): they stand until a newer report.
+  states: [
+    { site: "east-west-pipeline", status: "working", statusSrc: S("Al Jazeera (the Saudi energy minister)", "https://www.aljazeera.com/news/2026/10/6/saudi-arabia-says-east-west-pipeline-pumping-5-8-million-bpd", "2026-10-06", { tier: "official" }), why: "5.8 million barrels a day on 6 Oct; Hellenic Shipping's 12 Oct line is Bloomberg's repost" },
+    { site: "yanbu", status: "working", statusSrc: S("Marine Insight", "https://www.marineinsight.com/unknown-projectile-hits-saudi-arabias-yanbu-port-causing-fire-halting-tanker-loading/", "2026-10-03"), why: "loading resumed after the 1 Oct stop" },
+    { site: "dhahran-aramco", status: "working", statusSrc: S("The National", "https://www.thenationalnews.com/business/energy/2026/10/14/houthi-attack-hits-aramcos-historic-nerve-centre-in-saudi-arabia/", "2026-10-14"), why: "the building damaged, operations intact (Aramco's chief)" },
+    { site: "riyadh-refinery", status: "unknown", why: "no report of its output since the 3 Oct fire" },
+    { site: "sabaha-sanaa", status: "unknown", why: "struck 13 Oct; no damage reported, the company says it was empty" },
+    { site: "shedgum", status: "unknown", why: "a big fire on 9-10 Oct; no Aramco word" },
+  ],
   // Hand-checked hits: they stand over what the reads stored for that site and day.
   fixes: [
+    { site: "taibah-medina", hit: CJFC_1OCT, why: "18 Oct: the attack of 29 Sep, the coalition's own post" },
+    { site: "shedgum", hit: S("Yahya Saree, Houthi military spokesman", "https://t.me/army21ye/3866", "2026-10-10", { claim: true, weapon: "Ballistic and cruise missiles and drones", note: "Large fires, the Houthis say. Satellite heat of 616 MW at the plant on the night of 9 Oct (Ali Bk); no Aramco or Saudi word." }), why: "18 Oct: the Houthis' own statement over channels' smoke videos" },
+    { site: "tanajib", hit: S("Yahya Saree, Houthi military spokesman", "https://t.me/army21ye/3866", "2026-10-10", { claim: true, weapon: "Ballistic and cruise missiles and drones", note: "A fire, the Houthis say; no Saudi word." }), why: "18 Oct: missing" },
+    { site: "dhahran-aramco", hit: S("Bloomberg", "https://www.bloomberg.com/news/articles/2026-10-13/aramco-headquarters-hit-during-houthi-attacks-on-saudi-arabia", "2026-10-13", { tier: "wire", weapon: "A ballistic missile", note: "The top floors damaged and a limited fire, no one hurt (the energy ministry). The coalition said it intercepted a ballistic missile at Dhahran and debris fell in a neighbourhood. The Houthis claimed it (army21ye/3888)." }), why: "18 Oct: one strike, its weapon" },
+    { site: "sabaha-sanaa", hit: CJFC_13OCT("Underground fuel reserve stores in Sanaa, after the coalition's evacuation warning. The Yemen Petroleum Company says the station was empty."), why: "18 Oct: the coalition's own statement" },
+    { site: "bajil-fuel", hit: CJFC_13OCT("Fuel tanks and unloading piers in Hodeidah, with Ras Isa; local reports name the Bajil oil company site."), why: "18 Oct: the coalition's 13 Oct operation" },
+    { site: "ras-isa", hit: S("Almashhad", "https://www.almashhad.news/news/500356", "2026-10-13", { weapon: "About ten air strikes", note: "The coalition named fuel tanks and unloading piers in Hodeidah (its 13 Oct statement)." }), why: "18 Oct: the raids of 13 Oct" },
     { site: "abqaiq", hit: S("Ali Bk", "https://t.me/Alibk3/37488", "2026-09-30", { claim: true, weapon: "Drones", note: "Its own sources, Ali Bk says; drone attacks went on into the afternoon and Dammam airport stopped flights. No Saudi word." }), why: "user, 3 Oct: the first post, not the later one" },
     { site: "taibah-medina", hit: CJFC_1OCT, why: "user, 3 Oct: the coalition spokesman's own post" },
     {
@@ -257,12 +291,12 @@ export const LEDGER_BASELINE: Ledger = {
     },
     {
       site: "east-west-pipeline",
-      hit: S("CBS News", "https://www.cbsnews.com/live-updates/iran-war-trump-us-oil-prices-yemen-red-sea-houthis-bab-el-mandeb/", "2026-10-04", { weapon: "Ballistic missiles and drones, the Houthis say", note: "Pump station No. 2 by Khurais; the pipeline stopped for a time. The Houthis named Aramco in Khurais. The flow was back to 5.8 million barrels a day on 6 Oct, the energy minister says." }),
+      hit: S("CBS News (AFP, a Saudi energy source)", "https://www.cbsnews.com/live-updates/iran-war-trump-us-oil-prices-yemen-red-sea-houthis-bab-el-mandeb/#post-update-07285a3f", "2026-10-04", { weapon: "Ballistic missiles and drones, the Houthis say", note: "Pump station No. 2 by Khurais; the pipeline stopped for a time. The Houthis named Aramco in Khurais. The flow was back to 5.8 million barrels a day on 6 Oct, the energy minister says." }),
       why: "the 4 Oct attack by Khurais: the Houthis' claim, satellite heat, and the pipeline's halt the next day",
     },
     {
       site: "rabigh",
-      hit: S("Al Jazeera", "https://t.me/AjaNews/515587", "2026-10-05", { claim: true, note: "The Houthis named the Aramco refinery in Rabigh with Riyadh's airport and bases in the south; smoke over the refinery was filmed that evening. No Saudi word." }),
+      hit: S("Yahya Saree, Houthi military spokesman", "https://t.me/army21ye/3815", "2026-10-05", { claim: true, note: "The Houthis named the Aramco refinery in Rabigh with Riyadh's airport and bases in the south that evening; smoke over the refinery was filmed that afternoon. No Saudi word." }),
       why: "the 5 Oct evening attack, one row",
     },
   ],

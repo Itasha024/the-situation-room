@@ -225,7 +225,8 @@
   const HOME_ADM_SKIP = { adm1: ['YEM'], adm2: ['YEM'] };
   /* Ships go to the sea they are in (user, 18 Oct: no Shipping story beside Hormuz and Bab al-Mandab, they repeated it). */
   const SHIP_RE = /\b(?:ships?|vessels?|tankers?|freighters?|ukmto|seafarers?|crew)\b/i;
-  const GULF_SEA_RE = /hormuz|gulf of oman|persian gulf|arabian gulf|\bthe gulf\b|fujairah|khor fakkan|bandar abbas|qeshm|ras al-khaimah|jask|chabahar|kharg/i;
+  // The Gulf's own coasts too (18 Oct: the two tankers struck off Al Jubayl were in no story).
+  const GULF_SEA_RE = /hormuz|gulf of oman|persian gulf|arabian gulf|\bthe gulf\b|fujairah|khor fakkan|bandar abbas|qeshm|ras al-khaimah|jask|chabahar|kharg|jubail|jubayl|ras tanura|dammam|off (?:qatar|kuwait|bahrain|the uae|oman)|al-faw|umm qasr|jebel ali|sohar|khasab|musandam/i;
   const RED_SEA_RE = /red sea|bab al-mandab|bab el-mandeb|gulf of aden|hodeidah|mocha|aden|yanbu|jeddah|eritrea|djibouti/i;
   /* Inside Iran is Iran's land; Hormuz, its waters and islands (user, 18 Oct: the two stories repeated each other). */
   const AT_SEA_RE = /hormuz|strait|tanker|\bships?\b|vessel|naval|navy|gulf of oman|persian gulf|seized? (?:a )?(?:ship|tanker)/i;

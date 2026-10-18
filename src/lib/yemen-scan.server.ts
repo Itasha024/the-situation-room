@@ -429,6 +429,8 @@ const RSS: RssFeed[] = [
   { id: "seatrade", url: "https://www.seatrade-maritime.com/rss.xml", name: "Seatrade Maritime", cadence: C15, whole: true, site: "seatrade-maritime.com" },
   { id: "hellenicshipping", url: "https://www.hellenicshippingnews.com/feed/", name: "Hellenic Shipping News", cadence: C15, whole: true, site: "hellenicshippingnews.com" },
   { id: "kpler-blog", url: "https://www.kpler.com/blog/rss.xml", name: "Kpler", cadence: C30, whole: true, site: "kpler.com" },
+  // Windward's maritime intelligence notes (ships struck, dark activity off Iran and Yemen): the 18 Oct sea audit found them cited and unread.
+  { id: "windward", url: "https://windward.ai/feed/", name: "Windward", cadence: C30, whole: true, site: "windward.ai" },
   { id: "thenational", url: "https://www.thenationalnews.com/arc/outboundfeeds/rss/?outputType=xml", name: "The National", cadence: C10, whole: true, site: "thenationalnews.com" },
   { id: "almashhad", lang: "ar", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5, whole: true, site: "almashhad.news" },
   // A browser's user agent is refused (403); a plain client is served.

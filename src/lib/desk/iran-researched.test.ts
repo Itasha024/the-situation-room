@@ -52,3 +52,37 @@ test("a nuclear site hit names the site, not the town near it", () => {
   for (const s of ["Attack on Bushehr nuclear plant", "Strike on Natanz", "US strike on Fordow", "Khondab heavy water reactor hit", "Ardakan yellowcake plant", "Isfahan uranium conversion facility struck", "Taleghan nuclear site"]) assert.ok(NUCLEAR_SITE.test(s), s);
   for (const s of ["US strike on Bushehr air base", "Attack on IRGC barracks, Bushehr", "Explosions heard in Bushehr", "Drone strike on Arak", "Air strike on Isfahan airport", "Iranian nuclear scientist's car hit in Tehran"]) assert.ok(!NUCLEAR_SITE.test(s), s);
 });
+
+test("a researched pin outside the war's countries needs a named attacker and a war target (18 Oct, Arsin)", () => {
+  const { warPinAllowed } = require("../../../scripts/iran-research/pin-rules.cjs");
+  // Arsin, Trabzon: Turkey, no side named.
+  const arsin = pin({ fp: "rs-2026-08-18-unclear-arsin-trabzon", place: "Arsin, Trabzon", lat: 40.95, lng: 39.93, actor: "unclear", source: "Fars", label: "Attack on Arsin, Trabzon, Fars reports" });
+  assert.equal(warPinAllowed(arsin), false);
+  assert.equal(fixBase([arsin]).length, 0);
+  // A named attacker with no war target, or a war target with no attacker: dropped too.
+  assert.equal(warPinAllowed(pin({ place: "Turkey (place not stated)", lat: 39, lng: 35, actor: "iran", label: "Iranian attack on Turkey, Al Jazeera reports" })), false);
+  assert.equal(warPinAllowed(pin({ place: "Damietta port", lat: 31.47, lng: 31.76, actor: "unclear", label: "Drones hit Damietta port, Al Arabiya reports" })), false);
+  assert.equal(warPinAllowed(pin({ place: "Istanbul", lat: 41.0082, lng: 28.9784, actor: "unclear", label: "Attack on Istanbul, NNA reports" })), false);
+  // Both: kept.
+  assert.equal(warPinAllowed(pin({ place: "Incirlik base", lat: 37.0, lng: 35.42, actor: "iran", label: "Missiles from Iran intercepted over Incirlik base" })), true);
+  assert.equal(warPinAllowed(pin({ place: "Damietta port", lat: 31.47, lng: 31.76, actor: "iran", label: "Drones from Iran hit Damietta port" })), true);
+  // Inside the war's countries and at sea, the gate does not apply.
+  assert.equal(warPinAllowed(pin({ place: "Khiam", lat: 33.3272, lng: 35.609, actor: "unclear", label: "Explosions heard in Khiam" })), true);
+  assert.equal(warPinAllowed(pin({ place: "Indian Ocean", lat: 5.6, lng: 80.2, actor: "unclear", label: "Iranian ship attacked in the Indian Ocean off Sri Lanka" })), true);
+  assert.equal(warPinAllowed(pin({ place: "Sanaa", lat: 15.35, lng: 44.2, actor: "unclear", label: "Explosions heard in Sanaa" })), true);
+});
+
+test("Judea and Samaria, not the West Bank, on the maps' areas and the researched pins' notes (18 Oct)", async () => {
+  const fs = await import("node:fs");
+  const read = (p: string) => fs.readFileSync(new URL(`../../../${p}`, import.meta.url), "utf8");
+  const adm1 = JSON.parse(read("public/iran-adm1.geojson"));
+  const names = adm1.features.map((f: any) => f.properties.n);
+  assert.ok(names.includes("Judea and Samaria"));
+  assert.ok(!names.some((n: string) => /west bank/i.test(n)));
+  assert.match(read("scripts/iran-research/adm-pack.cjs"), /const RENAME = \{ "West Bank": "Judea and Samaria" \}/);
+  assert.match(read("public/app.js"), /const ADM_RENAME = \{ 'West Bank': 'Judea and Samaria' \};/);
+  const m = /const areaNames = (.+);/.exec(read("scripts/iran-research/map-pack.cjs"));
+  assert.ok(m);
+  const areaNames = (0, eval)(m![1]);
+  assert.equal(areaNames("Missiles from Iran at the West Bank: alerts in 4 places"), "Missiles from Iran at Judea and Samaria: alerts in 4 places");
+});

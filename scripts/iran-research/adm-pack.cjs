@@ -8,7 +8,7 @@ const fs = require("fs");
 const path = require("path");
 
 const dir = process.argv[2];
-if (!dir) throw new Error("usage: adm-pack.cjs <dir with the downloads>");
+if (!dir) throw new Error("usage: adm-pack.cjs <dir with the downloads> | --rename");
 // The coloured countries (scripts/iran-countries.mjs). Kuwait's and Qatar's ADM2 are city blocks and
 // zone numbers, not districts; the UAE and Bahrain have none.
 // Every country on the maps, the Yemen war's too (user, 18 Oct: districts and towns as you zoom, on every map):
@@ -26,7 +26,21 @@ function cleanName(raw, iso) {
   n = n.replace(/^WILAYAT\s+/i, "");
   if (n === n.toUpperCase()) n = title(n);
   n = n.replace(/\s+(County|Governorate|Region|Province|District)$/i, "").replace(/_/g, " ").trim();
-  return n;
+  return RENAME[n] || n;
+}
+// The maps' own names for an area (user, 18 Oct): "Judea and Samaria", not "West Bank". public/app.js drawAdminLayer
+// maps the same names for a file cached before the rename.
+const RENAME = { "West Bank": "Judea and Samaria" };
+// node adm-pack.cjs --rename: the names alone, in the packed files, with no downloads.
+if (dir === "--rename") {
+  for (const file of ["public/iran-adm1.geojson", "public/iran-adm2.geojson"]) {
+    const g = JSON.parse(fs.readFileSync(file, "utf8"));
+    let n = 0;
+    for (const f of g.features) if (RENAME[f.properties.n]) { f.properties.n = RENAME[f.properties.n]; n++; }
+    fs.writeFileSync(file, JSON.stringify(g));
+    console.log("[adm-pack]", file, n, "renamed");
+  }
+  process.exit(0);
 }
 
 const round = (v) => Math.round(v * 1000) / 1000;

@@ -564,7 +564,9 @@
       const row = app('sideLegendRow');
       const ctl = ((D.ydata && D.ydata.control) || []).map((c) => row(A('sideColor')(c), A('controlShortName')(c), !!lo[A('controlLayerKey')(c.id)], `data-layer="${esc(A('controlLayerKey')(c.id))}"`)).join('');
       const colors = app('COLORS') || {};
-      return `<div class="leg-sec">Who</div>${ctl}${row(colors.saudi, 'Saudi Arabia', !!lo.saudi, 'data-layer="saudi"')}${A('yemenEventRows')() || ''}`;
+      // Every side with a pin on the map has a row (user, 18 Oct: the purple Southern forces pin had none).
+      const seen = new Set(D.events.filter((e) => e.desk === 'yemen').map((e) => A('yemenSideOf')(e) || 'unclear'));
+      return `<div class="leg-sec">Who</div>${ctl}${row(colors.saudi, 'Saudi Arabia', !!lo.saudi, 'data-layer="saudi"')}${A('yemenSideRows')(seen) || ''}${A('yemenEventRows')() || ''}`;
     }
     const p = irPins();
     const sides = (app('IRAN_PIN_SIDES') || []).filter(([k]) => k !== 'other' || D.events.some((e) => e.desk === 'iran' && A('iranSideOf')(e) === 'other'));

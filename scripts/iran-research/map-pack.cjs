@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const pub = path.join(__dirname, '..', '..', 'public');
 // The audit's rules (pin-rules.cjs, 17 Oct): days in post order, places by their city, demolitions, one event one pin.
-const base = require('./pin-rules.cjs').fixBase(JSON.parse(fs.readFileSync(path.join(pub, 'iran-strikes-baseline.json'), 'utf8')), (n) => console.log('[map-pack] rules:', JSON.stringify(n)));
+const base = require('./pin-rules.cjs').fixBase(JSON.parse(fs.readFileSync(path.join(pub, 'iran-strikes-baseline.json'), 'utf8')), (n) => { const { offWarDropped, ...counts } = n; console.log('[map-pack] rules:', JSON.stringify(counts)); if (process.env.OFFWAR_DBG) console.log('[map-pack] outside the war, no named attacker or war target:', offWarDropped.join(' ')); });
 const year = base[0] ? base[0].day.slice(0, 4) : '2026';
 if (base.some((p) => p.day.slice(0, 4) !== year)) throw new Error('map-pack: pins from more than one year');
 // Air defence fire, interceptions, sirens and blasts heard over Iran are not Iran's attacks (user, 12 Oct):
@@ -59,8 +59,10 @@ function relabel(p) {
   if (country) l = l.replace(new RegExp(String.raw`\b(struck|strike on|attack on|attacks on)\s+(?:the\s+)?${country[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\b`), (m, v) => (v === 'struck' ? 'struck targets in ' : v.replace(/ on$/, ' in ')) + country[1]);
   // "heard at the airport", not "in" it.
   l = l.replace(/\b(heard|Sirens|Interceptions)\s+in\s+(?=[^,]*\b(?:base|school|airport|port|hospital|building|depot|refinery|camp|station|plant|facility|HQ|headquarters|barracks|complex|pier)\b)/gi, '$1 at ');
-  return seaWords(l).replace(/^\p{Ll}/u, (c) => c.toUpperCase());
+  return areaNames(seaWords(l)).replace(/^\p{Ll}/u, (c) => c.toUpperCase());
 }
+// The maps' own name for the area (user, 18 Oct): Judea and Samaria, not the West Bank (adm-pack.cjs RENAME).
+const areaNames = (s) => String(s || '').replace(/\b(?:the\s+)?West Bank\b/gi, 'Judea and Samaria');
 // The sea in plain English (Stage C, 12 Oct): "attacked in Off the coast of Oman" is "attacked off the coast of
 // Oman", "struck Gulf of Oman" is "struck a target in the Gulf of Oman", and a sea or strait takes "the".
 const SEA_NAMES = String.raw`(?:Strait of Hormuz|Gulf of Oman|Persian Gulf|Arabian Sea|Red Sea|Gulf of Aden|Arabian Gulf)`;
@@ -83,7 +85,7 @@ function seaWords(l) {
 const twins = require('./pin-rules.cjs').seaTwins(base, pins.map((r) => r[5] === 1));
 console.log('[map-pack] sea twins folded:', twins.size);
 pins = pins.filter((r, i) => !twins.has(i));
-const notes = base.filter((p, i) => !twins.has(i)).map((p) => [p.fp, seaWords(p.place).replace(/^the /, ''), relabel(p), p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
+const notes = base.filter((p, i) => !twins.has(i)).map((p) => [p.fp, areaNames(seaWords(p.place)).replace(/^the /, ''), relabel(p), p.source, p.url, (p.also || []).slice(0, 3).map((a) => [a.source, a.url])]);
 fs.writeFileSync(path.join(pub, 'iran-map-pins.json'), JSON.stringify({ year, n: pins.length, pins }));
 fs.writeFileSync(path.join(pub, 'iran-map-notes.json'), JSON.stringify({ n: notes.length, notes }));
 console.log('[map-pack]', pins.length, 'pins,', seaN, 'at sea,', movedN, 'moved to or out to sea;', unstated, "of Iran's own air defence and alarms shown as not stated");

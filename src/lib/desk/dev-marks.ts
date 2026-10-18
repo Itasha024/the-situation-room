@@ -155,7 +155,9 @@ export function yemenPinSide(e: { type?: string | null; label?: string | null; t
   // airport" was drawn as Saudi), unless it tells of both sides fighting.
   const said = pinSideOf(e);
   if (said && !/\b(?:clash\w*|battles?|fighting|between|engage\w*)\b/i.test(label)) return said;
-  return e.actor && e.actor !== "unclear" ? e.actor : said ?? "unclear";
+  // The reader's "stc" is the map's Southern forces (user, 18 Oct).
+  const stored = e.actor === "stc" ? "southern" : e.actor;
+  return stored && stored !== "unclear" ? stored : said ?? "unclear";
 }
 
 /**

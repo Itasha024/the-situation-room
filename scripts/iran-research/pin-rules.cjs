@@ -46,11 +46,28 @@ const GENERIC = /\b(?:target|base|site|camp|facility|headquarters|hq|gulf|sea|st
 // قصف is bombing: far from the border, "shelling" of Beirut or Byblos was an air strike.
 const SHELLING = /\bshelling\b/i;
 
+/*
+ * A pin outside the war's countries (user, 18 Oct: "Attack on Arsin, Trabzon", Turkey, no side named, Fars):
+ * shown only when it names who attacked and hits a target of this war (a base, an embassy, a ship, an
+ * airport, a port, missiles brought down). The war's countries: Iran, Iraq, Israel and the Palestinian areas,
+ * Lebanon, Syria, the Gulf states, Jordan, Yemen; and the sea.
+ */
+const WAR_COUNTRIES = new Set(['Iran', 'Iraq', 'Israel', 'Lebanon', 'Syria', 'Saudi Arabia', 'Qatar', 'Oman', 'Kuwait', 'Jordan', 'United Arab Emirates', 'Bahrain']);
+const AT_SEA = /\b(?:sea|gulf|strait|ocean|offshore|off the coast|coast of|ships?|tankers?|vessels?|nautical|NM)\b/i;
+const WAR_TARGET = /\b(?:air ?bases?|bases?|RAF|NATO|Incirlik|K[uü]recik|Akrotiri|embass(?:y|ies)|consulates?|radars?|military|troops|airports?|airfields?|runways?|ports?|ships?|tankers?|vessels?|LNG|FSRU|gas storage|intercept\w*|downed|shot down|ballistic missiles?|debris from intercepted)\b/i;
+function warPinAllowed(p) {
+  const country = countryAt(p.lat, p.lng);
+  const s = `${p.label || ''} ${p.place || ''}`;
+  if (country ? WAR_COUNTRIES.has(country) : AT_SEA.test(s) || (p.lat > 10 && p.lat < 40 && p.lng > 30 && p.lng < 65)) return true;
+  // Who attacked is the pin's side: one not stated is no named attacker.
+  return !!p.actor && p.actor !== 'unclear' && p.actor !== 'other' && WAR_TARGET.test(s);
+}
+
 function fixBase(base, log = () => {}) {
   const usual = usualPoints(base);
   // The cities, by name: a name with ten pins or more on one point.
   const cities = [...usual].filter(([k, u]) => u.n >= 10 && !/[,(]/.test(k) && k.length >= 4).sort((a, b) => b[0].length - a[0].length);
-  const n = { demolition: 0, downed: 0, notEvent: 0, city: 0, stray: 0, shelling: 0, day: 0, twin: 0 };
+  const n = { demolition: 0, downed: 0, notEvent: 0, offWar: 0, offWarDropped: [], city: 0, stray: 0, shelling: 0, day: 0, twin: 0 };
   let rows = base.map((p) => ({ ...p }));
 
   // Days out of their channel's post order (a post of 2 May dated "2/4" put 38 pins on 2 April).
@@ -77,6 +94,7 @@ function fixBase(base, log = () => {}) {
   rows = rows.filter((p) => {
     const label = String(p.label || '');
     if (NOT_EVENT.test(label)) { n.notEvent++; return false; }
+    if (!warPinAllowed(p)) { n.offWar++; n.offWarDropped.push(p.fp); return false; }
     return true;
   });
   for (const p of rows) {
@@ -160,4 +178,4 @@ function seaTwins(base, sea) {
  */
 const NUCLEAR_SITE = /\bnuclear (?:site|facilit|plant|power|reactor|complex|installation)|\b(?:fordow|natanz|khondab|heavy[- ]water|enrichment|uranium|yellowcake|ardakan|saghand|IR-40|tehran research reactor|(?:bushehr|arak|isfahan|karaj) (?:nuclear|reactor|power plant|npp|uranium|ucf))\b|محطة بوشهر النووية|نطنز|فوردو|نیروگاه اتمی بوشهر/i;
 
-module.exports = { fixBase, seaTwins, skeleton, NUCLEAR_SITE };
+module.exports = { fixBase, seaTwins, skeleton, warPinAllowed, NUCLEAR_SITE };

@@ -211,7 +211,15 @@ const YEMEN_PIN_SIDES = () => [
   ['unclear', '#94a3b8', 'Not stated'],
 ];
 const yemenSidesOn = {};
-const yemenSideOf = (ev) => (YEMEN_PIN_SIDES().some(([k]) => k === ev.actor) ? ev.actor : 'unclear');
+// The reader's 'stc' is the Southern forces' pin (user, 18 Oct).
+const yemenSideOf = (ev) => { const a = ev.actor === 'stc' ? 'southern' : ev.actor; return YEMEN_PIN_SIDES().some(([k]) => k === a) ? a : 'unclear'; };
+/* The sides whose pins the ground's own rows (Houthis, government, Saudi Arabia) already show; every other side with a pin on the map gets its own Who row (user, 18 Oct: the purple Southern forces pin had none). */
+const YEMEN_GROUND_SIDES = ['houthi', 'government', 'saudi'];
+const yemenSidesSeen = new Set();
+function yemenSideRows(present) {
+  return YEMEN_PIN_SIDES().filter(([k]) => !YEMEN_GROUND_SIDES.includes(k) && present.has(k))
+    .map(([k, c, n]) => sideLegendRow(c, n, yemenSidesOn[k] !== false, `data-side="${k}"`)).join('');
+}
 const yemenInk = (ev) => YEMEN_PIN_SIDES().find(([k]) => k === yemenSideOf(ev))[1];
 /* What happened on the Iran map: the researched pins carry it (map-pack.cjs), the live ones are read the same way. */
 const IRAN_KINDS = ['strike', 'combat', 'vessel', 'port', 'nuclear'];
@@ -5500,8 +5508,13 @@ function placeMapPin(ev) {
   const t = (ev.type || '').toLowerCase();
   const cat = ev.mapCat || classifyForMap(ev.text || ev.label || '', t) || pinCategory(t);
   if (!['strike', 'combat', 'vessel', 'port'].includes(cat)) return;
+  const pinSide = yemenSideOf(ev);
+  if (!yemenSidesSeen.has(pinSide)) {
+    yemenSidesSeen.add(pinSide);
+    if (!YEMEN_GROUND_SIDES.includes(pinSide)) setTimeout(() => { try { if (data) renderLegend(data); } catch (e) {} }, 0);
+  }
   if (!layersOn[cat]) return;
-  if (yemenSidesOn[yemenSideOf(ev)] === false) return;
+  if (yemenSidesOn[pinSide] === false) return;
   const key = pinPaintKey(ev);
   if (paintedPinKeys.has(key)) return;
   paintedPinKeys.add(key);
@@ -6402,6 +6415,7 @@ function renderLegend(d) {
       <div class="leg-sec">Who</div>
       ${controlRows}
       ${row('saudi', COLORS.saudi, 'Saudi Arabia')}
+      ${yemenSideRows(yemenSidesSeen)}
       ${yemenEventRows()}
     </div>`;
   fitLegend();
@@ -7797,6 +7811,8 @@ const admFile = (u) => {
   return ADM_FILES.get(u);
 };
 const YEMEN_MAP_SKIP = { adm1: ['YEM'], adm1Names: ['YEM'], adm2: ['YEM'], cities: ['SA'] };
+// The maps' own names for an area, for a file cached before scripts/iran-research/adm-pack.cjs renamed it (user, 18 Oct).
+const ADM_RENAME = { 'West Bank': 'Judea and Samaria' };
 async function drawAdminLayer(m, skip = {}) {
   if (!m || m._admDrawn) return;
   m._admDrawn = true;
@@ -7818,7 +7834,8 @@ async function drawAdminLayer(m, skip = {}) {
     const entries = [];
     for (const f of (g && g.features) || []) {
       const pt = featureLabelPoint(f);
-      const n = f.properties && f.properties.n;
+      const n0 = f.properties && f.properties.n;
+      const n = ADM_RENAME[n0] || n0;
       if (!pt || !n) continue;
       const marker = L.marker(pt, { pane: 'govNames', interactive: false, keyboard: false, icon: L.divIcon({ className: `gov-name ${cls}`, html: `<span>${escapeHtml(T(n))}</span>`, iconSize: null }) }).addTo(group);
       entries.push({ group: cls, prio, marker, visible: (z) => z >= from });

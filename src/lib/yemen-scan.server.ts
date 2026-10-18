@@ -1134,8 +1134,6 @@ type LeadCache = Record<string, { lead: string; at: number; real?: string; tries
 const GNEWS_RESOLVES = 8;
 /** A headline triage has not judged by this age keeps its keyword verdict. */
 const KEYWORD_FINAL_MS = 3 * 3600_000;
-/** A Google News item waits this many cycles for its article's address. */
-const GNEWS_HOLD_TRIES = 3;
 /** The wires and the big papers and channels: their articles are opened before a smaller site's. */
 const MAJOR_OUTLET = /^(?:Reuters|AP|AFP|Bloomberg|WSJ|NYT|Washington Post|Financial Times|Axios|CNN|The Guardian|BBC|Al Jazeera|Al Arabiya|Asharq Al-Awsat|Al-Akhbar|Al-Araby Al-Jadeed|Erem News|SPA)$/;
 
@@ -1150,6 +1148,37 @@ export async function articleOf(h: Pick<RawHit, "url" | "title" | "site">, need:
   const g = canResolve(need) ? await resolveGoogleNews(h.url, need) : "";
   if (g || !h.title || !h.site) return g;
   return bingResolve(h.title, h.site);
+}
+
+/** Google items waiting for their article's address, between ticks. */
+export const HELD_KEY = "gnews-held";
+/** At most this many wait; an item waits at most a day (older is not news). */
+const HELD_MAX = 120;
+const HELD_MS = 24 * 3600_000;
+
+/** What is still waiting: within the day, the newest first, no more than HELD_MAX. */
+export function keepHeld(items: RawHit[], now: number): RawHit[] {
+  const seen = new Set<string>();
+  return items
+    .filter((h) => isGnews(h.url) && now - (Date.parse(h.at) || now) <= HELD_MS && !seen.has(h.url) && !!seen.add(h.url))
+    .sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0))
+    .slice(0, HELD_MAX);
+}
+
+async function loadHeld(now: number): Promise<RawHit[]> {
+  try {
+    return keepHeld((await (await getStore()).getJson<RawHit[]>(HELD_KEY)) ?? [], now);
+  } catch {
+    return [];
+  }
+}
+
+async function saveHeld(items: RawHit[], now: number): Promise<void> {
+  try {
+    await (await getStore()).putJson(HELD_KEY, keepHeld(items, now));
+  } catch {
+    // Unsaved, the items wait in their listing for as long as it shows them.
+  }
 }
 
 /** Items given the lead (and the article's address) a read of their link found. */
@@ -2545,6 +2574,10 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   });
   hits.length = 0;
   hits.push(...fresh);
+  // Google items still waiting for their article's address, from earlier ticks:
+  // Google's listing drops them after its hour, so they wait here instead.
+  const held = await loadHeld(now);
+  for (const h of held) if (!hits.some((x) => x.url === h.url)) hits.push(h);
 
   // Thin RSS teasers get their lead paragraph pulled so the gate has something
   // to judge. The same items reappear cycle after cycle, so leads are cached by
@@ -2596,14 +2629,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   // and a teaser with nothing of its own is left out below without a look-up.
   const worthLookup = (h: RawHit) => !(OWN_ONLY.has(h.source) && !ownInformation(h.text, h.source));
   const fetchable = toFetch.filter((h) => !isGnews(h.url) || !!knownResolve(h.url) || (worthLookup(h) && resolves++ < gnBudget)).slice(0, BODY_FETCHES);
-  // A Google item left for want of budget has waited a cycle all the same: after
-  // GNEWS_HOLD_TRIES it goes on under Google's link, which the stored-card pass
-  // (relinkStoredCards) turns into the article's own later.
-  for (const h of toFetch) {
-    if (!isGnews(h.url) || fetchable.includes(h)) continue;
-    leadCache[h.url] = { lead: leadCache[h.url]?.lead ?? "", at: now, tries: (leadCache[h.url]?.tries ?? 0) + 1 };
-    leadChanged.add(h.url);
-  }
+  // A Google item left for want of budget waits for a later tick (saveHeld below).
   await Promise.allSettled(
     fetchable.map(async (h) => {
       const key = h.url;
@@ -2691,9 +2717,12 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   }
   hits.length = 0;
   hits.push(...oneEach.values());
-  // An item still on Google's redirect waits a few cycles for its address,
-  // then goes out as it is rather than be missed.
-  const resolved = hits.filter((h) => !isGnews(h.url) || (leadCache[h.url]?.tries ?? 0) >= GNEWS_HOLD_TRIES);
+  // An item still on Google's redirect is never a card under Google's link
+  // (18 Oct: 23 of 800 cards were): it waits, up to a day, until its article's
+  // address is found, by Google within its budget or by Bing.
+  const resolved = hits.filter((h) => !isGnews(h.url));
+  // A teaser the own-news gate would drop anyway does not take a place in the queue.
+  await saveHeld(hits.filter((h) => isGnews(h.url) && worthLookup(h)), now);
   hits.length = 0;
   hits.push(...resolved);
   return { at: now, hits, status, sourcesOk, learnedIds: learnedFeeds(learned).map((f) => f.id), iranShared: iranInbox };

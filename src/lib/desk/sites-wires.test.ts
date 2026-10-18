@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { extractLead, feedById, fetchText, listedHit, parseRss, withLeads, yemenCandidates, articleOf, fetchRank, type RawHit } from "../yemen-scan.server.ts";
+import { extractLead, feedById, fetchText, keepHeld, listedHit, parseRss, withLeads, yemenCandidates, articleOf, fetchRank, type RawHit } from "../yemen-scan.server.ts";
 import { fetchListing, parseListing } from "./sitemap.ts";
 import { isExclusive, ownInformation } from "./exclusive.ts";
 import { RESOLVE_LIMIT, canResolve, cleanUrl, knownResolve, resetResolver, resolveGoogleNews, resolvesLeft } from "./gnews.ts";
@@ -284,4 +284,12 @@ test("Triage: small enough calls for the free tiers, the keywords when no model 
   assert.ok(sizes.every((n) => n <= TRIAGE_BATCH));
   assert.equal(judged.size, 0);
   assert.equal(picked.size, 30);
+});
+
+test("Google items wait for their article's address, a day at most, the newest first", () => {
+  const now = Date.parse("2026-10-18T12:00:00+03:00");
+  const item = (n: number, h: number): RawHit => ({ source: "AP", url: `https://news.google.com/rss/articles/${n}`, text: "t", at: new Date(now - h * 3600_000).toISOString(), lean: "", fromTg: false });
+  const kept = keepHeld([item(1, 2), item(2, 30), item(1, 2), item(3, 1), { ...item(4, 1), url: "https://apnews.com/article/x" }], now);
+  assert.deepEqual(kept.map((h) => h.url.slice(-1)), ["3", "1"]);
+  assert.equal(keepHeld(Array.from({ length: 300 }, (_, i) => item(i, 1)), now).length, 120);
 });

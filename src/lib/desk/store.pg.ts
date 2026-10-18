@@ -252,6 +252,8 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
          where (${cursor}::timestamptz is null or at < ${cursor}::timestamptz)
            and (${floor}::timestamptz is null or at >= ${floor}::timestamptz)
            and (${desk}::text is null or ${desk}::text = any(desks))
+           -- A card is never shown under Google's link: it waits until relink.ts finds the article's (18 Oct).
+           and url not like 'https://news.google.com/%'
          order by at desc
          limit ${limit}
       `;
@@ -265,6 +267,7 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
          where (${cursor}::timestamptz is null or e.at < ${cursor}::timestamptz)
            and (${since}::timestamptz is null or e.at >= ${since}::timestamptz)
            and (${desk}::text is null or ${desk}::text = any(e.desks))
+           and (e.url is null or e.url not like 'https://news.google.com/%')
          order by e.at desc
          limit ${limit}
       `;
@@ -295,7 +298,11 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
             row.lat = r.lat;
             row.lng = r.lng;
           }
-          if (r.also_reported_by) row.alsoReportedBy = r.also_reported_by;
+          // Nor an "Also" under Google's link.
+          if (Array.isArray(r.also_reported_by)) {
+            const also = (r.also_reported_by as { url?: string }[]).filter((a) => !String(a?.url ?? "").startsWith("https://news.google.com/"));
+            if (also.length) row.alsoReportedBy = also;
+          } else if (r.also_reported_by) row.alsoReportedBy = r.also_reported_by;
           if (r.reply_to) row.replyTo = r.reply_to;
           if (r.citing) row.citing = r.citing;
           if (r.media) row.media = r.media;
@@ -401,7 +408,8 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
           // One card that fails to save (a clash on its link) must not stop
           // the cards after it: a tick once lost every older card this way.
           try {
-            if (!r.url || !hasArticlePath(r.url)) return;
+            // Never under Google's link (18 Oct): the scan holds such an item until its article is found.
+            if (!r.url || !hasArticlePath(r.url) || r.url.startsWith("https://news.google.com/")) return;
             const desks = r.desks?.length ? r.desks : [DEFAULT_DESK];
 
             // `returning fp` tells us whether this row was genuinely new, so the

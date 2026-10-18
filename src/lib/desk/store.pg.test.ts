@@ -290,3 +290,27 @@ test("a card rewritten to a link another card holds goes as that card's copy, an
   assert.equal(rows.length, 0);
   assert.equal((await sql<{ url: string }>`select url from desk_report where fp = ${"live-clash-a"}`)[0].url, "https://t.me/alhadath/1");
 });
+
+test("a card is never shown or stored under Google's link; relinked, it is shown under the article's (18 Oct)", async () => {
+  const store = createPgStore(provider);
+  const gn = "https://news.google.com/rss/articles/CBMiOLD?oc=5";
+  // Refused at the door.
+  const refused = await store.mergeIntoDesk([report({ fp: "live-gn-new", url: "https://news.google.com/rss/articles/CBMiNEW?oc=5", at: "2026-10-17T10:00:00+03:00" })]);
+  assert.equal(refused.reportsAdded, 0);
+  // One stored before the rule, with a Google "Also" beside a real one.
+  await sql`insert into desk_report (fp, url, at, source, type, summary, body, priority, confidence, desks, also_reported_by)
+            values ('live-gn-old', ${gn}, '2026-10-17T09:00:00+03:00', 'Google News', 'statement', 'Old card under Google''s link', '', 1, 3, '{yemen}',
+                    ${JSON.stringify([{ url: "https://news.google.com/rss/articles/X", source: "WSJ" }, { url: "https://www.reuters.com/a", source: "Reuters" }])}::jsonb)`;
+  await store.mergeIntoDesk([report({ fp: "live-also", url: "https://example.com/news/also", at: "2026-10-17T11:00:00+03:00", alsoReportedBy: [{ url: "https://news.google.com/rss/articles/Y", source: "AP", summary: "x" }, { url: "https://apnews.com/article/z", source: "AP", summary: "x" }] })]);
+  let slice = await store.recentDesk(50, undefined, { desk: "yemen", events: false });
+  assert.ok(!slice.reports.some((r) => String(r.url).startsWith("https://news.google.com/")), "hidden while on Google's link");
+  const also = slice.reports.find((r) => r.fp === "live-also")?.alsoReportedBy as { url: string }[];
+  assert.deepEqual(also.map((a) => a.url), ["https://apnews.com/article/z"]);
+  assert.deepEqual((await store.gnewsLinks!(10)).map((r) => r.fp), ["live-gn-old"]);
+  assert.equal(await store.relink!("live-gn-old", "https://www.wsj.com/world/middle-east/story-1a2b", "WSJ"), true);
+  slice = await store.recentDesk(50, undefined, { desk: "yemen", events: false });
+  const moved = slice.reports.find((r) => r.fp === "live-gn-old");
+  assert.equal(moved?.url, "https://www.wsj.com/world/middle-east/story-1a2b");
+  assert.equal(moved?.source, "WSJ");
+  assert.deepEqual(await store.gnewsLinks!(10), []);
+});

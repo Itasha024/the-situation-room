@@ -525,7 +525,8 @@ export function tidyEnergy(box: Box): Box {
     else if (typeof out[4] === "string") out[4] = stateText(out[4] as string);
     return out;
   });
-  return { ...box, rows };
+  // Newest first, as the list reads (a row set to its right day moves with it).
+  return { ...box, rows: byDayDesc(rows) };
 }
 /** Each list's rules by its title. */
 export function tidyList(box: Box): Box {

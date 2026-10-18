@@ -421,7 +421,10 @@ export function tidyShips(box: Box): Box {
     // and so are two places a different distance out.
     const miles = (x: ListRow) => /(\d+)\s?(?:NM|nm|nautical miles|miles)/.exec(String(x[2] ?? ""))?.[1];
     const apart = (k: ListRow) => (cellOf(k[0])?.k === "off" && cellOf(r[0])?.k === "off") || (!!miles(k) && !!miles(r) && miles(k) !== miles(r));
-    const twin = unnamed(r) && kept.find((k) => unnamed(k) && rowDay(k) === rowDay(r) && area(k) && area(k) === area(r) && !apart(k));
+    // The same distance out is the same ship a day either side (17 Oct: Asharq Al-Awsat's "68 nautical miles
+    // north-east of Jubail" was UKMTO's 16 Oct warning, told the next day).
+    const sameMiles = (k: ListRow) => !!miles(k) && miles(k) === miles(r) && daysApart(rowDay(k), rowDay(r)) <= 1;
+    const twin = unnamed(r) && kept.find((k) => unnamed(k) && (rowDay(k) === rowDay(r) || sameMiles(k)) && area(k) && area(k) === area(r) && (!apart(k) || sameMiles(k)));
     if (twin) {
       // The official teller leads.
       if (cellOf(r[0])?.k === "off" && cellOf(twin[0])?.k !== "off") kept[kept.indexOf(twin)] = r;
@@ -670,9 +673,9 @@ export function refreshIranLive(store: DeskStore, file: NumbersFile, now = new D
 }
 
 /** What the page swaps in: every box a reader has made, and the newest day any of them reached. */
-export function liveNumbers(live: IranLive | null, extra: Box[] = []): { boxes: Box[]; through: string; nextAt: string } | null {
+export function liveNumbers(live: IranLive | null, extra: Box[] = [], now = new Date()): { boxes: Box[]; through: string; nextAt: string } | null {
   // The lists' rules hold on every read, for rows stored before them too.
-  const boxes = [...Object.values(live?.boxes ?? {}).filter((b) => !extra.some((x) => x.title === b.title)).map(tidyList), ...extra];
+  const boxes = [...Object.values(live?.boxes ?? {}).filter((b) => !extra.some((x) => x.title === b.title)).map((b) => (b.title === "Incidents" || b.title === "Attacks on energy sites" ? recount(tidyList(b), now) : b)), ...extra];
   if (!boxes.length) return null;
   const through = Object.values(live?.at ?? {}).sort().pop() || "";
   // When the next reader is due: the time the numbers' line names, as the Yemen desk's names its next update (user, 17 Oct).

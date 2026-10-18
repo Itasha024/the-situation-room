@@ -304,3 +304,18 @@ test("the rows found wrong stay fixed: dropped, set right or added, in the file 
   assert.ok(!energy.some((r) => /Al-Dura refinery/.test(String(r[1]))));
   assert.ok(!JSON.stringify(energy).includes("wikipedia.org"));
 });
+
+test("lists: a report of the same distance out a day later is the same ship; the counts are made on every read", () => {
+  const c = (date: string, src: string, k: "off" | "unoff"): Cell => ({ v: date, k, src, url: "u", date });
+  const b = { ...box("Incidents"), rows: [
+    [c("2026-10-17", "Asharq Al-Awsat", "unoff"), "unnamed oil tanker", "68 nautical miles northeast of Jubail", "unidentified projectile", "hit"],
+    [c("2026-10-16", "UKMTO (warning 174-26)", "off"), "Tanker", "68 NM northeast of Al Jubayl, Saudi Arabia", "Unknown projectile", "Struck"],
+    [c("2026-10-16", "UKMTO (warning 175-26)", "off"), "Tanker", "78 NM northeast of Al Jubayl, Saudi Arabia", "RPG", "Attacked from a small boat"],
+  ] } as Box;
+  const rows = tidyShips(b).rows as [Cell, string, string][];
+  assert.deepEqual(rows.map((r) => r[0].src), ["UKMTO (warning 174-26)", "UKMTO (warning 175-26)"]);
+  const live: IranLive = { ...emptyLive(), boxes: { Incidents: b }, at: { Incidents: "2026-10-17T10:00:00Z" } };
+  const st = Object.fromEntries((liveNumbers(live, [], new Date("2026-10-17T12:00:00Z"))!.boxes[0].stats as [Cell, string][]).map(([x, l]) => [l, x]));
+  assert.equal(st["Last 7 days"].v, "2");
+  assert.equal(st.Today.note, "17 Oct");
+});

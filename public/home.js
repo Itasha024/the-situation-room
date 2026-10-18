@@ -114,7 +114,7 @@
     D.events = [...keep.values()];
   }
 
-  async function load() {
+  async function load(onDesks) {
     // The oil prices come in on their own: the stories never wait on them (user, 18 Oct: a slow price read left
     // Follow a story with no stories, no maps and no oil box). They fill the oil box when they come.
     getJson('/api/oil').then((oil) => {
@@ -123,8 +123,18 @@
       D.oil = oil;
       if (!had && T.length) { buildTopics(); renderStories(); }
     });
-    const [di, dy, bi, by, ti, ty, sy, si] = await Promise.all([
-      getJson('/api/desk?desk=iran'), getJson('/api/desk?desk=yemen'), getJson('/api/brief?desk=iran'), getJson('/api/brief?desk=yemen'),
+    // The pins are drawn as soon as the two desks are in, not after the briefs, Trump and the scan times
+    // (user, 18 Oct: a first visit waited seconds for the pins).
+    const desks = Promise.all([getJson('/api/desk?desk=iran'), getJson('/api/desk?desk=yemen')]);
+    if (onDesks) desks.then(([di, dy]) => {
+      if (!(di || dy)) return;
+      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports)]);
+      byFp = new Map(D.reports.map((r) => [r.fp, r]));
+      addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events)], true);
+      try { onDesks(); } catch (e) { console.warn(e); }
+    });
+    const [[di, dy], bi, by, ti, ty, sy, si] = await Promise.all([
+      desks, getJson('/api/brief?desk=iran'), getJson('/api/brief?desk=yemen'),
       getJson('/api/trump'), getJson('/api/trump?desk=yemen'),
       getJson('/api/scan?only=time', { cache: 'no-cache' }), getJson('/api/scan?desk=iran&only=time', { cache: 'no-cache' }),
     ]);
@@ -501,12 +511,24 @@
       </a>`;
   }
   const bannerSide = new Map();
+  const bannerMarks = new Map();
   function drawBanners() {
     if (!map) return;
-    if (bannerLayer) map.removeLayer(bannerLayer);
+    // A card that turns side, or a count that changes, is redrawn in place: the marker stays, so
+    // nothing blinks when the map is resized or goes full screen (user, 18 Oct).
+    if (bannerLayer && map.hasLayer(bannerLayer)) {
+      BANNERS.forEach((b) => {
+        const el = bannerMarks.get(b.desk)?.getElement();
+        const [sx, sy] = bannerSide.get(b.desk) || [1, 1];
+        if (el) el.innerHTML = bannerHtml(b, sx, sy);
+      });
+      return;
+    }
     bannerLayer = L.layerGroup(BANNERS.map((b) => {
       const [sx, sy] = bannerSide.get(b.desk) || [1, 1];
-      return L.marker(b.at, { keyboard: false, interactive: false, zIndexOffset: 3000, icon: L.divIcon({ className: 'h-co-wrap', iconSize: [0, 0], iconAnchor: [0, 0], html: bannerHtml(b, sx, sy) }) });
+      const m = L.marker(b.at, { keyboard: false, interactive: false, zIndexOffset: 3000, icon: L.divIcon({ className: 'h-co-wrap', iconSize: [0, 0], iconAnchor: [0, 0], html: bannerHtml(b, sx, sy) }) });
+      bannerMarks.set(b.desk, m);
+      return m;
     })).addTo(map);
   }
   /* A card that would run off the map turns to the other side of its dot. */
@@ -725,9 +747,8 @@
       anchor: window.innerWidth < 720 ? null : anchor,
       legend: '',
       go: () => showPin(fp),
-      build: (m) => {
-        miniControl(m);
-        A('drawAdminLayer')(m, HOME_ADM_SKIP);
+      build: (m, box, later = (fn) => fn()) => {
+        later(() => { miniControl(m); A('drawAdminLayer')(m, HOME_ADM_SKIP); });
         [...others, ...mine].forEach((e) => {
           const me = fps.has(e.fp);
           const mk = icon
@@ -740,6 +761,16 @@
       },
     });
   }
+  // On a desktop the pop-up opens on hover and closes when the pointer leaves, as on the desks (user, 18 Oct).
+  document.addEventListener('mouseover', (ev) => {
+    const b = ev.target.closest && ev.target.closest('.card-map[data-pin-of]');
+    if (!b || b.dataset.hover) return;
+    b.dataset.hover = '1';
+    const wire = app('wireMapHover');
+    if (!wire) return;
+    wire(b, (a) => showPinPop(b.dataset.pinOf, a), () => A('hideFrontFloat')());
+    b.onmouseenter();
+  });
   document.addEventListener('click', (ev) => {
     const b = ev.target.closest && ev.target.closest('.card-map[data-pin-of]');
     if (!b) return;
@@ -899,8 +930,10 @@
       fb.setAttribute('aria-label', on ? 'Exit full screen' : 'Full screen map');
       fb.title = on ? 'Exit full screen' : 'Full screen';
       if (on) $('map-wrap').scrollIntoView({ block: 'start' });
-      setTimeout(() => { map.invalidateSize(); placeBanners(); }, 60);
+      // The map follows its box as it grows or shrinks, frame by frame, so its pins and the desk cards stay put.
+      setTimeout(() => { map.invalidateSize({ pan: false }); placeBanners(); }, 60);
     };
+    if (window.ResizeObserver) new ResizeObserver(() => { map.invalidateSize({ pan: false }); placeBanners(); }).observe(map.getContainer());
     L.DomEvent.disableClickPropagation(fb);
     fb.onclick = () => focus(!document.body.classList.contains('map-focus'));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('map-focus') && !document.querySelector('.leaflet-popup')) focus(false); });
@@ -938,7 +971,7 @@
     idxEl.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) show(b.dataset.i); });
 
     const ctrl = drawControl();
-    await load();
+    await load(() => drawMarks());
     buildTopics();
     stampUpd();
     drawMarks();

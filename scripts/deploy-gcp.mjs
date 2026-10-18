@@ -75,6 +75,9 @@ if [ -z "$ok" ]; then
   echo "[deploy] new release did not answer /api/status — back on $PREV"
   exit 1
 fi
+# The first visitor after a restart does not pay for the cold caches: the pages and the desks' data are read once now.
+for u in / /yemen-conflict-desk /iran-conflict-desk "/api/desk?desk=yemen" "/api/desk?desk=iran" "/api/brief?desk=yemen" "/api/brief?desk=iran" /api/trump "/api/trump?desk=yemen"; do curl -s -o /dev/null -m 90 "http://127.0.0.1:3000$u" || true; done
+echo "[deploy] caches warmed"
 ls -1d /srv/desk/releases/* | sort -r | tail -n +4 | grep -v -x -e "$R" -e "$PREV" | xargs -r rm -rf
 echo "[deploy] live: $R"`;
 

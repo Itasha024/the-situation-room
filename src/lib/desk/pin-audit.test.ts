@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { notEvent, onePinPerEvent, reportKey, servePins, strayExtraPins } from "./yemen-pins.ts";
 import { clauseOf, yemenPinSide } from "./dev-marks.ts";
 
@@ -279,4 +280,29 @@ test("a reading put under its Arabic neighbour's id is caught: numbers and names
   assert.ok(fitScore(reading, a) <= 1, String(fitScore(reading, a)));
   assert.equal(misplaced(reading, a, [a, b]), true);
   assert.equal(misplaced(reading, b, [a, b]), false);
+});
+
+/* Page rules from the user's 18 Oct round (the page code is plain script, so these read its source). */
+test("page rules, 18 Oct: search X, box-only toggle, no map over the menu, edge serves the last copy", () => {
+  const app = readFileSync("public/app.js", "utf8");
+  const home = readFileSync("public/home.js", "utf8");
+  const themes = readFileSync("public/themes.css", "utf8");
+  const desk = readFileSync("public/desk.css", "utf8");
+  // The search button becomes an X that closes and clears the search; a clear X sits in the field.
+  assert.match(app, /btn\.innerHTML = open \? FS_ICON_X : FS_ICON_FIND/);
+  assert.match(app, /} else {\n\s+clearFeedSearch\(true\);/);
+  assert.match(app, /input\.addEventListener\('input', sync\)/);
+  assert.match(desk, /\.feed-search-btn\{[^}]*border:0;/);
+  assert.match(desk, /-webkit-search-cancel-button\{[^}]*display:none/);
+  // Latest developments opens from its box, not its header.
+  assert.match(app, /if \(!ev\.target\.closest\('\.sit-body, \.sit-rest, \.sit-more'\)\) return;/);
+  // The map and masthead are not lifted over the open side menu during the theme fade.
+  assert.match(themes, /html:has\(\.site-menu\.open\) \.map-wrap,html:has\(\.site-menu\.open\) \.mast\{view-transition-name:none\}/);
+  // The All page draws its pins once the desks are in, and its banners are redrawn in place.
+  assert.match(home, /await load\(\(\) => drawMarks\(\)\)/);
+  assert.match(home, /if \(el\) el\.innerHTML = bannerHtml\(b, sx, sy\)/);
+  // The desks' data is served from the edge while it refreshes, so a first visit after a while is quick.
+  for (const f of ["src/routes/api/desk.ts", "src/routes/api/trump.ts", "src/routes/api/scan.ts"]) {
+    assert.match(readFileSync(f, "utf8"), /stale-while-revalidate=86400/, f);
+  }
 });

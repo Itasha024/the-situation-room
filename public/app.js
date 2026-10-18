@@ -3073,7 +3073,8 @@ function wireMapHover(btn, open, hide) {
   btn.onmouseenter = () => {
     if (!canHover()) return;
     clearTimeout(pinPopTimer);
-    pinPopTimer = setTimeout(() => open(btn), 250);
+    // A short pause only, so a pointer passing over does not open it (user, 18 Oct: it took a while).
+    pinPopTimer = setTimeout(() => open(btn), 90);
   };
   btn.onmouseleave = () => {
     clearTimeout(pinPopTimer);
@@ -3126,6 +3127,8 @@ function renderSituation(d) {
     // A click anywhere in the box opens and closes it, as a Timeline box does; links and buttons keep their own click.
     el.onclick = (ev) => {
       if (ev.target.closest('a, button, .place-link, [data-place], .rel-btn')) return;
+      // The header and its time line sit above the box: only the box itself opens it (user, 18 Oct).
+      if (!ev.target.closest('.sit-body, .sit-rest, .sit-more')) return;
       if (window.getSelection && String(window.getSelection() || '')) return;
       if (!tog.offsetParent) return;
       tog.onclick();
@@ -4117,15 +4120,24 @@ async function runFeedSearch(q) {
   renderFeed(data);
 }
 
+const FS_ICON_FIND = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.6"/><path d="M12.8 12.8l4.6 4.6"/></svg>';
+const FS_ICON_X = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>';
 function clearFeedSearch(closeBar) {
   feedSearch = null;
   const input = document.getElementById('feed-q');
   if (input) input.value = '';
+  const x = document.querySelector('#feed-search .fs-clear');
+  if (x) x.hidden = true;
   if (closeBar) {
     const form = document.getElementById('feed-search');
     const btn = document.getElementById('btn-feed-search');
     if (form) form.hidden = true;
-    if (btn) btn.setAttribute('aria-expanded', 'false');
+    if (btn) {
+      btn.setAttribute('aria-expanded', 'false');
+      btn.innerHTML = FS_ICON_FIND;
+      btn.setAttribute('aria-label', 'Search all reports');
+      btn.title = 'Search all reports';
+    }
   }
   renderFeed(data);
 }
@@ -4193,16 +4205,50 @@ function wireFeedSearch() {
   const input = document.getElementById('feed-q');
   if (btn && form && !btn.dataset.wired) {
     btn.dataset.wired = '1';
+    // The magnifier opens the search and turns into an X; the X closes it, clears it and brings the
+    // latest reports back (user, 18 Oct).
+    const icon = (open) => {
+      btn.innerHTML = open ? FS_ICON_X : FS_ICON_FIND;
+      btn.setAttribute('aria-label', open ? 'Close the search' : 'Search all reports');
+      btn.title = open ? 'Close the search' : 'Search all reports';
+    };
     btn.onclick = () => {
       const open = form.hidden;
-      form.hidden = !open;
-      btn.setAttribute('aria-expanded', String(open));
       if (open) {
+        form.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        icon(true);
         input.focus();
         // The archive is read into the server's memory before the first letter.
         fetch('/api/search?warm=1').catch(() => {});
-      } else if (feedSearch) clearFeedSearch(false);
+      } else {
+        clearFeedSearch(true);
+      }
     };
+    // A clear X inside the field while it has text: it empties the field and the results, and the field stays open.
+    if (!form.querySelector('.fs-field')) {
+      const field = document.createElement('span');
+      field.className = 'fs-field';
+      input.parentNode.insertBefore(field, input);
+      field.appendChild(input);
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'fs-clear';
+      x.hidden = true;
+      x.setAttribute('aria-label', 'Clear the search');
+      x.title = 'Clear';
+      x.innerHTML = FS_ICON_X;
+      field.appendChild(x);
+      x.onclick = () => { clearFeedSearch(false); x.hidden = true; input.focus(); };
+    }
+    const clearBtn = form.querySelector('.fs-clear');
+    const sync = () => {
+      if (clearBtn) clearBtn.hidden = !input.value;
+      // The browser's own clear, or the text deleted by hand, brings the latest reports back.
+      if (!input.value && feedSearch) clearFeedSearch(false);
+    };
+    input.addEventListener('input', sync);
+    input.addEventListener('search', sync);
     form.onsubmit = (ev) => {
       ev.preventDefault();
       runFeedSearch(input.value);
@@ -5157,7 +5203,11 @@ function openMapPop({ title, anchor, build, go, legend, wide, tools }) {
   sheetMap = L.map('pin-sheet-map', { zoomControl: true, attributionControl: false, zoomSnap: 0.25 }).setView(FRONT_HOME_VIEW.slice(0, 2), FRONT_HOME_VIEW[2], { animate: false });
   L.tileLayer(TILE_URL, { maxZoom: 18, noWrap: true }).addTo(sheetMap);
   oneEarth(sheetMap);
-  build(sheetMap, el);
+  // The map, its tiles and its pins show at once; the outlines and place names follow a frame later,
+  // so the pop-up is never held up by them (user, 18 Oct).
+  const forMap = sheetMap;
+  const later = (fn) => setTimeout(() => { if (sheetMap === forMap) { try { fn(); } catch (e) { console.warn(e); } } }, 16);
+  build(sheetMap, el, later);
   setTimeout(() => { try { sheetMap && sheetMap.invalidateSize({ pan: false }); } catch (e) {} }, 60);
   el.querySelector('.pin-sheet-x').onclick = closePinSheet;
   el.onclick = (ev) => { if (ev.target === el) closePinSheet(); };
@@ -5177,9 +5227,9 @@ function openPinSheet(pin, anchor) {
     title: pin.label,
     anchor,
     go: () => goToPinOnMainMap(pin),
-    build: (m) => {
+    build: (m, box, later = (fn) => fn()) => {
       m.setView([pin.lat, pin.lng], 6.5);
-      if (geoCache) {
+      if (geoCache) later(() => {
         const byIso = controlByIso(data);
         const mainland = splitIslandFeatures(geoCache).mainland;
         districtLayer(m, byIso);
@@ -5187,7 +5237,7 @@ function openPinSheet(pin, anchor) {
         govNameLayer(m, mainland.features, byIso);
         saudiCityLayer(m);
         drawAdminLayer(m, YEMEN_MAP_SKIP);
-      }
+      });
       const ymd = jerusalemYmd(pin.at);
       [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
         const me = p.fp === pin.fp;
@@ -8097,9 +8147,11 @@ function openIranMapPop(evs, title, anchor, go) {
     anchor: window.innerWidth < 720 ? null : anchor,
     legend,
     go,
-    build: (m) => {
-      if (iranPins.countryGeo) L.geoJSON(iranPins.countryGeo, { style: iranCountryStyle, interactive: false }).addTo(m);
-      drawAdminLayer(m);
+    build: (m, box, later = (fn) => fn()) => {
+      later(() => {
+        if (iranPins.countryGeo) L.geoJSON(iranPins.countryGeo, { style: iranCountryStyle, interactive: false }).addTo(m);
+        drawAdminLayer(m);
+      });
       all.forEach((e) => {
         const me = mine.has(String(e.fp));
         L.marker([e.lat, e.lng], { icon: sidePinIcon(iranKindOf(e), IRAN_PIN_INK[iranSideOf(e)], me ? ' pin-pulse' : '', escapeHtml(e.label || '')), zIndexOffset: me ? 2000 : 0 })
@@ -8143,6 +8195,8 @@ function renderIranFeed() {
     el.querySelectorAll('.card').forEach((card) => irCardDress(card, res[Number(card.dataset.i)]));
     return;
   }
+  // A cleared search takes its line away too.
+  renderFeedNote();
   const sm = document.getElementById('btn-more-reports');
   if (sm) sm.hidden = true;
   const all = iranDesk.reports.filter((r) => !iranDesk.lean || r.lean === iranDesk.lean);
@@ -8620,6 +8674,8 @@ function wireBoxToggle(box, btn, cls) {
   box.classList.add(cls === 'sit-open' ? 'sit-click' : 'expandable');
   box.onclick = (ev) => {
     if (ev.target.closest('a, button, summary, details, .place-link, [data-place]')) return;
+    // A box whose header sits above it (Latest developments) opens from the box only, not the header (user, 18 Oct).
+    if (box.querySelector(':scope > .sit-body') && !ev.target.closest('.sit-body')) return;
     if (window.getSelection && String(window.getSelection() || '')) return;
     toggle();
   };

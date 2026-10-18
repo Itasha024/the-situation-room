@@ -87,6 +87,7 @@ const IRAN_HTML = `
     <div class="rail-head"><h2>Latest reports</h2><button type="button" class="feed-search-btn" id="btn-feed-search" aria-label="Search all reports" aria-expanded="false" aria-controls="feed-search" title="Search all reports"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.6"/><path d="M12.8 12.8l4.6 4.6"/></svg></button></div>
     <form class="feed-search" id="feed-search" role="search" hidden><input type="search" id="feed-q" placeholder="Search all reports: a place, a person, a weapon" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search all reports" maxlength="120"/><button type="submit" class="fs-go">Search</button></form>
     <div class="trump-pin" id="trump-pin"><div class="tp-head"><b>Trump's latest</b></div></div>
+    <div class="feed-sub" id="feed-sub" aria-hidden="true"><span>All reports</span><small>Newest first</small></div>
     <div class="feed-legend lf" id="feed-legend">
       <button type="button" class="lf-btn" aria-expanded="false" aria-haspopup="true" aria-controls="lf-menu"><span class="lf-sws" aria-hidden="true"></span><span class="lf-label">All sources</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5l3.5 3.5 3.5-3.5"/></svg></button>
       <div class="lf-menu" id="lf-menu" role="group" aria-label="Show only reports from" hidden>

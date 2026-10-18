@@ -15,7 +15,7 @@ export const Route = createFileRoute("/iran-conflict-desk")({
   component: IranDeskPage,
   headers: () => ({
     "cache-control": "public, max-age=0, must-revalidate",
-    "cdn-cache-control": "public, s-maxage=30, stale-while-revalidate=30",
+    "cdn-cache-control": "public, s-maxage=30, stale-while-revalidate=3600",
   }),
 });
 

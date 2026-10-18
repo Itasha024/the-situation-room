@@ -977,9 +977,17 @@ html{scroll-behavior:smooth}
 
 /* ---- Search and the alignment filters, in the reports column ------------ */
 .rail-head:has(.feed-search-btn){align-items:center}
-.feed-search-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:var(--r-btn,6px);background:transparent;color:var(--t-text-2,#b8c4d2);cursor:pointer}
+.feed-search-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:0;border-radius:0;background:transparent;color:var(--t-text-2,#b8c4d2);cursor:pointer}
 .feed-search-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
-.feed-search-btn:hover,.feed-search-btn[aria-expanded="true"]{background:var(--t-surface-3,#17273a);color:var(--t-strong,#fff)}
+/* The search and its X stand bare, with no box round them (user, 18 Oct). */
+.feed-search-btn:hover,.feed-search-btn[aria-expanded="true"]{background:transparent;color:var(--t-strong,#fff)}
+.feed-search .fs-field{position:relative;flex:1;min-width:0;display:flex}
+.feed-search .fs-field input{padding-right:2.1rem}
+.feed-search input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
+.feed-search .fs-clear{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;background:transparent;color:var(--t-muted,#7d8ea0);cursor:pointer}
+.feed-search .fs-clear[hidden]{display:none}
+.feed-search .fs-clear:hover{color:var(--t-strong,#fff)}
+.feed-search .fs-clear svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .feed-search{display:flex;gap:6px;margin:0 0 .6rem}
 .feed-search[hidden]{display:none}
 .feed-search input{flex:1;min-width:0;height:36px;padding:0 .7rem;border:1px solid var(--t-line-strong,#2a3a4e);border-radius:var(--r-btn,6px);background:var(--t-surface-2,#101a25);color:var(--t-strong,#fff);font:inherit;font-size:.82rem}

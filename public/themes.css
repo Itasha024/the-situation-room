@@ -403,7 +403,7 @@ html[data-theme="broadsheet-day"] .dv .dv-dot{background:#fff;box-shadow:0 0 0 2
 .situation .toggle-sit{display:block}
 .situation:not(.sit-open) .sit-rest{display:none}
 /* Clicking the text opens and closes it, as a Timeline box does (app.js renderSituation). */
-.sit-click,.front-card.expandable{cursor:pointer}
+.sit-click .sit-body,.front-card.expandable{cursor:pointer}
 /* A long report in short paragraphs; a closed card shows the first one's three lines. */
 .card .lead.lead-multi{display:block;overflow:visible;-webkit-line-clamp:unset}
 .card .lead.lead-multi p{margin:0}
@@ -413,7 +413,7 @@ html[data-theme="broadsheet-day"] .dv .dv-dot{background:#fff;box-shadow:0 0 0 2
 
 /* Search and the alignment filters in the broadsheet themes. */
 html[data-set="broadsheet"] .feed-search-btn{border-radius:0;color:var(--t-text-2)}
-html[data-set="broadsheet"] .feed-search-btn:hover,html[data-set="broadsheet"] .feed-search-btn[aria-expanded="true"]{background:var(--t-surface-2);color:var(--t-strong)}
+html[data-set="broadsheet"] .feed-search-btn:hover,html[data-set="broadsheet"] .feed-search-btn[aria-expanded="true"]{background:transparent;color:var(--t-strong)}
 html[data-set="broadsheet"] .feed-search input{border-radius:0;background:var(--t-surface-1);color:var(--t-strong);font-family:"Newsreader","Frank Ruhl Libre","Noto Naskh Arabic",Georgia,serif;font-size:1rem}
 html[data-set="broadsheet"] .feed-search input:focus{outline-color:var(--accent-ui)}
 html[data-set="broadsheet"] .feed-search .fs-go{border-radius:0;background:var(--accent-ui);color:var(--on-accent);font:600 .62rem/1 var(--f-body);letter-spacing:.08em;text-transform:uppercase}
@@ -850,7 +850,14 @@ html .top h1.desk-tabs{display:flex;align-items:center;gap:.65rem;min-width:0;pa
 ::view-transition-group(deskmap){animation-duration:.3s;animation-timing-function:ease}
 ::view-transition-old(deskmap),::view-transition-new(deskmap){animation-duration:.3s;height:100%;object-fit:cover}
 .map-wrap{view-transition-name:deskmap}
+/* With the side menu open the map is part of the page's own snapshot, so it never shows over the menu while the theme changes (user, 18 Oct). */
+html:has(.site-menu.open) .map-wrap,html:has(.site-menu.open) .mast{view-transition-name:none}
 
 /* Every map's legend at the bottom left (user, 17 Oct), lifted just clear of the Sections button
    when that button is over the map's corner (app.js liftLegend). */
 html .map-wrap .legend{top:auto;bottom:calc(12px + var(--leg-lift,0px))}
+/* Below Trump's box, a line that says the reports follow (user, 18 Oct: it was not clear there were more below). */
+.feed-sub{display:flex;align-items:center;gap:.6rem;margin:.9rem 0 .55rem;font:700 .66rem/1.2 var(--f-body,inherit);letter-spacing:.12em;text-transform:uppercase;color:var(--t-strong,#fff)}
+.feed-sub::after{content:"";flex:1;height:1px;background:var(--t-line-strong,#334155)}
+.feed-sub small{order:3;font:500 .62rem/1.2 var(--f-body,inherit);letter-spacing:.04em;text-transform:none;color:var(--t-muted,#8fa0b4)}
+body:has(#feed-search:not([hidden])) .feed-sub{display:none}

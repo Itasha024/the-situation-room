@@ -37,7 +37,7 @@ export const Route = createFileRoute("/api/scan")({
               // Served by Vercel's edge, not by a function and a database read
               // per visitor: two minutes fresh (the tick runs every five), then
               // refreshed in the background.
-              "cdn-cache-control": "public, s-maxage=30, stale-while-revalidate=30",
+              "cdn-cache-control": "public, s-maxage=30, stale-while-revalidate=86400",
             },
           });
         } catch (err) {

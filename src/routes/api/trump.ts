@@ -29,7 +29,7 @@ export const Route = createFileRoute("/api/trump")({
             m = { at: Date.now(), body: JSON.stringify({ ok: true, statements: feed.statements.filter((s) => shownYet(s) && onDesk(s)).map(({ tries: _t, off: _o, desks: _d, ...s }) => (s.headline ? { ...s, ...shownCard({ headline: s.headline, body: s.body }) } : { ...s, ...plainCard(s) })), checkedAt: feed.checkedAt ?? null, down: feed.down ?? [] }) };
             memo.set(desk, m);
           }
-          return new Response(m.body, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60", "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=60" } });
+          return new Response(m.body, { headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60", "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=86400" } });
         } catch (err) {
           return new Response(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : "trump feed failed", statements: [] }), { status: 500, headers: { "content-type": "application/json" } });
         }

@@ -159,7 +159,7 @@ export const Route = createFileRoute("/api/desk")({
             // is the archive behind them, so the edge keeps it five minutes.
             {
               "cache-control": "public, max-age=30",
-              "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=600",
+              "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=86400",
             },
           );
         } catch (err) {

@@ -1913,6 +1913,7 @@ export function foldIntoPublished(
     // By id too: a relay traced to its original carries the original's link.
     foldTrail.set(r.url, `${home.source}: ${home.summary.slice(0, 90)}`);
     foldTrail.set(r.fp, `${home.source}: ${home.summary.slice(0, 90)}`);
+    if (siteOutlet(r)) console.log(`[fold] site article ${r.url} into ${home.fp}${isExclusiveCard(home) ? " (exclusive)" : ""}${isOriginal(home) ? " (original)" : ""}${inPayload.has(home.fp) ? " (in payload)" : ""}`);
     // A big site's or a wire's own article on a story a post or a relay leads:
     // with its own information it takes the card, the post going under "Also"
     // (18 Oct: Al Jazeera, Asharq Al-Awsat and Arab News on the new defence
@@ -1927,9 +1928,9 @@ export function foldIntoPublished(
     // on an exclusive's or an original's card too, and past the cap.
     const siteAlso = () => {
       if (!siteOutlet(r)) return;
-      const prior = JSON.stringify(home!.alsoReportedBy ?? []);
       home!.alsoReportedBy = mergeAlso(home!.alsoReportedBy, [{ source: r.source, url: r.url, summary: r.summary }], home!);
-      if (JSON.stringify(home!.alsoReportedBy ?? []) !== prior && !inPayload.has(home!.fp)) touched.add(home!);
+      if (!inPayload.has(home!.fp)) touched.add(home!);
+      console.log(`[fold] site article ${r.url} listed under ${home!.fp} (${(home!.alsoReportedBy ?? []).length} in Also)`);
     };
     // An outlet's exclusive leads always, with no "Also": the others only
     // retell it (user, 8 Oct). An exclusive arriving after a card on its

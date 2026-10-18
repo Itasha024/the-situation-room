@@ -297,12 +297,28 @@ export function placeKey(s: string): string {
   return k.slice(0, 1) + k.slice(1).replace(/[aeiouy]/g, "").replace(/(.)\1+/g, "$1");
 }
 
+/**
+ * The gazetteer's places in a headline, remembered: the desk reads the same
+ * cards every minute, and the gazetteer's thousand names cost seconds a read
+ * on the server.
+ */
+const PLACES_SEEN = new Map<string, ReturnType<typeof placesIn>>();
+function placesOf(s: string): ReturnType<typeof placesIn> {
+  let p = PLACES_SEEN.get(s);
+  if (!p) {
+    if (PLACES_SEEN.size > 6000) PLACES_SEEN.clear();
+    p = placesIn(s);
+    PLACES_SEEN.set(s, p);
+  }
+  return p;
+}
+
 /** The district a card's event is in: "X district" in the headline, a district it names, or its place. */
 export function districtOf(r: { summary: string; place?: string | null }): string {
   const s = String(r.summary || "");
   const d = /\b((?:Al-|al-)?[A-Z][\w'’-]+(?: [A-Z][\w'’-]+)?) (?:[Dd]istrict|[Dd]irectorate)\b/.exec(s);
   if (d) return placeKey(d[1]);
-  const named = placesIn(s).find((p) => !WIDE.has(p.kind));
+  const named = placesOf(s).find((p) => !WIDE.has(p.kind));
   if (named) return placeKey(named.name);
   // A village or an area the gazetteer does not know: "Al-Laspah village in Lahj".
   const v = /\b((?:Al-|al-)?[A-Z][\w'’-]+(?: [A-Z][\w'’-]+)?) (?:village|area)\b/.exec(s);
@@ -315,7 +331,7 @@ export function districtOf(r: { summary: string; place?: string | null }): strin
 
 /** The governorates and cities a card names, for two cards that give no district. */
 export function widePlaces(r: { summary: string; place?: string | null }): string[] {
-  const out = new Set(placesIn(String(r.summary || "")).filter((p) => p.kind === "governorate" || p.kind === "city" || p.kind === "port city").map((p) => placeKey(p.name)));
+  const out = new Set(placesOf(String(r.summary || "")).filter((p) => p.kind === "governorate" || p.kind === "city" || p.kind === "port city").map((p) => placeKey(p.name)));
   const p = String(r.place ?? "").trim();
   if (p && PLACE_BY_NAME[p] && WIDE.has(PLACE_BY_NAME[p].kind) && PLACE_BY_NAME[p].kind !== "country") out.add(placeKey(p));
   return [...out];
@@ -531,9 +547,19 @@ function sharedTargets(x: Set<string>, y: Set<string>): number {
 }
 // Worked out once per card: a read compares every pair of 400 cards.
 const sigs = new WeakMap<object, Sig>();
+// And by what a card says, across reads: a ship's learnt name and cause are its card's own, so it is copied.
+const SIG_SEEN = new Map<string, Sig>();
 function sig(r: Card): Sig {
   let s = sigs.get(r);
-  if (!s) {
+  if (s) return s;
+  const key = `${r.at}|${r.source}|${r.type}|${r.place ?? ""}|${r.url}|${r.summary}`;
+  const seen = SIG_SEEN.get(key);
+  if (seen) {
+    s = { ...seen, ship: seen.ship ? { ...seen.ship } : null };
+    sigs.set(r, s);
+    return s;
+  }
+  {
     const district = districtOf(r);
     s = {
       district,
@@ -553,6 +579,8 @@ function sig(r: Card): Sig {
       site: citySite(r.summary),
     };
     sigs.set(r, s);
+    if (SIG_SEEN.size > 6000) SIG_SEEN.clear();
+    SIG_SEEN.set(key, { ...s, ship: s.ship ? { ...s.ship } : null });
   }
   return s;
 }

@@ -65,6 +65,9 @@ export async function refreshBrief(
     return { brief: await reprose(store, saved, now, false, strongOnly ? STRONG_MODELS : WRITER_MODELS), built: false };
   }
 
+  // A page visit never builds a window that has a last one to show: the clock (the scans' own process since
+  // 18 Oct) builds it, and a visit at the turn of a window waited on the writers for half a minute or more.
+  if (!retryProse && saved) return { brief: saved.brief, built: false };
   // One build at a time: while it waits for a strong writer, visits get the last window.
   if (building && saved) return { brief: saved.brief, built: false };
   if (building) return building;

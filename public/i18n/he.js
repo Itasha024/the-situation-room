@@ -157,6 +157,7 @@ window.DESK_I18N = {
     'Read the report': 'לקריאת הדיווח',
     ', citing {s}': ', בהסתמך על {s}',
     '↩ Follows {t} · {h}': '↩ בהמשך לדיווח מ־{t} · {h}',
+    '{name} (article)': '{name} (כתבה)',
     'Read more': 'קראו עוד',
     'Show less': 'הצגת פחות',
     'Show more': 'הצגת עוד',

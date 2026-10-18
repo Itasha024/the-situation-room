@@ -22,6 +22,7 @@
  */
 import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
 import { speechOwner, wordsInCommon } from "./copies.ts";
+import { leadFromSite, mergeAlso, siteTakesLead } from "./site-articles.ts";
 
 export type Card = {
   fp: string;
@@ -739,8 +740,17 @@ export function joinInto(home: Card, copy: Card, rule: Rule): Card {
     home.tags = [...new Set([...(home.tags ?? []), "lead-swap", "original"])];
     return home;
   }
-  home.alsoReportedBy = addAlso(home.alsoReportedBy, { source: copy.source, url: copy.url, summary: copy.summary }, home.source);
-  for (const a of copy.alsoReportedBy ?? []) home.alsoReportedBy = addAlso(home.alsoReportedBy, a, home.source);
+  // A site's article with its own information takes the card from a post or
+  // a relay; any other site article is listed under "Also" by its link (18 Oct:
+  // Al Jazeera's and Asharq Al-Awsat's pieces vanished into a Fars post).
+  // Never from the speaker's own account: their words are theirs.
+  if (siteTakesLead(home, copy) && !ownChannelOf(remarksOwner(home), home.source)) {
+    const oldText = String(home.text ?? "");
+    leadFromSite(home, copy);
+    if (oldText && !carries(String(home.text ?? ""), oldText.slice(0, 200))) home.text = appendLine(String(home.text ?? ""), oldText);
+    return home;
+  }
+  home.alsoReportedBy = mergeAlso(home.alsoReportedBy, [{ source: copy.source, url: copy.url, summary: copy.summary }, ...(copy.alsoReportedBy ?? [])], home, 12);
   if (rule === "remarks" || rule === "burst") {
     const line = lineOf(copy.summary);
     const text = String(home.text ?? "");
@@ -763,10 +773,7 @@ function appendLine(text: string, line: string): string {
   return text.trim() ? `${text.trim()}\n${l}` : l;
 }
 function addAlso(list: Card["alsoReportedBy"], a: { source: string; url: string; summary?: string }, lead: string) {
-  if (a.source === lead || (list ?? []).some((x) => x.source === a.source || x.url === a.url)) return list;
-  const out = [...(list ?? [])];
-  out.push(a);
-  return out.slice(0, 12);
+  return mergeAlso(list, [a], { source: lead, url: "" }, 12);
 }
 
 /* ------------------------------------------------------------------ *

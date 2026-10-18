@@ -12,6 +12,7 @@
 import type { Sql } from "../db.ts";
 import type { DeskEventRow, DeskReportRow } from "./snapshot.ts";
 import { deriveEvents, hasArticlePath } from "./snapshot.ts";
+import { siteAlsoOnly } from "./site-articles.ts";
 import { dbMeter, type DeskSlice, type DeskStore, type RecentOpts, type MergeResult } from "./store.ts";
 import type { DeskId } from "../desks.ts";
 import { DEFAULT_DESK } from "./desk-route.ts";
@@ -561,8 +562,11 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
                 `;
               }
               // An exclusive leads with no "Also" (user, 8 Oct), whenever it was found to be one.
+              // Only a big site's article stays under it (18 Oct, site-articles.ts).
               if (r.flags?.includes("exclusive")) {
-                await sql`update desk_report set also_reported_by = null where fp = ${r.fp} and also_reported_by is not null`;
+                const sites = siteAlsoOnly(r.alsoReportedBy);
+                if (sites) r.alsoReportedBy = sites;
+                else await sql`update desk_report set also_reported_by = null where fp = ${r.fp} and also_reported_by is not null`;
               }
               // Another outlet's take on this story arrived after it was stored.
               if (r.alsoReportedBy?.length) {

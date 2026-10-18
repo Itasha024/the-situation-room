@@ -47,6 +47,7 @@ import {
 } from "./originals.ts";
 import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
 import { ownRead } from "./recent-reads.ts";
+import { siteAlsoOnly } from "./site-articles.ts";
 
 export type Cited = {
   name: string;
@@ -1049,11 +1050,11 @@ export async function traceOrigins(
   let discovers = part(DISCOVER_BUDGET);
   let dirty = false;
   const apply = (r: LiveReport, f: Found) => {
-    // The original stands alone: no "Also" line of relays.
+    // The original stands alone: no "Also" line of relays, only a big site's article (18 Oct).
     r.url = f.url;
     r.source = f.source;
     r.citing = undefined;
-    r.alsoReportedBy = undefined;
+    r.alsoReportedBy = siteAlsoOnly(r.alsoReportedBy);
     if (f.exclusive) r.flags = [...new Set([...(r.flags ?? []), "exclusive"])];
   };
   let routes: RouteLog | undefined;

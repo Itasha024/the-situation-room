@@ -36,6 +36,7 @@ import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { nearerSource } from "./desk/speaker-press.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
+import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead } from "./desk/site-articles.ts";
 import { relinkStoredCards } from "./desk/relink.ts";
 import { fixStoredPosts } from "./desk/post-fit.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
@@ -1666,6 +1667,11 @@ export function foldIntoPublished(
         .sort((x, y) => wordsInCommon(y.summary, r.summary) - wordsInCommon(x.summary, r.summary))[0];
       if (his) {
         gone.add(r);
+        // A big site's article still shows under his post (18 Oct).
+        if (siteOutlet(r)) {
+          his.alsoReportedBy = mergeAlso(his.alsoReportedBy, [{ source: r.source, url: r.url, summary: r.summary }], his);
+          if (!inPayload.has(his.fp)) touched.add(his);
+        }
         foldTrail.set(r.url, `${his.source}: ${his.summary.slice(0, 90)}`);
         foldTrail.set(r.fp, `${his.source}: ${his.summary.slice(0, 90)}`);
         continue;
@@ -1907,18 +1913,40 @@ export function foldIntoPublished(
     // By id too: a relay traced to its original carries the original's link.
     foldTrail.set(r.url, `${home.source}: ${home.summary.slice(0, 90)}`);
     foldTrail.set(r.fp, `${home.source}: ${home.summary.slice(0, 90)}`);
+    // A big site's or a wire's own article on a story a post or a relay leads:
+    // with its own information it takes the card, the post going under "Also"
+    // (18 Oct: Al Jazeera, Asharq Al-Awsat and Arab News on the new defence
+    // minister vanished into a Fars Telegram card).
+    if (siteTakesLead(home, r)) {
+      leadFromSite(home, r);
+      if (home.side) home.confidence = confidenceOf(home, (home.alsoReportedBy ?? []).map((a) => sideOfSource(a.source)));
+      touched.add(home);
+      continue;
+    }
+    // Otherwise a site article is always listed under "Also", by its link:
+    // on an exclusive's or an original's card too, and past the cap.
+    const siteAlso = () => {
+      if (!siteOutlet(r)) return;
+      const prior = JSON.stringify(home!.alsoReportedBy ?? []);
+      home!.alsoReportedBy = mergeAlso(home!.alsoReportedBy, [{ source: r.source, url: r.url, summary: r.summary }], home!);
+      if (JSON.stringify(home!.alsoReportedBy ?? []) !== prior && !inPayload.has(home!.fp)) touched.add(home!);
+    };
     // An outlet's exclusive leads always, with no "Also": the others only
     // retell it (user, 8 Oct). An exclusive arriving after a card on its
     // story takes that card over.
-    if (isExclusiveCard(home) && home.source !== r.source) continue;
+    if (isExclusiveCard(home) && home.source !== r.source) {
+      siteAlso();
+      continue;
+    }
     if (isExclusiveCard(r)) {
+      const was = { source: home.source, url: home.url, summary: home.summary };
       home.summary = r.summary;
       home.text = r.text;
       home.url = r.url;
       home.source = r.source;
       home.tier = r.tier;
       home.citing = undefined;
-      home.alsoReportedBy = undefined;
+      home.alsoReportedBy = siteAlsoOnly(mergeAlso(undefined, [was, ...(home.alsoReportedBy ?? [])], home));
       home.flags = [...new Set([...(home.flags ?? []), "exclusive"])];
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap"])];
       touched.add(home);
@@ -1937,6 +1965,7 @@ export function foldIntoPublished(
       // cards on his words as their "Also".
       (OWN_CHANNELS.has(r.source) && !OWN_CHANNELS.has(home.source));
     if (OWN_CHANNELS.has(r.source) && !OWN_CHANNELS.has(home.source)) {
+      const was = { source: home.source, url: home.url, summary: home.summary };
       home.summary = r.summary;
       home.text = r.text;
       home.url = r.url;
@@ -1944,7 +1973,8 @@ export function foldIntoPublished(
       home.tier = r.tier;
       home.citing = undefined;
       // Outlets quoting him relay him; only what they add stays in "Also".
-      home.alsoReportedBy = (home.alsoReportedBy ?? []).filter((a) => !quotesOwnChannel(a.summary ?? "", r.source));
+      // A big site's article stays listed, the card's old lead among them.
+      home.alsoReportedBy = mergeAlso(undefined, [was, ...(home.alsoReportedBy ?? [])].filter((a) => siteOutlet(a) || (a !== was && !quotesOwnChannel(a.summary ?? "", r.source))), home) ?? [];
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap", "original"])];
       touched.add(home);
       continue;
@@ -1953,13 +1983,15 @@ export function foldIntoPublished(
     // and a card from the original needs no "Also" (user, 3 Oct 07:09).
     const theOriginal = !!home.citing && !r.citing && sameOutlet(r.source, home.citing);
     if (theOriginal) {
+      const was = { source: home.source, url: home.url, summary: home.summary };
       home.summary = r.summary;
       home.text = r.text;
       home.url = r.url;
       home.source = r.source;
       home.tier = r.tier;
       home.citing = undefined;
-      home.alsoReportedBy = undefined;
+      // Only a big site's article stays under it.
+      home.alsoReportedBy = siteAlsoOnly(mergeAlso(undefined, [was, ...(home.alsoReportedBy ?? [])], home));
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap", "original"])];
       touched.add(home);
       continue;
@@ -1982,7 +2014,7 @@ export function foldIntoPublished(
       home.url = r.url;
       home.source = r.source;
       home.tier = r.tier;
-      home.alsoReportedBy = [relayed, ...(home.alsoReportedBy ?? [])].slice(0, 8);
+      home.alsoReportedBy = mergeAlso(undefined, [relayed, ...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? [])], home) ?? [];
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap"])];
       if (home.side) home.confidence = confidenceOf(home, home.alsoReportedBy.map((a) => sideOfSource(a.source)));
       touched.add(home);
@@ -1995,13 +2027,15 @@ export function foldIntoPublished(
     if (enrich && addsFacts(home, r) && (wave || told || site || relayed)) enrich.push([home, r]);
     // A card written from the original source needs no "Also": the others
     // only relay it.
-    if (isOriginal(home) || relayed) continue;
+    if (isOriginal(home) || relayed) {
+      siteAlso();
+      continue;
+    }
     // The later account says something the card does not (a figure, a place):
     // the card is written again from both, so nothing new is lost to "Also".
     if (!wave && !told && !site && enrich && addsFacts(home, r)) enrich.push([home, r]);
-    const also =[...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? []), { source: r.source, url: r.url, summary: r.summary }];
-    const seen = new Set([home.source]);
-    home.alsoReportedBy = also.filter((a) => !seen.has(a.source) && (seen.add(a.source), true)).slice(0, 8);
+    // Once per outlet, a big site's article once per link and never cut (site-articles.ts).
+    home.alsoReportedBy = mergeAlso(home.alsoReportedBy, [...(r.alsoReportedBy ?? []), { source: r.source, url: r.url, summary: r.summary }], home) ?? [];
     // More outlets, more trust: counted by side, as in the cycle's own grouping.
     if (home.side) home.confidence = confidenceOf(home, home.alsoReportedBy.map((a) => sideOfSource(a.source)));
     if (!inPayload.has(home.fp)) touched.add(home);
@@ -2188,6 +2222,8 @@ export function leadRank(r: LiveReport): number {
     (OWN_CHANNELS.has(r.source) ? 4000 : 0) +
     (spoken && OFFICIAL_OUTLETS.has(r.source) ? 2000 : 0) +
     (isOriginal(r) ? 1000 : 0) +
+    // A big site's own article over the posts on its story (18 Oct).
+    (siteOwnNews(r) ? 800 : 0) +
     (r.tier === "agency" ? 500 : 0) +
     scoreReport(r)
   );
@@ -3112,12 +3148,14 @@ export async function shapeCards(
   for (const { lead, others } of groups) {
     if (!others.length) continue;
     // Distinct outlets only: three posts from one channel is one account.
-    const outlets = new Map<string, { source: string; url: string }>();
-    for (const o of others) if (o.source !== lead.source && o.citing !== lead.source) outlets.set(o.source, { source: o.source, url: o.url });
-    // An exclusive leads with no "Also" (user, 8 Oct): 9 Oct's Middle East Eye card carried BBC.
-    if (isOriginal(lead) || isExclusiveCard(lead)) outlets.clear();
-    if (outlets.size) {
-      lead.alsoReportedBy = [...outlets.values()].slice(0, 6);
+    // A big site's article is listed by its link, even under its own channel's post, and never cut (18 Oct).
+    const outlets = others
+      .filter((o) => siteOutlet(o) || (o.source !== lead.source && o.citing !== lead.source))
+      .map((o) => ({ source: o.source, url: o.url }));
+    // An exclusive leads with no "Also" (user, 8 Oct): 9 Oct's Middle East Eye card carried BBC. Only a big site's article stays.
+    const also = isOriginal(lead) || isExclusiveCard(lead) ? siteAlsoOnly(mergeAlso(undefined, outlets, lead)) : mergeAlso(undefined, outlets, lead, 6);
+    if (also?.length) {
+      lead.alsoReportedBy = also;
     }
     // Corroboration moves the trust figure — counted by side inside
     // `credibility`, so five channels of one side count once.

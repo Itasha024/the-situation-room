@@ -168,6 +168,7 @@
       'Read the report': 'اقرأ التقرير',
       ', citing {s}': '، نقلًا عن {s}',
       '↩ Follows {t} · {h}': '↩ متابعة لتقرير {t} · {h}',
+      '{name} (article)': '{name} (مقال)',
       'Read more': 'اقرأ المزيد',
       'Show less': 'عرض أقل',
       'Show more': 'عرض المزيد',

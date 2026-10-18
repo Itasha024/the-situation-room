@@ -3746,10 +3746,22 @@ function feedCardHtml(r, i) {
   const srcHtml = sourceAnchors(src, r.url || '');
   const lead = reportLead(r);
   // Each outlet once, and never the card's own: two posts of one channel are one name.
+  // A site's article is its own entry, by link, even under its channel's post (18 Oct):
+  // "Al Jazeera (article)" beside the Al Jazeera post that leads.
   const seenAlso = new Set([canonicalSourceName(r.source)]);
-  const alsoList = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []).filter((a) => {
+  const seenLinks = new Set([r.url || '']);
+  const alsoList = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []).flatMap((a) => {
     const n = canonicalSourceName(a.source);
-    return !seenAlso.has(n) && (seenAlso.add(n), true);
+    if (a.url && !isPostLink(a.url)) {
+      if (seenLinks.has(a.url)) return [];
+      seenLinks.add(a.url);
+      const label = seenAlso.has(n) ? T('{name} (article)', { name: n }) : n;
+      seenAlso.add(n);
+      return [{ ...a, label }];
+    }
+    if (seenAlso.has(n)) return [];
+    seenAlso.add(n);
+    return [{ ...a, label: n }];
   });
   const also = alsoList.length ? alsoList : null;
   const isOpen = openFeedFps.has(fp);
@@ -3768,9 +3780,18 @@ function feedCardHtml(r, i) {
       <p class="headline">${escapeHtml(sum)}</p>
       ${leadHtml(lead)}
       ${!Array.isArray(r.media) && (r.type === 'statement' || r.type === 'diplomacy') ? '' : cardMediaHtml(r.media)}
-      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(canonicalSourceName(a.source))}</a>`).join(' · ')}</p>` : ''}
+      ${also ? `<p class="also">Also: ${also.map((a) => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.label)}</a>`).join(' · ')}</p>` : ''}
       ${lead ? `<div class="actions"><button type="button" class="toggle" hidden>${isOpen ? 'Show less' : 'Read more'}</button></div>` : ''}
     </article>`;
+}
+
+/** A channel's or account's post, not a site's article. */
+function isPostLink(url) {
+  try {
+    return /^(?:t\.me|telegram\.me|x\.com|twitter\.com|mobile\.twitter\.com|youtube\.com|m\.youtube\.com|facebook\.com|instagram\.com)$/.test(new URL(url).hostname.replace(/^www\./, ''));
+  } catch {
+    return true;
+  }
 }
 
 /** A card's text: one paragraph, or short paragraphs with a line between them when it is long. */

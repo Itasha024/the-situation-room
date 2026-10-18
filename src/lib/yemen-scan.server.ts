@@ -1635,9 +1635,15 @@ export function foldIntoPublished(
   const byTime = [...reports].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   // Cards already on the desk that this cycle's payload no longer carries.
   const inPayload = new Set(reports.map((r) => r.fp));
-  const homes = [...byTime, ...stored.filter((s) => !inPayload.has(s.fp))];
   const savedFp = new Set(stored.map((s) => s.fp));
   const savedUrl = new Set(stored.map((s) => linkKey(s.url)));
+  // A card read again this cycle under another id (a relay's card moved to its
+  // original keeps the relay's id) is the stored card: what joins it joins the
+  // stored row, which is saved; the copy is not (18 Oct: Arab News's article
+  // joined Sky News Arabia's re-read copy and was lost each tick).
+  const storedByUrl = new Map(stored.map((s) => [linkKey(s.url), s]));
+  const asStored = (o: LiveReport) => (!savedFp.has(o.fp) && storedByUrl.get(linkKey(o.url))) || o;
+  const homes = [...new Set([...byTime.map(asStored), ...stored.filter((s) => !inPayload.has(s.fp))])];
   const gone = new Set<LiveReport>();
   const touched = new Set<LiveReport>();
   for (const r of byTime) {
@@ -1905,6 +1911,7 @@ export function foldIntoPublished(
         foldTrail.set(r.fp, `${into.source}: ${into.summary.slice(0, 90)}`);
         joinInto(asCard(into), asCard(r), rule);
         if (!inPayload.has(into.fp)) touched.add(into);
+        if (siteOutlet(r)) console.log(`[fold] site article ${r.url} joined ${into.fp} by ${rule}${inPayload.has(into.fp) ? " (in payload)" : ""}`);
         continue;
       }
     }

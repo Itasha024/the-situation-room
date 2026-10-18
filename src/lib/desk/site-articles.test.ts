@@ -211,3 +211,23 @@ test("Also: posts once per outlet and capped, site articles once per link and ne
   assert.equal(out.filter((a) => a.url.startsWith("https://t.me/")).length, 8);
   assert.equal(out[0].url, "https://english.aawsat.com/node/5330760");
 });
+
+test("Arab News on Egypt's support (18 Oct, live): the article joins the stored Sky News Arabia card, not its copy read again under another id", async () => {
+  const { foldIntoPublished } = await import("../yemen-scan.server.ts");
+  const url = "https://www.skynewsarabia.com/middle-east/1898942-egypt-parliament-saudi-support";
+  const base = { live: true as const, score: 0, tags: [] as string[], type: "diplomacy", at: "2026-10-17T22:31:46Z", url, source: "Sky News Arabia", flags: ["exclusive"],
+    summary: "Egyptian parliament extends secret emergency session to discuss support for Saudi Arabia",
+    text: "The Egyptian House of Representatives adjourned its extraordinary secret session called by President Abdel Fattah El-Sisi to Monday to continue discussions on supporting Saudi Arabia against recent attacks. The National Defense Council earlier declared full solidarity with Saudi Arabia and decided to provide all necessary support to defend its security and stability." };
+  // Stored under the relay's id it was first written from; read again from the site under the site's.
+  const stored = { ...base, fp: "live-t-me-almasirah2-303775" } as { alsoReportedBy?: { url: string }[] } & typeof base & { fp: string };
+  const reread = { ...base, fp: "live-www-skynewsarabia-com-middle-east-1898942" };
+  const arab = {
+    ...article("an-eg", "Arab News", "https://www.arabnews.com/middle-east/egypt-pledges-full-support-for-saudi-arabia-amid-escalating-regional-tensions-3006984", "2026-10-18T13:00:00Z", "Egyptian National Defense Council: Egypt pledges full support to Saudi Arabia's security", "Egypt's National Defense Council decided to provide all necessary support to Saudi Arabia."),
+    type: "diplomacy", duplicateOf: undefined,
+  };
+  const reports = [reread, arab];
+  const touched = foldIntoPublished(reports as never[], new Set(), [stored] as never[]) as { fp: string }[];
+  assert.ok(!reports.includes(arab as never));
+  assert.ok(touched.some((t) => t.fp === stored.fp));
+  assert.deepEqual((stored.alsoReportedBy ?? []).map((a) => a.url), [arab.url]);
+});

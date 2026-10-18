@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { extractLead, feedById, fetchText, listedHit, withLeads, yemenCandidates, articleOf, fetchRank, type RawHit } from "../yemen-scan.server.ts";
+import { extractLead, feedById, fetchText, listedHit, parseRss, withLeads, yemenCandidates, articleOf, fetchRank, type RawHit } from "../yemen-scan.server.ts";
 import { fetchListing, parseListing } from "./sitemap.ts";
 import { isExclusive, ownInformation } from "./exclusive.ts";
 import { RESOLVE_LIMIT, canResolve, cleanUrl, knownResolve, resetResolver, resolveGoogleNews, resolvesLeft } from "./gnews.ts";
@@ -156,6 +156,10 @@ test("A Reuters exclusive listed by Google: Google refusing, Bing News gives the
   );
   assert.equal(url, REUTERS_FII);
   assert.equal(canResolve("lead"), false, "Google rests after its 429");
+  // The Iran desk's own Google searches name the site too, so Bing can look there.
+  const [viaIran] = parseRss(FX.REUTERS_GNEWS, "Google News");
+  assert.equal(viaIran.source, "Reuters");
+  assert.equal(viaIran.site, "reuters.com");
   resetResolver();
 });
 

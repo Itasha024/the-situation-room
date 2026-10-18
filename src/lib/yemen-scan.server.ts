@@ -1312,12 +1312,15 @@ export function parseRss(xml: string, source: string): RawHit[] {
     let url = decodeEntities(linkRaw || guid).replace(/&amp;/g, "&").trim();
     if (!title || !url || !/^https?:\/\//i.test(url)) continue;
     let src = source;
+    let site = "";
     if (/news\.google\.com/i.test(url)) {
       const g = outletFromGoogleTitle(title, source);
       title = g.title;
       src = g.source;
       // Keep Google's per-article link. <source url> is only the outlet's
       // homepage; swapping it in made every Google item a "section front".
+      // It names the site where Bing looks for the article (bing.ts).
+      site = siteHost((b.match(/<source[^>]+url=["']([^"']+)["']/i) || [])[1] || "");
     }
     if (title.length < 12) continue;
     if (isIsraeliSource(src, url)) continue;
@@ -1325,7 +1328,7 @@ export function parseRss(xml: string, source: string): RawHit[] {
     let at = jerusalemIso();
     const parsed = Date.parse(dateRaw);
     if (Number.isFinite(parsed)) at = jerusalemIso(new Date(parsed));
-    items.push({ source: src, url, text: blob, at, lean: "", fromTg: false, title });
+    items.push({ source: src, url, text: blob, at, lean: "", fromTg: false, title, ...(site ? { site } : {}) });
   }
   return items;
 }

@@ -1720,6 +1720,38 @@ export function sharedWords(r: Pick<Reading, "headline" | "body">, text: string)
 }
 export function misplaced(r: Pick<Reading, "publish" | "headline" | "body">, own: string, others: string[]): boolean {
   if (!r.publish) return false;
-  if (sharedWords(r, own) > 1) return false;
-  return others.some((t) => t !== own && sharedWords(r, t) >= 3);
+  if (fitScore(r, own) > 1) return false;
+  return others.some((t) => t !== own && fitScore(r, t) >= 3);
+}
+
+/*
+ * How well a reading fits a post in any script (18 Oct: a card's link was the post one or two ids
+ * beside its own, on Crater Sky, Khabar, Almashhad and Alfaqaar: the model had read an Arabic post
+ * under its neighbour's id, and the English-word check saw no words in Arabic). Its English words,
+ * its numbers, and its names by their consonants' sound ("Maqbanah" and "مقبنة" are both MKBN).
+ */
+const SOUND_AR: Record<string, string> = {
+  ب: "B", پ: "B", ت: "T", ث: "T", ط: "T", ج: "J", چ: "C", خ: "K", د: "D", ذ: "D", ض: "D", ظ: "D", ر: "R", ز: "Z", ژ: "Z",
+  س: "S", ش: "S", ص: "S", غ: "G", ف: "F", ق: "K", ك: "K", ک: "K", گ: "G", ل: "L", م: "M", ن: "N",
+};
+const soundOfLatin = (w: string) =>
+  w.toLowerCase().replace(/^(?:al|el|ad|ar|as|ash|at|az)-/, "").replace(/kh/g, "K").replace(/gh/g, "G").replace(/sh/g, "S").replace(/th|dh/g, (m) => (m === "th" ? "T" : "D")).replace(/ch/g, "C").replace(/h/g, "")
+    .replace(/[qck]/g, "K").replace(/[pb]/g, "B").replace(/[vf]/g, "F").replace(/[aeiouyw'’]/g, "").toUpperCase().replace(/(.)\1+/g, "$1");
+const soundOfNative = (w: string) =>
+  w.replace(/[ً-ٟـ]/g, "").replace(/^(?:وال|بال|فال|لل|ال)/, "").split("").map((c) => SOUND_AR[c] ?? "").join("").replace(/(.)\1+/g, "$1");
+const NATIVE_DIGIT = /[٠-٩۰-۹]/g;
+const westernDigits = (s: string) => s.replace(NATIVE_DIGIT, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d) >= 0 ? "٠١٢٣٤٥٦٧٨٩".indexOf(d) : "۰۱۲۳۴۵۶۷۸۹".indexOf(d)));
+const numbersIn = (s: string) => new Set((westernDigits(s).match(/\b\d+\b/g) ?? []).filter((n) => !/^20\d\d$/.test(n) && !/^0+$/.test(n) && n !== "1"));
+export function fitScore(r: Pick<Reading, "headline" | "body">, text: string): number {
+  const copy = `${r.headline || ""} ${r.body || ""}`;
+  let n = sharedWords(r, text);
+  const nums = numbersIn(text);
+  for (const x of numbersIn(copy)) if (nums.has(x)) n++;
+  // Names: the copy's capitalised words against the post's Arabic or Persian words, by sound.
+  const native = new Set((text.match(/[؀-ۿ]{3,}/g) ?? []).map(soundOfNative).filter((s) => s.length >= 2));
+  if (native.size) {
+    const names = new Set((copy.match(/(?<![\p{L}])[A-Z][\p{L}'’-]{3,}/gu) ?? []).map(soundOfLatin).filter((s) => s.length >= 2));
+    for (const s of names) if (native.has(s)) n++;
+  }
+  return n;
 }

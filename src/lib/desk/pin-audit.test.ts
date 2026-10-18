@@ -269,3 +269,14 @@ test("an Iran card stored with no place gets one from its headline; fly-overs, f
   assert.equal(at("IDF and Shin Bet destroyed four Hamas and Islamic Jihad weapons warehouses in Gaza", "israel"), null);
   assert.equal(at("Six ships attacked in Strait of Hormuz in one day; Kpler says oil flows fell", "iran", "vessel"), null);
 });
+
+test("a reading put under its Arabic neighbour's id is caught: numbers and names by sound (18 Oct: links one or two posts off)", async () => {
+  const { misplaced, fitScore } = await import("./reader.ts");
+  const a = "عاجل | غارات جوية تستهدف مواقع للحوثيين في مديرية الخوخة بالحديدة";
+  const b = "مقتل 8 مدنيين بقصف حوثي على منطقة مقبنة غرب تعز";
+  const reading = { publish: true, headline: "Houthi shelling kills 8 civilians in Maqbanah, west of Taiz", body: "Eight civilians were killed when Houthi forces shelled Maqbanah district." };
+  assert.ok(fitScore(reading, b) >= 3, String(fitScore(reading, b)));
+  assert.ok(fitScore(reading, a) <= 1, String(fitScore(reading, a)));
+  assert.equal(misplaced(reading, a, [a, b]), true);
+  assert.equal(misplaced(reading, b, [a, b]), false);
+});

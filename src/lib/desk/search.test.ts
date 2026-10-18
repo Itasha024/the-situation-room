@@ -89,3 +89,24 @@ test("an outlet's name finds its cards, not headlines with the word; a misspelt 
   assert.equal(u.about, "medina");
   assert.ok(u.groups[0].includes("medina"));
 });
+
+// 18 Oct: the Iran desk got the search; both read other spellings and keep to what was asked.
+test("a place or a name in another spelling finds the desk's own", async () => {
+  const { understandLocally, skeleton } = await import("./search.ts");
+  const has = (q: string, t: string) => understandLocally(q).groups.some((g) => g.includes(t));
+  for (const [q, t] of [["Hudaydah", "hodeidah"], ["Taizz", "taiz"], ["Sa'dah", "saada"], ["Mokha", "mocha"], ["Hadramout", "hadramawt"], ["Perim", "mayun"], ["Qalibaf", "ghalibaf"], ["Arakchi", "araghchi"], ["Bandar-e Abbas", "bandar abbas"], ["bandarabbas", "bandar abbas"], ["Esfahan", "isfahan"], ["Hizbullah", "hezbollah"], ["Ebnelreza", "ebnolreza"]]) assert.ok(has(q, t), `${q} -> ${t}`);
+  assert.equal(skeleton("arakchi"), skeleton("araghchi"));
+  assert.equal(skeleton("hadramout"), skeleton("hadramawt"));
+});
+
+test("a Saudi town is itself, a tanker a tanker, the Red Sea a place apart from the ship", async () => {
+  const { understandLocally } = await import("./search.ts");
+  const g = (q: string) => understandLocally(q).groups;
+  assert.ok(!g("Jizan").flat().includes("riyadh"));
+  assert.ok(!g("Riyadh airport").flat().includes("najran"));
+  assert.ok(!g("tanker attack")[0].includes("red sea"));
+  assert.ok(!g("supertanker")[0].includes("container ship"));
+  assert.deepEqual(g("Red Sea ship").map((x) => x[0]), ["red sea", "ship"]);
+  assert.ok(g("ballistic missile").length === 1 && !g("ballistic missile")[0].includes("rocket"));
+  assert.ok(g("naval mine")[0].includes("mines"));
+});

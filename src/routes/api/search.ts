@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { metered } from "@/lib/desk/cpu-meter";
 import { checkLinks } from "@/lib/desk/links";
+import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { unglue } from "@/lib/desk/reader";
 import {
   type Lexicon,
@@ -37,7 +38,18 @@ import { getStore } from "@/lib/desk/store";
 type Row = Record<string, unknown> & { fp: string; at: string; source?: string; summary?: string; text?: string };
 
 /** The archive, held for five minutes: the stored cards and the older ones in data.json. */
-type Corpus = { at: number; rows: Row[]; docs: SearchDoc[]; people: People; places: Set<string>; lex: Lexicon };
+type Corpus = { at: number; rows: Row[]; docs: SearchDoc[]; people: People; places: Set<string>; lex: Lexicon; byDesk?: Map<string, SearchDoc[]> };
+/** A desk's own cards only, so the other desk's never crowd its results out (18 Oct: "hormuz" filled the 300 places). */
+function docsOf(c: Corpus, desk: string): SearchDoc[] {
+  c.byDesk ??= new Map();
+  let d = c.byDesk.get(desk);
+  if (!d) {
+    const mine = new Set(c.rows.filter((r) => onDesk(r, desk as never)).map((r) => String(r.fp)));
+    d = c.docs.filter((x) => mine.has(x.fp));
+    c.byDesk.set(desk, d);
+  }
+  return d;
+}
 let corpus: Corpus | null = null;
 let loading: Promise<Corpus> | null = null;
 
@@ -133,10 +145,10 @@ function allowed(ip: string): boolean {
  * unrelated shows. The full search follows and replaces it.
  */
 /** A search whose every idea the desk knows: the reports whose headlines name it, at once. */
-function knownSearch(q: string, docs: SearchDoc[], local: Understood): { fps: string[]; about: string } {
-  const key = norm(q);
+function knownSearch(q: string, docs: SearchDoc[], local: Understood, desk: string): { fps: string[]; about: string } {
+  const key = desk + ":" + norm(q);
   const strong = strongTerms(q, local);
-  const fps = findCandidates(docs, local, 500)
+  const fps = findCandidates(docs, local, 2000)
     .filter((x) => headlineHas(x.doc, strong, local))
     .sort((a, b) => Date.parse(b.doc.at) - Date.parse(a.doc.at))
     .map((x) => x.doc.fp);
@@ -146,18 +158,20 @@ function knownSearch(q: string, docs: SearchDoc[], local: Understood): { fps: st
   return out;
 }
 
-async function quick(q: string): Promise<{ fps: string[]; about: string; full: boolean }> {
-  const key = norm(q);
+async function quick(q: string, desk: string): Promise<{ fps: string[]; about: string; full: boolean }> {
+  const key = desk + ":" + norm(q);
   const hit = answered.get(key);
   if (hit && Date.now() - hit.at < 10 * 60_000) return { ...hit, full: true };
-  const { docs, people, places, lex } = await archive();
+  const c = await archive();
+  const { people, places, lex } = c;
+  const docs = docsOf(c, desk);
   const local = understandLocally(q, people, places, lex);
   // Every word known to the desk: this is the whole answer, no model needed.
-  if (local.known) return { ...knownSearch(q, docs, local), full: true };
+  if (local.known) return { ...knownSearch(q, docs, local, desk), full: true };
   const u = meant.has(key) ? mergeUnderstood(meant.get(key)!, local) : local;
   // Only headlines that name the thing itself: nothing unrelated, even for a moment.
   const strong = strongTerms(q, local);
-  const fps = findCandidates(docs, u, 300)
+  const fps = findCandidates(docs, u, 600)
     .filter((x) => headlineHas(x.doc, strong, local))
     .sort((a, b) => Date.parse(b.doc.at) - Date.parse(a.doc.at))
     .map((x) => x.doc.fp);
@@ -170,13 +184,15 @@ async function quick(q: string): Promise<{ fps: string[]; about: string; full: b
  * each idea; and a model's second look only at the ones matched by a loose
  * word alone. A headline that names the thing itself needs no second look.
  */
-async function search(q: string): Promise<{ fps: string[]; about: string }> {
-  const key = norm(q);
+async function search(q: string, desk: string): Promise<{ fps: string[]; about: string }> {
+  const key = desk + ":" + norm(q);
   const hit = answered.get(key);
   if (hit && Date.now() - hit.at < 10 * 60_000) return hit;
-  const { docs, people, places, lex } = await archive();
+  const c = await archive();
+  const { people, places, lex } = c;
+  const docs = docsOf(c, desk);
   const local = understandLocally(q, people, places, lex);
-  if (local.known) return knownSearch(q, docs, local);
+  if (local.known) return knownSearch(q, docs, local, desk);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Aden" });
   if (today !== day) {
     day = today;
@@ -193,7 +209,7 @@ async function search(q: string): Promise<{ fps: string[]; about: string }> {
     }
   }
   const u = m ? mergeUnderstood(m, local) : local;
-  const cands = findCandidates(docs, u, 300);
+  const cands = findCandidates(docs, u, 600);
   // A headline that names the thing itself (the query's words, the desk's
   // synonyms for a word, a name or title) stands; the rest get a second look.
   const strong = strongTerms(q, local);
@@ -237,13 +253,15 @@ export const Route = createFileRoute("/api/search")({
           if (norm(q).length < 2) return json({ ok: false, error: "Type at least two letters." }, 400);
           const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
           const fast = url.searchParams.get("fast") === "1";
-          if (!fast && !answered.has(norm(q)) && !allowed(ip)) return json({ ok: false, error: "Too many searches. Try again in a few minutes." }, 429);
-          const { fps, about, full }: { fps: string[]; about: string; full?: boolean } = fast ? await quick(q) : { ...(await search(q)), full: true };
+          // One archive for every desk; each desk is searched in its own cards (Round 30; 18 Oct).
+          const desk = deskParam(url.searchParams.get("desk"));
+          if (!fast && !answered.has(desk + ":" + norm(q)) && !allowed(ip)) return json({ ok: false, error: "Too many searches. Try again in a few minutes." }, 429);
+          const { fps, about, full }: { fps: string[]; about: string; full?: boolean } = fast ? await quick(q, desk) : { ...(await search(q, desk)), full: true };
           const { rows } = await archive();
           const byFp = new Map(rows.map((r) => [r.fp, r]));
-          // One archive for every desk; each desk is answered with its own cards (Round 30).
-          const desk = deskParam(url.searchParams.get("desk"));
-          const reports = fps.map((fp) => byFp.get(fp)).filter((r): r is Row => !!r && onDesk(r, desk));
+          // The Iran desk's cards carry their source's group, as its feed gives them (its filter and colours).
+          const reports = fps.map((fp) => byFp.get(fp)).filter((r): r is Row => !!r && onDesk(r, desk))
+            .map((r) => (desk === "iran" ? { ...r, lean: iranLeanOfSource(String(r.source ?? "")) } : r));
           return json({ ok: true, q, about, full, total: reports.length, reports }, 200, { "cache-control": "public, max-age=60", "cdn-cache-control": "public, s-maxage=300" });
         } catch (err) {
           const message = err instanceof Error ? err.message : "search failed";

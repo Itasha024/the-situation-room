@@ -84,7 +84,8 @@ const IRAN_HTML = `
   </section>
   <div class="rail-splitter" id="rail-splitter" role="separator" aria-orientation="vertical" aria-label="Resize the report column" title="Drag to widen the report column"></div>
   <aside class="rail" id="rail">
-    <div class="rail-head"><h2>Latest reports</h2></div>
+    <div class="rail-head"><h2>Latest reports</h2><button type="button" class="feed-search-btn" id="btn-feed-search" aria-label="Search all reports" aria-expanded="false" aria-controls="feed-search" title="Search all reports"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.6"/><path d="M12.8 12.8l4.6 4.6"/></svg></button></div>
+    <form class="feed-search" id="feed-search" role="search" hidden><input type="search" id="feed-q" placeholder="Search all reports: a place, a person, a weapon" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search all reports" maxlength="120"/><button type="submit" class="fs-go">Search</button></form>
     <div class="trump-pin" id="trump-pin"><div class="tp-head"><b>Trump's latest</b></div></div>
     <div class="feed-legend lf" id="feed-legend">
       <button type="button" class="lf-btn" aria-expanded="false" aria-haspopup="true" aria-controls="lf-menu"><span class="lf-sws" aria-hidden="true"></span><span class="lf-label">All sources</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5l3.5 3.5 3.5-3.5"/></svg></button>
@@ -93,7 +94,9 @@ const IRAN_HTML = `
       ${LEANS.map(([k, c, n]) => `<button type="button" class="lean-f" data-lean="${k}" aria-pressed="false" disabled><span class="sw" style="background:${c}"></span>${n}</button>`).join("\n      ")}
       </div>
     </div>
+    <div class="feed-note" id="feed-note" aria-live="polite" hidden></div>
     <div id="feed" class="feed">${SOON("reports from every side, each with its source's rating.")}</div>
+    <button type="button" class="more" id="btn-more-reports" hidden>Show more results</button>
   </aside>
 </main>
 <section class="situation" id="situation" tabindex="-1">

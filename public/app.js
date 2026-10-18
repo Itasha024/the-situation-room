@@ -4084,7 +4084,8 @@ async function runFeedSearch(q) {
   const rail = document.getElementById('rail');
   if (rail && rail.scrollTop > 0) rail.scrollTop = 0;
   const ask = async (fast) => {
-    const res = await fetch('/api/search?q=' + encodeURIComponent(q) + (fast ? '&fast=1' : ''));
+    // Each desk searches its own reports (user, 18 Oct: the Iran desk has the search too).
+    const res = await fetch('/api/search?q=' + encodeURIComponent(q) + (fast ? '&fast=1' : '') + (ON_IRAN_DESK() ? '&desk=iran' : ''));
     const body = await res.json().catch(() => ({}));
     if (!res.ok || !body.ok) throw new Error(body.error || 'The search did not answer. Try again in a moment.');
     return body;
@@ -4210,6 +4211,8 @@ function wireFeedSearch() {
       if (ev.key === 'Escape') { ev.preventDefault(); if (feedSearch || input.value) clearFeedSearch(false); else btn.click(); }
     };
   }
+  // The Iran desk's source groups have their own buttons (startIranFeed).
+  if (ON_IRAN_DESK()) return;
   document.querySelectorAll('#feed-legend .lean-f').forEach((b) => {
     if (b.dataset.wired) return;
     b.dataset.wired = '1';
@@ -4218,7 +4221,9 @@ function wireFeedSearch() {
   wireLeanMenu();
 }
 
+const ON_IRAN_DESK = () => /^\/iran-conflict-desk/.test(location.pathname);
 function renderFeed(d) {
+  if (ON_IRAN_DESK()) { renderIranFeed(); return; }
   if (!d) return;
   if (feedSearch) { renderSearchFeed(); return; }
   renderFeedNote();
@@ -7565,6 +7570,10 @@ const IRAN_GROUP_NAMES = { axis: 'Iran and Axis-aligned', opposition: 'Iranian o
 const iranDesk = { reports: [], lean: '', scan: null, timer: 0, shown: INITIAL_REPORTS };
 function startIranFeed() {
   if (iranDesk.timer) return;
+  // The search, as on the Yemen desk (user, 18 Oct).
+  wireFeedSearch();
+  const sm = document.getElementById('btn-more-reports');
+  if (sm) sm.onclick = () => { if (feedSearch) { feedSearch.shown += SEARCH_STEP; renderIranFeed(); } };
   const buttons = document.querySelectorAll('#feed-legend .lean-f');
   buttons.forEach((b) => {
     b.disabled = false;
@@ -8127,6 +8136,15 @@ async function loadIranFeed() {
 function renderIranFeed() {
   const el = document.getElementById('feed');
   if (!el) return;
+  // A search shows its results, as on the Yemen desk, in the Iran desk's colours and pop-up map.
+  if (feedSearch) {
+    renderSearchFeed();
+    const res = feedSearch.reports || [];
+    el.querySelectorAll('.card').forEach((card) => irCardDress(card, res[Number(card.dataset.i)]));
+    return;
+  }
+  const sm = document.getElementById('btn-more-reports');
+  if (sm) sm.hidden = true;
   const all = iranDesk.reports.filter((r) => !iranDesk.lean || r.lean === iranDesk.lean);
   const list = all.slice(0, iranDesk.shown);
   if (!list.length) {
@@ -8146,20 +8164,23 @@ function renderIranFeed() {
     return box.innerHTML;
   }).join('') +
     (all.length > list.length ? `<button type="button" class="more" id="iran-more">Show earlier reports (+${Math.min(MORE_STEP, all.length - list.length)})</button>` : '');
-  el.querySelectorAll('.card').forEach((card) => {
-    const r = list[Number(card.dataset.i)];
-    const lean = (r && r.lean) || 'intl';
-    card.className = card.className.replace(/\blean-\S+/, 'ir-' + lean);
-    card.title = IRAN_GROUP_NAMES[lean] || '';
-    wireFeedCard(card);
-    const mb = card.querySelector('.card-map');
-    if (mb) { mb.onmouseenter = null; mb.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); const fp = card.dataset.fp; openIranMapPop(iranPinsOf(fp), (r && r.summary) || '', mb, () => showIranPin(fp)); }; }
-  });
+  el.querySelectorAll('.card').forEach((card) => { irCardDress(card, list[Number(card.dataset.i)]); wireFeedCard(card); irCardMap(card, list[Number(card.dataset.i)]); });
   const more = document.getElementById('iran-more');
   if (more) more.addEventListener('click', () => { iranDesk.shown += MORE_STEP; renderIranFeed(); });
   wireMediaClicks(el);
   const up = document.getElementById('updated');
   if (up && iranDesk.scan && iranDesk.scan.scannedAt) up.textContent = 'UPDATED ' + fmtClock(iranDesk.scan.scannedAt);
+}
+/** An Iran card in its source group's colour, its map button opening the Iran pop-up map. */
+function irCardDress(card, r) {
+  const lean = (r && r.lean) || 'intl';
+  card.className = card.className.replace(/\blean-\S+/, 'ir-' + lean);
+  card.title = IRAN_GROUP_NAMES[lean] || '';
+  if (feedSearch) irCardMap(card, r);
+}
+function irCardMap(card, r) {
+  const mb = card.querySelector('.card-map');
+  if (mb) { mb.onmouseenter = null; mb.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); const fp = card.dataset.fp; openIranMapPop(iranPinsOf(fp), (r && r.summary) || '', mb, () => showIranPin(fp)); }; }
 }
 async function loadIranScan() {
   try {

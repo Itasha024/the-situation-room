@@ -90,10 +90,13 @@ function outletOf(phrase: string, lex: Lexicon): string | null {
 
 /** The desk's own words a misspelt one stands for, most used first; none when the word is the desk's. */
 export function respellWord(w: string, lex: Lexicon): string[] {
-  if (w.length < 5 || /\d/.test(w) || lex.words.has(w) || ABBR[w] || LOCAL.some((g) => g.includes(w))) return [];
+  if (w.length < 5 || /\d/.test(w) || lex.words.has(w) || ABBR[w] || LOCAL.some((g) => g.includes(w)) || SPELLINGS.some((g) => g.includes(w))) return [];
   const out: [string, number][] = [];
   for (const [v, n] of lex.words) if (Math.abs(v.length - w.length) <= 2 && v[0] === w[0] && close(w, v)) out.push([v, n]);
   if (!out.length) for (const [v, n] of lex.words) if (Math.abs(v.length - w.length) <= 1 && close(w, v)) out.push([v, n]);
+  // A name spelt by its sound: "arakchi" is the desk's "araghchi", "hadramout" its "hadramawt" (18 Oct).
+  const sk = skeleton(w);
+  if (!out.length && sk.length >= 4) for (const [v, n] of lex.words) if (v[0] === w[0] && Math.abs(v.length - w.length) <= 3 && skeleton(v) === sk) out.push([v, n]);
   return out.sort((a, b) => b[1] - a[1]).slice(0, 3).map(([v]) => v);
 }
 
@@ -130,12 +133,20 @@ export function norm(s: string): string {
  */
 const LOCAL: string[][] = [
   ["drone", "uav", "unmanned", "unmanned aerial vehicle", "quadcopter", "samad", "shahed", "mq 9", "reaper", "loitering"],
-  ["missile", "ballistic", "cruise missile", "rocket", "hypersonic"],
+  ["missile", "cruise missile", "rocket", "hypersonic"],
   ["saree", "sarea", "saria", "sari", "yahya saree", "houthi military spokesperson", "houthi armed forces spokesperson", "houthi spokesperson"],
   ["houthi", "ansar allah", "ansarallah", "ansarullah"],
   ["air strike", "airstrike", "air raid", "warplane", "fighter jet", "bombing"],
   ["interception", "intercepted", "intercept", "shot down", "shoot down", "air defence", "air defense", "patriot"],
-  ["ship", "vessel", "tanker", "shipping", "red sea", "bab al mandab", "ukmto", "navy", "naval"],
+  // A ship is a ship: no sea or navy for it (18 Oct: "tanker attack" brought every Red Sea card).
+  ["tanker", "tankers", "oil tanker", "supertanker", "super tanker", "vlcc", "lng carrier", "lpg carrier", "product tanker", "crude tanker"],
+  ["ship", "vessel", "tanker", "shipping", "cargo ship", "container ship", "bulk carrier", "merchant ship", "supertanker", "freighter", "lng carrier"],
+  ["navy", "naval", "warship", "destroyer", "frigate", "aircraft carrier", "carrier strike group", "fleet"],
+  ["ballistic missile", "ballistic missiles", "ballistic"],
+  ["plane", "aircraft", "jet", "airliner", "flight", "boeing", "airbus"],
+  ["kurdish opposition", "kurdish parties", "kurdish groups", "kurdish militants", "kurdish separatists", "kdpi", "pdki", "pjak", "komala", "pak", "kurdish opposition parties", "kurdish party"],
+  ["mines", "mine", "naval mine", "naval mines", "sea mine", "minefield", "minesweeper", "mine clearing"],
+  ["sanctions", "sanction", "sanctioned", "ofac", "treasury designat", "blacklist"],
   ["casualties", "killed", "dead", "wounded", "injured", "death toll"],
   ["capture", "captured", "seized", "took control", "recaptured", "advance"],
   ["shelling", "shelled", "artillery", "mortar", "howitzer"],
@@ -148,11 +159,73 @@ const LOCAL: string[][] = [
   ["attack", "attacks", "attacked", "hit", "hits", "struck", "strike", "strikes", "targeted", "targeting", "targets", "bombed", "shelled"],
   // The kingdom, and the places a card names instead of it.
   ["saudi", "saudi arabia", "kingdom", "riyadh", "jazan", "jizan", "najran", "abha", "khamis mushait", "asir", "taif", "jeddah", "mecca", "yanbu", "tabuk", "dammam", "eastern province", "abqaiq", "ras tanura", "aramco"],
-  ["prisoner", "prisoner exchange", "prisoner swap", "detainee", "captive"],
+  ["prisoner exchange", "prisoners exchange", "exchange of prisoners", "prisoner swap", "prisoners swap", "release of prisoners", "prisoner release", "prisoners release", "freed prisoners", "detainee exchange", "detainees release"],
+  ["prisoner", "prisoners", "detainee", "detainees", "captive", "captives", "abductee"],
   ["talks", "negotiation", "truce", "ceasefire", "peace talks", "mediation"],
   ["displaced", "displacement", "idp", "refugee"],
   ["iran", "iranian", "irgc", "revolutionary guard"],
 ];
+
+/*
+ * One place or person, its spellings (18 Oct: "Hudaydah", "Taizz", "Sa'dah", "Mokha", "Hadramout",
+ * "Qalibaf", "Arakchi", "Bandar-e Abbas" found nothing or a handful). Each is the same thing, so each
+ * spelling is a sure word; the first is the desk's own.
+ */
+const SPELLINGS: string[][] = [
+  ["hodeidah", "hudaydah", "hodeida", "hudayda", "al hudaydah", "hudaidah", "hodaidah"],
+  ["taiz", "taizz", "taez", "tiaz"],
+  ["saada", "sadah", "saadah", "sada", "saddah"],
+  ["mocha", "mokha", "mukha", "al mukha", "makha"],
+  ["hadramawt", "hadramout", "hadhramaut", "hadramaut", "hadrmout", "hadramut"],
+  ["mayun", "perim", "mayyun", "mayoun", "barim"],
+  ["jizan", "jazan", "gizan", "jaizan"],
+  ["marib", "maarib", "mareb"],
+  ["shabwa", "shabwah", "shabweh"],
+  ["dhale", "dhalea", "al dhale", "ad dali", "dali", "dhalia", "al dhalea"],
+  ["sanaa", "sana", "sanaa city"],
+  ["bayda", "al bayda", "baydha", "beida", "al baydha"],
+  ["jawf", "al jawf", "jouf"],
+  ["hajjah", "hajja"],
+  ["mahra", "mahrah", "al mahrah", "al mahra"],
+  ["socotra", "soqotra", "suqutra"],
+  ["lahj", "lahij", "lahej"],
+  ["mukalla", "al mukalla", "mokalla"],
+  ["kamaran", "kamran"],
+  ["salif", "al salif", "saleef"],
+  ["khokha", "al khawkhah", "khawkhah", "khoukha"],
+  ["ras isa", "ras issa", "ras eisa"],
+  ["bab al mandab", "bab el mandeb", "bab al mandeb", "bab el mandab", "mandab"],
+  ["bandar abbas", "bandarabbas", "bandar e abbas", "bandar abas"],
+  ["hormuz", "hormoz", "hormuz strait", "ormuz"],
+  ["araghchi", "arakchi", "araqchi", "araghchy"],
+  ["ghalibaf", "qalibaf", "qalibaaf", "ghalibaaf"],
+  ["khamenei", "khamenehi", "khamenei s", "khameini"],
+  ["pezeshkian", "pezeshkiyan", "pezeshkyan", "pezeshkian s"],
+  ["isfahan", "esfahan", "isfehan"],
+  ["fordow", "fordo", "fordu"],
+  ["bushehr", "bushire", "busher", "bushehre"],
+  ["kharg", "khark"],
+  ["qeshm", "gheshm", "qishm"],
+  ["ahvaz", "ahwaz"],
+  ["hezbollah", "hizbullah", "hizbollah", "hezballah"],
+  ["ebnolreza", "ebnelreza", "ebn reza"],
+  ["chabahar", "chahbahar"],
+  ["kermanshah", "kirmanshah"],
+  ["supertanker", "super tanker", "supratanker", "vlcc", "very large crude carrier"],
+  ["emirati", "uae", "emirates", "united arab emirates"],
+  ["us navy", "american navy", "us warship", "us destroyer", "us aircraft carrier", "us carrier", "us naval", "us navys", "us fifth fleet", "fifth fleet"],
+  ["red sea", "the red sea"],
+  ["gulf of aden", "aden gulf"],
+  ["persian gulf", "arabian gulf"],
+  ["gulf of oman", "oman sea"],
+];
+/** The Saudi places in the kingdom's line: a search for one is for it, not for the whole kingdom (18 Oct: "Jizan" brought Riyadh). */
+const NARROW = new Set(["riyadh", "jazan", "jizan", "najran", "abha", "khamis mushait", "asir", "taif", "jeddah", "mecca", "yanbu", "tabuk", "dammam", "eastern province", "abqaiq", "ras tanura"]);
+/** A word's sound, roughly, for spellings no table names: "arakchi" and "araghchi", "hadramout" and "hadramawt". */
+export function skeleton(w: string): string {
+  return norm(w).replace(/ /g, "").replace(/(.)\1+/g, "$1").replace(/kh|gh|q|k|c(?=h)/g, "g").replace(/ch/g, "gh").replace(/sh/g, "s").replace(/th/g, "t").replace(/dh/g, "d").replace(/ph/g, "f").replace(/h$/, "")
+    .replace(/^[aeiouwy]+/, (m) => m[0]).replace(/(?!^)[aeiouwyh]/g, "").replace(/(.)\1+/g, "$1");
+}
 
 /** Words that never make an idea on their own. */
 const STOP = new Set("a an the of in on at to for and or by with from about all any what who when where which news report reports latest recent is are was were be it its this that these those did does do s".split(" "));
@@ -228,7 +301,11 @@ function ideaTerms(idea: string, people?: People): string[] | null {
   const long = words.map((w) => (ABBR[w] && !ABBR[w].includes(w) ? ABBR[w][0] : w)).join(" ");
   const terms = new Set<string>([idea, long]);
   for (const w of words) if (ABBR[w]) for (const x of ABBR[w]) terms.add(words.length === 1 ? x : long);
-  const table = LOCAL.find((g) => g.some((t) => t === idea || t === long || (!t.includes(" ") && idea.length >= 4 && !idea.includes(" ") && close(idea, t))));
+  // A place's or a person's spellings are all of it.
+  const spelt = SPELLINGS.find((g) => g.includes(idea) || g.includes(idea.replace(/ /g, "")));
+  if (spelt) for (const t of spelt) terms.add(t);
+  // A Saudi town is itself; only "Saudi" is the whole kingdom.
+  const table = NARROW.has(idea) || spelt ? null : LOCAL.find((g) => g.some((t) => t === idea || t === long || (!t.includes(" ") && idea.length >= 4 && !idea.includes(" ") && close(idea, t))));
   if (table) for (const t of table) terms.add(t);
   if (people) {
     for (const k of [...terms]) {
@@ -245,7 +322,10 @@ function ideaTerms(idea: string, people?: People): string[] | null {
     const m = t.match(/^(\w+) (?:foreign minister|secretary of state)$/);
     if (m) terms.add(`${m[1]} counterpart`);
   }
-  return terms.size > 1 || table || words.length > 1 ? [...terms] : null;
+  // A phrase of a line headed by one word ("naval mine": mines) takes the line's single words as sure ones too.
+  const out = [...terms];
+  if (table && !table[0].includes(" ")) out.unshift(table[0]);
+  return terms.size > 1 || table || words.length > 1 ? [...new Set(out)] : null;
 }
 
 /**
@@ -259,9 +339,27 @@ export function understandLocally(q: string, people?: People, places?: Set<strin
   let known = true;
   let about = q;
   const ideas = q.split(/\s*(?:,|&|\+|\band\b|\bwith\b|\bvs\.?(?=\s)|\bversus\b)\s*/i).map(norm);
-  for (const raw of ideas) {
+  for (const raw0 of ideas) {
+    // Persian's linking "e" ("Bandar-e Abbas") is no word.
+    const raw = raw0.replace(/(?<=\S) e (?=\S)/g, " ");
     let idea = raw.split(" ").filter((w) => w && !STOP.has(w)).join(" ");
     if (!idea) continue;
+    // A place or thing of several words the desk knows is one idea, apart from the rest: "red sea ship" is the Red Sea and a ship.
+    {
+      const ws = idea.split(" ");
+      const known = (p: string) => SPELLINGS.some((g) => g.includes(p)) || LOCAL.some((g) => g.includes(p)) || !!places?.has(p);
+      let cut = false;
+      for (let n = Math.min(3, ws.length - 1); n >= 2 && !cut; n--) {
+        for (let i = 0; i + n <= ws.length; i++) {
+          const p = ws.slice(i, i + n).join(" ");
+          if (!known(p)) continue;
+          const rest = [...ws.slice(0, i), ...ws.slice(i + n)].join(" ");
+          if (rest) { ideas.push(p, rest); cut = true; }
+          break;
+        }
+      }
+      if (cut) continue;
+    }
     if (lex) {
       // An outlet the query names, the longest first: "al jazeera", "reuters".
       const ws = idea.split(" ");
@@ -291,7 +389,7 @@ export function understandLocally(q: string, people?: People, places?: Set<strin
       continue;
     }
     if (places?.has(idea)) {
-      groups.push([idea]);
+      groups.push(SPELLINGS.find((g) => g.includes(idea)) ?? [idea]);
       continue;
     }
     for (const w of idea.split(" ")) {

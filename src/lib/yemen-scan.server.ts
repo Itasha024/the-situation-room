@@ -27,6 +27,7 @@ import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, tr
 import { isOfficialBody } from "./desk/numbers.ts";
 import { leadSpeaker } from "./desk/speakers.ts";
 import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS, STRIKE_ABROAD_MS, sameStrikeAbroad, OWN_RETELL_MS, ownRetelling, ONE_EVENT_MS, oneEventTwoTypes, RARE_FIGURE_MS, sameRareFigure } from "./desk/copies.ts";
+import { type Card as SameCard, eventRule, joinInto, type Rule as FoldRule, talkRule } from "./desk/fold-same.ts";
 import { type OutletSide, homeOutlet, isAggregator, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -1565,6 +1566,8 @@ const SAME_HEADLINE_COUNTED_MS = 8 * 3600_000;
 const CLAIM_WINDOW_MS = 30 * 60_000;
 /** The reader's "same event as": no further back than this. */
 const DUPLICATE_WINDOW_MS = 6 * 3600_000;
+/** How far back the one-event rules of fold-same.ts look for a card: a ship incident holds for a day. */
+const SAME_FOLD_MS = 24 * 3600_000;
 /** A relay and the card of the outlet it cites: one story within the day. */
 const RELAY_HOME_MS = 24 * 3600_000;
 /** Two relays of one body's statement: the same story within two hours, or any of its words within twenty minutes. */
@@ -1862,6 +1865,34 @@ export function foldIntoPublished(
     // Two known figures' words are two cards: Hegseth's interview was folded
     // into a card on Trump's post from five hours earlier (8 Oct).
     if (home && otherFigure(home.summary, r.summary)) home = undefined;
+    // One event, one card (fold-same.ts, 18 Oct review): one official's
+    // remarks that day, one ship incident in 24 hours, one district's toll,
+    // one blast abroad, one article on a mirror host, one channel's same
+    // headline. The desk's read folds the copies already stored by the same rules.
+    if (!home) {
+      const near = homes.filter((o) => same(o) && (Date.parse(o.at) <= t || known(o)) && Math.abs(t - Date.parse(o.at)) <= SAME_FOLD_MS);
+      const asCard = (x: LiveReport) => x as unknown as SameCard;
+      let hit: [LiveReport, FoldRule] | null = null;
+      for (const pass of [eventRule, talkRule]) {
+        for (const o of near) {
+          const rule = pass(asCard(o), asCard(r));
+          if (rule) {
+            hit = [o, rule];
+            break;
+          }
+        }
+        if (hit) break;
+      }
+      if (hit) {
+        const [into, rule] = hit;
+        gone.add(r);
+        foldTrail.set(r.url, `${into.source}: ${into.summary.slice(0, 90)}`);
+        foldTrail.set(r.fp, `${into.source}: ${into.summary.slice(0, 90)}`);
+        joinInto(asCard(into), asCard(r), rule);
+        if (!inPayload.has(into.fp)) touched.add(into);
+        continue;
+      }
+    }
     if (!home) continue;
     gone.add(r);
     // By id too: a relay traced to its original carries the original's link.
@@ -2168,8 +2199,9 @@ export function leadRank(r: LiveReport): number {
 async function storedCards(desk: DeskId = "yemen"): Promise<LiveReport[]> {
   try {
     const store = await getStore();
-    const since = Date.now() - STORY_WINDOW_MS;
-    return (await store.recentDesk(150, undefined, { events: false, desk })).reports
+    // A day back, 300 rows: a ship incident folds for 24 hours (fold-same.ts), and the Iran desk posts some 150 cards a day.
+    const since = Date.now() - Math.max(STORY_WINDOW_MS, SAME_FOLD_MS);
+    return (await store.recentDesk(300, undefined, { events: false, desk })).reports
       .filter((r) => Date.parse(String(r.at)) >= since)
       .map((r) => ({ ...(r as unknown as LiveReport), text: String((r as { text?: string }).text ?? ""), live: true as const }));
   } catch {

@@ -12,6 +12,7 @@ import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
 import { serveIranPins, serveYemenPins } from "@/lib/desk/serve-map-pins";
 import { serveCard } from "@/lib/desk/copy-rules";
+import { type Card as SameCard, foldServed } from "@/lib/desk/fold-same";
 
 /**
  * The accumulated desk — every report the clock has collected, newest first.
@@ -67,6 +68,11 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
       // An alert, an interception or an attack in Saudi Arabia is the Houthis' whatever was stored (17 Oct).
       (r as Record<string, unknown>).actor = houthiAttack(x) ? "houthi" : a && a !== "unclear" ? a : pinSideOf(x) ?? "unclear";
     }
+  }
+  // One event, one card (fold-same.ts): copies stored before the rules fold into their card as
+  // the desk is read, the way the pins' rules apply; the rows stay as they are.
+  if (slice.reports.length) {
+    slice.reports = foldServed(slice.reports as unknown as SameCard[]).reports as unknown as typeof slice.reports;
   }
   // The Iran map's own pins pass its scope as they are served, so a pin stored under older rules never shows.
   // The Iran map's own pins pass its scope as they are served (serve-map-pins.ts).

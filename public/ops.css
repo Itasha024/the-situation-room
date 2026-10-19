@@ -526,7 +526,10 @@ html[data-view="ops"] .ops-dock .time-filter .tf-short { display: inline !import
 /* The numbers, fitted to the panel: their tabs in a full row, the control bars one under the other. */
 html[data-view="ops"] .ops-left .num-cat { display: flex; flex-wrap: wrap; max-width: 100% }
 html[data-view="ops"] .ops-left .num-cat button { flex: 1 1 auto }
-html[data-view="ops"] .ops-left .bars { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px !important; max-width: 100% }
+html[data-view="ops"] .ops-left .bars { display: grid !important; grid-template-columns: 1fr; gap: 8px !important; max-width: 100% }
 html[data-view="ops"] .ops-left .bars .bar { width: auto !important; min-width: 0 !important; margin: 0 !important }
-html[data-view="ops"] .ops-left .bars .bar h3 { font-size: 12px !important; letter-spacing: .1em !important; overflow-wrap: anywhere; margin: 0 0 4px !important }
+html[data-view="ops"] .ops-left .bars .bar h3 { font-size: 12px !important; letter-spacing: .08em !important; margin: 0 0 4px !important }
 html[data-view="ops"] .ops-pane { overflow-x: hidden }
+html[data-view="ops"] .ops-sw > span, html[data-view="ops"] .ops-sw small { font-style: normal }
+html[data-view="ops"] .ops-quick span { display: none }
+html[data-view="ops"] .ops-dock .time-filter input { width: 112px }

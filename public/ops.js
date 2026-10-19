@@ -16,6 +16,9 @@
  */
 (function () {
   'use strict';
+  // Once a page (a copy of this script loaded twice would lay the page out twice).
+  if (window.__opsView) return;
+  window.__opsView = true;
   const H = document.documentElement;
   const $ = (s, r) => (r || document).querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -150,44 +153,81 @@
   const noteOf = (e) => (e.desk === 'iran' ? A('iranPopupHtml')(e) : A('popupHtml')(e)) || esc(e.label || '');
 
   /* ---------- The frame ---------- */
-  const S = { left: true, right: true, dock: true, tab: null, ptab: 'map', sel: null, tool: null, cast: false, air: false, airMil: false, sea: false };
-  try { Object.assign(S, JSON.parse(localStorage.getItem('ops-state') || '{}'), { tool: null, sel: null, cast: false }); } catch (e) { /* none kept */ }
-  const keep = () => { try { const { left, right, dock, tab, air, airMil, sea } = S; localStorage.setItem('ops-state', JSON.stringify({ left, right, dock, tab, air, airMil, sea })); } catch (e) { /* private */ } };
+  const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, cast: false, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: false };
+  try { Object.assign(S, JSON.parse(localStorage.getItem('ops-state2') || '{}'), { tool: null, sel: null, cast: false }); } catch (e) { /* none kept */ }
+  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills })); } catch (e) { /* private */ } };
 
-  let shell, bar, leftEl, dock, stage, mapWrap;
-  const LEFT_TABS = {
-    yemen: [['situation', 'Latest'], ['fronts-wrap', 'Fronts'], ['cas-wrap', 'Numbers'], ['timeline-wrap', 'Timeline']],
-    iran: [['situation', 'Latest'], ['fronts-wrap', 'Arenas'], ['cas-wrap', 'Numbers'], ['timeline-wrap', 'Timeline']],
-    all: [['g-body', 'Stories']],
+  let shell, strip, bar, nav, leftEl, rightEl, dock, stage, mapWrap;
+  const NAV_ICON = {
+    brief: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4.5" y="3.5" width="15" height="17" rx="1.5"/><path d="M8 8h8M8 11.5h8M8 15h5"/></g></svg>',
+    fronts: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c3-1 4-5 7-5s3 4 6 4 3-3 5-4"/><path d="M6 13.5l1.6-2.6M11 9.8V6.8M16 13.6l1.6-2.4"/></g></svg>',
+    numbers: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20h16"/><path d="M7 20v-6M12 20V6M17 20v-9"/></g></svg>',
+    timeline: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 4v16"/><circle cx="6" cy="7" r="1.6" fill="currentColor"/><circle cx="6" cy="13" r="1.6" fill="currentColor"/><path d="M10 7h9M10 13h7M10 18.5h5"/></g></svg>',
+    theatres: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.5 5.2 3.5 8.5s-1.1 6.1-3.5 8.5c-2.4-2.4-3.5-5.2-3.5-8.5S9.6 5.9 12 3.5z"/></g></svg>',
+    layers: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="M3 12l9 4.5 9-4.5M3 16l9 4.5 9-4.5"/></g></svg>',
   };
+  const LEFT_TABS = {
+    yemen: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Fronts', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
+    iran: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
+    all: [['ops-theatres', 'Theatres', 'theatres']],
+  };
+  const PAGE_NAME = { all: 'All theatres', iran: 'Iran', yemen: 'Yemen' };
+  /* Date-time group, Zulu: 192047Z OCT 26. */
+  const dtg = (t) => { const d = new Date(t); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}Z ${d.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' }).toUpperCase()} ${String(d.getUTCFullYear()).slice(2)}`; };
+
   function build() {
     root.classList.add('ops-on');
     shell = root;
-    // The bar: the masthead and the desk line in one row, and the view's own buttons.
+    // The status strip: live, the time in Zulu and on the desk's clock, the last update, the counts.
+    strip = document.createElement('div');
+    strip.className = 'ops-strip';
+    strip.innerHTML = `<span class="ops-live"><i></i>Live</span>
+      <span class="ops-sf"><small>DTG</small><b id="ops-dtg">--</b></span>
+      ${PAGE !== 'all' ? `<span class="ops-sf"><small>${esc(CAP[PAGE])}</small><b id="ops-local">--:--</b></span>` : `<span class="ops-sf"><small>Sanaa</small><b data-tz="Asia/Aden">--:--</b></span><span class="ops-sf"><small>Tehran</small><b data-tz="Asia/Tehran">--:--</b></span><span class="ops-sf"><small>Jerusalem</small><b data-tz="Asia/Jerusalem">--:--</b></span>`}
+      <span class="ops-sf ops-upd"></span>
+      <span class="ops-sf ops-cnt"><small>Events 24 h</small><b id="ops-n24">–</b></span>
+      <span class="ops-sf ops-cnt"><small>48 h</small><b id="ops-n48">–</b></span>
+      <span class="ops-tag">Open source</span>`;
+    // The bar: the name, the theatres, the view's own buttons.
     bar = document.createElement('div');
     bar.className = 'ops-bar';
     const mast = $('.mast', root), top = $('header.top', root);
     if (mast) bar.appendChild(mast);
-    if (top) bar.appendChild(top);
+    if (top) {
+      bar.appendChild(top);
+      const st = $('.stamp', top);
+      if (st) $('.ops-upd', strip).appendChild(st);
+    }
     const acts = document.createElement('div');
     acts.className = 'ops-acts';
     acts.innerHTML = `
-      ${PAGE !== 'all' ? `<span class="ops-z" title="Coordinated Universal Time (Zulu)"><b id="ops-z">--:--</b> UTC</span>` : ''}
-      <button type="button" class="ops-btn" data-op="traffic" aria-expanded="false" title="Live traffic (T)">${ICON.plane}<span>Live traffic</span></button>
-      <button type="button" class="ops-btn ops-ico" data-op="cast" aria-pressed="false" title="Broadcast mode, for screens (B)">${ICON.cast}<span class="sr">Broadcast mode</span></button>
+      <button type="button" class="ops-btn" data-op="layers" aria-expanded="false" title="Layers: base map, aircraft, ships, grid (T)">${NAV_ICON.layers}<span>Layers</span></button>
+      <button type="button" class="ops-btn" data-op="traffic" title="Live aircraft and ships (T)">${ICON.plane}<span>Traffic</span></button>
+      <button type="button" class="ops-btn ops-ico" data-op="cast" aria-pressed="false" title="Broadcast mode, for screens and TV (B)">${ICON.cast}<span class="sr">Broadcast mode</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="theme" title="Day or night">${ICON.theme}<span class="sr">Day or night</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="keys" title="Keys (?)">${ICON.keys}<span class="sr">Keys</span></button>
-      <a class="ops-classic" href="?view=classic" title="The site's classic layout">Classic view</a>`;
+      <a class="ops-classic" href="?view=classic" title="The site's classic layout">Classic</a>`;
     bar.appendChild(acts);
     root.insertBefore(bar, root.firstChild);
+    root.insertBefore(strip, bar);
 
-    // The left rail: the brief's parts as tabs.
+    // The tool rail and the left panel: the brief's parts.
+    const tabs = LEFT_TABS[PAGE].filter(([id]) => id === 'ops-theatres' || document.getElementById(id));
+    nav = document.createElement('nav');
+    nav.className = 'ops-nav';
+    nav.setAttribute('aria-label', 'Panels');
+    nav.innerHTML = tabs.map(([id, n, ic]) => `<button type="button" data-tab="${id}" title="${esc(n)}">${NAV_ICON[ic]}<span>${esc(n)}</span></button>`).join('')
+      + `<span class="ops-nav-sp"></span><button type="button" data-op="layers" title="Layers (T)">${NAV_ICON.layers}<span>Layers</span></button>`;
     leftEl = document.createElement('aside');
     leftEl.className = 'ops-left';
-    const tabs = LEFT_TABS[PAGE].filter(([id]) => document.getElementById(id));
-    leftEl.innerHTML = `<div class="ops-lhead">${tabs.length > 1 ? `<nav class="ops-tabs" role="tablist">${tabs.map(([id, n]) => `<button type="button" role="tab" data-tab="${id}">${n}</button>`).join('')}</nav>` : `<h2 class="ops-ltitle">${esc(tabs[0] ? tabs[0][1] : '')}</h2>`}<button type="button" class="ops-fold" data-op="left" title="Fold the left column ([)">${ICON.left}</button></div><div class="ops-panes"></div>`;
+    leftEl.innerHTML = `<div class="ops-phead"><h2 class="ops-ptitle"></h2><button type="button" class="ops-fold" data-op="left" title="Close the panel ([)">${ICON.left}</button></div><div class="ops-panes"></div>`;
     const panes = $('.ops-panes', leftEl);
-    tabs.forEach(([id]) => { const el = document.getElementById(id); el.classList.add('ops-pane'); panes.appendChild(el); });
+    tabs.forEach(([id]) => {
+      let el = document.getElementById(id);
+      if (!el) { el = document.createElement('section'); el.id = id; }
+      el.classList.add('ops-pane');
+      panes.appendChild(el);
+    });
     const foot = root.querySelector(':scope > footer');
     if (foot) panes.appendChild(foot);
     if (!tabs.some(([id]) => id === S.tab)) S.tab = tabs[0] && tabs[0][0];
@@ -196,33 +236,37 @@
     let item = stage;
     while (item.parentNode !== root) item = item.parentNode;
     item.classList.add('ops-stage');
+    root.insertBefore(nav, item);
     root.insertBefore(leftEl, item);
     mapWrap = $('.map-wrap', stage);
 
-    // The rail on the All page: every desk's reports and Trump's latest.
-    if (PAGE === 'all') buildAllRail();
-    const rail = $('#rail', root) || $('.ops-rail', root);
-    if (rail) {
-      const f = document.createElement('button');
-      f.type = 'button'; f.className = 'ops-fold ops-fold-r'; f.dataset.op = 'right'; f.title = 'Fold the reports (])'; f.innerHTML = ICON.right;
-      rail.insertBefore(f, rail.firstChild);
-    }
+    // The right panel: the reports, and the events placed on the map.
+    rightEl = document.createElement('aside');
+    rightEl.className = 'ops-right';
+    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events <small class="ops-ev-n"></small></button></nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
+      <div class="ops-rpane ops-rp-rep"></div>
+      <div class="ops-rpane ops-rp-ev"><div class="ops-evf"><input class="ops-q ops-evq" type="search" placeholder="Filter events: a place, a side, a weapon" aria-label="Filter the events"><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>`;
+    root.insertBefore(rightEl, item.nextSibling);
+    const rail = $('#rail', root);
+    if (rail) $('.ops-rp-rep', rightEl).appendChild(rail);
+    const split = $('#rail-splitter', root);
+    if (split) split.hidden = true;
+    if (PAGE === 'all') buildAllRail($('.ops-rp-rep', rightEl));
 
-    // The dock under the map: the time filter, Who and What, the last 48 hours, the latest events.
+    // The strip under the map: the time filter, Who and What, the last 48 hours.
     dock = document.createElement('div');
     dock.className = 'ops-dock';
-    dock.innerHTML = `<div class="ops-drow ops-dtop"><div class="ops-time"></div><button type="button" class="ops-fold ops-fold-d" data-op="dock" title="Fold the panel under the map (\\)">${ICON.down}</button></div>
+    dock.innerHTML = `<div class="ops-drow ops-dtop"><div class="ops-quick" role="group" aria-label="Show the last"><span>Last</span><button type="button" data-qr="1">24 h</button><button type="button" data-qr="2">48 h</button><button type="button" data-qr="7">7 days</button></div><div class="ops-time"></div><button type="button" class="ops-fold ops-fold-d" data-op="dock" title="Fold the timeline (\\)">${ICON.down}</button></div>
       <div class="ops-drow ops-who"></div>
       <div class="ops-drow ops-mx">
         <div class="ops-act"><div class="ops-act-h"><b>Last 48 hours</b><span class="ops-act-sel" hidden></span><small>Drag across the hours to show only their events</small></div><svg class="ops-amx" role="img" aria-label="Events in the last 48 hours, by side and hour"></svg></div>
-        <div class="ops-log"><div class="ops-act-h"><b>Latest events</b><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>
       </div>`;
     const tb = $('.toolbar', root);
     if (tb) $('.ops-time', dock).appendChild(tb);
     const legend = $('#legend', root) || $('#h-legend', root);
     if (legend) {
       $('.ops-who', dock).appendChild(legend);
-      // Open, always: in the dock it is the Who and What rows (the page draws it again now and then).
+      // Open, always: in the strip it is the Who and What rows (the page draws it again now and then).
       const open = () => { if (legend.classList.contains('collapsed')) { const h = $('.leg-head', legend); if (h) h.click(); } };
       open();
       new MutationObserver(open).observe(legend, { attributes: true, attributeFilter: ['class'], childList: true });
@@ -231,16 +275,36 @@
     // The phone's tabs: the map, then each part of the page.
     const pt = document.createElement('nav');
     pt.className = 'ops-ptabs';
-    pt.innerHTML = [['map', 'Map'], ...tabs, ['rail', 'Reports']].map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
+    pt.innerHTML = [['map', 'Map'], ...tabs, ['rail', 'Reports'], ['events', 'Events']].map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
     root.insertBefore(pt, bar.nextSibling);
+    if (PAGE === 'all') drawTheatres();
     paintFrame();
     if (window.ResizeObserver) new ResizeObserver(sizeDock).observe(dock);
     sizeDock();
     wireFrame();
   }
+  /* The last day, two days or week on the map, through the page's own period boxes. */
+  const shiftYmd = (ymd, n) => { const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  function quickRange(days) {
+    const per = $('#btn-period', root), from = $('#map-date', root), to = $('#map-to', root), box = $('#tf-range', root);
+    if (!per || !from || !to) return false;
+    if (box && box.hidden) per.click();
+    const end = to.max || to.value;
+    if (!end) return false;
+    from.value = shiftYmd(end, -(days - 1));
+    to.value = end;
+    to.dispatchEvent(new Event('change', { bubbles: true }));
+    S.qr = days;
+    paintQuick();
+    return true;
+  }
+  function paintQuick() {
+    const on = $('#btn-period', root) && $('#btn-period', root).classList.contains('on');
+    dock.querySelectorAll('[data-qr]').forEach((b) => b.setAttribute('aria-pressed', String(on && +b.dataset.qr === S.qr)));
+  }
   function sizeDock() {
     if (!dock) return;
-    // The map keeps at least 60% of its box, whatever the dock holds.
+    // The map keeps at least 60% of its box, whatever the strip holds.
     const h = isPhone() || !S.dock ? 0 : Math.min(dock.offsetHeight, Math.round(mapWrap.clientHeight * 0.4));
     mapWrap.style.setProperty('--dock-h', h + 'px');
     const m = getMap();
@@ -251,9 +315,14 @@
     root.classList.toggle('ops-noright', !S.right);
     root.classList.toggle('ops-nodock', !S.dock);
     H.classList.toggle('ops-cast', S.cast);
+    H.classList.toggle('ops-fills', !!S.fills);
     root.dataset.opsPtab = S.ptab;
-    leftEl.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === S.tab)));
+    root.dataset.opsRtab = S.rtab;
+    nav.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(S.left && b.dataset.tab === S.tab)));
+    const cur = LEFT_TABS[PAGE].find(([id]) => id === S.tab);
+    $('.ops-ptitle', leftEl).textContent = cur ? cur[1] : '';
     leftEl.querySelectorAll('.ops-pane').forEach((p) => p.classList.toggle('on', p.id === S.tab));
+    rightEl.querySelectorAll('[data-rtab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.rtab === S.rtab)));
     root.querySelectorAll('[data-ptab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ptab === S.ptab)));
     const c = $('[data-op="cast"]', bar); if (c) c.setAttribute('aria-pressed', String(S.cast));
     setTimeout(sizeDock, 30);
@@ -261,10 +330,22 @@
   }
   function wireFrame() {
     root.addEventListener('click', (ev) => {
-      const t = ev.target.closest('[data-op],[data-tab],[data-ptab]');
+      const t = ev.target.closest('[data-op],[data-tab],[data-ptab],[data-rtab]');
       if (!t || !root.contains(t)) return;
-      if (t.dataset.tab) { S.tab = t.dataset.tab; keep(); paintFrame(); return; }
-      if (t.dataset.ptab) { S.ptab = t.dataset.ptab; if (LEFT_TABS[PAGE].some(([id]) => id === S.ptab)) S.tab = S.ptab; paintFrame(); if (S.ptab !== 'map') window.scrollTo({ top: 0 }); return; }
+      if (t.dataset.tab) {
+        // The open panel's own button closes it again.
+        if (S.left && S.tab === t.dataset.tab && !isPhone()) S.left = false; else { S.tab = t.dataset.tab; S.left = true; }
+        keep(); paintFrame(); return;
+      }
+      if (t.dataset.rtab) { S.rtab = t.dataset.rtab; keep(); paintFrame(); return; }
+      if (t.dataset.ptab) {
+        const p = t.dataset.ptab;
+        S.ptab = p;
+        if (LEFT_TABS[PAGE].some(([id]) => id === p)) S.tab = p;
+        if (p === 'rail') S.rtab = 'rep';
+        if (p === 'events') S.rtab = 'ev';
+        paintFrame(); if (p !== 'map') window.scrollTo({ top: 0 }); return;
+      }
       const op = t.dataset.op;
       if (op === 'left') { S.left = !S.left; keep(); paintFrame(); }
       else if (op === 'right') { S.right = !S.right; keep(); paintFrame(); }
@@ -272,31 +353,37 @@
       else if (op === 'cast') { S.cast = !S.cast; paintFrame(); paintCast(); }
       else if (op === 'keys') toggleKeys();
       else if (op === 'theme') { const set = app('setTheme'), nx = app('nextTheme'); if (set && nx) set(nx(app('THEME'))); }
-      else if (op === 'traffic') toggleTrafficMenu();
+      else if (op === 'layers') toggleLayers();
+      else if (op === 'traffic') { if (!S.air && !S.sea) { S.air = true; S.sea = true; keep(); runTraffic(); } toggleLayers(true); }
     });
-    // The column edges, to open a folded column again.
+    dock.addEventListener('click', (ev) => {
+      const q = ev.target.closest('[data-qr]');
+      if (q) quickRange(+q.dataset.qr);
+      else if (ev.target.closest('.time-filter button')) { S.qr = 0; setTimeout(paintQuick, 50); }
+    });
+    rightEl.addEventListener('input', (ev) => { if (ev.target.matches('.ops-evq')) { evQ = ev.target.value.trim().toLowerCase(); drawLog(recent()); } });
+    // The column edges, to open a closed panel again.
     ['left', 'right'].forEach((side) => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = `ops-unfold ops-unfold-${side}`; b.dataset.op = side;
-      b.title = side === 'left' ? 'Open the left column ([)' : 'Open the reports (])';
+      b.title = side === 'left' ? 'Open the panel ([)' : 'Open the reports (])';
       b.innerHTML = side === 'left' ? ICON.right : ICON.left;
       mapWrap.appendChild(b);
     });
     const ud = document.createElement('button');
-    ud.type = 'button'; ud.className = 'ops-unfold ops-unfold-dock'; ud.dataset.op = 'dock'; ud.title = 'Open the panel under the map (\\)';
-    ud.innerHTML = `<span>Time, Who and What, last 48 hours</span>`;
+    ud.type = 'button'; ud.className = 'ops-unfold ops-unfold-dock'; ud.dataset.op = 'dock'; ud.title = 'Open the timeline (\\)';
+    ud.innerHTML = `<span>Time · Who and What · Last 48 hours</span>`;
     mapWrap.appendChild(ud);
     addEventListener('resize', () => { sizeDock(); drawMatrix(); });
   }
 
-  /* The All page's rail: both desks' reports, newest first, and Trump's latest (home.js's own cards). */
+  /* The All page's reports: both desks', newest first, and Trump's latest (home.js's own cards). */
   let allRail = null, allTab = 'rep', allN = 60, allQ = '';
-  function buildAllRail() {
-    allRail = document.createElement('aside');
+  function buildAllRail(into) {
+    allRail = document.createElement('div');
     allRail.className = 'rail ops-rail';
     allRail.id = 'ops-rail';
-    stage.appendChild(allRail);
-    stage.classList.add('ops-has-rail');
+    into.appendChild(allRail);
     allRail.addEventListener('click', (ev) => {
       const t = ev.target.closest('[data-rt],[data-more]');
       if (!t) return;
@@ -314,18 +401,58 @@
     const cards = list.slice(0, allN).map((r) => (allTab === 'rep' ? h.card(r) : h.trumpCard(r))).join('');
     const body = `<div id="feed" class="feed">${cards || '<p class="ops-empty">Nothing here yet.</p>'}</div>${list.length > allN ? '<button type="button" class="more" data-more>Show more</button>' : ''}`;
     if (listOnly && allRail.querySelector('.ops-rbody')) { allRail.querySelector('.ops-rbody').innerHTML = body; return; }
-    const fold = allRail.querySelector('.ops-fold-r');
-    allRail.innerHTML = `<div class="rail-head ops-rhead"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rt="rep" aria-selected="${allTab === 'rep'}">Latest reports</button><button type="button" role="tab" data-rt="tr" aria-selected="${allTab === 'tr'}">Trump’s latest</button></nav></div>
+    allRail.innerHTML = `<div class="ops-seg" role="tablist"><button type="button" role="tab" data-rt="rep" aria-selected="${allTab === 'rep'}">All desks</button><button type="button" role="tab" data-rt="tr" aria-selected="${allTab === 'tr'}">Trump’s latest</button></div>
       <input class="ops-q" type="search" placeholder="Filter: a place, a person, a weapon" value="${esc(allQ)}" aria-label="Filter the reports">
       <div class="ops-rbody">${body}</div>`;
-    if (fold) allRail.insertBefore(fold, allRail.firstChild);
+  }
+
+  /* The All page's left panel: each theatre at a glance, from the events and reports the page has. */
+  const DESK_INFO = { iran: ['Iran', 'Israel, the US, Iran and its allies', '/iran-conflict-desk'], yemen: ['Yemen', 'The Houthis, the government, the coalition, the Red Sea', '/yemen-conflict-desk'] };
+  function drawTheatres() {
+    const el = document.getElementById('ops-theatres');
+    const h = window.__home;
+    if (!el || !h || !h.D) return;
+    const now = Date.now();
+    const ev = events();
+    el.innerHTML = Object.entries(DESK_INFO).map(([desk, [name, sub, href]]) => {
+      const mine = ev.filter((e) => e.desk === desk);
+      const d24 = mine.filter((e) => now - Date.parse(e.at) < 864e5), d48 = mine.filter((e) => now - Date.parse(e.at) < 1728e5);
+      const by = new Map();
+      d24.forEach((e) => { const s = sideOf(e); const r = by.get(s.name) || { s, n: 0 }; r.n++; by.set(s.name, r); });
+      const sides = [...by.values()].sort((a, b) => b.n - a.n);
+      const max = Math.max(1, ...sides.map((x) => x.n));
+      const reps = (h.D.reports || []).filter((r) => (r.desks || []).includes(desk));
+      const lastRep = reps[0];
+      const latest = mine.slice().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
+      return `<article class="ops-th">
+        <header><h3><a href="${href}">${esc(name)}</a></h3><a class="ops-th-go" href="${href}">Open desk ${ICON.right}</a></header>
+        <p class="ops-th-sub">${esc(sub)}</p>
+        <dl class="ops-kpi"><div><dt>Events 24 h</dt><dd>${d24.length}</dd></div><div><dt>48 h</dt><dd>${d48.length}</dd></div><div><dt>Last report</dt><dd>${lastRep ? esc(ago(lastRep.at).replace(' ago', '')) : '–'}</dd></div></dl>
+        ${sides.length ? `<ul class="ops-bars">${sides.map((x) => `<li><span>${esc(x.s.name)}</span><i style="--c:${x.s.c};--w:${Math.round((x.n / max) * 100)}%"></i><b>${x.n}</b></li>`).join('')}</ul>` : '<p class="ops-empty">No events on the map in the last 24 hours.</p>'}
+        ${latest.length ? `<ol class="ops-th-ev">${latest.map((e) => `<li><button type="button" data-thev="${esc(keyOf(e))}"><time>${esc(hm(e.at))}</time><span>${esc(e.label || e.place || '')}</span></button></li>`).join('')}</ol>` : ''}
+      </article>`;
+    }).join('') + `<p class="ops-th-note">Every mark on the map is a report placed where it happened. Open a desk for its brief, fronts, numbers and timeline.</p>`;
+    if (!el._wired) {
+      el._wired = true;
+      el.addEventListener('click', (ev) => { const b = ev.target.closest('[data-thev]'); if (b) { const e = events().find((x) => keyOf(x) === b.dataset.thev); if (e) focusEvent(e); } });
+    }
   }
 
   /* ---------- Clocks ---------- */
   function tick() {
-    const z = document.getElementById('ops-z');
-    if (z) z.textContent = new Date().toISOString().slice(11, 16);
+    const now = Date.now();
+    const z = document.getElementById('ops-dtg');
+    if (z) z.textContent = dtg(now);
+    const l = document.getElementById('ops-local');
+    if (l && PAGE !== 'all') l.textContent = hm(now, TZ[PAGE]);
+    strip && strip.querySelectorAll('[data-tz]').forEach((b) => { b.textContent = hm(now, b.dataset.tz); });
     if (S.cast) paintCast();
+  }
+  function counts() {
+    const now = Date.now(), ev = events();
+    const n24 = ev.filter((e) => now - Date.parse(e.at) < 864e5).length, n48 = ev.filter((e) => now - Date.parse(e.at) < 1728e5).length;
+    const a = document.getElementById('ops-n24'), b = document.getElementById('ops-n48');
+    if (a) a.textContent = n24; if (b) b.textContent = n48;
   }
 
   /* ---------- On the map: place, scale, overview, ruler, rings, link ---------- */
@@ -475,7 +602,7 @@
     const by = new Map();
     list.forEach((e) => { const s = sideOf(e); const r = by.get(s.name) || { name: s.name, c: s.c, ev: [] }; r.ev.push(e); by.set(s.name, r); });
     rows = [...by.values()].sort((a, b) => b.ev.length - a.ev.length);
-    const W = Math.max(240, svg.clientWidth || svg.parentNode.clientWidth || 600), LW = 132, RH = 13, top = 4;
+    const W = Math.max(240, svg.clientWidth || svg.parentNode.clientWidth || 600), LW = 132, RH = 11, top = 3;
     const H2 = top + Math.max(1, rows.length) * RH + 18;
     svg.setAttribute('viewBox', `0 0 ${W} ${H2}`);
     svg.style.height = H2 + 'px';
@@ -493,14 +620,14 @@
     }
     rows.forEach((r, i) => {
       const y = top + i * RH;
-      out += `<text class="lab" x="${LW - 8}" y="${y + 9.5}" text-anchor="end">${esc(r.name.length > 20 ? r.name.slice(0, 19) + '…' : r.name)}</text>`;
+      out += `<text class="lab" x="${LW - 8}" y="${y + 8.5}" text-anchor="end">${esc(r.name.length > 20 ? r.name.slice(0, 19) + '…' : r.name)}</text>`;
       out += `<line class="row" x1="${LW}" x2="${W - 6}" y1="${y + 6}" y2="${y + 6}"/>`;
       // An hour's events as one block, darker with more.
       const bins = new Map();
       r.ev.forEach((e) => { const b = Math.floor(Date.parse(e.at) / hour); bins.set(b, (bins.get(b) || 0) + 1); });
       bins.forEach((n, b) => {
         const a = Math.max(t0, b * hour), z = Math.min(now, (b + 1) * hour);
-        out += `<rect class="cell" x="${x(a).toFixed(1)}" y="${y + 1.5}" width="${Math.max(2, x(z) - x(a) - 0.8).toFixed(1)}" height="9" rx="1.5" fill="${r.c}" fill-opacity="${Math.min(1, 0.35 + n * 0.16).toFixed(2)}"><title>${esc(r.name)}: ${n} event${n === 1 ? '' : 's'}, ${hm(b * hour, VIEW_TZ())}–${hm((b + 1) * hour, VIEW_TZ())}</title></rect>`;
+        out += `<rect class="cell" x="${x(a).toFixed(1)}" y="${y + 1.5}" width="${Math.max(2, x(z) - x(a) - 0.8).toFixed(1)}" height="8" rx="1" fill="${r.c}" fill-opacity="${Math.min(1, 0.35 + n * 0.16).toFixed(2)}"><title>${esc(r.name)}: ${n} event${n === 1 ? '' : 's'}, ${hm(b * hour, VIEW_TZ())}–${hm((b + 1) * hour, VIEW_TZ())}</title></rect>`;
       });
     });
     if (!rows.length) out += `<text class="lab" x="${LW}" y="${top + 9.5}">No events on the map in the last 48 hours.</text>`;
@@ -515,6 +642,8 @@
     if (rng) sel.innerHTML = `${esc(hm(rng[0], VIEW_TZ()))}–${esc(hm(rng[1], VIEW_TZ()))} <button type="button" data-clear title="Show every hour again">${ICON.x}<span class="sr">Clear</span></button>`;
     drawLog(list);
     drawMiniDots(list);
+    counts();
+    if (PAGE === 'all') drawTheatres();
     dimPins();
   }
   function wireMatrix() {
@@ -550,21 +679,27 @@
     });
   }
 
-  /* The latest events: the hours picked, else the newest; a click goes to the pin and opens its note. */
-  let logList = [];
+  /* The events: the hours picked, else the last 48 hours, newest first, filtered; a click goes to the pin and opens its note. */
+  let logList = [], evQ = '';
   function drawLog(list) {
-    const l = $('.ops-log-l', dock);
+    const l = rightEl && $('.ops-log-l', rightEl);
     if (!l) return;
-    const pick = (rng ? list.filter((e) => { const t = Date.parse(e.at); return t >= rng[0] && t <= rng[1]; }) : list).sort((a, b) => (a.at < b.at ? 1 : -1));
-    logList = pick.slice(0, 80);
-    $('.ops-log-n', dock).textContent = rng ? `${pick.length} in the hours picked` : `${list.length} in 48 hours`;
+    let pick = (rng ? list.filter((e) => { const t = Date.parse(e.at); return t >= rng[0] && t <= rng[1]; }) : list).sort((a, b) => (a.at < b.at ? 1 : -1));
+    if (evQ) pick = pick.filter((e) => `${e.label || ''} ${e.place || ''} ${sideOf(e).name} ${kindOf(e).name} ${e.source || ''}`.toLowerCase().includes(evQ));
+    logList = pick.slice(0, 200);
+    $('.ops-log-n', rightEl).textContent = rng ? `${pick.length} in the hours picked` : `${pick.length} in 48 hours`;
+    const n = $('.ops-ev-n', rightEl); if (n) n.textContent = list.length;
+    let day = '';
     l.innerHTML = logList.map((e, i) => {
       const s = sideOf(e), k = kindOf(e);
-      return `<li><button type="button" data-ev="${i}" title="${esc(e.place || '')}"><time>${esc(hm(e.at, VIEW_TZ()))}</time><span class="k" style="--c:${s.c}" title="${esc(s.name)} · ${esc(k.name)}">${glyph(k.k)}</span><span class="t">${esc(e.label || e.place || k.name)}</span></button></li>`;
-    }).join('') || '<li class="ops-empty">No events in these hours.</li>';
+      const d = dm(e.at, VIEW_TZ());
+      const head = d !== day ? `<li class="ops-day">${esc(d)}</li>` : '';
+      day = d;
+      return `${head}<li><button type="button" data-ev="${i}" style="--c:${s.c}"><time>${esc(hm(e.at, VIEW_TZ()))}</time><span class="k" title="${esc(k.name)}">${glyph(k.k)}</span><span class="t"><b>${esc(e.label || e.place || k.name)}</b><small>${esc([s.name, k.name, e.place].filter(Boolean).join(' · '))}${e.source ? ` · <i>${esc(e.source)}</i>` : ''}</small></span></button></li>`;
+    }).join('') || '<li class="ops-empty">No events here.</li>';
   }
   function wireLog() {
-    $('.ops-log-l', dock).addEventListener('click', (ev) => {
+    $('.ops-log-l', rightEl).addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-ev]');
       if (b) focusEvent(logList[+b.dataset.ev]);
     });
@@ -640,42 +775,115 @@
     focusEvent(list[cycle]);
   }
 
-  /* ---------- Live traffic ---------- */
-  const T = { air: [], at: '', seaOk: null, ships: [], seaAt: '', timer: null, layer: null, rend: null, sel: null, trail: new Map() };
-  const AIR_MS = 15000;
-  function toggleTrafficMenu(force) {
+  /* ---------- Layers: the base map, names, a grid, control areas, live traffic ---------- */
+  const T = { air: [], at: '', seaOk: null, ships: [], seaAt: '', seaNote: '', timer: null, layer: null, rend: null, sel: null, trail: new Map(), src: [] };
+  const AIR_MS = 10000;
+  const ESRI_T = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+  const BASES = [
+    ['auto', 'Plain', 'Grey, with Day or Night'],
+    ['sat', 'Satellite', 'Esri World Imagery'],
+    ['relief', 'Relief', 'Hills and mountains'],
+  ];
+  const night = () => H.dataset.theme !== 'broadsheet-day';
+  const baseUrl = (b) => (b === 'sat' ? ESRI_T + 'World_Imagery/MapServer/tile/{z}/{y}/{x}' : b === 'relief' ? ESRI_T + `Elevation/World_Hillshade${night() ? '_Dark' : ''}/MapServer/tile/{z}/{y}/{x}` : '');
+  const namesUrl = () => (S.base === 'sat' ? ESRI_T + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}' : ESRI_T + `Canvas/World_${night() ? 'Dark' : 'Light'}_Gray_Reference/MapServer/tile/{z}/{y}/{x}`);
+  const LY = { base: null, names: null, grid: null };
+  function pane(m, name, z) {
+    if (!m.getPane(name)) { m.createPane(name); m.getPane(name).style.zIndex = z; m.getPane(name).style.pointerEvents = 'none'; }
+    return name;
+  }
+  function drawBase() {
+    const m = getMap();
+    if (!m) return;
+    const u = baseUrl(S.base);
+    if (LY.base && (!u || LY.base._url !== u)) { m.removeLayer(LY.base); LY.base = null; }
+    if (u && !LY.base) LY.base = L.tileLayer(u, { pane: pane(m, 'opsBase', 205), maxZoom: 18, maxNativeZoom: S.base === 'relief' ? 16 : 18, noWrap: true, attribution: 'Esri, Maxar, Earthstar Geographics' }).addTo(m);
+    H.classList.toggle('ops-base-sat', S.base === 'sat');
+    H.classList.toggle('ops-base-relief', S.base === 'relief');
+    const nu = S.names ? namesUrl() : '';
+    if (LY.names && (!nu || LY.names._url !== nu)) { m.removeLayer(LY.names); LY.names = null; }
+    if (nu && !LY.names) LY.names = L.tileLayer(nu, { pane: pane(m, 'opsNames', 455), maxZoom: 18, maxNativeZoom: 16, noWrap: true }).addTo(m);
+    drawGrid();
+  }
+  /* A grid of latitude and longitude, its spacing set by the zoom, its lines named at the map's edges. */
+  function drawGrid() {
+    const m = getMap();
+    if (!m) return;
+    if (!LY.grid) LY.grid = L.layerGroup().addTo(m);
+    LY.grid.clearLayers();
+    if (!S.grid) return;
+    const z = m.getZoom(), b = m.getBounds().pad(0.05);
+    const step = z < 4.5 ? 10 : z < 6 ? 5 : z < 7.5 ? 2 : z < 8.5 ? 1 : z < 10 ? 0.5 : 0.25;
+    const p = pane(m, 'opsGrid', 430);
+    const st = { pane: p, interactive: false, weight: 1, opacity: 1, className: 'ops-gl' };
+    const lab = (ll, t, cls) => L.marker(ll, { pane: p, interactive: false, icon: L.divIcon({ className: `ops-glab ${cls}`, iconSize: [0, 0], html: `<span>${t}</span>` }) }).addTo(LY.grid);
+    const vb = m.getBounds();
+    const dp = step < 1 ? 2 : 0;
+    for (let lat = Math.ceil(b.getSouth() / step) * step; lat <= b.getNorth(); lat += step) {
+      L.polyline([[lat, b.getWest()], [lat, b.getEast()]], st).addTo(LY.grid);
+      lab([lat, vb.getWest()], `${Math.abs(lat).toFixed(dp)}°${lat >= 0 ? 'N' : 'S'}`, 'w');
+    }
+    for (let lng = Math.ceil(b.getWest() / step) * step; lng <= b.getEast(); lng += step) {
+      L.polyline([[b.getSouth(), lng], [b.getNorth(), lng]], st).addTo(LY.grid);
+      lab([vb.getNorth(), lng], `${Math.abs(lng).toFixed(dp)}°${lng >= 0 ? 'E' : 'W'}`, 'n');
+    }
+  }
+  function toggleLayers(force) {
     const menu = $('.ops-menu', hud);
+    if (!menu) return;
     const open = force != null ? force : menu.hidden;
     menu.hidden = !open;
-    $('[data-op="traffic"]', bar).setAttribute('aria-expanded', String(open));
-    if (open) paintTrafficMenu();
+    root.querySelectorAll('[data-op="layers"]').forEach((b) => b.setAttribute('aria-expanded', String(open)));
+    if (open) paintLayers();
   }
-  function paintTrafficMenu() {
+  const toggleTrafficMenu = toggleLayers;
+  const sw = (k, on, label, sub, extra = '') => `<label class="ops-sw ${extra}"><input type="checkbox" data-ly="${k}" ${on ? 'checked' : ''} ${/off/.test(extra) ? 'disabled' : ''}><span>${label}</span>${sub ? `<small>${sub}</small>` : ''}</label>`;
+  function paintLayers() {
     const menu = $('.ops-menu', hud);
-    if (menu.hidden) return;
+    if (!menu || menu.hidden) return;
     const mil = T.air.filter((a) => a[13]);
-    const seaTxt = T.seaOk === false ? '<small class="note">No live ship feed yet: the server needs a key for AISStream, the free live feed for the Gulf and the Red Sea.</small>' : '';
-    menu.innerHTML = `<div class="ops-mh"><b>Live traffic</b><button type="button" class="ops-x" data-tr="close" aria-label="Close">${ICON.x}</button></div>
-      <label class="ops-sw"><input type="checkbox" data-tr="air" ${S.air ? 'checked' : ''}><span>${ICON.plane}Aircraft</span><small>${S.air && T.at ? `${T.air.length.toLocaleString('en-GB')} in the air · ${esc(ago(T.at))}` : 'Every aircraft broadcasting over the region'}</small></label>
-      <label class="ops-sw sub ${S.air ? '' : 'off'}"><input type="checkbox" data-tr="mil" ${S.airMil ? 'checked' : ''} ${S.air ? '' : 'disabled'}><span>Military only</span><small>${S.air ? `${mil.length} military` : ''}</small></label>
-      <label class="ops-sw ${T.seaOk === false ? 'off' : ''}"><input type="checkbox" data-tr="sea" ${S.sea && T.seaOk !== false ? 'checked' : ''} ${T.seaOk === false ? 'disabled' : ''}><span>${ICON.ship}Ships</span><small>${S.sea && T.seaAt ? `${T.ships.length.toLocaleString('en-GB')} at sea · ${esc(ago(T.seaAt))}` : 'Every ship broadcasting its position'}</small>${seaTxt}</label>
-      ${S.air && mil.length ? `<div class="ops-mil"><p>Military aircraft now</p><ul>${mil.slice(0, 40).map((a) => `<li><button type="button" data-hex="${esc(a[0])}"><b>${esc(a[8] || a[9] || a[0])}</b><span>${esc(a[11] || a[10] || '')}</span><em>${a[3] != null ? esc(fl(a[3])) : ''}</em></button></li>`).join('')}</ul></div>` : ''}
-      <p class="ops-src">Aircraft: <a href="https://adsb.fi/" target="_blank" rel="noopener">adsb.fi open data</a>, every 15 seconds. Only aircraft that broadcast are seen.</p>`;
+    const ground = T.air.filter((a) => a[16]).length;
+    const seaNo = T.seaOk === false;
+    const airTxt = S.air && T.at ? `<b>${(T.air.length - ground).toLocaleString('en-GB')}</b> in the air${ground ? `, ${ground} on the ground` : ''} · ${esc(ago(T.at))}` : 'Every aircraft broadcasting its position';
+    const seaTxt = seaNo ? 'Waiting for the live ship feed to be connected' : S.sea && T.seaAt ? `<b>${T.ships.length.toLocaleString('en-GB')}</b> ships · ${T.seaNote === 'live' ? 'live' : esc(T.seaNote || '')}` : 'Every ship broadcasting its position (AIS)';
+    menu.innerHTML = `<div class="ops-mh"><b>Layers</b><button type="button" class="ops-x" data-ly="close" aria-label="Close">${ICON.x}</button></div>
+      <p class="ops-mlab">Base map</p>
+      <div class="ops-bases">${BASES.map(([k, n, s]) => `<button type="button" data-base="${k}" aria-pressed="${S.base === k}" title="${esc(s)}"><i class="ops-bthumb ${k}"></i>${esc(n)}</button>`).join('')}</div>
+      <p class="ops-mlab">On the map</p>
+      ${sw('names', S.names, 'Place names', '')}
+      ${sw('grid', S.grid, 'Grid', 'Latitude and longitude')}
+      ${sw('fills', S.fills, 'Areas of control, shaded', 'Who holds what, in colour')}
+      <p class="ops-mlab">Live traffic</p>
+      ${sw('air', S.air, `${ICON.plane}Aircraft`, airTxt)}
+      ${sw('mil', S.airMil, 'Military only', S.air ? `${mil.length} military aircraft` : '', `sub ${S.air ? '' : 'off'}`)}
+      ${sw('gnd', S.airGround, 'Also on the ground', S.air ? 'At airfields and bases' : '', `sub ${S.air ? '' : 'off'}`)}
+      ${sw('sea', S.sea && !seaNo, `${ICON.ship}Ships`, seaTxt, seaNo ? 'off' : '')}
+      ${S.air && mil.length ? `<div class="ops-mil"><p>Military aircraft now</p><ul>${mil.slice(0, 60).map((a) => `<li><button type="button" data-hex="${esc(a[0])}"><b>${esc(a[8] || a[9] || a[0])}</b><span>${esc(a[11] || a[10] || '')}</span><em>${a[16] ? 'GND' : a[3] != null ? esc(fl(a[3])) : ''}</em></button></li>`).join('')}</ul></div>` : ''}
+      <p class="ops-src">Aircraft: ${(T.src.length ? T.src : ['adsb.fi', 'adsb.lol']).map(esc).join(' and ')} open data, every 10 seconds. Ships: AISStream. Only what broadcasts is seen; many military flights do not.</p>`;
   }
   const fl = (ft) => (ft >= 18000 ? 'FL' + String(Math.round(ft / 100)).padStart(3, '0') : `${ft.toLocaleString('en-GB')} ft`);
   function wireTraffic() {
     const menu = $('.ops-menu', hud);
     menu.addEventListener('change', (ev) => {
-      const k = ev.target.dataset.tr;
-      if (k === 'air') S.air = ev.target.checked;
-      if (k === 'mil') S.airMil = ev.target.checked;
-      if (k === 'sea') S.sea = ev.target.checked;
-      keep(); runTraffic(); drawTraffic(); paintTrafficMenu();
+      const k = ev.target.dataset.ly, v = ev.target.checked;
+      if (k === 'air') S.air = v;
+      if (k === 'mil') S.airMil = v;
+      if (k === 'gnd') S.airGround = v;
+      if (k === 'sea') S.sea = v;
+      if (k === 'names') S.names = v;
+      if (k === 'grid') S.grid = v;
+      if (k === 'fills') { S.fills = v; paintFrame(); }
+      keep();
+      if (/^(air|sea)$/.test(k)) runTraffic();
+      if (/^(names|grid)$/.test(k)) drawBase();
+      drawTraffic(); paintLayers();
     });
     menu.addEventListener('click', (ev) => {
-      if (ev.target.closest('[data-tr="close"]')) toggleTrafficMenu(false);
+      if (ev.target.closest('[data-ly="close"]')) toggleLayers(false);
+      const bb = ev.target.closest('[data-base]');
+      if (bb) { S.base = bb.dataset.base; keep(); drawBase(); drawTraffic(); paintLayers(); }
       const h = ev.target.closest('[data-hex]');
-      if (h) { const a = T.air.find((x) => x[0] === h.dataset.hex); if (a) { selectAc(a, true); toggleTrafficMenu(false); } }
+      if (h) { const a = T.air.find((x) => x[0] === h.dataset.hex); if (a) { selectAc(a, true); if (isPhone()) toggleLayers(false); } }
     });
   }
   async function pull(kind) {
@@ -689,7 +897,7 @@
     if (S.air) {
       const j = await pull('air');
       if (j && j.ok) {
-        T.air = j.ac || []; T.at = j.at;
+        T.air = j.ac || []; T.at = j.at; T.src = j.src || T.src;
         if (j.ships === false) T.seaOk = false;
         const now = Date.now();
         T.air.forEach((a) => { const tr = T.trail.get(a[0]) || []; const p = tr[tr.length - 1]; if (!p || p[0] !== a[1] || p[1] !== a[2]) tr.push([a[1], a[2], now]); if (tr.length > 60) tr.shift(); T.trail.set(a[0], tr); });
@@ -698,9 +906,9 @@
     }
     if (S.sea && T.seaOk !== false) {
       const j = await pull('sea');
-      if (j && j.ok) { T.ships = j.ships || []; T.seaAt = j.at; T.seaOk = true; } else if (j && j.note === 'no-key') { T.seaOk = false; S.sea = false; }
+      if (j && j.ok) { T.ships = j.ships || []; T.seaAt = j.at; T.seaNote = j.note || ''; T.seaOk = true; } else if (j && j.note === 'no-key') T.seaOk = false;
     }
-    drawTraffic(); paintTrafficMenu();
+    drawTraffic(); paintLayers();
     if (T.sel) refreshSel();
   }
   function runTraffic() {
@@ -713,6 +921,8 @@
   let TrafficMark = null;
   const PLANE = new Path2D('M0-9 1.4-3.2 8 1v1.8L1.4 1 1 6.2 3.2 8v1.3L0 8.4-3.2 9.3V8L-1 6.2-1.4 1-8 2.8V1l6.6-4.2z');
   const BOAT = new Path2D('M0-8 3.2-2.5V7H-3.2V-2.5z');
+  /* A mark turned to its heading, with a line ahead of it for its speed (a minute's travel at high zoom),
+     and, close in, its callsign beside it. */
   function trafficClass() {
     if (TrafficMark) return TrafficMark;
     TrafficMark = L.CircleMarker.extend({
@@ -720,58 +930,75 @@
         const r = this._renderer;
         if (!r || !r._drawing || this._empty()) return;
         const ctx = r._ctx, p = this._point, o = this.options;
+        const a = ((o.hdg || 0) * Math.PI) / 180;
+        if (o.vec > 2 && o.hdg != null) {
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.sin(a) * o.vec, p.y - Math.cos(a) * o.vec);
+          ctx.lineWidth = 1; ctx.strokeStyle = o.ink; ctx.globalAlpha = 0.55; ctx.stroke(); ctx.globalAlpha = 1;
+        }
         ctx.save();
         ctx.translate(p.x, p.y);
-        ctx.rotate(((o.hdg || 0) * Math.PI) / 180);
-        const k = o.big ? 1.25 : 0.95;
+        ctx.rotate(a);
+        const k = (o.big ? 1.15 : 0.85) * (o.gnd ? 0.75 : 1);
         ctx.scale(k, k);
-        ctx.lineWidth = 1.4;
+        ctx.lineWidth = 1.6;
         ctx.strokeStyle = o.edge;
         ctx.fillStyle = o.ink;
+        ctx.globalAlpha = o.gnd ? 0.6 : 1;
         ctx.stroke(o.ship ? BOAT : PLANE);
         ctx.fill(o.ship ? BOAT : PLANE);
         ctx.restore();
-        if (o.sel) { ctx.beginPath(); ctx.arc(p.x, p.y, 13, 0, Math.PI * 2); ctx.lineWidth = 1.6; ctx.strokeStyle = '#ffd166'; ctx.stroke(); }
+        if (o.tag) {
+          ctx.font = '500 10.5px "IBM Plex Mono", ui-monospace, monospace';
+          ctx.lineWidth = 3; ctx.strokeStyle = o.edge; ctx.fillStyle = o.ink;
+          ctx.strokeText(o.tag, p.x + 11, p.y + 4); ctx.fillText(o.tag, p.x + 11, p.y + 4);
+        }
+        if (o.sel) { ctx.beginPath(); ctx.rect(p.x - 13, p.y - 13, 26, 26); ctx.lineWidth = 1.5; ctx.strokeStyle = o.selInk; ctx.stroke(); }
       },
     });
     return TrafficMark;
   }
-  const AIR_INK = { civ: '#9fb7d3', mil: '#f5b942', emg: '#ff5a5f' };
-  function shipInk(type) {
+  const INK = () => (night() && S.base !== 'sat'
+    ? { civ: '#9fb8d0', mil: '#f0a53a', emg: '#ff5a4f', ship: '#6fc3c9', tank: '#d9a066', navy: '#f0a53a', edge: 'rgba(8,11,14,.9)', sel: '#ffffff' }
+    : S.base === 'sat' ? { civ: '#e6eef6', mil: '#ffb547', emg: '#ff5a4f', ship: '#7fe0e6', tank: '#ffc27a', navy: '#ffb547', edge: 'rgba(0,0,0,.85)', sel: '#ffffff' }
+      : { civ: '#3f5566', mil: '#b25e00', emg: '#c62828', ship: '#00838f', tank: '#a15c12', navy: '#b25e00', edge: 'rgba(255,255,255,.95)', sel: '#000000' });
+  function shipInk(type, I) {
     const t = Number(type) || 0;
-    if (t >= 80 && t < 90) return '#e8875b'; // tankers
-    if (t >= 70 && t < 80) return '#6cc28a'; // cargo
-    if (t >= 60 && t < 70) return '#7aa7e8'; // passenger
-    if (t === 35) return '#f5b942'; // military
-    return '#b3aca4';
+    if (t >= 80 && t < 90) return I.tank; // tankers
+    if (t === 35) return I.navy; // military
+    return I.ship;
   }
   function drawTraffic() {
     const m = getMap();
     if (!m) return;
-    if (!T.rend) { T.rend = L.canvas({ padding: 0.2, pane: 'overlayPane' }); }
+    if (!T.rend) T.rend = L.canvas({ padding: 0.2, pane: pane(m, 'opsTraffic', 590) });
     if (T.layer) m.removeLayer(T.layer);
     T.layer = L.layerGroup();
     const Mk = trafficClass();
-    const night = H.dataset.theme !== 'broadsheet-day';
-    const edge = night ? 'rgba(10,10,12,.85)' : 'rgba(255,255,255,.9)';
+    const I = INK(), z = m.getZoom();
+    // A minute's travel, in pixels at this zoom (metres per pixel at the region's latitude).
+    const mpp = (40075016 * Math.cos((25 * Math.PI) / 180)) / (256 * 2 ** z);
+    const vecOf = (kt) => (kt ? Math.min(60, ((kt * 1852) / 60) / mpp) : 0);
     if (S.air) T.air.forEach((a) => {
       if (S.airMil && !a[13]) return;
+      if (a[16] && !S.airGround) return;
       const emg = a[7] === '7500' || a[7] === '7600' || a[7] === '7700';
       const sel = T.sel && T.sel.kind === 'air' && T.sel.id === a[0];
-      const mk = new Mk([a[1], a[2]], { renderer: T.rend, radius: 9, hdg: a[5], ink: emg ? AIR_INK.emg : a[13] ? AIR_INK.mil : AIR_INK.civ, edge, big: !!a[13] || emg, sel, stroke: false, fill: true, bubblingMouseEvents: false });
+      const tag = (z >= 7.5 || (a[13] && z >= 6)) && !a[16] ? a[8] || a[9] || '' : '';
+      const mk = new Mk([a[1], a[2]], { renderer: T.rend, radius: 9, hdg: a[5], vec: a[16] ? 0 : vecOf(a[4]), ink: emg ? I.emg : a[13] ? I.mil : I.civ, edge: I.edge, selInk: I.sel, big: !!a[13] || emg, gnd: !!a[16], tag, sel, stroke: false, fill: true, bubblingMouseEvents: false });
       mk.on('click', () => selectAc(a));
       T.layer.addLayer(mk);
     });
     if (S.sea) T.ships.forEach((s) => {
       const sel = T.sel && T.sel.kind === 'sea' && T.sel.id === s[0];
-      const mk = new Mk([s[2], s[3]], { renderer: T.rend, radius: 9, hdg: s[6] != null ? s[6] : s[5], ink: shipInk(s[8]), edge, ship: true, sel, stroke: false, fill: true, bubblingMouseEvents: false });
+      const tag = z >= 9 ? s[1] || '' : '';
+      const mk = new Mk([s[2], s[3]], { renderer: T.rend, radius: 9, hdg: s[6] != null ? s[6] : s[5], vec: s[4] > 0.5 ? vecOf(s[4]) * 10 : 0, ink: shipInk(s[8], I), edge: I.edge, selInk: I.sel, ship: true, tag, sel, stroke: false, fill: true, bubblingMouseEvents: false });
       mk.on('click', () => selectShip(s));
       T.layer.addLayer(mk);
     });
     // The picked aircraft's track since the layer was turned on.
     if (T.sel && T.sel.kind === 'air') {
       const tr = T.trail.get(T.sel.id);
-      if (tr && tr.length > 1) L.polyline(tr.map((p) => [p[0], p[1]]), { color: '#ffd166', weight: 2, opacity: 0.8, interactive: false }).addTo(T.layer);
+      if (tr && tr.length > 1) L.polyline(tr.map((p) => [p[0], p[1]]), { pane: 'opsTraffic', color: I.sel, weight: 1.5, opacity: 0.75, dashArray: '4 4', interactive: false }).addTo(T.layer);
     }
     T.layer.addTo(m);
   }
@@ -802,7 +1029,7 @@
         <h3>${esc(a[8] || a[9] || a[0].toUpperCase())}</h3>
         <p class="ops-csub">${esc([a[11] || a[10], a[12]].filter(Boolean).join(' · '))}</p>
         ${a[14] && a[15] ? `<p class="ops-route"><b>${esc(a[14])}</b><span>→</span><b>${esc(a[15])}</b><small>Scheduled route of the flight number</small></p>` : ''}
-        <dl>${row('Altitude', a[3] != null ? esc(fl(a[3])) : '')}${row('Speed', a[4] != null ? `${a[4]} kt` : '')}${row('Heading', a[5] != null ? `${String(a[5]).padStart(3, '0')}°` : '')}${row('Climb', a[6] ? `${a[6] > 0 ? '+' : ''}${a[6].toLocaleString('en-GB')} ft/min` : '')}${row('Squawk', sq)}${row('Registration', esc(a[9] || ''))}${row('Hex', esc(String(a[0]).toUpperCase()))}${row('Position', esc(latlon(a[1], a[2])))}${row('MGRS', esc(mgrs(a[1], a[2])))}</dl>
+        <dl>${row('Altitude', a[16] ? 'On the ground' : a[3] != null ? esc(fl(a[3])) : '')}${row('Speed', a[4] != null ? `${a[4]} kt` : '')}${row('Heading', a[5] != null ? `${String(a[5]).padStart(3, '0')}°` : '')}${row('Climb', a[6] ? `${a[6] > 0 ? '+' : ''}${a[6].toLocaleString('en-GB')} ft/min` : '')}${row('Squawk', sq)}${row('Registration', esc(a[9] || ''))}${row('Hex', esc(String(a[0]).toUpperCase()))}${row('Position', esc(latlon(a[1], a[2])))}${row('MGRS', esc(mgrs(a[1], a[2])))}</dl>
         <p class="ops-clinks"><a href="https://globe.adsb.fi/?icao=${esc(a[0])}" target="_blank" rel="noopener">adsb.fi ${ICON.ext}</a></p>`;
     } else {
       const s = T.ships.find((x) => x[0] === T.sel.id);
@@ -829,7 +1056,7 @@
   }
 
   /* ---------- Keys ---------- */
-  const KEYS = [['Space', 'The latest event, then the one before'], ['T', 'Live traffic'], ['M', 'Measure a distance'], ['R', 'Range rings'], ['L', 'Copy a link to this view'], ['F', 'Full screen'], ['B', 'Broadcast mode'], ['[  ]', 'Fold the left column, the reports'], ['\\', 'Fold the panel under the map'], ['Esc', 'Close, clear'], ['?', 'These keys']];
+  const KEYS = [['Space', 'The latest event, then the one before'], ['T', 'Layers and live traffic'], ['G', 'Grid'], ['S', 'Base map: plain, satellite, relief'], ['M', 'Measure a distance'], ['R', 'Range rings'], ['L', 'Copy a link to this view'], ['F', 'Full screen'], ['B', 'Broadcast mode'], ['[  ]', 'Close or open the left panel, the reports'], ['\\', 'Fold the timeline under the map'], ['Esc', 'Close, clear'], ['?', 'These keys']];
   function toggleKeys(force) {
     let el = $('.ops-keys');
     if (!el) {
@@ -858,7 +1085,7 @@
         return;
       }
       const act = {
-        ' ': nextLatest, t: () => toggleTrafficMenu(), m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
+        ' ': nextLatest, t: () => toggleTrafficMenu(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
         l: () => copyLink($('[data-do="link"]', hud)), f: fullScreen, b: () => { S.cast = !S.cast; paintFrame(); paintCast(); },
         '[': () => { S.left = !S.left; keep(); paintFrame(); }, ']': () => { S.right = !S.right; keep(); paintFrame(); }, '\\': () => { S.dock = !S.dock; keep(); paintFrame(); }, '?': () => toggleKeys(),
       }[k.length === 1 ? k.toLowerCase() : k];
@@ -880,10 +1107,19 @@
     const own = (app('DESK_GO') || {})[PAGE === 'all' ? '/' : PAGE === 'iran' ? '/iran-conflict-desk' : '/yemen-conflict-desk'];
     if (own && !/#(at|pin)=/.test(location.hash) && !sessionStorage.getItem('desk-go')) { try { m.invalidateSize(); m.fitBounds(own.b, { padding: [8, 8] }); } catch (e) { /* kept */ } }
     openAt(m);
+    // The map opens on the last 48 hours, as the timeline under it (a link to a pin or a place keeps its own).
+    if (!/#(at|pin)=/.test(location.hash)) {
+      let tries = 0;
+      const first = () => { if (!quickRange(2) && ++tries < 20) setTimeout(first, 300); };
+      setTimeout(first, 400);
+    }
+    drawBase();
+    m.on('zoomend', () => { if (S.air || S.sea) drawTraffic(); });
+    m.on('moveend', () => { if (S.grid) drawGrid(); });
     drawMatrix();
     runTraffic();
     // The theme: the overview's tiles and the traffic's edges follow it.
-    new MutationObserver(() => { themeTiles(); drawTraffic(); drawMatrix(); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
+    new MutationObserver(() => { themeTiles(); drawBase(); drawTraffic(); drawMatrix(); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
     // The pins are drawn again by the page now and then: fade the ones outside the hours picked again.
     let dimT = 0;
     new MutationObserver(() => { if (rng) { clearTimeout(dimT); dimT = setTimeout(dimPins, 80); } }).observe(m.getPane('markerPane'), { childList: true });
@@ -897,7 +1133,7 @@
     if (started) return;
     if (!findRoot()) return;
     started = true;
-    try { build(); startHud(); } catch (e) {
+    try { build(); tick(); counts(); startHud(); } catch (e) {
       // Anything wrong: the classic page, as it is.
       console.error('map view', e);
       H.dataset.view = 'classic';

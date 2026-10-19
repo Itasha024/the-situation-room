@@ -1,445 +1,532 @@
 /*
- * The map-first view (public/ops.js; user, 19 Oct). Every rule here is under html[data-view="ops"],
- * so the classic site never sees one of them. Colours are the site's own theme tokens (themes.css),
- * Day and Night alike; only the view's own tools add a few.
+ * The map-first view (public/ops.js; user, 19 Oct; redrawn the same night: "professional, militarised but
+ * news-minded, not gimmicky, totally different from the site's design"). Every rule here is under
+ * html[data-view="ops"], so the classic site never sees one of them.
+ *
+ * The look follows operations rooms and newsroom desks: neutral greys, colour kept for meaning (who acted,
+ * an alert, the reader's own tools), flat panels with hairline borders, no shadows or glow; IBM Plex Sans
+ * to read, IBM Plex Mono for figures, times and places, Barlow Condensed for the labels. Night is a dark
+ * operations room, Day a newsroom page; the reader's device picks unless they do.
  */
 html[data-view="ops"] {
-  --ops-lw: 372px;
-  --ops-bar-h: 48px;
-  --ops-gap: 10px;
-  --ops-radius: 6px;
-  --ops-tool: #ffd166;
-  --ops-ui: "Libre Franklin", "Inter", system-ui, sans-serif;
-  --ops-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
-}
-/*
- * The view's own look (user, 19 Oct: "dont do the new design with the design of the current themes"): a
- * graphite Night and a cool paper-white Day, one sans-serif face and a mono one for figures. The page's
- * own parts follow it through the theme tokens they are drawn with; Day or Night is still the reader's
- * device setting unless they pick one (the classic themes are kept as they are, for the classic view).
- */
-html[data-view="ops"][data-theme="broadsheet-night"] {
-  --bg: #0e131a; --panel: #131a23; --line: #232d3a; --text: #d5dde7; --muted: #8d99a8;
-  --accent: #5aa9f0; --accent-ui: #6db3f2; --on-accent: #08111b;
-  --t-bg: #0e131a; --t-surface-1: #121922; --t-surface-2: #18212c; --t-surface-3: #1e2935; --t-surface-4: #273443;
-  --t-line-soft: #1a232e; --t-line: #232e3b; --t-line-strong: #34424f;
-  --t-strong: #f1f5f9; --t-text: #d5dde7; --t-text-2: #b3bfcc; --t-muted: #8592a2; --t-faint: #5f6c7c; --t-link: #6db3f2; --t-on-light: #0e131a;
-  --t-glass: rgba(16, 22, 30, .94); --shadow-pop: 0 10px 28px rgba(0, 0, 0, .5);
-  --ev-edge: #0e131a; --halo: #0e131a; --halo-ink: #d5dde7;
-  --ops-tool: #f2c14e;
-  color-scheme: dark;
+  --ops-lw: clamp(300px, 23vw, 380px);
+  --ops-rw: clamp(320px, 24vw, 400px);
+  --ops-nav-w: 56px;
+  --ops-strip-h: 26px;
+  --ops-bar-h: 46px;
+  --ops-r: 3px;
+  --ops-ui: "IBM Plex Sans", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ops-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --ops-cond: "Barlow Condensed", "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  /* Night, an operations room (the default tokens; Day redefines them below). */
+  --o-bg: #0b0e11; --o-panel: #11151a; --o-raised: #171c22; --o-hover: #1d232a; --o-line: #242a31; --o-line-2: #323a43;
+  --o-text: #d7dce1; --o-dim: #8a939d; --o-faint: #5f6873; --o-strong: #f3f5f7;
+  --o-sel: #e0a43c; --o-sel-ink: #17110a; --o-live: #ff5a4f; --o-ok: #46b37a; --o-tool: #e0a43c; --o-tool-2: #6fc3c9;
+  --o-map-line: #48525d; --o-glass: rgba(14, 18, 22, .93);
 }
 html[data-view="ops"][data-theme="broadsheet-day"] {
-  --bg: #f3f5f8; --panel: #ffffff; --line: #dde3ea; --text: #1e2935; --muted: #5d6a7a;
-  --accent: #0b63b6; --accent-ui: #0b63b6; --on-accent: #ffffff;
-  --t-bg: #eef1f5; --t-surface-1: #ffffff; --t-surface-2: #f2f5f8; --t-surface-3: #e7ecf1; --t-surface-4: #d9e0e8;
-  --t-line-soft: #edf0f4; --t-line: #dfe5ec; --t-line-strong: #c4cdd8;
-  --t-strong: #0c1520; --t-text: #1e2935; --t-text-2: #3a4757; --t-muted: #5d6a7a; --t-faint: #8995a3; --t-link: #0b63b6; --t-on-light: #1e2935;
-  --t-glass: rgba(255, 255, 255, .95); --shadow-pop: 0 8px 24px rgba(20, 35, 55, .14);
-  --ev-edge: #ffffff; --halo: #ffffff; --halo-ink: #1e2935;
-  --ops-tool: #d99a00;
-  color-scheme: light;
+  --o-bg: #eceee9; --o-panel: #fafaf8; --o-raised: #ffffff; --o-hover: #f0f1ed; --o-line: #d9dcd6; --o-line-2: #c3c8c1;
+  --o-text: #1b1f24; --o-dim: #5c6570; --o-faint: #858d96; --o-strong: #0b0e11;
+  --o-sel: #9a6100; --o-sel-ink: #ffffff; --o-live: #c62828; --o-ok: #2e7d32; --o-tool: #b26a00; --o-tool-2: #00838f;
+  --o-map-line: #8f979e; --o-glass: rgba(250, 250, 248, .95);
 }
-html[data-view="ops"] {
-  --f-body: "Inter", system-ui, sans-serif; --f-head: "Inter", system-ui, sans-serif; --f-card: "Inter", system-ui, sans-serif; --f-prose: "Inter", system-ui, sans-serif;
-  --ops-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --ops-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
-  --r-card: 6px; --r-btn: 6px; --r-media: 6px;
+/* The page's own parts (cards, the brief, the numbers) are drawn with the site's theme tokens: the view sets them. */
+html[data-view="ops"][data-theme] {
+  --bg: var(--o-bg); --panel: var(--o-panel); --line: var(--o-line); --text: var(--o-text); --muted: var(--o-dim);
+  --accent: var(--o-sel); --accent-ui: var(--o-sel); --on-accent: var(--o-sel-ink);
+  --t-bg: var(--o-bg); --t-surface-1: var(--o-panel); --t-surface-2: var(--o-raised); --t-surface-3: var(--o-hover); --t-surface-4: var(--o-line-2);
+  --t-line-soft: var(--o-line); --t-line: var(--o-line); --t-line-strong: var(--o-line-2);
+  --t-strong: var(--o-strong); --t-text: var(--o-text); --t-text-2: color-mix(in srgb, var(--o-text) 82%, var(--o-dim)); --t-muted: var(--o-dim); --t-faint: var(--o-faint); --t-link: var(--o-text); --t-on-light: var(--o-bg);
+  --t-glass: var(--o-glass); --shadow-pop: 0 6px 20px rgba(0, 0, 0, .28);
+  --ev-edge: var(--o-bg); --halo: var(--o-bg); --halo-ink: var(--o-text);
+  --f-body: var(--ops-ui); --f-head: var(--ops-ui); --f-card: var(--ops-ui); --f-prose: var(--ops-ui);
+  --r-card: var(--ops-r); --r-btn: var(--ops-r); --r-media: var(--ops-r);
 }
-html[data-view="ops"] body { background: var(--t-bg); color: var(--t-text) }
-/* One face everywhere in the view; figures in the mono one. */
+html[data-view="ops"][data-theme="broadsheet-night"] { color-scheme: dark }
+html[data-view="ops"][data-theme="broadsheet-day"] { color-scheme: light; --shadow-pop: 0 6px 18px rgba(20, 25, 30, .12) }
+html[data-view="ops"] body { background: var(--o-bg); color: var(--o-text) }
 html[data-view="ops"] body :not(svg, svg *, code, kbd, pre) { font-family: var(--ops-ui) !important }
-html[data-view="ops"] :is(.ops-coords, .ops-coords *, .ops-card h3, .ops-card dd, .ops-card dd *, .ops-log-l time, .ops-z, .ops-z *, .ops-act-sel, .ops-mil b, .ops-mil em, .ops-rlabel span, .ops-ringlabel span, .ops-lt .clk, .ops-lb time, .ye-clock, .ye-clock *, kbd, .leaflet-control-scale-line) { font-family: var(--ops-mono) !important }
-/* The base map as it is, without the classic themes' paper tint. */
-html[data-view="ops"][data-theme="broadsheet-night"] .leaflet-tile-pane { filter: saturate(.7) brightness(.95) contrast(1.02) }
-html[data-view="ops"][data-theme="broadsheet-day"] .leaflet-tile-pane { filter: saturate(.75) }
+html[data-view="ops"] :is(.ops-strip b, .ops-sf, .ops-log-l time, .ops-card h3, .ops-card dd, .ops-card dd *, .ops-coords, .ops-coords *, .ops-act-sel, .ops-mil b, .ops-mil em, .ops-rlabel span, .ops-ringlabel span, .ops-glab span, .ops-lt .clk, .ops-lb time, .ops-kpi dd, .ops-bars b, .ops-th-ev time, .ye-clock, .ye-clock *, kbd, .leaflet-control-scale-line, .ops-amx .tk) { font-family: var(--ops-mono) !important }
+html[data-view="ops"] :is(.ops-ptitle, .ops-mlab, .ops-tabs button, .ops-seg button, .ops-nav button span, .ops-act-h b, .ops-mh b, .ops-mil p, .ops-ck, .ops-card dt, .ops-kpi dt, .ops-tag, .ops-live, .ops-strip small, .ops-day, .ops-ptabs button, .ops-left .ops-pane h2, .ops-dock .legend :is(.leg-sec, .leg-sub), .ops-th-go, .ops-classic) { font-family: var(--ops-cond) !important }
 html[data-view="ops"] .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
-/* Until the view has laid the page out, the page waits (a second at most; ops.js falls back to classic). */
+/* Until the view has laid the page out, the page waits (ops.js falls back to classic). */
 html[data-view="ops"] #home-root:not(.ops-on) { visibility: hidden }
+/* No stories on the All page in this view (user, 19 Oct). */
+html[data-view="ops"] .ops-on > :is(#g-body, #chrome, #toolbar) { display: none !important }
+html[data-view="ops"] body:has(.ops-on) .sec-nav { display: none !important }
+html[data-view="ops"] .ops-on > .ops-stage > .stage { width: 100% }
+html[data-view="ops"] .ops-on .rail-splitter { display: none !important }
 
 /* ---------- The frame (wide screens) ---------- */
 @media (min-width: 761px) {
   html[data-view="ops"] body:has(.ops-on) { overflow: hidden; height: 100dvh }
   html[data-view="ops"] .ops-on {
     display: grid;
-    grid-template-columns: var(--ops-lw) minmax(0, 1fr);
-    grid-template-rows: var(--ops-bar-h) minmax(0, 1fr);
-    height: 100dvh;
-    background: var(--t-bg);
-    color: var(--t-text);
-    font-family: var(--ops-ui);
+    grid-template-columns: var(--ops-nav-w) var(--ops-lw) minmax(0, 1fr) var(--ops-rw);
+    grid-template-rows: var(--ops-strip-h) var(--ops-bar-h) minmax(0, 1fr);
+    height: 100dvh; background: var(--o-bg); color: var(--o-text);
   }
-  html[data-view="ops"] .ops-on.ops-noleft { grid-template-columns: 0 minmax(0, 1fr) }
-  html[data-view="ops"] .ops-on.ops-noleft > .ops-left { visibility: hidden }
-  html[data-view="ops"] .ops-on > .ops-bar { grid-column: 1 / -1; grid-row: 1 }
-  html[data-view="ops"] .ops-on > .ops-left { grid-column: 1; grid-row: 2 }
-  html[data-view="ops"] .ops-on > .ops-stage { grid-column: 2; grid-row: 2; min-height: 0; min-width: 0 }
-  html[data-view="ops"] .ops-on > .ops-stage:not(main) { display: flex }
-  html[data-view="ops"] .ops-on > main.ops-stage { display: grid }
+  html[data-view="ops"] .ops-on.ops-noleft { grid-template-columns: var(--ops-nav-w) 0 minmax(0, 1fr) var(--ops-rw) }
+  html[data-view="ops"] .ops-on.ops-noright { grid-template-columns: var(--ops-nav-w) var(--ops-lw) minmax(0, 1fr) 0 }
+  html[data-view="ops"] .ops-on.ops-noleft.ops-noright { grid-template-columns: var(--ops-nav-w) 0 minmax(0, 1fr) 0 }
+  html[data-view="ops"] .ops-on.ops-noleft > .ops-left, html[data-view="ops"] .ops-on.ops-noright > .ops-right { visibility: hidden; overflow: hidden; border: 0 }
+  html[data-view="ops"] .ops-on > .ops-strip { grid-column: 1 / -1; grid-row: 1 }
+  html[data-view="ops"] .ops-on > .ops-bar { grid-column: 1 / -1; grid-row: 2 }
+  html[data-view="ops"] .ops-on > .ops-nav { grid-column: 1; grid-row: 3 }
+  html[data-view="ops"] .ops-on > .ops-left { grid-column: 2; grid-row: 3 }
+  html[data-view="ops"] .ops-on > .ops-stage { grid-column: 3; grid-row: 3; min-height: 0; min-width: 0; display: flex }
+  html[data-view="ops"] .ops-on > .ops-right { grid-column: 4; grid-row: 3 }
   html[data-view="ops"] .ops-on > .ops-ptabs { display: none }
-  html[data-view="ops"] .ops-on main.stage { flex: 1; height: auto !important; min-height: 0 !important; grid-template-columns: minmax(0, 1fr) 6px var(--rail-w, 390px) }
-  html[data-view="ops"] .ops-on main.stage.ops-has-rail { display: grid; grid-template-columns: minmax(0, 1fr) var(--rail-w, 390px) }
-  html[data-view="ops"] .ops-on.ops-noright main.stage { grid-template-columns: minmax(0, 1fr) !important }
-  html[data-view="ops"] .ops-on.ops-noright :is(.rail, .rail-splitter) { display: none !important }
-  html[data-view="ops"] .ops-on .map-wrap { height: 100% !important; min-height: 0 !important; border: 0 }
-  html[data-view="ops"] .ops-on #map,
-  html[data-view="ops"] .ops-on #h-map { position: absolute; inset: 0 0 var(--dock-h, 0) 0; height: auto !important }
+  html[data-view="ops"] .ops-on main.stage { flex: 1; display: block !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; max-width: none !important }
+  html[data-view="ops"] .ops-on .map-wrap { position: relative; height: 100% !important; min-height: 0 !important; border: 0 !important; border-radius: 0 !important; margin: 0 !important }
+  html[data-view="ops"] .ops-on :is(#map, #h-map) { position: absolute; inset: 0 0 var(--dock-h, 0) 0; height: auto !important; border-radius: 0 !important }
   html[data-view="ops"] .ops-on.ops-nodock .ops-dock { display: none }
   html[data-view="ops"] .ops-on.ops-nodock .map-wrap { --dock-h: 0px !important }
 }
-html[data-view="ops"] #home-root.ops-on > :is(#chrome, #toolbar) { display: none }
-/* The classic page's section jumper: the view's tabs do its work. */
-html[data-view="ops"] body:has(.ops-on) .sec-nav { display: none !important }
-html[data-view="ops"] .ops-on > .ops-stage > .stage { width: 100% }
+@media (min-width: 761px) and (max-width: 1180px) {
+  html[data-view="ops"] { --ops-lw: 300px; --ops-rw: 320px; --ops-nav-w: 50px }
+}
 
-/* ---------- The bar ---------- */
+/* ---------- The status strip ---------- */
+html[data-view="ops"] .ops-strip {
+  display: flex; align-items: center; gap: 0; min-width: 0; overflow: hidden; white-space: nowrap;
+  padding: 0 12px 0 0; background: var(--o-bg); border-bottom: 1px solid var(--o-line); font-size: 11.5px; color: var(--o-dim);
+}
+html[data-view="ops"] .ops-live { display: inline-flex; align-items: center; gap: 7px; height: 100%; padding: 0 14px 0 16px; font-weight: 700; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--o-strong); border-right: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--o-live); animation: ops-blink 2.4s ease-in-out infinite }
+@keyframes ops-blink { 50% { opacity: .35 } }
+html[data-view="ops"] .ops-sf { display: inline-flex; align-items: baseline; gap: 6px; padding: 0 14px; border-right: 1px solid var(--o-line); line-height: 25px }
+html[data-view="ops"] .ops-sf small { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--o-faint) }
+html[data-view="ops"] .ops-sf b { font-size: 12px; font-weight: 500; color: var(--o-text); font-variant-numeric: tabular-nums; letter-spacing: .02em }
+html[data-view="ops"] .ops-upd { min-width: 0; overflow: hidden }
+html[data-view="ops"] .ops-upd .stamp { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 0; font: 500 11.5px var(--ops-mono); color: var(--o-dim) }
+html[data-view="ops"] .ops-upd .stamp .ye-clock { display: none }
+html[data-view="ops"] .ops-upd .stamp .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--o-ok); box-shadow: none; animation: none }
+html[data-view="ops"] .ops-tag { margin-left: auto; padding: 1px 8px; border: 1px solid var(--o-line-2); border-radius: 2px; font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--o-dim) }
+
+/* ---------- The bar: the name, the theatres, the view's buttons ---------- */
 html[data-view="ops"] .ops-bar {
-  display: flex; align-items: center; gap: 14px; min-width: 0;
-  padding: 0 12px 0 6px;
-  background: var(--t-surface-1);
-  border-bottom: 1px solid var(--t-line);
-  position: relative; z-index: 1200;
+  display: flex; align-items: center; gap: 18px; min-width: 0;
+  padding: 0 12px 0 0; background: var(--o-panel); border-bottom: 1px solid var(--o-line); position: relative; z-index: 1200;
 }
-html[data-view="ops"] .ops-bar .mast { display: flex; align-items: center; gap: 4px; margin: 0; padding: 0; border: 0; background: none; min-height: 0; flex: none; position: static }
-html[data-view="ops"] .ops-bar .mast::before, html[data-view="ops"] .ops-bar .mast::after { display: none }
-html[data-view="ops"] .ops-bar .mast-date { order: 0; position: static; transform: none; margin: 0; flex: none }
-html[data-view="ops"] .ops-bar .mast-mid { display: flex; align-items: baseline; gap: 10px; position: static; transform: none; margin: 0; text-align: left }
-html[data-view="ops"] .ops-bar .mast-name { font-size: 19px; line-height: 1; letter-spacing: -.005em; white-space: nowrap }
-html[data-view="ops"] .ops-bar .mast-name .mn { font-size: inherit }
-html[data-view="ops"] .ops-bar .mast-line { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--t-faint); white-space: nowrap; margin: 0 }
-html[data-view="ops"] .ops-bar .mast-end { display: none }
-html[data-view="ops"] .ops-bar header.top {
-  display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  flex: 1 1 auto; min-width: 0; margin: 0; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--t-line); background: none; height: 30px; position: static;
+html[data-view="ops"] .ops-bar .mast { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; border: 0; background: none; min-height: 0; height: 100%; flex: none; position: static }
+html[data-view="ops"] .ops-bar .mast::before, html[data-view="ops"] .ops-bar .mast::after, html[data-view="ops"] .ops-bar .mast-end, html[data-view="ops"] .ops-bar .mast-line { display: none !important }
+html[data-view="ops"] .ops-bar .mast-date { order: 0; position: static; transform: none; margin: 0; flex: none; width: var(--ops-nav-w); height: 100%; display: grid; place-items: center; border-right: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-bar .mast-menu { color: var(--o-text) }
+html[data-view="ops"] .ops-bar .mast-mid { display: flex; align-items: center; position: static; transform: none; margin: 0 0 0 16px; text-align: left }
+html[data-view="ops"] .ops-bar .mast-name { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--o-strong) }
+html[data-view="ops"] .ops-bar .mast-name::before { content: ""; width: 14px; height: 14px; flex: none; border: 2px solid var(--o-strong); transform: rotate(45deg) scale(.82); box-sizing: border-box; background: linear-gradient(var(--o-sel), var(--o-sel)) center / 4px 4px no-repeat }
+html[data-view="ops"] .ops-bar .mast-name .mn { font: 700 15px var(--ops-cond) !important; letter-spacing: .2em; text-transform: uppercase; white-space: nowrap }
+html[data-view="ops"] .ops-bar header.top { display: flex; align-items: center; gap: 0; flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; background: none; height: 100%; position: static }
+html[data-view="ops"] .ops-bar header.top .brand { min-width: 0; height: 100% }
+html[data-view="ops"] .ops-bar header.top h1 { margin: 0; height: 100%; display: flex; align-items: stretch; font-size: inherit }
+html[data-view="ops"] .ops-bar .dt-label { display: none }
+html[data-view="ops"] .ops-bar .dt-row { display: flex; align-items: stretch; gap: 0; height: 100%; overflow: visible }
+html[data-view="ops"] .ops-bar .dt-btn {
+  height: 100%; padding: 0 16px; gap: 8px; border: 0; border-radius: 0; border-left: 1px solid var(--o-line); background: none; box-shadow: none; transform: none !important;
+  color: var(--o-dim); font: 600 13px var(--ops-cond) !important; letter-spacing: .14em; text-transform: uppercase; position: relative;
 }
-html[data-view="ops"] .ops-bar header.top .brand { min-width: 0; overflow: hidden }
-html[data-view="ops"] .ops-bar header.top h1 { margin: 0; font-size: 14px }
-html[data-view="ops"] .ops-bar .stamp { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--t-muted); white-space: nowrap; margin: 0 }
-html[data-view="ops"] .ops-bar .ye-clock { font-variant-numeric: tabular-nums }
-html[data-view="ops"] .ops-acts { display: flex; align-items: center; gap: 6px; flex: none }
-html[data-view="ops"] .ops-z { font: 500 12px var(--ops-mono); color: var(--t-muted); padding: 0 8px 0 0; border-right: 1px solid var(--t-line); margin-right: 2px; white-space: nowrap }
-html[data-view="ops"] .ops-z b { color: var(--t-text-2); font-weight: 600 }
+html[data-view="ops"] .ops-bar .dt-btn:last-child { border-right: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-bar .dt-btn::after { display: none }
+html[data-view="ops"] .ops-bar .dt-btn .dt-name { font: inherit !important; font-size: inherit; letter-spacing: inherit }
+html[data-view="ops"] .ops-bar .dt-btn .dt-flag { width: 16px; height: 16px; box-shadow: none; filter: saturate(.55); opacity: .85 }
+html[data-view="ops"] .ops-bar .dt-btn .dt-globe { fill: none; stroke: currentColor; stroke-width: 1.6 }
+html[data-view="ops"] .ops-bar .dt-btn:hover { color: var(--o-strong); background: var(--o-hover) }
+html[data-view="ops"] .ops-bar .dt-btn[aria-current="page"] { color: var(--o-strong); background: var(--o-bg) }
+html[data-view="ops"] .ops-bar .dt-btn[aria-current="page"]::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--o-sel) }
+html[data-view="ops"] .ops-bar .dt-btn[aria-current="page"] .dt-flag { filter: none; opacity: 1 }
+html[data-view="ops"] .ops-acts { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto }
 html[data-view="ops"] .ops-btn {
-  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px;
-  border: 1px solid var(--t-line); border-radius: var(--ops-radius); background: var(--t-surface-2);
-  color: var(--t-text-2); font: 500 12.5px var(--ops-ui); cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px;
+  border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: none;
+  color: var(--o-text); font: 600 12.5px var(--ops-cond) !important; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; white-space: nowrap;
 }
 html[data-view="ops"] .ops-btn svg { width: 16px; height: 16px; flex: none }
 html[data-view="ops"] .ops-btn.ops-ico { width: 32px; padding: 0; justify-content: center }
-html[data-view="ops"] .ops-btn:hover { border-color: var(--t-line-strong); color: var(--t-strong) }
-html[data-view="ops"] .ops-btn:is(.on, [aria-pressed="true"], [aria-expanded="true"]) { border-color: color-mix(in srgb, var(--t-link) 55%, var(--t-line)); color: var(--t-strong); background: color-mix(in srgb, var(--t-link) 14%, var(--t-surface-2)) }
-html[data-view="ops"] .ops-btn.on::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #3fbf7f; box-shadow: 0 0 0 3px color-mix(in srgb, #3fbf7f 25%, transparent) }
-html[data-view="ops"] .ops-classic { font: 500 12px var(--ops-ui); color: var(--t-muted); text-decoration: none; padding: 0 4px 0 8px; white-space: nowrap }
-html[data-view="ops"] .ops-classic:hover { color: var(--t-link); text-decoration: underline }
+html[data-view="ops"] .ops-btn:hover { border-color: var(--o-dim); color: var(--o-strong); background: var(--o-hover) }
+html[data-view="ops"] .ops-btn:is([aria-pressed="true"], [aria-expanded="true"]) { border-color: var(--o-sel); color: var(--o-strong); background: color-mix(in srgb, var(--o-sel) 14%, transparent) }
+html[data-view="ops"] .ops-btn.on::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--o-ok) }
+html[data-view="ops"] .ops-classic { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--o-faint); text-decoration: none; padding: 0 2px 0 8px; white-space: nowrap }
+html[data-view="ops"] .ops-classic:hover { color: var(--o-text) }
 
-/* ---------- The left column ---------- */
-html[data-view="ops"] .ops-left { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--t-surface-1); border-right: 1px solid var(--t-line); overflow: hidden }
-html[data-view="ops"] .ops-lhead { display: flex; align-items: center; gap: 6px; padding: 8px 8px 0 10px; border-bottom: 1px solid var(--t-line); flex: none }
-html[data-view="ops"] .ops-ltitle { margin: 0 0 8px; font: 600 13px var(--ops-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--t-muted); flex: 1 }
-html[data-view="ops"] .ops-tabs { display: flex; gap: 2px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none }
+/* ---------- The tool rail ---------- */
+html[data-view="ops"] .ops-nav { display: flex; flex-direction: column; align-items: stretch; gap: 0; background: var(--o-panel); border-right: 1px solid var(--o-line); padding: 6px 0; min-height: 0 }
+html[data-view="ops"] .ops-nav button {
+  appearance: none; position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 2px 8px; border: 0; background: none; color: var(--o-dim); cursor: pointer;
+}
+html[data-view="ops"] .ops-nav button svg { width: 20px; height: 20px }
+html[data-view="ops"] .ops-nav button span { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; line-height: 1 }
+html[data-view="ops"] .ops-nav button:hover { color: var(--o-strong); background: var(--o-hover) }
+html[data-view="ops"] .ops-nav button:is([aria-pressed="true"], [aria-expanded="true"]) { color: var(--o-strong) }
+html[data-view="ops"] .ops-nav button:is([aria-pressed="true"], [aria-expanded="true"])::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--o-sel) }
+html[data-view="ops"] .ops-nav-sp { flex: 1 }
+
+/* ---------- The panels, left and right ---------- */
+html[data-view="ops"] :is(.ops-left, .ops-right) { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--o-panel); overflow: hidden }
+html[data-view="ops"] .ops-left { border-right: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-right { border-left: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-phead { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 16px; border-bottom: 1px solid var(--o-line); flex: none }
+html[data-view="ops"] .ops-ptitle { flex: 1; margin: 0; font-size: 14px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--o-strong) }
+html[data-view="ops"] .ops-rtabs { padding-left: 8px }
+html[data-view="ops"] .ops-tabs { display: flex; align-items: stretch; gap: 0; flex: 1; min-width: 0; height: 100%; overflow-x: auto; scrollbar-width: none }
 html[data-view="ops"] .ops-tabs button {
-  appearance: none; border: 0; background: none; cursor: pointer; padding: 7px 10px 9px; margin-bottom: -1px;
-  font: 600 12.5px var(--ops-ui); color: var(--t-muted); border-bottom: 2px solid transparent; white-space: nowrap;
+  appearance: none; border: 0; background: none; cursor: pointer; padding: 0 10px; margin-bottom: -1px; border-bottom: 2px solid transparent;
+  font-size: 13.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--o-dim); white-space: nowrap;
 }
-html[data-view="ops"] .ops-tabs button:hover { color: var(--t-text) }
-html[data-view="ops"] .ops-tabs button[aria-selected="true"] { color: var(--t-strong); border-bottom-color: var(--t-link) }
-html[data-view="ops"] .ops-fold {
-  appearance: none; flex: none; width: 26px; height: 26px; display: grid; place-items: center; margin-bottom: 6px;
-  border: 1px solid transparent; border-radius: var(--ops-radius); background: none; color: var(--t-faint); cursor: pointer;
-}
+html[data-view="ops"] .ops-tabs button small { font: 500 11px var(--ops-mono) !important; color: var(--o-faint); letter-spacing: 0; margin-left: 3px }
+html[data-view="ops"] .ops-tabs button:hover { color: var(--o-text) }
+html[data-view="ops"] .ops-tabs button[aria-selected="true"] { color: var(--o-strong); border-bottom-color: var(--o-sel) }
+html[data-view="ops"] .ops-fold { appearance: none; flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid transparent; border-radius: var(--ops-r); background: none; color: var(--o-faint); cursor: pointer }
 html[data-view="ops"] .ops-fold svg { width: 15px; height: 15px }
-html[data-view="ops"] .ops-fold:hover { color: var(--t-text); border-color: var(--t-line); background: var(--t-surface-2) }
-html[data-view="ops"] .ops-panes { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--t-line-strong) transparent }
-html[data-view="ops"] .ops-pane { display: none !important; margin: 0 !important; padding: 12px 14px 18px !important; border: 0 !important; max-width: none !important; background: none !important; box-shadow: none !important }
+html[data-view="ops"] .ops-fold:hover { color: var(--o-text); border-color: var(--o-line-2) }
+html[data-view="ops"] .ops-panes { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--o-line-2) transparent }
+html[data-view="ops"] .ops-pane { display: none !important; margin: 0 !important; padding: 14px 16px 22px !important; border: 0 !important; max-width: none !important; background: none !important; box-shadow: none !important }
 html[data-view="ops"] .ops-pane.on { display: block !important }
-html[data-view="ops"] .ops-left .ops-pane > h2:first-child { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--t-muted); margin: 0 0 8px }
-html[data-view="ops"] .ops-left footer { padding: 10px 14px 16px; border-top: 1px solid var(--t-line-soft); font-size: 11px; color: var(--t-faint) }
-/* Wide parts made for the page's width, fitted to the column. */
-html[data-view="ops"] .ops-left :is(.g-body, .h2-sec .g-body) { grid-template-columns: 1fr !important }
-html[data-view="ops"] .ops-left .g-wrap { display: block }
-html[data-view="ops"] .ops-left :is(table) { font-size: 12px }
+html[data-view="ops"] .ops-left .ops-pane > h2:first-child { display: none }
+html[data-view="ops"] .ops-left .ops-pane h2, html[data-view="ops"] .ops-left .ops-pane h3 { font-size: 14px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--o-dim); margin: 18px 0 8px }
+html[data-view="ops"] .ops-left footer { padding: 12px 16px 18px; border-top: 1px solid var(--o-line); font-size: 11px; color: var(--o-faint) }
 html[data-view="ops"] .ops-left :is(.cas-grid, .num-grid, .tally-grid, .boxes) { grid-template-columns: 1fr !important }
-html[data-view="ops"] .ops-left .h2-sec > h2 { display: none }
-
-/* ---------- The reports (right) ---------- */
-html[data-view="ops"] .ops-on .rail { position: relative; background: var(--t-surface-1); border-left: 1px solid var(--t-line); padding: 10px 12px 16px 14px }
-html[data-view="ops"] .ops-on .rail-splitter { background: var(--t-line-soft) }
-html[data-view="ops"] .ops-fold-r { position: absolute; top: 8px; right: 8px; z-index: 3 }
-html[data-view="ops"] .ops-on .rail .rail-head { padding-right: 34px }
-html[data-view="ops"] .ops-rail { overflow: auto; min-height: 0; height: 100% }
-html[data-view="ops"] .ops-rhead { border-bottom: 1px solid var(--t-line); margin: 0 0 10px; padding-right: 34px }
+html[data-view="ops"] .ops-left table { font-size: 12px }
+html[data-view="ops"] .ops-left .cadence { font: 500 11px var(--ops-mono) !important; letter-spacing: 0 !important; color: var(--o-faint) !important; text-transform: none !important; margin: 0 0 12px !important }
+html[data-view="ops"] .ops-on :is(.situation, .fronts-wrap) :is(p, li, .pts li) { font-size: 14px; line-height: 1.55 }
+html[data-view="ops"] .ops-rpane { display: none; flex: 1; min-height: 0; flex-direction: column }
+html[data-view="ops"] .ops-on[data-ops-rtab="rep"] .ops-rp-rep, html[data-view="ops"] .ops-on[data-ops-rtab="ev"] .ops-rp-ev { display: flex }
+/* The desk's own reports column, as it is, inside the panel. */
+html[data-view="ops"] .ops-rp-rep > .rail { flex: 1; min-height: 0; overflow: auto; position: relative; height: auto !important; max-height: none !important; width: auto !important; margin: 0 !important; padding: 12px 14px 18px !important; border: 0 !important; background: none !important; box-shadow: none !important; scrollbar-width: thin; scrollbar-color: var(--o-line-2) transparent }
+html[data-view="ops"] .ops-rp-rep > .rail .rail-head h2 { font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--o-dim); font-family: var(--ops-cond) !important }
+html[data-view="ops"] .ops-seg { display: flex; gap: 0; margin: 0 0 10px; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); overflow: hidden }
+html[data-view="ops"] .ops-seg button { appearance: none; flex: 1; height: 30px; border: 0; background: none; color: var(--o-dim); font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; cursor: pointer }
+html[data-view="ops"] .ops-seg button + button { border-left: 1px solid var(--o-line-2) }
+html[data-view="ops"] .ops-seg button[aria-selected="true"] { background: var(--o-hover); color: var(--o-strong); box-shadow: inset 0 -2px 0 var(--o-sel) }
 html[data-view="ops"] .ops-q {
   width: 100%; box-sizing: border-box; height: 32px; margin: 0 0 10px; padding: 0 10px;
-  border: 1px solid var(--t-line); border-radius: var(--ops-radius); background: var(--t-surface-2); color: var(--t-text); font: 13px var(--ops-ui);
+  border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: var(--o-bg); color: var(--o-text); font: 13px var(--ops-ui);
 }
-html[data-view="ops"] .ops-q:focus { outline: 2px solid color-mix(in srgb, var(--t-link) 45%, transparent); outline-offset: 0 }
-html[data-view="ops"] .ops-empty { color: var(--t-muted); font-size: 13px; list-style: none; padding: 8px 2px }
+html[data-view="ops"] .ops-q::placeholder { color: var(--o-faint) }
+html[data-view="ops"] .ops-q:focus { outline: 1px solid var(--o-sel); outline-offset: 0; border-color: var(--o-sel) }
+html[data-view="ops"] .ops-empty { color: var(--o-dim); font-size: 13px; list-style: none; padding: 10px 2px }
 
-/* ---------- Folded columns: a tab on the map's edge opens them again ---------- */
-html[data-view="ops"] .ops-unfold {
-  display: none; position: absolute; z-index: 900; top: 50%; transform: translateY(-50%);
-  width: 20px; height: 56px; padding: 0; border: 1px solid var(--t-line); background: var(--t-glass); color: var(--t-muted); cursor: pointer; place-items: center;
+/* ---------- Report cards, flat ---------- */
+html[data-view="ops"] .ops-on .card { border-radius: var(--ops-r) !important; box-shadow: none !important; background: var(--o-raised) !important; border: 1px solid var(--o-line) !important }
+html[data-view="ops"] .ops-on .card:hover { border-color: var(--o-line-2) !important }
+html[data-view="ops"] .ops-on .card .headline { font-size: 14.5px; font-weight: 600; line-height: 1.38; letter-spacing: -.003em; color: var(--o-strong) }
+html[data-view="ops"] .ops-on .card :is(.lead, .full, .body) { font-size: 13.5px; line-height: 1.5; color: var(--t-text-2) }
+html[data-view="ops"] .ops-on .card :is(time, .when, .meta, .src, .card-meta) { font-family: var(--ops-mono) !important; font-size: 11.5px }
+html[data-view="ops"] .leaflet-popup-content .pop-h { font-size: 14px; font-weight: 600; line-height: 1.35 }
+html[data-view="ops"] .ops-on .leaflet-popup-content-wrapper { border-radius: var(--ops-r); box-shadow: var(--shadow-pop); background: var(--o-raised); color: var(--o-text); border: 1px solid var(--o-line-2) }
+html[data-view="ops"] .ops-on .leaflet-popup-tip { background: var(--o-raised) }
+
+/* ---------- The events list (right) ---------- */
+html[data-view="ops"] .ops-evf { display: flex; flex-direction: column; gap: 0; padding: 12px 14px 0; flex: none }
+html[data-view="ops"] .ops-evf .ops-q { margin-bottom: 6px }
+html[data-view="ops"] .ops-evf .ops-log-n { font: 500 11px var(--ops-mono); color: var(--o-faint); padding: 0 2px 8px }
+html[data-view="ops"] .ops-log-l { list-style: none; margin: 0; padding: 0 8px 18px; overflow: auto; flex: 1; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--o-line-2) transparent }
+html[data-view="ops"] .ops-day { position: sticky; top: 0; z-index: 1; padding: 8px 8px 4px; background: var(--o-panel); font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint); border-bottom: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-log-l button {
+  appearance: none; width: 100%; display: grid; grid-template-columns: 42px 20px minmax(0, 1fr); align-items: start; gap: 8px; padding: 8px 8px 8px 6px;
+  border: 0; border-left: 2px solid var(--c); border-bottom: 1px solid var(--o-line); border-radius: 0; background: none; color: var(--o-text); font: 13px/1.35 var(--ops-ui); text-align: left; cursor: pointer;
 }
-html[data-view="ops"] .ops-unfold svg { width: 14px; height: 14px }
-html[data-view="ops"] .ops-unfold-left { left: 0; border-left: 0; border-radius: 0 var(--ops-radius) var(--ops-radius) 0 }
-html[data-view="ops"] .ops-unfold-right { right: 0; border-right: 0; border-radius: var(--ops-radius) 0 0 var(--ops-radius) }
-html[data-view="ops"] .ops-unfold-dock { top: auto; bottom: 0; left: 50%; transform: translateX(-50%); width: auto; height: 24px; padding: 0 14px; border-bottom: 0; border-radius: var(--ops-radius) var(--ops-radius) 0 0; font: 500 11.5px var(--ops-ui) }
+html[data-view="ops"] .ops-log-l button:hover { background: var(--o-hover) }
+html[data-view="ops"] .ops-log-l time { font-size: 11.5px; font-weight: 500; color: var(--o-dim); padding-top: 2px }
+html[data-view="ops"] .ops-log-l .t { min-width: 0 }
+html[data-view="ops"] .ops-log-l .t b { display: block; font-weight: 500; color: var(--o-strong) }
+html[data-view="ops"] .ops-log-l .t small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--o-dim) }
+html[data-view="ops"] .ops-log-l .t small i { font-style: normal; color: var(--o-faint) }
+html[data-view="ops"] :is(.ops-log-l, .ops-toast) .k { width: 20px; height: 20px; border-radius: 2px; background: var(--c); display: grid; place-items: center; color: #fff; flex: none }
+html[data-view="ops"] :is(.ops-log-l, .ops-toast) .k svg { width: 12px; height: 12px }
+
+/* ---------- The All page: each theatre at a glance ---------- */
+html[data-view="ops"] .ops-th { padding: 0 0 16px; margin: 0 0 16px; border-bottom: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-th header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px }
+html[data-view="ops"] .ops-th h3 { margin: 0 !important; font-size: 20px !important; font-weight: 700; letter-spacing: .14em !important; text-transform: uppercase; color: var(--o-strong) !important; font-family: var(--ops-cond) !important }
+html[data-view="ops"] .ops-th h3 a { color: inherit; text-decoration: none }
+html[data-view="ops"] .ops-th-go { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--o-dim); text-decoration: none }
+html[data-view="ops"] .ops-th-go svg { width: 12px; height: 12px }
+html[data-view="ops"] .ops-th-go:hover { color: var(--o-sel) }
+html[data-view="ops"] .ops-th-sub { margin: 2px 0 12px; font-size: 12.5px; color: var(--o-dim) }
+html[data-view="ops"] .ops-kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 0 0 12px; border: 1px solid var(--o-line); border-radius: var(--ops-r) }
+html[data-view="ops"] .ops-kpi div { padding: 8px 10px; min-width: 0 }
+html[data-view="ops"] .ops-kpi div + div { border-left: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-kpi dt { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--o-faint) }
+html[data-view="ops"] .ops-kpi dd { margin: 2px 0 0; font-size: 18px; font-weight: 500; color: var(--o-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+html[data-view="ops"] .ops-bars { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 5px }
+html[data-view="ops"] .ops-bars li { display: grid; grid-template-columns: 112px 1fr 30px; align-items: center; gap: 8px; font-size: 12px; color: var(--o-text) }
+html[data-view="ops"] .ops-bars span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+html[data-view="ops"] .ops-bars i { height: 8px; background: linear-gradient(var(--c), var(--c)) left / var(--w) 100% no-repeat, var(--o-hover); border-radius: 1px }
+html[data-view="ops"] .ops-bars b { font-size: 12px; font-weight: 500; text-align: right; color: var(--o-strong) }
+html[data-view="ops"] .ops-th-ev { list-style: none; margin: 0; padding: 0 }
+html[data-view="ops"] .ops-th-ev button { appearance: none; width: 100%; display: grid; grid-template-columns: 42px 1fr; gap: 8px; padding: 6px 4px; border: 0; border-top: 1px solid var(--o-line); background: none; color: var(--o-text); font: 12.5px/1.35 var(--ops-ui); text-align: left; cursor: pointer }
+html[data-view="ops"] .ops-th-ev button:hover { background: var(--o-hover) }
+html[data-view="ops"] .ops-th-ev time { font-size: 11.5px; color: var(--o-dim) }
+html[data-view="ops"] .ops-th-note { font-size: 12px; color: var(--o-faint); line-height: 1.5 }
+
+/* ---------- Closed panels: a tab on the map's edge opens them again ---------- */
+html[data-view="ops"] .ops-unfold { display: none; position: absolute; z-index: 900; top: 50%; transform: translateY(-50%); width: 18px; height: 52px; padding: 0; border: 1px solid var(--o-line-2); background: var(--o-glass); color: var(--o-dim); cursor: pointer; place-items: center }
+html[data-view="ops"] .ops-unfold svg { width: 13px; height: 13px }
+html[data-view="ops"] .ops-unfold-left { left: 0; border-left: 0; border-radius: 0 var(--ops-r) var(--ops-r) 0 }
+html[data-view="ops"] .ops-unfold-right { right: 0; border-right: 0; border-radius: var(--ops-r) 0 0 var(--ops-r) }
+html[data-view="ops"] .ops-unfold-dock { top: auto; bottom: 0; left: 50%; transform: translateX(-50%); width: auto; height: 24px; padding: 0 14px; border-bottom: 0; border-radius: var(--ops-r) var(--ops-r) 0 0; font: 600 11.5px var(--ops-cond); letter-spacing: .12em; text-transform: uppercase }
 @media (min-width: 761px) {
-  html[data-view="ops"] .ops-noleft .ops-unfold-left,
-  html[data-view="ops"] .ops-noright .ops-unfold-right { display: grid }
+  html[data-view="ops"] .ops-noleft .ops-unfold-left, html[data-view="ops"] .ops-noright .ops-unfold-right { display: grid }
   html[data-view="ops"] .ops-nodock .ops-unfold-dock { display: block }
 }
 
-/* ---------- The dock under the map ---------- */
-html[data-view="ops"] .ops-dock {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 800;
-  display: flex; flex-direction: column; gap: 0;
-  background: var(--t-surface-1); border-top: 1px solid var(--t-line);
-  font-family: var(--ops-ui);
-  max-height: 40%; overflow: hidden;
-}
-html[data-view="ops"] .ops-drow { display: flex; align-items: center; gap: 10px; padding: 6px 12px; min-width: 0 }
-html[data-view="ops"] .ops-drow + .ops-drow { border-top: 1px solid var(--t-line-soft) }
-html[data-view="ops"] .ops-dtop { padding-top: 5px; padding-bottom: 5px }
+/* ---------- The strip under the map: time, Who and What, the last 48 hours ---------- */
+html[data-view="ops"] .ops-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 800; display: flex; flex-direction: column; background: var(--o-panel); border-top: 1px solid var(--o-line-2); max-height: 40%; overflow: hidden }
+html[data-view="ops"] .ops-drow { display: flex; align-items: center; gap: 10px; padding: 5px 12px; min-width: 0 }
+html[data-view="ops"] .ops-drow + .ops-drow { border-top: 1px solid var(--o-line) }
 html[data-view="ops"] .ops-time { flex: 1; min-width: 0 }
 html[data-view="ops"] .ops-fold-d { margin: 0 }
-/* The time filter, as the desks have it, in one quiet row. */
 html[data-view="ops"] .ops-dock .toolbar { position: static !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; min-height: 0; top: auto }
 html[data-view="ops"] .ops-dock .time-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px }
-html[data-view="ops"] .ops-dock .time-filter :is(button, input) { height: 28px; font-size: 12.5px }
-/* Who and What: the legend, laid out in rows. */
-html[data-view="ops"] .ops-who { padding-top: 4px; padding-bottom: 5px }
+html[data-view="ops"] .ops-dock .time-filter .tf-label { font: 700 12px var(--ops-cond) !important; letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint) }
+html[data-view="ops"] .ops-dock .time-filter :is(button, input) { height: 28px; font-size: 12.5px; border-radius: var(--ops-r) !important; border: 1px solid var(--o-line-2) !important; background: none !important; color: var(--o-text) !important; box-shadow: none !important }
+html[data-view="ops"] .ops-dock .time-filter input { font-family: var(--ops-mono) !important; font-size: 12px; background: var(--o-bg) !important }
+html[data-view="ops"] .ops-dock .time-filter button:hover { border-color: var(--o-dim) !important; background: var(--o-hover) !important }
+html[data-view="ops"] .ops-dock .time-filter button:is(.on, [aria-pressed="true"]) { border-color: var(--o-sel) !important; background: color-mix(in srgb, var(--o-sel) 16%, transparent) !important; color: var(--o-strong) !important }
+html[data-view="ops"] .ops-who { padding-top: 4px; padding-bottom: 4px }
 html[data-view="ops"] .ops-dock .legend {
   position: static !important; inset: auto !important; transform: none !important; width: auto !important; max-width: none !important; max-height: none !important;
   margin: 0 !important; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; backdrop-filter: none !important; overflow: visible !important; flex: 1; min-width: 0;
 }
 html[data-view="ops"] .ops-dock .legend .leg-head, html[data-view="ops"] .ops-dock .legend .leg-hint { display: none !important }
-html[data-view="ops"] .ops-dock .legend .leg-body { display: flex !important; flex-wrap: wrap; align-items: center; gap: 2px 4px; max-height: none !important; overflow: visible !important; padding: 0 !important }
-html[data-view="ops"] .ops-dock .legend :is(.leg-sec, .leg-sub) { margin: 0 4px 0 10px !important; padding: 0 !important; border: 0 !important; font: 600 10.5px var(--ops-ui) !important; letter-spacing: .1em; text-transform: uppercase; color: var(--t-faint) !important; width: auto !important; flex: none }
+html[data-view="ops"] .ops-dock .legend .leg-body { display: flex !important; flex-wrap: wrap; align-items: center; gap: 2px 3px; max-height: none !important; overflow: visible !important; padding: 0 !important }
+html[data-view="ops"] .ops-dock .legend :is(.leg-sec, .leg-sub) { margin: 0 6px 0 12px !important; padding: 0 !important; border: 0 !important; font-size: 12px !important; font-weight: 700 !important; letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint) !important; width: auto !important; flex: none }
 html[data-view="ops"] .ops-dock .legend :is(.leg-sec, .leg-sub):first-of-type { margin-left: 0 !important }
-html[data-view="ops"] .ops-dock .legend .leg-item { width: auto !important; margin: 0 !important; padding: 3px 8px 3px 4px !important; border-radius: 99px !important; font-size: 12px !important; gap: 6px; white-space: nowrap; border: 1px solid transparent }
-html[data-view="ops"] .ops-dock .legend .leg-item:hover { background: var(--t-surface-2); border-color: var(--t-line) }
-html[data-view="ops"] .ops-dock .legend .leg-item:not(.on) { opacity: .5 }
+html[data-view="ops"] .ops-dock .legend .leg-item { width: auto !important; margin: 0 !important; padding: 2px 8px 2px 3px !important; border-radius: 2px !important; font-size: 12px !important; gap: 6px; white-space: nowrap; border: 1px solid transparent; background: none !important; color: var(--o-text) !important }
+html[data-view="ops"] .ops-dock .legend .leg-item:hover { background: var(--o-hover) !important; border-color: var(--o-line-2) }
+html[data-view="ops"] .ops-dock .legend .leg-item:not(.on) { opacity: .45 }
+html[data-view="ops"] .ops-dock .legend .sw { border-radius: 2px !important }
 html[data-view="ops"] .ops-dock .h-leg-pick { display: inline-flex; gap: 4px; margin: 0 8px 0 0 }
 html[data-view="ops"] .ops-dock .legend :is(.leg-break, hr) { display: none }
-/* The last 48 hours, and the latest events beside them. */
-html[data-view="ops"] .ops-mx { align-items: stretch; gap: 14px; padding-top: 6px; padding-bottom: 8px }
+html[data-view="ops"] .ops-mx { align-items: stretch; gap: 14px; padding-top: 6px; padding-bottom: 6px }
 html[data-view="ops"] .ops-act { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column }
-html[data-view="ops"] .ops-act-h { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; font-size: 12px; white-space: nowrap; min-width: 0 }
-html[data-view="ops"] .ops-act-h b { font-weight: 600; color: var(--t-text) }
-html[data-view="ops"] .ops-act-h small { color: var(--t-faint); font-size: 11px; overflow: hidden; text-overflow: ellipsis }
-html[data-view="ops"] .ops-act-sel { display: inline-flex; align-items: center; gap: 4px; padding: 1px 4px 1px 8px; border-radius: 99px; background: color-mix(in srgb, var(--ops-tool) 22%, transparent); color: var(--t-strong); font: 600 11.5px var(--ops-mono) }
+html[data-view="ops"] .ops-act-h { display: flex; align-items: baseline; gap: 10px; margin: 0 0 3px; white-space: nowrap; min-width: 0 }
+html[data-view="ops"] .ops-act-h b { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint) }
+html[data-view="ops"] .ops-act-h small { color: var(--o-faint); font-size: 11px; overflow: hidden; text-overflow: ellipsis }
+html[data-view="ops"] .ops-act-sel { display: inline-flex; align-items: center; gap: 4px; padding: 0 3px 0 8px; border-radius: 2px; background: color-mix(in srgb, var(--o-sel) 22%, transparent); color: var(--o-strong); font-size: 11.5px; font-weight: 600 }
 html[data-view="ops"] .ops-act-sel button { appearance: none; border: 0; background: none; color: inherit; width: 18px; height: 18px; padding: 2px; cursor: pointer; display: grid; place-items: center }
 html[data-view="ops"] .ops-act-sel svg { width: 12px; height: 12px }
 html[data-view="ops"] .ops-amx { width: 100%; display: block; max-height: 130px; user-select: none; touch-action: none }
-html[data-view="ops"] .ops-amx .lab { font: 500 10.5px var(--ops-ui); fill: var(--t-muted) }
-html[data-view="ops"] .ops-amx .tk { font: 500 10px var(--ops-mono); fill: var(--t-faint) }
-html[data-view="ops"] .ops-amx .tk.now { fill: var(--t-text-2) }
-html[data-view="ops"] .ops-amx .g { stroke: var(--t-line-soft); stroke-width: 1 }
-html[data-view="ops"] .ops-amx .g.d { stroke: var(--t-line-strong); stroke-dasharray: 2 3 }
-html[data-view="ops"] .ops-amx .row { stroke: var(--t-line-soft); stroke-width: 1 }
-html[data-view="ops"] .ops-amx .nowl { stroke: var(--t-text-2); stroke-width: 1 }
-html[data-view="ops"] .ops-amx .sel { fill: color-mix(in srgb, var(--ops-tool) 16%, transparent); stroke: var(--ops-tool); stroke-width: 1 }
+html[data-view="ops"] .ops-amx .lab { font: 500 11px var(--ops-ui); fill: var(--o-dim) }
+html[data-view="ops"] .ops-amx .tk { font-size: 10.5px; fill: var(--o-faint) }
+html[data-view="ops"] .ops-amx .tk.now, html[data-view="ops"] .ops-amx .tk.day { fill: var(--o-text) }
+html[data-view="ops"] .ops-amx .g { stroke: var(--o-line); stroke-width: 1 }
+html[data-view="ops"] .ops-amx .g.d { stroke: var(--o-line-2); stroke-dasharray: 2 3 }
+html[data-view="ops"] .ops-amx .row { stroke: var(--o-line); stroke-width: 1 }
+html[data-view="ops"] .ops-amx .nowl { stroke: var(--o-live); stroke-width: 1 }
+html[data-view="ops"] .ops-amx .sel { fill: color-mix(in srgb, var(--o-sel) 16%, transparent); stroke: var(--o-sel); stroke-width: 1 }
 html[data-view="ops"] .ops-amx .hit { fill: transparent; cursor: crosshair }
 html[data-view="ops"] .ops-amx .cell { pointer-events: none }
-html[data-view="ops"] .ops-log { flex: 0 0 min(34%, 360px); min-width: 0; display: flex; flex-direction: column; border-left: 1px solid var(--t-line-soft); padding-left: 12px }
-html[data-view="ops"] .ops-log-l { list-style: none; margin: 0; padding: 0; overflow: auto; max-height: 112px; scrollbar-width: thin; scrollbar-color: var(--t-line-strong) transparent }
-html[data-view="ops"] .ops-log-l button { appearance: none; width: 100%; display: grid; grid-template-columns: 38px 18px minmax(0, 1fr); align-items: center; gap: 6px; padding: 3px 4px; border: 0; border-radius: 4px; background: none; color: var(--t-text-2); font: 12px var(--ops-ui); text-align: left; cursor: pointer }
-html[data-view="ops"] .ops-log-l button:hover { background: var(--t-surface-2); color: var(--t-strong) }
-html[data-view="ops"] .ops-log-l time { font: 500 11px var(--ops-mono); color: var(--t-faint) }
-html[data-view="ops"] .ops-log-l .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-html[data-view="ops"] :is(.ops-log-l, .ops-toast) .k { width: 18px; height: 18px; border-radius: 50%; background: var(--c); display: grid; place-items: center; color: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25) }
-html[data-view="ops"] :is(.ops-log-l, .ops-toast) .k svg { width: 11px; height: 11px }
 
-/* ---------- On the map ---------- */
-html[data-view="ops"] .ops-hud { position: absolute; inset: 0 0 var(--dock-h, 0) 0; pointer-events: none; z-index: 850; font-family: var(--ops-ui) }
+/* ---------- The map itself: no country colours, thin borders ---------- */
+html[data-view="ops"] .ops-on .leaflet-container { background: var(--o-bg); font-family: var(--ops-ui) }
+html[data-view="ops"]:not(.ops-fills) .ops-on :is(.leaflet-overlay-pane, .leaflet-hCtrl-pane, .leaflet-irCountries-pane, .leaflet-islands-pane, .leaflet-irAdm-pane) path:not(.place-hl, .gov-hl, .gov-hl-pulse, .front-mv) {
+  fill-opacity: 0 !important; stroke: var(--o-map-line) !important; stroke-opacity: .9 !important; stroke-width: .7px !important;
+}
+html[data-view="ops"].ops-fills .ops-on :is(.leaflet-overlay-pane > svg, .leaflet-hCtrl-pane, .leaflet-irCountries-pane, .leaflet-islands-pane) { opacity: .62 }
+html[data-view="ops"][data-theme="broadsheet-night"] .ops-on .leaflet-tile-pane { filter: saturate(.6) brightness(.92) }
+html[data-view="ops"][data-theme="broadsheet-day"] .ops-on .leaflet-tile-pane { filter: saturate(.5) }
+html[data-view="ops"].ops-base-sat .ops-on .leaflet-tile-pane { filter: saturate(.75) brightness(.8) }
+html[data-view="ops"][data-theme="broadsheet-day"].ops-base-sat .ops-on .leaflet-tile-pane { filter: saturate(.85) brightness(.95) }
+html[data-view="ops"] .ops-on .leaflet-opsNames-pane { opacity: .9 }
+html[data-view="ops"] .ops-on .ops-gl { stroke: var(--o-text); stroke-opacity: .16 }
+html[data-view="ops"] .ops-glab span { position: absolute; white-space: nowrap; font-size: 10px; font-weight: 500; color: var(--o-dim); text-shadow: 0 0 3px var(--o-bg), 0 0 3px var(--o-bg) }
+html[data-view="ops"] .ops-glab.w span { transform: translate(4px, -100%) }
+html[data-view="ops"] .ops-glab.n span { transform: translate(3px, 2px) }
+html[data-view="ops"] .ops-on .leaflet-control-zoom { border: 1px solid var(--o-line-2) !important; border-radius: var(--ops-r) !important; box-shadow: none !important; overflow: hidden }
+html[data-view="ops"] .ops-on .leaflet-control-zoom a { width: 32px !important; height: 32px !important; line-height: 32px !important; background: var(--o-glass) !important; color: var(--o-text) !important; border-color: var(--o-line) !important; border-radius: 0 !important }
+html[data-view="ops"] .ops-on .leaflet-control-zoom a:hover { background: var(--o-hover) !important }
+html[data-view="ops"] .ops-on .leaflet-control-attribution { background: color-mix(in srgb, var(--o-bg) 70%, transparent) !important; color: var(--o-faint) !important; font-size: 10px }
+html[data-view="ops"] .ops-on .leaflet-control-attribution a { color: var(--o-dim) !important }
+html[data-view="ops"] .ops-on .map-chip { top: 10px; right: 10px; font-size: 12px; border-radius: var(--ops-r); background: var(--o-glass); border: 1px solid var(--o-line-2); color: var(--o-text); box-shadow: none }
+html[data-view="ops"] .ops-on .map-full { display: none !important }
+
+/* ---------- On the map: tools, place, scale, overview ---------- */
+html[data-view="ops"] .ops-hud { position: absolute; inset: 0 0 var(--dock-h, 0) 0; pointer-events: none; z-index: 850 }
 html[data-view="ops"] .ops-hud > * { pointer-events: auto }
 html[data-view="ops"] .ops-on .leaflet-top.leaflet-left { top: 2px }
-html[data-view="ops"] .ops-tools {
-  position: absolute; left: 10px; top: 92px; display: flex; flex-direction: column; overflow: hidden;
-  border: 1px solid var(--t-line); border-radius: var(--ops-radius); background: var(--t-glass); box-shadow: var(--shadow-pop);
-}
-html[data-view="ops"] .ops-tools button { appearance: none; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-bottom: 1px solid var(--t-line-soft); background: none; color: var(--t-text-2); cursor: pointer; position: relative }
+html[data-view="ops"] .ops-tools { position: absolute; left: 10px; top: 86px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: var(--o-glass) }
+html[data-view="ops"] .ops-tools button { appearance: none; width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-bottom: 1px solid var(--o-line); background: none; color: var(--o-text); cursor: pointer; position: relative }
 html[data-view="ops"] .ops-tools button:last-child { border-bottom: 0 }
 html[data-view="ops"] .ops-tools button svg { width: 17px; height: 17px }
-html[data-view="ops"] .ops-tools button:hover { color: var(--t-strong); background: var(--t-surface-2) }
-html[data-view="ops"] .ops-tools button[aria-pressed="true"] { color: #1a1408; background: var(--ops-tool) }
-html[data-view="ops"] :is(.ops-tools button, .ops-coords).tipped::after { content: attr(data-tip); position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); padding: 3px 8px; border-radius: 4px; background: var(--t-strong); color: var(--t-bg); font: 600 11px var(--ops-ui); white-space: nowrap }
+html[data-view="ops"] .ops-tools button:hover { background: var(--o-hover); color: var(--o-strong) }
+html[data-view="ops"] .ops-tools button[aria-pressed="true"] { color: var(--o-sel-ink); background: var(--o-tool) }
+html[data-view="ops"] :is(.ops-tools button, .ops-coords).tipped::after { content: attr(data-tip); position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); padding: 3px 8px; border-radius: 2px; background: var(--o-strong); color: var(--o-bg); font: 600 11px var(--ops-ui); white-space: nowrap }
 html[data-view="ops"] .ops-coords.tipped::after { left: 0; top: auto; bottom: calc(100% + 6px); transform: none }
-html[data-view="ops"] .ops-tooltip { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); padding: 6px 12px; border-radius: 99px; background: var(--t-strong); color: var(--t-bg); font: 600 12px var(--ops-ui); box-shadow: var(--shadow-pop) }
+html[data-view="ops"] .ops-tooltip { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); padding: 6px 12px; border-radius: 2px; background: var(--o-strong); color: var(--o-bg); font: 600 12px var(--ops-ui) }
 html[data-view="ops"] .ops-coords {
   position: absolute; left: 10px; bottom: 34px; display: flex; flex-direction: column; gap: 1px; cursor: copy;
-  padding: 5px 9px; border: 1px solid var(--t-line); border-radius: var(--ops-radius); background: var(--t-glass);
-  font: 500 11.5px var(--ops-mono); color: var(--t-text-2); font-variant-numeric: tabular-nums;
+  padding: 5px 9px; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: var(--o-glass); font-size: 11.5px; font-weight: 500; color: var(--o-text); font-variant-numeric: tabular-nums;
 }
-html[data-view="ops"] .ops-coords .ops-mgrs { color: var(--t-muted); font-size: 11px }
+html[data-view="ops"] .ops-coords .ops-mgrs { color: var(--o-dim); font-size: 11px }
 html[data-view="ops"] .ops-on .leaflet-control-scale { margin-left: 10px !important; margin-bottom: 10px !important }
-html[data-view="ops"] .ops-on .leaflet-control-scale-line { background: var(--t-glass); border-color: var(--t-text-2); color: var(--t-text-2); font: 500 10.5px var(--ops-mono) }
-html[data-view="ops"] .ops-mini {
-  position: absolute; right: 10px; top: 52px; width: 170px; height: 118px; overflow: hidden;
-  border: 1px solid var(--t-line-strong); border-radius: var(--ops-radius); box-shadow: var(--shadow-pop); background: var(--t-surface-2);
-}
-html[data-view="ops"] .ops-mini-map { position: absolute; inset: 0; cursor: pointer; background: var(--t-surface-2) }
-html[data-view="ops"] .ops-mini .leaflet-tile-pane { opacity: .9 }
-html[data-view="ops"] .ops-amx .tk.day { fill: var(--t-text-2) }
+html[data-view="ops"] .ops-on .leaflet-control-scale-line { background: var(--o-glass); border-color: var(--o-text); color: var(--o-text); font-size: 10.5px }
+html[data-view="ops"] .ops-mini { position: absolute; right: 10px; top: 52px; width: 168px; height: 112px; overflow: hidden; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: var(--o-bg) }
+html[data-view="ops"] .ops-mini-map { position: absolute; inset: 0; cursor: pointer; background: var(--o-bg) }
 html[data-view="ops"] .ops-crosshair { cursor: crosshair !important }
-/* While measuring, a click is a point on the map, not a pin or a province. */
 html[data-view="ops"] .ops-crosshair :is(.leaflet-marker-pane, .leaflet-overlay-pane, .leaflet-interactive) { pointer-events: none !important }
-html[data-view="ops"] .ops-rlabel span, html[data-view="ops"] .ops-ringlabel span {
-  position: absolute; transform: translate(10px, -50%); white-space: nowrap; padding: 3px 7px; border-radius: 4px;
-  background: rgba(14,14,16,.86); color: #ffe7a6; font: 600 11.5px var(--ops-mono); display: flex; flex-direction: column; line-height: 1.25;
-}
-html[data-view="ops"] .ops-rlabel small { color: #cbbd95; font-weight: 500; font-size: 10.5px }
-html[data-view="ops"] .ops-ringlabel span { transform: translate(-50%, -120%); color: #bfe6fb; font-size: 10.5px; padding: 1px 5px }
-/* Pins outside the hours picked fade; a pin gone to pulses. */
+html[data-view="ops"] .ops-rlabel span, html[data-view="ops"] .ops-ringlabel span { position: absolute; transform: translate(10px, -50%); white-space: nowrap; padding: 3px 7px; border-radius: 2px; background: rgba(8, 11, 14, .88); color: #ffd99a; font-size: 11.5px; font-weight: 600; display: flex; flex-direction: column; line-height: 1.25 }
+html[data-view="ops"] .ops-rlabel small { color: #c9b48d; font-weight: 500; font-size: 10.5px }
+html[data-view="ops"] .ops-ringlabel span { transform: translate(-50%, -120%); color: #bfeef1; font-size: 10.5px; padding: 1px 5px }
 html[data-view="ops"] .ev.ops-dim { opacity: .14; filter: grayscale(.8) }
-html[data-view="ops"] .ops-pulse .ev { animation: ops-pulse 1s ease-out 4 }
-@keyframes ops-pulse { 0% { filter: drop-shadow(0 0 0 var(--ops-tool)) } 50% { filter: drop-shadow(0 0 9px var(--ops-tool)) brightness(1.25) } 100% { filter: drop-shadow(0 0 0 transparent) } }
-html[data-view="ops"] .ops-ping span { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--c); box-shadow: 0 0 0 2px rgba(255,255,255,.7); animation: ops-ring 1.6s ease-out infinite }
-@keyframes ops-ring { 0% { transform: scale(.6); opacity: 1 } 100% { transform: scale(2.6); opacity: 0 } }
-@media (prefers-reduced-motion: reduce) { html[data-view="ops"] :is(.ops-ping span, .ops-pulse .ev) { animation: none } }
-/* New events as they come in. */
-html[data-view="ops"] .ops-toasts { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; width: min(440px, calc(100% - 140px)); pointer-events: none }
+html[data-view="ops"] .ops-pulse .ev { animation: ops-pulse 1.2s ease-out 2 }
+@keyframes ops-pulse { 0% { filter: drop-shadow(0 0 0 var(--o-sel)) } 50% { filter: drop-shadow(0 0 8px var(--o-sel)) brightness(1.2) } 100% { filter: drop-shadow(0 0 0 transparent) } }
+html[data-view="ops"] .ops-ping span { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border: 2px solid var(--c); animation: ops-ring 1.2s ease-out 3 forwards }
+@keyframes ops-ring { 0% { transform: scale(.6) rotate(45deg); opacity: 1 } 100% { transform: scale(2.4) rotate(45deg); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { html[data-view="ops"] :is(.ops-ping span, .ops-pulse .ev, .ops-live i) { animation: none } }
+/* New events as they come in: a flash line at the top of the map. */
+html[data-view="ops"] .ops-toasts { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; width: min(460px, calc(100% - 140px)); pointer-events: none }
 html[data-view="ops"] .ops-toast {
   pointer-events: auto; appearance: none; display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; text-align: left; cursor: pointer;
-  border: 1px solid var(--t-line); border-left: 3px solid var(--ops-tool); border-radius: var(--ops-radius); background: var(--t-glass); color: var(--t-text); box-shadow: var(--shadow-pop);
-  font: 500 13px/1.3 var(--ops-ui); animation: ops-in .25s ease-out; transition: opacity .5s, transform .5s;
+  border: 1px solid var(--o-line-2); border-left: 3px solid var(--o-live); border-radius: var(--ops-r); background: var(--o-glass); color: var(--o-strong);
+  font: 500 13px/1.3 var(--ops-ui); animation: ops-in .2s ease-out; transition: opacity .4s, transform .4s;
 }
 html[data-view="ops"] .ops-toast.out { opacity: 0; transform: translateY(-6px) }
-html[data-view="ops"] .ops-toast .k { flex: none }
-html[data-view="ops"] .ops-toast small { display: block; color: var(--t-muted); font: 600 10.5px var(--ops-ui); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 2px }
+html[data-view="ops"] .ops-toast small { display: block; color: var(--o-live); font: 700 11px var(--ops-cond) !important; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 2px }
 @keyframes ops-in { from { opacity: 0; transform: translateY(-8px) } }
 
-/* ---------- Panels on the map: live traffic, a picked aircraft or ship ---------- */
+/* ---------- Panels on the map: layers, a picked aircraft or ship ---------- */
 html[data-view="ops"] :is(.ops-menu, .ops-card) {
-  position: absolute; top: 10px; right: 10px; width: 300px; max-height: calc(100% - 180px); overflow: auto; box-sizing: border-box;
-  padding: 10px 12px 12px; border: 1px solid var(--t-line); border-radius: 8px; background: var(--t-glass); color: var(--t-text);
-  box-shadow: var(--shadow-pop); font: 13px/1.4 var(--ops-ui); backdrop-filter: blur(6px);
+  position: absolute; top: 10px; right: 10px; width: 300px; max-height: calc(100% - 160px); overflow: auto; box-sizing: border-box; scrollbar-width: thin;
+  padding: 10px 12px 12px; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: var(--o-glass); color: var(--o-text); font: 13px/1.4 var(--ops-ui);
 }
-html[data-view="ops"] .ops-card { top: auto; bottom: 40px; max-height: calc(100% - 190px) }
-html[data-view="ops"] .ops-hud:has(.ops-menu:not([hidden])) .ops-mini { display: none }
-html[data-view="ops"] .ops-menu:not([hidden]) ~ .ops-card { right: 320px }
-html[data-view="ops"] .ops-mh, html[data-view="ops"] .ops-ch { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px }
-html[data-view="ops"] .ops-mh b { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--t-muted) }
-html[data-view="ops"] .ops-x { appearance: none; width: 26px; height: 26px; padding: 4px; border: 0; border-radius: 4px; background: none; color: var(--t-muted); cursor: pointer; display: grid; place-items: center }
+html[data-view="ops"] .ops-menu { left: 52px; right: auto; top: 10px }
+html[data-view="ops"] .ops-card { top: 10px; right: 10px }
+html[data-view="ops"] .ops-hud:has(.ops-card:not([hidden])) .ops-mini { display: none }
+html[data-view="ops"] :is(.ops-mh, .ops-ch) { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px }
+html[data-view="ops"] .ops-mh b { font-size: 14px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--o-strong) }
+html[data-view="ops"] .ops-mlab { margin: 10px 0 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint) }
+html[data-view="ops"] .ops-bases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
+html[data-view="ops"] .ops-bases button { appearance: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 4px; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: none; color: var(--o-text); font: 600 12px var(--ops-cond) !important; letter-spacing: .1em; text-transform: uppercase; cursor: pointer }
+html[data-view="ops"] .ops-bases button[aria-pressed="true"] { border-color: var(--o-sel); box-shadow: inset 0 0 0 1px var(--o-sel) }
+html[data-view="ops"] .ops-bthumb { height: 34px; border-radius: 2px; background: linear-gradient(135deg, #2a3038 0 40%, #1b2026 40% 100%) }
+html[data-view="ops"][data-theme="broadsheet-day"] .ops-bthumb.auto { background: linear-gradient(135deg, #d8dbd6 0 40%, #f3f3f1 40% 100%) }
+html[data-view="ops"] .ops-bthumb.sat { background: radial-gradient(circle at 30% 40%, #6b6a4e, transparent 45%), radial-gradient(circle at 70% 70%, #2b4a5c, transparent 50%), linear-gradient(135deg, #8c7a56, #3b4a40) }
+html[data-view="ops"] .ops-bthumb.relief { background: repeating-linear-gradient(120deg, #4a5058 0 3px, #2d3238 3px 8px) }
+html[data-view="ops"] .ops-x { appearance: none; width: 26px; height: 26px; padding: 4px; border: 0; border-radius: 2px; background: none; color: var(--o-dim); cursor: pointer; display: grid; place-items: center }
 html[data-view="ops"] .ops-x svg { width: 15px; height: 15px }
-html[data-view="ops"] .ops-x:hover { background: var(--t-surface-2); color: var(--t-strong) }
-html[data-view="ops"] .ops-sw { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--t-line-soft); cursor: pointer }
+html[data-view="ops"] .ops-x:hover { background: var(--o-hover); color: var(--o-strong) }
+html[data-view="ops"] .ops-sw { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--o-line); cursor: pointer }
 html[data-view="ops"] .ops-sw.sub { padding-left: 24px; border-top: 0; padding-top: 0 }
-html[data-view="ops"] .ops-sw.off { opacity: .6; cursor: default }
-html[data-view="ops"] .ops-sw input { width: 16px; height: 16px; margin: 0; accent-color: var(--t-link) }
-html[data-view="ops"] .ops-sw > span { display: inline-flex; align-items: center; gap: 6px; font-weight: 600 }
-html[data-view="ops"] .ops-sw > span svg { width: 15px; height: 15px; color: var(--t-muted) }
-html[data-view="ops"] .ops-sw small { grid-column: 2; color: var(--t-muted); font-size: 11.5px }
-html[data-view="ops"] .ops-sw small.note { color: var(--t-faint); margin-top: 3px }
-html[data-view="ops"] .ops-mil { border-top: 1px solid var(--t-line-soft); padding-top: 6px; margin-top: 2px }
-html[data-view="ops"] .ops-mil p { margin: 0 0 4px; font: 600 11px var(--ops-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--t-faint) }
+html[data-view="ops"] .ops-sw.off { opacity: .55; cursor: default }
+html[data-view="ops"] .ops-sw input { width: 15px; height: 15px; margin: 0; accent-color: var(--o-sel) }
+html[data-view="ops"] .ops-sw > span { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--o-strong) }
+html[data-view="ops"] .ops-sw > span svg { width: 15px; height: 15px; color: var(--o-dim) }
+html[data-view="ops"] .ops-sw small { grid-column: 2; color: var(--o-dim); font-size: 11.5px }
+html[data-view="ops"] .ops-sw small b { font: 600 11.5px var(--ops-mono); color: var(--o-strong) }
+html[data-view="ops"] .ops-mil { border-top: 1px solid var(--o-line); padding-top: 6px; margin-top: 2px }
+html[data-view="ops"] .ops-mil p { margin: 0 0 4px; font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint) }
 html[data-view="ops"] .ops-mil ul { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow: auto }
-html[data-view="ops"] .ops-mil button { appearance: none; width: 100%; display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; padding: 4px 6px; border: 0; border-radius: 4px; background: none; color: var(--t-text-2); font: 12px var(--ops-ui); text-align: left; cursor: pointer }
-html[data-view="ops"] .ops-mil button:hover { background: var(--t-surface-2) }
-html[data-view="ops"] .ops-mil b { font-family: var(--ops-mono); color: #f5b942; font-size: 11.5px }
+html[data-view="ops"] .ops-mil button { appearance: none; width: 100%; display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; padding: 4px 6px; border: 0; border-radius: 2px; background: none; color: var(--o-text); font: 12px var(--ops-ui); text-align: left; cursor: pointer }
+html[data-view="ops"] .ops-mil button:hover { background: var(--o-hover) }
+html[data-view="ops"] .ops-mil b { color: var(--o-tool); font-size: 11.5px }
 html[data-view="ops"] .ops-mil span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-html[data-view="ops"] .ops-mil em { font: normal 11px var(--ops-mono); color: var(--t-faint) }
-html[data-view="ops"] .ops-src { margin: 8px 0 0; font-size: 11px; color: var(--t-faint) }
-html[data-view="ops"] .ops-src a, html[data-view="ops"] .ops-clinks a { color: var(--t-link) }
-html[data-view="ops"] .ops-ck { display: inline-flex; align-items: center; gap: 5px; font: 600 11px var(--ops-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--t-muted) }
+html[data-view="ops"] .ops-mil em { font-style: normal; font-size: 11px; color: var(--o-faint) }
+html[data-view="ops"] .ops-src { margin: 8px 0 0; font-size: 11px; color: var(--o-faint); line-height: 1.45 }
+html[data-view="ops"] :is(.ops-src, .ops-clinks) a { color: var(--o-text) }
+html[data-view="ops"] .ops-ck { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--o-dim) }
 html[data-view="ops"] .ops-ck svg { width: 14px; height: 14px }
-html[data-view="ops"] .ops-ck.mil { color: #d99a1e }
-html[data-view="ops"] .ops-card h3 { margin: 0; font: 600 18px var(--ops-mono); color: var(--t-strong); letter-spacing: .02em }
-html[data-view="ops"] .ops-csub { margin: 2px 0 8px; color: var(--t-muted); font-size: 12.5px }
-html[data-view="ops"] .ops-route { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0 0 8px; padding: 6px 8px; border-radius: 4px; background: var(--t-surface-2); font-size: 12.5px }
-html[data-view="ops"] .ops-route small { flex-basis: 100%; color: var(--t-faint); font-size: 10.5px }
+html[data-view="ops"] .ops-ck.mil { color: var(--o-tool) }
+html[data-view="ops"] .ops-card h3 { margin: 0; font-size: 19px; font-weight: 600; color: var(--o-strong); letter-spacing: .03em }
+html[data-view="ops"] .ops-csub { margin: 2px 0 8px; color: var(--o-dim); font-size: 12.5px }
+html[data-view="ops"] .ops-route { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0 0 8px; padding: 6px 8px; border-radius: 2px; background: var(--o-hover); font-size: 12.5px }
+html[data-view="ops"] .ops-route small { flex-basis: 100%; color: var(--o-faint); font-size: 10.5px }
 html[data-view="ops"] .ops-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 0 }
 html[data-view="ops"] .ops-card dl div { min-width: 0 }
-html[data-view="ops"] .ops-card dt { font: 600 10px var(--ops-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--t-faint) }
-html[data-view="ops"] .ops-card dd { margin: 1px 0 0; font: 500 12.5px var(--ops-mono); color: var(--t-text); overflow-wrap: anywhere }
-html[data-view="ops"] .ops-card dd .emg { color: #ff5a5f }
+html[data-view="ops"] .ops-card dt { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--o-faint) }
+html[data-view="ops"] .ops-card dd { margin: 1px 0 0; font-size: 12.5px; font-weight: 500; color: var(--o-text); overflow-wrap: anywhere }
+html[data-view="ops"] .ops-card dd .emg { color: var(--o-live) }
 html[data-view="ops"] .ops-clinks { margin: 10px 0 0; font-size: 12px }
 html[data-view="ops"] .ops-clinks a { display: inline-flex; align-items: center; gap: 4px }
 
 /* ---------- The keys ---------- */
-html[data-view="ops"] .ops-keys { position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; background: rgba(0,0,0,.45) }
+html[data-view="ops"] .ops-keys { position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; background: rgba(0, 0, 0, .5) }
 html[data-view="ops"] .ops-keys[hidden] { display: none }
-html[data-view="ops"] .ops-kbox { width: min(420px, calc(100vw - 32px)); padding: 14px 16px; border: 1px solid var(--t-line); border-radius: 10px; background: var(--t-surface-1); color: var(--t-text); box-shadow: var(--shadow-pop); font: 13px var(--ops-ui) }
+html[data-view="ops"] .ops-kbox { width: min(440px, calc(100vw - 32px)); padding: 14px 16px; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: var(--o-panel); color: var(--o-text); font: 13px var(--ops-ui) }
+html[data-view="ops"] .ops-kbox .ops-mh b { font-family: var(--ops-cond) !important }
 html[data-view="ops"] .ops-kbox dl { margin: 0; display: grid; gap: 7px }
 html[data-view="ops"] .ops-kbox dl div { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 10px }
-html[data-view="ops"] .ops-kbox dd { margin: 0; color: var(--t-text-2) }
-html[data-view="ops"] kbd { display: inline-block; min-width: 18px; padding: 1px 6px; border: 1px solid var(--t-line-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--t-surface-2); font: 600 11.5px var(--ops-mono); text-align: center; color: var(--t-strong) }
+html[data-view="ops"] .ops-kbox dd { margin: 0; color: var(--o-text) }
+html[data-view="ops"] kbd { display: inline-block; min-width: 18px; padding: 1px 6px; border: 1px solid var(--o-line-2); border-bottom-width: 2px; border-radius: 2px; background: var(--o-raised); font-size: 11.5px; font-weight: 600; text-align: center; color: var(--o-strong) }
 
-/* ---------- Broadcast mode: the map alone, for a screen ---------- */
-html[data-view="ops"].ops-cast .ops-on { grid-template-columns: 0 minmax(0, 1fr) !important; grid-template-rows: 0 minmax(0, 1fr) !important }
-html[data-view="ops"].ops-cast .ops-on > :is(.ops-bar, .ops-left) { visibility: hidden; overflow: hidden }
-html[data-view="ops"].ops-cast .ops-on :is(.rail, .rail-splitter, .ops-dock, .ops-tools, .ops-coords, .ops-unfold, .map-chip, .leaflet-control-zoom) { display: none !important }
-html[data-view="ops"].ops-cast .ops-on main.stage { grid-template-columns: minmax(0, 1fr) !important }
+/* ---------- Broadcast mode: the map alone, with a news lower third ---------- */
+html[data-view="ops"].ops-cast .ops-on { grid-template-columns: 0 0 minmax(0, 1fr) 0 !important; grid-template-rows: 0 0 minmax(0, 1fr) !important }
+html[data-view="ops"].ops-cast .ops-on > :is(.ops-strip, .ops-bar, .ops-nav, .ops-left, .ops-right) { visibility: hidden; overflow: hidden }
+html[data-view="ops"].ops-cast .ops-on :is(.ops-dock, .ops-tools, .ops-coords, .ops-unfold, .map-chip, .leaflet-control-zoom, .ops-menu) { display: none !important }
 html[data-view="ops"].ops-cast .ops-on .map-wrap { --dock-h: 0px !important }
 html[data-view="ops"].ops-cast .ops-on .ev-wrap .ev { transform: scale(1.18); transform-origin: 50% 100% }
-html[data-view="ops"] .ops-lower { position: absolute; left: 28px; bottom: 28px; right: 230px; display: flex; flex-direction: column; gap: 0; font-family: var(--ops-ui); pointer-events: none }
-html[data-view="ops"] .ops-lt { display: flex; align-items: center; gap: 14px; padding: 10px 16px; background: #13110f; color: #fff; font-size: 22px; align-self: flex-start; border-radius: 4px 4px 0 0 }
-html[data-view="ops"] .ops-lt .live { font: 700 12px var(--ops-ui); letter-spacing: .14em; text-transform: uppercase; padding: 4px 8px; border-radius: 3px; background: #c4302b }
-html[data-view="ops"] .ops-lt b { font-family: var(--f-head, Georgia, serif); font-weight: 600 }
-html[data-view="ops"] .ops-lt .clk { font: 600 15px var(--ops-mono); color: #d8cfc6 }
-html[data-view="ops"] .ops-lt .brand { font: 600 12px var(--ops-ui); letter-spacing: .12em; text-transform: uppercase; color: #a99d93; margin-left: 12px }
-html[data-view="ops"] .ops-lb { padding: 9px 16px; background: rgba(255,248,241,.95); color: #1b1918; font: 500 18px/1.3 var(--f-head, Georgia, serif); border-radius: 0 4px 4px 4px; max-width: 980px }
-html[data-view="ops"] .ops-lb time { font: 700 14px var(--ops-mono); color: #a8372a; margin-right: 10px }
+html[data-view="ops"] .ops-lower { position: absolute; left: 32px; bottom: 32px; right: 220px; display: flex; flex-direction: column; pointer-events: none }
+html[data-view="ops"] .ops-lt { display: flex; align-items: center; gap: 14px; padding: 9px 16px; background: #0b0e11; color: #fff; font-size: 22px; align-self: flex-start }
+html[data-view="ops"] .ops-lt .live { font: 700 13px var(--ops-cond) !important; letter-spacing: .18em; text-transform: uppercase; padding: 4px 9px; background: #d32f2f }
+html[data-view="ops"] .ops-lt b { font: 700 24px var(--ops-cond) !important; letter-spacing: .1em; text-transform: uppercase }
+html[data-view="ops"] .ops-lt .clk { font-size: 15px; font-weight: 600; color: #c9d1d9 }
+html[data-view="ops"] .ops-lt .brand { font: 700 13px var(--ops-cond) !important; letter-spacing: .2em; text-transform: uppercase; color: #8a939d; margin-left: 12px }
+html[data-view="ops"] .ops-lb { padding: 10px 16px; background: rgba(247, 248, 245, .97); color: #0b0e11; font: 600 20px/1.3 var(--ops-ui); max-width: 1000px; border-left: 4px solid #d32f2f }
+html[data-view="ops"] .ops-lb time { font-size: 15px; font-weight: 700; color: #b71c1c; margin-right: 12px }
 
-/* ---------- The page's own parts in the view's type ---------- */
-html[data-view="ops"] .ops-bar .mast-name .mn { font-weight: 700; font-size: 16px; letter-spacing: -.01em }
-html[data-view="ops"] .ops-bar .mast-line { color: var(--t-faint); font-weight: 600; font-size: 10px }
-html[data-view="ops"] .ops-bar .mast-line::before, html[data-view="ops"] .ops-bar .mast-line::after { display: none }
-html[data-view="ops"] .ops-on .card { border-radius: 6px }
-html[data-view="ops"] .ops-on .card .headline { font-size: 14.5px; font-weight: 600; line-height: 1.38; letter-spacing: -.006em }
-html[data-view="ops"] .ops-on .card :is(.lead, .full, .body) { font-size: 13.5px; line-height: 1.5; color: var(--t-text-2) }
-html[data-view="ops"] .ops-on :is(.situation, .fronts-wrap) :is(p, li, .pts li) { font-size: 14px; line-height: 1.55 }
-html[data-view="ops"] .ops-left .ops-pane > h2:first-child, html[data-view="ops"] .ops-left .ops-pane h2 { font-size: 15px; font-weight: 700; letter-spacing: -.005em; text-transform: none; color: var(--t-strong) }
-html[data-view="ops"] .ops-on .rail h2 { font-size: 15px; font-weight: 700 }
-html[data-view="ops"] .ops-left .cadence { font-size: 11px !important; letter-spacing: .04em !important; color: var(--t-faint) !important; text-transform: none !important; margin: 2px 0 10px !important }
-/* The control colours, quieter: the land reads first, the pins over it. */
-html[data-view="ops"] .ops-on :is(.leaflet-overlay-pane > svg, .leaflet-hCtrl-pane) { opacity: .74 }
-html[data-view="ops"] .leaflet-popup-content .pop-h { font-size: 14px; font-weight: 600; line-height: 1.35 }
-
-/* ---------- The site's own pin notes, in the view's frame ---------- */
-html[data-view="ops"] .ops-on .leaflet-popup-content-wrapper { border-radius: 8px }
-html[data-view="ops"] .ops-on .map-chip { top: 10px; right: 10px; font-size: 12px }
-html[data-view="ops"] .ops-menu:not([hidden]) ~ .ops-card ~ .ops-lower { display: none }
-
-/* ---------- Phones: the map first, then a tab for each part ---------- */
+/* ---------- Phones: the map first, a tab for each part ---------- */
 @media (max-width: 760px) {
-  html[data-view="ops"] .ops-on { display: flex; flex-direction: column; background: var(--t-bg) }
-  html[data-view="ops"] .ops-bar { position: relative; height: auto; flex-wrap: wrap; row-gap: 0; gap: 0 8px; padding: 4px 8px 0 4px }
-  html[data-view="ops"] .ops-bar .mast { flex: 1 1 auto; min-width: 0 }
-  html[data-view="ops"] .ops-bar header.top { order: 3; flex: 1 0 100%; border-left: 0; border-top: 1px solid var(--t-line-soft); padding: 0; height: 40px; margin-top: 4px }
-  html[data-view="ops"] .ops-bar header.top .stamp { display: none }
-  html[data-view="ops"] .ops-bar .mast-line, html[data-view="ops"] .ops-bar .stamp > :not(.ye-clock), html[data-view="ops"] .ops-z, html[data-view="ops"] .ops-btn > span:not(.sr), html[data-view="ops"] [data-op="keys"] { display: none !important }
-  html[data-view="ops"] .ops-bar .mast-name { font-size: 16px }
-  html[data-view="ops"] .ops-bar header.top { padding-left: 8px; overflow-x: auto; scrollbar-width: none }
+  html[data-view="ops"] .ops-on { display: flex; flex-direction: column; background: var(--o-bg) }
+  html[data-view="ops"] .ops-strip { order: 0; height: 24px; flex: none; overflow-x: auto; scrollbar-width: none }
+  html[data-view="ops"] .ops-strip :is(.ops-cnt, .ops-tag, .ops-upd) { display: none }
+  html[data-view="ops"] .ops-bar { height: 46px; flex: none; gap: 8px; padding-right: 8px }
+  html[data-view="ops"] .ops-bar .mast-date { width: 44px }
+  html[data-view="ops"] .ops-bar .mast-mid { margin-left: 10px }
+  html[data-view="ops"] .ops-bar .mast-name .mn { font-size: 13px !important; letter-spacing: .14em }
+  html[data-view="ops"] .ops-bar .mast-name::before { display: none }
+  html[data-view="ops"] .ops-bar header.top { display: none }
+  html[data-view="ops"] .ops-btn > span:not(.sr), html[data-view="ops"] [data-op="keys"], html[data-view="ops"] .ops-acts [data-op="cast"] { display: none !important }
   html[data-view="ops"] .ops-btn { width: 32px; padding: 0; justify-content: center }
   html[data-view="ops"] .ops-classic { font-size: 11px; padding: 0 2px }
-  html[data-view="ops"] .ops-ptabs { position: sticky; top: 0; z-index: 1100; display: flex; overflow-x: auto; scrollbar-width: none; background: var(--t-surface-1); border-bottom: 1px solid var(--t-line) }
-  html[data-view="ops"] .ops-ptabs button { appearance: none; flex: 1 0 auto; padding: 10px 12px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--t-muted); font: 600 13px var(--ops-ui) }
-  html[data-view="ops"] .ops-ptabs button[aria-selected="true"] { color: var(--t-strong); border-bottom-color: var(--t-link) }
-  html[data-view="ops"] .ops-on > .ops-left { display: none; border: 0 }
-  html[data-view="ops"] .ops-on:not([data-ops-ptab="map"]):not([data-ops-ptab="rail"]) > .ops-left { display: block }
-  html[data-view="ops"] .ops-lhead { display: none }
-  html[data-view="ops"] .ops-on:not([data-ops-ptab="map"]):not([data-ops-ptab="rail"]) > .ops-stage { display: none }
-  html[data-view="ops"] .ops-on main.stage { display: block !important; height: auto !important }
-  html[data-view="ops"] .ops-on[data-ops-ptab="map"] :is(.rail, .ops-rail, .rail-splitter) { display: none !important }
-  html[data-view="ops"] .ops-on[data-ops-ptab="rail"] .map-wrap { display: none !important }
-  html[data-view="ops"] .ops-on[data-ops-ptab="rail"] :is(.rail, .ops-rail) { display: block !important; height: auto; border: 0 }
-  html[data-view="ops"] .ops-on .map-wrap { height: auto !important; min-height: 0 !important; display: flex; flex-direction: column }
-  html[data-view="ops"] .ops-on :is(#map, #h-map) { position: relative !important; inset: auto !important; height: 66svh !important; flex: none }
-  html[data-view="ops"] .ops-hud { inset: 0 0 auto 0; height: 66svh }
-  html[data-view="ops"] .ops-dock { position: static; border-top: 1px solid var(--t-line) }
-  html[data-view="ops"] .ops-mx { flex-direction: column }
-  html[data-view="ops"] .ops-log { flex: none; border-left: 0; padding-left: 0; border-top: 1px solid var(--t-line-soft); padding-top: 6px }
-  html[data-view="ops"] .ops-log-l { max-height: 220px }
-  html[data-view="ops"] .ops-fold, html[data-view="ops"] .ops-unfold, html[data-view="ops"] .ops-mini, html[data-view="ops"] .ops-act-h small { display: none !important }
-  html[data-view="ops"] .ops-tools { top: 84px }
+  html[data-view="ops"] .ops-nav { display: none }
+  html[data-view="ops"] .ops-ptabs { position: sticky; top: 0; z-index: 1100; display: flex; overflow-x: auto; scrollbar-width: none; background: var(--o-panel); border-bottom: 1px solid var(--o-line); flex: none }
+  html[data-view="ops"] .ops-ptabs button { appearance: none; flex: 1 0 auto; padding: 11px 12px 9px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--o-dim); font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase }
+  html[data-view="ops"] .ops-ptabs button[aria-selected="true"] { color: var(--o-strong); border-bottom-color: var(--o-sel) }
+  html[data-view="ops"] .ops-on > :is(.ops-left, .ops-right) { display: none; border: 0 }
+  html[data-view="ops"] .ops-on:not([data-ops-ptab="map"]):not([data-ops-ptab="rail"]):not([data-ops-ptab="events"]) > .ops-left { display: flex }
+  html[data-view="ops"] .ops-on:is([data-ops-ptab="rail"], [data-ops-ptab="events"]) > .ops-right { display: flex }
+  html[data-view="ops"] .ops-phead { display: none }
+  html[data-view="ops"] .ops-on:not([data-ops-ptab="map"]) > .ops-stage { display: none }
+  html[data-view="ops"] .ops-on main.stage { display: block !important; height: auto !important; margin: 0 !important; padding: 0 !important }
+  html[data-view="ops"] .ops-on .map-wrap { height: auto !important; min-height: 0 !important; display: flex; flex-direction: column; position: relative; border: 0 !important; margin: 0 !important; border-radius: 0 !important }
+  html[data-view="ops"] .ops-on :is(#map, #h-map) { position: relative !important; inset: auto !important; height: 64svh !important; flex: none; border-radius: 0 !important }
+  html[data-view="ops"] .ops-hud { inset: 0 0 auto 0; height: 64svh }
+  html[data-view="ops"] .ops-dock { position: static; max-height: none; border-top: 1px solid var(--o-line-2) }
+  html[data-view="ops"] .ops-log-l { max-height: none; overflow: visible }
+  html[data-view="ops"] .ops-panes, html[data-view="ops"] .ops-rp-rep > .rail { overflow: visible }
+  html[data-view="ops"] :is(.ops-fold, .ops-unfold, .ops-mini, .ops-act-h small) { display: none !important }
+  html[data-view="ops"] .ops-tools { top: 80px }
   html[data-view="ops"] .ops-coords { bottom: 30px; font-size: 10.5px }
-  html[data-view="ops"] :is(.ops-menu, .ops-card) { left: 8px; right: 8px; width: auto; top: 8px; bottom: auto; max-height: calc(66svh - 20px) }
+  html[data-view="ops"] :is(.ops-menu, .ops-card) { left: 8px; right: 8px; width: auto; top: 8px; bottom: auto; max-height: calc(64svh - 20px) }
   html[data-view="ops"] .ops-toasts { width: calc(100% - 24px) }
-  html[data-view="ops"] .ops-on .leaflet-bottom.leaflet-right .leaflet-control-attribution { margin-right: 0 }
   html[data-view="ops"] .ops-pane { padding: 12px 14px 24px !important }
   html[data-view="ops"] .ops-lower { left: 8px; right: 8px; bottom: 8px }
   html[data-view="ops"] .ops-lt { font-size: 15px; padding: 7px 10px }
+  html[data-view="ops"] .ops-lt b { font-size: 17px !important }
   html[data-view="ops"] .ops-lb { font-size: 14px }
 }
+/* The quick periods, before the page's own time filter. */
+html[data-view="ops"] .ops-quick { display: flex; align-items: center; gap: 0; flex: none; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); overflow: hidden; height: 28px }
+html[data-view="ops"] .ops-quick span { padding: 0 8px; font: 700 12px var(--ops-cond); letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint); border-right: 1px solid var(--o-line-2); line-height: 26px }
+html[data-view="ops"] .ops-quick button { appearance: none; height: 100%; padding: 0 10px; border: 0; background: none; color: var(--o-text); font: 500 12px var(--ops-mono); cursor: pointer }
+html[data-view="ops"] .ops-quick button + button { border-left: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-quick button:hover { background: var(--o-hover) }
+html[data-view="ops"] .ops-quick button[aria-pressed="true"] { background: color-mix(in srgb, var(--o-sel) 18%, transparent); color: var(--o-strong); box-shadow: inset 0 -2px 0 var(--o-sel) }
+html[data-view="ops"] .ops-dock .time-filter .tf-label { display: none }
+/* The time row in one line: arrows without words, the boxes narrow; it scrolls sideways if the map is narrow. */
+html[data-view="ops"] .ops-dtop { gap: 8px }
+html[data-view="ops"] .ops-dock .time-filter { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 5px }
+html[data-view="ops"] .ops-dock .time-filter :is(.day-nav-txt, .tf-sep) { display: none }
+html[data-view="ops"] .ops-dock .time-filter button { padding: 0 9px; flex: none; font-weight: 600 }
+html[data-view="ops"] .ops-dock .time-filter input { width: 118px; padding: 0 4px; flex: none }
+html[data-view="ops"] .ops-dock .time-filter .tf-range { display: inline-flex; align-items: center; gap: 5px; flex: none }
+html[data-view="ops"] .ops-dock .time-filter .tf-long { display: none }
+html[data-view="ops"] .ops-dock .time-filter .tf-short { display: inline !important }
+/* The numbers, fitted to the panel: their tabs in a full row, the control bars one under the other. */
+html[data-view="ops"] .ops-left .num-cat { display: flex; flex-wrap: wrap; max-width: 100% }
+html[data-view="ops"] .ops-left .num-cat button { flex: 1 1 auto }
+html[data-view="ops"] .ops-left .bars { display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px !important; max-width: 100% }
+html[data-view="ops"] .ops-left .bars .bar { width: auto !important; min-width: 0 !important; margin: 0 !important }
+html[data-view="ops"] .ops-left .bars .bar h3 { font-size: 12px !important; letter-spacing: .1em !important; overflow-wrap: anywhere; margin: 0 0 4px !important }
+html[data-view="ops"] .ops-pane { overflow-x: hidden }

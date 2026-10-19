@@ -6,9 +6,10 @@ import { metered } from "@/lib/desk/cpu-meter";
  * Live traffic for the map-first view's "Live traffic" button (user, 19 Oct: every aircraft and
  * ship in the region, live, whenever the buttons are on).
  *
- * - Aircraft: adsb.fi's open data (no key; one call a second): twelve circles cover the region,
- *   its military list every two minutes, and the scheduled route of a flight number from
- *   adsb.lol's standing data. Read only while someone has the layer on (asked in the last three
+ * - Aircraft: adsb.fi's and adsb.lol's open data together (no key; each sees through its own
+ *   receivers, so the two give the fuller picture; adsb.fi one call a second): twelve circles cover
+ *   the region, both military lists every two minutes, those on the ground too (marked), and the
+ *   scheduled route of a flight number from adsb.lol's standing data. Read only while someone has the layer on (asked in the last three
  *   minutes), then the reading stops.
  * - Ships: AISStream's live feed, read here (its terms keep the key off the browser), only when
  *   the server has an AISSTREAM_KEY; without one the answer says so and the page offers none.
@@ -24,7 +25,7 @@ const inBox = (lat: number, lon: number) => lat > 8 && lat < 42 && lon > 30 && l
 type Ac = Record<string, unknown> & { hex: string; lat?: number; lon?: number };
 type Row = (string | number | null)[];
 
-const air = { rows: [] as Row[], at: "", asked: 0, running: false, mil: new Set<string>(), milAt: 0 };
+const air = { rows: [] as Row[], at: "", asked: 0, running: false, mil: new Set<string>(), milAt: 0, src: new Set<string>() };
 const routes = new Map<string, { from: string; to: string } | null>();
 
 async function getJson(u: string) {
@@ -48,38 +49,47 @@ async function airLoop() {
   try {
     while (Date.now() - air.asked < 180_000) {
       const all = new Map<string, Ac>();
+      // The fresher position of the two feeds wins.
+      const put = (a: Ac) => {
+        if (typeof a.lat !== "number") return;
+        const was = all.get(a.hex);
+        if (!was || Number(a.seen_pos ?? 99) < Number(was.seen_pos ?? 99)) all.set(a.hex, was ? { ...was, ...a } : a);
+      };
       for (const [la, lo, d] of CIRCLES) {
-        try {
-          const x = await getJson(`https://opendata.adsb.fi/api/v2/lat/${la}/lon/${lo}/dist/${d}`);
-          for (const a of x.aircraft || x.ac || []) if (typeof a.lat === "number") all.set(a.hex, a);
-        } catch { /* the next sweep */ }
+        await Promise.all([
+          getJson(`https://opendata.adsb.fi/api/v2/lat/${la}/lon/${lo}/dist/${d}`).then((x) => { (x.aircraft || x.ac || []).forEach(put); air.src.add("adsb.fi"); }).catch(() => { /* the next sweep */ }),
+          getJson(`https://api.adsb.lol/v2/point/${la}/${lo}/${d}`).then((x) => { (x.aircraft || x.ac || []).forEach(put); air.src.add("adsb.lol"); }).catch(() => { /* the next sweep */ }),
+        ]);
         await sleep(1100);
       }
       if (Date.now() - air.milAt > 120_000) {
         air.milAt = Date.now();
-        try {
-          const x = await getJson("https://opendata.adsb.fi/api/v2/mil");
-          for (const a of x.aircraft || x.ac || []) {
-            air.mil.add(a.hex);
-            if (typeof a.lat === "number" && typeof a.lon === "number" && inBox(a.lat, a.lon)) all.set(a.hex, { ...all.get(a.hex), ...a });
-          }
-        } catch { /* the next time */ }
+        for (const u of ["https://opendata.adsb.fi/api/v2/mil", "https://api.adsb.lol/v2/mil"]) {
+          try {
+            const x = await getJson(u);
+            for (const a of x.aircraft || x.ac || []) {
+              air.mil.add(a.hex);
+              if (typeof a.lat === "number" && typeof a.lon === "number" && inBox(a.lat, a.lon)) all.set(a.hex, { ...all.get(a.hex), ...a });
+            }
+          } catch { /* the next time */ }
+        }
         await sleep(1100);
       }
       const rows: Row[] = [];
       let lookups = 0;
       for (const a of all.values()) {
         const lat = Number(a.lat), lon = Number(a.lon);
-        if (!inBox(lat, lon) || a.alt_baro === "ground") continue;
+        if (!inBox(lat, lon)) continue;
+        const gnd = a.alt_baro === "ground" ? 1 : 0;
         const f = String(a.flight || "").trim();
         const mil = air.mil.has(a.hex) || (Number(a.dbFlags) & 1) === 1 ? 1 : 0;
         if (f && !mil && !routes.has(f) && lookups < 8) { lookups++; void routeOf(f); }
         const rt = f ? routes.get(f) : null;
         const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null);
         // hex, lat, lon, altitude ft, ground speed kt, track, climb ft/min, squawk, flight, registration,
-        // type code, type, operator, military, from, to
-        rows.push([a.hex, +lat.toFixed(4), +lon.toFixed(4), n(a.alt_baro), n(a.gs), n(a.track), n(a.baro_rate ?? a.geom_rate), (a.squawk as string) || null,
-          f || null, (a.r as string) || null, (a.t as string) || null, (a.desc as string) || null, (a.ownOp as string) || null, mil, rt ? rt.from : null, rt ? rt.to : null]);
+        // type code, type, operator, military, from, to, on the ground
+        rows.push([a.hex, +lat.toFixed(4), +lon.toFixed(4), gnd ? 0 : n(a.alt_baro), n(a.gs), n(a.track), n(a.baro_rate ?? a.geom_rate), (a.squawk as string) || null,
+          f || null, (a.r as string) || null, (a.t as string) || null, (a.desc as string) || null, (a.ownOp as string) || null, mil, rt ? rt.from : null, rt ? rt.to : null, gnd]);
       }
       if (rows.length) { air.rows = rows; air.at = new Date().toISOString(); }
     }
@@ -150,7 +160,7 @@ export const Route = createFileRoute("/api/traffic")({
         void airLoop();
         // The first answer after a quiet spell waits for the first circles to come in.
         for (let i = 0; i < 48 && !air.rows.length; i++) await sleep(500);
-        return json({ ok: true, at: air.at, ac: air.rows, ships: !!process.env.AISSTREAM_KEY });
+        return json({ ok: true, at: air.at, ac: air.rows, src: [...air.src], ships: !!process.env.AISSTREAM_KEY });
       }),
     },
   },

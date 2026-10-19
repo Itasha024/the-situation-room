@@ -2796,7 +2796,7 @@ function drawDevMarks(m, marks, bounds) {
       const d = districtAt(x.ll[0], x.ll[1]);
       const f = d && districtGeo.features.find((g) => g.properties.id === d.id);
       if (f) {
-        const fill = L.geoJSON(f, { interactive: false, style: { color: x.kind === 'capture' ? foe : col, weight: x.kind === 'capture' ? 1.8 : 2.6, dashArray: x.kind === 'advance' ? '6 5' : null, fillColor: foe, fillOpacity: x.kind === 'capture' ? 0.6 : 0 } }).addTo(m);
+        const fill = L.geoJSON(f, { interactive: false, style: { color: x.kind === 'capture' ? foe : col, weight: x.kind === 'capture' ? 1.8 : 2.6, dashArray: x.kind === 'advance' ? '6 5' : null, className: 'front-mv', fillColor: foe, fillOpacity: x.kind === 'capture' ? 0.6 : 0 } }).addTo(m);
         movers.push({ type: 'fill', x, fill, col, foe });
       }
     }

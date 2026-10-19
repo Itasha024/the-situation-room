@@ -917,6 +917,8 @@
     legendBox = $('h-legend');
     if (phone()) legendCollapsed = true;
     map = L.map($('h-map'), { zoomControl: true, attributionControl: true, worldCopyJump: false, minZoom: 3, zoomSnap: 0.25, closePopupOnClick: false });
+    // The map view (public/ops.js) works with the same map, data and cards.
+    window.__home = { map, D, card, trumpCard };
     tiles = L.tileLayer(tileUrl(), { maxZoom: 18, noWrap: true, attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ' }).addTo(map);
     map.fitBounds(REGION);
     // Back from a desk: the map starts where the desk's flight out ended.

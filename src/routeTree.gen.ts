@@ -21,6 +21,7 @@ import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiStatusRouteImport } from './routes/api/status'
 import { Route as ApiTgmediaRouteImport } from './routes/api/tgmedia'
 import { Route as ApiTickRouteImport } from './routes/api/tick'
+import { Route as ApiTrafficRouteImport } from './routes/api/traffic'
 import { Route as ApiTrumpRouteImport } from './routes/api/trump'
 import { Route as YemenConflictDeskSourcesRouteImport } from './routes/yemen-conflict-desk_.sources'
 
@@ -84,6 +85,11 @@ const ApiTickRoute = ApiTickRouteImport.update({
   path: '/api/tick',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTrafficRoute = ApiTrafficRouteImport.update({
+  id: '/api/traffic',
+  path: '/api/traffic',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTrumpRoute = ApiTrumpRouteImport.update({
   id: '/api/trump',
   path: '/api/trump',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
+  '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
   '/yemen-conflict-desk/sources': typeof YemenConflictDeskSourcesRoute
 }
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
+  '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
   '/yemen-conflict-desk/sources': typeof YemenConflictDeskSourcesRoute
 }
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/api/status': typeof ApiStatusRoute
   '/api/tgmedia': typeof ApiTgmediaRoute
   '/api/tick': typeof ApiTickRoute
+  '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
   '/yemen-conflict-desk_/sources': typeof YemenConflictDeskSourcesRoute
 }
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
+    | '/api/traffic'
     | '/api/trump'
     | '/yemen-conflict-desk/sources'
   fileRoutesByTo: FileRoutesByTo
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
+    | '/api/traffic'
     | '/api/trump'
     | '/yemen-conflict-desk/sources'
   id:
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/api/status'
     | '/api/tgmedia'
     | '/api/tick'
+    | '/api/traffic'
     | '/api/trump'
     | '/yemen-conflict-desk_/sources'
   fileRoutesById: FileRoutesById
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   ApiStatusRoute: typeof ApiStatusRoute
   ApiTgmediaRoute: typeof ApiTgmediaRoute
   ApiTickRoute: typeof ApiTickRoute
+  ApiTrafficRoute: typeof ApiTrafficRoute
   ApiTrumpRoute: typeof ApiTrumpRoute
   YemenConflictDeskSourcesRoute: typeof YemenConflictDeskSourcesRoute
 }
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/traffic': {
+      id: '/api/traffic'
+      path: '/api/traffic'
+      fullPath: '/api/traffic'
+      preLoaderRoute: typeof ApiTrafficRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/trump': {
       id: '/api/trump'
       path: '/api/trump'
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStatusRoute: ApiStatusRoute,
   ApiTgmediaRoute: ApiTgmediaRoute,
   ApiTickRoute: ApiTickRoute,
+  ApiTrafficRoute: ApiTrafficRoute,
   ApiTrumpRoute: ApiTrumpRoute,
   YemenConflictDeskSourcesRoute: YemenConflictDeskSourcesRoute,
 }

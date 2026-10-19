@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { ASSET_V } from "@/lib/asset-version";
+import { OPS_VIEW, VIEW_BOOT } from "@/lib/ops-view";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Yemen Conflict Desk";
@@ -49,6 +50,7 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: `/desk.css?v=${ASSET_V}` },
       { rel: "stylesheet", href: `/themes.css?v=${ASSET_V}` },
       { rel: "stylesheet", href: `/rtl.css?v=${ASSET_V}` },
+      ...(OPS_VIEW === "off" ? [] : [{ rel: "stylesheet", href: `/ops.css?v=${ASSET_V}` }]),
       { rel: "preload", href: "/vendor/leaflet/leaflet.js", as: "script" },
       { rel: "preload", href: `/app.js?v=${ASSET_V}`, as: "script" },
       { rel: "preload", href: `/data.json?v=${ASSET_V}`, as: "fetch", crossOrigin: "anonymous" },
@@ -66,6 +68,7 @@ function RootDocument() {
       <head>
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        {OPS_VIEW === "off" ? null : <script dangerouslySetInnerHTML={{ __html: VIEW_BOOT }} />}
         <script dangerouslySetInnerHTML={{ __html: LANG_BOOT }} />
         <script dangerouslySetInnerHTML={{ __html: VT_QUIET }} />
         <script type="speculationrules" dangerouslySetInnerHTML={{ __html: SPECULATION }} />
@@ -77,6 +80,7 @@ function RootDocument() {
         </AuthProvider>
         <script id="leaflet-js" src="/vendor/leaflet/leaflet.js" />
         <script id="yemen-app-js" src={`/app.js?v=${ASSET_V}`} />
+        {OPS_VIEW === "off" ? null : <script id="ops-js" src={`/ops.js?v=${ASSET_V}`} />}
         <Scripts />
       </body>
     </html>

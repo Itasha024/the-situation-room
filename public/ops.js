@@ -169,11 +169,12 @@
   S.names = false;
   const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, mini, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, mini, trafficSeen })); } catch (e) { /* private */ } };
   /* The reader's settings (20 Oct: "make a settings page too to make the site very customizable"). */
-  const PREF_DEF = { v: 2, tz: 'desk', range: 1, pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, castTour: true, castEvery: 12, castTicker: true, airStart: false };
+  const PREF_DEF = { v: 3, tz: 'desk', range: 'today', pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, castTour: true, castEvery: 12, castTicker: true, airStart: false };
   const P = { ...PREF_DEF };
   try { Object.assign(P, JSON.parse(localStorage.getItem('ops-prefs') || '{}')); } catch (e) { /* none kept */ }
   // Every map opens on the last 24 hours (20 Oct); settings kept before then had 48.
-  if (!(P.v >= 2)) { P.v = 2; P.range = 1; }
+  // Maps open on today (20 Oct, later: "today should be the default"; the 24-hour button went).
+  if (!(P.v >= 3)) { P.v = 3; P.range = 'today'; }
   const keepPrefs = () => { try { localStorage.setItem('ops-prefs', JSON.stringify(P)); } catch (e) { /* private */ } };
   if (P.airStart) S.air = true;
 
@@ -284,7 +285,7 @@
     // The strip under the map: the time filter, Who and What, the last 48 hours.
     dock = document.createElement('div');
     dock.className = 'ops-dock';
-    dock.innerHTML = `<div class="ops-drow ops-dtop"><div class="ops-quick" role="group" aria-label="Show the last"><span>Last</span><button type="button" data-qr="1">24 h</button><button type="button" data-qr="2">48 h</button><button type="button" data-qr="7">7 days</button></div><div class="ops-time"></div><button type="button" class="ops-fold ops-fold-d" data-op="dock" title="Fold the timeline (\\)">${ICON.down}</button></div>
+    dock.innerHTML = `<div class="ops-drow ops-dtop"><div class="ops-quick" role="group" aria-label="Show the last"><span>Last</span><button type="button" data-qr="2">48 h</button><button type="button" data-qr="7">7 days</button></div><div class="ops-time"></div><button type="button" class="ops-fold ops-fold-d" data-op="dock" title="Fold the timeline (\\)">${ICON.down}</button></div>
       <div class="ops-drow ops-who"></div>
       <div class="ops-drow ops-mx">
         <div class="ops-act"><div class="ops-act-h"><b>Last 48 hours</b><span class="ops-act-sel" hidden></span><small>Drag across the hours to show only their events</small><span class="ops-mz" role="group" aria-label="Zoom the hours"><button type="button" data-mz="-1" aria-label="Zoom out">−</button><button type="button" data-mz="1" aria-label="Zoom in">+</button></span></div><div class="ops-amx-sc"><svg class="ops-amx" role="img" aria-label="Events in the last 48 hours, by side and hour"></svg></div></div>
@@ -325,6 +326,11 @@
     S.qr = days;
     paintQuick();
     return true;
+  }
+  /* The span a page opens on: today (the page's own Today), or the last 48 hours or 7 days. */
+  function openRange(v) {
+    if (v === 'today' || !(Number(v) > 1)) { const t = $('#btn-day-today', root); if (!t) return false; t.click(); S.qr = 0; paintQuick(); return true; }
+    return quickRange(Number(v));
   }
   function paintQuick() {
     const on = $('#btn-period', root) && $('#btn-period', root).classList.contains('on');
@@ -1158,7 +1164,8 @@
     const m = getMap();
     if (!m) return;
     if (!T.rend) T.rend = L.canvas({ padding: 0.2, pane: pane(m, 'opsTraffic', 590) });
-    if (T.layer) m.removeLayer(T.layer);
+    // The new marks go on before the old come off: the canvas is never blank between them (20 Oct: the map flinched at each zoom).
+    const old = T.layer;
     T.layer = L.layerGroup();
     T.marks = [];
     const Mk = trafficClass();
@@ -1191,6 +1198,7 @@
       if (tr && tr.length > 1) L.polyline(tr.map((p) => [p[0], p[1]]), { pane: 'opsTraffic', color: I.sel, weight: 1.5, opacity: 0.75, dashArray: '4 4', interactive: false }).addTo(T.layer);
     }
     T.layer.addTo(m);
+    if (old) m.removeLayer(old);
     moveTraffic();
   }
   /* Each aircraft and ship moves on at its own live speed and heading between the feed's reads (20 Oct: "move
@@ -1634,7 +1642,7 @@
     ]],
     ['Time', [
       ['tz', 'Times shown in', 'For the events, the timeline and the alerts.', [['desk', 'The desk’s clock'], ['local', 'Your clock'], ['utc', 'UTC']]],
-      ['range', 'The map opens on', 'The events the map shows when a page opens.', [[1, 'Last 24 h'], [2, 'Last 48 h'], [7, 'Last 7 days']]],
+      ['range', 'The map opens on', 'The events the map shows when a page opens.', [['today', 'Today'], [2, 'Last 48 h'], [7, 'Last 7 days']]],
     ]],
     ['Map', [
       ['base', 'Base map', '', [['auto', 'Plain'], ['sat', 'Satellite'], ['relief', 'Relief']], 'S'],
@@ -1693,7 +1701,7 @@
         else if (row[4] === 'S') { S[row[0]] = v; keep(); drawBase(); drawTraffic(); paintFrame(); paintLayers(); }
         else {
           P[row[0]] = v; keepPrefs(); applyPrefs();
-          if (row[0] === 'range') quickRange(v);
+          if (row[0] === 'range') openRange(v);
           if (row[0] === 'airStart' && v && !S.air) { S.air = true; keep(); runTraffic(); }
           if (row[0] === 'tz') { drawMatrix(); tick(); }
         }
@@ -1797,7 +1805,7 @@
     // The map opens on the reader's span, as the timeline under it (a link to a pin or a place keeps its own).
     if (!/#(at|pin)=/.test(location.hash)) {
       let tries = 0;
-      const first = () => { if (!quickRange(Number(P.range) || 2) && ++tries < 20) setTimeout(first, 300); };
+      const first = () => { if (!openRange(P.range) && ++tries < 20) setTimeout(first, 300); };
       setTimeout(first, 400);
     }
     drawBase();

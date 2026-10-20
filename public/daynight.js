@@ -109,7 +109,18 @@
       var tintPane = mkPane('deskNightTint' + id, z);
       var lightsPane = mkPane('deskNightLights' + id, z + 10);
       lightsPane.style.mixBlendMode = 'screen';
-      lightsPane.style.opacity = String(opts.lightsOpacity != null ? opts.lightsOpacity : (theme === 'night' ? 0.9 : 0.8));
+      // Only the lights (20 Oct: the user found the layer muddy): the image's blue-grey land is pressed to black,
+      // which the screen blend leaves out, and the lights stay crisp and warm.
+      lightsPane.style.filter = 'brightness(.85) contrast(2.4) saturate(1.3)';
+      // The image is sharp to zoom 8 (about 500 m a pixel); closer in it would only blur, so it fades away.
+      function lightsBase() { return opts.lightsOpacity != null ? opts.lightsOpacity : (theme === 'night' ? 0.95 : 0.85); }
+      function lightsLevel() {
+        var zz = map.getZoom();
+        var f = zz <= 7.5 ? 1 : zz >= 9 ? 0 : (9 - zz) / 1.5;
+        lightsPane.style.opacity = String(lightsBase() * f);
+        lightsPane.style.display = f ? '' : 'none';
+      }
+      lightsLevel();
 
       var renderer = L.svg({ pane: 'deskNightTint' + id, padding: 0.5 });
       var tints = [];
@@ -164,10 +175,13 @@
             }
           }
           clipPath(sun);
+          lightsLevel();
         } catch (e) { /* never break the host page */ }
       }
       function redrawClip() { try { clipPath(subsolar(now())); } catch (e) {} }
-      function hideClip() { lightsPane.style.visibility = 'hidden'; }
+      // Kept on through a zoom (20 Oct: hidden at each zoom's start, the lights blinked off and on with every zoom); the
+      // night's edge is set right again when the zoom ends.
+      function hideClip() {}
 
       map.on('zoomstart', hideClip);
       map.on('zoomend viewreset', update);

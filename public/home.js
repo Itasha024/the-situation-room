@@ -619,13 +619,43 @@
     return `<p class="leg-sub leg-who">Who</p>${sides.map(([k, c, n]) => row(c, n, p.on[k] !== false, `data-side="${k}"`)).join('')}
       ${A('iranKindRows')() || ''}`;
   }
+  /* The map view: one legend for the one map (20 Oct: "no need to separate, the map has it all"). Every side and every
+     kind of event of both desks, once each, Who on one line and What on the next; a row named alike on both desks
+     (the Houthis) works both desks' pins. */
+  const OPS = () => document.documentElement.dataset.view === 'ops';
+  const legKey = (t) => (/not stated/i.test(t) ? 'not stated' : t).toLowerCase().replace(/forces/g, '').replace(/[^a-z]+/g, ' ').trim().replace(/s$/, '');
+  function mergedBody() {
+    const groups = { who: new Map(), what: new Map() };
+    [['y', legendBody('yemen')], ['i', legendBody('iran')]].forEach(([d, html]) => {
+      const box = document.createElement('div');
+      box.innerHTML = html;
+      let sec = 'who';
+      box.querySelectorAll('.leg-sec, .leg-sub, .leg-item').forEach((el) => {
+        if (!el.classList.contains('leg-item')) { sec = /what/i.test(el.textContent) ? 'what' : 'who'; return; }
+        const name = el.textContent.replace('✓', '').trim();
+        const k = legKey(name);
+        const ref = el.dataset.side ? 'side:' + el.dataset.side : el.dataset.layer ? 'layer:' + el.dataset.layer : el.dataset.kind ? 'kind:' + el.dataset.kind : '';
+        const g = groups[sec].get(k) || { el, on: false, y: [], i: [] };
+        g[d].push(ref);
+        g.on = g.on || el.classList.contains('on');
+        groups[sec].set(k, g);
+      });
+    });
+    const out = (m) => [...m.values()].map((g) => { const b = g.el.cloneNode(true); ['side', 'layer', 'kind'].forEach((a) => b.removeAttribute('data-' + a)); b.dataset.y = g.y.join(' '); b.dataset.i = g.i.join(' '); b.classList.toggle('on', g.on); b.setAttribute('aria-pressed', String(g.on)); return b.outerHTML; }).join('');
+    return `<div class="leg-sec">Who</div>${out(groups.who)}<div class="leg-sec">What</div>${out(groups.what)}`;
+  }
+  function setMerged(b) {
+    const on = !b.classList.contains('on');
+    (b.dataset.y || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); if (t === 'side') yeSides()[k] = on; else if (t === 'layer') yeLayers()[k] = on; });
+    (b.dataset.i || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); const p = irPins(); if (t === 'side') p.on[k] = on; else if (t === 'kind') p.kinds[k] = on; });
+  }
   let legendCollapsed = true; // Closed at first, as on the desks (user, 17 Oct).
   function drawLegend() {
     const d = S.legend;
     legendBox.classList.toggle('collapsed', legendCollapsed);
     legendBox.innerHTML = `<div class="leg-head"><span class="leg-title">Legend</span><button type="button" class="leg-collapse" aria-label="${legendCollapsed ? 'Expand legend' : 'Collapse legend'}" aria-expanded="${legendCollapsed ? 'false' : 'true'}">${legendCollapsed ? '▸' : '▾'}</button></div>
-      <div class="h-leg-pick" role="tablist" aria-label="Whose legend">${['yemen', 'iran'].map((k) => `<button type="button" role="tab" data-leg="${k}" aria-selected="${k === d}">${FLAG[k]}<span>${HD[k].short}</span></button>`).join('')}</div>
-      <div class="leg-body"><p class="leg-hint">Tick to show, untick to hide.</p>${legendBody(d)}</div>`;
+      ${OPS() ? '' : `<div class="h-leg-pick" role="tablist" aria-label="Whose legend">${['yemen', 'iran'].map((k) => `<button type="button" role="tab" data-leg="${k}" aria-selected="${k === d}">${FLAG[k]}<span>${HD[k].short}</span></button>`).join('')}</div>`}
+      <div class="leg-body"><p class="leg-hint">Tick to show, untick to hide.</p>${OPS() ? mergedBody() : legendBody(d)}</div>`;
   }
   function wireLegend() {
     try { L.DomEvent.disableClickPropagation(legendBox); L.DomEvent.disableScrollPropagation(legendBox); } catch (e) { /* no map yet */ }
@@ -638,7 +668,8 @@
       if (pick) { S.legend = pick.dataset.leg; drawLegend(); return; }
       const b = t.closest('.leg-item');
       if (!b) return;
-      if (S.legend === 'yemen') {
+      if (b.dataset.y != null || b.dataset.i != null) setMerged(b);
+      else if (S.legend === 'yemen') {
         if (b.dataset.side) { const s = yeSides(); s[b.dataset.side] = s[b.dataset.side] === false; }
         else if (b.dataset.layer) { const lo = yeLayers(); lo[b.dataset.layer] = !lo[b.dataset.layer]; }
       } else {

@@ -1305,7 +1305,7 @@
     const known = d && (d.origin || d.destination || (d.track && d.track.length > 1));
     return `<div class="ops-route"><p class="ops-rline"><span class="ops-rp">${place(d && d.origin)}</span><i aria-hidden="true">${ICON.right}</i><span class="ops-rp">${place(to)}</span></p>
       ${known ? `<button type="button" class="ops-rbtn" data-route aria-pressed="${!!r.show}">${r.show ? 'Hide the route' : 'Show the route on the map'}</button>` : ''}
-      ${d && d.source && d.source.length ? `<small>${esc([].concat(d.source).join(', '))}${d.confidence && d.confidence !== 'confirmed' ? ' · ' + esc(d.confidence) : ''}</small>` : ''}</div>`;
+      ${d && d.source && d.source.length ? `<small>${esc([].concat(d.source).slice(0, 2).map((x) => String(x).replace(/ *\(.*\)/, '')).join(', '))}${d.confidence && d.confidence !== 'confirmed' ? ' · ' + esc(d.confidence) : ''}</small>` : ''}</div>`;
   }
   async function loadRoute(kind, id, cs) {
     T.route = { id, kind, loading: true, show: false };

@@ -971,3 +971,5 @@ html[data-view="ops"] .ops-left table.list[data-ops-l] td { display: block; padd
 html[data-view="ops"] .ops-left table.list[data-ops-l] td:first-child { grid-row: span 6 }
 html[data-view="ops"] .ops-left table.list[data-ops-l] td:nth-child(2) { font-weight: 600; color: var(--o-strong) }
 html[data-view="ops"] .ops-left table.list[data-ops-l] td[data-h]::before { content: attr(data-h) ": "; color: var(--o-faint); font-size: .92em }
+/* A picked aircraft or ship: the map zoom buttons step aside for its card. */
+html[data-view="ops"] .map-wrap:has(.ops-card:not([hidden])) .leaflet-control-zoom { visibility: hidden }

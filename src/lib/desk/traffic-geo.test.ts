@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { AIR_BOX, AIR_ROW, AIR_ROW_LEN, aisEta, inAirBox, inSeaBox, km, lattice, History, joinTracks, matchPort, nearestPort, pickRoute, routeFits, SEA_ROW, SEA_ROW_LEN, type Place } from "./traffic-geo.ts";
+import { tidyShips, AIR_BOX, AIR_ROW, AIR_ROW_LEN, aisEta, bearing, continues, destPoint, EST, project, inAirBox, inSeaBox, km, lattice, History, joinTracks, matchPort, nearestPort, pickRoute, routeFits, SEA_ROW, SEA_ROW_LEN, type Place } from "./traffic-geo.ts";
 
 /** Commas outside brackets: the number of fields of a row literal, less one. */
 function topCommas(src: string) {
@@ -71,6 +71,7 @@ test("row index maps: new fields only at the end, the old ones where the front e
   assert.equal(AIR_ROW.climbFpm, 6);
   assert.equal(AIR_ROW.posTime, 18);
   assert.equal(AIR_ROW.source, 20);
+  assert.equal(AIR_ROW.estimated, 21);
   assert.equal(Math.max(...Object.values(AIR_ROW)) + 1, AIR_ROW_LEN);
   assert.equal(new Set(Object.values(AIR_ROW)).size, AIR_ROW_LEN);
   assert.equal(SEA_ROW.posTimeIso, 13);
@@ -83,6 +84,8 @@ test("row index maps: new fields only at the end, the old ones where the front e
   assert.equal(topCommas(airRow) + 1, AIR_ROW_LEN);
   const seaRow = src.slice(src.indexOf("ships.map((s) => [s.mmsi"), src.indexOf("]) });", src.indexOf("ships.map((s) => [s.mmsi")));
   assert.equal(topCommas(seaRow) + 1, SEA_ROW_LEN);
+  // A scripted edit once turned the callsign test's \d into a plain d, and no continued track ever found its route.
+  assert.ok(!src.includes("{3}d/"), "a callsign regex lost its backslash");
 });
 
 test("History keeps one point per interval, six hours back, capped", () => {
@@ -145,4 +148,64 @@ test("the air circles cover the whole region box with no hole (0.05° grid, 250 
 test("the region reaches Egypt, Sudan, the Horn, Iran's east and the Caspian; ships also the Arabian Sea", () => {
   for (const [la, lo] of [[30.1, 31.2], [15.6, 32.5], [11.6, 43.1], [29.5, 60.9], [37.5, 50], [33.3, 44.4], [24.7, 46.7], [15.4, 44.2]]) assert.ok(inAirBox(la, lo), `${la},${lo}`);
   for (const [la, lo] of [[12.5, 47], [15, 65], [31.3, 32.3], [34, 27]]) assert.ok(inSeaBox(la, lo), `${la},${lo}`);
+});
+
+test("continued tracks: only aircraft last heard airborne, fast and high", () => {
+  assert.equal(continues(35000, 450, 120), true);
+  assert.equal(continues(4000, 250, 120), false);
+  assert.equal(continues(35000, 100, 120), false);
+  assert.equal(continues("ground", 0, 0), false);
+  assert.equal(continues(35000, 450, undefined), false);
+});
+
+test("continued tracks: moved along the great circle to the destination at the last ground speed", () => {
+  // Lost over Kuwait at 480 kt, bound for Riyadh (OERK).
+  const last = { lat: 29.0, lon: 47.8, t: 1_800_000_000, gs: 480, track: 200, alt: 36000, rate: 0 };
+  const RUH = { lat: 24.96, lon: 46.7 };
+  const e = project(last, RUH, last.t + 900);
+  const moved = km(last.lat, last.lon, e.lat, e.lon);
+  assert.ok(Math.abs(moved - 480 * 1.852 * 0.25) < 3, `moved ${moved}`);
+  // still on the line to Riyadh, pointing at it
+  assert.ok(Math.abs(km(last.lat, last.lon, RUH.lat, RUH.lon) - moved - km(e.lat, e.lon, RUH.lat, RUH.lon)) < 2);
+  assert.ok(Math.abs(e.track - bearing(e.lat, e.lon, RUH.lat, RUH.lon)) <= 1);
+  assert.equal(e.done, null);
+  assert.equal(e.alt, 36000);
+});
+
+test("continued tracks: dropped on arrival (40 km out), on landing, after three hours", () => {
+  const last = { lat: 29.0, lon: 47.8, t: 1_800_000_000, gs: 480, track: 200, alt: 36000, rate: 0 };
+  const RUH = { lat: 24.96, lon: 46.7 };
+  const total = km(last.lat, last.lon, RUH.lat, RUH.lon);
+  const toArrive = ((total - EST.arriveKm + 1) / (480 * 1.852)) * 3600;
+  assert.equal(project(last, RUH, last.t + toArrive).done, "arrived");
+  assert.equal(project(last, RUH, last.t + toArrive - 60).done, null);
+  // descending at 2,000 ft/min from 12,000 ft: down in five minutes
+  assert.equal(project({ ...last, alt: 12000, rate: -2000 }, null, last.t + 330).done, "landed");
+  // a long route: three hours at most
+  const far = destPoint(last, 120, 9000);
+  assert.equal(project({ ...last, gs: 300 }, far, last.t + EST.maxSec + 1).done, "too-long");
+});
+
+test("continued tracks: without a route, straight on for ten minutes only", () => {
+  const last = { lat: 20, lon: 40, t: 1_800_000_000, gs: 450, track: 90, alt: 37000, rate: 0 };
+  const e = project(last, null, last.t + 300);
+  assert.equal(e.done, null);
+  assert.ok(Math.abs(e.lat - 20) < 0.1 && e.lon > 40.5);
+  assert.equal(project(last, null, last.t + EST.noRouteSec + 1).done, "no-route");
+});
+
+test("ships: positions kept six hours, name and destination a day, the cap drops position-less ships first", () => {
+  const now = 1_800_000_000_000, h = 3600_000;
+  const m = new Map<number, { mmsi: number; t: number; sAt?: number }>([
+    [1, { mmsi: 1, t: now - 5 * h }],
+    [2, { mmsi: 2, t: now - 7 * h, sAt: now - 2 * h }],
+    [3, { mmsi: 3, t: now - 7 * h }],
+    [4, { mmsi: 4, t: 0, sAt: now - 25 * h }],
+    [5, { mmsi: 5, t: 0, sAt: now - h }],
+  ]);
+  tidyShips(m, now, 10);
+  assert.deepEqual([...m.keys()].sort(), [1, 2, 5]);
+  assert.equal(m.get(2)?.t, 0); // too old to show, kept for its name
+  tidyShips(m, now, 1);
+  assert.deepEqual([...m.keys()], [1]);
 });

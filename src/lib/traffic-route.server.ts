@@ -111,7 +111,7 @@ export type AirRouteAnswer = {
  * pos: the live position (with track) the server has for the aircraft, if any; seen: our own
  * kept history of it ([lat, lon, unix s]).
  */
-export async function airRoute(hex: string, cs: string | null, pos: (LatLon & { track?: number | null; t?: number }) | null, seen: TrackPoint[]): Promise<AirRouteAnswer> {
+export async function airRoute(hex: string, cs: string | null, pos: (LatLon & { track?: number | null; t?: number }) | null, seen: TrackPoint[], withTrack = true): Promise<AirRouteAnswer> {
   const call = cs && /^[A-Z0-9]{3,8}$/.test(cs) ? cs : null;
   const cands = call && /^[A-Z]{3}\d/.test(call)
     ? cached(candCache, call, 20 * 60_000, 3000, () => ({
@@ -123,7 +123,8 @@ export async function airRoute(hex: string, cs: string | null, pos: (LatLon & { 
         }),
       })).c
     : Promise.resolve([] as Candidate[]);
-  const trk = cached(trackCache, hex, 3 * 60_000, 500, () => ({ p: openskyTrack(hex) })).p;
+  // Continued tracks ask for the route only: OpenSky's track is spent on readers' clicks.
+  const trk = withTrack ? cached(trackCache, hex, 3 * 60_000, 500, () => ({ p: openskyTrack(hex) })).p : Promise.resolve([] as Awaited<ReturnType<typeof openskyTrack>>);
   const [c, path] = await Promise.all([cands, trk]);
   // A track that began low and slow was a take-off its receivers saw: where it began is the origin.
   const first = path[0];

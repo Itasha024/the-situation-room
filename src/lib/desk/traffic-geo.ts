@@ -16,8 +16,14 @@ export const AIR_ROW = {
   headingDeg: 19,
   /** which open feed gave the position: "fi" adsb.fi, "lol" adsb.lol, "os" OpenSky Network */
   source: 20,
+  /**
+   * 1 = an estimate: no feed hears the aircraft any longer (a receiver hole), so it is moved on
+   * from its last real position along its route (or its last track, ten minutes at most). For
+   * these, ageSec is the time since the last real position and posTime the time of the estimate.
+   */
+  estimated: 21,
 } as const;
-export const AIR_ROW_LEN = 21;
+export const AIR_ROW_LEN = 22;
 
 /** Ship row of GET /api/traffic?kind=sea `ships[]`. New fields only ever go at the end. */
 export const SEA_ROW = {
@@ -34,6 +40,20 @@ export const SEA_ROW_LEN = 16;
 export const AIR_BOX = { s: 8, n: 42, w: 25, e: 65 } as const;
 /** Ships: also the Arabian Sea to India and the Gulf of Aden to its mouth. */
 export const SEA_BOX = { s: 5, n: 42, w: 25, e: 70 } as const;
+/** How long ship data is kept: positions six hours, name / type / destination a day. */
+export const SEA_KEEP = { posMs: 6 * 3600_000, staticMs: 24 * 3600_000 } as const;
+/** Drops ship positions past six hours and ships with neither a position nor static data of the day; at most `max` kept, those without a position going first. */
+export function tidyShips<T extends { mmsi: number; t: number; sAt?: number }>(ships: Map<number, T>, now: number, max: number) {
+  const cut = now - SEA_KEEP.posMs, statCut = now - SEA_KEEP.staticMs;
+  for (const [k, s] of ships) {
+    if (s.t && s.t < cut) s.t = 0;
+    if (!s.t && !(s.sAt && s.sAt > statCut)) ships.delete(k);
+  }
+  if (ships.size > max) {
+    const order = [...ships.values()].sort((a, b) => (a.t ? 1 : 0) - (b.t ? 1 : 0) || Math.max(a.t, a.sAt || 0) - Math.max(b.t, b.sAt || 0));
+    for (const x of order.slice(0, ships.size - max)) ships.delete(x.mmsi);
+  }
+}
 export const inAirBox = (lat: number, lon: number) => lat > AIR_BOX.s && lat < AIR_BOX.n && lon > AIR_BOX.w && lon < AIR_BOX.e;
 export const inSeaBox = (lat: number, lon: number) => lat > SEA_BOX.s && lat < SEA_BOX.n && lon > SEA_BOX.w && lon < SEA_BOX.e;
 
@@ -76,6 +96,62 @@ export function crossTrackKm(o: LatLon, d: LatLon, p: LatLon) {
 }
 
 export type LatLon = { lat: number; lon: number };
+
+/** The point `distKm` from p on the initial bearing `brg` (great circle). */
+export function destPoint(p: LatLon, brg: number, distKm: number): LatLon {
+  const d = distKm / EARTH_KM, b = brg * R, la = p.lat * R, lo = p.lon * R;
+  const la2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(b));
+  const lo2 = lo + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(la2));
+  return { lat: la2 / R, lon: ((lo2 / R + 540) % 360) - 180 };
+}
+
+/** Rules for continued tracks (user, 20 Oct: aircraft must not vanish into receiver holes). */
+export const EST = {
+  /** only aircraft last seen airborne, faster than this (kt) and higher than this (ft), are continued */
+  minKt: 120, minFt: 5000,
+  /** dropped this close to the destination (km): assumed arrived */
+  arriveKm: 40,
+  /** never continued longer than this (s) */
+  maxSec: 3 * 3600,
+  /** without a known route: on the last track for at most this (s) */
+  noRouteSec: 600,
+} as const;
+export type LastFix = LatLon & { t: number; gs: number; track: number; alt?: number | null; rate?: number | null };
+export type Estimate = LatLon & { track: number; alt: number | null; done: null | "arrived" | "landed" | "too-long" | "no-route" };
+
+/** Should an aircraft that every feed has stopped hearing be continued? */
+export function continues(alt: unknown, gs: unknown, track: unknown) {
+  return typeof alt === "number" && alt > EST.minFt && typeof gs === "number" && gs > EST.minKt && typeof track === "number" && Number.isFinite(track);
+}
+
+/**
+ * Where an aircraft last heard at `last` is now (unix s), at its last ground speed: along the
+ * great circle to `dest` when its route is known, else straight on its last track. `done` says
+ * it should be dropped: within 40 km of the destination (arrived), descending to below 2,000 ft on
+ * its last rate (landed), three hours on, or ten minutes on with no route.
+ */
+export function project(last: LastFix, dest: LatLon | null, nowSec: number): Estimate {
+  const dt = Math.max(0, nowSec - last.t);
+  const dist = (last.gs * 1.852 * dt) / 3600;
+  let alt = typeof last.alt === "number" ? last.alt : null;
+  if (alt != null && typeof last.rate === "number" && last.rate < -500) alt = alt + (last.rate * dt) / 60;
+  let p: LatLon, track: number, done: Estimate["done"] = null;
+  if (dest) {
+    const total = km(last.lat, last.lon, dest.lat, dest.lon);
+    if (total - dist <= EST.arriveKm) { p = dest; track = bearing(last.lat, last.lon, dest.lat, dest.lon); done = "arrived"; }
+    else {
+      p = destPoint(last, bearing(last.lat, last.lon, dest.lat, dest.lon), dist);
+      track = bearing(p.lat, p.lon, dest.lat, dest.lon);
+    }
+  } else {
+    p = destPoint(last, last.track, dist);
+    track = last.track;
+    if (dt > EST.noRouteSec) done = "no-route";
+  }
+  if (!done && alt != null && alt < 2000) done = "landed";
+  if (!done && dt > EST.maxSec) done = "too-long";
+  return { lat: +p.lat.toFixed(4), lon: +p.lon.toFixed(4), track: Math.round(track), alt: alt == null ? null : Math.max(0, Math.round(alt)), done };
+}
 export type Place = LatLon & { name: string; iata?: string | null; icao?: string | null; city?: string | null };
 export type Fit = { ok: boolean; lengthKm: number; offKm: number; detourKm: number; headingOff: number | null; why: string };
 

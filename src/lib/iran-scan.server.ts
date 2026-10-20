@@ -22,6 +22,7 @@ import { iranPlaceFromWords } from "./desk/iran-places.ts";
 import { remember } from "./desk/recent-reads.ts";
 import { combineSystem } from "./desk/combine.ts";
 import { isExclusive } from "./desk/exclusive.ts";
+import { exclusiveUrl } from "./desk/copy-rules.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
 import { canResolve, cleanUrl, isGnews, knownResolve, outletFromHost, resolvesLeft } from "./desk/gnews.ts";
 import { bingLeft } from "./desk/bing.ts";
@@ -385,7 +386,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   for (const [url, v] of verdicts) {
     if (v.kind !== "publish") continue;
     const h = texts.get(url);
-    if (h && isExclusive(h.text, h.source)) v.report.flags = [...new Set([...(v.report.flags ?? []), "exclusive"])];
+    if ((h && isExclusive(h.text, h.source)) || exclusiveUrl(url)) v.report.flags = [...new Set([...(v.report.flags ?? []), "exclusive"])];
     v.report.desks = ["iran"];
     if (trumpSaid(v.report)) said.push(v.report);
     else approved.push(v.report);

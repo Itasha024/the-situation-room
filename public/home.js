@@ -78,7 +78,9 @@
     return (rows || []).map((r) => ({
       fp: String(r.fp), at: r.at, srcRaw: r.source, src: srcName(r.source), url: r.url || '', h: r.summary || '',
       also: Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : [], desks: Array.isArray(r.desks) && r.desks.length ? [desk, ...r.desks.filter((d) => d !== desk)] : [desk],
-      lean: r.lean, replyTo: r.replyTo, flags: r.flags || [],
+      lean: r.lean, replyTo: r.replyTo, flags: r.flags || [], score: Number(r.score) || 0,
+      // The desk's own card tells more only when it has a body beyond the headline (20 Oct).
+      more: (() => { const t = String(r.text || '').trim(); return t.length > 80 && t.replace(/\W+/g, '').toLowerCase() !== String(r.summary || '').replace(/\W+/g, '').toLowerCase(); })(),
     })).filter((r) => r.h && r.at);
   }
   /* A pin as its desk draws it: the kind of event (the mark) and who acted (the colour). */
@@ -128,7 +130,7 @@
     const desks = Promise.all([getJson('/api/desk?desk=iran'), getJson('/api/desk?desk=yemen')]);
     if (onDesks) desks.then(([di, dy]) => {
       if (!(di || dy)) return;
-      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports)]);
+      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), OLD]);
       byFp = new Map(D.reports.map((r) => [r.fp, r]));
       addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events)], true);
       try { onDesks(); } catch (e) { console.warn(e); }
@@ -139,7 +141,7 @@
       getJson('/api/scan?only=time', { cache: 'no-cache' }), getJson('/api/scan?desk=iran&only=time', { cache: 'no-cache' }),
     ]);
     if (di || dy) {
-      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports)]);
+      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), OLD]);
       byFp = new Map(D.reports.map((r) => [r.fp, r]));
       addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events)], true);
       // When the desks last looked, as each desk shows it, not the newest report's time.
@@ -163,6 +165,29 @@
       }));
       D.trump = [...m.values()].sort((a, b) => (a.at < b.at ? 1 : -1));
     }
+  }
+
+  /* Older reports, a page of each desk at a time, when the reader scrolls past the ones the page has (20 Oct:
+     every report since 28 Feb, none read before it is asked for). False once both desks reach their start. */
+  const olderDone = { iran: false, yemen: false };
+  // Kept apart, so each new read of the latest keeps the pages scrolled to.
+  var OLD = [];
+  async function older() {
+    const add = await Promise.all(['iran', 'yemen'].map(async (desk) => {
+      if (olderDone[desk]) return [];
+      const own = D.reports.filter((r) => r.desks[0] === desk);
+      const t = own.reduce((m, r) => Math.min(m, Date.parse(r.at) || Infinity), Infinity);
+      if (!Number.isFinite(t)) { olderDone[desk] = true; return []; }
+      const j = await getJson(`/api/desk?desk=${desk}&limit=200&before=${encodeURIComponent(new Date(t).toISOString())}`);
+      const rows = (j && j.reports) || [];
+      if (rows.length < 200) olderDone[desk] = true;
+      return reportsOf(desk, rows);
+    }));
+    const n = D.reports.length;
+    add.forEach((l) => OLD.push(...l));
+    D.reports = mergeReports([D.reports, ...add]);
+    byFp = new Map(D.reports.map((r) => [r.fp, r]));
+    return D.reports.length > n || !(olderDone.iran && olderDone.yemen);
   }
 
   /* The whole war's pins, read once, soon after the page is up, so a longer view comes at once. */
@@ -227,7 +252,7 @@
       ${reply}
       <p class="headline">${esc(r.h)}</p>
       ${also.length ? `<p class="also">Also: ${also.slice(0, 4).map((a) => `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(srcName(a.source))}</a>`).join(' · ')}</p>` : ''}
-      ${r.desks[0] && HD[r.desks[0]] ? `<a class="x-desk" href="${HD[r.desks[0]].href}#r=${encodeURIComponent(r.fp)}">Full report on the ${esc(HD[r.desks[0]].short)} desk →</a>` : ''}
+      ${r.more && r.desks[0] && HD[r.desks[0]] ? `<a class="x-desk" href="${HD[r.desks[0]].href}#r=${encodeURIComponent(r.fp)}">Full report on the ${esc(HD[r.desks[0]].short)} desk →</a>` : ''}
     </article>`;
   }
   function trumpCard(s) {
@@ -582,7 +607,11 @@
       const colors = app('COLORS') || {};
       // Every side with a pin on the map has a row (user, 18 Oct: the purple Southern forces pin had none).
       const seen = new Set(D.events.filter((e) => e.desk === 'yemen').map((e) => A('yemenSideOf')(e) || 'unclear'));
-      return `<div class="leg-sec">Who</div>${ctl}${row(colors.saudi, 'Saudi Arabia', !!lo.saudi, 'data-layer="saudi"')}${A('yemenSideRows')(seen) || ''}${A('yemenEventRows')() || ''}`;
+      // Until the control map and the pins are in, the full list as it last was, not Saudi Arabia alone (20 Oct).
+      const full = !!(D.ydata && D.ydata.control && D.ydata.control.length && seen.size);
+      const html = `<div class="leg-sec">Who</div>${ctl}${row(colors.saudi, 'Saudi Arabia', !!lo.saudi, 'data-layer="saudi"')}${A('yemenSideRows')(seen) || ''}${A('yemenEventRows')() || ''}`;
+      try { if (full) localStorage.setItem('h-leg-yemen', html); else { const kept = localStorage.getItem('h-leg-yemen'); if (kept) return kept; } } catch (e) { /* private */ }
+      return full ? html : '<div class="leg-sec">Who</div><span class="leg-hint">Loading…</span>';
     }
     const p = irPins();
     const sides = (app('IRAN_PIN_SIDES') || []).filter(([k]) => k !== 'other' || D.events.some((e) => e.desk === 'iran' && A('iranSideOf')(e) === 'other'));
@@ -935,7 +964,7 @@
     if (phone()) legendCollapsed = true;
     map = L.map($('h-map'), { zoomControl: true, attributionControl: true, worldCopyJump: false, minZoom: 3, zoomSnap: 0.25, closePopupOnClick: false });
     // The map view (public/ops.js) works with the same map, data and cards.
-    window.__home = { map, D, card, trumpCard };
+    window.__home = { map, D, card, trumpCard, older, loadWar };
     tiles = L.tileLayer(tileUrl(), { maxZoom: 18, noWrap: true, attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ' }).addTo(map);
     map.fitBounds(REGION);
     // Back from a desk: the map starts where the desk's flight out ended.

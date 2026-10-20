@@ -1,16 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { metered } from "@/lib/desk/cpu-meter";
+import { AIR_BOX, aisEta, angleDiff, bearing, History, inAirBox, inSeaBox, joinTracks, km, lattice, matchPort, nearestPort, SEA_BOX } from "@/lib/desk/traffic-geo";
+import { airRoute } from "@/lib/traffic-route.server";
 
 /**
  * Live traffic for the map-first view's "Live traffic" button (user, 19 Oct: every aircraft and
  * ship in the region, live, whenever the buttons are on; 20 Oct: "make sure it loads immediately
  * all the live data upon choosing to activate it" and "not missing any data").
  *
- * - Aircraft: adsb.fi's and adsb.lol's open data together (no key; each sees through its own
- *   receivers, so the two give the fuller picture; adsb.fi one call a second, adsb.lol 500 a day,
- *   so adsb.fi carries the sweep and adsb.lol tops it up, see `lol` below). 35 circles of 250 nm
- *   cover the whole box (8–42°N, 30–64°E) with no gap. The reading never stops: one pass a minute
+ * - Aircraft: adsb.fi's, adsb.lol's and the OpenSky Network's open data together (no key; each
+ *   sees through its own receivers, so together they give the fullest picture; adsb.fi one call a
+ *   second, adsb.lol 10 a minute and 500 a day, OpenSky 400 credits a day; so adsb.fi carries the
+ *   sweep, OpenSky's one whole-region call (4 credits) every 5 minutes while someone looks adds
+ *   what only its receivers hear — a third more aircraft on 20 Oct — and adsb.lol tops up the
+ *   busy circles, see `lol` and `os` below). 45 circles of 250 nm cover the whole box (8–42°N,
+ *   25–65°E: Egypt, Sudan and the Horn to the Caspian and Pakistan) with no gap (`lattice`,
+ *   checked in traffic-geo.test.ts). Checked 20 Oct and not used: airplanes.live (its API now
+ *   asks every user to write to them first), adsb.one (a Cloudflare challenge), ADS-B Exchange
+ *   (paid key), ADSBHub (feeders only), Flightradar24 and the like (their terms forbid it).
+ *   Iraq, Iran, inland Saudi Arabia, Yemen, Sudan and the Red Sea have few or no open receivers:
+ *   none of these feeds sees much there. The reading never stops: one pass a minute
  *   while nobody looks, passes back to back while someone has the layer on, so the first answer
  *   is the warm picture at once. Each circle's aircraft join the picture as it lands; an aircraft
  *   neither feed sees any longer inside a circle just read leaves it. Circles that held nothing
@@ -26,16 +36,8 @@ const UA = { headers: { "user-agent": "TheSituationRoom/1.0 (+https://thesituati
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const RADIUS = 250; // nm, the most either feed answers
 /** A hexagonal lattice over the box, checked on a 0.05° grid: no point of the box is outside every circle. */
-const LATTICE: [number, number][] = [
-  [9, 30], [9, 36.9], [9, 43.9], [9, 50.8], [9, 57.7], [9, 64.7],
-  [14.9, 33.6], [14.9, 40.7], [14.9, 47.8], [14.9, 54.9], [14.9, 62.1],
-  [20.8, 30], [20.8, 37.4], [20.8, 44.8], [20.8, 52.2], [20.8, 59.6], [20.8, 67],
-  [26.6, 33.9], [26.6, 41.7], [26.6, 49.5], [26.6, 57.3], [26.6, 65.1],
-  [32.5, 30], [32.5, 38.3], [32.5, 46.6], [32.5, 55], [32.5, 63.3],
-  [38.4, 34.5], [38.4, 43.5], [38.4, 52.6], [38.4, 61.6],
-  [44.3, 30], [44.3, 39.4], [44.3, 48.9], [44.3, 58.3],
-];
-const inBox = (lat: number, lon: number) => lat > 8 && lat < 42 && lon > 30 && lon < 64;
+const LATTICE = lattice(AIR_BOX, RADIUS);
+const inBox = inAirBox;
 function nm(a: number, b: number, c: number, d: number) {
   const r = Math.PI / 180;
   const x = Math.sin(((c - a) * r) / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(((d - b) * r) / 2) ** 2;
@@ -48,7 +50,7 @@ const CIRCLES = [...LATTICE].sort((p, q) => Math.min(...HUBS.map(([a, b]) => nm(
 type Ac = { hex: string; lat: number; lon: number } & Record<string, string | number | undefined>;
 type Row = (string | number | null)[];
 /** Only what a row needs is kept (the VM has 1 GB). */
-const FIELDS = ["alt_baro", "gs", "track", "baro_rate", "geom_rate", "squawk", "flight", "r", "t", "desc", "ownOp", "dbFlags"];
+const FIELDS = ["alt_baro", "gs", "track", "baro_rate", "geom_rate", "squawk", "flight", "r", "t", "desc", "ownOp", "dbFlags", "true_heading"];
 function slim(x: Record<string, unknown>): Ac | null {
   if (typeof x.hex !== "string" || typeof x.lat !== "number" || typeof x.lon !== "number") return null;
   const a: Ac = { hex: x.hex, lat: x.lat, lon: x.lon };
@@ -57,11 +59,14 @@ function slim(x: Record<string, unknown>): Ac | null {
 }
 
 /**
- * seen: each aircraft with the time its position was taken (ms), and whether only adsb.lol saw it
- * last (adsb.lol is read far less often, so its own aircraft are not dropped by an adsb.fi read).
+ * seen: each aircraft with the time its position was taken (ms), the feed whose reads decide when
+ * it has gone (`own`: "fi" once adsb.fi has seen it, else the feed that did; adsb.lol and OpenSky
+ * are read far less often, so their own aircraft are not dropped by an adsb.fi read), and the
+ * feed that gave the position shown (`by`).
  */
+type Src = "fi" | "lol" | "os";
 const air = {
-  seen: new Map<string, { a: Ac; t: number; lol: boolean }>(),
+  seen: new Map<string, { a: Ac; t: number; own: Src; by: Src }>(),
   rows: [] as Row[], ver: 0, built: -1,
   at: "", asked: 0, running: false, wake: null as null | (() => void),
   mil: new Set<string>(), milAt: 0, lolMilAt: 0,
@@ -70,24 +75,76 @@ const air = {
 };
 /**
  * adsb.lol allows one address 4 calls a second, 60 a minute and 500 a day (its x-ratelimit-limit
- * header, 20 Oct; past that every call is refused for a while). So it is spent from a budget of
- * 450 a day, only while someone has the layer on: the busiest circles in turn, and its military
- * list every ten minutes. adsb.fi (one call a second, no daily cap) carries the sweep.
+ * header), and since 20 Oct also only 10 a minute ("rate limit exceeded: 10 req/min", retry-after
+ * 15 s; past that every call is refused for a while). So it is spent from a budget of 450 a day,
+ * at most one call each 7 seconds, only while someone has the layer on: the busiest circles in
+ * turn, and its military list every ten minutes. adsb.fi (one call a second, no daily cap) carries
+ * the sweep.
  */
-const lol = { tokens: 10, at: Date.now(), until: 0 };
+const lol = { tokens: 10, at: Date.now(), until: 0, last: 0 };
 function lolSpend() {
   const now = Date.now();
   lol.tokens = Math.min(40, lol.tokens + ((now - lol.at) * 450) / 86_400_000);
   lol.at = now;
-  if (now < lol.until || lol.tokens < 1) return false;
+  if (now < lol.until || lol.tokens < 1 || now - lol.last < 7000) return false;
   lol.tokens -= 1;
+  lol.last = now;
   return true;
 }
+/**
+ * OpenSky Network, anonymous: 400 credits a day per address; the whole region in one call costs 4
+ * (any box over 400 square degrees). 95 calls a day: one each 5 minutes while someone looks (a
+ * burst of six, then as the budget refills, about one each 15 minutes), each 30 minutes while
+ * nobody does, so the first look is warm. Its own aircraft stay up to 12 minutes, moved on by
+ * the page from their speed and track.
+ */
+const os = { tokens: 4, at: Date.now(), until: 0, last: 0 };
+function osDue() {
+  const now = Date.now();
+  os.tokens = Math.min(6, os.tokens + ((now - os.at) * 95) / 86_400_000);
+  os.at = now;
+  return now >= os.until && os.tokens >= 1 && now - os.last >= (watched() ? 300_000 : 1_800_000);
+}
+async function readOpenSky() {
+  const now = Date.now();
+  os.last = now;
+  os.tokens -= 1;
+  try {
+    const r = await fetch(`https://opensky-network.org/api/states/all?lamin=${AIR_BOX.s}&lomin=${AIR_BOX.w}&lamax=${AIR_BOX.n}&lomax=${AIR_BOX.e}`, { ...UA, signal: AbortSignal.timeout(20_000) });
+    const wait = Number(r.headers.get("x-rate-limit-retry-after-seconds"));
+    if (r.status === 429 || Number(r.headers.get("x-rate-limit-remaining")) < 4) os.until = now + (Number.isFinite(wait) && wait > 0 ? wait : 3600) * 1000;
+    if (!r.ok) return;
+    const x = (await r.json()) as { states?: unknown[][] | null };
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+    // [icao24, callsign, country, time_position, last_contact, lon, lat, baro_alt m, on_ground, velocity m/s, true_track, vertical_rate m/s, sensors, geo_alt, squawk, ...]
+    for (const st of x.states || []) {
+      const hex = typeof st[0] === "string" ? st[0].toLowerCase() : "";
+      const lat = num(st[6]), lon = num(st[5]), tp = num(st[3]);
+      if (!hex || lat == null || lon == null || tp == null || !inBox(lat, lon) || now / 1000 - tp > 300) continue;
+      const alt = num(st[7]), v = num(st[9]), vr = num(st[11]), trk = num(st[10]);
+      // Only what OpenSky has is set: a merge must not blank what another feed gave.
+      const a: Ac = { hex, lat, lon, seen_pos: Math.max(0, now / 1000 - tp) };
+      if (st[8] === true) a.alt_baro = "ground";
+      else if (alt != null) a.alt_baro = alt * 3.28084;
+      if (v != null) a.gs = v * 1.943844;
+      if (trk != null) a.track = trk;
+      if (vr != null) a.baro_rate = vr * 196.8504;
+      if (typeof st[14] === "string") a.squawk = st[14];
+      if (typeof st[1] === "string" && st[1].trim()) a.flight = st[1];
+      put(a, now, "os");
+    }
+    air.srcOk.set("OpenSky", Date.now());
+    air.at = new Date().toISOString();
+    air.ver++;
+  } catch { /* the next time */ }
+}
 const routes = new Map<string, { from: string; to: string } | null>();
+/** Each aircraft's own positions, one a minute for six hours (for the flown route when a reader opens it). */
+const airHist = new History(60, 6 * 3600, 360, 5000);
 
 async function getJson(u: string) {
   const r = await fetch(u, { ...UA, signal: AbortSignal.timeout(12_000) });
-  if (r.status === 429 && u.includes("adsb.lol")) lol.until = Date.now() + Math.max(60, Number(r.headers.get("retry-after")) || 0) * 1000;
+  if (r.status === 429 && u.startsWith("https://api.adsb.lol/")) lol.until = Date.now() + Math.max(60, Number(r.headers.get("retry-after")) || 0) * 1000;
   if (!r.ok) throw new Error(`${r.status} ${u}`);
   return r.json() as Promise<{ aircraft?: Record<string, unknown>[]; ac?: Record<string, unknown>[]; _airports?: { iata?: string; icao?: string; location?: string; name?: string; countryiso2?: string }[] }>;
 }
@@ -103,14 +160,17 @@ async function routeOf(cs: string) {
   } catch { /* none */ }
 }
 
-/** The fresher position of the two feeds wins; the other fills what it lacks. */
-function put(a: Ac, now: number, fromLol: boolean) {
+/** Merged by hex: the freshest position of the feeds wins; the others fill what it lacks. */
+function put(a: Ac, now: number, src: Src) {
   const t = now - Math.max(0, Number(a.seen_pos ?? 0)) * 1000;
   const was = air.seen.get(a.hex);
-  if (!was || t >= was.t) air.seen.set(a.hex, { a: was ? { ...was.a, ...a } : a, t, lol: fromLol && (!was || was.lol) });
-  else { was.a = { ...a, ...was.a }; if (!fromLol) was.lol = false; }
+  if (!was || t >= was.t) {
+    air.seen.set(a.hex, { a: was ? { ...was.a, ...a } : a, t, own: was?.own === "fi" ? "fi" : src, by: src });
+    if (inBox(a.lat, a.lon)) airHist.add(a.hex, a.lat, a.lon, t / 1000);
+  }
+  else { was.a = { ...a, ...was.a }; if (src === "fi") was.own = "fi"; }
 }
-async function readFeed(u: string, now: number, fromLol: boolean) {
+async function readFeed(u: string, now: number, src: Src) {
   const x = await getJson(u);
   const got = new Set<string>();
   for (const raw of x.aircraft || x.ac || []) {
@@ -118,25 +178,26 @@ async function readFeed(u: string, now: number, fromLol: boolean) {
     if (!a) continue;
     a.seen_pos = Number(raw.seen_pos ?? 0);
     got.add(a.hex);
-    put(a, now, fromLol);
+    put(a, now, src);
   }
-  air.srcOk.set(fromLol ? "adsb.lol" : "adsb.fi", Date.now());
+  air.srcOk.set(src === "lol" ? "adsb.lol" : "adsb.fi", Date.now());
   return got;
 }
 async function readCircle(i: number, withLol: boolean) {
   const [la, lo] = CIRCLES[i];
   const now = Date.now();
   const [fi, ll] = await Promise.all([
-    readFeed(`https://opendata.adsb.fi/api/v2/lat/${la}/lon/${lo}/dist/${RADIUS}`, now, false).catch(() => null),
-    withLol ? readFeed(`https://api.adsb.lol/v2/point/${la}/${lo}/${RADIUS}`, now, true).catch(() => null) : Promise.resolve(null),
+    readFeed(`https://opendata.adsb.fi/api/v2/lat/${la}/lon/${lo}/dist/${RADIUS}`, now, "fi").catch(() => null),
+    withLol ? readFeed(`https://api.adsb.lol/v2/point/${la}/${lo}/${RADIUS}`, now, "lol").catch(() => null) : Promise.resolve(null),
   ]);
   if (ll) air.lolAt[i] = now;
   if (!fi && !ll) return;
   // Mark what adsb.fi saw itself; then what the feeds that answered no longer see well inside the circle has gone.
-  if (fi) for (const h of fi) { const s = air.seen.get(h); if (s) s.lol = false; }
+  if (fi) for (const h of fi) { const s = air.seen.get(h); if (s) s.own = "fi"; }
   for (const [h, s] of air.seen) {
     if (fi?.has(h) || ll?.has(h) || s.t >= now || nm(la, lo, s.a.lat, s.a.lon) > RADIUS - 10) continue;
-    if (ll || (fi && !s.lol)) air.seen.delete(h);
+    if (s.own === "os") continue; // OpenSky's own: kept until its next read or 12 minutes
+    if (ll || (fi && s.own === "fi")) air.seen.delete(h);
   }
   air.count[i] = new Set([...(fi || []), ...(ll || [])]).size;
   air.readAt[i] = Date.now();
@@ -145,18 +206,18 @@ async function readCircle(i: number, withLol: boolean) {
 }
 async function readMil() {
   const now = Date.now();
-  const lists: [string, boolean][] = [["https://opendata.adsb.fi/api/v2/mil", false]];
-  if (Date.now() - air.lolMilAt > 600_000 && watched() && lolSpend()) { air.lolMilAt = now; lists.push(["https://api.adsb.lol/v2/mil", true]); }
+  const lists: [string, Src][] = [["https://opendata.adsb.fi/api/v2/mil", "fi"]];
+  if (Date.now() - air.lolMilAt > 600_000 && watched() && lolSpend()) { air.lolMilAt = now; lists.push(["https://api.adsb.lol/v2/mil", "lol"]); }
   air.milAt = now;
-  for (const [u, fromLol] of lists) {
+  for (const [u, src] of lists) {
     try {
       const x = await getJson(u);
       for (const raw of x.aircraft || x.ac || []) {
         if (typeof raw.hex === "string") air.mil.add(raw.hex);
         const a = slim(raw);
-        if (a && inBox(a.lat, a.lon)) { a.seen_pos = Number(raw.seen_pos ?? 0); put(a, now, fromLol); }
+        if (a && inBox(a.lat, a.lon)) { a.seen_pos = Number(raw.seen_pos ?? 0); put(a, now, src); }
       }
-      air.srcOk.set(fromLol ? "adsb.lol" : "adsb.fi", Date.now());
+      air.srcOk.set(src === "lol" ? "adsb.lol" : "adsb.fi", Date.now());
     } catch { /* the next time */ }
   }
   if (air.mil.size > 20_000) air.mil.clear();
@@ -176,13 +237,17 @@ async function airLoop() {
       for (const i of order) {
         if (air.count[i] === 0 && pass % 3 !== 0 && Date.now() - air.readAt[i] < 180_000) continue;
         await readCircle(i, lolTurn.has(i) && lolSpend());
-        await sleep(1100); // adsb.fi: one call a second
+        if (osDue()) await readOpenSky();
+        await sleep(1050); // adsb.fi: one call a second
       }
+      if (osDue()) await readOpenSky();
       if (Date.now() - air.milAt > 120_000) { await readMil(); await sleep(1100); }
       // An aircraft whose circle has not been read for four minutes (feeds failing) is not shown as live,
-      // nor one only adsb.lol saw, two and a half minutes on.
-      const cut = Date.now() - 240_000, cutLol = Date.now() - 150_000;
-      for (const [h, s] of air.seen) if (s.t < cut || (s.lol && s.t < cutLol)) air.seen.delete(h);
+      // nor one only adsb.lol saw, two and a half minutes on, nor one only OpenSky saw, twelve minutes on.
+      const now = Date.now();
+      const keep = { fi: 240_000, lol: 150_000, os: 720_000 };
+      for (const [h, s] of air.seen) if (s.t < now - keep[s.own]) air.seen.delete(h);
+      airHist.prune(Date.now() / 1000 - 1800);
       air.ver++;
       // Nobody looking: one pass a minute, woken at once when someone turns the layer on.
       const rest = 60_000 - (Date.now() - start);
@@ -201,7 +266,7 @@ function airRows() {
   const now = Date.now();
   const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null);
   const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
-  for (const { a, t } of air.seen.values()) {
+  for (const { a, t, by } of air.seen.values()) {
     const { lat, lon } = a;
     if (!inBox(lat, lon)) continue;
     const gnd = a.alt_baro === "ground" ? 1 : 0;
@@ -210,9 +275,11 @@ function airRows() {
     if (f && !mil && !routes.has(f) && lookups < 8) { lookups++; void routeOf(f); }
     const rt = f ? routes.get(f) : null;
     // hex, lat, lon, altitude ft, ground speed kt, track, climb ft/min, squawk, flight, registration,
-    // type code, type, operator, military, from, to, on the ground, seconds since the position
+    // type code, type, operator, military, from, to, on the ground, seconds since the position,
+    // then (20 Oct, added at the end) the position's unix time, the true heading and the feed. See AIR_ROW.
     rows.push([a.hex, +lat.toFixed(4), +lon.toFixed(4), gnd ? 0 : n(a.alt_baro), n(a.gs), n(a.track), n(a.baro_rate ?? a.geom_rate), s(a.squawk),
-      f || null, s(a.r), s(a.t), s(a.desc), s(a.ownOp), mil, rt ? rt.from : null, rt ? rt.to : null, gnd, Math.max(0, Math.round((now - t) / 1000))]);
+      f || null, s(a.r), s(a.t), s(a.desc), s(a.ownOp), mil, rt ? rt.from : null, rt ? rt.to : null, gnd, Math.max(0, Math.round((now - t) / 1000)),
+      Math.round(t / 1000), n(a.true_heading), by]);
   }
   air.rows = rows;
   air.built = air.ver;
@@ -220,7 +287,14 @@ function airRows() {
 }
 
 /* Ships: AISStream, kept open while the server has a key, so the picture is already there when asked for. */
-type Ship = { mmsi: number; name: string; lat: number; lon: number; sog: number | null; cog: number | null; hdg: number | null; nav: number | null; type?: number; dest?: string; cs?: string; imo?: number; len?: number; t: number };
+/**
+ * stop: where the ship last lay still (speed under half a knot, or moored / at anchor) and until
+ * when; once it moves on, that is where it came from (AIS has no origin).
+ */
+type Ship = { mmsi: number; name: string; lat: number; lon: number; sog: number | null; cog: number | null; hdg: number | null; nav: number | null; type?: number; dest?: string; cs?: string; imo?: number; len?: number; eta?: string | null; t: number;
+  stop?: { lat: number; lon: number; from: number; to: number } };
+/** Each ship's own positions, one per ten minutes for six hours. */
+const seaHist = new History(600, 6 * 3600, 40, 8000);
 const sea = { ships: new Map<number, Ship>(), asked: 0, ws: null as WebSocket | null, note: "", openedAt: 0, tidyAt: 0 };
 type Msg = Record<string, Record<string, unknown> | undefined> & { MetaData?: Record<string, unknown>; Message?: Record<string, Record<string, unknown> | undefined>; error?: string };
 function seaOpen() {
@@ -233,7 +307,9 @@ function seaOpen() {
   sea.note = "connecting";
   ws.onopen = () => {
     sea.note = "live";
-    ws.send(JSON.stringify({ APIKey: key, BoundingBoxes: [[[8, 30], [42, 64]]],
+    ws.send(JSON.stringify({ APIKey: key, // The whole sea region: east Mediterranean, Suez, Red Sea, Gulf of Aden, Arabian Sea, the Gulf;
+      // every ship type (no type filter), class A and B.
+      BoundingBoxes: [[[SEA_BOX.s, SEA_BOX.w], [SEA_BOX.n, SEA_BOX.e]]],
       FilterMessageTypes: ["PositionReport", "StandardClassBPositionReport", "ExtendedClassBPositionReport", "ShipStaticData", "StaticDataReport"] }));
   };
   ws.onmessage = async (ev) => {
@@ -250,11 +326,17 @@ function seaOpen() {
       const num = (v: unknown) => (typeof v === "number" ? v : null);
       if (pr && typeof md.latitude === "number" && typeof md.longitude === "number") {
         Object.assign(s, { lat: +md.latitude.toFixed(4), lon: +md.longitude.toFixed(4), sog: num(pr.Sog), cog: num(pr.Cog), hdg: pr.TrueHeading === 511 ? null : num(pr.TrueHeading), nav: num(pr.NavigationalStatus) ?? s.nav, t: Date.now() });
+        const still = (s.sog != null && s.sog < 0.5) || s.nav === 1 || s.nav === 5;
+        if (still) {
+          if (s.stop && s.stop.to > s.t - 1800_000 && km(s.stop.lat, s.stop.lon, s.lat, s.lon) < 5) s.stop.to = s.t;
+          else s.stop = { lat: s.lat, lon: s.lon, from: s.t, to: s.t };
+        }
+        seaHist.add(id, s.lat, s.lon, s.t / 1000);
       }
       const st = M.ShipStaticData;
       if (st) {
         const D = (st.Dimension || {}) as Record<string, number>;
-        Object.assign(s, { type: st.Type, dest: String(st.Destination || "").trim(), cs: String(st.CallSign || "").trim(), imo: st.ImoNumber || undefined, len: (D.A || 0) + (D.B || 0) || undefined });
+        Object.assign(s, { type: st.Type, dest: String(st.Destination || "").trim(), cs: String(st.CallSign || "").trim(), imo: st.ImoNumber || undefined, len: (D.A || 0) + (D.B || 0) || undefined, eta: aisEta(st.Eta) });
       }
       const sd = M.StaticDataReport as Record<string, Record<string, unknown> | undefined> | undefined;
       if (sd) {
@@ -278,6 +360,35 @@ function seaTidy() {
   // A ship with no position for three hours (or never one) goes; never more than 40,000 kept.
   for (const [k, s] of sea.ships) if (s.t ? s.t < cut : Date.now() - sea.openedAt > 3600_000 && sea.ships.size > 20_000) sea.ships.delete(k);
   if (sea.ships.size > 40_000) for (const k of [...sea.ships.keys()].slice(0, sea.ships.size - 40_000)) sea.ships.delete(k);
+  seaHist.prune(cut / 1000);
+}
+
+/** A ship's route: the AIS destination (and ETA) its crew set, where it last lay still, and the track we kept. */
+function seaRoute(mmsi: number) {
+  const s = sea.ships.get(mmsi);
+  const track = joinTracks(300, seaHist.get(mmsi), s && s.t ? [[s.lat, s.lon, Math.round(s.t / 1000)]] : []);
+  if (!s) return { ok: true, kind: "sea", mmsi, origin: null, destination: null, track, source: [], confidence: "unknown", note: "not seen in the last three hours" };
+  const moving = s.sog != null && s.sog >= 0.5 && s.nav !== 1 && s.nav !== 5;
+  let origin = null;
+  if (s.stop && moving) {
+    const p = nearestPort(s.stop.lat, s.stop.lon, 30);
+    origin = { name: p ? p.name : null, locode: p?.code ?? null, lat: s.stop.lat, lon: s.stop.lon, left: new Date(s.stop.to).toISOString() };
+  } else if (!moving) {
+    const p = nearestPort(s.lat, s.lon, 30);
+    origin = p ? { name: p.name, locode: p.code, lat: p.lat, lon: p.lon, left: null } : null;
+  }
+  const port = matchPort(s.dest);
+  const destination = s.dest ? { name: port ? port.name : s.dest, locode: port?.code ?? null, lat: port?.lat ?? null, lon: port?.lon ?? null, ais: s.dest, eta: s.eta ?? null } : null;
+  // Confirmed: the destination is a known port and the ship's course points at it (or it is nearly there).
+  let confidence: "confirmed" | "likely" | "unknown" = destination ? "likely" : "unknown";
+  if (port && moving && s.cog != null) {
+    const d = km(s.lat, s.lon, port.lat, port.lon);
+    // Ships follow coasts and straits, so the course is held to the destination only loosely.
+    if (d < 50 || angleDiff(bearing(s.lat, s.lon, port.lat, port.lon), s.cog) <= 75) confidence = "confirmed";
+  }
+  const source = ["AISStream (AIS destination and ETA as set by the crew)"];
+  if (origin) source.push("the desk's own kept positions (where the ship last lay still)");
+  return { ok: true, kind: "sea", mmsi, name: s.name || null, origin, destination, track, source, confidence };
 }
 
 /* Kept warm from the start in the site's own server process (port 3000 on the VM), not the scan
@@ -294,14 +405,37 @@ export const Route = createFileRoute("/api/traffic")({
   server: {
     handlers: {
       GET: ({ request }) => metered("traffic", async () => {
-        const kind = new URL(request.url).searchParams.get("kind") || "air";
+        const q = new URL(request.url).searchParams;
+        const kind = q.get("kind") || "air";
+        // One aircraft's or ship's route: GET /api/traffic?route=<hex>&cs=<callsign> or ?kind=sea&mmsi=<mmsi>.
+        if (kind === "sea" && q.get("mmsi")) {
+          const mmsi = Number(q.get("mmsi"));
+          if (!Number.isInteger(mmsi) || mmsi <= 0) return json({ ok: false, why: "bad mmsi" });
+          if (!process.env.AISSTREAM_KEY) return json({ ok: false, kind: "sea", mmsi, origin: null, destination: null, track: [], source: [], confidence: "unknown", note: "no-key" });
+          return json(seaRoute(mmsi));
+        }
+        const hex = (q.get("route") || "").toLowerCase();
+        if (q.has("route")) {
+          if (!/^~?[0-9a-f]{6}$/.test(hex)) return json({ ok: false, why: "bad hex" });
+          const s = air.seen.get(hex);
+          const cs = (q.get("cs") || String(s?.a.flight || "")).trim().toUpperCase() || null;
+          const pos = s ? { lat: s.a.lat, lon: s.a.lon, track: typeof s.a.track === "number" ? s.a.track : null, t: Math.round(s.t / 1000) } : null;
+          const ans = await airRoute(hex.replace("~", ""), cs, pos, airHist.get(hex));
+          // The list's from/to follows the checked answer: a route that did not fit is not shown there either.
+          if (cs && s && ans.checks.length && String(s.a.flight || "").trim().toUpperCase() === cs) {
+            const at = (p: NonNullable<typeof ans.origin>) => [p.iata || p.icao, p.city || p.name].filter(Boolean).join(" ");
+            routes.set(cs, ans.origin && ans.destination ? { from: at(ans.origin), to: at(ans.destination) } : null);
+            air.ver++;
+          }
+          return json(ans, "public, max-age=60");
+        }
         if (kind === "sea") {
           if (!process.env.AISSTREAM_KEY) return json({ ok: false, live: false, note: "no-key", ships: [], why: "The live ship feed needs a free AISStream key on the server (AISSTREAM_KEY); none is set." });
           sea.asked = Date.now();
           seaOpen();
           seaTidy();
-          const ships = [...sea.ships.values()].filter((s) => s.t && inBox(s.lat, s.lon));
-          return json({ ok: true, live: sea.note === "live", note: sea.note, at: new Date().toISOString(), ships: ships.map((s) => [s.mmsi, s.name, s.lat, s.lon, s.sog, s.cog, s.hdg, s.nav, s.type ?? null, s.dest || null, s.cs || null, s.imo ?? null, s.len ?? null, new Date(s.t).toISOString()]) });
+          const ships = [...sea.ships.values()].filter((s) => s.t && inSeaBox(s.lat, s.lon));
+          return json({ ok: true, live: sea.note === "live", note: sea.note, at: new Date().toISOString(), ships: ships.map((s) => [s.mmsi, s.name, s.lat, s.lon, s.sog, s.cog, s.hdg, s.nav, s.type ?? null, s.dest || null, s.cs || null, s.imo ?? null, s.len ?? null, new Date(s.t).toISOString(), Math.round(s.t / 1000), s.eta ?? null]) });
         }
         air.asked = Date.now();
         if (air.wake) air.wake();

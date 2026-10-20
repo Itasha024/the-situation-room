@@ -3401,7 +3401,7 @@ const PEEK = 3;
 function moreBox(id, head, tableHead, rows) {
   const open = ledOpen.has(id);
   const body = rows.map((r, i) => (i < PEEK ? r : r.replace('<tr>', '<tr class="led-rest">'))).join('');
-  const tog = rows.length > PEEK ? `<button type="button" class="toggle-sit led-tog" aria-expanded="${open}">${open ? T('Show less') : T('Show more')}</button>` : '';
+  const tog = rows.length > PEEK ? `<button type="button" class="toggle-sit led-tog" aria-expanded="${open}">${open ? T('Show less') : T('Full list ({n})', { n: rows.length })}</button>` : '';
   return `<div class="led-more${open ? ' open' : ''}" data-more="${id}"><div class="led-head">${head}</div><div class="led-detail">${SL_KEY}<table class="${tableHead[0]}">${tableHead[1]}${body}</table></div>${tog}</div>`;
 }
 function wireMore(root) {
@@ -3412,7 +3412,7 @@ function wireMore(root) {
       const now = box.classList.toggle('open');
       if (now) ledOpen.add(box.dataset.more);
       else ledOpen.delete(box.dataset.more);
-      tog.textContent = now ? T('Show less') : T('Show more');
+      tog.textContent = now ? T('Show less') : T('Full list ({n})', { n: box.querySelectorAll('tr.led-rest').length + PEEK });
       tog.setAttribute('aria-expanded', String(now));
     };
     // The list opens and closes from anywhere on it too; links and buttons keep their own click.
@@ -6038,6 +6038,14 @@ function registerLabels(m, group, entries) {
  * height up from there. Measuring the span is the only way the boxes match
  * what the reader sees.
  */
+// Where the base map writes each country's name (its label points, near enough), and the name.
+const COUNTRY_NAMES = [
+  ['Turkey', 39.0, 35.2], ['Syria', 35.2, 38.4], ['Iraq', 33.0, 43.6], ['Iran', 32.6, 54.3], ['Saudi Arabia', 24.1, 44.6], ['Jordan', 31.0, 36.5],
+  ['Kuwait', 29.4, 47.6], ['Qatar', 25.3, 51.2], ['United Arab Emirates', 23.6, 54.2], ['Oman', 20.8, 56.9], ['Yemen', 15.8, 47.6], ['Egypt', 26.4, 29.9],
+  ['Sudan', 15.8, 30.2], ['Eritrea', 15.5, 38.6], ['Ethiopia', 8.7, 39.6], ['Djibouti', 11.8, 42.6], ['Somalia', 6.5, 46.2], ['Afghanistan', 33.9, 65.8],
+  ['Pakistan', 29.6, 68.8], ['Turkmenistan', 39.1, 59.4], ['Azerbaijan', 40.3, 47.7], ['Armenia', 40.3, 44.9], ['Georgia', 42.2, 43.5], ['Lebanon', 33.9, 35.9],
+  ['Israel', 31.1, 34.9], ['Bahrain', 26.0, 50.55], ['Cyprus', 35.0, 33.2],
+];
 function declutterLabels(m) {
   const all = mapLabels.get(m);
   if (!all || !all.length) return;
@@ -6046,7 +6054,11 @@ function declutterLabels(m) {
     // Three passes, so the page is laid out once, not once per label (20 Oct: measuring after each
     // change froze a phone for a second): clear every label, measure them all, then hide the ones that hit.
     const els = [];
+    // Only the labels in and near the view are measured (20 Oct: zoomed in, every town and district of the
+    // region was measured on each move, and the map stuck); the rest are left as they are, out of sight.
+    const near = m.getBounds().pad(0.15);
     for (const e of all) {
+      if (e.marker.getLatLng && !near.contains(e.marker.getLatLng())) continue;
       const root = e.marker.getElement();
       const el = root && (root.querySelector('span') || root);
       if (!el) continue;
@@ -6058,7 +6070,12 @@ function declutterLabels(m) {
     }
     const view = m.getContainer().getBoundingClientRect();
     const rects = els.map((el) => el.getBoundingClientRect());
-    const boxes = [];
+    // The countries' own names, drawn in the base map's tiles, come first: no town is written over them (20 Oct).
+    const boxes = z < 7.5 ? COUNTRY_NAMES.map(([n, lat, lng]) => {
+      const p = m.latLngToContainerPoint([lat, lng]);
+      const w = Math.min(n.length, 13) * (z < 5 ? 6.5 : 8) + 10, h = z < 5 ? 14 : 18;
+      return { left: view.left + p.x - w / 2, right: view.left + p.x + w / 2, top: view.top + p.y - h / 2, bottom: view.top + p.y + h / 2 };
+    }) : [];
     const hide = [];
     els.forEach((el, i) => {
       const r = rects[i];
@@ -8288,10 +8305,31 @@ async function loadIranFeed() {
     const res = await fetch('/api/desk?desk=iran&limit=300', { cache: 'no-cache' });
     if (!res.ok) return;
     const d = await res.json();
-    iranDesk.reports = (d.reports || []).sort((a, b) => Date.parse(reportTime(b)) - Date.parse(reportTime(a)));
+    // The older pages the reader has scrolled to stay under the newest (20 Oct: every report since 28 Feb, a page at a time).
+    const newest = d.reports || [];
+    const have = new Set(newest.map((r) => String(r.fp)));
+    iranDesk.reports = [...newest, ...(iranDesk.older || []).filter((r) => !have.has(String(r.fp)))].sort((a, b) => Date.parse(reportTime(b)) - Date.parse(reportTime(a)));
     for (const r of iranDesk.reports) if (r.fp) reportByFp.set(String(r.fp), r);
     renderIranFeed();
   } catch (e) { console.warn('iran feed', e); }
+}
+/** The next page of older stored reports, strictly before the oldest the page holds; false at the start of the war. */
+async function pullOlderIran() {
+  if (iranDesk.olderDone) return false;
+  const t = iranDesk.reports.reduce((m, r) => Math.min(m, Date.parse(reportTime(r)) || Infinity), Infinity);
+  if (!Number.isFinite(t)) return false;
+  try {
+    const res = await fetch('/api/desk?desk=iran&limit=200&before=' + encodeURIComponent(new Date(t).toISOString()));
+    if (!res.ok) return false;
+    const rows = ((await res.json()).reports || []);
+    if (rows.length < 200) iranDesk.olderDone = true;
+    const have = new Set(iranDesk.reports.map((r) => String(r.fp)));
+    const fresh = rows.filter((r) => r && r.fp && !have.has(String(r.fp)));
+    iranDesk.older = [...(iranDesk.older || []), ...fresh];
+    iranDesk.reports = [...iranDesk.reports, ...fresh].sort((a, b) => Date.parse(reportTime(b)) - Date.parse(reportTime(a)));
+    for (const r of fresh) reportByFp.set(String(r.fp), r);
+    return fresh.length > 0;
+  } catch (e) { return false; }
 }
 function renderIranFeed() {
   const el = document.getElementById('feed');
@@ -8325,10 +8363,14 @@ function renderIranFeed() {
     card.insertAdjacentHTML('beforeend', `<a class="x-desk" href="/yemen-conflict-desk#r=${encodeURIComponent(r.fp)}">Full report on the Yemen desk →</a>`);
     return box.innerHTML;
   }).join('') +
-    (all.length > list.length ? `<button type="button" class="more" id="iran-more">Show earlier reports (+${Math.min(MORE_STEP, all.length - list.length)})</button>` : '');
+    (all.length > list.length || !iranDesk.olderDone ? '<button type="button" class="more" id="iran-more">Show earlier reports</button>' : '');
   el.querySelectorAll('.card').forEach((card) => { irCardDress(card, list[Number(card.dataset.i)]); wireFeedCard(card); irCardMap(card, list[Number(card.dataset.i)]); });
   const more = document.getElementById('iran-more');
-  if (more) more.addEventListener('click', () => { iranDesk.shown += MORE_STEP; renderIranFeed(); });
+  if (more) more.addEventListener('click', async () => {
+    if (more.disabled) return;
+    if (iranDesk.shown + MORE_STEP > all.length && !iranDesk.olderDone) { more.disabled = true; more.textContent = 'Loading…'; await pullOlderIran(); }
+    iranDesk.shown += MORE_STEP; renderIranFeed();
+  });
   wireMediaClicks(el);
   const up = document.getElementById('updated');
   if (up && iranDesk.scan && iranDesk.scan.scannedAt) up.textContent = 'UPDATED ' + fmtClock(iranDesk.scan.scannedAt);
@@ -8642,7 +8684,7 @@ function irBox(b, i = 0) {
   const mark = (label) => (b.link && b.link.mark && (b.link.on || []).includes(label) ? `<span class="ir-mark">${escapeHtml(b.link.mark)}</span>` : '');
   const spark = '';
   const SHOW = 6;
-  const more = (rows) => (rows.length > SHOW ? '<button type="button" class="toggle-phase rows-tog">Read more</button>' : '');
+  const more = (rows) => (rows.length > SHOW ? `<button type="button" class="toggle-phase rows-tog">All ${rows.length} rows</button>` : '');
   const xtra = (i) => (i >= SHOW ? ' class="xtra"' : '');
   if (b.type === 'claims') {
     const rows = b.rows.map((r, i) => `<tr${xtra(i)}><th scope="row">${escapeHtml(r.label)}${mark(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</th>${irCell(r.off, 'off')}${irCell(r.unoff, 'u')}</tr>`).join('');
@@ -8668,11 +8710,13 @@ function irBox(b, i = 0) {
     // The first rows show; the rest open under them with Read more (user, 18 Oct: the Sanctions lists never closed, as no row was marked to hide).
     const rows = b.rows.map((r, i) => `<tr${i >= SHOW ? ' class="led-rest"' : ''}>${r.map((c, j) => `<td class="${(b.cols[j] && b.cols[j][1]) || 'l'}">${c && typeof c === 'object' ? irLink(c) : escapeHtml(c == null ? '' : String(c))}</td>`).join('')}</tr>`);
     const stats = b.stats ? `<div class="stat3">${b.stats.map(([v, l]) => `<div><b>${irLink(v)}</b><span>${escapeHtml(l)}</span></div>`).join('')}</div>` : '';
-    const tog = rows.length > SHOW ? '<button type="button" class="toggle-sit led-tog" aria-expanded="false">Read more</button>' : '';
+    const tog = rows.length > SHOW ? `<button type="button" class="toggle-sit led-tog" aria-expanded="false">Full list (${rows.length})</button>` : '';
     body = `<div class="led-more${tog ? ' expandable' : ''}"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div>${tog}</div>`;
   }
   return `<div class="tally-box claims ledger ir${b.type === 'table' && b.rows.length > SHOW ? ' rows-more' : ''}">${head}${body}${spark}${note}</div>`;
 }
+// The nuclear file's order (user, 20 Oct): uranium, then the days since inspectors last visited, then the sites struck.
+const nukeRank = (b) => (/uranium/i.test(b.title) ? 0 : /inspector|IAEA/i.test(b.title) ? 1 : 2);
 function renderIranNumbers() {
   const el = document.getElementById('iran-numbers');
   const d = iranNums.d;
@@ -8682,7 +8726,8 @@ function renderIranNumbers() {
   // Each box as its reader on the server last made it, over the researched file (user, 17 Oct: "everything should be automatic").
   const live = iranBrief.b && (iranBrief.b.numbers || iranBrief.b.sanctions);
   const swap = live && Array.isArray(live.boxes) ? new Map(live.boxes.map((b) => [b.title, b])) : null;
-  const set = swap ? { ...found, boxes: found.boxes.map((b) => swap.get(b.title) || b) } : found;
+  const set0 = swap ? { ...found, boxes: found.boxes.map((b) => swap.get(b.title) || b) } : found;
+  const set = set0.key === 'nuke' ? { ...set0, boxes: [...set0.boxes].sort((a, b) => nukeRank(a) - nukeRank(b)) } : set0;
   // The same line as the Yemen desk's numbers (user, 17 Oct), with the time the Iran desk's numbers next update.
   const nextAt = live && Date.parse(live.nextAt || '') > Date.now() ? live.nextAt : iranBrief.b && iranBrief.b.nextUpdateAt;
   const head = cadenceStamp(true, nextAt ? { nextUpdateAt: nextAt } : null);
@@ -8773,9 +8818,10 @@ async function loadIranBrief() {
 /** Read more on a box: the button, or a click anywhere in it that is not a link or a button. */
 function wireBoxToggle(box, btn, cls) {
   if (!btn) return;
+  const closed = btn.textContent;
   const toggle = () => {
     const open = box.classList.toggle(cls);
-    btn.textContent = open ? 'Show less' : 'Read more';
+    btn.textContent = open ? 'Show less' : closed;
     btn.setAttribute('aria-expanded', String(open));
   };
   btn.onclick = (ev) => { ev.stopPropagation(); toggle(); };

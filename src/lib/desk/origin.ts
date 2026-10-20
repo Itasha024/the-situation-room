@@ -24,6 +24,7 @@
 
 import { BROWSER_UA, type Edition, type GnewsItem, canResolve, resolveCount, resolveGoogleNews, searchCount, searchGoogleNews } from "./gnews.ts";
 import { FULL_TEXT_MAX } from "./reader.ts";
+import { LATE_MS, wrongSource, xPostTime } from "./copy-rules.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
 import type { Listed } from "./sitemap.ts";
@@ -1050,6 +1051,12 @@ export async function traceOrigins(
   let discovers = part(DISCOVER_BUDGET);
   let dirty = false;
   const apply = (r: LiveReport, f: Found) => {
+    // Never the post of the man the speaker answers (Round 4 of 20 Oct: Iran's judiciary spokesman on
+    // "Rubio's remarks in Greece" was traced to Rubio's own X post).
+    if (wrongSource(r.summary, f.source)) return;
+    // An original posted over twelve hours before its relay is old news: the card keeps the original's time.
+    const posted = xPostTime(f.url);
+    if (posted && posted < Date.parse(r.at) - LATE_MS) r.at = new Date(posted).toISOString();
     // The original stands alone: no "Also" line of relays, only a big site's article (18 Oct).
     r.url = f.url;
     r.source = f.source;

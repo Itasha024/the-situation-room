@@ -165,11 +165,15 @@
   /* ---------- The frame ---------- */
   const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, cast: false, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: false };
   try { Object.assign(S, JSON.parse(localStorage.getItem('ops-state2') || '{}'), { tool: null, sel: null, cast: false }); } catch (e) { /* none kept */ }
+  // The map writes its own place names (20 Oct: the Place names layer went from Layers).
+  S.names = false;
   const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, mini, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, mini, trafficSeen })); } catch (e) { /* private */ } };
   /* The reader's settings (20 Oct: "make a settings page too to make the site very customizable"). */
-  const PREF_DEF = { tz: 'desk', range: 2, pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, castTour: true, castEvery: 12, castTicker: true, airStart: false };
+  const PREF_DEF = { v: 2, tz: 'desk', range: 1, pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, castTour: true, castEvery: 12, castTicker: true, airStart: false };
   const P = { ...PREF_DEF };
   try { Object.assign(P, JSON.parse(localStorage.getItem('ops-prefs') || '{}')); } catch (e) { /* none kept */ }
+  // Every map opens on the last 24 hours (20 Oct); settings kept before then had 48.
+  if (!(P.v >= 2)) { P.v = 2; P.range = 1; }
   const keepPrefs = () => { try { localStorage.setItem('ops-prefs', JSON.stringify(P)); } catch (e) { /* private */ } };
   if (P.airStart) S.air = true;
 
@@ -225,7 +229,7 @@
     const acts = document.createElement('div');
     acts.className = 'ops-acts';
     acts.innerHTML = `
-      <button type="button" class="ops-btn" data-op="traffic" aria-expanded="false" title="Live aircraft and ships (T)">${ICON.plane}<span>Traffic</span></button>
+      <span class="ops-trfw"><button type="button" class="ops-btn" data-op="traffic" aria-pressed="false" title="Live aircraft and ships, on or off (T)">${ICON.plane}<span>Traffic</span></button><button type="button" class="ops-btn ops-ico ops-trfm" data-op="trafmenu" aria-expanded="false" title="Traffic options">${ICON.down}<span class="sr">Traffic options</span></button></span>
       <button type="button" class="ops-btn ops-ico" data-op="cast" aria-pressed="false" title="Broadcast mode, for screens and TV (B)">${ICON.cast}<span class="sr">Broadcast mode</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="theme" title="Day or night">${ICON.theme}<span class="sr">Day or night</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="settings" title="Settings (,)">${ICON.gear}<span class="sr">Settings</span></button>
@@ -240,7 +244,7 @@
     nav.className = 'ops-nav';
     nav.setAttribute('aria-label', 'Panels');
     nav.innerHTML = tabs.map(([id, n, ic]) => `<button type="button" data-tab="${id}" title="${esc(n)}">${NAV_ICON[ic]}<span>${esc(n)}</span></button>`).join('')
-      + `<span class="ops-nav-sp"></span><button type="button" data-op="layers" aria-expanded="false" title="Layers: base map, names, grid, control areas (Y)">${NAV_ICON.layers}<span>Layers</span></button>`
+      + `${PAGE === 'all' ? '' : '<span class="ops-nav-sp"></span>'}<button type="button" data-op="layers" aria-expanded="false" title="Layers: base map, names, grid, control areas (Y)">${NAV_ICON.layers}<span>Layers</span></button>`
       + `<button type="button" data-op="keys" title="Keys (?)">${ICON.keys}<span>Keys</span></button>`;
     leftEl = document.createElement('aside');
     leftEl.className = 'ops-left';
@@ -283,7 +287,7 @@
     dock.innerHTML = `<div class="ops-drow ops-dtop"><div class="ops-quick" role="group" aria-label="Show the last"><span>Last</span><button type="button" data-qr="1">24 h</button><button type="button" data-qr="2">48 h</button><button type="button" data-qr="7">7 days</button></div><div class="ops-time"></div><button type="button" class="ops-fold ops-fold-d" data-op="dock" title="Fold the timeline (\\)">${ICON.down}</button></div>
       <div class="ops-drow ops-who"></div>
       <div class="ops-drow ops-mx">
-        <div class="ops-act"><div class="ops-act-h"><b>Last 48 hours</b><span class="ops-act-sel" hidden></span><small>Drag across the hours to show only their events</small></div><svg class="ops-amx" role="img" aria-label="Events in the last 48 hours, by side and hour"></svg></div>
+        <div class="ops-act"><div class="ops-act-h"><b>Last 48 hours</b><span class="ops-act-sel" hidden></span><small>Drag across the hours to show only their events</small><span class="ops-mz" role="group" aria-label="Zoom the hours"><button type="button" data-mz="-1" aria-label="Zoom out">−</button><button type="button" data-mz="1" aria-label="Zoom in">+</button></span></div><div class="ops-amx-sc"><svg class="ops-amx" role="img" aria-label="Events in the last 48 hours, by side and hour"></svg></div></div>
       </div>`;
     const tb = $('.toolbar', root);
     if (tb) $('.ops-time', dock).appendChild(tb);
@@ -334,7 +338,12 @@
     const m = getMap();
     if (m) try { m.invalidateSize({ pan: false }); } catch (e) { /* not yet */ }
   }
+  // Between a phone and a wide screen one side panel is open at a time, so the map keeps its room (20 Oct: at
+  // 900 pixels both panels left the map 230 pixels).
+  const midWidth = () => matchMedia('(min-width:761px) and (max-width:1180px)').matches;
+  let lastOpen = 'left';
   function paintFrame() {
+    if (midWidth() && S.left && S.right) { if (lastOpen === 'right') S.left = false; else S.right = false; }
     root.classList.toggle('ops-noleft', !S.left);
     root.classList.toggle('ops-noright', !S.right);
     root.classList.toggle('ops-nodock', !S.dock);
@@ -358,7 +367,7 @@
       if (!t || !root.contains(t)) return;
       if (t.dataset.tab) {
         // The open panel's own button closes it again.
-        if (S.left && S.tab === t.dataset.tab && !isPhone()) S.left = false; else { S.tab = t.dataset.tab; S.left = true; }
+        if (S.left && S.tab === t.dataset.tab && !isPhone()) S.left = false; else { S.tab = t.dataset.tab; S.left = true; lastOpen = 'left'; }
         keep(); paintFrame(); return;
       }
       if (t.dataset.rtab) { S.rtab = t.dataset.rtab; keep(); paintFrame(); return; }
@@ -371,14 +380,15 @@
         paintFrame(); if (p !== 'map') window.scrollTo({ top: 0 }); return;
       }
       const op = t.dataset.op;
-      if (op === 'left') { S.left = !S.left; keep(); paintFrame(); }
-      else if (op === 'right') { S.right = !S.right; keep(); paintFrame(); }
+      if (op === 'left') { S.left = !S.left; lastOpen = 'left'; keep(); paintFrame(); }
+      else if (op === 'right') { S.right = !S.right; lastOpen = 'right'; keep(); paintFrame(); }
       else if (op === 'dock') { S.dock = !S.dock; keep(); paintFrame(); }
       else if (op === 'cast') setCast(!S.cast);
       else if (op === 'keys') toggleKeys();
       else if (op === 'theme') { const set = app('setTheme'), nx = app('nextTheme'); if (set && nx) set(nx(app('THEME'))); }
       else if (op === 'layers') toggleLayers();
-      else if (op === 'traffic') toggleTraffic();
+      else if (op === 'traffic') trafficOnOff();
+      else if (op === 'trafmenu') toggleTraffic();
       else if (op === 'settings') openSettings();
       else if (op === 'full') fullScreen();
     });
@@ -401,7 +411,7 @@
     ud.type = 'button'; ud.className = 'ops-unfold ops-unfold-dock'; ud.dataset.op = 'dock'; ud.title = 'Open the timeline (\\)';
     ud.innerHTML = `<span>Time · Who and What · Last 48 hours</span>`;
     mapWrap.appendChild(ud);
-    addEventListener('resize', () => { sizeDock(); drawMatrix(); });
+    addEventListener('resize', () => { if (midWidth() && S.left && S.right) paintFrame(); sizeDock(); drawMatrix(); });
     // Going to another desk: its tab lights at once and the page shows it is on its way (the page's own
     // link handler, on the document, has already started the move; this runs after it).
     addEventListener('click', (ev) => {
@@ -415,17 +425,23 @@
   }
 
   /* The All page's reports: both desks', newest first, and Trump's latest (home.js's own cards). */
-  let allRail = null, allTab = 'rep', allN = 60, allQ = '';
+  let allRail = null, allTab = 'rep', allN = 60, allQ = '', allMore = true;
   function buildAllRail(into) {
     allRail = document.createElement('div');
     allRail.className = 'rail ops-rail';
     allRail.id = 'ops-rail';
     into.appendChild(allRail);
-    allRail.addEventListener('click', (ev) => {
+    allRail.addEventListener('click', async (ev) => {
       const t = ev.target.closest('[data-rt],[data-more]');
       if (!t) return;
-      if (t.dataset.rt) { allTab = t.dataset.rt; allN = 60; drawAllRail(); }
-      else { allN += 60; drawAllRail(); }
+      if (t.dataset.rt) { allTab = t.dataset.rt; allN = 60; drawAllRail(); return; }
+      // Past the reports the page has: the next page of each desk's, older (every report since 28 Feb).
+      const h = window.__home;
+      if (allTab === 'rep' && !allQ && allN + 60 > h.D.reports.length && h.older && allMore) {
+        t.disabled = true; t.textContent = 'Loading…';
+        allMore = await h.older();
+      }
+      allN += 60; drawAllRail(true);
     });
     allRail.addEventListener('input', (ev) => { if (ev.target.matches('.ops-q')) { allQ = ev.target.value.trim().toLowerCase(); allN = 60; drawAllRail(true); } });
     drawAllRail();
@@ -436,7 +452,7 @@
     const all = allTab === 'rep' ? h.D.reports : h.D.trump;
     const list = allQ ? all.filter((r) => `${r.h} ${r.src} ${r.body || ''}`.toLowerCase().includes(allQ)) : all;
     const cards = list.slice(0, allN).map((r) => (allTab === 'rep' ? h.card(r) : h.trumpCard(r))).join('');
-    const body = `<div id="feed" class="feed">${cards || '<p class="ops-empty">Nothing here yet.</p>'}</div>${list.length > allN ? '<button type="button" class="more" data-more>Show more</button>' : ''}`;
+    const body = `<div id="feed" class="feed">${cards || '<p class="ops-empty">Nothing here yet.</p>'}</div>${list.length > allN || (allTab === 'rep' && !allQ && allMore) ? '<button type="button" class="more" data-more>Earlier reports</button>' : ''}`;
     if (listOnly && allRail.querySelector('.ops-rbody')) { allRail.querySelector('.ops-rbody').innerHTML = body; return; }
     allRail.innerHTML = `<div class="ops-seg" role="tablist"><button type="button" role="tab" data-rt="rep" aria-selected="${allTab === 'rep'}">All desks</button><button type="button" role="tab" data-rt="tr" aria-selected="${allTab === 'tr'}">Trump’s latest</button></div>
       <input class="ops-q" type="search" placeholder="Filter: a place, a person, a weapon" value="${esc(allQ)}" aria-label="Filter the reports">
@@ -634,7 +650,10 @@
     const by = new Map();
     list.forEach((e) => { const s = sideOf(e); const r = by.get(s.name) || { name: s.name, c: s.c, ev: [] }; r.ev.push(e); by.set(s.name, r); });
     rows = [...by.values()].sort((a, b) => b.ev.length - a.ev.length);
-    const W = Math.max(240, svg.clientWidth || svg.parentNode.clientWidth || 600), LW = 132, RH = 11, top = 3;
+    // On a phone the hours can be drawn two, four or eight times as wide, to read and to tap (20 Oct).
+    const sc = svg.parentNode, zoom = isPhone() ? MZ : 1;
+    const W = Math.max(240, (sc.clientWidth || 600) * zoom), LW = isPhone() ? 92 : 132, RH = isPhone() ? 14 : 11, top = 3;
+    svg.style.width = zoom > 1 ? W + 'px' : '';
     const H2 = top + Math.max(1, rows.length) * RH + 18;
     svg.setAttribute('viewBox', `0 0 ${W} ${H2}`);
     svg.style.height = H2 + 'px';
@@ -669,6 +688,7 @@
     out += `<rect class="hit" data-mx x="${LW}" y="0" width="${W - LW - 6}" height="${H2 - 12}"/>`;
     svg.innerHTML = out;
     svg._x = { t0, LW, W };
+    if (sc._z !== zoom) { sc._z = zoom; sc.scrollLeft = sc.scrollWidth; }
     const sel = $('.ops-act-sel', dock);
     sel.hidden = !rng;
     if (rng) sel.innerHTML = `${esc(hm(rng[0], VIEW_TZ()))}–${esc(hm(rng[1], VIEW_TZ()))} <button type="button" data-clear title="Show every hour again">${ICON.x}<span class="sr">Clear</span></button>`;
@@ -678,13 +698,20 @@
     if (PAGE === 'all') drawTheatres();
     dimPins();
   }
+  let MZ = 1;
   function wireMatrix() {
     const svg = $('.ops-amx', dock);
+    $('.ops-mz', dock).addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-mz]');
+      if (!b) return;
+      MZ = Math.max(1, Math.min(8, +b.dataset.mz > 0 ? MZ * 2 : MZ / 2));
+      drawMatrix();
+    });
     let start = null;
     const tAt = (ev) => { const r = svg.getBoundingClientRect(), k = svg._x; const px = ((ev.clientX - r.left) / r.width) * k.W; return k.t0 + ((px - k.LW) / (k.W - k.LW - 6)) * SPAN; };
-    svg.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('[data-mx], .cell')) return; start = tAt(ev); svg.setPointerCapture(ev.pointerId); ev.preventDefault(); rangeForPick(); });
+    svg.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('[data-mx], .cell')) return; start = tAt(ev); if (ev.pointerType === 'touch' && isPhone()) return; svg.setPointerCapture(ev.pointerId); ev.preventDefault(); rangeForPick(); });
     svg.addEventListener('pointermove', (ev) => {
-      if (start == null) return;
+      if (start == null || (ev.pointerType === 'touch' && isPhone())) return;
       const t = tAt(ev), now = Date.now();
       const a = Math.max(now - SPAN, Math.min(start, t)), b = Math.min(now, Math.max(start, t));
       if (b - a > 10 * 60e3) { rng = [a, b]; drawMatrix(); }
@@ -693,9 +720,17 @@
       if (start == null) return;
       const t = tAt(ev);
       // A click, not a drag: the hour clicked.
-      if (Math.abs(t - start) < 6 * 60e3) { const h = Math.floor(t / 3600e3) * 3600e3; rng = [h, h + 3600e3]; drawMatrix(); }
+      if (Math.abs(t - start) < 6 * 60e3) {
+        const h = Math.floor(t / 3600e3) * 3600e3;
+        rangeForPick();
+        if (isPhone() && rng && rng[1] - rng[0] <= 3600e3 && h !== rng[0]) rng = [Math.min(h, rng[0]), Math.max(h, rng[0]) + 3600e3];
+        else if (isPhone() && rng && h >= rng[0] && h < rng[1]) rng = null;
+        else rng = [h, h + 3600e3];
+        drawMatrix();
+      }
       start = null;
     });
+    svg.addEventListener('pointercancel', () => { start = null; });
     dock.addEventListener('click', (ev) => { if (ev.target.closest('[data-clear]')) { rng = null; drawMatrix(); } });
   }
   /* Pins outside the hours picked fade (the pins drawn one by one; the whole war's canvas is left alone). */
@@ -730,29 +765,81 @@
   }
 
   /* The events: the hours picked, else the last 48 hours, newest first, filtered; a click goes to the pin and opens its note. */
-  let logList = [], evQ = '';
-  function drawLog(list) {
+  /* Every event since the desk's start (20 Oct: Yemen from 13 Jul, Iran and the All page from 28 Feb), newest first; the
+     hours picked under the map, when picked. Drawn a page at a time as the reader scrolls; the older ones are read
+     from the server only when the reader reaches them. */
+  const LOG_FROM = { yemen: Date.parse('2026-07-13T00:00:00+03:00'), iran: Date.parse('2026-02-28T00:00:00+03:00'), all: Date.parse('2026-02-28T00:00:00+03:00') };
+  const LOG_STEP = 100;
+  let logList = [], evQ = '', logN = LOG_STEP, logOld = 'no';
+  const tOf = (e) => { if (e._t == null) e._t = Date.parse(e.at) || 0; return e._t; };
+  /* The researched attacks' words (who, where, the source) are in their own file, read when the list reaches them. */
+  const NOTES = { list: null, p: null };
+  function notesFor(list) {
+    if (!list.some((e) => e.researched && e.ni != null && !e.noted)) return;
+    if (NOTES.list) { list.forEach((e) => { const n = e.researched && e.ni != null && !e.noted && NOTES.list[e.ni]; if (n) { [e.rfp, e.place, e.label, e.source, e.url] = n; e.also = (n[5] || []).map(([source, url]) => ({ source, url })); e.noted = true; } }); return; }
+    if (NOTES.p) return;
+    const v = (() => { try { return /[?&]v=([^&]+)/.exec(document.querySelector('script[src*="/app.js?v="]').src)[1]; } catch (e) { return 'n'; } })();
+    NOTES.p = fetch(`/iran-map-notes.json?v=${v}`).then((r) => (r.ok ? r.json() : null)).then((j) => { NOTES.list = (j && j.notes) || []; drawLog(); }).catch(() => { NOTES.list = []; });
+  }
+  /* The older events, read once when the list's end is reached: the whole war's pins of the page. */
+  async function olderEvents() {
+    if (logOld !== 'no') return;
+    logOld = 'loading';
+    try {
+      if (PAGE === 'all') await window.__home.loadWar();
+      else if (PAGE === 'yemen') await A('loadAllPins')();
+    } catch (e) { /* kept as is */ }
+    logOld = 'done';
+    drawLog();
+  }
+  function drawLog() {
     const l = rightEl && $('.ops-log-l', rightEl);
     if (!l) return;
-    let pick = (rng ? list.filter((e) => { const t = Date.parse(e.at); return t >= rng[0] && t < rng[1]; }) : list).sort((a, b) => (a.at < b.at ? 1 : -1));
-    if (evQ) pick = pick.filter((e) => `${e.label || ''} ${e.place || ''} ${sideOf(e).name} ${kindOf(e).name} ${e.source || ''}`.toLowerCase().includes(evQ));
-    logList = pick.slice(0, 200);
-    // What the list holds, in words (20 Oct: a bare count read as random).
-    $('.ops-log-n', rightEl).textContent = rng ? `The hours picked under the map, ${hm(rng[0], VIEW_TZ())}–${hm(rng[1], VIEW_TZ())}` : 'The last 48 hours, newest first';
+    const from = LOG_FROM[PAGE] || 0;
+    let pick = events(true).filter((e) => { const t = tOf(e); return rng ? t >= rng[0] && t < rng[1] : t >= from && t <= Date.now() + 60e3; }).sort((a, b) => tOf(b) - tOf(a));
+    if (evQ) { notesFor(pick); pick = pick.filter((e) => `${e.label || ''} ${e.place || ''} ${sideOf(e).name} ${kindOf(e).name} ${e.source || ''}`.toLowerCase().includes(evQ)); }
+    logList = pick.slice(0, logN);
+    notesFor(logList);
+    $('.ops-log-n', rightEl).textContent = rng ? `${hm(rng[0], VIEW_TZ())}–${hm(rng[1], VIEW_TZ())}` : '';
     let day = '';
+    const year = new Date().getFullYear();
     l.innerHTML = logList.map((e, i) => {
       const s = sideOf(e), k = kindOf(e);
       const d = dm(e.at, VIEW_TZ());
-      const head = d !== day ? `<li class="ops-day">${esc(d)}</li>` : '';
+      const head = d !== day ? `<li class="ops-day">${esc(d)}${new Date(tOf(e)).getFullYear() !== year ? ' ' + new Date(tOf(e)).getFullYear() : ''}</li>` : '';
       day = d;
-      return `${head}<li><button type="button" data-ev="${i}" style="--c:${s.c}"><time>${esc(hm(e.at, VIEW_TZ()))}</time><span class="k" title="${esc(k.name)}">${glyph(k.k)}</span><span class="t"><b>${esc(e.label || e.place || k.name)}</b><small>${esc([s.name, k.name, e.place].filter(Boolean).join(' · '))}${e.source ? ` · <i>${esc(e.source)}</i>` : ''}</small></span></button></li>`;
-    }).join('') || '<li class="ops-empty">No events here.</li>';
+      return `${head}<li><button type="button" data-ev="${i}" style="--c:${s.c}"><time>${e.dayOnly ? '' : esc(hm(e.at, VIEW_TZ()))}</time><span class="k" title="${esc(k.name)}">${glyph(k.k)}</span><span class="t"><b>${esc(e.label || e.place || k.name)}</b><small>${esc([s.name, k.name, e.label ? e.place : ''].filter(Boolean).join(' · '))}${e.source ? ` · <i>${esc(e.source)}</i>` : ''}</small></span></button></li>`;
+    }).join('') + (pick.length > logN || (!rng && logOld !== 'done' && PAGE !== 'iran') ? '<li class="ops-log-more"><button type="button" class="more" data-log-more>Earlier events</button></li>' : '') || '<li class="ops-empty">No events here.</li>';
+  }
+  async function moreLog() {
+    const from = LOG_FROM[PAGE] || 0;
+    const have = events(true).filter((e) => tOf(e) >= from).length;
+    if (logN >= have && logOld !== 'done' && PAGE !== 'iran') await olderEvents();
+    logN += LOG_STEP;
+    drawLog();
   }
   function wireLog() {
     $('.ops-log-l', rightEl).addEventListener('click', (ev) => {
+      if (ev.target.closest('[data-log-more]')) { moreLog(); return; }
       const b = ev.target.closest('[data-ev]');
       if (b) focusEvent(logList[+b.dataset.ev]);
     });
+    autoMore(rightEl);
+  }
+  /* "Earlier" and "Show more" at the end of a list press themselves when the reader scrolls to them: the next page
+     is there before they look for it (20 Oct), and nothing is read before then. */
+  function autoMore(box) {
+    if (!window.IntersectionObserver) return;
+    const io = new IntersectionObserver((ents) => ents.forEach((en) => {
+      const b = en.target;
+      if (!en.isIntersecting) { b._auto = false; return; }
+      if (b.disabled || b._auto) return;
+      b._auto = true;
+      setTimeout(() => { if (b.isConnected && !b.disabled) b.click(); }, 120);
+    }), { rootMargin: '0px 0px 300px 0px' });
+    const look = () => box.querySelectorAll('.more, [data-more], [data-log-more]').forEach((b) => { if (!b._io) { b._io = true; io.observe(b); } });
+    new MutationObserver(look).observe(box, { childList: true, subtree: true });
+    look();
   }
   /** An event on the map: its own pin if drawn (its note opened), else a mark of ours with its note. */
   let pingLayer = null;
@@ -913,10 +1000,15 @@
     root.querySelectorAll('[data-op="traffic"]').forEach((b) => b.setAttribute('aria-expanded', String(open)));
     if (open) {
       if (isPhone()) toggleLayers(false);
-      // Opening the panel the first time turns the aircraft on: what it is for (20 Oct: "loads immediately").
-      if (!S.air && !S.sea && !S.trafficSeen) { S.air = true; S.trafficSeen = true; keep(); runTraffic(); }
       paintTraffic();
     }
+  }
+  /* The Traffic button: the aircraft and the ships on, or off again (20 Oct); its arrow opens the options. */
+  function trafficOnOff(force) {
+    const on = force != null ? force : !(S.air || S.sea);
+    S.air = on; S.sea = on;
+    if (!on) { T.sel = null; T.route = null; paintSel(); }
+    keep(); runTraffic(); drawTraffic(); paintTraffic();
   }
   const sw = (k, on, label, sub, extra = '') => `<label class="ops-sw ${extra}"><input type="checkbox" data-ly="${k}" ${on ? 'checked' : ''} ${/off/.test(extra) ? 'disabled' : ''}><span>${label}</span>${sub ? `<small>${sub}</small>` : ''}</label>`;
   function paintLayers() {
@@ -926,11 +1018,9 @@
       <p class="ops-mlab">Base map</p>
       <div class="ops-bases">${BASES.map(([k, n, s]) => `<button type="button" data-base="${k}" aria-pressed="${S.base === k}" title="${esc(s)}"><i class="ops-bthumb ${k}"></i>${esc(n)}</button>`).join('')}</div>
       <p class="ops-mlab">On the map</p>
-      ${sw('names', S.names, 'Place names', 'Cities, towns and borders, named')}
       ${sw('grid', S.grid, 'Grid', 'Latitude and longitude, named at the edges')}
       ${sw('fills', S.fills, 'Areas of control, shaded', 'Who holds what, in colour')}
-      ${sw('mini', S.mini !== false, 'Overview map', 'The region, and where this map is looking')}
-      <p class="ops-src">Live aircraft and ships are under Traffic, at the top.</p>`;
+      ${sw('mini', S.mini !== false, 'Overview map', 'The region, and where this map is looking')}`;
   }
   function paintTraffic() {
     const menu = $('.ops-trf', hud);
@@ -938,15 +1028,15 @@
     const mil = T.air.filter((a) => a[13] && (S.airGround || !a[16]));
     const ground = T.air.filter((a) => a[16]).length;
     const seaNo = T.seaOk === false;
-    const airTxt = S.air ? (T.at ? `<b>${(T.air.length - ground).toLocaleString('en-GB')}</b> in the air${ground ? `, ${ground.toLocaleString('en-GB')} on the ground` : ''} · ${esc(ago(T.at))}` : 'Loading…') : 'Every aircraft broadcasting its position';
-    const seaTxt = seaNo ? 'Not connected yet: the free ship feed needs its key on the server' : S.sea ? (T.seaAt ? `<b>${T.ships.length.toLocaleString('en-GB')}</b> ships · ${T.seaNote === 'live' ? 'live' : esc(T.seaNote || ago(T.seaAt))}` : 'Loading…') : 'Every ship broadcasting its position (AIS)';
+    // Only the counts (20 Oct: "no need for all the explanations in that menu").
+    const airTxt = S.air ? (T.at ? `<b>${(T.air.length - ground).toLocaleString('en-GB')}</b> in the air` : 'Loading…') : '';
+    const seaTxt = seaNo ? 'Not connected yet' : S.sea ? (T.seaAt ? `<b>${T.ships.length.toLocaleString('en-GB')}</b> ships` : 'Loading…') : '';
     menu.innerHTML = `<div class="ops-mh"><b>Traffic</b><button type="button" class="ops-x" data-ly="close" aria-label="Close">${ICON.x}</button></div>
       ${sw('air', S.air, `${ICON.plane}Aircraft`, airTxt)}
-      ${sw('mil', S.airMil, 'Military only', S.air ? `${mil.length} military aircraft now` : '', `sub ${S.air ? '' : 'off'}`)}
-      ${sw('gnd', S.airGround, 'Also on the ground', S.air ? 'At airfields and bases' : '', `sub ${S.air ? '' : 'off'}`)}
+      ${sw('mil', S.airMil, 'Military only', S.air ? `${mil.length} now` : '', `sub ${S.air ? '' : 'off'}`)}
+      ${sw('gnd', S.airGround, 'On the ground too', '', `sub ${S.air ? '' : 'off'}`)}
       ${sw('sea', S.sea && !seaNo, `${ICON.ship}Ships`, seaTxt, seaNo ? 'off' : '')}
-      ${S.air && mil.length ? `<div class="ops-mil"><p>Military aircraft now</p><ul>${mil.slice(0, 80).map((a) => `<li><button type="button" data-hex="${esc(a[0])}"><b>${esc(a[8] || a[9] || a[0])}</b><span>${esc(a[11] || a[10] || '')}</span><em>${a[16] ? 'GND' : a[3] != null ? esc(fl(a[3])) : ''}</em></button></li>`).join('')}</ul></div>` : ''}
-      <p class="ops-src">Click an aircraft or a ship on the map for its details. Aircraft: ${(T.src.length ? T.src : ['adsb.fi', 'adsb.lol']).map(esc).join(' and ')} open data, each area read again about every 20 seconds. Ships: AISStream. Only what broadcasts is seen; many military flights do not.</p>`;
+      ${S.air && mil.length ? `<div class="ops-mil"><p>Military aircraft now</p><ul>${mil.slice(0, 80).map((a) => `<li><button type="button" data-hex="${esc(a[0])}"><b>${esc(a[8] || a[9] || a[0])}</b><span>${esc(a[11] || a[10] || '')}</span><em>${a[16] ? 'GND' : a[3] != null ? esc(fl(a[3])) : ''}</em></button></li>`).join('')}</ul></div>` : ''}`;
   }
   const fl = (ft) => (ft >= 18000 ? 'FL' + String(Math.round(ft / 100)).padStart(3, '0') : `${ft.toLocaleString('en-GB')} ft`);
   function wireTraffic() {
@@ -989,7 +1079,7 @@
     if (S.air) {
       const j = await pull('air');
       if (j && j.ok) {
-        T.air = j.ac || []; T.at = j.at; T.src = j.src || T.src;
+        T.air = j.ac || []; T.at = j.at; T.airT = Date.parse(j.at) || Date.now(); T.src = j.src || T.src;
         if (j.ships === false) T.seaOk = false;
         const now = Date.now();
         T.air.forEach((a) => { const tr = T.trail.get(a[0]) || []; const p = tr[tr.length - 1]; if (!p || p[0] !== a[1] || p[1] !== a[2]) tr.push([a[1], a[2], now]); if (tr.length > 60) tr.shift(); T.trail.set(a[0], tr); });
@@ -1008,7 +1098,11 @@
     clearInterval(T.timer);
     T.timer = null;
     if (S.air || S.sea) { airTick(); T.timer = setInterval(airTick, AIR_MS); }
-    $('[data-op="traffic"]', bar).classList.toggle('on', S.air || S.sea);
+    const tb = $('[data-op="traffic"]', bar);
+    tb.classList.toggle('on', S.air || S.sea);
+    tb.setAttribute('aria-pressed', String(S.air || S.sea));
+    clearInterval(T.anim); T.anim = 0;
+    if (S.air || S.sea) T.anim = setInterval(moveTraffic, isPhone() ? 2000 : 1000);
   }
   /* The aircraft and ships, drawn on one canvas: a mark turned to its heading. */
   let TrafficMark = null;
@@ -1079,31 +1173,90 @@
       const sel = T.sel && T.sel.kind === 'air' && T.sel.id === a[0];
       const tag = (z >= 7.5 || (a[13] && z >= 6)) && !a[16] ? a[8] || a[9] || '' : '';
       const mk = new Mk([a[1], a[2]], { renderer: T.rend, radius: 9, hdg: a[5], vec: a[16] ? 0 : vecOf(a[4]), ink: emg ? I.emg : a[13] ? I.mil : I.civ, edge: I.edge, selInk: I.sel, big: !!a[13] || emg, gnd: !!a[16], tag, sel, stroke: false, fill: true, interactive: false });
-      T.marks.push({ ll: [a[1], a[2]], air: a });
+      // Where it was when last heard (row 17: seconds before the feed's time), to move it on at its speed.
+      T.marks.push({ ll: [a[1], a[2]], air: a, mk, t: a[18] ? a[18] * 1000 : (T.airT || Date.now()) - (Number(a[17]) || 0) * 1000, kt: a[16] ? 0 : Number(a[4]) || 0, hdg: a[5] });
       T.layer.addLayer(mk);
     });
     if (S.sea) T.ships.forEach((s) => {
       const sel = T.sel && T.sel.kind === 'sea' && T.sel.id === s[0];
       const tag = z >= 9 ? s[1] || '' : '';
       const mk = new Mk([s[2], s[3]], { renderer: T.rend, radius: 9, hdg: s[6] != null ? s[6] : s[5], vec: s[4] > 0.5 ? vecOf(s[4]) * 10 : 0, ink: shipInk(s[8], I), edge: I.edge, selInk: I.sel, ship: true, tag, sel, stroke: false, fill: true, interactive: false });
-      T.marks.push({ ll: [s[2], s[3]], sea: s });
+      T.marks.push({ ll: [s[2], s[3]], sea: s, mk, t: s[14] ? s[14] * 1000 : Date.parse(s[13]) || Date.now(), kt: s[4] > 0.5 ? Number(s[4]) : 0, hdg: s[5] != null ? s[5] : s[6] });
       T.layer.addLayer(mk);
     });
-    // The picked aircraft's track since the layer was turned on.
-    if (T.sel && T.sel.kind === 'air') {
+    // The picked aircraft's or ship's route, when shown: where it flew or sailed, and on to where it is going.
+    if (T.sel && T.route && T.route.show && T.route.id === T.sel.id && T.route.d) drawRoute(T.layer, T.route.d, I);
+    else if (T.sel && T.sel.kind === 'air') {
       const tr = T.trail.get(T.sel.id);
       if (tr && tr.length > 1) L.polyline(tr.map((p) => [p[0], p[1]]), { pane: 'opsTraffic', color: I.sel, weight: 1.5, opacity: 0.75, dashArray: '4 4', interactive: false }).addTo(T.layer);
     }
     T.layer.addTo(m);
+    moveTraffic();
+  }
+  /* Each aircraft and ship moves on at its own live speed and heading between the feed's reads (20 Oct: "move
+     according to their real speed"): from where it was last heard, for as long as since then (two minutes at most). */
+  const R_M = 6371008.8;
+  function ahead(lat, lng, hdg, m) {
+    const d = m / R_M, b = rad(hdg), p1 = rad(lat), l1 = rad(lng);
+    const p2 = Math.asin(Math.sin(p1) * Math.cos(d) + Math.cos(p1) * Math.sin(d) * Math.cos(b));
+    const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(p1), Math.cos(d) - Math.sin(p1) * Math.sin(p2));
+    return [(p2 * 180) / Math.PI, (l2 * 180) / Math.PI];
+  }
+  function moveTraffic() {
+    if (!T.marks || document.hidden || P.still) return;
+    const now = Date.now();
+    for (const k of T.marks) {
+      if (!k.kt || k.hdg == null || !k.mk) continue;
+      const src = k.air ? [k.air[1], k.air[2]] : [k.sea[2], k.sea[3]];
+      const sec = Math.min(120, Math.max(0, (now - k.t) / 1000));
+      k.ll = ahead(src[0], src[1], k.hdg, k.kt * 0.514444 * sec);
+      k.mk.setLatLng(k.ll);
+    }
+  }
+  /* A route: the track flown or sailed (solid), on from where it is now to where it is going (dashed). */
+  function drawRoute(layer, d, I) {
+    const st = { pane: 'opsTraffic', interactive: false };
+    const tr = (d.track || []).filter((p) => p && p[0] != null).map((p) => [p[0], p[1]]);
+    const k = (T.marks || []).find((x) => (x.air ? x.air[0] : x.sea && x.sea[0]) === T.sel.id);
+    const here = k ? k.ll : tr[tr.length - 1];
+    const o = d.origin, t = d.destination;
+    if (o && o.lat != null && tr.length && distKm({ lat: o.lat, lng: o.lon }, { lat: tr[0][0], lng: tr[0][1] }) > 30) L.polyline(arc([o.lat, o.lon], tr[0]), { ...st, color: I.sel, weight: 1.5, opacity: 0.5, dashArray: '2 5' }).addTo(layer);
+    else if (o && o.lat != null && !tr.length && here) L.polyline(arc([o.lat, o.lon], here), { ...st, color: I.sel, weight: 1.5, opacity: 0.5, dashArray: '2 5' }).addTo(layer);
+    if (tr.length > 1) L.polyline(here ? [...tr, here] : tr, { ...st, color: I.sel, weight: 2, opacity: 0.85 }).addTo(layer);
+    if (t && t.lat != null && here) L.polyline(arc(here, [t.lat, t.lon]), { ...st, color: I.sel, weight: 1.6, opacity: 0.7, dashArray: '6 6' }).addTo(layer);
+    [o, t].forEach((a) => { if (a && a.lat != null) L.circleMarker([a.lat, a.lon], { ...st, radius: 4, color: I.sel, weight: 2, fillColor: I.edge, fillOpacity: 1 }).addTo(layer); });
+  }
+  /* The great circle between two points, in short steps (a long flight's line bends as on a globe). */
+  function arc(a, b) {
+    const out = [], n = 48, p1 = rad(a[0]), l1 = rad(a[1]), p2 = rad(b[0]), l2 = rad(b[1]);
+    const d = 2 * Math.asin(Math.sqrt(Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin((l2 - l1) / 2) ** 2));
+    if (!d) return [a, b];
+    for (let i = 0; i <= n; i++) {
+      const f = i / n, A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
+      const x = A * Math.cos(p1) * Math.cos(l1) + B * Math.cos(p2) * Math.cos(l2), y = A * Math.cos(p1) * Math.sin(l1) + B * Math.cos(p2) * Math.sin(l2), z = A * Math.sin(p1) + B * Math.sin(p2);
+      out.push([(Math.atan2(z, Math.sqrt(x * x + y * y)) * 180) / Math.PI, (Math.atan2(y, x) * 180) / Math.PI]);
+    }
+    return out;
+  }
+  /* Where a flight or a voyage came from and is going, and its track (/api/traffic?route=), kept five minutes. */
+  const ROUTES = new Map();
+  function routeOf(kind, id, cs) {
+    const key = kind + '|' + id;
+    const had = ROUTES.get(key);
+    if (had && Date.now() - had.at < 5 * 60e3) return had.p;
+    const q = kind === 'sea' ? '/api/traffic?kind=sea&mmsi=' + encodeURIComponent(id) : '/api/traffic?route=' + encodeURIComponent(id) + (cs ? '&cs=' + encodeURIComponent(String(cs).trim()) : '');
+    const pr = fetch(q).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    ROUTES.set(key, { at: Date.now(), p: pr });
+    return pr;
   }
   const SQUAWK = { 7500: 'Hijack', 7600: 'Radio failure', 7700: 'Emergency' };
   function selectAc(a, fly) {
     T.sel = { kind: 'air', id: a[0] };
     const m = getMap();
     if (fly) m.flyTo([a[1], a[2]], Math.max(m.getZoom(), 7), { duration: 0.7 });
-    paintSel(); drawTraffic();
+    loadRoute('air', a[0], a[8]); drawTraffic();
   }
-  function selectShip(s) { T.sel = { kind: 'sea', id: s[0] }; paintSel(); drawTraffic(); }
+  function selectShip(s) { T.sel = { kind: 'sea', id: s[0] }; loadRoute('sea', s[0]); drawTraffic(); }
   function refreshSel() {
     const still = T.sel.kind === 'air' ? T.air.some((a) => a[0] === T.sel.id) : T.ships.some((s) => s[0] === T.sel.id);
     if (still) paintSel(); else closeSel();
@@ -1119,19 +1272,19 @@
       const a = T.air.find((x) => x[0] === T.sel.id);
       if (!a) return;
       const sq = a[7] && SQUAWK[a[7]] ? `<b class="emg">${esc(a[7])} · ${SQUAWK[a[7]]}</b>` : esc(a[7] || '');
+      // One screen, no scrolling (20 Oct): the photo beside the name, where from and where to, the figures in three columns.
       html = `<div class="ops-ch"><span class="ops-ck ${a[13] ? 'mil' : ''}">${ICON.plane}${a[13] ? 'Military' : 'Aircraft'}</span><button type="button" class="ops-x" data-sel="x" aria-label="Close">${ICON.x}</button></div>
-        <h3>${esc(a[8] || a[9] || a[0].toUpperCase())}</h3>
-        <p class="ops-csub">${esc([a[11] || a[10], a[12]].filter(Boolean).join(' · '))}</p>
-        ${a[14] && a[15] ? `<p class="ops-route"><b>${esc(a[14])}</b><span>→</span><b>${esc(a[15])}</b><small>Scheduled route of the flight number</small></p>` : ''}
-        <dl>${row('Altitude', a[16] ? 'On the ground' : a[3] != null ? esc(fl(a[3])) : '')}${row('Speed', a[4] != null ? `${a[4]} kt` : '')}${row('Heading', a[5] != null ? `${String(a[5]).padStart(3, '0')}°` : '')}${row('Climb', a[6] ? `${a[6] > 0 ? '+' : ''}${a[6].toLocaleString('en-GB')} ft/min` : '')}${row('Squawk', sq)}${row('Registration', esc(a[9] || ''))}${row('Hex', esc(String(a[0]).toUpperCase()))}${row('Position', esc(latlon(a[1], a[2])))}${row('MGRS', esc(mgrs(a[1], a[2])))}</dl>
-        <div class="ops-photo" data-hex="${esc(a[0])}"></div>
-        <p class="ops-clinks"><a href="https://globe.adsb.fi/?icao=${esc(a[0])}" target="_blank" rel="noopener">Track on adsb.fi ${ICON.ext}</a>${a[8] ? `<a href="https://www.flightradar24.com/${esc(String(a[8]).trim())}" target="_blank" rel="noopener">Flightradar24 ${ICON.ext}</a>` : ''}</p>`;
+        <div class="ops-chead"><div class="ops-photo" data-hex="${esc(a[0])}"></div><div><h3>${esc(a[8] || a[9] || a[0].toUpperCase())}</h3><p class="ops-csub">${esc([a[11] || a[10], a[12]].filter(Boolean).join(' · '))}</p></div></div>
+        ${routeBox('air', a[0])}
+        <dl>${row('Altitude', a[16] ? 'Ground' : a[3] != null ? esc(fl(a[3])) : '')}${row('Speed', a[4] != null ? `${a[4]} kt` : '')}${row('Heading', a[5] != null ? `${String(a[5]).padStart(3, '0')}°` : '')}${row('Climb', a[6] ? `${a[6] > 0 ? '+' : ''}${a[6].toLocaleString('en-GB')} ft/m` : '')}${row('Squawk', sq)}${row('Reg.', esc(a[9] || String(a[0]).toUpperCase()))}</dl>
+        <p class="ops-clinks"><a href="https://globe.adsb.fi/?icao=${esc(a[0])}" target="_blank" rel="noopener">adsb.fi ${ICON.ext}</a>${a[8] ? `<a href="https://www.flightradar24.com/${esc(String(a[8]).trim())}" target="_blank" rel="noopener">Flightradar24 ${ICON.ext}</a>` : ''}</p>`;
     } else {
       const s = T.ships.find((x) => x[0] === T.sel.id);
       if (!s) return;
       html = `<div class="ops-ch"><span class="ops-ck">${ICON.ship}${esc(SHIP_TYPE(s[8]) || 'Ship')}</span><button type="button" class="ops-x" data-sel="x" aria-label="Close">${ICON.x}</button></div>
         <h3>${esc(s[1] || 'MMSI ' + s[0])}</h3>
-        <dl>${row('Destination', esc(s[9] || ''))}${row('Speed', s[4] != null ? `${s[4]} kt` : '')}${row('Course', s[5] != null ? `${Math.round(s[5])}°` : '')}${row('Status', esc(NAV[s[7]] || ''))}${row('Length', s[12] ? `${s[12]} m` : '')}${row('MMSI', esc(s[0]))}${row('IMO', esc(s[11] || ''))}${row('Call sign', esc(s[10] || ''))}${row('Position', esc(latlon(s[2], s[3])))}${row('Seen', esc(ago(s[13])))}</dl>
+        ${routeBox('sea', s[0], s[9])}
+        <dl>${row('Speed', s[4] != null ? `${s[4]} kt` : '')}${row('Course', s[5] != null ? `${Math.round(s[5])}°` : '')}${row('Status', esc(NAV[s[7]] || ''))}${row('Length', s[12] ? `${s[12]} m` : '')}${row('MMSI', esc(s[0]))}${row('Seen', esc(ago(s[13])))}</dl>
         <p class="ops-clinks"><a href="https://www.marinetraffic.com/en/ais/details/ships/mmsi:${esc(s[0])}" target="_blank" rel="noopener">MarineTraffic ${ICON.ext}</a></p>`;
     }
     // The card is drawn again every ten seconds: the photo found once is kept.
@@ -1141,6 +1294,26 @@
     card.hidden = false;
     const ph2 = $('.ops-photo', card);
     if (ph2) { if (keepPh != null) ph2.innerHTML = keepPh; else photoOf(ph2.dataset.hex, card); }
+  }
+  /* Where from, where to, and the route on the map at a click: read once when a mark is picked (/api/traffic?route=). */
+  const place = (x) => (x ? `<b>${esc(x.iata || x.icao || x.locode || '')}</b><span>${esc(x.city || x.name || '')}</span>` : '<b>—</b><span>Not known</span>');
+  function routeBox(kind, id, aisTo) {
+    const r = T.route && T.route.id === id ? T.route : null;
+    const d = r && r.d;
+    if (!r || r.loading) return `<div class="ops-route"><p class="ops-rline"><span class="ops-rwait">Finding where it came from and where it is going…</span></p></div>`;
+    const to = d && d.destination ? d.destination : aisTo ? { name: aisTo } : null;
+    const known = d && (d.origin || d.destination || (d.track && d.track.length > 1));
+    return `<div class="ops-route"><p class="ops-rline"><span class="ops-rp">${place(d && d.origin)}</span><i aria-hidden="true">${ICON.right}</i><span class="ops-rp">${place(to)}</span></p>
+      ${known ? `<button type="button" class="ops-rbtn" data-route aria-pressed="${!!r.show}">${r.show ? 'Hide the route' : 'Show the route on the map'}</button>` : ''}
+      ${d && d.source && d.source.length ? `<small>${esc([].concat(d.source).join(', '))}${d.confidence && d.confidence !== 'confirmed' ? ' · ' + esc(d.confidence) : ''}</small>` : ''}</div>`;
+  }
+  async function loadRoute(kind, id, cs) {
+    T.route = { id, kind, loading: true, show: false };
+    paintSel();
+    const d = await routeOf(kind, id, cs);
+    if (!T.route || T.route.id !== id) return;
+    T.route = { id, kind, d: d && d.ok !== false ? d : null, show: false };
+    paintSel();
   }
   /* A photo of the airframe, from Planespotters' open photo service, credited and linked. */
   const PHOTOS = new Map();
@@ -1160,7 +1333,19 @@
     const el = $(`.ops-photo[data-hex="${CSS.escape(hex)}"]`, card);
     if (el) el.innerHTML = html;
   }
-  function closeSel() { T.sel = null; paintSel(); drawTraffic(); }
+  function closeSel() { T.sel = null; T.route = null; paintSel(); drawTraffic(); }
+  /* The route on the map, or off again; shown, the map takes in the whole of it. */
+  function toggleRoute() {
+    if (!T.route || !T.route.d) return;
+    T.route.show = !T.route.show;
+    paintSel(); drawTraffic();
+    if (!T.route.show) return;
+    const d = T.route.d, pts = (d.track || []).map((p) => [p[0], p[1]]);
+    [d.origin, d.destination].forEach((x) => { if (x && x.lat != null) pts.push([x.lat, x.lon]); });
+    const k = (T.marks || []).find((x) => (x.air ? x.air[0] : x.sea && x.sea[0]) === T.sel.id);
+    if (k) pts.push(k.ll);
+    if (pts.length > 1) try { getMap().flyToBounds(pts, { padding: [40, 40], maxZoom: 8, duration: 0.8 }); } catch (e) { /* no bounds */ }
+  }
   /* A click on an aircraft or a ship opens its details (20 Oct: clicks did not reach them). The marks are drawn on
      one canvas that lets the map's own clicks through, so the click is measured here first: the nearest mark
      within 14 pixels takes it, and the pin or province under it does not. */
@@ -1193,23 +1378,62 @@
   }
 
   /* ---------- Broadcast mode: the map alone, a title strip and the latest line ---------- */
-  /* For a screen on a wall or on air (20 Oct: "develop it more"): the map alone and full screen; a lower third
-     with the desk, the clock and the event on screen; a ticker of the latest; the sides' colours and the day's
-     count in the corners; and a tour that goes from the latest event to the one before, every few seconds,
-     the map flying to each. Controls show when the pointer moves. */
-  const CAST = { timer: 0, i: -1, play: true, cur: null, idle: 0, full: false };
-  const castName = () => (PAGE === 'all' ? 'The wars with Iran and in Yemen' : PAGE === 'iran' ? 'The Iran war' : 'The war in Yemen');
-  function castList() { return recent().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 20); }
+  /* For a screen on a wall or on air (20 Oct: "develop it more"). The map alone and full screen, and:
+     - "In the region": the latest reports of every desk on the page, one after another, 4 seconds each, the map going
+       to each one's place (only in the live view of the last 24 hours);
+     - Tehran's and Sanaa's clocks;
+     - the legend of every side and kind of event on the map, small;
+     - along the bottom, the most important of the latest reports, most important first;
+     - live traffic on or off;
+     - a time lapse: today, 24 hours, 7 days, the Yemen war, Lion's Roar and Epic Fury (the 40 days from 28 Feb), or
+       everything since 28 Feb, each event lit on the map at its time.
+     Controls show when the pointer moves. */
+  const CAST = { timer: 0, i: -1, play: true, cur: null, idle: 0, full: false, lapse: null };
+  const CAST_MS = 4000;
+  const WAR0 = '2026-02-28T00:00:00+03:00';
+  const LAPSE_DEF = [
+    ['today', 'Today', () => { const d = new Date(); const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(d); return [Date.parse(`${ymd}T00:00:00+03:00`), Date.now()]; }],
+    ['24h', 'Last 24 hours', () => [Date.now() - 864e5, Date.now()]],
+    ['7d', 'Last 7 days', () => [Date.now() - 7 * 864e5, Date.now()]],
+    ['yemen', 'The Yemen war', () => [Date.parse('2026-07-13T00:00:00+03:00'), Date.now()], 'yemen'],
+    ['lion', 'Lion’s Roar and Epic Fury', () => [Date.parse(WAR0), Date.parse('2026-04-08T23:59:00+03:00')], 'iran'],
+    ['war', 'Since 28 Feb', () => [Date.parse(WAR0), Date.now()], 'iran'],
+  ];
+  const lapses = () => LAPSE_DEF.filter((x) => !x[3] || PAGE === 'all' || PAGE === x[3]);
+  /* The page's reports, of every desk it has, newest first: { at, h, desk, src, score, fp }. */
+  function castReports() {
+    const out = [];
+    if (PAGE === 'all') { const h = window.__home; (h && h.D.reports || []).forEach((r) => out.push({ at: r.at, h: r.h, desk: r.desks[0], src: r.src, score: r.score || 0, fp: r.fp })); }
+    else if (PAGE === 'iran') { const d = app('iranDesk'); (d && d.reports || []).forEach((r) => out.push({ at: r.at, h: r.summary, desk: 'iran', src: r.source, score: r.score || 0, fp: r.fp })); }
+    else { const d = app('data'); (d && d.reports || []).forEach((r) => out.push({ at: r.at || r.t || A('reportTime')(r), h: r.summary || r.headline || r.title, desk: 'yemen', src: r.source, score: r.score || 0, fp: r.fp })); }
+    return out.filter((r) => r.h && r.at).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  }
+  const day24 = (list) => list.filter((r) => Date.now() - Date.parse(r.at) < 864e5);
+  function castList() { return day24(castReports()).slice(0, 24); }
+  /* The ticker: the latest day's most important reports (the desks' own score), most important first. */
+  function castTicker() {
+    const list = day24(castReports());
+    const top = list.filter((r) => r.score > 0).sort((a, b) => b.score - a.score || Date.parse(b.at) - Date.parse(a.at));
+    return (top.length >= 6 ? top : [...top, ...list.filter((r) => !(r.score > 0))]).slice(0, 12);
+  }
+  /* A report's pin, if it has one on the map. */
+  function pinOfReport(r) {
+    if (!r || !r.fp) return null;
+    const k = String(r.fp);
+    return events(true).find((e) => String(e.fp).split('-pin-')[0] === k && typeof e.lat === 'number') || null;
+  }
+  const DESK_NAME = { iran: 'Iran', yemen: 'Yemen' };
   function setCast(on) {
     S.cast = on;
     paintFrame();
     clearInterval(CAST.timer); CAST.timer = 0;
+    stopLapse();
     if (on) {
       CAST.i = -1; CAST.play = P.castTour;
       if (!document.fullscreenElement && H.requestFullscreen) H.requestFullscreen().then(() => { CAST.full = true; }).catch(() => {});
       getMap().closePopup();
       if (CAST.play) castStep(1);
-      CAST.timer = setInterval(() => { if (CAST.play) castStep(1); }, Math.max(6, P.castEvery) * 1000);
+      CAST.timer = setInterval(() => { if (CAST.play && !CAST.lapse) castStep(1); }, CAST_MS);
       castIdle();
     } else {
       if (CAST.full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -1219,14 +1443,18 @@
     setTimeout(() => { const m = getMap(); if (m) m.invalidateSize(); }, 80);
   }
   function castStep(d) {
+    if (CAST.lapse) return;
     const list = castList();
     if (!list.length) return;
     CAST.i = (CAST.i + d + list.length) % list.length;
-    const e = list[CAST.i];
-    CAST.cur = e;
-    const m = getMap();
-    m.flyTo([e.lat, e.lng], Math.max(6.5, Math.min(8, m.getZoom() + 0.5)), { duration: P.still ? 0 : 1.6 });
-    m.once('moveend', () => { if (S.cast && CAST.cur === e) ping(e); });
+    const r = list[CAST.i];
+    CAST.cur = r;
+    const e = pinOfReport(r);
+    if (e) {
+      const m = getMap();
+      m.flyTo([e.lat, e.lng], Math.max(6, Math.min(7.5, m.getZoom())), { duration: P.still ? 0 : 1.2 });
+      m.once('moveend', () => { if (S.cast && CAST.cur === r) ping(e); });
+    }
     paintCast();
   }
   function castIdle() {
@@ -1234,48 +1462,121 @@
     clearTimeout(CAST.idle);
     CAST.idle = setTimeout(() => H.classList.add('ops-cast-idle'), 3500);
   }
+  /* Every side and kind of event on the map now (the time lapse's own while it runs), small, in one block. */
+  function castLegend(list) {
+    const sides = new Map(), kinds = new Map();
+    list.forEach((e) => { const s0 = sideOf(e); const s = /not stated/i.test(s0.name) ? { name: 'Not stated', c: s0.c } : s0; if (!sides.has(s.name)) sides.set(s.name, s); const k = kindOf(e); if (!kinds.has(k.k)) kinds.set(k.k, k); });
+    if (!sides.size) return '';
+    return `<div class="ops-cleg"><ul>${[...sides.values()].map((x) => `<li style="--c:${x.c}">${esc(x.name)}</li>`).join('')}</ul><ul class="kinds">${[...kinds.values()].map((k) => `<li><span class="g">${glyph(k.k)}</span>${esc(k.name)}</li>`).join('')}</ul></div>`;
+  }
   function paintCast() {
     const el = hud && $('.ops-lower', hud);
     if (!el) return;
     el.hidden = !S.cast;
     if (!S.cast) { el.innerHTML = ''; return; }
     const list = castList();
-    const e = CAST.cur || list[0];
+    const r = CAST.cur || list[0];
     const now = Date.now();
-    const n24 = events().filter((x) => now - Date.parse(x.at) < 864e5).length;
-    const sides = [...new Map(list.map((x) => { const s = sideOf(x); return [s.name, s]; })).values()].slice(0, 6);
-    const s = e && sideOf(e), k = e && kindOf(e);
-    const clock = PAGE !== 'all' ? `${CAP[PAGE]} ${hm(now, TZ[PAGE])}` : `Sanaa ${hm(now, TZ.yemen)} · Tehran ${hm(now, TZ.iran)}`;
-    const tick = list.slice(0, 12).map((x) => `<span><time>${esc(hm(x.at, VIEW_TZ()))}</time>${esc(x.label || '')}</span>`).join('');
-    if (!$('.ops-cmain', el)) el.innerHTML = '<div class="ops-cmain"></div><div class="ops-tickh"></div>';
-    // The ticker runs on: it is drawn again only when the events in it change.
+    if (!$('.ops-cmain', el)) el.innerHTML = '<div class="ops-cmain"></div><div class="ops-clegh"></div><div class="ops-tickh"></div>';
+    // The ticker runs on: it is drawn again only when what is in it changes.
+    const tk = castTicker();
+    const tick = tk.map((x) => `<span>${esc(x.h)}</span>`).join('');
     const th = $('.ops-tickh', el);
-    const tkey = P.castTicker ? tick : '';
-    if (th._k !== tkey) { th._k = tkey; th.innerHTML = tkey ? `<div class="ops-tick"><b>Latest</b><div class="ops-tick-in"><div class="ops-tick-run" style="--d:${Math.max(30, list.slice(0, 12).length * 7)}s">${tick}${tick}</div></div></div>` : ''; }
+    const tkey = P.castTicker && !CAST.lapse ? tick : '';
+    if (th._k !== tkey) { th._k = tkey; th.innerHTML = tkey ? `<div class="ops-tick"><b>Latest</b><div class="ops-tick-in"><div class="ops-tick-run" style="--d:${Math.max(40, tk.length * 9)}s">${tick}${tick}</div></div></div>` : ''; }
+    const lg = $('.ops-clegh', el);
+    const legList = CAST.lapse ? CAST.lapse.list : events(true).filter((e) => now - tOf(e) < 864e5);
+    const lkey = legList.length + '|' + (CAST.lapse ? CAST.lapse.k : '');
+    if (lg._k !== lkey) { lg._k = lkey; lg.innerHTML = castLegend(legList); }
+    const L3 = CAST.lapse ? '' : `<div class="ops-l3">
+        <div class="ops-lt"><span class="live">Live</span><b>In the region</b><span class="clk"><span><small>Tehran</small>${esc(hm(now, TZ.iran))}</span><span><small>Sanaa</small>${esc(hm(now, TZ.yemen))}</span></span><span class="brand">${LOGO}The Situation Room</span></div>
+        ${r ? `<div class="ops-lb" style="--c:${r.desk === 'iran' ? '#e5484d' : '#f08c2e'}"><div><small>${esc(hm(r.at, VIEW_TZ()))}${PAGE === 'all' && DESK_NAME[r.desk] ? ` · ${esc(DESK_NAME[r.desk])}` : ''}${r.src ? ` · ${esc(r.src)}` : ''}</small><p>${esc(r.h)}</p></div></div>` : ''}
+      </div>`;
+    const lp = CAST.lapse;
     $('.ops-cmain', el).innerHTML = `
       <div class="ops-cbar" role="toolbar" aria-label="Broadcast">
-        <button type="button" data-cast="prev" title="The one before">${ICON.left}</button>
-        <button type="button" data-cast="play" title="${CAST.play ? 'Pause the tour' : 'Tour the latest events'}">${CAST.play ? ICON.pause : ICON.play}</button>
-        <button type="button" data-cast="next" title="The next">${ICON.right}</button>
-        <span>${list.length ? `${CAST.i + 1 > 0 ? CAST.i + 1 : 1} of ${list.length}` : ''}</span>
-        <button type="button" data-cast="exit" class="ops-cexit">Exit broadcast</button>
+        ${lp ? '' : `<button type="button" data-cast="prev" title="The one before">${ICON.left}</button>
+        <button type="button" data-cast="play" title="${CAST.play ? 'Pause' : 'Go through the latest reports'}">${CAST.play ? ICON.pause : ICON.play}</button>
+        <button type="button" data-cast="next" title="The next">${ICON.right}</button>`}
+        <label class="ops-csel"><span class="sr">Time lapse</span><select data-cast="lapse"><option value="">Live, last 24 hours</option>${lapses().map(([k, n]) => `<option value="${k}"${lp && lp.k === k ? ' selected' : ''}>Time lapse: ${esc(n)}</option>`).join('')}</select></label>
+        <button type="button" data-cast="traffic" aria-pressed="${S.air || S.sea}" title="Live aircraft and ships">${ICON.plane}<span>Traffic</span></button>
+        <button type="button" data-cast="exit" class="ops-cexit">Exit</button>
       </div>
-      <div class="ops-ckpi"><small>Events, last 24 hours</small><b>${n24}</b></div>
-      ${sides.length ? `<ul class="ops-cleg">${sides.map((x) => `<li style="--c:${x.c}">${esc(x.name)}</li>`).join('')}</ul>` : ''}
-      <div class="ops-l3">
-        <div class="ops-lt"><span class="live">Live</span><b>${esc(castName())}</b><span class="clk">${esc(clock)}</span><span class="brand">${LOGO}The Situation Room</span></div>
-        ${e ? `<div class="ops-lb" style="--c:${s.c}"><span class="k">${glyph(k.k)}</span><div><small>${esc(dm(e.at, VIEW_TZ()))} · ${esc(hm(e.at, VIEW_TZ()))} · ${esc(s.name)}${e.place ? ` · ${esc(e.place)}` : ''}</small><p>${esc(e.label || k.name)}</p></div></div>` : ''}
-      </div>`;
+      ${lp ? `<div class="ops-lapse"><b>${esc(lp.n)}</b><time></time><small></small><span class="ops-lbar"><i></i></span><button type="button" data-cast="replay">Again</button></div>` : ''}
+      ${L3}`;
+    if (lp) paintLapse();
+  }
+  /* ---------- The time lapse: each event of the span lit on the map at its time, over about half a minute ---------- */
+  let lapseLayer = null, lapseRend = null;
+  async function startLapse(k) {
+    stopLapse();
+    const def = lapses().find((x) => x[0] === k);
+    if (!def) { paintCast(); return; }
+    const [a, b] = def[2]();
+    CAST.lapse = { k, n: def[1], a, b, list: [], i: 0, t: a, start: 0, raf: 0, loading: true };
+    paintCast();
+    // The span's older events are read first if the page does not have them yet.
+    if (a < Date.now() - 8 * 864e5) { try { if (PAGE === 'all') await window.__home.loadWar(); else if (PAGE === 'yemen') await A('loadAllPins')(); } catch (e) { /* what there is */ } }
+    const lp = CAST.lapse;
+    if (!lp || lp.k !== k) return;
+    lp.list = events(true).filter((e) => typeof e.lat === 'number' && tOf(e) >= a && tOf(e) <= b).sort((x, y) => tOf(x) - tOf(y));
+    lp.loading = false;
+    H.classList.add('ops-lapsing');
+    const m = getMap();
+    lapseRend = lapseRend || L.canvas({ padding: 0.3, pane: pane(m, 'opsLapse', 610) });
+    lapseLayer = L.layerGroup().addTo(m);
+    // The whole span in view.
+    if (lp.list.length > 1) try { m.flyToBounds(lp.list.map((e) => [e.lat, e.lng]), { padding: [60, 60], maxZoom: 7, duration: P.still ? 0 : 1 }); } catch (e) { /* kept */ }
+    lp.dur = Math.max(20, Math.min(60, lp.list.length * 0.06)) * 1000;
+    setTimeout(() => { if (CAST.lapse === lp) { lp.start = performance.now(); lp.raf = requestAnimationFrame(lapseFrame); } }, P.still ? 0 : 1100);
+    paintCast();
+  }
+  function lapseFrame(now) {
+    const lp = CAST.lapse;
+    if (!lp) return;
+    const f = Math.min(1, (now - lp.start) / lp.dur);
+    lp.t = lp.a + (lp.b - lp.a) * f;
+    while (lp.i < lp.list.length && tOf(lp.list[lp.i]) <= lp.t) {
+      const e = lp.list[lp.i++];
+      const mk = L.circleMarker([e.lat, e.lng], { renderer: lapseRend, radius: 7, stroke: true, color: '#fff', weight: 1, fillColor: sideOf(e).c, fillOpacity: 0.95, interactive: false }).addTo(lapseLayer);
+      setTimeout(() => { try { mk.setRadius(4); mk.setStyle({ weight: 0.6, fillOpacity: 0.8 }); } catch (x) { /* gone */ } }, 700);
+    }
+    paintLapse();
+    if (f < 1) lp.raf = requestAnimationFrame(lapseFrame);
+  }
+  function paintLapse() {
+    const lp = CAST.lapse, el = hud && $('.ops-lapse', hud);
+    if (!lp || !el) return;
+    const long = lp.b - lp.a > 3 * 864e5;
+    $('time', el).textContent = lp.loading ? 'Loading…' : `${dayTxt(lp.t, VIEW_TZ())}${long ? '' : ' · ' + hm(lp.t, VIEW_TZ())}`;
+    $('small', el).textContent = lp.loading ? '' : `${lp.i.toLocaleString('en-GB')} events`;
+    $('.ops-lbar i', el).style.width = `${lp.loading ? 0 : Math.round(((lp.t - lp.a) / Math.max(1, lp.b - lp.a)) * 100)}%`;
+  }
+  function stopLapse() {
+    const lp = CAST.lapse;
+    if (lp) cancelAnimationFrame(lp.raf);
+    CAST.lapse = null;
+    H.classList.remove('ops-lapsing');
+    if (lapseLayer) { try { getMap().removeLayer(lapseLayer); } catch (e) { /* gone */ } lapseLayer = null; }
   }
   function wireCast() {
-    $('.ops-lower', hud).addEventListener('click', (ev) => {
-      const b = ev.target.closest('[data-cast]');
+    const low = $('.ops-lower', hud);
+    low.addEventListener('click', (ev) => {
+      const b = ev.target.closest('button[data-cast]');
       if (!b) return;
       const a = b.dataset.cast;
       if (a === 'exit') setCast(false);
       else if (a === 'play') { CAST.play = !CAST.play; if (CAST.play) castStep(1); else paintCast(); }
       else if (a === 'next') castStep(1);
       else if (a === 'prev') castStep(-1);
+      else if (a === 'traffic') { trafficOnOff(); paintCast(); }
+      else if (a === 'replay' && CAST.lapse) startLapse(CAST.lapse.k);
+    });
+    low.addEventListener('change', (ev) => {
+      if (!ev.target.matches('select[data-cast="lapse"]')) return;
+      const k = ev.target.value;
+      if (k) startLapse(k);
+      else { stopLapse(); CAST.i = -1; castStep(1); }
     });
     addEventListener('pointermove', () => { if (S.cast) castIdle(); }, { passive: true });
     document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) CAST.full = false; });
@@ -1283,7 +1584,7 @@
 
 
   /* ---------- Keys ---------- */
-  const KEYS = [['Space', 'The latest event, then the one before'], ['T', 'Live traffic: aircraft and ships'], ['Y', 'Layers: the map itself'], ['G', 'Grid'], ['S', 'Base map: plain, satellite, relief'], ['M', 'Measure a distance'], ['R', 'Range rings'], ['L', 'Copy a link to this view'], ['F', 'Full screen'], ['B', 'Broadcast mode'], [',', 'Settings'], ['[  ]', 'Close or open the left panel, the reports'], ['\\', 'Fold the timeline under the map'], ['Esc', 'Close, clear'], ['?', 'These keys']];
+  const KEYS = [['Space', 'The latest event, then the one before'], ['T', 'Live traffic on or off: aircraft and ships'], ['Y', 'Layers: the map itself'], ['G', 'Grid'], ['S', 'Base map: plain, satellite, relief'], ['M', 'Measure a distance'], ['R', 'Range rings'], ['L', 'Copy a link to this view'], ['F', 'Full screen'], ['B', 'Broadcast mode'], [',', 'Settings'], ['[  ]', 'Close or open the left panel, the reports'], ['\\', 'Fold the timeline under the map'], ['Esc', 'Close, clear'], ['?', 'These keys']];
   function toggleKeys(force) {
     let el = $('.ops-keys');
     if (!el) {
@@ -1314,7 +1615,7 @@
         return;
       }
       const act = {
-        ' ': () => (S.cast ? castStep(1) : nextLatest()), t: () => toggleTraffic(), y: () => toggleLayers(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
+        ' ': () => (S.cast ? castStep(1) : nextLatest()), t: () => trafficOnOff(), y: () => toggleLayers(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
         l: () => copyLink($('[data-do="link"]', hud)), f: fullScreen, b: () => setCast(!S.cast), ',': () => openSettings(),
         '[': () => { S.left = !S.left; keep(); paintFrame(); }, ']': () => { S.right = !S.right; keep(); paintFrame(); }, '\\': () => { S.dock = !S.dock; keep(); paintFrame(); }, '?': () => toggleKeys(),
         ArrowRight: S.cast ? () => castStep(1) : null, ArrowLeft: S.cast ? () => castStep(-1) : null,
@@ -1337,7 +1638,6 @@
     ]],
     ['Map', [
       ['base', 'Base map', '', [['auto', 'Plain'], ['sat', 'Satellite'], ['relief', 'Relief']], 'S'],
-      ['names', 'Place names', '', [[false, 'Off'], [true, 'On']], 'S'],
       ['grid', 'Grid', 'Latitude and longitude.', [[false, 'Off'], [true, 'On']], 'S'],
       ['fills', 'Areas of control', 'Who holds what, shaded.', [[false, 'Off'], [true, 'On']], 'S'],
       ['coords', 'Place under the pointer', '', [['mgrs', 'Degrees and MGRS'], ['deg', 'Degrees'], ['dms', 'Degrees, minutes, seconds']]],
@@ -1349,9 +1649,8 @@
       ['airStart', 'Aircraft', 'Live aircraft on the map from the start.', [[false, 'When I turn them on'], [true, 'Always on']]],
     ]],
     ['Broadcast', [
-      ['castTour', 'Tour', 'Broadcast mode goes from the latest event to the one before by itself.', [[true, 'On'], [false, 'Off']]],
-      ['castEvery', 'Each event for', '', [[8, '8 s'], [12, '12 s'], [20, '20 s'], [30, '30 s']]],
-      ['castTicker', 'Ticker', 'The latest events running along the bottom.', [[true, 'On'], [false, 'Off']]],
+      ['castTour', 'Tour', 'Broadcast mode goes from the latest report to the one before by itself, 4 seconds each.', [[true, 'On'], [false, 'Off']]],
+      ['castTicker', 'Ticker', 'The most important of the latest reports, running along the bottom.', [[true, 'On'], [false, 'Off']]],
     ]],
     ['Panels', [
       ['left', 'Left panel', 'The brief and its parts.', [[true, 'Open'], [false, 'Closed']], 'S'],
@@ -1415,6 +1714,11 @@
     const el = $('.ops-set');
     if (!el) return;
     const cur = (r) => (r[0] === 'theme' ? themeNow() : r[4] === 'S' ? (S[r[0]] == null ? r[3][0][0] : S[r[0]]) : P[r[0]]);
+    // Drawn again open: only the buttons change, the list stays where the reader is (20 Oct: it went back to the top).
+    if ($('.ops-sbody', el)) {
+      el.querySelectorAll('[data-k]').forEach((b) => { const r = SET_ROWS.flatMap((g) => g[1]).find((x) => x[0] === b.dataset.k); b.setAttribute('aria-pressed', String(cur(r) === r[3][+b.dataset.i][0])); });
+      return;
+    }
     el.innerHTML = `<div class="ops-sbox" role="dialog" aria-label="Settings">
       <header><span class="ops-sh">${LOGO}<b>Settings</b></span><button type="button" class="ops-x" data-set-x aria-label="Close">${ICON.x}</button></header>
       <div class="ops-sbody">${SET_ROWS.map(([g, rows]) => `<section><h3>${esc(g)}</h3>${rows.map((r) => `<div class="ops-srow"><div class="ops-sl"><b>${esc(r[1])}</b>${r[2] ? `<small>${esc(r[2])}</small>` : ''}</div><div class="ops-sopts" role="group" aria-label="${esc(r[1])}">${r[3].map(([v, n], i) => `<button type="button" data-k="${r[0]}" data-i="${i}" aria-pressed="${String(cur(r) === v)}">${esc(n)}</button>`).join('')}</div></div>`).join('')}</section>`).join('')}
@@ -1461,6 +1765,12 @@
     // Open, every point (20 Oct: "the latest developments open"); the page keeps a box open once it is.
     root.querySelectorAll('.ops-left .situation:not(.sit-open)').forEach((s) => s.classList.add('sit-open'));
     root.querySelectorAll('.ops-left .front-card:not(.open)').forEach((s) => s.classList.add('open'));
+    // The numbers' long lists, a row a block, each figure named by its column (20 Oct: the tables ran past the panel).
+    root.querySelectorAll('.ops-left table.list:not([data-ops-l])').forEach((t) => {
+      t.dataset.opsL = '1';
+      const heads = [...t.querySelectorAll('tr:first-child th')].map((h) => h.textContent.trim());
+      t.querySelectorAll('tr').forEach((tr, i) => { if (!i) return; [...tr.children].forEach((td, j) => { if (j > 1 && heads[j]) td.dataset.h = heads[j]; }); });
+    });
   }
   /* A report opened from the All page (#r=…): the reports panel, open. */
   const OPEN_REPORT = /^#r=/.test(location.hash || '');
@@ -1473,13 +1783,16 @@
     if (!m || !m.getContainer || !window.L || !m._loaded || !(m.getSize().y > 0)) { setTimeout(startHud, 200); return; }
     buildHud(m);
     wireMatrix(); wireLog(); wireTraffic(); wireKeys(); wireCast(); wireTrafficClicks(m);
-    $('.ops-card', hud).addEventListener('click', (ev) => { if (ev.target.closest('[data-sel="x"]')) closeSel(); });
+    $('.ops-card', hud).addEventListener('click', (ev) => { if (ev.target.closest('[data-sel="x"]')) closeSel(); else if (ev.target.closest('[data-route]')) toggleRoute(); });
     paintMini();
     sizeDock();
     oneWorld(m);
     // The desk's own part of the map, in the new map box (the page fitted it to the old one).
     const own = (app('DESK_GO') || {})[PAGE === 'all' ? '/' : PAGE === 'iran' ? '/iran-conflict-desk' : '/yemen-conflict-desk'];
-    if (own && !/#(at|pin)=/.test(location.hash) && !sessionStorage.getItem('desk-go')) { try { m.invalidateSize(); m.fitBounds(own.b, { padding: [8, 8] }); } catch (e) { /* kept */ } }
+    if (own && !/#(at|pin)=/.test(location.hash) && !sessionStorage.getItem('desk-go')) { try { m.invalidateSize(); m.fitBounds(own.b, { padding: [8, 8], animate: false }); } catch (e) { /* kept */ } }
+    // The map shows once it is in its place (20 Oct: the Yemen map shook for a second as the frame settled round it).
+    // The page fits its map again as the frame settles: the map shows when it has held still for 400 ms.
+    { let at = '', still = 0, n = 0; const t = setInterval(() => { const c = m.getCenter(), k = `${c.lat.toFixed(3)},${c.lng.toFixed(3)},${m.getZoom()}`; still = k === at ? still + 1 : 0; at = k; if (still >= 4 || ++n > 40) { clearInterval(t); root.classList.add('ops-ready'); } }, 100); }
     openAt(m);
     // The map opens on the reader's span, as the timeline under it (a link to a pin or a place keeps its own).
     if (!/#(at|pin)=/.test(location.hash)) {
@@ -1488,13 +1801,16 @@
       setTimeout(first, 400);
     }
     drawBase();
+    // Day and night as they are now on the map: each place lit or dark by its own hour, with the cities' lights
+    // as seen from space on the night side (20 Oct; public/daynight.js).
+    try { if (window.deskDayNight) T.dn = window.deskDayNight.add(m, { theme: night() ? 'night' : 'day' }); } catch (e) { /* the plain map */ }
     m.on('zoomend', () => { if (S.air || S.sea) drawTraffic(); });
     m.on('moveend', () => { if (S.grid) drawGrid(); });
     drawMatrix();
     runTraffic();
     if (location.hash === '#settings') openSettings();
     // The theme: the overview's tiles and the traffic's edges follow it.
-    new MutationObserver(() => { themeTiles(); drawBase(); drawTraffic(); drawMatrix(); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
+    new MutationObserver(() => { themeTiles(); drawBase(); drawTraffic(); drawMatrix(); if (T.dn) T.dn.setTheme(night() ? 'night' : 'day'); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
     // The pins are drawn again by the page now and then: fade the ones outside the hours picked again.
     let dimT = 0;
     new MutationObserver(() => { if (rng) { clearTimeout(dimT); dimT = setTimeout(dimPins, 80); } }).observe(m.getPane('markerPane'), { childList: true });
@@ -1519,6 +1835,8 @@
     if (started) return;
     if (!findRoot()) return;
     started = true;
+    // Shown in any case after a few seconds, whatever kept the map from being placed.
+    setTimeout(() => root && root.classList.add('ops-ready'), 5000);
     try {
       applyPrefs();
       if (OPEN_REPORT) { S.right = true; S.rtab = 'rep'; S.ptab = 'rail'; }

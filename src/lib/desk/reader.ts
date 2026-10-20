@@ -390,7 +390,9 @@ ${SPELLING_RULES}
   not one). Write it as a wire story, not a list: vary the attribution
   ("warned", "accused", "urged", "argued", "he added", or none where the
   sentence is plainly his) and join related points. Never open sentence
-  after sentence with "He said".
+  after sentence with "He said". An outlet's exclusive (its own scoop) is
+  always one extended card: the headline, then a body with every fact the
+  piece gives (terms, figures, who carried it, each side's answer).
 - The headline keeps what makes the item news, not only its first words:
   prisoners "released from Saudi prisons", not "released prisoners".
 - A long item is a full article: read ALL of it. The headline carries its
@@ -1273,6 +1275,16 @@ export function unattributed(headline: string, type: string | undefined, sourceT
   return null;
 }
 
+/** The outlet's exclusive label at the head of the text: "Exclusive:", "حصري", "خاص |". */
+const EXCLUSIVE_HEAD = /\bexclusive(?:ly)?\b|حصري|(?:^|[\n|:])\s*خاص\s*[|:]/i;
+/** A long exclusive (eight sentences or more) written up in under three. */
+export function thinExclusive(sourceText: string, body: string): boolean {
+  const src = String(sourceText || "");
+  if (!EXCLUSIVE_HEAD.test(src.slice(0, 400)) || sourceSentences(src) < 8) return false;
+  const told = String(body || "").split(/(?<=[.!?])\s+/).filter((s) => s.trim().split(/\s+/).length >= 4).length;
+  return told < 3;
+}
+
 export function checkReading(r: Reading, sourceText: string, strict = true): string | null {
   if (!r.publish) return r.reject_reason || "not publishable";
   const h = String(r.headline || "").trim();
@@ -1327,6 +1339,11 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   const points = pointsIn(sourceText);
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && points >= 4 && b.length < 120) {
     return `points dropped: the text makes ${points} points; the body carries every newsworthy one, as long as it needs`;
+  }
+  // An outlet's exclusive keeps every fact (Round 4 of 20 Oct: The New Arab's exclusive on the Qatar–Pakistan
+  // proposal, a long article, went out in two sentences, without the $6bn and the secret IAEA visit).
+  if (thinExclusive(sourceText, b)) {
+    return "points dropped: an outlet's exclusive keeps every fact; the body carries all of them (the terms, the figures, who delivered it, each side's answer), as long as it needs";
   }
   return null;
 }

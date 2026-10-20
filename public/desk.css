@@ -1063,6 +1063,8 @@ html{scroll-behavior:smooth}
 .stat3 div{border:1px solid var(--t-line,#1c2836);border-radius:6px;padding:.5rem .4rem .45rem;text-align:center}
 .stat3 b{display:block;font-size:1.5rem;line-height:1.1;font-weight:700;color:var(--t-strong,#fff);font-variant-numeric:tabular-nums}
 .stat3 span{display:block;margin-top:.15rem;font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--t-muted,#8fa3b6)}
+/* A count with no link is the same size as one with a link (20 Oct: the energy counts were tiny). */
+.stat3 b span.sl{display:inline;margin:0;font-size:inherit;letter-spacing:inherit;text-transform:none}
 .tier{display:inline-block;padding:0 .32rem;border:1px solid currentColor;border-radius:3px;font-size:.6rem;font-weight:600;line-height:1.45;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
 a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .tally-box.claims td .tier,.tally-box.claims .tier{border:1px solid currentColor}

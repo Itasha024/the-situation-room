@@ -98,8 +98,26 @@ export function notEvent(e: YemenPin): boolean {
   if (/\bunexploded ordnance\b/i.test(t) && !/\b(?:kill\w*|wound\w*|injur\w*|dead|died)\b/i.test(t)) return true;
   // The audit of 20 Oct: a toll that rose, people fleeing, a day long gone, a "could".
   if (tollUpdate(t) || fleeingStory(t) || longAgo(t, e.at) || HYPOTHETICAL.test(t)) return true;
+  // Round 4 of 20 Oct: crime and coercion, the dead counted in a morgue, a strike "several days ago".
+  if (crimeOrCoercion(t) || MORGUE.test(t) || DAYS_AGO.test(`${t} ${String((e as { text?: string | null }).text ?? "")}`)) return true;
   return NO_FIGHT.test(t) && !FIGHT.test(t);
 }
+/**
+ * Crime and coercion, not battle (Round 4 of 20 Oct): "Houthi fighter kills brother in Taiz for refusing to add
+ * sectarian phrase to prayer call", "Houthi forces turn school and health unit in Mocha into military barracks",
+ * "Kholan bin Amer tribes mobilize in Jahanah ... following killing of Sheikh Abdulqawi Ghunaim", "Yemeni
+ * government forces foil Houthi operation targeting military and civilian facilities in Aden" (a cell caught),
+ * "Houthi forces block hundreds of Yemeni Umrah pilgrims".
+ */
+const CRIME =
+  /\b(?:fighter|gunman|man|member|soldier|militant|youth|husband|leader|supervisor)s?\s+(?:[\w-]+\s+)?kill(?:s|ed|ing)?\s+(?:his |her |their |own )*(?:brother|sister|father|mother|son|daughter|wife|husband|cousin|relative|uncle|nephew|kin)s?\b|\b(?:family|tribal|land) (?:dispute|feud|quarrel)\b|\brevenge killing\b|\bhonou?r killing\b|\b(?:turn|turns|turned|convert\w*|use[sd]?|using) (?:a |the |\w+ )?(?:schools?|hospitals?|health (?:units?|centres?|centers?)|clinics?|mosques?|homes?|houses?)(?: and (?:a |the )?[\w ]{2,25}?)? (?:into|as) (?:military )?(?:barracks|bases?|operations? rooms?|positions?|depots?|prisons?|human shields?)\b|\bhuman shields?\b|\b(?:demand\w*|over) (?:the )?(?:handover|hand-over) of (?:the )?(?:killers|perpetrators|suspects)\b|\btribes?\b[^.]{0,40}\bmobili[sz]\w*[^.]{0,60}\bkilling of\b|\bfoil\w* (?:a |an )?(?:Houthi |terrorist )?(?:plot|cell|operation|scheme|plan)\b|\bblock\w* (?:[\w-]+ ){0,4}(?:pilgrims|travell?ers|passengers|students)\b/i;
+export function crimeOrCoercion(t: string): boolean {
+  return CRIME.test(String(t || ""));
+}
+/** The dead of an attack already pinned, counted at a morgue or a burial (20 Oct: "Dozens of charred bodies in Ataq General Hospital morgue"). */
+const MORGUE = /\bmorgues?\b|\bcharred bodies\b|\bunidentified bodies\b|\bunclaimed bodies\b|\bmass (?:burial|grave)\b/i;
+/** A strike its own report dates days back (20 Oct: "Houthi commander ... killed in an air strike ... several days ago"). */
+const DAYS_AGO = /\b(?:several|a few|some|two|three|four|five|six|\d+) days ago\b|\blast week\b|\bearlier this (?:week|month)\b/i;
 /**
  * A death toll that rose is the attack already pinned, told again (20 Oct: the Houthi strike on the Shabwa training
  * camp pinned five times as its toll went from 18 to 67), unless the words go on to a new attack ("... rises to 60
@@ -153,7 +171,7 @@ const AFTER = /\b(?:caused (?:\w+ ){0,2}damage|repair\w*|stranded|damage (?:caus
 const NEW_ATTACK = /\b(?:fresh|new|another|renewed)\s+(?:\w+\s+){0,2}(?:strikes?|attacks?|barrage|missiles?)\b/i;
 // Threats, slogans and calls (20 Oct: "Houthi commander threatens Amjad Khaled over contacts with Taiz figures").
 const NO_FIGHT = /\b(?:vows?|vowed|threatens?|threatened|slogans?|calls? on|military movements?|reinforcements?|deploys?|deployed|deployment|transfers?|transferred|mobili[sz]\w*|redeploy\w*|dispatch\w*|arrives?|arrived|drills?|exercises?|manoeuvres?|maneuvers?|parades?|graduat\w*|forms? new|leaflets?|graffiti|abduct\w*|kidnap\w*|arrests?|arrested|detains?|detained|detention|loot\w*|storms? (?:a |the )?(?:citizen'?s? )?(?:home|house)|raid (?:and \w+ )?(?:over \d+ )?(?:homes|houses)|praises?|praised|mediations?|flares?|ammunition trucks|finds?|found)\b/i;
-const FIGHT = /\b(?:recaptur\w*|retak\w*|seiz\w*|advanc\w*|liberat\w*|massacre|withdraw\w*|take control|took control|strikes?|struck|hits?|attack\w*|clash\w*|kill\w*|wound\w*|injur\w*|shell\w*|repel\w*|fire[sd]?|firing|target\w*|destroy\w*|captur\w*|ambush\w*|battles?|fight\w*|besieg\w*|bomb\w*|explo\w*|expel\w*|expuls\w*|pursu\w*|clear(?:s|ed|ing)?|thwart\w*|foil\w*|decapitat\w*|executed|dead|bod(?:y|ies)|operations?)\b/i;
+const FIGHT = /\b(?:recaptur\w*|retak\w*|seiz\w*|advanc\w*|liberat\w*|massacre|withdraw\w*|take control|took control|strikes?|struck|hits?|attack\w*|clash\w*|kill\w*|wound\w*|injur\w*|shell\w*|repel\w*|fire[sd]?|firing|target\w*|destroy\w*|captur\w*|ambush\w*|battles?|fight(?!ers?\b)\w*|besieg\w*|bomb\w*|explo\w*|expel\w*|expuls\w*|pursu\w*|clear(?:s|ed|ing)?|thwart\w*|foil\w*|decapitat\w*|executed|dead|bod(?:y|ies)|operations?)\b/i;
 /** A tally or a round of the war across the land: "219 violations over 48 hours", "strikes on Sanaa, Taiz, Ibb and Saada". */
 export function roundup(t: string): boolean {
   const target = targetsOf(t).size > 0;
@@ -406,10 +424,17 @@ function kept(f: (t: string) => Set<string>, t: string): ReadonlySet<string> {
 export function oneEvent(k: FullPin, p: FullPin): boolean {
   // One card's two pins moved onto one spot are one pin, whatever side each part of its sentence reads as.
   if (k.fp && baseFp(k) === baseFp(p)) return samePlace(k, p) || (near(k, p) && dayOf(k.at) === dayOf(p.at));
-  if (dayOf(k.at) !== dayOf(p.at) || !sideOk(k.actor, p.actor)) return false;
+  // The next day's claim or count of an attack pinned the day before (Round 4 of 20 Oct: "Houthi forces claim missile
+  // strike on Al-Alam camp in Shabwa", 03:16 on 20 Oct, a day after the strike was pinned).
+  if (dayOf(k.at) !== dayOf(p.at)) return sideOk(k.actor, p.actor) && siteAttackRetold(k, p);
+  if (!sideOk(k.actor, p.actor)) return false;
   const a = String(k.label || ""), b = String(p.label || "");
   const tk = kept(targetsOf, a), tp = kept(targetsOf, b);
   const shareTarget = [...tp].some((x) => tk.has(x));
+  // One site attack, its spots worded apart: "Al-Camp camp in Jirdan district" and "military training camp in Shabwa" (19 Oct, four pins).
+  if (siteAttackRetold(k, p)) return true;
+  // One telling on a governorate's name and on its district: "landmine kills child in Hodeidah" and "… in Al-Jarrahi district of Hodeidah" (19 Oct).
+  if (hours(k.at, p.at) <= 3 && sameWords(a, b) && [...govsIn(a)].some((g) => govsIn(b).has(g)) && (BROAD.has(placeKey(String(k.place || "").split(",")[0])) || BROAD.has(placeKey(String(p.place || "").split(",")[0])))) return true;
   const ta = kept(tollOf, a), tb = kept(tollOf, b);
   // The same dead and wounded at the same target, wherever each outlet set it down: Aden's palace, pinned on Sanaa's (16 Oct).
   if (shareTarget && [...ta].some((x) => x[0] === "k" && tb.has(x)) && [...ta].some((x) => x[0] === "w" && tb.has(x))) return true;
@@ -438,6 +463,30 @@ export function oneEvent(k: FullPin, p: FullPin): boolean {
   if ((heardOnly(k) || heardOnly(p)) && hours(k.at, p.at) <= 3) return true;
   // An alert, an interception and a missile on one Saudi city within three hours: one wave.
   return inSaudi(k) && inSaudi(p) && hours(k.at, p.at) <= 3;
+}
+
+/** A site that is attacked as one place: a camp, a base, an airport, a port. */
+const SITE_TARGETS = new Set(["camp", "base", "airport", "port", "harbor", "harbour", "palace", "headquarters", "refinery", "aramco", "prison", "terminal", "pipeline", "university", "hospital", "school", "market"]);
+/** A claim, a count or a retelling of an attack, not a new one. */
+const RETOLD = /\bclaim\w*|\bresponsibility\b|\bkill\w*|\bdead\b|\bdeaths?\b|\btoll\b|\bcasualt\w*|\bwounded\b|\binjur\w*/i;
+const CLAIMED = /\bclaim\w*|\bresponsibility\b|\btoll\b|\badmit\w*/i;
+const AGAIN = /\b(?:again|fresh|new|another|renewed|second|third)\b/i;
+/**
+ * One attack on one site told again within a day and a half (Round 4 of 20 Oct): the same kind of site
+ * (a camp), the same governorate, within 60 km, the later telling a claim or a count, never "again" or
+ * "another".
+ */
+function siteAttackRetold(k: FullPin, p: FullPin): boolean {
+  if (hours(k.at, p.at) > 36) return false;
+  const a = String(k.label || ""), b = String(p.label || "");
+  const tk = kept(targetsOf, a), tp = kept(targetsOf, b);
+  if (tk.size > 2 || tp.size > 2 || ![...tp].some((x) => tk.has(x) && SITE_TARGETS.has(x))) return false;
+  const later = Date.parse(String(p.at)) >= Date.parse(String(k.at)) ? b : a;
+  // The next day only a claim or a toll is the same attack: "strikes on Al-Hamza camp kill 5" the next day is another strike.
+  if (!(dayOf(k.at) === dayOf(p.at) ? RETOLD : CLAIMED).test(later) || AGAIN.test(later)) return false;
+  if (!(typeof k.lat === "number" && typeof p.lat === "number" && kmTo(k.lat, k.lng ?? 0, p.lat, p.lng ?? 0) < 60)) return false;
+  const ga = govsIn(`${a} ${k.place ?? ""}`), gb = govsIn(`${b} ${p.place ?? ""}`);
+  return [...ga].some((g) => gb.has(g));
 }
 
 /*

@@ -827,3 +827,147 @@ html[data-view="ops"] .ops-acts { view-transition-name: ops-acts }
   html[data-view="ops"] .ops-on:not([data-ops-ptab="map"]) .ops-dock { display: none }
   html[data-view="ops"] .ops-on > :is(.ops-left, .ops-right) { min-height: calc(100svh - 120px) }
 }
+
+/* ==========================================================================
+   20 Oct, round 4 (user's list).
+   ========================================================================== */
+/* Phones: the desks beside the mark, as on a computer; every tab but Map shows only its own part, never the map. */
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-bar header.top { justify-content: flex-start !important }
+  html[data-view="ops"] .ops-bar header.top .brand { margin: 0 !important }
+  html[data-view="ops"] .ops-on:not([data-ops-ptab="map"]) > .ops-stage { display: none !important }
+}
+
+/* Traffic: the button turns it on and off; the arrow beside it opens its options. */
+html[data-view="ops"] .ops-trfw { display: inline-flex; align-items: stretch }
+html[data-view="ops"] .ops-trfw [data-op="traffic"] { border-top-right-radius: 0; border-bottom-right-radius: 0 }
+html[data-view="ops"] .ops-trfw .ops-trfm { width: 24px !important; border-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0 }
+html[data-view="ops"] .ops-trfw .ops-trfm svg { width: 13px; height: 13px }
+html[data-view="ops"] .ops-trfw [data-op="traffic"].on + .ops-trfm { border-color: var(--o-sel) }
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-trfw .ops-trfm { display: inline-flex !important; width: 22px !important }
+}
+
+/* An aircraft or a ship: one screen, no scrolling. */
+html[data-view="ops"] .ops-card { width: 320px; max-height: none; overflow: visible }
+html[data-view="ops"] .ops-chead { display: flex; align-items: center; gap: 10px; margin: 0 0 8px }
+html[data-view="ops"] .ops-chead > div:last-child { min-width: 0 }
+html[data-view="ops"] .ops-chead .ops-photo { flex: none; width: 104px }
+html[data-view="ops"] .ops-chead .ops-photo:empty { display: none }
+html[data-view="ops"] .ops-chead .ops-photo a { margin: 0 }
+html[data-view="ops"] .ops-chead .ops-photo img { aspect-ratio: 3 / 2; object-fit: cover }
+html[data-view="ops"] .ops-chead .ops-photo small { font-size: 9.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+html[data-view="ops"] .ops-chead .ops-csub { margin: 2px 0 0 }
+html[data-view="ops"] .ops-card .ops-route { display: block; margin: 0 0 8px; padding: 7px 9px; background: var(--o-hover); border-radius: 2px }
+html[data-view="ops"] .ops-rline { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; margin: 0 }
+html[data-view="ops"] .ops-rline > i { color: var(--o-sel); display: grid }
+html[data-view="ops"] .ops-rline > i svg { width: 15px; height: 15px }
+html[data-view="ops"] .ops-rp { display: flex; flex-direction: column; min-width: 0 }
+html[data-view="ops"] .ops-rp:last-child { text-align: right }
+html[data-view="ops"] .ops-rp b { font: 600 15px var(--ops-mono); color: var(--o-strong) }
+html[data-view="ops"] .ops-rp span { font-size: 11.5px; color: var(--o-dim); overflow-wrap: anywhere }
+html[data-view="ops"] .ops-rwait { grid-column: 1 / -1; font-size: 12px; color: var(--o-faint) }
+html[data-view="ops"] .ops-rbtn { appearance: none; width: 100%; margin-top: 7px; height: 28px; border: 1px solid var(--o-sel); border-radius: 2px; background: none; color: var(--o-strong); font: 700 11.5px var(--ops-cond); letter-spacing: .12em; text-transform: uppercase; cursor: pointer }
+html[data-view="ops"] .ops-rbtn[aria-pressed="true"] { background: var(--o-sel); color: var(--o-sel-ink) }
+html[data-view="ops"] .ops-card .ops-route small { display: block; margin-top: 5px; font-size: 10.5px; color: var(--o-faint); flex-basis: auto }
+html[data-view="ops"] .ops-card dl { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px 10px }
+html[data-view="ops"] .ops-card .ops-clinks { margin-top: 8px }
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-card { max-height: none; width: auto }
+  html[data-view="ops"] .ops-chead .ops-photo { width: 84px }
+  html[data-view="ops"] .ops-card h3 { font-size: 17px }
+}
+
+/* The numbers' long lists: a plain button to open the whole list (20 Oct: no sign it could be opened). */
+html[data-view="ops"] .ops-left :is(.led-tog, .rows-tog, .ir-clamp-tog) {
+  display: flex !important; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 30px; margin: 10px 0 0 !important; padding: 0 10px !important;
+  border: 1px solid var(--o-line-2) !important; border-radius: 2px !important; background: var(--o-panel) !important; color: var(--o-sel) !important;
+  font: 700 11.5px var(--ops-cond) !important; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; box-shadow: none !important
+}
+html[data-view="ops"] .ops-left :is(.led-tog, .rows-tog, .ir-clamp-tog)::after { content: ""; width: 7px; height: 7px; border: solid currentColor; border-width: 0 1.6px 1.6px 0; transform: translateY(-2px) rotate(45deg) }
+html[data-view="ops"] .ops-left :is(.led-more.open .led-tog, .open > .rows-tog, .open > .ir-clamp-tog)::after { transform: translateY(2px) rotate(-135deg) }
+html[data-view="ops"] .ops-left :is(.led-tog, .rows-tog, .ir-clamp-tog):hover { border-color: var(--o-sel) !important; color: var(--o-strong) !important }
+
+/* No text cut anywhere in the panels: words wrap inside their box at every width. */
+html[data-view="ops"] .ops-left :is(.tally-box, .led-more, .front-card, .situation) { min-width: 0; max-width: 100% }
+html[data-view="ops"] .ops-left .tally-box table { width: 100%; table-layout: auto }
+html[data-view="ops"] .ops-left .tally-box :is(td, th) { overflow-wrap: anywhere; word-break: normal; white-space: normal }
+html[data-view="ops"] .ops-left .tally-box .sl { white-space: normal }
+html[data-view="ops"] .ops-left .tally-box table.list { display: block; overflow-x: auto; scrollbar-width: thin }
+html[data-view="ops"] .ops-left .tally-box h3 { white-space: normal; overflow: visible; text-overflow: clip }
+html[data-view="ops"] .ops-left .stat3 > div { min-width: 0 }
+html[data-view="ops"] .ops-left .stat3 b { font-size: 1.35rem; overflow-wrap: anywhere }
+html[data-view="ops"] .ops-left .stat3 span { white-space: normal }
+html[data-view="ops"] .ops-left .num-cat button { white-space: nowrap; min-width: 0 }
+
+/* The events: the next page comes as the reader reaches the end. */
+html[data-view="ops"] .ops-log-more { padding: 6px 4px 10px }
+html[data-view="ops"] .ops-log-more .more { margin: 0 }
+html[data-view="ops"] .ops-evf .ops-log-n:empty { display: none }
+
+/* The hours under the map: zoom on a phone. */
+html[data-view="ops"] .ops-amx-sc { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin }
+html[data-view="ops"] .ops-mz { display: none; margin-left: auto; gap: 0; border: 1px solid var(--o-line-2); border-radius: 2px; overflow: hidden }
+html[data-view="ops"] .ops-mz button { appearance: none; width: 34px; height: 28px; border: 0; background: none; color: var(--o-strong); font: 600 17px var(--ops-mono); cursor: pointer }
+html[data-view="ops"] .ops-mz button + button { border-left: 1px solid var(--o-line-2) }
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-mz { display: inline-flex }
+  html[data-view="ops"] .ops-act-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
+  html[data-view="ops"] .ops-amx { touch-action: pan-x; max-height: none }
+  html[data-view="ops"] .ops-amx .lab { font-size: 12px }
+  html[data-view="ops"] .ops-amx .tk { font-size: 11.5px }
+}
+
+/* Broadcast: In the region, the two clocks, a light legend, the time lapse. */
+html[data-view="ops"] .ops-lt .clk { display: inline-flex; flex-direction: column; gap: 0; line-height: 1.15; font-size: 15px }
+html[data-view="ops"] .ops-lt .clk > span { display: inline-flex; gap: 8px; justify-content: space-between }
+html[data-view="ops"] .ops-lt .clk small { font: 700 11px var(--ops-cond); letter-spacing: .14em; text-transform: uppercase; color: #8a939d }
+html[data-view="ops"] .ops-lb .k { display: none }
+html[data-view="ops"] .ops-lb { border-left-width: 5px }
+html[data-view="ops"] .ops-clegh { position: absolute; top: 16px; left: 16px; max-width: min(340px, 36vw); pointer-events: none }
+html[data-view="ops"] .ops-clegh .ops-cleg { position: static; display: block; padding: 8px 10px; background: rgba(8, 11, 14, .62); border-radius: 2px; font: 500 12px var(--ops-ui); color: #dfe5ea }
+html[data-view="ops"] .ops-cleg ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 3px 12px }
+html[data-view="ops"] .ops-cleg ul + ul { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, .12) }
+html[data-view="ops"] .ops-cleg li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap }
+html[data-view="ops"] .ops-cleg ul:first-child li::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1px rgba(255, 255, 255, .7) }
+html[data-view="ops"] .ops-cleg .kinds li::before { content: none }
+html[data-view="ops"] .ops-cleg .g { display: inline-grid; width: 13px; height: 13px; color: #dfe5ea }
+html[data-view="ops"] .ops-cleg .g svg { width: 13px; height: 13px }
+html[data-view="ops"] .ops-cbar { flex-wrap: wrap; justify-content: center; max-width: calc(100% - 32px) }
+html[data-view="ops"] .ops-cbar button { gap: 6px; display: inline-flex; align-items: center }
+html[data-view="ops"] .ops-cbar button[aria-pressed="true"] { background: #e0a43c; color: #17110a }
+html[data-view="ops"] .ops-csel select { height: 32px; max-width: 250px; padding: 0 8px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 2px; background: #0b0e11; color: #e8ecef; font: 600 12.5px var(--ops-ui) }
+html[data-view="ops"] .ops-lapse { position: absolute; left: 32px; bottom: 32px; display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 18px; padding: 12px 16px; background: rgba(8, 11, 14, .88); color: #fff; border-left: 4px solid #e0a43c; pointer-events: auto }
+html[data-view="ops"] .ops-lapse b { grid-column: 1 / -1; font: 700 13px var(--ops-cond); letter-spacing: .16em; text-transform: uppercase; color: #e0a43c }
+html[data-view="ops"] .ops-lapse time { font: 600 26px var(--ops-mono) }
+html[data-view="ops"] .ops-lapse small { font: 500 14px var(--ops-mono); color: #c9d1d9; text-align: right }
+html[data-view="ops"] .ops-lbar { grid-column: 1 / -1; height: 3px; background: rgba(255, 255, 255, .15); margin-top: 6px }
+html[data-view="ops"] .ops-lbar i { display: block; height: 100%; width: 0; background: #e0a43c }
+html[data-view="ops"] .ops-lapse button { grid-column: 1 / -1; justify-self: start; margin-top: 8px; appearance: none; height: 26px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, .25); border-radius: 2px; background: none; color: #fff; font: 700 11.5px var(--ops-cond); letter-spacing: .12em; text-transform: uppercase; cursor: pointer }
+html[data-view="ops"].ops-lapsing .ops-on .leaflet-marker-pane > *, html[data-view="ops"].ops-lapsing .ops-on .leaflet-overlay-pane canvas { visibility: hidden }
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-clegh { display: none }
+  html[data-view="ops"] .ops-lapse { left: 8px; right: 8px; bottom: 8px }
+  html[data-view="ops"] .ops-lapse time { font-size: 18px }
+  html[data-view="ops"] .ops-csel select { max-width: 180px }
+}
+html[data-view="ops"] .ops-hud > :is(.ops-card, .ops-menu) { z-index: 1100 }
+/* The map fades in once it is in its place, not while the frame settles round it. */
+html[data-view="ops"] .ops-on:not(.ops-ready) :is(#map, #h-map) .leaflet-map-pane { opacity: 0 }
+html[data-view="ops"] .ops-on :is(#map, #h-map) .leaflet-map-pane { transition: opacity .25s ease-out }
+/* A box name with its chart button wraps like any title; a reply line wraps rather than ending in dots (20 Oct: nothing cut). */
+html[data-view="ops"] .ops-on .tally-box h3 .spot { white-space: normal !important; max-width: 100%; text-align: left; display: inline !important; height: auto; padding: 0 !important }
+html[data-view="ops"] .ops-on .tally-box h3 .spot .spot-end { white-space: nowrap }
+html[data-view="ops"] .ops-on .card .reply-to { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; display: block; max-width: 100% }
+html[data-view="ops"] .ops-on .card .meta .src-link { overflow-wrap: anywhere }
+html[data-view="ops"] .ops-act-h small { white-space: normal; overflow: visible; text-overflow: clip }
+/* The numbers' lists in the narrow panel: each row a short block, its date beside it, each figure named. */
+html[data-view="ops"] .ops-left .tally-box table.list[data-ops-l] { display: block !important; overflow: visible !important; width: 100% }
+html[data-view="ops"] .ops-left table.list[data-ops-l] tbody { display: block }
+html[data-view="ops"] .ops-left table.list[data-ops-l] tr:first-child { display: none }
+html[data-view="ops"] .ops-left table.list[data-ops-l] tr { display: grid; grid-template-columns: 4.4rem minmax(0, 1fr); gap: 2px 10px; padding: 8px 0; border-top: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-left .led-more:not(.open) table.list[data-ops-l] tr.led-rest { display: none }
+html[data-view="ops"] .ops-left table.list[data-ops-l] td { display: block; padding: 0 !important; border: 0 !important; width: auto !important; min-width: 0 }
+html[data-view="ops"] .ops-left table.list[data-ops-l] td:first-child { grid-row: span 6 }
+html[data-view="ops"] .ops-left table.list[data-ops-l] td:nth-child(2) { font-weight: 600; color: var(--o-strong) }
+html[data-view="ops"] .ops-left table.list[data-ops-l] td[data-h]::before { content: attr(data-h) ": "; color: var(--o-faint); font-size: .92em }

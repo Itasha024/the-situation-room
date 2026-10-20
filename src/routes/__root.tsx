@@ -84,6 +84,7 @@ function RootDocument() {
         </AuthProvider>
         <script id="leaflet-js" src="/vendor/leaflet/leaflet.js" />
         <script id="yemen-app-js" src={`/app.js?v=${ASSET_V}`} />
+        {OPS_VIEW === "off" ? null : <script id="daynight-js" src={`/daynight.js?v=${ASSET_V}`} />}
         {OPS_VIEW === "off" ? null : <script id="ops-js" src={`/ops.js?v=${ASSET_V}`} />}
         <Scripts />
       </body>

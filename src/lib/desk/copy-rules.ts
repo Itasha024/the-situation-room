@@ -45,10 +45,17 @@ const OFF_TOPIC =
   /\bearthquakes?\b|\bthunderstorms?\b|\bweather (?:centre|center|forecast|warning)\b|\bmeteorolog\w*|\brain(?:fall|s)?\b(?! of)|\bflash floods?\b|\bexecut(?:es|ed)\b[^.]{0,40}\b(?:citizens|convicts|men|people)\b|\bblood donation\b/i;
 const WAR_WORD = /\b(?:missiles?|drones?|strikes?|air ?strikes?|attacks?|shell\w*|explosions?|killed|wounded|Houthis?|Israel\w*|US|war|blockade|Hormuz|spy|spies|espionage)\b/i;
 /** Commentary by role or by a commentator the desk knows (Yemen 51, 123, 252, 317, 325, 337, 357, 365, 376; Iran 123, 357). */
+// Round 4 of 20 Oct: "Former UK defence secretary Michael Fallon:", "Former Iranian MP:", "Sanaa Center head:" (a think tank).
 const COMMENTATOR_LEAD =
-  /^(?:[^:]{0,50}\b)?(?:analysts?|commentators?|researchers?|writers?|journalists?|columnists?|experts?|academics?|professors?|ex-PM|former (?:\w+ ){0,2}?(?:prime minister|PM|minister|official|ambassador|general|officer|envoy|president|diplomat))\b[^:]{0,50}:/i;
+  /^(?:[^:]{0,50}\b)?(?:analysts?|commentators?|researchers?|writers?|journalists?|columnists?|experts?|academics?|professors?|ex-PM|think[- ]tanks?|(?:research|studies|strategic|policy) (?:center|centre|institute)|Sanaa Center|former (?:\w+ ){0,2}?(?:prime minister|PM|minister|official|ambassador|general|officer|envoy|president|diplomat|secretary|MP|lawmaker|parliamentarian|governor|commander))\b[^:]{0,50}:/i;
 const COMMENTATORS = /\bex-PM\b|\b(?:Citrinowicz|Andreas (?:Craig|Krieg)|Nusbacher|Khalid Al-Nasi|Ali al-Asali)\b/i;
-const COMMENTATOR_BODY = /^[^.]{0,80}\b(?:a|an) (?:former (?:\w+ ){0,3}?(?:officer|official|minister|diplomat|general)|analyst|researcher|commentator|military expert|writer|journalist|fellow at)\b/i;
+const COMMENTATOR_BODY = /^[^.]{0,80}\b(?:(?:a|an) (?:former (?:\w+ ){0,3}?(?:officer|official|minister|diplomat|general|ambassador|governor|MP|lawmaker)|analyst|researcher|commentator|military expert|writer|journalist|fellow at)|^former (?:\w+ ){0,2}?(?:ambassador|minister|official|diplomat|governor|MP|lawmaker))\b/i;
+/** A paper's editorial or a column, told in the body (20 Oct: Okaz's editorial "a final alarm bell for all Yemenis"). */
+const EDITORIAL = /^[^.]{0,140}\b(?:in (?:an?|its) (?:editorial|op-ed|opinion (?:piece|column)|column)|editorial (?:said|says|argued|argues|wrote|writes))\b/i;
+/** Sport between the warring countries is not the war (20 Oct: "Yemen faces Saudi Arabia in Gulf U-17 clash in Doha"). */
+const SPORT = /\b(?:football|soccer|futsal|U-?1[5-9]|U-?2[0-3]|under-1[5-9]|under-2[0-3]|Gulf Cup|Asian Cup|World Cup|national team|kick-?off)\b/i;
+/** A statistics release with nothing of the war in it (20 Oct: "Saudi Arabia's Operating Revenues Index rises 3% year on year in August"). */
+const STATS = /\byear[- ]on[- ]year\b|\b(?:revenues?|PMI|GDP|inflation|price|production|industrial|activity) index\b|\bindex (?:rises|rose|falls|fell|grows|grew|climbs|edges)\b/i;
 /** A major outlet's own analysis led as the teller: "Reuters warns of Houthi efforts to seize Taiz" (Yemen 386). */
 const OUTLET_ANALYSIS = /^(?:Reuters|AP|AFP|Bloomberg|WSJ|The Wall Street Journal|NYT|The New York Times|The Economist|Financial Times|CNN|BBC)\b[^:]{0,20}\b(?:warns?|analysis|predicts?|expects?|forecasts?)\b/i;
 
@@ -71,6 +78,9 @@ export function notNews(headline: string, body = "", type = ""): string | null {
   if (OUTLET_ANALYSIS.test(h)) return "analysis: an outlet's own assessment is not a report";
   if (COMMENTATOR_LEAD.test(h) || COMMENTATORS.test(h)) return "commentary: analysts, writers and former officials are not reports";
   if (/^[^:]{2,60}:\s/.test(h) && COMMENTATOR_BODY.test(String(body || ""))) return "commentary: the speaker is an analyst or a former official";
+  if (EDITORIAL.test(String(body || "")) || /\beditorial\b/i.test(h)) return "commentary: a paper's editorial or a column is not a report";
+  if (SPORT.test(h) && !WAR_WORD.test(h)) return "off-topic: sport is not the war";
+  if (type === "economy" && STATS.test(h) && !WAR_WORD.test(h)) return "off-topic: a statistics release with nothing of the war in it";
   return null;
 }
 
@@ -153,6 +163,13 @@ export function wrongSource(headline: string, source: string, linkedText = ""): 
   const lead = /^([^:]{2,70}):\s/.exec(h)?.[1] ?? "";
   if (/Truth Social|Donald J\. Trump/i.test(source) && lead && !/\b(?:Trump|US President|President of the United States)\b/i.test(lead)) {
     return `wrong source: a Truth Social post is Trump's, not ${lead}'s`;
+  }
+  // A person's own post linked as the original of someone's answer to him (Round 4 of 20 Oct: Iran's judiciary
+  // spokesman on "Rubio's remarks in Greece" went out under Marco Rubio's own X post).
+  const surname = source.trim().split(/\s+/).pop() ?? "";
+  const person = /^[A-Z][a-z]+(?: [A-Z][a-z'-]+){1,2}$/.test(source.trim()) && FAMOUS.test(surname) ? surname : "";
+  if (person && lead && !new RegExp(`\\b${person}\\b`, "i").test(lead) && new RegExp(`\\b${person}(?:['’]s)?\\b`, "i").test(h.slice(lead.length))) {
+    return `wrong source: ${source}'s own post is not where ${lead} spoke`;
   }
   const t = String(linkedText || "");
   const latin = (t.match(/[A-Za-z]/g) ?? []).length;
@@ -528,6 +545,202 @@ export function xPostTime(url: string): number | null {
 export const LATE_MS = 12 * 3600_000;
 
 /* ------------------------------------------------------------------ *
+ * Round 4 of 20 Oct: times, exclusives by link, bodies off the story.
+ * ------------------------------------------------------------------ */
+
+/** "https://www.newarab.com/news/exclusive-mediators-submit-new-peace-proposal-iran-us": the outlet labels it an exclusive in its link. */
+export function exclusiveUrl(url: string): boolean {
+  const path = /^https?:\/\/[^/]+(\/[^?#]*)/i.exec(String(url || ""))?.[1] ?? "";
+  return /(?:^|[/_-])exclusive(?:[_-]|$)/i.test(path) && !/\/(?:video|videos|watch|photos?|gallery)\//i.test(path);
+}
+
+const BODY_STOP = new Set(
+  "about after again against also among amid backed being between carried city coalition district during forces front government governorate houthi houthis local media military other popular region reported reports resistance saudi saudi-led says said sources their there these those under while with yemen yemeni".split(" "),
+);
+const bodyWords = (s: string) =>
+  new Set(
+    (String(s || "").toLowerCase().match(/[a-z][a-z'-]{3,}/g) ?? [])
+      .map((w) => w.replace(/^al-/, "").replace(/(?:ing|ed|es|s)$/, ""))
+      .filter((w) => w.length >= 4 && !BODY_STOP.has(w)),
+  );
+/**
+ * A field report's body that tells another event: no sentence of it shares a
+ * word with the headline once its dateline is gone (Crater Sky, 20 Oct 17:23:
+ * "Saudi-led coalition intercepts and destroys drone over Riyadh region" over
+ * "RIYADH — Government forces ... carried out a raid ... in Al-Masrakh").
+ */
+export function bodyOffTopic(headline: string, body: string, type = ""): boolean {
+  if (!["strike", "combat", "vessel", "alert"].includes(String(type))) return false;
+  const text = String(body || "").replace(/^[A-Z][A-Z .'’`-]{1,40}\s+[—–-]\s+/, "");
+  const h = bodyWords(headline);
+  const sentences = text.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 20);
+  if (!sentences.length || h.size < 2) return false;
+  if (!sentences.every((s) => ![...bodyWords(s)].some((w) => h.has(w)))) return false;
+  // And it is elsewhere: the body names a city the headline does not, and none the headline names
+  // (a front's body listing its villages is the same fight).
+  const cities = (s: string) => new Set([...s.matchAll(CITY)].map((m) => m[0].toLowerCase()));
+  const hc = cities(headline);
+  const bc = cities(text);
+  return hc.size > 0 && bc.size > 0 && ![...bc].some((c) => hc.has(c)) && ![...hc].some((c) => bc.has(c));
+}
+const CITY = /\b(?:Riyadh|Jeddah|Jazan|Najran|Abha|Khamis Mushait|Dammam|Mecca|Medina|Taiz|Marib|Sanaa|Aden|Lahj|Hodeidah|Saada|Shabwa|Abyan|Ibb|Bayda|Jawf|Hajjah|Dhale|Mocha|Mukalla|Hadramawt|Tehran|Isfahan|Bandar Abbas|Beirut|Baghdad|Haifa|Tel Aviv|Doha|Dubai|Abu Dhabi)\b/gi;
+
+/**
+ * A link whose own words tell another story (Round 4 of 20 Oct: Bloomberg's card on the RAF's Typhoons for
+ * Saudi Arabia linked "how-musk-s-starlink-and-us-spy-satellites-support-ukraine-s-defense"). Only a
+ * worded English slug of five words or more, sharing none with the card.
+ */
+export function wrongLink(summary: string, text: string, url: string): boolean {
+  const path = /^https?:\/\/[^/]+(\/[^?#]*)/i.exec(String(url || ""))?.[1] ?? "";
+  const slug = path.split("/").filter(Boolean).pop() ?? "";
+  if (/%[0-9a-f]{2}/i.test(slug) || /\/(?:de|fr|es|it|ar|fa|tr|ru|he|ur|zh)\//i.test(path)) return false;
+  const words = slug.toLowerCase().split(/[-_]+/).filter((w) => /^[a-z]{2,}$/.test(w));
+  // English words only: a German or a transliterated slug says nothing to an English card.
+  if (words.length < 5 || !words.some((w) => /^(?:the|and|for|of|to|in|on|with|after|over|says|as|is|are|how|why|what|from|amid)$/.test(w))) return false;
+  const stem = (s: string) => new Set((s.toLowerCase().match(/[a-z]{3,}/g) ?? []).filter((w) => !/^(?:the|and|for|with|from|after|over|says|said|are|how|why|what|amid|news|latest)$/.test(w)).map((w) => w.replace(/(?:ing|ed|es|s)$/, "")));
+  const card = stem(`${summary} ${text}`);
+  return ![...stem(words.join(" "))].some((w) => card.has(w));
+}
+
+const H3 = 3 * 3600_000;
+/** A card's id as the desk slugs a link: "https://x.com/yemen_mofa/status/1" → "x-com-yemen-mofa-status-1". */
+export function slugOf(url: string): string {
+  return String(url || "")
+    .toLowerCase()
+    .replace(/^https?:\/\/(?:www\.)?/, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+/** The link a card was first written from, by its id ("live-x-com-marebpress-status-…", "ir-live-…"). */
+export function bornFrom(fp: string, url: string): boolean {
+  const f = String(fp || "").replace(/^(?:ir-)?live-/, "").replace(/-pin-.*$/, "");
+  const s = slugOf(url);
+  if (f.length < 12 || s.length < 12) return false;
+  return s.startsWith(f) || f.startsWith(s) || s.replace(/^(?:www-)/, "").startsWith(f.replace(/^www-/, ""));
+}
+
+/**
+ * A card's time against its lead's own time (Round 4 of 20 Oct). An X post's
+ * time is in its id:
+ * - a lead posted more than three hours AFTER the card's time took over a card
+ *   on another story (Yemen's foreign ministry on the Saudi ambassador's words,
+ *   posted at 18:58, led a card on a Washington protest timed 01:29; Fox News's
+ *   "Netanyahu meets Hegseth" of 15:25 led a 01:12 card): the card goes back to
+ *   its first account, kept under "Also" by the card's id, and the late post is
+ *   a card of its own at its own time. The same story told again later (seven
+ *   hours, four words in common) keeps its card;
+ *   When the first account is not under "Also", the card is shown at its
+ *   lead's time;
+ * - a lead posted more than twelve hours BEFORE the card's time is old news
+ *   relayed late (Iran's foreign ministry on Egypt, posted 07:30 on 19 Oct,
+ *   went out at 07:04 on 20 Oct): the card is shown at its post's time.
+ * Returns the cards, with any card split off; the rows stay as they are.
+ */
+export function postTimes<T extends Record<string, unknown>>(rows: T[]): T[] {
+  const out: T[] = [];
+  for (const r of rows) {
+    const posted = xPostTime(String(r.url ?? ""));
+    const at = Date.parse(String(r.at ?? ""));
+    if (!posted || !Number.isFinite(at)) {
+      out.push(r);
+      continue;
+    }
+    const also = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []) as { source: string; url: string; summary?: string }[];
+    if (posted < at - LATE_MS && !also.length && !wrongSource(String(r.summary ?? ""), String(r.source ?? ""))) {
+      out.push({ ...r, at: new Date(posted).toISOString() });
+      continue;
+    }
+    if (posted > at + H3 && !bornFrom(String(r.fp ?? ""), String(r.url ?? ""))) {
+      const first = also.find((a) => bornFrom(String(r.fp ?? ""), a.url));
+      const sameStory = first && wordsShared(String(r.summary ?? ""), String(first.summary ?? "")) >= 4 && posted - at <= LATE_MS;
+      if (first && first.summary && !sameStory) {
+        const late = { ...r, fp: `${r.fp}~late`, at: new Date(posted).toISOString(), alsoReportedBy: undefined } as T;
+        const back = { ...r, source: first.source, url: first.url, summary: first.summary, text: "", alsoReportedBy: also.filter((a) => a !== first) } as T;
+        if (!(back.alsoReportedBy as unknown[]).length) delete back.alsoReportedBy;
+        delete back.media;
+        out.push(back, late);
+        continue;
+      }
+      // The first account is not kept: the card is its lead's story, shown at its lead's time.
+      if (!first) {
+        out.push({ ...r, at: new Date(posted).toISOString() });
+        continue;
+      }
+    }
+    out.push(r);
+  }
+  return out;
+}
+const wordsShared = (a: string, b: string) => {
+  const x = bodyWords(a);
+  let n = 0;
+  for (const w of bodyWords(b)) if (x.has(w)) n += 1;
+  return n;
+};
+
+/**
+ * An outlet's exclusive is never another card's "Also" (Round 4 of 20 Oct: The
+ * New Arab's "Exclusive: breakthrough expected in US–Iran mediation" sat under
+ * Nour News's "Pakistan's army chief to arrive in Tehran tomorrow"). It is
+ * shown as a card of its own, labelled, at the card's time; the fold rules
+ * then join it with the rest of that scoop (fold-same.ts "scoop").
+ */
+export function exclusivesOut<T extends Record<string, unknown>>(rows: T[]): T[] {
+  const out: T[] = [];
+  for (const r of rows) {
+    const also = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []) as { source: string; url: string; summary?: string }[];
+    const mine = Array.isArray(r.flags) && (r.flags as string[]).includes("exclusive");
+    const scoops = mine ? [] : also.filter((a) => exclusiveUrl(a.url) && a.summary);
+    if (!scoops.length) {
+      out.push(r);
+      continue;
+    }
+    out.push({ ...r, alsoReportedBy: also.filter((a) => !scoops.includes(a)) } as T);
+    for (const a of scoops) {
+      out.push({ ...r, fp: `${r.fp}~${slugOf(a.url).slice(-24)}`, source: a.source, url: a.url, summary: a.summary, text: "", alsoReportedBy: undefined, flags: [...((r.flags as string[] | undefined) ?? []).filter((f) => f.startsWith("arena:")), "exclusive"], media: undefined, replyTo: undefined } as T);
+    }
+  }
+  return out;
+}
+
+/**
+ * A site's or a channel's numbered articles are told in their order: a card
+ * timed hours before the article numbered just below it was not out yet
+ * (Saba's viewstory/154307, published 12:18 on 20 Oct, was timed 00:25, after
+ * 154306 at 14:37; a twelve-hour clock read as midnight). The card is shown
+ * at its neighbour's time. Only a card written from that article (its id),
+ * whose neighbour is within five numbers and over two hours later.
+ */
+export function idOrderTimes<T extends Record<string, unknown>>(rows: T[]): T[] {
+  type K = { key: string; n: number; at: number; r: T };
+  const groups = new Map<string, K[]>();
+  for (const r of rows) {
+    const url = String(r.url ?? "");
+    if (xPostTime(url)) continue;
+    const m = /^https?:\/\/(?:www\.)?([^/?#]+)(\/[^?#]*?)(\d{4,})(?:\.html?)?\/?$/i.exec(url);
+    if (!m || !bornFrom(String(r.fp ?? ""), url)) continue;
+    const key = `${m[1].toLowerCase()}${m[2].toLowerCase()}`;
+    const at = Date.parse(String(r.at ?? ""));
+    if (!Number.isFinite(at)) continue;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push({ key, n: Number(m[3]), at, r });
+  }
+  const moved = new Map<T, string>();
+  for (const list of groups.values()) {
+    list.sort((a, b) => a.n - b.n);
+    for (let i = 1; i < list.length; i++) {
+      const below = list[i - 1];
+      const me = list[i];
+      if (me.n - below.n <= 5 && below.at - me.at > 2 * 3600_000) {
+        me.at = below.at;
+        moved.set(me.r, new Date(below.at).toISOString());
+      }
+    }
+  }
+  return moved.size ? rows.map((r) => (moved.has(r) ? { ...r, at: moved.get(r)! } : r)) : rows;
+}
+
+/* ------------------------------------------------------------------ *
  * Stored cards, as they are served.
  * ------------------------------------------------------------------ */
 
@@ -558,6 +771,15 @@ export function serveCard(r: Row, desk: "yemen" | "iran"): boolean {
     if (desk === "yemen") out = houthiWords(out, houthi);
     return out;
   };
+  // A link to another story: the first other account leads, or the card is not shown (Round 4 of 20 Oct).
+  if (wrongLink(summary, text, String(r.url ?? ""))) {
+    const also = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []) as { source: string; url: string }[];
+    const next = also.find((a) => a?.url && !wrongLink(summary, text, a.url));
+    if (!next) return false;
+    r.source = next.source;
+    r.url = next.url;
+    r.alsoReportedBy = also.filter((a) => a !== next);
+  }
   // A card about its footage is shown with that footage or not at all (user, 18 Oct: "Houthi media publishes new footage …" with no video).
   if (aboutFootage({ summary }) && !r.media) return false;
   let h = speakerByRole(ungarble(fix(summary)), text);
@@ -568,6 +790,10 @@ export function serveCard(r: Row, desk: "yemen" | "iran"): boolean {
     for (const a of r.alsoReportedBy as Row[]) if (a && typeof a.summary === "string") a.summary = ungarble(officeTitles(a.summary));
   }
   if (text) r.text = cleanBody(fix(text), source);
+  // A field report's body about another event (Crater Sky, 20 Oct: "intercepts drone over Riyadh" over a raid in Al-Masrakh).
+  if (r.text && bodyOffTopic(h, String(r.text), type)) r.text = "";
+  // An outlet's exclusive by its link (The New Arab's /news/exclusive-…), labelled as one.
+  if (exclusiveUrl(String(r.url ?? "")) && !(Array.isArray(r.flags) && r.flags.includes("exclusive"))) r.flags = [...((r.flags as string[] | undefined) ?? []), "exclusive"];
   const t = rightType(type, h);
   if (t !== type) r.type = t;
   // An Arabic outlet name ("وردنا") is shown in Latin letters.

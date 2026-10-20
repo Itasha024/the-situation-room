@@ -161,6 +161,7 @@ window.DESK_I18N = {
     'Read more': 'קראו עוד',
     'Show less': 'הצגת פחות',
     'Show more': 'הצגת עוד',
+    'Full list ({n})': 'הרשימה המלאה ({n})',
     'Hide': 'הסתרה',
     'More details': 'פרטים נוספים',
     ' from <b>{s}</b>': ' מ<b>{s}</b>',

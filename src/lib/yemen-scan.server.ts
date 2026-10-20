@@ -28,6 +28,7 @@ import { isOfficialBody } from "./desk/numbers.ts";
 import { leadSpeaker } from "./desk/speakers.ts";
 import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS, STRIKE_ABROAD_MS, sameStrikeAbroad, OWN_RETELL_MS, ownRetelling, ONE_EVENT_MS, oneEventTwoTypes, RARE_FIGURE_MS, sameRareFigure } from "./desk/copies.ts";
 import { type Card as SameCard, eventRule, joinInto, type Rule as FoldRule, talkRule } from "./desk/fold-same.ts";
+import { exclusiveUrl } from "./desk/copy-rules.ts";
 import { type OutletSide, homeOutlet, isAggregator, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
@@ -1406,6 +1407,8 @@ export function newestTgPost(html: string, channel: string): number {
  */
 /** Words that place a piece in this war: an exclusive about something else is not forced in. */
 const THIS_WAR = /اليمن|يمني|الحوث|صنعاء|عدن|تعز|مأرب|الحديدة|السعودي|البحر الأحمر|باب المندب|أنصار الله|Yemen|Houthi|Sanaa|Sana'a|Aden|Taiz|Marib|Hodeidah|Saudi|Red Sea|Bab al-Mandab|Ansar Allah/i;
+/** The Iran desk's war, for the exclusives the shared sites carry (sources belong to the site, not a desk). */
+export const IRAN_WAR_WORDS = /إيران|ايران|إيراني|طهران|هرمز|الحرس الثوري|عراقجي|Iran|Tehran|Hormuz|IRGC|Araghchi|Pezeshkian|Ghalibaf/i;
 
 const DIGEST_MARK = /[◼⬛⬜🖋]️?/gu;
 const OURS = /اليمن|يمني|الحوث|صنعاء|السعود|عدن|تعز|مأرب|الحديدة|Yemen|Houthi|Saudi|Sanaa|Aden|Taiz|Marib/i;
@@ -1615,6 +1618,15 @@ export function linkKey(u: string): string {
   if (!q) return base;
   const kept = q.split("&").filter((p) => p && !/^(?:utm_[a-z]+|fbclid|gclid|ref|cmp|outputType|at_[a-z]+)=/i.test(p));
   return kept.length ? `${base}?${kept.sort().join("&")}` : base;
+}
+
+/**
+ * Three hours or more after the card, and under two words of its story in common. A relay of the card's
+ * outlet (South24 on Axios's 200 targets) and a line of a speech the card's speaker gave are its own still.
+ */
+export function lateOtherStory(home: { at: string; summary: string }, r: { at: string; summary: string; citing?: string | null }): boolean {
+  if (r.citing || speechOwner(r.summary)) return false;
+  return Date.parse(r.at) - Date.parse(home.at) > 3 * 3600_000 && wordsInCommon(home.summary, r.summary) < 2;
 }
 
 /** Where each report a fold took went (url → its card), for the scan's own accounting. */
@@ -1886,6 +1898,10 @@ export function foldIntoPublished(
     // Two known figures' words are two cards: Hegseth's interview was folded
     // into a card on Trump's post from five hours earlier (8 Oct).
     if (home && otherFigure(home.summary, r.summary)) home = undefined;
+    // A post hours after a card, with hardly a word of its story, is no copy of it: it took such cards
+    // over (Round 4, 20 Oct: Yemen's foreign ministry on the Saudi ambassador's words, posted 18:58, led
+    // a card on a Washington protest timed 01:29; copy-rules.ts postTimes splits the stored ones).
+    if (home && lateOtherStory(home, r)) home = undefined;
     // One event, one card (fold-same.ts, 18 Oct review): one official's
     // remarks that day, one ship incident in 24 hours, one district's toll,
     // one blast abroad, one article on a mirror host, one channel's same
@@ -2632,7 +2648,9 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
     unjudged.forEach((u, i) => {
       const id = String(i);
       // An exclusive on this war is always read, whatever the triage made of it.
-      const forced = !picked.has(id) && isExclusive(u.hit.text, u.feed.name) && THIS_WAR.test(u.hit.text);
+      // Either desk's war (Round 4 of 20 Oct: Al-Araby Al-Jadeed's exclusive on the Qatar–Pakistan proposal to
+      // Iran and the US named nothing of Yemen, so it was never forced in), and an exclusive by its link too.
+      const forced = !picked.has(id) && (isExclusive(u.hit.text, u.feed.name) || exclusiveUrl(u.hit.url)) && (THIS_WAR.test(u.hit.text) || IRAN_WAR_WORDS.test(u.hit.text));
       // A headline no model got to for hours keeps the keyword verdict it had all
       // along: unjudged, every listing's headlines went round again each tick,
       // and the pile grew past what the models could take (18 Oct: 1,100
@@ -2669,7 +2687,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   // URL and each article page is fetched once.
   // An exclusive is opened whatever its teaser: a 2,000-character teaser is
   // still a fraction of the piece.
-  const exclusive = (h: RawHit) => !h.fromTg && isExclusive(h.text, h.source);
+  const exclusive = (h: RawHit) => !h.fromTg && (isExclusive(h.text, h.source) || exclusiveUrl(h.url));
   const leadable = (h: RawHit) => !(h.fromTg || (h.text.length >= 2000 && !isGnews(h.url) && !exclusive(h)) || /\.pdf(\?|$)/i.test(h.url));
   const leadCache = await loadLeadCache(hits.filter(leadable).map((h) => h.url));
   const leadChanged = new Set<string>();
@@ -2885,7 +2903,7 @@ export async function readYemen(state: ScanState, prev: ScanPayload | null, got:
     let note = c.note;
     let kept = false;
     if (v?.kind === "publish") {
-      if (isExclusive(h.text, h.source)) v.report.flags = [...new Set([...(v.report.flags ?? []), "exclusive"])];
+      if (isExclusive(h.text, h.source) || exclusiveUrl(h.url)) v.report.flags = [...new Set([...(v.report.flags ?? []), "exclusive"])];
       reports.push(v.report);
       [outcome, reason, note, kept] = ["feed", "kept", "", true];
     } else if (v?.kind === "reject") {
@@ -3614,9 +3632,9 @@ function retoldInAlso(home: LiveReport, r: LiveReport): boolean {
   return (home.alsoReportedBy ?? []).some((a) => !!a.summary && sameStory({ summary: a.summary }, { summary: r.summary }));
 }
 
-/** A card the reader marked as its outlet's own exclusive. */
+/** A card the reader marked as its outlet's own exclusive, or one its outlet's link calls one (The New Arab's /news/exclusive-…, 20 Oct). */
 export function isExclusiveCard(r: LiveReport): boolean {
-  return !!r.flags?.includes("exclusive") || !!r.tags?.includes("exclusive");
+  return !!r.flags?.includes("exclusive") || !!r.tags?.includes("exclusive") || exclusiveUrl(r.url);
 }
 
 /** The Yemen scan's sources by the key the Iran routing looks them up by (SHARED_TG, SHARED_X, SHARED_RSS): the share audit's list. */

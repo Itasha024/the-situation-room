@@ -22,7 +22,7 @@
  */
 import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
 import { speechOwner, wordsInCommon } from "./copies.ts";
-import { leadFromSite, mergeAlso, siteTakesLead } from "./site-articles.ts";
+import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteTakesLead } from "./site-articles.ts";
 
 export type Card = {
   fp: string;
@@ -77,6 +77,8 @@ const SPEAKERS: { key: string; who: RegExp; own?: RegExp }[] = [
   { key: "arab league", who: /^(?:the )?Arab League(?: (?:chief|secretary[- ]general|council))?$|\bAboul Gheit\b/i },
   { key: "gcc", who: /^(?:the )?(?:GCC|Gulf Cooperation Council)(?: (?:chief|secretary[- ]general))?$|\bAlbudaiwi\b/i },
   { key: "oic", who: /^(?:the )?(?:OIC|Organi[sz]ation of Islamic Cooperation)(?: (?:chief|secretary[- ]general))?$/i },
+  // Round 4 of 20 Oct: the Saudi ambassador's interview went out as twelve cards in an hour (Al Hadath, Al Arabiya, Crater Sky, South24 ...).
+  { key: "saudi ambassador to yemen", who: /\b(?:Mohammed )?Al[- ]Jaber\b|\bSaudi ambassador(?: to Yemen)?\b/i, own: /Al[- ]?Jaber/i },
 ];
 /** Talk only, unless a spokesman speaks: his count of the day's operations is typed combat as often as statement. */
 const SPOKES = /\bspokes(?:man|person|woman)\b/i;
@@ -545,6 +547,81 @@ export function mirrorKey(url: string): string {
   return `${site.replace(/\d+$/, "")}${path.replace(/\/$/, "")}`;
 }
 
+/* ------------------------------------------------------------------ *
+ * Round 4 of 20 Oct: an outlet's scoop, one interception, one decision
+ * ------------------------------------------------------------------ */
+
+/**
+ * The outlets whose own reporting is their scoop, by every name they go
+ * under: Al-Araby Al-Jadeed is The New Arab in English (exclusive.ts's own-news
+ * sites). Its site, its accounts, and a relay crediting it ("…, Al Araby Al
+ * Jadeed reports") are all that one scoop.
+ */
+const SCOOP_OUTLETS: { key: string; names: RegExp; credit: RegExp }[] = [
+  { key: "araby", names: /^(?:Al-Araby Al-Jadeed|The New Arab|Al-Araby)$/i, credit: /\b(?:Al[- ]Araby Al[- ]Jadeed|The New Arab|العربي الجديد)\b/i },
+  { key: "akhbar", names: /^Al-Akhbar$/i, credit: /\bAl-Akhbar\b|«الأخبار»/i },
+  { key: "aawsat", names: /^(?:Asharq Al-Awsat|ASHARQ AL-AWSAT English)$/i, credit: /\bAsharq Al-Awsat\b/i },
+  { key: "erem", names: /^Erem News$/i, credit: /\bErem News\b/i },
+  { key: "modon", names: /^Al-Modon$/i, credit: /\bAl-Modon\b/i },
+  { key: "axios", names: /^Axios$/i, credit: /\bAxios\b/ },
+];
+const CREDITED = /\b(?:reports?|reported|says|said|according to|citing|cited|told|tells|learned|revealed|reveals)\b/i;
+/** An outlet's link is its scoop: The New Arab's /news/exclusive-… */
+const scoopLink = (url: string) => /(?:^|[/_-])exclusive(?:[_-]|$)/i.test(/^https?:\/\/[^/]+(\/[^?#]*)/i.exec(String(url || ""))?.[1] ?? "");
+/** Whose scoop a card is: its own outlet's, or the outlet a relay credits; "" for none. */
+export function scoopOf(r: Card): { key: string; own: boolean; site: boolean } | null {
+  const src = String(r.source || "").trim();
+  const site = siteOutlet(r);
+  for (const o of SCOOP_OUTLETS) {
+    if (o.names.test(src) || (site && o.names.test(site))) return { key: o.key, own: true, site: !!site };
+    const t = `${r.summary} ${String(r.text ?? "").slice(0, 300)}`;
+    const m = o.credit.exec(t);
+    if (m && CREDITED.test(t.slice(Math.max(0, m.index - 40), m.index + m[0].length + 40))) return { key: o.key, own: false, site: false };
+  }
+  return null;
+}
+const isScoop = (r: Card) => !!r.flags?.includes("exclusive") || !!r.tags?.includes("exclusive") || scoopLink(r.url) || /^Exclusive\b/i.test(r.summary);
+/** The story words of a scoop: two in common within a day ("Qatar and Pakistan propose…" and "Qatar and Pakistan submit new peace proposal…"). */
+export const SCOOP_MS = 24 * H;
+export function sameScoop(a: Card, b: Card): boolean {
+  const x = scoopOf(a);
+  const y = scoopOf(b);
+  if (!x || !y || x.key !== y.key || (!x.own && !y.own)) return false;
+  if (Math.abs(Date.parse(b.at) - Date.parse(a.at)) > SCOOP_MS) return false;
+  // One of them is the outlet's scoop, by its label, its link or a relay crediting it.
+  if (!(isScoop(a) || isScoop(b) || !x.own || !y.own)) return false;
+  return wordsInCommon(a.summary, b.summary) >= 2;
+}
+
+/** A Saudi city or site an interception is over. */
+const SAUDI_CITY = /\b(Riyadh|Jeddah|Jazan|Jizan|Najran|Abha|Khamis Mushait|Dammam|Dhahran|Yanbu|Taif|Mecca|Makkah|Medina|Madinah|Al-Kharj|Kharj|Sharurah|Tabuk|Ras Tanura|Abqaiq)\b/i;
+const INTERCEPT = /\b(?:intercept\w*|shoots? down|shot down|downs|downed|destroys? and intercepts?|thwart\w*)\b/i;
+/** One interception over one Saudi city, told by several outlets within two hours (20 Oct: the missile at Riyadh, five cards in 45 minutes). */
+export const INTERCEPT_MS = 2 * H;
+export function interceptAt(r: Card): string {
+  const s = String(r.summary || "");
+  if (!INTERCEPT.test(s)) return "";
+  const weapon = /\bballistic|\bmissiles?\b/i.test(s) ? "missile" : /\bdrones?\b|\bUAVs?\b/i.test(s) ? "drone" : "";
+  const city = SAUDI_CITY.exec(s)?.[1].toLowerCase().replace(/^jizan$/, "jazan").replace(/^makkah$/, "mecca").replace(/^madinah$/, "medina").replace(/^al-kharj$/, "kharj");
+  return weapon && city ? `${city} ${weapon}` : "";
+}
+
+/**
+ * One decision on a named weapon or force for one country, told by outlet
+ * after outlet: Britain's Typhoons for Saudi Arabia went out as seven cards
+ * in 85 minutes (20 Oct). Talk cards only: a field event is the field rules'.
+ */
+const KIT = /\b(Typhoons?|Eurofighters?|F-35s?|F-16s?|F-15s?|Rafales?|Patriots?|THAAD|A400Ms?|Apaches?|Reapers?|MQ-9s?|aircraft carriers?|carrier strike group|destroyers?|frigates?|Iron Dome|Aegis)\b/i;
+const KIT_FOR = /\b(Saudi|Israel|Qatar|UAE|Emirates|Bahrain|Kuwait|Oman|Jordan|Iraq|Egypt|Yemen)\w*/i;
+export const KIT_MS = 12 * H;
+export function kitDecision(r: Card): string {
+  if (!TALK.has(String(r.type))) return "";
+  const s = String(r.summary || "");
+  const k = KIT.exec(s)?.[1].toLowerCase().replace(/s$/, "").replace(/^eurofighter$/, "typhoon");
+  const c = KIT_FOR.exec(s)?.[1].toLowerCase().replace(/^emirates$/, "uae");
+  return k && c ? `${k} ${c}` : "";
+}
+
 const headKey = (s: string) =>
   String(s || "")
     .toLowerCase()
@@ -562,7 +639,7 @@ export function sameOwnHeadline(a: Card, b: Card): boolean {
  * Which rule joins two cards
  * ------------------------------------------------------------------ */
 
-export type Rule = "mirror" | "own-headline" | "headline" | "remarks" | "burst" | "ship" | "dead" | "blast" | "figure" | "site" | "target";
+export type Rule = "mirror" | "own-headline" | "headline" | "remarks" | "burst" | "ship" | "dead" | "blast" | "figure" | "site" | "target" | "scoop" | "intercept" | "kit";
 
 /** The same headline from two outlets: a field report within two hours, anything else within twelve. */
 export const HEADLINE_FIELD_MS = 2 * H;
@@ -586,6 +663,8 @@ type Sig = {
   site: string;
   district: string;
   targets: Set<string>;
+  intercept: string;
+  kit: string;
 };
 function sharedTargets(x: Set<string>, y: Set<string>): number {
   let n = 0;
@@ -625,6 +704,8 @@ function sig(r: Card): Sig {
       money: moneyOf(r.summary),
       rare: rareFigures(r.summary),
       site: citySite(r.summary),
+      intercept: interceptAt(r),
+      kit: kitDecision(r),
     };
     sigs.set(r, s);
     if (SIG_SEEN.size > 6000) SIG_SEEN.clear();
@@ -653,6 +734,9 @@ export function eventRule(a: Card, b: Card): Rule | null {
     if (gap <= (sa.field || sb.field ? HEADLINE_FIELD_MS : HEADLINE_MS)) return "headline";
   }
   if (sa.ship && sb.ship && gap <= SHIP_MS && sameShip(sa.ship, sb.ship)) return "ship";
+  if (sa.intercept && sa.intercept === sb.intercept && gap <= INTERCEPT_MS) return "intercept";
+  if (sa.kit && sa.kit === sb.kit && gap <= KIT_MS) return "kit";
+  if (sameScoop(a, b)) return "scoop";
   return looseRule(a, b);
 }
 
@@ -724,6 +808,23 @@ export function joinInto(home: Card, copy: Card, rule: Rule): Card {
       h.sea ||= c.sea;
       if (h.kind === "ship") h.kind = c.kind;
     }
+  }
+  // An outlet's scoop is one card (Round 4 of 20 Oct: Al-Araby Al-Jadeed's Qatar–Pakistan proposal went
+  // out from its X account, from The New Arab's article and from Iran International's relay, three cards).
+  // Its own article leads, else its own post; no "Also" but other sites' articles (user, 8 Oct).
+  if (rule === "scoop") {
+    const rank = (r: Card) => {
+      const s = scoopOf(r);
+      return (s?.own ? 4 : 0) + (s?.site ? 2 : 0) + (isScoop(r) ? 1 : 0) + (r.text ? 0.5 : 0);
+    };
+    const keepText = String(home.text ?? "");
+    if (rank(copy) > rank(home)) {
+      leadFromSite(home, copy);
+      if (!String(home.text ?? "").trim() && keepText) home.text = keepText;
+    }
+    home.flags = [...new Set([...(home.flags ?? []), "exclusive"])];
+    home.alsoReportedBy = siteAlsoOnly(mergeAlso(home.alsoReportedBy, [{ source: copy.source, url: copy.url, summary: copy.summary }, ...(copy.alsoReportedBy ?? [])], home));
+    return home;
   }
   if ((rule === "remarks" || rule === "burst") && ownChannelOf(remarksOwner(home), copy.source) && !ownChannelOf(remarksOwner(home), home.source)) {
     const was = { source: home.source, url: home.url, summary: home.summary };

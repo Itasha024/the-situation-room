@@ -12,7 +12,7 @@ import { gzipped, respond } from "@/lib/desk/microcache";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
 import { cardsOnTheirPins, serveIranPins, serveYemenPins } from "@/lib/desk/serve-map-pins";
-import { serveCard } from "@/lib/desk/copy-rules";
+import { exclusivesOut, idOrderTimes, postTimes, serveCard } from "@/lib/desk/copy-rules";
 import { type Card as SameCard, foldServed } from "@/lib/desk/fold-same";
 
 /**
@@ -73,6 +73,12 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   }
   // One event, one card (fold-same.ts): copies stored before the rules fold into their card as
   // the desk is read, the way the pins' rules apply; the rows stay as they are.
+  // A card's time against its lead's own (copy-rules.ts, Round 4 of 20 Oct): a late post that took over
+  // another story's card is split off at its own time, old news relayed late is shown at its post's time,
+  // and a numbered article timed before the one numbered below it takes that one's time.
+  if (!since && slice.reports.length) {
+    slice.reports = exclusivesOut(idOrderTimes(postTimes(slice.reports as Record<string, unknown>[]))) as typeof slice.reports;
+  }
   if (slice.reports.length) {
     slice.reports = foldServed(slice.reports as unknown as SameCard[]).reports as unknown as typeof slice.reports;
   }

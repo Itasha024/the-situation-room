@@ -288,7 +288,7 @@
     dock.innerHTML = `<div class="ops-drow ops-dtop"><div class="ops-quick" role="group" aria-label="Show the last"><span>Last</span><button type="button" data-qr="2">48 h</button><button type="button" data-qr="7">7 days</button></div><div class="ops-time"></div><button type="button" class="ops-fold ops-fold-d" data-op="dock" title="Fold the timeline (\\)">${ICON.down}</button></div>
       <div class="ops-drow ops-who"></div>
       <div class="ops-drow ops-mx">
-        <div class="ops-act"><div class="ops-act-h"><b>Last 48 hours</b><span class="ops-act-sel" hidden></span><small>Drag across the hours to show only their events</small><span class="ops-mz" role="group" aria-label="Zoom the hours"><button type="button" data-mz="-1" aria-label="Zoom out">−</button><button type="button" data-mz="1" aria-label="Zoom in">+</button></span></div><div class="ops-amx-sc"><svg class="ops-amx" role="img" aria-label="Events in the last 48 hours, by side and hour"></svg></div></div>
+        <div class="ops-act"><div class="ops-act-h"><b>Since the start</b><span class="ops-act-sel" hidden></span><small>Drag across the days to show them on the map</small><span class="ops-mz" role="group" aria-label="Zoom the hours"><button type="button" data-mz="-1" aria-label="Zoom out">−</button><button type="button" data-mz="1" aria-label="Zoom in">+</button></span></div><div class="ops-amx-sc"><svg class="ops-amx" role="img" aria-label="Events since the war's start, by side and day"></svg></div></div>
       </div>`;
     const tb = $('.toolbar', root);
     if (tb) $('.ops-time', dock).appendChild(tb);
@@ -415,7 +415,7 @@
     });
     const ud = document.createElement('button');
     ud.type = 'button'; ud.className = 'ops-unfold ops-unfold-dock'; ud.dataset.op = 'dock'; ud.title = 'Open the timeline (\\)';
-    ud.innerHTML = `<span>Time · Who and What · Last 48 hours</span>`;
+    ud.innerHTML = `<span>Time · Who and What · Since the start</span>`;
     mapWrap.appendChild(ud);
     addEventListener('resize', () => { if (midWidth() && S.left && S.right) paintFrame(); sizeDock(); drawMatrix(); });
     // Going to another desk: its tab lights at once and the page shows it is on its way (the page's own
@@ -640,64 +640,70 @@
     if (mini && mini._t) mini._t.setUrl(app('TILE_URL') || mini._t._url);
   }
 
-  /* ---------- The last 48 hours, side by side ---------- */
+  /* ---------- The whole war, side by side: a column a day since the desk's start (20 Oct: "since 13 Jul on the
+     Yemen desk, since 28 Feb on the Iran desk and the All page") ---------- */
   const SPAN = 48 * 3600e3;
+  const DAY = 864e5, D_OFF = 3 * 3600e3; // the days of the region's clock (UTC+3)
+  const dayOf = (t) => Math.floor((t + D_OFF) / DAY) * DAY - D_OFF;
   let rng = null; // [from, to] picked by dragging, or null
   let rows = [];
   function recent(withResearched) {
     const now = Date.now();
     return events(withResearched).filter((e) => { const t = Date.parse(e.at); return t > now - SPAN && t <= now + 60e3; });
   }
+  const MON = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'Asia/Riyadh' });
   function drawMatrix() {
     const svg = dock && $('.ops-amx', dock);
     if (!svg) return;
-    const list = recent();
-    const now = Date.now(), t0 = now - SPAN;
+    const now = Date.now(), t0 = dayOf(LOG_FROM[PAGE] || now - 30 * DAY), span = Math.max(DAY, dayOf(now) + DAY - t0);
+    const all = events(true).filter((e) => typeof e.lat === 'number' && tOf(e) >= t0 && tOf(e) <= now + 60e3);
     const by = new Map();
-    list.forEach((e) => { const s = sideOf(e); const r = by.get(s.name) || { name: s.name, c: s.c, ev: [] }; r.ev.push(e); by.set(s.name, r); });
+    all.forEach((e) => { const s0 = sideOf(e); const s = /not stated/i.test(s0.name) ? { name: 'Not stated', c: '#94a3b8' } : s0; const r = by.get(s.name) || { name: s.name, c: s.c, ev: [] }; r.ev.push(e); by.set(s.name, r); });
     rows = [...by.values()].sort((a, b) => b.ev.length - a.ev.length);
-    // On a phone the hours can be drawn two, four or eight times as wide, to read and to tap (20 Oct).
+    // On a phone the days can be drawn two, four or eight times as wide, to read and to tap (20 Oct).
     const sc = svg.parentNode, zoom = isPhone() ? MZ : 1;
     const W = Math.max(240, (sc.clientWidth || 600) * zoom), LW = isPhone() ? 92 : 132, RH = isPhone() ? 14 : 11, top = 3;
     svg.style.width = zoom > 1 ? W + 'px' : '';
     const H2 = top + Math.max(1, rows.length) * RH + 18;
     svg.setAttribute('viewBox', `0 0 ${W} ${H2}`);
     svg.style.height = H2 + 'px';
-    const x = (t) => LW + ((t - t0) / SPAN) * (W - LW - 6);
-    const hour = 3600e3, first = Math.ceil(t0 / hour) * hour;
+    const x = (t) => LW + ((t - t0) / span) * (W - LW - 6);
     let out = '';
-    // The hours on the desk's clock: a faint line every six, midnight marked with its day, noon with its hour.
-    const hOf = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone: VIEW_TZ() });
     const ty = H2 - 3;
-    for (let t = first; t <= now; t += hour) {
-      const h = Number(hOf.format(t));
-      if (h % 6) continue;
-      out += `<line class="g${h === 0 ? ' d' : ''}" x1="${x(t)}" x2="${x(t)}" y1="${top - 2}" y2="${H2 - 15}"/>`;
-      if ((h === 0 || h === 12) && x(t) > LW + 24 && x(t) < W - 40) out += `<text class="tk${h === 0 ? ' day' : ''}" x="${x(t)}" y="${ty}" text-anchor="middle">${h === 0 ? dm(t, VIEW_TZ()) : '12:00'}</text>`;
+    // A line at each month's first day, named; a faint one each week when the days are wide enough.
+    const dayW = (W - LW - 6) / (span / DAY);
+    for (let t = t0; t < t0 + span; t += DAY) {
+      const d = new Date(t + D_OFF);
+      if (d.getUTCDate() === 1) {
+        out += `<line class="g d" x1="${x(t)}" x2="${x(t)}" y1="${top - 2}" y2="${H2 - 15}"/>`;
+        if (x(t) > LW + 12 && x(t) < W - 34) out += `<text class="tk day" x="${x(t) + 2}" y="${ty}">${MON.format(t + 3600e3)}</text>`;
+      } else if (dayW > 5 && d.getUTCDay() === 1) out += `<line class="g" x1="${x(t)}" x2="${x(t)}" y1="${top - 2}" y2="${H2 - 15}"/>`;
     }
+    out += `<text class="tk" x="${LW}" y="${ty}">${esc(dm(t0 + 3600e3 * 4, 'Asia/Riyadh'))}</text>`;
     rows.forEach((r, i) => {
       const y = top + i * RH;
       out += `<text class="lab" x="${LW - 8}" y="${y + 8.5}" text-anchor="end">${esc(r.name.length > 20 ? r.name.slice(0, 19) + '…' : r.name)}</text>`;
       out += `<line class="row" x1="${LW}" x2="${W - 6}" y1="${y + 6}" y2="${y + 6}"/>`;
-      // An hour's events as one block, darker with more.
+      // A day's events as one block, darker with more.
       const bins = new Map();
-      r.ev.forEach((e) => { const b = Math.floor(Date.parse(e.at) / hour); bins.set(b, (bins.get(b) || 0) + 1); });
+      r.ev.forEach((e) => { const b = dayOf(tOf(e)); bins.set(b, (bins.get(b) || 0) + 1); });
       bins.forEach((n, b) => {
-        const a = Math.max(t0, b * hour), z = Math.min(now, (b + 1) * hour);
-        out += `<rect class="cell" x="${x(a).toFixed(1)}" y="${y + 1.5}" width="${Math.max(2, x(z) - x(a) - 0.8).toFixed(1)}" height="8" rx="1" fill="${r.c}" fill-opacity="${Math.min(1, 0.35 + n * 0.16).toFixed(2)}"><title>${esc(r.name)}: ${n} event${n === 1 ? '' : 's'}, ${hm(b * hour, VIEW_TZ())}–${hm((b + 1) * hour, VIEW_TZ())}</title></rect>`;
+        out += `<rect class="cell" x="${x(b).toFixed(1)}" y="${y + 1.5}" width="${Math.max(1.4, dayW - 0.4).toFixed(1)}" height="8" fill="${r.c}" fill-opacity="${Math.min(1, 0.3 + n * 0.08).toFixed(2)}"><title>${esc(r.name)}: ${n} event${n === 1 ? '' : 's'}, ${esc(dm(b + 3600e3 * 4, 'Asia/Riyadh'))}</title></rect>`;
       });
     });
-    if (!rows.length) out += `<text class="lab" x="${LW}" y="${top + 9.5}">No events on the map in the last 48 hours.</text>`;
-    out += `<text class="tk now" x="${W - 6}" y="${ty}" text-anchor="end">Now</text>`;
-    out += `<line class="nowl" x1="${x(now)}" x2="${x(now)}" y1="${top - 2}" y2="${H2 - 15}"/>`;
+    if (!rows.length) out += `<text class="lab" x="${LW}" y="${top + 9.5}">Loading the events…</text>`;
+    out += `<text class="tk now" x="${W - 6}" y="${ty}" text-anchor="end">Today</text>`;
     if (rng) out += `<rect class="sel" x="${x(rng[0])}" y="${top - 3}" width="${Math.max(2, x(rng[1]) - x(rng[0]))}" height="${H2 - 14 - top}"/>`;
     out += `<rect class="hit" data-mx x="${LW}" y="0" width="${W - LW - 6}" height="${H2 - 12}"/>`;
     svg.innerHTML = out;
-    svg._x = { t0, LW, W };
+    svg._x = { t0, LW, W, span };
     if (sc._z !== zoom) { sc._z = zoom; sc.scrollLeft = sc.scrollWidth; }
+    const head = $('.ops-act-h b', dock);
+    if (head) head.textContent = `Since ${dm(t0 + 3600e3 * 4, 'Asia/Riyadh')}`;
     const sel = $('.ops-act-sel', dock);
     sel.hidden = !rng;
-    if (rng) sel.innerHTML = `${esc(hm(rng[0], VIEW_TZ()))}–${esc(hm(rng[1], VIEW_TZ()))} <button type="button" data-clear title="Show every hour again">${ICON.x}<span class="sr">Clear</span></button>`;
+    if (rng) sel.innerHTML = `${esc(dm(rng[0] + 3600e3 * 4, 'Asia/Riyadh'))}${rng[1] - rng[0] > DAY ? '–' + esc(dm(rng[1] - 3600e3, 'Asia/Riyadh')) : ''} <button type="button" data-clear title="Show every day again">${ICON.x}<span class="sr">Clear</span></button>`;
+    const list = recent();
     drawLog(list);
     drawMiniDots(list);
     counts();
@@ -714,42 +720,40 @@
       drawMatrix();
     });
     let start = null;
-    const tAt = (ev) => { const r = svg.getBoundingClientRect(), k = svg._x; const px = ((ev.clientX - r.left) / r.width) * k.W; return k.t0 + ((px - k.LW) / (k.W - k.LW - 6)) * SPAN; };
-    svg.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('[data-mx], .cell')) return; start = tAt(ev); if (ev.pointerType === 'touch' && isPhone()) return; svg.setPointerCapture(ev.pointerId); ev.preventDefault(); rangeForPick(); });
+    const tAt = (ev) => { const r = svg.getBoundingClientRect(), k = svg._x; const px = ((ev.clientX - r.left) / r.width) * k.W; return k.t0 + ((px - k.LW) / (k.W - k.LW - 6)) * k.span; };
+    const clampDay = (t) => Math.max(svg._x.t0, Math.min(dayOf(Date.now()), dayOf(t)));
+    svg.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('[data-mx], .cell')) return; start = tAt(ev); if (ev.pointerType === 'touch' && isPhone()) return; svg.setPointerCapture(ev.pointerId); ev.preventDefault(); });
     svg.addEventListener('pointermove', (ev) => {
       if (start == null || (ev.pointerType === 'touch' && isPhone())) return;
-      const t = tAt(ev), now = Date.now();
-      const a = Math.max(now - SPAN, Math.min(start, t)), b = Math.min(now, Math.max(start, t));
-      if (b - a > 10 * 60e3) { rng = [a, b]; drawMatrix(); }
+      const a = clampDay(Math.min(start, tAt(ev))), b = clampDay(Math.max(start, tAt(ev))) + DAY;
+      if (!rng || rng[0] !== a || rng[1] !== b) { rng = [a, b]; drawMatrix(); }
     });
     svg.addEventListener('pointerup', (ev) => {
       if (start == null) return;
       const t = tAt(ev);
-      // A click, not a drag: the hour clicked.
-      if (Math.abs(t - start) < 6 * 60e3) {
-        const h = Math.floor(t / 3600e3) * 3600e3;
-        rangeForPick();
-        if (isPhone() && rng && rng[1] - rng[0] <= 3600e3 && h !== rng[0]) rng = [Math.min(h, rng[0]), Math.max(h, rng[0]) + 3600e3];
-        else if (isPhone() && rng && h >= rng[0] && h < rng[1]) rng = null;
-        else rng = [h, h + 3600e3];
+      // A click, not a drag: the day clicked (on a phone, a second day takes in the days between; the same day clears).
+      if (Math.abs(t - start) < DAY / 3) {
+        const d = clampDay(t);
+        if (isPhone() && rng && rng[1] - rng[0] <= DAY && d !== rng[0]) rng = [Math.min(d, rng[0]), Math.max(d, rng[0]) + DAY];
+        else if (rng && d >= rng[0] && d < rng[1] && rng[1] - rng[0] <= DAY) rng = null;
+        else rng = [d, d + DAY];
         drawMatrix();
       }
       start = null;
+      pickToMap();
     });
     svg.addEventListener('pointercancel', () => { start = null; });
-    dock.addEventListener('click', (ev) => { if (ev.target.closest('[data-clear]')) { rng = null; drawMatrix(); } });
+    dock.addEventListener('click', (ev) => { if (ev.target.closest('[data-clear]')) { rng = null; drawMatrix(); openRange(P.range); } });
   }
-  /* Pins outside the hours picked fade (the pins drawn one by one; the whole war's canvas is left alone). */
-  /* Each pin is matched to its own event by its label and its place (20 Oct: matched by label alone, two
-     events with one label took one time, so a pin could light or fade wrongly); a pin with no event in the
-     last 48 hours is older, so it fades. */
+  /* Pins outside the days picked fade (the pins drawn one by one; the whole war's canvas is left alone). Each pin
+     is matched to its own event by its label and its place. */
   function dimPins() {
     const m = getMap();
     if (!m) return;
     const pane = m.getPane('markerPane');
     if (!rng) { pane.querySelectorAll('.ev.ops-dim').forEach((el) => el.classList.remove('ops-dim')); return; }
     const byLabel = new Map();
-    recent(true).forEach((e) => { const k = e.label || ''; const l = byLabel.get(k) || []; l.push(e); byLabel.set(k, l); });
+    events(true).forEach((e) => { const k = e.label || ''; const l = byLabel.get(k) || []; l.push(e); byLabel.set(k, l); });
     m.eachLayer((l) => {
       if (!(l instanceof L.Marker) || !l.getElement) return;
       const el = l.getElement(), ev = el && el.querySelector('.ev[title]');
@@ -758,16 +762,27 @@
       const ll = l.getLatLng();
       let best = null, bd = Infinity;
       cands.forEach((e) => { const d = ll.distanceTo([e.lat, e.lng]); if (d < bd) { bd = d; best = e; } });
-      const t = best && bd < 40000 ? Date.parse(best.at) : NaN;
+      const t = best && bd < 40000 ? tOf(best) : NaN;
       ev.classList.toggle('ops-dim', !(t >= rng[0] && t < rng[1]));
     });
   }
-  /* Hours picked while the map shows the whole war (its thousands drawn on one canvas, which cannot fade one by
-     one): the map goes to the last 48 hours, where each pin is its own. */
-  function rangeForPick() {
-    const m = getMap();
-    if (!m) return;
-    if (S.qr !== 2 && S.qr !== 7) quickRange(2);
+  /* The days picked go to the map: its period set to them, through the page's own date boxes. */
+  const ymdOf = (t) => new Date(t + D_OFF).toISOString().slice(0, 10);
+  function pickToMap() {
+    if (!rng) return;
+    const per = $('#btn-period', root), from = $('#map-date', root), to = $('#map-to', root), box = $('#tf-range', root);
+    if (!per || !from || !to) return;
+    if (box && box.hidden) per.click();
+    from.value = ymdOf(rng[0]);
+    to.value = ymdOf(rng[1] - 3600e3);
+    to.dispatchEvent(new Event('change', { bubbles: true }));
+    S.qr = 0;
+    paintQuick();
+  }
+  /* The whole war's events, read once soon after the page is up (pins only, small), for the chart. */
+  function warForChart() {
+    const go = () => { try { if (PAGE === 'all') window.__home.loadWar(); else if (PAGE === 'yemen') A('loadAllPins')(); } catch (e) { /* what there is */ } };
+    if (window.requestIdleCallback) setTimeout(() => requestIdleCallback(go, { timeout: 4000 }), 5000); else setTimeout(go, 6000);
   }
 
   /* The events: the hours picked, else the last 48 hours, newest first, filtered; a click goes to the pin and opens its note. */
@@ -806,7 +821,7 @@
     if (evQ) { notesFor(pick); pick = pick.filter((e) => `${e.label || ''} ${e.place || ''} ${sideOf(e).name} ${kindOf(e).name} ${e.source || ''}`.toLowerCase().includes(evQ)); }
     logList = pick.slice(0, logN);
     notesFor(logList);
-    $('.ops-log-n', rightEl).textContent = rng ? `${hm(rng[0], VIEW_TZ())}–${hm(rng[1], VIEW_TZ())}` : '';
+    $('.ops-log-n', rightEl).textContent = rng ? `${dm(rng[0] + 4 * 3600e3, 'Asia/Riyadh')}${rng[1] - rng[0] > 864e5 ? '–' + dm(rng[1] - 3600e3, 'Asia/Riyadh') : ''}` : '';
     let day = '';
     const year = new Date().getFullYear();
     l.innerHTML = logList.map((e, i) => {
@@ -1823,6 +1838,7 @@
     m.on('zoomend', () => { if (S.air || S.sea) drawTraffic(); });
     m.on('moveend', () => { if (S.grid) drawGrid(); });
     drawMatrix();
+    warForChart();
     runTraffic();
     if (location.hash === '#settings') openSettings();
     // The theme: the overview's tiles and the traffic's edges follow it.

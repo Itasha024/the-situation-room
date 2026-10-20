@@ -202,7 +202,15 @@
   const deskOfReport = (r) => (r.desks.includes('iran') && r.desks.includes('yemen') ? 'both' : r.desks[0]);
 
   /** A report's pins on the map (one report can be pinned on several places). */
-  const pinsOf = (fp) => D.events.filter((e) => !e.researched && (e.fp === fp || e.fp.split('-pin-')[0] === fp));
+  // Indexed by the report, made again when the events change (20 Oct: each card searched every event).
+  let PINS_BY = null, PINS_OF = null, PINS_N = -1;
+  const pinsOf = (fp) => {
+    if (PINS_OF !== D.events || PINS_N !== D.events.length) {
+      PINS_OF = D.events; PINS_N = D.events.length; PINS_BY = new Map();
+      D.events.forEach((e) => { if (e.researched) return; const k = String(e.fp).split('-pin-')[0]; const l = PINS_BY.get(k) || []; l.push(e); PINS_BY.set(k, l); });
+    }
+    return PINS_BY.get(String(fp)) || [];
+  };
   function card(r, o) {
     const opts = o || {};
     const parent = r.replyTo && byFp.get(String(r.replyTo));
@@ -267,7 +275,11 @@
   const onIranLand = (e) => !atSea(e) && !STRAIT_ISLE_RE.test(placeText(e)) && (countryAt(e) === 'Iran' || (countryAt(e) === 'Iraq' && e.actor === 'iran'));
   const inStrait = (e) => atSea(e) || STRAIT_ISLE_RE.test(placeText(e));
   let T = [], TOPIC = {};
+  // The map view shows no stories (user, 19 Oct): they and their small maps are not made there (20 Oct: they
+  // cost seconds on a phone, each small map drawing every district of Iran).
+  const noStories = () => document.documentElement.dataset.view === 'ops';
   function buildTopics() {
+    if (noStories()) return;
     T = [
       { id: 'hormuz', name: 'Strait of Hormuz', desk: 'iran', bounds: [[24.3, 54.6], [27.8, 59]], erx: /hormuz|strait|tanker|vessel|ship|bandar abbas|qeshm|fujairah/i, where: inStrait, pts: ptsOf(arena('hormuz')),
         cards: uniq([...flagged('arena:hormuz'), ...re(/hormuz/i), ...re(SHIP_RE).filter((r) => GULF_SEA_RE.test(r.h))]) },
@@ -876,6 +888,7 @@
     };
   }
   function renderStories() {
+    if (noStories()) return;
     const items = ordered();
     const idx = $('index');
     idx.innerHTML = items.map((t) => `<button type="button" role="tab" data-i="${t.id}" aria-selected="false">${kicker(t)}<b>${esc(t.name)}</b><time>${esc(timeOf(latestOf(t)))}</time></button>`).join('');

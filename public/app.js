@@ -1834,6 +1834,13 @@ function loadAllPins() {
 /** After the map's day changes: fetch that day's stored reports, then draw again. */
 function fillMapDay() {
   const from = mapMode === 'day' ? (mapDate || todayYmd()) : mapMode === 'range' ? mapDateFrom : mapMode === 'all' ? CONFLICT_START : null;
+  // A range of the last week is filled as a day is, page by page (20 Oct: the map view opens on the last
+  // 48 hours, and every such range fetched and drew the whole war's thousands of pins, seconds on a phone).
+  const weekAgo = new Date(Date.now() - 8 * 864e5).toISOString().slice(0, 10);
+  if (mapMode === 'range' && mapDateFrom && mapDateFrom >= weekAgo) {
+    fillArchiveTo(mapDateFrom, 20).then((added) => { if (added) { applyMapFilters(); renderFeed(data); } }).catch(() => {});
+    return;
+  }
   if (mapMode === 'range' || mapMode === 'all') {
     // Drawn again when they are in, the count with them.
     loadAllPins().then(() => applyMapFilters());
@@ -2493,13 +2500,34 @@ let devAnim = null;
 function stopDevAnim() { if (devAnim) { cancelAnimationFrame(devAnim.raf); devAnim = null; } }
 
 /** Is a point inside a Saudi province? */
+// Each outline's box worked out once, and each point's answer kept (20 Oct: this test took two seconds on a phone).
+let SAUDI_RINGS = null, SAUDI_RINGS_OF = null;
+const SAUDI_AT = new Map();
 function inSaudi(ll) {
   const feats = (saudiGeoCache && saudiGeoCache.features) || [];
-  return feats.some((f) => {
-    const g = f.geometry;
-    const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
-    return polys.some((p) => pointInRing(ll[1], ll[0], p[0]));
-  });
+  if (SAUDI_RINGS_OF !== feats) {
+    SAUDI_RINGS_OF = feats;
+    SAUDI_AT.clear();
+    SAUDI_RINGS = [];
+    feats.forEach((f) => {
+      const g = f.geometry;
+      (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).forEach((p) => {
+        const r = p[0];
+        let w = 180, e = -180, s = 90, n = -90;
+        r.forEach(([x, y]) => { if (x < w) w = x; if (x > e) e = x; if (y < s) s = y; if (y > n) n = y; });
+        SAUDI_RINGS.push({ r, w, e, s, n });
+      });
+    });
+  }
+  const k = `${ll[0]},${ll[1]}`;
+  let v = SAUDI_AT.get(k);
+  if (v === undefined) {
+    const x = ll[1], y = ll[0];
+    v = SAUDI_RINGS.some((b) => x >= b.w && x <= b.e && y >= b.s && y <= b.n && pointInRing(x, y, b.r));
+    if (SAUDI_AT.size > 20000) SAUDI_AT.clear();
+    SAUDI_AT.set(k, v);
+  }
+  return v;
 }
 
 function entryCenter(entry) {
@@ -5308,8 +5336,23 @@ function pinPaintKey(p) {
   return [jerusalemYmd(p.at), Math.round((p.lat || 0) * 100) / 100, Math.round((p.lng || 0) * 100) / 100, p.mapCat || p.type || '', p.fp || p.url || ''].join('|');
 }
 
+/* The pins worked out from the reports and events are kept while they are the same (20 Oct: every redraw read
+   all of them again through every rule, seconds on a phone); the day's filter still runs each time. */
+let PIN_MEMO = null;
+const pinMemoKey = (d) => {
+  const R = d.reports || [], E = d.events || [];
+  const end = (a) => (a.length ? `${a[0].fp || ''}~${a[a.length - 1].fp || ''}` : '');
+  return [R.length, E.length, end(R), end(E), Object.keys(MAP_FIXES).length].join('|');
+};
 function buildMapPins(d) {
-  const byFp = new Map();
+  const memoKey = pinMemoKey(d);
+  const hadMemo = PIN_MEMO && PIN_MEMO.d === d && PIN_MEMO.k === memoKey;
+  const byFp = hadMemo ? PIN_MEMO.byFp : new Map();
+  if (!hadMemo) buildPinsInto(d, byFp);
+  PIN_MEMO = { d, k: memoKey, byFp };
+  return pinsOfDay(byFp);
+}
+function buildPinsInto(d, byFp) {
   const push = (pin) => {
     if (!pin || pin.lat == null || pin.lng == null) return;
     if (isWeakHeadline(pin.label)) return;
@@ -5426,7 +5469,8 @@ function buildMapPins(d) {
       classText: [rawLabel, blob].filter(Boolean).join('\n'),
     });
   });
-
+}
+function pinsOfDay(byFp) {
   const day = effectiveMapDate();
   const today = todayYmd();
   const from = mapDateFrom || CONFLICT_START;
@@ -5604,7 +5648,9 @@ function renderEvents(d) {
     if (mapMode === 'all') label = `${fmtDay(CONFLICT_START)} – ${fmtDay(today)}`;
     else if (mapMode === 'range') label = `${fmtDay(mapDateFrom || CONFLICT_START)} – ${fmtDay(mapDateTo || today)}`;
     else label = fmtDay(effectiveMapDate());
-    const waiting = (mapMode === 'all' || mapMode === 'range') && !allPinsRead;
+    // A range of the last week waits for no whole-war pins (it is filled page by page).
+    const recentRange = mapMode === 'range' && mapDateFrom && mapDateFrom >= new Date(Date.now() - 8 * 864e5).toISOString().slice(0, 10);
+    const waiting = (mapMode === 'all' || (mapMode === 'range' && !recentRange)) && !allPinsRead;
     chip.textContent = waiting ? T('Loading the events of {d}…', { d: label }) : pins.length
       ? T('{n} on {d} · click a mark for detail', { n: N('event', pins.length), d: label })
       : T('No mapped events for {d}', { d: label });
@@ -5997,7 +6043,9 @@ function declutterLabels(m) {
   if (!all || !all.length) return;
   try {
     const z = m.getZoom();
-    const boxes = [];
+    // Three passes, so the page is laid out once, not once per label (20 Oct: measuring after each
+    // change froze a phone for a second): clear every label, measure them all, then hide the ones that hit.
+    const els = [];
     for (const e of all) {
       const root = e.marker.getElement();
       const el = root && (root.querySelector('span') || root);
@@ -6006,16 +6054,26 @@ function declutterLabels(m) {
       // a hidden element measures as a zero-sized box.
       el.classList.remove('lbl-collide');
       if (e.visible && !e.visible(z)) continue;
-      const r = el.getBoundingClientRect();
-      if (!r.width || !r.height) continue;
+      els.push(el);
+    }
+    const view = m.getContainer().getBoundingClientRect();
+    const rects = els.map((el) => el.getBoundingClientRect());
+    const boxes = [];
+    const hide = [];
+    els.forEach((el, i) => {
+      const r = rects[i];
+      if (!r.width || !r.height) return;
+      // Out of sight: nothing to tidy.
+      if (r.right < view.left || r.left > view.right || r.bottom < view.top || r.top > view.bottom) return;
       // Wider than a hairline: every label carries a white halo, so two boxes
       // that merely touch already read as one smudge.
       const pad = 3;
       const hit = boxes.some((b) => r.left < b.right + pad && r.right > b.left - pad
         && r.top < b.bottom + pad && r.bottom > b.top - pad);
-      if (hit) el.classList.add('lbl-collide');
+      if (hit) hide.push(el);
       else boxes.push(r);
-    }
+    });
+    hide.forEach((el) => el.classList.add('lbl-collide'));
   } catch (e) {}
 }
 
@@ -6739,6 +6797,8 @@ function wireRailResize() {
   const rail = document.getElementById('rail');
   if (!stage || !split || !rail) return;
   if (split.dataset.wired === '1') return;
+  // The map view has no splitter: its columns are its own.
+  if (document.documentElement.dataset.view === 'ops') return;
   split.dataset.wired = '1';
   const KEY = 'yemenDeskRailW';
   const apply = (px) => {
@@ -7243,6 +7303,8 @@ function installSectionNav() {
   // a map taller than the screen, or scrolled, would leave it below the screen's foot, and the pill at the
   // screen's bottom left would cover it.
   const liftLegend = () => {
+    // The map view keeps its legend under the map: nothing to lift, and no layout to force every two seconds.
+    if (document.documentElement.dataset.view === 'ops') return;
     const tab = nav.querySelector('.sec-tab'), wrap = document.getElementById('map-wrap'), leg = document.getElementById('legend');
     if (!wrap) return;
     const w = wrap.getBoundingClientRect();

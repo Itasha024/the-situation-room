@@ -49,8 +49,12 @@ html[data-view="ops"] body :not(svg, svg *, code, kbd, pre) { font-family: var(-
 html[data-view="ops"] :is(.ops-strip b, .ops-sf, .ops-log-l time, .ops-card h3, .ops-card dd, .ops-card dd *, .ops-coords, .ops-coords *, .ops-act-sel, .ops-mil b, .ops-mil em, .ops-rlabel span, .ops-ringlabel span, .ops-glab span, .ops-lt .clk, .ops-lb time, .ops-kpi dd, .ops-bars b, .ops-th-ev time, .ye-clock, .ye-clock *, kbd, .leaflet-control-scale-line, .ops-amx .tk) { font-family: var(--ops-mono) !important }
 html[data-view="ops"] :is(.ops-ptitle, .ops-mlab, .ops-tabs button, .ops-seg button, .ops-nav button span, .ops-act-h b, .ops-mh b, .ops-mil p, .ops-ck, .ops-card dt, .ops-kpi dt, .ops-tag, .ops-live, .ops-strip small, .ops-day, .ops-ptabs button, .ops-left .ops-pane h2, .ops-dock .legend :is(.leg-sec, .leg-sub), .ops-th-go, .ops-classic) { font-family: var(--ops-cond) !important }
 html[data-view="ops"] .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
-/* Until the view has laid the page out, the page waits (ops.js falls back to classic). */
+/* Until the view has laid the page out, the page waits, saying so (20 Oct: a slow first load showed a blank page). */
 html[data-view="ops"] #home-root:not(.ops-on) { visibility: hidden }
+html[data-view="ops"] body:has(#home-root:not(.ops-on))::after {
+  content: "Loading the map…"; position: fixed; inset: 0; display: grid; place-items: center; z-index: 50;
+  background: var(--o-bg); color: var(--o-dim); font: 600 13px/1 var(--ops-cond); letter-spacing: .14em; text-transform: uppercase;
+}
 /* No stories on the All page in this view (user, 19 Oct). */
 html[data-view="ops"] .ops-on > :is(#g-body, #chrome, #toolbar) { display: none !important }
 html[data-view="ops"] body:has(.ops-on) .sec-nav { display: none !important }

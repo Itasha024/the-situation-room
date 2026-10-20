@@ -1139,10 +1139,15 @@
       H.dataset.view = 'classic';
     }
   }
+  // The page's scripts can take seconds on a slow server: the view waits for them (20 Oct: after 9 s the
+  // All page gave up and showed the classic design, so readers on a slow load never saw this view).
   const poll = setInterval(() => { start(); if (started) clearInterval(poll); }, 60);
-  setTimeout(() => { if (!started) clearInterval(poll); /* no page of ours: nothing to do */ }, 30000);
-  // The All page waits for the view (ops.css); a page that never gets it is shown as classic.
-  setTimeout(() => { if (!started && document.getElementById('home-root')) H.dataset.view = 'classic'; }, 9000);
+  setTimeout(() => {
+    if (started) return;
+    clearInterval(poll); /* no page of ours: nothing to do */
+    // An All page that never came up at all: the classic page, as it is, rather than "Loading" for ever.
+    if (document.getElementById('home-root')) H.dataset.view = 'classic';
+  }, 90000);
   // A desk's page: the map's box exists from the start, so the layout is set before the map is drawn.
   start();
   window.opsView = { setView, focusEvent };

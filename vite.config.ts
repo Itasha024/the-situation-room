@@ -1,4 +1,5 @@
-import { readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
@@ -22,6 +23,27 @@ function hasGlobbedMigrations(root: string): boolean {
   } catch {
     return false;
   }
+}
+
+/** Files of public/ that are never published (the nitro `ignore` below). */
+const UNPUBLISHED = /(^|\/)(desk-[^/]*\.json|[^/]*\.tmp-[^/]*|[^/]*\.he\.json|SOURCES\.md)$/;
+
+/**
+ * A fingerprint of everything public/ publishes, taken at build: it is part of ASSET_V, so a
+ * changed app.js, style or data.json always has a new address (20 Oct: half the releases changed
+ * them without a new ASSET_V, which is why browsers could not be told to keep them).
+ */
+function publicFingerprint(root: string): string {
+  const h = createHash("sha1");
+  const walk = (dir: string, rel: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      if (e.isDirectory()) walk(join(dir, e.name), r);
+      else if (!UNPUBLISHED.test(r)) h.update(r).update(readFileSync(join(dir, e.name)));
+    }
+  };
+  walk(join(root, "public"), "");
+  return h.digest("hex").slice(0, 8);
 }
 
 /**
@@ -149,6 +171,8 @@ function authPopupPlugin(): Plugin {
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
 export default defineConfig(({ command, isPreview }) => ({
+  // src/lib/asset-version.ts; the dev server rewrites data.json every tick, so it has none.
+  define: command === "build" ? { __ASSET_HASH__: JSON.stringify(publicFingerprint(process.cwd())) } : {},
   server: {
     host: "0.0.0.0",
     port: 8080,
@@ -201,6 +225,15 @@ export default defineConfig(({ command, isPreview }) => ({
             // lock, meters). None of it is fetched by the page, so it must
             // never be published.
             ignore: ["**/desk-*.json", "**/*.tmp-*", "**/*.he.json", "**/SOURCES.md"],
+            // Browsers keep the page's files (20 Oct: every visit fetched app.js, the styles and
+            // the 888 KB data.json again from the small server). The page asks for these only as
+            // ?v=ASSET_V, which holds the build's fingerprint of public/, so a changed file has a
+            // new address. These rules run before the static files; a server middleware does not.
+            routeRules: Object.fromEntries(
+              ["/app.js", "/home.js", "/ops.js", "/desk.css", "/home.css", "/ops.css", "/themes.css", "/rtl.css", "/data.json", "/i18n/**"].map(
+                (p) => [p, { headers: { "cache-control": "public, max-age=31536000, immutable" } }],
+              ),
+            ),
             // On Vercel a tick cycle (scan + model reads) outlives the default
             // limit; 300s is the Hobby ceiling. It runs in the background (see
             // src/routes/api/tick.ts), so the scheduler never waits for it.

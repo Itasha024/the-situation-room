@@ -25,7 +25,7 @@
   // app.js's names (its top-level script names are shared with this script).
   const app = (name) => { try { return eval(name); } catch (e) { return null; } };
   const A = (name) => app(name) || (() => null);
-  const setView = (v) => { try { localStorage.setItem('desk-view', v); } catch (e) { /* private */ } };
+  const setView = (v) => { try { sessionStorage.setItem('desk-view', v); } catch (e) { /* private */ } };
 
   /* The classic site: only a way into the new view, in the site menu. */
   if (H.dataset.view !== 'ops') {

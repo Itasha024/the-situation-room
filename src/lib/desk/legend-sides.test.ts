@@ -40,18 +40,24 @@ test("Yemen legend: every side with a pin has a Who row of its colour, on the de
   }
   // Only the sides on the map.
   assert.equal(y.yemenSideRows(new Set(["houthi"])), "");
-  assert.ok(!y.yemenSideRows(new Set(["southern"])).includes("data-side=\"us\""));
-  // The reader's "stc" is the Southern forces.
-  assert.equal(y.yemenSideOf({ actor: "stc" }), "southern");
+  assert.ok(!y.yemenSideRows(new Set(["israel"])).includes("data-side=\"us\""));
+  // The Southern forces are the government's side, with no colour or row of their own (user, 20 Oct).
+  assert.equal(y.yemenSideOf({ actor: "stc" }), "government");
+  assert.equal(y.yemenSideOf({ actor: "southern" }), "government");
+  assert.ok(!sides.some(([k]) => k === "southern"));
+  assert.ok(!/#c084fc/i.test(app.slice(app.indexOf("const YEMEN_PIN_SIDES"), app.indexOf("const yemenSidesOn"))));
   assert.equal(y.yemenSideOf({ actor: "who" }), "unclear");
   // Both legends draw the rows.
   assert.match(app, /\$\{yemenSideRows\(yemenSidesSeen\)\}/);
   assert.match(home, /A\('yemenSideRows'\)\(seen\)/);
 });
 
-test("the served Yemen pin: the reader's stc is southern", () => {
-  assert.equal(yemenPinSide({ label: "Forces seize Al-Aradi hill in Bab al-Mandab", place: "Bab al-Mandab", lat: 12.6, lng: 43.4, actor: "stc" }), "southern");
-  assert.equal(yemenPinSide({ label: "Southern forces seize Al-Aradi hill in Bab al-Mandab", place: "Bab al-Mandab", lat: 12.6, lng: 43.4, actor: "unclear" }), "southern");
+test("the served Yemen pin: the Southern forces' pins are the government's (user, 20 Oct)", () => {
+  assert.equal(yemenPinSide({ label: "Forces seize Al-Aradi hill in Bab al-Mandab", place: "Bab al-Mandab", lat: 12.6, lng: 43.4, actor: "stc" }), "government");
+  assert.equal(yemenPinSide({ label: "Southern forces seize Al-Aradi hill in Bab al-Mandab", place: "Bab al-Mandab", lat: 12.6, lng: 43.4, actor: "unclear" }), "government");
+  assert.equal(yemenPinSide({ label: "Shabwa Defense Forces: drones strike Houthi positions in Ayn, Harib, Bayhan and Marakha Al-Olaya fronts", place: "Harib", lat: 15.0, lng: 45.4, actor: "stc" }), "government");
+  // Their air defence meets a Houthi drone: the Houthis' (20 Oct, Aden).
+  assert.equal(yemenPinSide({ label: "Southern forces anti-aircraft units engage drone over Maasheq Palace in Crater in Aden", place: "Aden", lat: 12.78, lng: 45.03, actor: "stc" }), "houthi");
 });
 
 test("Iran legend: every side a pin can take has a Who row, Not stated when such pins are shown", () => {

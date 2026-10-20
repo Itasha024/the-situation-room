@@ -229,11 +229,21 @@ export default defineConfig(({ command, isPreview }) => ({
             // the 888 KB data.json again from the small server). The page asks for these only as
             // ?v=ASSET_V, which holds the build's fingerprint of public/, so a changed file has a
             // new address. These rules run before the static files; a server middleware does not.
-            routeRules: Object.fromEntries(
-              ["/app.js", "/home.js", "/ops.js", "/desk.css", "/home.css", "/ops.css", "/themes.css", "/rtl.css", "/data.json", "/i18n/**"].map(
+            routeRules: Object.fromEntries([
+              ...["/app.js", "/home.js", "/ops.js", "/desk.css", "/home.css", "/ops.css", "/themes.css", "/rtl.css", "/data.json", "/i18n/**"].map(
                 (p) => [p, { headers: { "cache-control": "public, max-age=31536000, immutable" } }],
               ),
-            ),
+              // The map's outlines and the desks' reference files had no cache rule at all (20 Oct: every
+              // visit fetched 2-3 MB of them again from the small server). The outlines change about never:
+              // a day, then a week served while checked again. The rest change with a release; some are
+              // asked for without ?v=, so an hour, then a day served while checked again.
+              ...["/yemen-adm1.geojson", "/yemen-adm2.geojson", "/saudi-adm1.geojson", "/iran-adm1.geojson", "/iran-adm2.geojson", "/iran-countries.geojson", "/iran-land.json", "/vendor/**"].map(
+                (p) => [p, { headers: { "cache-control": "public, max-age=86400, stale-while-revalidate=604800" } }],
+              ),
+              ...["/gazetteer.json", "/control.json", "/iran-cities.json", "/iran-map-pins.json", "/iran-map-notes.json", "/iran-numbers.json", "/iran-timeline.json"].map(
+                (p) => [p, { headers: { "cache-control": "public, max-age=3600, stale-while-revalidate=86400" } }],
+              ),
+            ]),
             // On Vercel a tick cycle (scan + model reads) outlives the default
             // limit; 300s is the Hobby ceiling. It runs in the background (see
             // src/routes/api/tick.ts), so the scheduler never waits for it.

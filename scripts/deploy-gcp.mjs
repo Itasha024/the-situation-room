@@ -76,7 +76,8 @@ if [ -z "$ok" ]; then
   exit 1
 fi
 # The first visitor after a restart does not pay for the cold caches: the pages and the desks' data are read once now.
-for u in / /yemen-conflict-desk /iran-conflict-desk "/api/desk?desk=yemen" "/api/desk?desk=iran" "/api/brief?desk=yemen" "/api/brief?desk=iran" /api/trump "/api/trump?desk=yemen"; do curl -s -o /dev/null -m 90 "http://127.0.0.1:3000$u" || true; done
+# The map's whole-war pins (?since=, the heaviest answers) and the scan's are among them (20 Oct).
+for u in / /yemen-conflict-desk /iran-conflict-desk "/api/desk?desk=yemen" "/api/desk?desk=iran" "/api/desk?limit=400" "/api/desk?desk=yemen&since=2026-07-13" "/api/desk?desk=iran&since=2026-02-28" "/api/brief?desk=yemen" "/api/brief?desk=iran" /api/brief /api/scan "/api/scan?only=time" "/api/scan?desk=iran&only=time" /api/trump "/api/trump?desk=yemen"; do curl -s -o /dev/null -m 90 "http://127.0.0.1:3000$u" || true; done
 echo "[deploy] caches warmed"
 ls -1d /srv/desk/releases/* | sort -r | tail -n +4 | grep -v -x -e "$R" -e "$PREV" | xargs -r rm -rf
 echo "[deploy] live: $R"`;

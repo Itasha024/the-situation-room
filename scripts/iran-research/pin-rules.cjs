@@ -40,6 +40,21 @@ const HEARD = /^(?:Explosions?|Blasts?|A blast|An explosion)\s+(?:heard|reported
 const DOWNED = /\b(?:says it shot down|shoots? down|shot down|downs|downed|intercept\w*)\s+(?:an?\s+|the\s+|two\s+|\d+\s+)?(?:US|U\.S\.|American|Israeli|MQ-9|Hermes|Reaper)\b/i;
 // What is no attack: footage, its aftermath, a crash, a seizure, a later report, a household blast.
 const NOT_EVENT = /\b(?:footage|video|published (?:a )?video|effects of the (?:air ?)?strikes|fires? (?:continue|still)\s+(?:to\s+)?burn\w*|destroyed buildings (?:were )?seen|crashed|ship seized|seizes? (?:a |the )?(?:ship|tanker|vessel)|previous nights|gas cylinder|house blew up|domestic)\b/i;
+/*
+ * A Gulf state's own attack (user, 20 Oct: "return the gulf states as a side in purple ... and add their pins for
+ * attacks they did"): a strike, a raid or jets a Gulf state flies, alone or beside the US ("US and Saudi jets strike
+ * militia sites in eastern Iraq", "US-Saudi strikes hit PMF positions"), or a strike later laid at its door
+ * ("attributed to the UAE"). Not its air defence: a missile it shoots down is the attacker's. The same words as
+ * src/lib/desk/iran-places.ts GULF_ATTACK, which serves the live pins.
+ */
+const GULF_ATTACK = /\b(?:(?:US|U\.S\.|American)(?:\s+and\s+|-)(?:Saudi|Emirati|UAE|Qatari|Bahraini|Kuwaiti|Omani)|Saudi(?:[- ]led)?|Emirati|UAE|Qatari|Bahraini|Kuwaiti|Omani|(?<!Persian |Arabian )Gulf)\s+(?:(?:fighter|war|air|drone|naval)\s+)?(?:jets?|warplanes?|planes?|aircraft|air ?strikes?|strikes?|raids?|bombing|bombardment|artillery|shelling|helicopters?|drone strikes?|forces?\s+(?:strike|struck|hit|bomb\w*|attack\w*|shell\w*|raid\w*))\b|\b(?:attributed|blamed)\s+(?:on|to)\s+(?:the\s+)?(?:UAE|Emirates|Saudi Arabia|Saudis|Qatar|Bahrain|Kuwait|Oman)\b|\b(?:Saudi Arabia|the UAE|Emirates|Qatar|Bahrain|Kuwait|Oman)\s+(?:strikes|struck|bombs|bombed|shells|shelled|raids|raided|launch(?:es|ed)\s+(?:air ?)?strikes)\b/;
+// Words before a name that make it the target: "strike on Saudi jets" is no Saudi strike.
+const GULF_TARGET_BEFORE = /\b(?:on|at|against|targeting|targets?|hits?|hit|struck|over|into|toward|towards)\s+(?:the\s+|a\s+|an\s+)?$/i;
+function gulfAttack(label) {
+  const s = String(label || '');
+  const m = GULF_ATTACK.exec(s);
+  return !!m && !GULF_TARGET_BEFORE.test(s.slice(Math.max(0, m.index - 20), m.index));
+}
 // A country, a province or a region, and names any base or site may carry.
 const AREA = /\b(?:iran|iraq|kuwait|saudi arabia|jordan|qatar|bahrain|oman|uae|emirates|syria|lebanon|israel|cyprus|turkey|province|governorate|region|district|plains?|valley|northern|southern|eastern|western|central|north|south|east|west|anbar|basra|nineveh|diyala|kirkuk|erbil|sulaymaniyah|kurdistan|bushehr|hormozgan|khuzestan|lorestan|kermanshah|fars|isfahan province|tehran province|bekaa)\b/i;
 const GENERIC = /\b(?:target|base|site|camp|facility|headquarters|hq|gulf|sea|strait|place not stated|area)\b/i;
@@ -67,7 +82,7 @@ function fixBase(base, log = () => {}) {
   const usual = usualPoints(base);
   // The cities, by name: a name with ten pins or more on one point.
   const cities = [...usual].filter(([k, u]) => u.n >= 10 && !/[,(]/.test(k) && k.length >= 4).sort((a, b) => b[0].length - a[0].length);
-  const n = { demolition: 0, downed: 0, notEvent: 0, offWar: 0, offWarDropped: [], city: 0, stray: 0, shelling: 0, day: 0, twin: 0 };
+  const n = { demolition: 0, downed: 0, gulf: 0, notEvent: 0, offWar: 0, offWarDropped: [], city: 0, stray: 0, shelling: 0, day: 0, twin: 0 };
   let rows = base.map((p) => ({ ...p }));
 
   // Days out of their channel's post order (a post of 2 May dated "2/4" put 38 pins on 2 April).
@@ -105,6 +120,8 @@ function fixBase(base, log = () => {}) {
       n.demolition++;
     }
     if (DOWNED.test(label) && p.actor !== 'unclear' && /\b(?:Iran|IRGC|Iranian|Hezbollah|Houthi|Iraqi|Kuwait\w*|Saudi|Emirati|Bahrain\w*|Qatar\w*|Jordan\w*)\b/.test(label) && !/\b(?:strike|struck|attack\w*)\s+(?:on|in)\b/i.test(label)) { p.actor = 'unclear'; n.downed++; }
+    // A Gulf state's own strike, alone or with the US, is the Gulf states' pin (user, 20 Oct).
+    if (p.actor !== 'gulf' && gulfAttack(label)) { p.actor = 'gulf'; n.gulf++; }
     if (SHELLING.test(p.label) && inLebanon(p) && p.lat > 33.42 && !/\bartillery\b/i.test(p.label)) { p.label = p.label.replace(/\bshelling\b/i, 'strike'); n.shelling++; }
     // A place named after its city ("Bahonar port, Bandar Abbas", "Tehran District 22") sits within 40 km of that city.
     const place = String(p.place || '').toLowerCase();
@@ -178,4 +195,4 @@ function seaTwins(base, sea) {
  */
 const NUCLEAR_SITE = /\bnuclear (?:site|facilit|plant|power|reactor|complex|installation)|\b(?:fordow|natanz|khondab|heavy[- ]water|enrichment|uranium|yellowcake|ardakan|saghand|IR-40|tehran research reactor|(?:bushehr|arak|isfahan|karaj) (?:nuclear|reactor|power plant|npp|uranium|ucf))\b|محطة بوشهر النووية|نطنز|فوردو|نیروگاه اتمی بوشهر/i;
 
-module.exports = { fixBase, seaTwins, skeleton, warPinAllowed, NUCLEAR_SITE };
+module.exports = { fixBase, seaTwins, skeleton, warPinAllowed, NUCLEAR_SITE, GULF_ATTACK, gulfAttack };

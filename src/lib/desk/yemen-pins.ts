@@ -96,14 +96,50 @@ export function notEvent(e: YemenPin): boolean {
   // What followed an attack, unless the words tell the attack too: "Air traffic suspended and explosions shake Riyadh".
   if (AFTER.test(t) && !NEW_ATTACK.test(t) && !DIRECT.test(t.split(/\b(?:following|after|days before|days after)\b/i)[0])) return true;
   if (/\bunexploded ordnance\b/i.test(t) && !/\b(?:kill\w*|wound\w*|injur\w*|dead|died)\b/i.test(t)) return true;
+  // The audit of 20 Oct: a toll that rose, people fleeing, a day long gone, a "could".
+  if (tollUpdate(t) || fleeingStory(t) || longAgo(t, e.at) || HYPOTHETICAL.test(t)) return true;
   return NO_FIGHT.test(t) && !FIGHT.test(t);
+}
+/**
+ * A death toll that rose is the attack already pinned, told again (20 Oct: the Houthi strike on the Shabwa training
+ * camp pinned five times as its toll went from 18 to 67), unless the words go on to a new attack ("... rises to 60
+ * as coalition intercepts ballistic missile aimed at Riyadh").
+ */
+const TOLL = /^(?:[^:]{2,60}:\s*)?(?:the\s+)?(?:death\s+|casualty\s+)?toll\b.{0,120}?\b(?:rises?|rose|risen|climbs?|climbed|reach(?:es|ed)?|exceeds?|exceeded|jumps?|jumped|hits|tops|surpass\w*|increases?|increased|grows?|grew)\b/i;
+export function tollUpdate(t: string): boolean {
+  if (!TOLL.test(t)) return false;
+  const rest = t.split(/\s+(?:as|while|amid|after)\s+|;\s*/i).slice(1).join(" ");
+  return !(rest && DIRECT.test(rest));
+}
+/** A story of people fleeing (20 Oct: the Guardian's "Yemeni families flee across Bab al-Mandab to Djibouti as Houthi forces battle government troops near Mocha", 13:00): the fighting is its background, not an event at a place and time. */
+export function fleeingStory(t: string): boolean {
+  return /^(?:[^:]{2,60}:\s*)?(?:[\w'-]+\s+){0,3}(?:families|residents|civilians|refugees|migrants|people|thousands|hundreds|villagers|children|women)\s+(?:[\w'-]+\s+){0,2}(?:flee\w*|fled|displaced|escap\w*|cross(?:es|ed|ing)?|leav(?:e|es|ing)|left|seek\w* (?:refuge|shelter|safety))\b/i.test(t);
+}
+/** Words of what could or would happen, not what did: "controlling the Strait of Hormuz can affect the lives of billions" (20 Oct). */
+const HYPOTHETICAL = /\b(?:can|could|would|might)\s+(?!have\b|not\s+be\s+(?:independently\s+)?(?:verified|confirmed)\b)(?:not\s+)?\w+/i;
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+/**
+ * An event the words date two days or more before the report ("US forces destroyed an Iranian-affiliated dhow ... on 6 October",
+ * told on 14 Oct; "Iran targets a non-compliant vessel ... on 9 October", told on 18 Oct): not a new event at the report's time.
+ */
+export function longAgo(t: string, at: string | null | undefined): boolean {
+  const when = Date.parse(String(at || ""));
+  if (!Number.isFinite(when)) return false;
+  const m = /\bon\s+(?:(\d{1,2})(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)|(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?)\b/i.exec(t);
+  if (!m) return false;
+  const day = Number(m[1] ?? m[4]);
+  const month = MONTHS.indexOf(String(m[2] ?? m[3]).toLowerCase());
+  const year = new Date(when).getUTCFullYear();
+  let then = Date.UTC(year, month, day, 12);
+  if (then > when + 2 * 864e5) then = Date.UTC(year - 1, month, day, 12);
+  return when - then >= 1.5 * 864e5;
 }
 /** A trend or its cost, told without an attack of its own: "attacks on Hormuz shipping at wartime high". */
 /**
  * Told about an event, not the event (17 Oct): burials and mourning, condemnations, a threat declared
  * over, a mobilisation announced, devices defused, rifts among leaders, flights halted.
  */
-const ASIDE = /\b(?:bur(?:y|ies|ied|ial)|funerals?|mourn\w*|laid to rest|condemn\w*|denounc\w*|threat (?:is )?over|all clear|announce\w* (?:a |the )?(?:national |general )?mobili[sz]ation|defus\w*|dismantl\w* (?:\w+ )?(?:IEDs?|explosive|devices?|mines?)|rifts?|defect\w*|danger (?:has )?(?:passed|removed|over)|travel warning|^moment of|food convoy|visit\w* (?:the )?wounded|offload\w*|sends? (?:over |more than )?[\d,]+ fighters|reinforc(?:es|ed|ing) (?:its |their )?(?:\w+ )?presence|plans? to expand|carriers shift|(?:mass\w*|gather\w*) (?:\w+ ){0,3}fighters|issue\w* (?:a )?message|recruit\w*|conscript\w*|move\w* casualties|denies|denied|highlights|threat\b.{0,30}\b(?:has )?ended|urges? (?:\w+ )?(?:Americans|citizens|nationals|travellers|travelers)|travel advisory|publish\w* (?:a |the )?photos?|photos? from|mine-clearing|clear\w* (?:hundreds of |dozens of )?(?:Houthi )?(?:land)?mines|launch\w* (?:a )?campaign|dig\w* (?:\w+ ){0,2}trenches|(?:defensive )?berm|on high alert|high (?:state of )?readiness|(?:return\w*|hand\w* over|recover\w*|retriev\w*|collect\w*|remov\w*) (?:[\w'’]+ ){0,4}bod(?:y|ies))\b/i;
+const ASIDE = /\b(?:bur(?:y|ies|ied|ial)|funerals?|mourn\w*|laid to rest|condemn\w*|denounc\w*|threat (?:is )?over|all clear|announce\w* (?:a |the )?(?:national |general )?mobili[sz]ation|defus\w*|dismantl\w* (?:\w+ )?(?:IEDs?|explosive|devices?|mines?)|rifts?|defect\w*|danger (?:has )?(?:passed|removed|over)|travel warning|^moment of|food convoys?|visit\w* (?:the )?wounded|offload\w*|sends? (?:over |more than )?[\d,]+ fighters|reinforc(?:es|ed|ing) (?:its |their )?(?:\w+ )?presence|plans? to expand|carriers shift|(?:mass\w*|gather\w*) (?:\w+ ){0,3}fighters|issue\w* (?:a )?message|recruit\w*|conscript\w*|move\w* casualties|denies|denied|highlights|threat\b.{0,30}\b(?:has )?(?:ended|passed)|urges? (?:\w+ )?(?:Americans|citizens|nationals|travellers|travelers)|travel advisory|publish\w* (?:a |the )?photos?|photos? from|mine-clearing|clear\w* (?:hundreds of |dozens of )?(?:Houthi )?(?:land)?mines|launch\w* (?:a )?campaign|dig\w* (?:\w+ ){0,2}trenches|(?:defensive )?berm|on high alert|high (?:state of )?readiness|(?:return\w*|hand\w* over|recover\w*|retriev\w*|collect\w*|remov\w*) (?:[\w'’]+ ){0,4}bod(?:y|ies))\b/i;
 const ANALYSIS = /\b(?:tensions? (?:surface|rise|mount|grow)\w*|stockpil\w*|wartime high|record high|raises? (?:\w+ )?concerns?|faces? (?:\w+ )?challenges|counteroffensive stalls|since (?:January|February|March|April|May|June|July|August|September|October|November|December|the war began|the start of the war)|steps? up (?:its |their )?campaign|attacks? surge|surge in attacks|shipping slows|vessels crossed|transits? (?:fell|fall|drop\w*))\b/i;
 const DIRECT = /\b(?:infiltrat\w*|blow\w* up|intercept\w*|kill\w*|wound\w*|injur\w*|explosions?|launch\w*|strikes?\s+on|attacks?\s+on|bomb\w*|shell\w*|struck|hits?|advanc\w*)\b/i;
 
@@ -112,9 +148,11 @@ const DIRECT = /\b(?:infiltrat\w*|blow\w* up|intercept\w*|kill\w*|wound\w*|injur
  * floating), troops moved, drills, arrests and raids on homes, praise and mediation, finds of weapons.
  */
 // The damage an earlier attack did is no new attack (user, 18 Oct: SNN's "US attack caused serious damage to Bushehr airport terminal").
-const AFTER = /\b(?:caused (?:\w+ ){0,2}damage|damage (?:caused|done|left) by|extent of (?:the )?damage|damage assessment|assess\w* (?:the )?damage|satellite (?:imagery|images?)|for (?:a )?second consecutive day|closes?|closed|closure|disruptions?|halted|halts|grounded|disruption to air navigation|no aircraft in (?:the )?airspace|flight tracking|cancels?|cancell?ed|cancellations?|suspends?|suspended|suspension|delays?|delayed|postpones?|postponed|resumes?|resumed|remains? (?:shut|closed)|reopens?|reopened|insurance|premiums?|stopped public|leak\w* fuel|float\w*|gather\w* cargo|controlled (?:explosion|detonation)|lifts?\s+(?:the\s+)?(?:emergency\s+|security\s+)?(?:alerts?|warnings?))\b/i;
+// Repairs and the stranded after an attack (20 Oct: "minister orders repair of Haija al-Abd culvert damaged in Houthi strike").
+const AFTER = /\b(?:caused (?:\w+ ){0,2}damage|repair\w*|stranded|damage (?:caused|done|left) by|extent of (?:the )?damage|damage assessment|assess\w* (?:the )?damage|satellite (?:imagery|images?)|for (?:a )?second consecutive day|closes?|closed|closure|disruptions?|halted|halts|grounded|disruption to air navigation|no aircraft in (?:the )?airspace|flight tracking|cancels?|cancell?ed|cancellations?|suspends?|suspended|suspension|delays?|delayed|postpones?|postponed|resumes?|resumed|remains? (?:shut|closed)|reopens?|reopened|insurance|premiums?|stopped public|leak\w* fuel|float\w*|gather\w* cargo|controlled (?:explosion|detonation)|lifts?\s+(?:the\s+)?(?:emergency\s+|security\s+)?(?:alerts?|warnings?))\b/i;
 const NEW_ATTACK = /\b(?:fresh|new|another|renewed)\s+(?:\w+\s+){0,2}(?:strikes?|attacks?|barrage|missiles?)\b/i;
-const NO_FIGHT = /\b(?:vows?|vowed|military movements?|reinforcements?|deploys?|deployed|deployment|transfers?|transferred|mobili[sz]\w*|redeploy\w*|dispatch\w*|arrives?|arrived|drills?|exercises?|manoeuvres?|maneuvers?|parades?|graduat\w*|forms? new|leaflets?|graffiti|abduct\w*|kidnap\w*|arrests?|arrested|detains?|detained|detention|loot\w*|storms? (?:a |the )?(?:citizen'?s? )?(?:home|house)|raid (?:and \w+ )?(?:over \d+ )?(?:homes|houses)|praises?|praised|mediations?|flares?|ammunition trucks|finds?|found)\b/i;
+// Threats, slogans and calls (20 Oct: "Houthi commander threatens Amjad Khaled over contacts with Taiz figures").
+const NO_FIGHT = /\b(?:vows?|vowed|threatens?|threatened|slogans?|calls? on|military movements?|reinforcements?|deploys?|deployed|deployment|transfers?|transferred|mobili[sz]\w*|redeploy\w*|dispatch\w*|arrives?|arrived|drills?|exercises?|manoeuvres?|maneuvers?|parades?|graduat\w*|forms? new|leaflets?|graffiti|abduct\w*|kidnap\w*|arrests?|arrested|detains?|detained|detention|loot\w*|storms? (?:a |the )?(?:citizen'?s? )?(?:home|house)|raid (?:and \w+ )?(?:over \d+ )?(?:homes|houses)|praises?|praised|mediations?|flares?|ammunition trucks|finds?|found)\b/i;
 const FIGHT = /\b(?:recaptur\w*|retak\w*|seiz\w*|advanc\w*|liberat\w*|massacre|withdraw\w*|take control|took control|strikes?|struck|hits?|attack\w*|clash\w*|kill\w*|wound\w*|injur\w*|shell\w*|repel\w*|fire[sd]?|firing|target\w*|destroy\w*|captur\w*|ambush\w*|battles?|fight\w*|besieg\w*|bomb\w*|explo\w*|expel\w*|expuls\w*|pursu\w*|clear(?:s|ed|ing)?|thwart\w*|foil\w*|decapitat\w*|executed|dead|bod(?:y|ies)|operations?)\b/i;
 /** A tally or a round of the war across the land: "219 violations over 48 hours", "strikes on Sanaa, Taiz, Ibb and Saada". */
 export function roundup(t: string): boolean {
@@ -231,7 +269,18 @@ function alike(a: string, b: string): boolean {
   A.forEach((w) => B.has(w) && n++);
   return n / Math.min(A.size, B.size) >= 0.7;
 }
-const dayOf = (at?: string) => (at ? new Date(Date.parse(at) + 3 * 3600e3).toISOString().slice(0, 10) : "");
+// Kept per time: the pins' pairs ask it for the same times again and again (20 Oct, the site's processor time).
+const daysOf = new Map<string, string>();
+const dayOf = (at?: string): string => {
+  if (!at) return "";
+  let d = daysOf.get(at);
+  if (d === undefined) {
+    d = new Date(Date.parse(at) + 3 * 3600e3).toISOString().slice(0, 10);
+    if (daysOf.size > 50_000) daysOf.clear();
+    daysOf.set(at, d);
+  }
+  return d;
+};
 
 /** The sea a ship pin is in, by its longitude: the Red Sea, the Gulf of Aden, the Arabian Sea. */
 const seaOf = (e: YemenPin) => (typeof e.lng !== "number" ? "" : e.lng < 43.6 ? "red" : e.lng < 52 ? "aden" : "arabian");
@@ -314,7 +363,11 @@ const near = (k: YemenPin, p: YemenPin) =>
   typeof k.lat === "number" && typeof p.lat === "number" &&
   ((Math.abs(k.lat - p.lat) < 0.012 && Math.abs((k.lng ?? 0) - (p.lng ?? 0)) < 0.012) || samePlace(k, p));
 /** One card's pins on its several places are that many places, never one event's twins. */
-const baseFp = (p: YemenPin) => String(p.fp || "").split("-pin-")[0];
+const baseFp = (p: YemenPin) => {
+  const fp = String(p.fp || "");
+  const i = fp.indexOf("-pin-");
+  return i < 0 ? fp : fp.slice(0, i);
+};
 const sideOk = (a?: string | null, b?: string | null) => !a || !b || a === "unclear" || b === "unclear" || a === b;
 /** Saudi Arabia, north of the border: an alert, an interception and a hit there are one Houthi wave. */
 const inSaudi = (p: YemenPin) => typeof p.lat === "number" && typeof p.lng === "number" && p.lng > 36 && p.lng < 52 && p.lat < 28.5 && (p.lat > 17.5 || (p.lat > 16.35 && p.lng < 43.2)) && !governorateAt(p.lat, p.lng) && !(p.lat > 24.4 && p.lng > 50.3);
@@ -333,20 +386,36 @@ function taken(t: string): Set<string> {
 }
 /** Blasts heard and nothing more, with no side named. */
 const heardOnly = (p: FullPin) => (!p.actor || p.actor === "unclear") && /\b(?:explosions?|blasts?|booms?)\b/i.test(String(p.label || "")) && !/\b(?:kill\w*|wound\w*|injur\w*|strikes?|struck|hits?|missiles?|drones?|shell\w*)\b/i.test(String(p.label || ""));
+/**
+ * A label's targets, tolls, captures and actions, read once per label (20 Oct: every pair of pins read
+ * both labels' again, the site's processor time on the small server). Read-only sets.
+ */
+const keptSets = new Map<(t: string) => Set<string>, Map<string, Set<string>>>();
+function kept(f: (t: string) => Set<string>, t: string): ReadonlySet<string> {
+  let m = keptSets.get(f);
+  if (!m) keptSets.set(f, (m = new Map()));
+  let s = m.get(t);
+  if (!s) {
+    s = f(t);
+    if (m.size > 20_000) m.clear();
+    m.set(t, s);
+  }
+  return s;
+}
 /** Two pins that tell one event. */
 export function oneEvent(k: FullPin, p: FullPin): boolean {
   // One card's two pins moved onto one spot are one pin, whatever side each part of its sentence reads as.
   if (k.fp && baseFp(k) === baseFp(p)) return samePlace(k, p) || (near(k, p) && dayOf(k.at) === dayOf(p.at));
   if (dayOf(k.at) !== dayOf(p.at) || !sideOk(k.actor, p.actor)) return false;
   const a = String(k.label || ""), b = String(p.label || "");
-  const tk = targetsOf(a), tp = targetsOf(b);
+  const tk = kept(targetsOf, a), tp = kept(targetsOf, b);
   const shareTarget = [...tp].some((x) => tk.has(x));
-  const ta = tollOf(a), tb = tollOf(b);
+  const ta = kept(tollOf, a), tb = kept(tollOf, b);
   // The same dead and wounded at the same target, wherever each outlet set it down: Aden's palace, pinned on Sanaa's (16 Oct).
   if (shareTarget && [...ta].some((x) => x[0] === "k" && tb.has(x)) && [...ta].some((x) => x[0] === "w" && tb.has(x))) return true;
   // One side's capture of one place, told all day ("capture Bab al-Mandab strait and Mayun island",
   // "announce clearing Bab al-Mandab and Mayun island", "Giants recapture Mayun island", 10 Oct).
-  const ca = taken(a), cb = taken(b);
+  const ca = kept(taken, a), cb = kept(taken, b);
   if (k.actor && k.actor === p.actor && k.actor !== "unclear" && [...ca].some((x) => cb.has(x)) && typeof k.lat === "number" && typeof p.lat === "number" && kmTo(k.lat, k.lng ?? 0, p.lat, p.lng ?? 0) < 60) return true;
   if (!near(k, p)) {
     // One telling, set down at two spots of one front (14 Oct: a commander killed "in Marib" and "on Al-Jubah, Marib").
@@ -358,7 +427,7 @@ export function oneEvent(k: FullPin, p: FullPin): boolean {
   const lebanon = (x: YemenPin) => typeof x.lat === "number" && x.lat > 33.03 && x.lat < 34.7 && (x.lng ?? 0) > 35.1 && (x.lng ?? 0) < 36.65;
   if (lebanon(k) && lebanon(p) && hours(k.at, p.at) > 1) return false;
   if (sameWords(a, b)) return true;
-  const A = actionsOf(a), B = actionsOf(b);
+  const A = kept(actionsOf, a), B = kept(actionsOf, b);
   const shareAction = [...A].some((x) => B.has(x));
   // One target each, or two: a round of "airport, palace and camp" ties no attacks together.
   if (shareAction && shareTarget && tk.size <= 2 && tp.size <= 2) return true;

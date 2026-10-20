@@ -8,6 +8,7 @@ import { liveSanctionBoxes, OFAC_KEY, type OfacStore } from "@/lib/desk/ofac";
 import { type Box, IRAN_LIVE_KEY, type IranLive, liveNumbers } from "@/lib/desk/iran-live";
 import IRAN_NUMBERS from "../../../public/iran-numbers.json" with { type: "json" };
 import { metered } from "@/lib/desk/cpu-meter";
+import { cachedResponse } from "@/lib/desk/microcache";
 import { deskParam } from "@/lib/desk/desk-route";
 import { deskById } from "@/lib/desks";
 import { getStore } from "@/lib/desk/store";
@@ -31,9 +32,21 @@ export const Route = createFileRoute("/api/brief")({
   server: {
     handlers: {
       GET: ({ request }) => metered("brief", async () => {
+        const desk = deskParam(new URL(request.url).searchParams.get("desk"));
+        // Built once per 30 seconds, not per visitor (20 Oct, microcache.ts): the brief changes with a
+        // tick or a 6-hour window, and each read was a handful of database reads and the points' rules.
+        return cachedResponse(`brief|${desk}`, 30_000, 30 * 60_000, async () => {
+          const res = await briefAnswer(desk);
+          return { status: res.status, body: await res.text(), headers: Object.fromEntries(res.headers) };
+        }, request.headers.get("accept-encoding"));
+      }),
+    },
+  },
+});
+
+async function briefAnswer(desk: ReturnType<typeof deskParam>): Promise<Response> {
         try {
           // The Iran desk's brief is built from stage 4 of Round 30; until then it has none.
-          const desk = deskParam(new URL(request.url).searchParams.get("desk"));
           if (desk !== "yemen") {
             const st = desk === "iran" ? await getStore() : null;
             const ib = st ? await st.getJson<IranBrief>(IRAN_BRIEF_KEY) : null;
@@ -56,10 +69,7 @@ export const Route = createFileRoute("/api/brief")({
           const msg = err instanceof Error ? err.message : "brief failed";
           return json({ ok: false, error: msg, ...briefWindow() }, 500);
         }
-      }),
-    },
-  },
-});
+}
 
 function ok(brief: Brief, tally: Tally, claims: Claims, timelineNow: TimelineNow | null, controlLive: (Pick<ControlLive, "districts" | "asOf"> & { changes: Pick<ControlLive["changes"][number], "at" | "district" | "from" | "to">[] }) | null, ledger: Ledger, transits: Transits | null) {
   const secondsLeft = Math.max(60, Math.round((Date.parse(brief.nextUpdateAt) - Date.now()) / 1000));

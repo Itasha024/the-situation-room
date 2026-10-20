@@ -63,7 +63,7 @@
   const REGION = [[11.5, 32.5], [38.5, 61]];
 
   /* ---------- The data ---------- */
-  const D = { asOf: null, reports: [], events: [], trump: [], arenas: [], fronts: [], oil: null, ydata: null, ybrief: null };
+  const D = { asOf: null, reports: [], events: [], trump: [], arenas: [], fronts: [], oil: null, ydata: null, ybrief: null, ibrief: null };
   let byFp = new Map();
   // No request holds the page up for long: one that has not answered in 40 seconds counts as none (it is asked again with the next refresh).
   const getJson = (u, o) => fetch(u, { ...(o || {}), signal: AbortSignal.timeout ? AbortSignal.timeout(40_000) : undefined }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -146,7 +146,7 @@
       const t = Math.max(...[di && di.updatedAt, dy && dy.updatedAt, sy && sy.scannedAt, si && si.scannedAt].map((x) => Date.parse(x || '') || 0));
       if (t) D.asOf = new Date(t).toISOString();
     }
-    if (bi && bi.ok !== false && !bi.pending) D.arenas = bi.arenas || D.arenas;
+    if (bi && bi.ok !== false && !bi.pending) { D.arenas = bi.arenas || D.arenas; D.ibrief = bi; }
     if (by && by.ok !== false) {
       D.fronts = by.fronts || D.fronts;
       // Yemen's control as the desk has it now: its update clock's live layer over the hand baseline.
@@ -219,6 +219,7 @@
       ${reply}
       <p class="headline">${esc(r.h)}</p>
       ${also.length ? `<p class="also">Also: ${also.slice(0, 4).map((a) => `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(srcName(a.source))}</a>`).join(' · ')}</p>` : ''}
+      ${r.desks[0] && HD[r.desks[0]] ? `<a class="x-desk" href="${HD[r.desks[0]].href}#r=${encodeURIComponent(r.fp)}">Full report on the ${esc(HD[r.desks[0]].short)} desk →</a>` : ''}
     </article>`;
   }
   function trumpCard(s) {
@@ -354,7 +355,10 @@
 
   /* The reports under a story's lines, without the ones the lines came from. */
   // Each word by its consonants, so two spellings of a name are one word (Ebnolreza, Ebnelreza; defence, defense).
-  const words = (s) => new Set((String(s).toLowerCase().match(/[a-z]{4,}/g) || []).map((w) => w.replace(/c/g, 's').replace(/[aeiouy]/g, '')).filter((w) => w.length > 1));
+  // Each headline's words worked out once (20 Oct: comparing every pair re-ran the regexes, seconds on a phone).
+  const WORDS = new Map();
+  const words = (s) => { const k = String(s); let w = WORDS.get(k); if (!w) { if (WORDS.size > 20000) WORDS.clear(); w = words0(k); WORDS.set(k, w); } return w; };
+  const words0 = (s) => new Set((String(s).toLowerCase().match(/[a-z]{4,}/g) || []).map((w) => w.replace(/c/g, 's').replace(/[aeiouy]/g, '')).filter((w) => w.length > 1));
   const alike = (a, b) => { const X = words(a), Y = words(b); let n = 0; X.forEach((w) => Y.has(w) && n++); return n / Math.max(1, Math.min(X.size, Y.size)) > 0.6; };
   const rest = (t) => { const shown = (t.pts || []).slice(0, 4); const urls = new Set(shown.map((p) => p.ref && p.ref.url)); return t.cards.filter((r) => !urls.has(r.url) && !shown.some((p) => alike(r.h, p.t))); };
 

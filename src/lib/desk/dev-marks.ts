@@ -55,7 +55,8 @@ const SIDE_RE: [DevSide, RegExp][] = [
   ["saudi", /\b(Saudi|coalition)\b/gi],
   ["us", /\b(US|U\.S\.|American|CENTCOM|Pentagon)\b/g],
   // Nation's Shield (درع الوطن) is a government force: with no side found the mark fell to the Houthis (Jabal Habashi, 6 Oct).
-  ["government", /\b(government|pro-government|Giants|National Resistance|Nation'?s Shield|Homeland Shield|Tareq|army|PLC|Presidential Leadership|Yemeni forces)\b/gi],
+  // The Popular Resistance fights beside the army (20 Oct: "Popular Resistance ambush kills seven Houthi fighters in Taiz" had no side).
+  ["government", /\b(government|pro-government|Giants|National Resistance|Popular Resistance|Nation'?s Shield|Homeland Shield|Tareq|army|PLC|Presidential Leadership|Yemeni forces)\b/gi],
 ];
 /** A name after these words is the target, not the one who acted. */
 const OBJECT_BEFORE = /\b(on|at|against|targeting|targets?|hits?|struck|strikes?|kills?|killed|of|into|toward|towards|repels?|repelled|near|by)\s+(?:the |a |an )?(?:[\w-]+ )?$/i;
@@ -96,7 +97,19 @@ export function actorOf(r: Pick<LiveReport, "summary" | "text">, kind: DevKind):
  */
 export type PinSide = DevSide | "israel";
 /** A side named as the one hit or killed ("Houthi fighters killed", "bodies of Houthi fighters"): not who acted. */
-const VICTIM_AFTER = /^(?:[\w-]+\s+)?(?:fighters?|members?|elements?|militants?|militiamen|soldiers?|troops|personnel|commanders?|leaders?|officers?)?\s*(?:were |was )?(?:killed|wounded|dead|died|bodies|casualties|losses|captured|taken prisoner|surrender\w*)\b/i;
+// Or a title and a name before "killed" (20 Oct: "Houthi intelligence chief Abdul-Hakim al-Khiwani killed in Sanaa strike",
+// "Houthi commander and security official killed in Taiz" were drawn as the Houthis'), with no weapon or attack among them.
+const VICTIM_AFTER = /^(?:[\w-]+\s+)?(?:fighters?|members?|elements?|militants?|militiamen|soldiers?|troops|personnel|commanders?|leaders?|officers?)?\s*(?:were |was )?(?:killed|wounded|dead|died|bodies|casualties|losses|captured|taken prisoner|surrender\w*)\b|^(?:(?!(?:attacks?|strikes?|missiles?|drones?|shell\w*|fire[sd]?|mines?|landmines?|ambush\w*|bombs?|IEDs?|explosive|devices?|snipers?|gunfire|artillery|raids?|forces|by|on|in|at|after|as|kills?)\b)[\w'’.-]+\s+){1,5}(?:were |was |is |reported(?:ly)? |also )?(?:killed|dead|died|assassinated)\b/i;
+/** A side the words name only as the dead or the hit, never as the one acting. */
+function namedOnlyAsVictim(label: string, side: string): boolean {
+  const re = PIN_SIDES.find(([k]) => k === side)?.[1];
+  if (!re || !new RegExp(re.source, re.flags.replace("g", "")).test(label)) return false;
+  for (const m of label.matchAll(new RegExp(re.source, re.flags.includes("g") ? re.flags : `${re.flags}g`))) {
+    const at = m.index ?? 0;
+    if (!VICTIM_AFTER.test(label.slice(at + m[0].length).trimStart()) && !OBJECT_BEFORE.test(label.slice(Math.max(0, at - 30), at))) return false;
+  }
+  return true;
+}
 /** The Houthis' own outlets call their forces "Yemeni" ("Yemeni ballistic missiles target…"). */
 const HOUTHI_YEMENI = /\bYemeni (?:ballistic |cruise |winged |hypersonic )?(?:missiles?|drones?|rockets?)\b|\bYemeni (?:armed|naval|missile) forces\b|\bSanaa forces\b/i;
 const PIN_SIDES: [PinSide, RegExp][] = [["israel", /\b(Israel(?:i)?|IDF)\b/g], ...SIDE_RE];
@@ -124,7 +137,8 @@ function sideIn(s: string): PinSide | null {
  * air defence, sirens and warnings at work, or a missile or drone shot down, are the attack they meet,
  * whoever the report names as defending; and in Saudi Arabia's own cities every attack is the Houthis'.
  */
-const DEFENCE_RE = /\b(?:intercept\w*|shoots?\s+down|shot\s+down|downed|air[- ]defen[cs]es?|early[- ]warnings?|emergency alerts?|alerts?|sirens?|warnings?\s+(?:issued|sounded))\b/i;
+// "anti-aircraft units engage drone over Maasheq Palace" (20 Oct): air defence too.
+const DEFENCE_RE = /\b(?:intercept\w*|shoots?\s+down|shot\s+down|downed|air[- ]defen[cs]es?|anti-?aircraft|early[- ]warnings?|emergency alerts?|alerts?|sirens?|warnings?\s+(?:issued|sounded))\b/i;
 const WEAPON_RE = /\b(?:ballistic|missiles?|drones?|UAVs?|rockets?|projectiles?)\b/i;
 /** A missile or drone the text gives to another side: "US drone strike", "government drone strikes". */
 const OTHERS_WEAPON = /\b(?:Saudi|coalition|US|U\.S\.|American|Israeli|Emirati|UAE|government|army|Giants|southern|STC)(?:[- ]led(?:\s+coalition)?)?\s+(?:\w+\s+)?(?:drones?|missiles?|rockets?|UAVs?)\b/i;
@@ -140,8 +154,17 @@ export function houthiAttack(e: { label?: string | null; place?: string | null; 
   if (DEFENCE_RE.test(t) && (WEAPON_RE.test(t) || inSaudi)) return true;
   return inSaudi && IN_SAUDI_HIT_RE.test(t) && !/\b(?:coalition|Saudi-led)\s+(?:air ?strikes?|raids?)\b|\bair ?strikes?\b/i.test(t);
 }
-/** A Yemen map pin's side as served: from the part of its headline about its own place, the Houthis' for attacks only they make, else as stored. */
-export function yemenPinSide(e: { type?: string | null; label?: string | null; text?: string | null; source?: string | null; place?: string | null; lat?: number | null; lng?: number | null; actor?: string | null }): string {
+/**
+ * A Yemen map pin's side as served: from the part of its headline about its own place, the Houthis' for attacks only they make, else as stored.
+ * The Southern forces are no side of their own on the map: their pins are the government's (user, 20 Oct: "remove southern forces
+ * color, they are not a separate side for me"). Their name stays in the words.
+ */
+type YemenPinIn = { type?: string | null; label?: string | null; text?: string | null; source?: string | null; place?: string | null; lat?: number | null; lng?: number | null; actor?: string | null };
+export function yemenPinSide(e: YemenPinIn): string {
+  const s = readPinSide(e);
+  return s === "southern" || s === "stc" ? "government" : s;
+}
+function readPinSide(e: YemenPinIn): string {
   const label = String(e.label || "");
   if (houthiTelling(label)) return "houthi";
   const c = clauseOf(label, e.place);
@@ -155,8 +178,9 @@ export function yemenPinSide(e: { type?: string | null; label?: string | null; t
   // airport" was drawn as Saudi), unless it tells of both sides fighting.
   const said = pinSideOf(e);
   if (said && !/\b(?:clash\w*|battles?|fighting|between|engage\w*)\b/i.test(label)) return said;
-  // The reader's "stc" is the map's Southern forces (user, 18 Oct).
   const stored = e.actor === "stc" ? "southern" : e.actor;
+  // A side the headline names only as the dead is not the one who acted, whatever was stored.
+  if (stored && !said && namedOnlyAsVictim(label, stored)) return "unclear";
   return stored && stored !== "unclear" ? stored : said ?? "unclear";
 }
 
@@ -210,7 +234,8 @@ export function pinSideOf(e: { type?: string | null; label?: string | null; text
   const side = (colon ? sideIn(full.slice(colon[0].length)) : null) ?? sideIn(full);
   if (side) return side;
   // Only the coalition, the US and Israel fly strike aircraft over Yemen.
-  if (/\b(air ?strikes?|air ?raids?|warplanes?|fighter jets?|cluster bombs?)\b/i.test(full)) return /\b(US|U\.S\.|American)\b/.test(full) ? "us" : "saudi";
+  // Attack helicopters too (20 Oct: "Apache helicopters strike Houthi targets in Al-Jawf" had no side).
+  if (/\b(air ?strikes?|air ?raids?|warplanes?|fighter jets?|cluster bombs?|Apaches?|(?:attack |combat )?helicopters?)\b/i.test(full)) return /\b(US|U\.S\.|American)\b/.test(full) ? "us" : "saudi";
   const body = sideIn(String(e.text || "").slice(0, 300));
   if (body) return body;
   // The Houthis' military spokesman speaks only of their own attacks.

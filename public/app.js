@@ -57,8 +57,8 @@ const deviceTheme = () => (window.matchMedia && matchMedia('(prefers-color-schem
 const chosenTheme = () => { try { const t = localStorage.getItem('desk-theme'); return THEMES.includes(t) ? t : null; } catch (e) { return null; } };
 let THEME = chosenTheme() || deviceTheme();
 const THEME_SIDES = {
-  'broadsheet-day': { houthi: '#a8372a', plc: '#0d7680', saudi: '#5f86ad', contested: '#b07d1a', mixed: '#7d6b99' },
-  'broadsheet-night': { houthi: '#e2694f', plc: '#3fb0b3', saudi: '#7aa5d6', contested: '#d9aa45', mixed: '#a898c4' },
+  'broadsheet-day': { houthi: '#e8761f', plc: '#0d7680', saudi: '#9b4dea', contested: '#b07d1a', mixed: '#7d6b99' },
+  'broadsheet-night': { houthi: '#f08c2e', plc: '#3fb0b3', saudi: '#a855f7', contested: '#d9aa45', mixed: '#a898c4' },
 };
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
 const BASE_COLORS = { houthi: '#c45c26', plc: '#22c55e', saudi: '#1f8a7a', contested: '#e9c46a', mixed: '#457b9d' };
@@ -204,15 +204,14 @@ function pinMark(ll, o) {
 const YEMEN_PIN_SIDES = () => [
   ['houthi', COLORS.houthi, 'Houthis'],
   ['government', COLORS.plc, 'Government forces'],
-  ['southern', '#c084fc', 'Southern forces'],
   ['saudi', COLORS.saudi, 'Saudi-led coalition'],
   ['us', '#2563eb', 'US'],
-  ['israel', '#f472b6', 'Israel'],
+  ['israel', '#38bdf8', 'Israel'],
   ['unclear', '#94a3b8', 'Not stated'],
 ];
 const yemenSidesOn = {};
-// The reader's 'stc' is the Southern forces' pin (user, 18 Oct).
-const yemenSideOf = (ev) => { const a = ev.actor === 'stc' ? 'southern' : ev.actor; return YEMEN_PIN_SIDES().some(([k]) => k === a) ? a : 'unclear'; };
+// The Southern forces are no side of their own: their pins are the government's (user, 20 Oct: "they are not a separate side for me").
+const yemenSideOf = (ev) => { const a = ev.actor === 'stc' || ev.actor === 'southern' ? 'government' : ev.actor; return YEMEN_PIN_SIDES().some(([k]) => k === a) ? a : 'unclear'; };
 /* The sides whose pins the ground's own rows (Houthis, government, Saudi Arabia) already show; every other side with a pin on the map gets its own Who row (user, 18 Oct: the purple Southern forces pin had none). */
 const YEMEN_GROUND_SIDES = ['houthi', 'government', 'saudi'];
 const yemenSidesSeen = new Set();
@@ -544,14 +543,21 @@ function fmtWhen(ts) {
   return T('{t} on {d}', { t: fmtClock(ts), d: day });
 }
 
+// One formatter, and each time's day kept (20 Oct: a new formatter per call took seconds on a phone).
+let JYMD_FMT = null;
+const JYMD = new Map();
 function jerusalemYmd(ts) {
   if (!ts) return '';
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: DESK_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date(ts));
+  const k = String(ts);
+  const had = JYMD.get(k);
+  if (had) return had;
+  JYMD_FMT = JYMD_FMT || new Intl.DateTimeFormat('en-CA', { timeZone: DESK_TZ, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const parts = JYMD_FMT.formatToParts(new Date(ts));
   const y = parts.find((p) => p.type === 'year').value;
   const m = parts.find((p) => p.type === 'month').value;
   const d = parts.find((p) => p.type === 'day').value;
+  if (JYMD.size > 50000) JYMD.clear();
+  JYMD.set(k, `${y}-${m}-${d}`);
   return `${y}-${m}-${d}`;
 }
 
@@ -1807,7 +1813,7 @@ let allPinsLoaded = null;
 // Read once, well or not: till then the whole war's count is not shown (user, 17 Oct: 1,175, then 3,308).
 let allPinsRead = false;
 function loadAllPins() {
-  allPinsLoaded ??= fetch('/api/desk?since=' + CONFLICT_START)
+  allPinsLoaded ??= fetch('/api/desk?desk=yemen&since=' + CONFLICT_START)
     .then((res) => (res.ok ? res.json() : null))
     .then((body) => {
       const rows = body && Array.isArray(body.events) ? body.events : [];
@@ -7688,14 +7694,15 @@ function startIranFeed() {
  * Yemen desk's, the note only the report, one pin per event.
  */
 const IRAN_PIN_SIDES = [
-  ['iran', '#dc2626', 'Iran'],
+  ['iran', '#e5484d', 'Iran'],
   ['hezbollah', '#eab308', 'Hezbollah'],
-  ['iraqi_militias', '#f97316', 'Iraqi and Syrian militias'],
-  ['houthi', '#16a34a', 'Houthis'],
+  ['iraqi_militias', '#ec4899', 'Iraqi and Syrian militias'],
+  ['houthi', '#f08c2e', 'Houthis'],
   ['us', '#2563eb', 'US'],
-  ['israel', '#60a5fa', 'Israel'],
-  ['gulf', '#a855f7', 'Gulf states and others'],
-  ['other', '#94a3b8', 'Not stated'],
+  ['israel', '#38bdf8', 'Israel'],
+  // The Gulf states' own attacks, purple (user, 20 Oct: "return the gulf states as a side in purple").
+  ['gulf', '#a855f7', 'Gulf states'],
+  ['other', '#94a3b8', 'Others or not stated'],
 ];
 const IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));
 const IRAN_MAP_FROM = '2026-02-28';
@@ -7924,7 +7931,8 @@ function iranCountryStyle(f) {
   // The Yemen map's look (user, 9 Oct: one style across the site): a solid fill under dark borders.
   return { fillColor: ink, fillOpacity: on ? 0.38 : 0, color: EDGE, weight: 0.8, opacity: on ? 0.75 : 0.15 };
 }
-const iranSideOf = (ev) => (IRAN_PIN_INK[ev.actor] ? ev.actor : 'other');
+// A Yemen desk pin's Saudi-led coalition is a Gulf state's attack here (user, 20 Oct).
+const iranSideOf = (ev) => (IRAN_PIN_INK[ev.actor] ? ev.actor : ev.actor === 'saudi' ? 'gulf' : 'other');
 /*
  * At sea or on land (user, 12 Oct), as scripts/iran-research/map-pack.cjs reads the researched pins:
  * a ship, a boat or "off" a place is at sea, and so is a point more than 3 km off the coast
@@ -7968,7 +7976,7 @@ async function loadIranPins() {
   // the map comes up at once): today is drawn from the live pins, the whole war when they come.
   const pastP = iranPins.past ? Promise.resolve(iranPins.past) : (iranPins.pastP = iranPins.pastP || loadIranPast());
   try {
-    const res = await fetch(`/api/desk?desk=iran&since=${IRAN_MAP_FROM}`, { cache: 'no-cache' });
+    const res = await fetch(`/api/desk?desk=iran&since=${IRAN_MAP_FROM}`);
     if (!res.ok) return;
     const d = await res.json();
     // The desk's own pins from the day it began reading; the researched ones before it.

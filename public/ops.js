@@ -69,14 +69,21 @@
     theme: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="currentColor" d="M12 3.5a8.5 8.5 0 0 1 0 17z"/></svg>',
     keys: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="6" width="19" height="12" rx="1.6"/><path stroke-linecap="round" d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7.5 14h9"/></g></svg>',
     x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8l1.6 2.3 2.7-.7.6 2.7 2.6 1-.8 2.7 1.9 2-1.9 2 .8 2.7-2.6 1-.6 2.7-2.7-.7L12 21.2l-1.6-2.3-2.7.7-.6-2.7-2.6-1 .8-2.7-1.9-2 1.9-2-.8-2.7 2.6-1 .6-2.7 2.7.7z"/></g></svg>',
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l10.5-6.5z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>',
     left: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></svg>',
     right: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>',
     down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 9l7 7 7-7"/></svg>',
     ext: '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/></g></svg>',
   };
-  const hm = (t, tz) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz });
-  const dm = (t, tz) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: tz });
-  const VIEW_TZ = () => (PAGE && TZ[PAGE]) || undefined;
+  // One formatter per clock, made once (each call making its own cost seconds on a phone).
+  const FMT = new Map();
+  const fmt = (kind, tz) => { const k = `${kind}|${tz || ''}`; let f = FMT.get(k); if (!f) { f = new Intl.DateTimeFormat('en-GB', kind === 't' ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: tz } : { day: 'numeric', month: 'short', timeZone: tz }); FMT.set(k, f); } return f; };
+  const hm = (t, tz) => fmt('t', tz).format(new Date(t));
+  const dm = (t, tz) => fmt('d', tz).format(new Date(t));
+  // The times in the view: the desk's clock (the All page: the reader's), the reader's own, or UTC, as set.
+  const VIEW_TZ = () => (P.tz === 'utc' ? 'UTC' : P.tz === 'local' ? undefined : (PAGE && TZ[PAGE]) || undefined);
   const ago = (t) => { const m = Math.round((Date.now() - Date.parse(t)) / 60000); return m < 1 ? 'now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
 
   /* Degrees and MGRS (WGS84, UTM), for the place under the pointer and for every event. */
@@ -103,6 +110,7 @@
   }
   const deg = (v, pos, neg) => `${Math.abs(v).toFixed(4)}° ${v >= 0 ? pos : neg}`;
   const latlon = (lat, lng) => `${deg(lat, 'N', 'S')}, ${deg(lng, 'E', 'W')}`;
+  const dms = (v, pos, neg) => { const a = Math.abs(v), d = Math.floor(a), m = Math.floor((a - d) * 60), s = Math.round(((a - d) * 60 - m) * 60); return `${d}°${String(m).padStart(2, '0')}′${String(s).padStart(2, '0')}″${v >= 0 ? pos : neg}`; };
   const R_KM = 6371.0088;
   const rad = (d) => (d * Math.PI) / 180;
   function distKm(a, b) {
@@ -115,7 +123,8 @@
     const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lng - a.lng));
     return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
   }
-  const kmTxt = (km) => `${km < 10 ? km.toFixed(1) : Math.round(km).toLocaleString('en-GB')} km · ${(km / 1.852 < 10 ? (km / 1.852).toFixed(1) : Math.round(km / 1.852).toLocaleString('en-GB'))} nm`;
+  const n1 = (v) => (v < 10 ? v.toFixed(1) : Math.round(v).toLocaleString('en-GB'));
+  const kmTxt = (km) => (P.units === 'km' ? `${n1(km)} km` : P.units === 'nm' ? `${n1(km / 1.852)} nm` : `${n1(km)} km · ${n1(km / 1.852)} nm`);
   async function copy(text, btn) {
     let ok = false;
     try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { /* refused */ }
@@ -126,9 +135,10 @@
   /* ---------- The map and its events, whichever page ---------- */
   const getMap = () => (PAGE === 'all' ? window.__home && window.__home.map : app('map'));
   /** The events the page has, each with its desk. */
-  function events() {
-    if (PAGE === 'all') { const h = window.__home; return h && h.D ? h.D.events.filter((e) => !e.researched) : []; }
-    if (PAGE === 'iran') { const p = app('iranPins'); return p && p.events ? p.events.filter((e) => !e.researched).map((e) => (e.desk ? e : Object.assign(e, { desk: 'iran' }))) : []; }
+  function events(withResearched) {
+    const own = (e) => withResearched || !e.researched;
+    if (PAGE === 'all') { const h = window.__home; return h && h.D ? h.D.events.filter(own) : []; }
+    if (PAGE === 'iran') { const p = app('iranPins'); return p && p.events ? p.events.filter(own).map((e) => (e.desk ? e : Object.assign(e, { desk: 'iran' }))) : []; }
     const d = app('data');
     return d && d.events ? d.events.filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (e.desk ? e : Object.assign(e, { desk: 'yemen' }))) : [];
   }
@@ -155,7 +165,13 @@
   /* ---------- The frame ---------- */
   const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, cast: false, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: false };
   try { Object.assign(S, JSON.parse(localStorage.getItem('ops-state2') || '{}'), { tool: null, sel: null, cast: false }); } catch (e) { /* none kept */ }
-  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills })); } catch (e) { /* private */ } };
+  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, mini, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, mini, trafficSeen })); } catch (e) { /* private */ } };
+  /* The reader's settings (20 Oct: "make a settings page too to make the site very customizable"). */
+  const PREF_DEF = { tz: 'desk', range: 2, pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, castTour: true, castEvery: 12, castTicker: true, airStart: false };
+  const P = { ...PREF_DEF };
+  try { Object.assign(P, JSON.parse(localStorage.getItem('ops-prefs') || '{}')); } catch (e) { /* none kept */ }
+  const keepPrefs = () => { try { localStorage.setItem('ops-prefs', JSON.stringify(P)); } catch (e) { /* private */ } };
+  if (P.airStart) S.air = true;
 
   let shell, strip, bar, nav, leftEl, rightEl, dock, stage, mapWrap;
   const NAV_ICON = {
@@ -169,28 +185,36 @@
   const LEFT_TABS = {
     yemen: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Fronts', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
     iran: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
-    all: [['ops-theatres', 'Theatres', 'theatres']],
+    all: [['ops-theatres', 'Brief', 'brief']],
   };
   const PAGE_NAME = { all: 'All theatres', iran: 'Iran', yemen: 'Yemen' };
-  /* Date-time group, Zulu: 192047Z OCT 26. */
-  const dtg = (t) => { const d = new Date(t); const p = (n) => String(n).padStart(2, '0'); return `${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}Z ${d.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' }).toUpperCase()} ${String(d.getUTCFullYear()).slice(2)}`; };
+  /* The day, plainly: Tue 20 Oct 2026 (20 Oct: a military date-time group read as the 26th). */
+  const dayTxt = (t, tz) => new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: tz });
+  /* The site's mark: a plotting scope in a room's frame, its sweep in the view's amber. */
+  const LOGO = '<svg class="ops-logo" viewBox="0 0 32 32" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 9V3h6M23 3h6v6M29 23v6h-6M9 29H3v-6"/><circle cx="16" cy="16" r="9.2" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16" cy="16" r="4.6" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".55"/><path class="sw" d="M16 16V6.8a9.2 9.2 0 0 1 8.4 5.45z"/><path stroke="currentColor" stroke-width="1.5" d="M16 3.5v3M16 25.5v3M3.5 16h3M25.5 16h3"/><circle class="bl" cx="20.4" cy="11" r="1.5"/></svg>';
 
   function build() {
     root.classList.add('ops-on');
     shell = root;
-    // The status strip: live, the time in Zulu and on the desk's clock, the last update, the counts.
+    // The status strip: live, the date, the time on the desks' clocks, the last update, the counts.
     strip = document.createElement('div');
     strip.className = 'ops-strip';
     strip.innerHTML = `<span class="ops-live"><i></i>Live</span>
-      <span class="ops-sf"><small>DTG</small><b id="ops-dtg">--</b></span>
+      <span class="ops-sf"><b id="ops-date">${esc(dayTxt(Date.now()))}</b></span>
       ${PAGE !== 'all' ? `<span class="ops-sf"><small>${esc(CAP[PAGE])}</small><b id="ops-local">--:--</b></span>` : `<span class="ops-sf"><small>Sanaa</small><b data-tz="Asia/Aden">--:--</b></span><span class="ops-sf"><small>Tehran</small><b data-tz="Asia/Tehran">--:--</b></span><span class="ops-sf"><small>Jerusalem</small><b data-tz="Asia/Jerusalem">--:--</b></span>`}
       <span class="ops-sf ops-upd"></span>
       <span class="ops-sf ops-cnt"><small>Events 24 h</small><b id="ops-n24">–</b></span>
       <span class="ops-sf ops-cnt"><small>48 h</small><b id="ops-n48">–</b></span>
       <span class="ops-tag">Open source</span>`;
-    // The bar: the name, the theatres, the view's own buttons.
+    // The bar: the mark and name, the theatres, the view's own buttons.
     bar = document.createElement('div');
     bar.className = 'ops-bar';
+    const home = document.createElement('a');
+    home.className = 'ops-home';
+    home.href = '/';
+    home.title = 'The Situation Room';
+    home.innerHTML = `${LOGO}<span class="sr">The Situation Room</span>`;
+    bar.appendChild(home);
     const mast = $('.mast', root), top = $('header.top', root);
     if (mast) bar.appendChild(mast);
     if (top) {
@@ -201,12 +225,11 @@
     const acts = document.createElement('div');
     acts.className = 'ops-acts';
     acts.innerHTML = `
-      <button type="button" class="ops-btn" data-op="layers" aria-expanded="false" title="Layers: base map, aircraft, ships, grid (T)">${NAV_ICON.layers}<span>Layers</span></button>
-      <button type="button" class="ops-btn" data-op="traffic" title="Live aircraft and ships (T)">${ICON.plane}<span>Traffic</span></button>
+      <button type="button" class="ops-btn" data-op="traffic" aria-expanded="false" title="Live aircraft and ships (T)">${ICON.plane}<span>Traffic</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="cast" aria-pressed="false" title="Broadcast mode, for screens and TV (B)">${ICON.cast}<span class="sr">Broadcast mode</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="theme" title="Day or night">${ICON.theme}<span class="sr">Day or night</span></button>
-      <button type="button" class="ops-btn ops-ico" data-op="keys" title="Keys (?)">${ICON.keys}<span class="sr">Keys</span></button>
-      <a class="ops-classic" href="?view=classic" title="The site's classic layout">Classic</a>`;
+      <button type="button" class="ops-btn ops-ico" data-op="settings" title="Settings (,)">${ICON.gear}<span class="sr">Settings</span></button>
+      <button type="button" class="ops-btn ops-ico" data-op="full" title="Full screen (F)">${ICON.full}<span class="sr">Full screen</span></button>`;
     bar.appendChild(acts);
     root.insertBefore(bar, root.firstChild);
     root.insertBefore(strip, bar);
@@ -217,7 +240,8 @@
     nav.className = 'ops-nav';
     nav.setAttribute('aria-label', 'Panels');
     nav.innerHTML = tabs.map(([id, n, ic]) => `<button type="button" data-tab="${id}" title="${esc(n)}">${NAV_ICON[ic]}<span>${esc(n)}</span></button>`).join('')
-      + `<span class="ops-nav-sp"></span><button type="button" data-op="layers" title="Layers (T)">${NAV_ICON.layers}<span>Layers</span></button>`;
+      + `<span class="ops-nav-sp"></span><button type="button" data-op="layers" aria-expanded="false" title="Layers: base map, names, grid, control areas (Y)">${NAV_ICON.layers}<span>Layers</span></button>`
+      + `<button type="button" data-op="keys" title="Keys (?)">${ICON.keys}<span>Keys</span></button>`;
     leftEl = document.createElement('aside');
     leftEl.className = 'ops-left';
     leftEl.innerHTML = `<div class="ops-phead"><h2 class="ops-ptitle"></h2><button type="button" class="ops-fold" data-op="left" title="Close the panel ([)">${ICON.left}</button></div><div class="ops-panes"></div>`;
@@ -243,7 +267,7 @@
     // The right panel: the reports, and the events placed on the map.
     rightEl = document.createElement('aside');
     rightEl.className = 'ops-right';
-    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events <small class="ops-ev-n"></small></button></nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
+    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events</button></nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
       <div class="ops-rpane ops-rp-rep"></div>
       <div class="ops-rpane ops-rp-ev"><div class="ops-evf"><input class="ops-q ops-evq" type="search" placeholder="Filter events: a place, a side, a weapon" aria-label="Filter the events"><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>`;
     root.insertBefore(rightEl, item.nextSibling);
@@ -350,11 +374,13 @@
       if (op === 'left') { S.left = !S.left; keep(); paintFrame(); }
       else if (op === 'right') { S.right = !S.right; keep(); paintFrame(); }
       else if (op === 'dock') { S.dock = !S.dock; keep(); paintFrame(); }
-      else if (op === 'cast') { S.cast = !S.cast; paintFrame(); paintCast(); }
+      else if (op === 'cast') setCast(!S.cast);
       else if (op === 'keys') toggleKeys();
       else if (op === 'theme') { const set = app('setTheme'), nx = app('nextTheme'); if (set && nx) set(nx(app('THEME'))); }
       else if (op === 'layers') toggleLayers();
-      else if (op === 'traffic') { if (!S.air && !S.sea) { S.air = true; S.sea = true; keep(); runTraffic(); } toggleLayers(true); }
+      else if (op === 'traffic') toggleTraffic();
+      else if (op === 'settings') openSettings();
+      else if (op === 'full') fullScreen();
     });
     dock.addEventListener('click', (ev) => {
       const q = ev.target.closest('[data-qr]');
@@ -362,12 +388,13 @@
       else if (ev.target.closest('.time-filter button')) { S.qr = 0; setTimeout(paintQuick, 50); }
     });
     rightEl.addEventListener('input', (ev) => { if (ev.target.matches('.ops-evq')) { evQ = ev.target.value.trim().toLowerCase(); drawLog(recent()); } });
-    // The column edges, to open a closed panel again.
+    // The column edges, to open a closed panel again: a tab with its name (20 Oct: a bare arrow was barely seen).
     ['left', 'right'].forEach((side) => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = `ops-unfold ops-unfold-${side}`; b.dataset.op = side;
-      b.title = side === 'left' ? 'Open the panel ([)' : 'Open the reports (])';
-      b.innerHTML = side === 'left' ? ICON.right : ICON.left;
+      const name = side === 'left' ? 'Brief' : 'Reports';
+      b.title = side === 'left' ? `Open the ${name.toLowerCase()} ([)` : 'Open the reports and events (])';
+      b.innerHTML = `${side === 'left' ? ICON.right : ICON.left}<span>${name}</span>`;
       mapWrap.appendChild(b);
     });
     const ud = document.createElement('button');
@@ -375,6 +402,16 @@
     ud.innerHTML = `<span>Time · Who and What · Last 48 hours</span>`;
     mapWrap.appendChild(ud);
     addEventListener('resize', () => { sizeDock(); drawMatrix(); });
+    // Going to another desk: its tab lights at once and the page shows it is on its way (the page's own
+    // link handler, on the document, has already started the move; this runs after it).
+    addEventListener('click', (ev) => {
+      const a = ev.target.closest && ev.target.closest('a[data-desk-go]');
+      if (!a || !ev.defaultPrevented || a.getAttribute('aria-current') === 'page') return;
+      const to = new URL(a.href, location.href).pathname.replace(/\/+$/, '') || '/';
+      root.querySelectorAll('.ops-bar .dt-btn').forEach((b) => { const p = new URL(b.href, location.href).pathname.replace(/\/+$/, '') || '/'; if (p === to) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+      H.classList.add('ops-going');
+    });
+    addEventListener('pageshow', () => H.classList.remove('ops-going'));
   }
 
   /* The All page's reports: both desks', newest first, and Trump's latest (home.js's own cards). */
@@ -408,41 +445,35 @@
 
   /* The All page's left panel: each theatre at a glance, from the events and reports the page has. */
   const DESK_INFO = { iran: ['Iran', 'Israel, the US, Iran and its allies', '/iran-conflict-desk'], yemen: ['Yemen', 'The Houthis, the government, the coalition, the Red Sea', '/yemen-conflict-desk'] };
+  /* Each desk's own brief, its latest developments in short (20 Oct: "make like a brief off of the desk's brief";
+     the counts and the bars of sides went). */
   function drawTheatres() {
     const el = document.getElementById('ops-theatres');
     const h = window.__home;
     if (!el || !h || !h.D) return;
-    const now = Date.now();
-    const ev = events();
-    el.innerHTML = Object.entries(DESK_INFO).map(([desk, [name, sub, href]]) => {
-      const mine = ev.filter((e) => e.desk === desk);
-      const d24 = mine.filter((e) => now - Date.parse(e.at) < 864e5), d48 = mine.filter((e) => now - Date.parse(e.at) < 1728e5);
-      const by = new Map();
-      d24.forEach((e) => { const s = sideOf(e); const r = by.get(s.name) || { s, n: 0 }; r.n++; by.set(s.name, r); });
-      const sides = [...by.values()].sort((a, b) => b.n - a.n);
-      const max = Math.max(1, ...sides.map((x) => x.n));
-      const reps = (h.D.reports || []).filter((r) => (r.desks || []).includes(desk));
-      const lastRep = reps[0];
-      const latest = mine.slice().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
+    const briefs = { iran: h.D.ibrief, yemen: h.D.ybrief };
+    const key = JSON.stringify([briefs.iran && briefs.iran.updatedAt, briefs.yemen && briefs.yemen.updatedAt, !!briefs.iran, !!briefs.yemen]);
+    if (el._k === key) return;
+    el._k = key;
+    const when = (t) => (t ? `${hm(t, 'Asia/Jerusalem')}, ${dm(t, 'Asia/Jerusalem')}` : '');
+    el.innerHTML = Object.entries(DESK_INFO).map(([desk, [name, , href]]) => {
+      const b = briefs[desk];
+      const s = b && b.situation;
+      const pts = s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 5) : [];
       return `<article class="ops-th">
-        <header><h3><a href="${href}">${esc(name)}</a></h3><a class="ops-th-go" href="${href}">Open desk ${ICON.right}</a></header>
-        <p class="ops-th-sub">${esc(sub)}</p>
-        <dl class="ops-kpi"><div><dt>Events 24 h</dt><dd>${d24.length}</dd></div><div><dt>48 h</dt><dd>${d48.length}</dd></div><div><dt>Last report</dt><dd>${lastRep ? esc(ago(lastRep.at).replace(' ago', '')) : '–'}</dd></div></dl>
-        ${sides.length ? `<ul class="ops-bars">${sides.map((x) => `<li><span>${esc(x.s.name)}</span><i style="--c:${x.s.c};--w:${Math.round((x.n / max) * 100)}%"></i><b>${x.n}</b></li>`).join('')}</ul>` : '<p class="ops-empty">No events on the map in the last 24 hours.</p>'}
-        ${latest.length ? `<ol class="ops-th-ev">${latest.map((e) => `<li><button type="button" data-thev="${esc(keyOf(e))}"><time>${esc(hm(e.at))}</time><span>${esc(e.label || e.place || '')}</span></button></li>`).join('')}</ol>` : ''}
+        <header><h3><a href="${href}" data-desk-go>${esc(name)}</a></h3><a class="ops-th-go" href="${href}" data-desk-go>Open desk ${ICON.right}</a></header>
+        ${b && b.updatedAt ? `<p class="ops-th-sub">The desk’s brief · updated ${esc(when(b.updatedAt))}</p>` : ''}
+        ${pts.length ? `<ol class="ops-th-pts">${pts.map((p) => `<li>${esc(p)}</li>`).join('')}</ol>` : `<p class="ops-empty">${b ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
+        <a class="ops-th-more" href="${href}" data-desk-go>The full brief, ${desk === 'iran' ? 'arenas' : 'fronts'}, numbers and timeline ${ICON.right}</a>
       </article>`;
-    }).join('') + `<p class="ops-th-note">Every mark on the map is a report placed where it happened. Open a desk for its brief, fronts, numbers and timeline.</p>`;
-    if (!el._wired) {
-      el._wired = true;
-      el.addEventListener('click', (ev) => { const b = ev.target.closest('[data-thev]'); if (b) { const e = events().find((x) => keyOf(x) === b.dataset.thev); if (e) focusEvent(e); } });
-    }
+    }).join('');
   }
 
   /* ---------- Clocks ---------- */
   function tick() {
     const now = Date.now();
-    const z = document.getElementById('ops-dtg');
-    if (z) z.textContent = dtg(now);
+    const z = document.getElementById('ops-date');
+    if (z) z.textContent = dayTxt(now, PAGE !== 'all' ? TZ[PAGE] : undefined);
     const l = document.getElementById('ops-local');
     if (l && PAGE !== 'all') l.textContent = hm(now, TZ[PAGE]);
     strip && strip.querySelectorAll('[data-tz]').forEach((b) => { b.textContent = hm(now, b.dataset.tz); });
@@ -465,14 +496,15 @@
         <button type="button" data-tool="ruler" title="Measure: click points, double-click to end (M)">${ICON.ruler}<span class="sr">Measure</span></button>
         <button type="button" data-tool="rings" title="Range rings: click a place (R)">${ICON.rings}<span class="sr">Range rings</span></button>
         <button type="button" data-do="link" title="Copy a link to this view (L)">${ICON.link}<span class="sr">Link to this view</span></button>
-        <button type="button" data-do="full" title="Full screen (F)">${ICON.full}<span class="sr">Full screen</span></button>
+        <button type="button" data-do="layers" class="ops-ph" title="Layers">${NAV_ICON.layers}<span class="sr">Layers</span></button>
       </div>
       <div class="ops-tooltip" hidden></div>
       <div class="ops-coords" aria-live="off"><span class="ops-ll">Point at the map</span><span class="ops-mgrs"></span></div>
       <div class="ops-mini" aria-hidden="true"><div class="ops-mini-map"></div></div>
       <div class="ops-toasts" aria-live="polite"></div>
       <div class="ops-card" hidden></div>
-      <div class="ops-menu" hidden></div>
+      <div class="ops-menu ops-lyr" hidden></div>
+      <div class="ops-menu ops-trf" hidden></div>
       <div class="ops-lower" hidden></div>`;
     mapWrap.appendChild(hud);
     L.DomEvent.disableClickPropagation(hud);
@@ -481,8 +513,8 @@
     try { L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 140 }).addTo(m); } catch (e) { /* no scale */ }
     m.on('mousemove', (ev) => {
       last = ev.latlng;
-      $('.ops-ll', coordsEl).textContent = latlon(ev.latlng.lat, ev.latlng.lng);
-      $('.ops-mgrs', coordsEl).textContent = 'MGRS ' + mgrs(ev.latlng.lat, ev.latlng.lng);
+      $('.ops-ll', coordsEl).textContent = P.coords === 'dms' ? `${dms(ev.latlng.lat, 'N', 'S')} ${dms(ev.latlng.lng, 'E', 'W')}` : latlon(ev.latlng.lat, ev.latlng.lng);
+      $('.ops-mgrs', coordsEl).textContent = P.coords === 'deg' || P.coords === 'dms' ? '' : 'MGRS ' + mgrs(ev.latlng.lat, ev.latlng.lng);
       if (S.tool === 'ruler' && ruler.pts.length) drawRuler(ev.latlng);
     });
     coordsEl.title = 'Click to copy';
@@ -492,7 +524,7 @@
       if (!t) return;
       if (t.dataset.tool) setTool(S.tool === t.dataset.tool ? null : t.dataset.tool);
       else if (t.dataset.do === 'link') copyLink(t);
-      else if (t.dataset.do === 'full') fullScreen();
+      else if (t.dataset.do === 'layers') toggleLayers();
     });
     // The tools' lines in their own pane, over the control colours and at full strength.
     if (!m.getPane('opsTools')) { m.createPane('opsTools'); m.getPane('opsTools').style.zIndex = 640; m.getPane('opsTools').style.pointerEvents = 'none'; }
@@ -555,7 +587,7 @@
     setTimeout(() => { try { m.setView([+at[1], +at[2]], +at[3]); } catch (e) { /* bad link */ } }, 900);
   }
   function fullScreen() {
-    const el = shell;
+    const el = H; // The whole page, so the settings and the keys show over it too.
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     else if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
   }
@@ -590,9 +622,9 @@
   const SPAN = 48 * 3600e3;
   let rng = null; // [from, to] picked by dragging, or null
   let rows = [];
-  function recent() {
+  function recent(withResearched) {
     const now = Date.now();
-    return events().filter((e) => { const t = Date.parse(e.at); return t > now - SPAN && t <= now + 60e3; });
+    return events(withResearched).filter((e) => { const t = Date.parse(e.at); return t > now - SPAN && t <= now + 60e3; });
   }
   function drawMatrix() {
     const svg = dock && $('.ops-amx', dock);
@@ -650,7 +682,7 @@
     const svg = $('.ops-amx', dock);
     let start = null;
     const tAt = (ev) => { const r = svg.getBoundingClientRect(), k = svg._x; const px = ((ev.clientX - r.left) / r.width) * k.W; return k.t0 + ((px - k.LW) / (k.W - k.LW - 6)) * SPAN; };
-    svg.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('[data-mx], .cell')) return; start = tAt(ev); svg.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+    svg.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('[data-mx], .cell')) return; start = tAt(ev); svg.setPointerCapture(ev.pointerId); ev.preventDefault(); rangeForPick(); });
     svg.addEventListener('pointermove', (ev) => {
       if (start == null) return;
       const t = tAt(ev), now = Date.now();
@@ -667,16 +699,34 @@
     dock.addEventListener('click', (ev) => { if (ev.target.closest('[data-clear]')) { rng = null; drawMatrix(); } });
   }
   /* Pins outside the hours picked fade (the pins drawn one by one; the whole war's canvas is left alone). */
+  /* Each pin is matched to its own event by its label and its place (20 Oct: matched by label alone, two
+     events with one label took one time, so a pin could light or fade wrongly); a pin with no event in the
+     last 48 hours is older, so it fades. */
   function dimPins() {
     const m = getMap();
     if (!m) return;
-    const at = new Map();
-    events().forEach((e) => { if (e.label) at.set(e.label, Date.parse(e.at)); });
-    m.getPane('markerPane').querySelectorAll('.ev[title]').forEach((el) => {
-      const t = at.get(el.getAttribute('title'));
-      const out = !!rng && !(t >= rng[0] && t <= rng[1]);
-      el.classList.toggle('ops-dim', out);
+    const pane = m.getPane('markerPane');
+    if (!rng) { pane.querySelectorAll('.ev.ops-dim').forEach((el) => el.classList.remove('ops-dim')); return; }
+    const byLabel = new Map();
+    recent(true).forEach((e) => { const k = e.label || ''; const l = byLabel.get(k) || []; l.push(e); byLabel.set(k, l); });
+    m.eachLayer((l) => {
+      if (!(l instanceof L.Marker) || !l.getElement) return;
+      const el = l.getElement(), ev = el && el.querySelector('.ev[title]');
+      if (!ev) return;
+      const cands = byLabel.get(ev.getAttribute('title') || '') || [];
+      const ll = l.getLatLng();
+      let best = null, bd = Infinity;
+      cands.forEach((e) => { const d = ll.distanceTo([e.lat, e.lng]); if (d < bd) { bd = d; best = e; } });
+      const t = best && bd < 40000 ? Date.parse(best.at) : NaN;
+      ev.classList.toggle('ops-dim', !(t >= rng[0] && t < rng[1]));
     });
+  }
+  /* Hours picked while the map shows the whole war (its thousands drawn on one canvas, which cannot fade one by
+     one): the map goes to the last 48 hours, where each pin is its own. */
+  function rangeForPick() {
+    const m = getMap();
+    if (!m) return;
+    if (S.qr !== 2 && S.qr !== 7) quickRange(2);
   }
 
   /* The events: the hours picked, else the last 48 hours, newest first, filtered; a click goes to the pin and opens its note. */
@@ -684,11 +734,11 @@
   function drawLog(list) {
     const l = rightEl && $('.ops-log-l', rightEl);
     if (!l) return;
-    let pick = (rng ? list.filter((e) => { const t = Date.parse(e.at); return t >= rng[0] && t <= rng[1]; }) : list).sort((a, b) => (a.at < b.at ? 1 : -1));
+    let pick = (rng ? list.filter((e) => { const t = Date.parse(e.at); return t >= rng[0] && t < rng[1]; }) : list).sort((a, b) => (a.at < b.at ? 1 : -1));
     if (evQ) pick = pick.filter((e) => `${e.label || ''} ${e.place || ''} ${sideOf(e).name} ${kindOf(e).name} ${e.source || ''}`.toLowerCase().includes(evQ));
     logList = pick.slice(0, 200);
-    $('.ops-log-n', rightEl).textContent = rng ? `${pick.length} in the hours picked` : `${pick.length} in 48 hours`;
-    const n = $('.ops-ev-n', rightEl); if (n) n.textContent = list.length;
+    // What the list holds, in words (20 Oct: a bare count read as random).
+    $('.ops-log-n', rightEl).textContent = rng ? `The hours picked under the map, ${hm(rng[0], VIEW_TZ())}–${hm(rng[1], VIEW_TZ())}` : 'The last 48 hours, newest first';
     let day = '';
     l.innerHTML = logList.map((e, i) => {
       const s = sideOf(e), k = kindOf(e);
@@ -744,14 +794,20 @@
   }
 
   /* ---------- New events as they come in ---------- */
+  /* Only a pin that is new on the map is flagged (20 Oct): the page's events come in over its first seconds,
+     so what it has in its first 25 seconds is what was there already; after that, an event with a place that
+     was not there before, from the last six hours, is new. */
   let seen = null, cycle = -1;
+  const T0 = Date.now();
   function watch() {
-    const list = events();
+    const list = events().filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number');
     if (!list.length) return;
-    if (!seen) { seen = new Set(list.map(keyOf)); return; }
+    if (!seen) seen = new Set();
+    if (Date.now() - T0 < 25000) { list.forEach((e) => seen.add(keyOf(e))); return; }
     const fresh = list.filter((e) => !seen.has(keyOf(e)) && Date.now() - Date.parse(e.at) < 6 * 3600e3);
     list.forEach((e) => seen.add(keyOf(e)));
-    fresh.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 3).forEach((e) => { toast(e); ping(e); });
+    if (P.alerts) fresh.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 3).forEach((e) => { toast(e); ping(e); });
+    if (fresh.length && P.sound && P.alerts) beep();
     if (fresh.length) { drawMatrix(); if (PAGE === 'all') drawAllRail(); }
   }
   function toast(e) {
@@ -760,12 +816,23 @@
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'ops-toast';
-    b.innerHTML = `<span class="k" style="--c:${s.c}">${glyph(k.k)}</span><span class="t"><small>New · ${esc(s.name)} · ${esc(hm(e.at, VIEW_TZ()))}</small>${esc(e.label || k.name)}</span>`;
+    b.title = 'Go to it on the map';
+    b.innerHTML = `<span class="k" style="--c:${s.c}">${glyph(k.k)}</span><span class="t"><small>New on the map · ${esc(hm(e.at, VIEW_TZ()))}</small>${esc(e.label || k.name)}</span>`;
     b.onclick = () => { focusEvent(e); b.remove(); };
     box.prepend(b);
     while (box.children.length > 3) box.lastChild.remove();
-    setTimeout(() => b.classList.add('out'), 14000);
-    setTimeout(() => b.remove(), 14600);
+    setTimeout(() => b.classList.add('out'), 12000);
+    setTimeout(() => b.remove(), 12600);
+  }
+  let actx = null;
+  function beep() {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.frequency.value = 880; g.gain.setValueAtTime(0.0001, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.08, actx.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.35);
+      o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + 0.4);
+    } catch (e) { /* no sound */ }
   }
   /* Space: the latest event, then the one before it. */
   function nextLatest() {
@@ -828,64 +895,87 @@
       lab([vb.getNorth(), lng], `${Math.abs(lng).toFixed(dp)}°${lng >= 0 ? 'E' : 'W'}`, 'n');
     }
   }
+  /* Two panels, each with its own things (20 Oct: the layers and the traffic were one menu): Layers is the map
+     itself (base, names, grid, shading), Traffic is what moves on it (aircraft, ships). */
   function toggleLayers(force) {
-    const menu = $('.ops-menu', hud);
+    const menu = $('.ops-lyr', hud);
     if (!menu) return;
     const open = force != null ? force : menu.hidden;
     menu.hidden = !open;
     root.querySelectorAll('[data-op="layers"]').forEach((b) => b.setAttribute('aria-expanded', String(open)));
-    if (open) paintLayers();
+    if (open) { if (isPhone()) toggleTraffic(false); paintLayers(); }
   }
-  const toggleTrafficMenu = toggleLayers;
+  function toggleTraffic(force) {
+    const menu = $('.ops-trf', hud);
+    if (!menu) return;
+    const open = force != null ? force : menu.hidden;
+    menu.hidden = !open;
+    root.querySelectorAll('[data-op="traffic"]').forEach((b) => b.setAttribute('aria-expanded', String(open)));
+    if (open) {
+      if (isPhone()) toggleLayers(false);
+      // Opening the panel the first time turns the aircraft on: what it is for (20 Oct: "loads immediately").
+      if (!S.air && !S.sea && !S.trafficSeen) { S.air = true; S.trafficSeen = true; keep(); runTraffic(); }
+      paintTraffic();
+    }
+  }
   const sw = (k, on, label, sub, extra = '') => `<label class="ops-sw ${extra}"><input type="checkbox" data-ly="${k}" ${on ? 'checked' : ''} ${/off/.test(extra) ? 'disabled' : ''}><span>${label}</span>${sub ? `<small>${sub}</small>` : ''}</label>`;
   function paintLayers() {
-    const menu = $('.ops-menu', hud);
+    const menu = $('.ops-lyr', hud);
     if (!menu || menu.hidden) return;
-    const mil = T.air.filter((a) => a[13]);
-    const ground = T.air.filter((a) => a[16]).length;
-    const seaNo = T.seaOk === false;
-    const airTxt = S.air && T.at ? `<b>${(T.air.length - ground).toLocaleString('en-GB')}</b> in the air${ground ? `, ${ground} on the ground` : ''} · ${esc(ago(T.at))}` : 'Every aircraft broadcasting its position';
-    const seaTxt = seaNo ? 'Waiting for the live ship feed to be connected' : S.sea && T.seaAt ? `<b>${T.ships.length.toLocaleString('en-GB')}</b> ships · ${T.seaNote === 'live' ? 'live' : esc(T.seaNote || '')}` : 'Every ship broadcasting its position (AIS)';
     menu.innerHTML = `<div class="ops-mh"><b>Layers</b><button type="button" class="ops-x" data-ly="close" aria-label="Close">${ICON.x}</button></div>
       <p class="ops-mlab">Base map</p>
       <div class="ops-bases">${BASES.map(([k, n, s]) => `<button type="button" data-base="${k}" aria-pressed="${S.base === k}" title="${esc(s)}"><i class="ops-bthumb ${k}"></i>${esc(n)}</button>`).join('')}</div>
       <p class="ops-mlab">On the map</p>
-      ${sw('names', S.names, 'Place names', '')}
-      ${sw('grid', S.grid, 'Grid', 'Latitude and longitude')}
+      ${sw('names', S.names, 'Place names', 'Cities, towns and borders, named')}
+      ${sw('grid', S.grid, 'Grid', 'Latitude and longitude, named at the edges')}
       ${sw('fills', S.fills, 'Areas of control, shaded', 'Who holds what, in colour')}
-      <p class="ops-mlab">Live traffic</p>
+      ${sw('mini', S.mini !== false, 'Overview map', 'The region, and where this map is looking')}
+      <p class="ops-src">Live aircraft and ships are under Traffic, at the top.</p>`;
+  }
+  function paintTraffic() {
+    const menu = $('.ops-trf', hud);
+    if (!menu || menu.hidden) return;
+    const mil = T.air.filter((a) => a[13] && (S.airGround || !a[16]));
+    const ground = T.air.filter((a) => a[16]).length;
+    const seaNo = T.seaOk === false;
+    const airTxt = S.air ? (T.at ? `<b>${(T.air.length - ground).toLocaleString('en-GB')}</b> in the air${ground ? `, ${ground.toLocaleString('en-GB')} on the ground` : ''} · ${esc(ago(T.at))}` : 'Loading…') : 'Every aircraft broadcasting its position';
+    const seaTxt = seaNo ? 'Not connected yet: the free ship feed needs its key on the server' : S.sea ? (T.seaAt ? `<b>${T.ships.length.toLocaleString('en-GB')}</b> ships · ${T.seaNote === 'live' ? 'live' : esc(T.seaNote || ago(T.seaAt))}` : 'Loading…') : 'Every ship broadcasting its position (AIS)';
+    menu.innerHTML = `<div class="ops-mh"><b>Traffic</b><button type="button" class="ops-x" data-ly="close" aria-label="Close">${ICON.x}</button></div>
       ${sw('air', S.air, `${ICON.plane}Aircraft`, airTxt)}
-      ${sw('mil', S.airMil, 'Military only', S.air ? `${mil.length} military aircraft` : '', `sub ${S.air ? '' : 'off'}`)}
+      ${sw('mil', S.airMil, 'Military only', S.air ? `${mil.length} military aircraft now` : '', `sub ${S.air ? '' : 'off'}`)}
       ${sw('gnd', S.airGround, 'Also on the ground', S.air ? 'At airfields and bases' : '', `sub ${S.air ? '' : 'off'}`)}
       ${sw('sea', S.sea && !seaNo, `${ICON.ship}Ships`, seaTxt, seaNo ? 'off' : '')}
-      ${S.air && mil.length ? `<div class="ops-mil"><p>Military aircraft now</p><ul>${mil.slice(0, 60).map((a) => `<li><button type="button" data-hex="${esc(a[0])}"><b>${esc(a[8] || a[9] || a[0])}</b><span>${esc(a[11] || a[10] || '')}</span><em>${a[16] ? 'GND' : a[3] != null ? esc(fl(a[3])) : ''}</em></button></li>`).join('')}</ul></div>` : ''}
-      <p class="ops-src">Aircraft: ${(T.src.length ? T.src : ['adsb.fi', 'adsb.lol']).map(esc).join(' and ')} open data, every 10 seconds. Ships: AISStream. Only what broadcasts is seen; many military flights do not.</p>`;
+      ${S.air && mil.length ? `<div class="ops-mil"><p>Military aircraft now</p><ul>${mil.slice(0, 80).map((a) => `<li><button type="button" data-hex="${esc(a[0])}"><b>${esc(a[8] || a[9] || a[0])}</b><span>${esc(a[11] || a[10] || '')}</span><em>${a[16] ? 'GND' : a[3] != null ? esc(fl(a[3])) : ''}</em></button></li>`).join('')}</ul></div>` : ''}
+      <p class="ops-src">Click an aircraft or a ship on the map for its details. Aircraft: ${(T.src.length ? T.src : ['adsb.fi', 'adsb.lol']).map(esc).join(' and ')} open data, each area read again about every 20 seconds. Ships: AISStream. Only what broadcasts is seen; many military flights do not.</p>`;
   }
   const fl = (ft) => (ft >= 18000 ? 'FL' + String(Math.round(ft / 100)).padStart(3, '0') : `${ft.toLocaleString('en-GB')} ft`);
   function wireTraffic() {
-    const menu = $('.ops-menu', hud);
-    menu.addEventListener('change', (ev) => {
-      const k = ev.target.dataset.ly, v = ev.target.checked;
-      if (k === 'air') S.air = v;
-      if (k === 'mil') S.airMil = v;
-      if (k === 'gnd') S.airGround = v;
-      if (k === 'sea') S.sea = v;
-      if (k === 'names') S.names = v;
-      if (k === 'grid') S.grid = v;
-      if (k === 'fills') { S.fills = v; paintFrame(); }
-      keep();
-      if (/^(air|sea)$/.test(k)) runTraffic();
-      if (/^(names|grid)$/.test(k)) drawBase();
-      drawTraffic(); paintLayers();
-    });
-    menu.addEventListener('click', (ev) => {
-      if (ev.target.closest('[data-ly="close"]')) toggleLayers(false);
-      const bb = ev.target.closest('[data-base]');
-      if (bb) { S.base = bb.dataset.base; keep(); drawBase(); drawTraffic(); paintLayers(); }
-      const h = ev.target.closest('[data-hex]');
-      if (h) { const a = T.air.find((x) => x[0] === h.dataset.hex); if (a) { selectAc(a, true); if (isPhone()) toggleLayers(false); } }
+    [$('.ops-lyr', hud), $('.ops-trf', hud)].forEach((menu) => {
+      menu.addEventListener('change', (ev) => {
+        const k = ev.target.dataset.ly, v = ev.target.checked;
+        if (k === 'air') S.air = v;
+        if (k === 'mil') S.airMil = v;
+        if (k === 'gnd') S.airGround = v;
+        if (k === 'sea') S.sea = v;
+        if (k === 'names') S.names = v;
+        if (k === 'grid') S.grid = v;
+        if (k === 'mini') { S.mini = v; paintMini(); }
+        if (k === 'fills') { S.fills = v; paintFrame(); }
+        keep();
+        if (/^(air|sea)$/.test(k)) runTraffic();
+        if (/^(names|grid)$/.test(k)) drawBase();
+        drawTraffic(); paintLayers(); paintTraffic();
+      });
+      menu.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-ly="close"]')) { if (menu.classList.contains('ops-lyr')) toggleLayers(false); else toggleTraffic(false); }
+        const bb = ev.target.closest('[data-base]');
+        if (bb) { S.base = bb.dataset.base; keep(); drawBase(); drawTraffic(); paintLayers(); }
+        const h = ev.target.closest('[data-hex]');
+        if (h) { const a = T.air.find((x) => x[0] === h.dataset.hex); if (a) { selectAc(a, true); if (isPhone()) toggleTraffic(false); } }
+      });
     });
   }
+  function paintMini() { const el = hud && $('.ops-mini', hud); if (el) el.hidden = S.mini === false; }
   async function pull(kind) {
     try {
       const r = await fetch(`/api/traffic?kind=${kind}`, { cache: 'no-store' });
@@ -894,6 +984,8 @@
   }
   async function airTick() {
     if (document.hidden) return;
+    // Both feeds at once, each drawn as it lands.
+    const sea = S.sea && T.seaOk !== false ? pull('sea') : null;
     if (S.air) {
       const j = await pull('air');
       if (j && j.ok) {
@@ -904,11 +996,12 @@
         for (const [k, tr] of T.trail) if (now - tr[tr.length - 1][2] > 20 * 60e3) T.trail.delete(k);
       }
     }
-    if (S.sea && T.seaOk !== false) {
-      const j = await pull('sea');
+    if (sea) {
+      if (S.air) { drawTraffic(); paintTraffic(); }
+      const j = await sea;
       if (j && j.ok) { T.ships = j.ships || []; T.seaAt = j.at; T.seaNote = j.note || ''; T.seaOk = true; } else if (j && j.note === 'no-key') T.seaOk = false;
     }
-    drawTraffic(); paintLayers();
+    drawTraffic(); paintTraffic();
     if (T.sel) refreshSel();
   }
   function runTraffic() {
@@ -973,6 +1066,7 @@
     if (!T.rend) T.rend = L.canvas({ padding: 0.2, pane: pane(m, 'opsTraffic', 590) });
     if (T.layer) m.removeLayer(T.layer);
     T.layer = L.layerGroup();
+    T.marks = [];
     const Mk = trafficClass();
     const I = INK(), z = m.getZoom();
     // A minute's travel, in pixels at this zoom (metres per pixel at the region's latitude).
@@ -984,15 +1078,15 @@
       const emg = a[7] === '7500' || a[7] === '7600' || a[7] === '7700';
       const sel = T.sel && T.sel.kind === 'air' && T.sel.id === a[0];
       const tag = (z >= 7.5 || (a[13] && z >= 6)) && !a[16] ? a[8] || a[9] || '' : '';
-      const mk = new Mk([a[1], a[2]], { renderer: T.rend, radius: 9, hdg: a[5], vec: a[16] ? 0 : vecOf(a[4]), ink: emg ? I.emg : a[13] ? I.mil : I.civ, edge: I.edge, selInk: I.sel, big: !!a[13] || emg, gnd: !!a[16], tag, sel, stroke: false, fill: true, bubblingMouseEvents: false });
-      mk.on('click', () => selectAc(a));
+      const mk = new Mk([a[1], a[2]], { renderer: T.rend, radius: 9, hdg: a[5], vec: a[16] ? 0 : vecOf(a[4]), ink: emg ? I.emg : a[13] ? I.mil : I.civ, edge: I.edge, selInk: I.sel, big: !!a[13] || emg, gnd: !!a[16], tag, sel, stroke: false, fill: true, interactive: false });
+      T.marks.push({ ll: [a[1], a[2]], air: a });
       T.layer.addLayer(mk);
     });
     if (S.sea) T.ships.forEach((s) => {
       const sel = T.sel && T.sel.kind === 'sea' && T.sel.id === s[0];
       const tag = z >= 9 ? s[1] || '' : '';
-      const mk = new Mk([s[2], s[3]], { renderer: T.rend, radius: 9, hdg: s[6] != null ? s[6] : s[5], vec: s[4] > 0.5 ? vecOf(s[4]) * 10 : 0, ink: shipInk(s[8], I), edge: I.edge, selInk: I.sel, ship: true, tag, sel, stroke: false, fill: true, bubblingMouseEvents: false });
-      mk.on('click', () => selectShip(s));
+      const mk = new Mk([s[2], s[3]], { renderer: T.rend, radius: 9, hdg: s[6] != null ? s[6] : s[5], vec: s[4] > 0.5 ? vecOf(s[4]) * 10 : 0, ink: shipInk(s[8], I), edge: I.edge, selInk: I.sel, ship: true, tag, sel, stroke: false, fill: true, interactive: false });
+      T.marks.push({ ll: [s[2], s[3]], sea: s });
       T.layer.addLayer(mk);
     });
     // The picked aircraft's track since the layer was turned on.
@@ -1030,7 +1124,8 @@
         <p class="ops-csub">${esc([a[11] || a[10], a[12]].filter(Boolean).join(' · '))}</p>
         ${a[14] && a[15] ? `<p class="ops-route"><b>${esc(a[14])}</b><span>→</span><b>${esc(a[15])}</b><small>Scheduled route of the flight number</small></p>` : ''}
         <dl>${row('Altitude', a[16] ? 'On the ground' : a[3] != null ? esc(fl(a[3])) : '')}${row('Speed', a[4] != null ? `${a[4]} kt` : '')}${row('Heading', a[5] != null ? `${String(a[5]).padStart(3, '0')}°` : '')}${row('Climb', a[6] ? `${a[6] > 0 ? '+' : ''}${a[6].toLocaleString('en-GB')} ft/min` : '')}${row('Squawk', sq)}${row('Registration', esc(a[9] || ''))}${row('Hex', esc(String(a[0]).toUpperCase()))}${row('Position', esc(latlon(a[1], a[2])))}${row('MGRS', esc(mgrs(a[1], a[2])))}</dl>
-        <p class="ops-clinks"><a href="https://globe.adsb.fi/?icao=${esc(a[0])}" target="_blank" rel="noopener">adsb.fi ${ICON.ext}</a></p>`;
+        <div class="ops-photo" data-hex="${esc(a[0])}"></div>
+        <p class="ops-clinks"><a href="https://globe.adsb.fi/?icao=${esc(a[0])}" target="_blank" rel="noopener">Track on adsb.fi ${ICON.ext}</a>${a[8] ? `<a href="https://www.flightradar24.com/${esc(String(a[8]).trim())}" target="_blank" rel="noopener">Flightradar24 ${ICON.ext}</a>` : ''}</p>`;
     } else {
       const s = T.ships.find((x) => x[0] === T.sel.id);
       if (!s) return;
@@ -1039,24 +1134,156 @@
         <dl>${row('Destination', esc(s[9] || ''))}${row('Speed', s[4] != null ? `${s[4]} kt` : '')}${row('Course', s[5] != null ? `${Math.round(s[5])}°` : '')}${row('Status', esc(NAV[s[7]] || ''))}${row('Length', s[12] ? `${s[12]} m` : '')}${row('MMSI', esc(s[0]))}${row('IMO', esc(s[11] || ''))}${row('Call sign', esc(s[10] || ''))}${row('Position', esc(latlon(s[2], s[3])))}${row('Seen', esc(ago(s[13])))}</dl>
         <p class="ops-clinks"><a href="https://www.marinetraffic.com/en/ais/details/ships/mmsi:${esc(s[0])}" target="_blank" rel="noopener">MarineTraffic ${ICON.ext}</a></p>`;
     }
+    // The card is drawn again every ten seconds: the photo found once is kept.
+    const ph = $('.ops-photo', card);
+    const keepPh = ph && card._ph && card._ph.hex === ph.dataset.hex ? card._ph.html : null;
     card.innerHTML = html;
     card.hidden = false;
+    const ph2 = $('.ops-photo', card);
+    if (ph2) { if (keepPh != null) ph2.innerHTML = keepPh; else photoOf(ph2.dataset.hex, card); }
+  }
+  /* A photo of the airframe, from Planespotters' open photo service, credited and linked. */
+  const PHOTOS = new Map();
+  async function photoOf(hex, card) {
+    let html = PHOTOS.get(hex);
+    if (html == null) {
+      html = '';
+      try {
+        const r = await fetch(`https://api.planespotters.net/pub/photos/hex/${encodeURIComponent(hex)}`);
+        const j = r.ok ? await r.json() : null;
+        const p = j && j.photos && j.photos[0];
+        if (p && p.thumbnail_large) html = `<a href="${esc(p.link)}" target="_blank" rel="noopener"><img src="${esc(p.thumbnail_large.src)}" alt="" loading="lazy"><small>Photo: ${esc(p.photographer || 'Planespotters.net')}</small></a>`;
+      } catch (e) { /* none */ }
+      PHOTOS.set(hex, html);
+    }
+    card._ph = { hex, html };
+    const el = $(`.ops-photo[data-hex="${CSS.escape(hex)}"]`, card);
+    if (el) el.innerHTML = html;
   }
   function closeSel() { T.sel = null; paintSel(); drawTraffic(); }
+  /* A click on an aircraft or a ship opens its details (20 Oct: clicks did not reach them). The marks are drawn on
+     one canvas that lets the map's own clicks through, so the click is measured here first: the nearest mark
+     within 14 pixels takes it, and the pin or province under it does not. */
+  function trafficAt(m, ev) {
+    if (!T.marks || !T.marks.length || S.tool) return null;
+    const r = m.getContainer().getBoundingClientRect();
+    const x = ev.clientX - r.left, y = ev.clientY - r.top;
+    let best = null, bd = 14 * 14;
+    for (const k of T.marks) {
+      const p = m.latLngToContainerPoint(k.ll);
+      const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (d < bd) { bd = d; best = k; }
+    }
+    return best;
+  }
+  function wireTrafficClicks(m) {
+    const box = m.getContainer();
+    box.addEventListener('click', (ev) => {
+      if (ev.target.closest('.leaflet-control, .ops-hud > *, .leaflet-popup, .ev-wrap')) return;
+      const k = trafficAt(m, ev);
+      if (!k) return;
+      ev.stopPropagation(); ev.preventDefault();
+      if (k.air) selectAc(k.air); else selectShip(k.sea);
+    }, true);
+    let raf = 0;
+    box.addEventListener('mousemove', (ev) => {
+      if (raf || !T.marks || !T.marks.length) return;
+      raf = requestAnimationFrame(() => { raf = 0; box.classList.toggle('ops-over-trf', !!trafficAt(m, ev)); });
+    });
+  }
 
   /* ---------- Broadcast mode: the map alone, a title strip and the latest line ---------- */
+  /* For a screen on a wall or on air (20 Oct: "develop it more"): the map alone and full screen; a lower third
+     with the desk, the clock and the event on screen; a ticker of the latest; the sides' colours and the day's
+     count in the corners; and a tour that goes from the latest event to the one before, every few seconds,
+     the map flying to each. Controls show when the pointer moves. */
+  const CAST = { timer: 0, i: -1, play: true, cur: null, idle: 0, full: false };
+  const castName = () => (PAGE === 'all' ? 'The wars with Iran and in Yemen' : PAGE === 'iran' ? 'The Iran war' : 'The war in Yemen');
+  function castList() { return recent().sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 20); }
+  function setCast(on) {
+    S.cast = on;
+    paintFrame();
+    clearInterval(CAST.timer); CAST.timer = 0;
+    if (on) {
+      CAST.i = -1; CAST.play = P.castTour;
+      if (!document.fullscreenElement && H.requestFullscreen) H.requestFullscreen().then(() => { CAST.full = true; }).catch(() => {});
+      getMap().closePopup();
+      if (CAST.play) castStep(1);
+      CAST.timer = setInterval(() => { if (CAST.play) castStep(1); }, Math.max(6, P.castEvery) * 1000);
+      castIdle();
+    } else {
+      if (CAST.full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      CAST.full = false; CAST.cur = null;
+    }
+    paintCast();
+    setTimeout(() => { const m = getMap(); if (m) m.invalidateSize(); }, 80);
+  }
+  function castStep(d) {
+    const list = castList();
+    if (!list.length) return;
+    CAST.i = (CAST.i + d + list.length) % list.length;
+    const e = list[CAST.i];
+    CAST.cur = e;
+    const m = getMap();
+    m.flyTo([e.lat, e.lng], Math.max(6.5, Math.min(8, m.getZoom() + 0.5)), { duration: P.still ? 0 : 1.6 });
+    m.once('moveend', () => { if (S.cast && CAST.cur === e) ping(e); });
+    paintCast();
+  }
+  function castIdle() {
+    H.classList.remove('ops-cast-idle');
+    clearTimeout(CAST.idle);
+    CAST.idle = setTimeout(() => H.classList.add('ops-cast-idle'), 3500);
+  }
   function paintCast() {
     const el = hud && $('.ops-lower', hud);
     if (!el) return;
     el.hidden = !S.cast;
-    if (!S.cast) return;
-    const name = PAGE === 'all' ? 'The wars with Iran and in Yemen' : PAGE === 'iran' ? 'Iran conflict' : 'Yemen conflict';
-    const latest = recent().sort((a, b) => (a.at < b.at ? 1 : -1))[0];
-    el.innerHTML = `<div class="ops-lt"><span class="live">Live</span><b>${esc(name)}</b>${PAGE !== 'all' ? `<span class="clk">${esc(CAP[PAGE])} ${esc(hm(Date.now(), TZ[PAGE]))}</span>` : ''}<span class="brand">The Situation Room</span></div>${latest ? `<div class="ops-lb"><time>${esc(hm(latest.at, VIEW_TZ()))}</time>${esc(latest.label || '')}</div>` : ''}`;
+    if (!S.cast) { el.innerHTML = ''; return; }
+    const list = castList();
+    const e = CAST.cur || list[0];
+    const now = Date.now();
+    const n24 = events().filter((x) => now - Date.parse(x.at) < 864e5).length;
+    const sides = [...new Map(list.map((x) => { const s = sideOf(x); return [s.name, s]; })).values()].slice(0, 6);
+    const s = e && sideOf(e), k = e && kindOf(e);
+    const clock = PAGE !== 'all' ? `${CAP[PAGE]} ${hm(now, TZ[PAGE])}` : `Sanaa ${hm(now, TZ.yemen)} · Tehran ${hm(now, TZ.iran)}`;
+    const tick = list.slice(0, 12).map((x) => `<span><time>${esc(hm(x.at, VIEW_TZ()))}</time>${esc(x.label || '')}</span>`).join('');
+    if (!$('.ops-cmain', el)) el.innerHTML = '<div class="ops-cmain"></div><div class="ops-tickh"></div>';
+    // The ticker runs on: it is drawn again only when the events in it change.
+    const th = $('.ops-tickh', el);
+    const tkey = P.castTicker ? tick : '';
+    if (th._k !== tkey) { th._k = tkey; th.innerHTML = tkey ? `<div class="ops-tick"><b>Latest</b><div class="ops-tick-in"><div class="ops-tick-run" style="--d:${Math.max(30, list.slice(0, 12).length * 7)}s">${tick}${tick}</div></div></div>` : ''; }
+    $('.ops-cmain', el).innerHTML = `
+      <div class="ops-cbar" role="toolbar" aria-label="Broadcast">
+        <button type="button" data-cast="prev" title="The one before">${ICON.left}</button>
+        <button type="button" data-cast="play" title="${CAST.play ? 'Pause the tour' : 'Tour the latest events'}">${CAST.play ? ICON.pause : ICON.play}</button>
+        <button type="button" data-cast="next" title="The next">${ICON.right}</button>
+        <span>${list.length ? `${CAST.i + 1 > 0 ? CAST.i + 1 : 1} of ${list.length}` : ''}</span>
+        <button type="button" data-cast="exit" class="ops-cexit">Exit broadcast</button>
+      </div>
+      <div class="ops-ckpi"><small>Events, last 24 hours</small><b>${n24}</b></div>
+      ${sides.length ? `<ul class="ops-cleg">${sides.map((x) => `<li style="--c:${x.c}">${esc(x.name)}</li>`).join('')}</ul>` : ''}
+      <div class="ops-l3">
+        <div class="ops-lt"><span class="live">Live</span><b>${esc(castName())}</b><span class="clk">${esc(clock)}</span><span class="brand">${LOGO}The Situation Room</span></div>
+        ${e ? `<div class="ops-lb" style="--c:${s.c}"><span class="k">${glyph(k.k)}</span><div><small>${esc(dm(e.at, VIEW_TZ()))} · ${esc(hm(e.at, VIEW_TZ()))} · ${esc(s.name)}${e.place ? ` · ${esc(e.place)}` : ''}</small><p>${esc(e.label || k.name)}</p></div></div>` : ''}
+      </div>`;
+  }
+  function wireCast() {
+    $('.ops-lower', hud).addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-cast]');
+      if (!b) return;
+      const a = b.dataset.cast;
+      if (a === 'exit') setCast(false);
+      else if (a === 'play') { CAST.play = !CAST.play; if (CAST.play) castStep(1); else paintCast(); }
+      else if (a === 'next') castStep(1);
+      else if (a === 'prev') castStep(-1);
+    });
+    addEventListener('pointermove', () => { if (S.cast) castIdle(); }, { passive: true });
+    document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) CAST.full = false; });
   }
 
+
   /* ---------- Keys ---------- */
-  const KEYS = [['Space', 'The latest event, then the one before'], ['T', 'Layers and live traffic'], ['G', 'Grid'], ['S', 'Base map: plain, satellite, relief'], ['M', 'Measure a distance'], ['R', 'Range rings'], ['L', 'Copy a link to this view'], ['F', 'Full screen'], ['B', 'Broadcast mode'], ['[  ]', 'Close or open the left panel, the reports'], ['\\', 'Fold the timeline under the map'], ['Esc', 'Close, clear'], ['?', 'These keys']];
+  const KEYS = [['Space', 'The latest event, then the one before'], ['T', 'Live traffic: aircraft and ships'], ['Y', 'Layers: the map itself'], ['G', 'Grid'], ['S', 'Base map: plain, satellite, relief'], ['M', 'Measure a distance'], ['R', 'Range rings'], ['L', 'Copy a link to this view'], ['F', 'Full screen'], ['B', 'Broadcast mode'], [',', 'Settings'], ['[  ]', 'Close or open the left panel, the reports'], ['\\', 'Fold the timeline under the map'], ['Esc', 'Close, clear'], ['?', 'These keys']];
   function toggleKeys(force) {
     let el = $('.ops-keys');
     if (!el) {
@@ -1076,22 +1303,167 @@
       if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
       const k = ev.key;
       if (k === 'Escape') {
+        if ($('.ops-set') && !$('.ops-set').hidden) return closeSettings();
         if ($('.ops-keys') && !$('.ops-keys').hidden) return toggleKeys(false);
         if (S.tool) return setTool(null);
         if (T.sel) return closeSel();
-        if (!$('.ops-menu', hud).hidden) return toggleTrafficMenu(false);
+        if (!$('.ops-trf', hud).hidden) return toggleTraffic(false);
+        if (!$('.ops-lyr', hud).hidden) return toggleLayers(false);
         if (rng) { rng = null; return drawMatrix(); }
-        if (S.cast) { S.cast = false; paintFrame(); paintCast(); }
+        if (S.cast) setCast(false);
         return;
       }
       const act = {
-        ' ': nextLatest, t: () => toggleTrafficMenu(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
-        l: () => copyLink($('[data-do="link"]', hud)), f: fullScreen, b: () => { S.cast = !S.cast; paintFrame(); paintCast(); },
+        ' ': () => (S.cast ? castStep(1) : nextLatest()), t: () => toggleTraffic(), y: () => toggleLayers(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
+        l: () => copyLink($('[data-do="link"]', hud)), f: fullScreen, b: () => setCast(!S.cast), ',': () => openSettings(),
         '[': () => { S.left = !S.left; keep(); paintFrame(); }, ']': () => { S.right = !S.right; keep(); paintFrame(); }, '\\': () => { S.dock = !S.dock; keep(); paintFrame(); }, '?': () => toggleKeys(),
+        ArrowRight: S.cast ? () => castStep(1) : null, ArrowLeft: S.cast ? () => castStep(-1) : null,
       }[k.length === 1 ? k.toLowerCase() : k];
       if (act) { ev.preventDefault(); act(); }
     }, true); // Before the map's own keys (it stops Esc once it has closed a note).
   }
+
+  /* ---------- Settings (20 Oct: "a settings page too, to make the site very customizable") ---------- */
+  const SET_ROWS = [
+    ['Look', [
+      ['theme', 'Theme', 'Night is a dark operations room, Day a newsroom page; Device follows your phone or computer.', [['auto', 'Device'], ['night', 'Night'], ['day', 'Day']]],
+      ['text', 'Text size', 'The panels’ text: the brief, the reports, the events.', [[90, 'Small'], [100, 'Normal'], [112, 'Large'], [125, 'Larger']]],
+      ['pin', 'Pin size', 'The marks on the map.', [['s', 'Small'], ['m', 'Normal'], ['l', 'Large']]],
+      ['still', 'Motion', 'Still keeps the map and the marks from moving on their own.', [[false, 'Moving'], [true, 'Still']]],
+    ]],
+    ['Time', [
+      ['tz', 'Times shown in', 'For the events, the timeline and the alerts.', [['desk', 'The desk’s clock'], ['local', 'Your clock'], ['utc', 'UTC']]],
+      ['range', 'The map opens on', 'The events the map shows when a page opens.', [[1, 'Last 24 h'], [2, 'Last 48 h'], [7, 'Last 7 days']]],
+    ]],
+    ['Map', [
+      ['base', 'Base map', '', [['auto', 'Plain'], ['sat', 'Satellite'], ['relief', 'Relief']], 'S'],
+      ['names', 'Place names', '', [[false, 'Off'], [true, 'On']], 'S'],
+      ['grid', 'Grid', 'Latitude and longitude.', [[false, 'Off'], [true, 'On']], 'S'],
+      ['fills', 'Areas of control', 'Who holds what, shaded.', [[false, 'Off'], [true, 'On']], 'S'],
+      ['coords', 'Place under the pointer', '', [['mgrs', 'Degrees and MGRS'], ['deg', 'Degrees'], ['dms', 'Degrees, minutes, seconds']]],
+      ['units', 'Distances', 'The ruler and the range rings.', [['both', 'km and nm'], ['km', 'km'], ['nm', 'nm']]],
+    ]],
+    ['Live', [
+      ['alerts', 'New events', 'A small note on the map when a new event is placed on it.', [[true, 'Show'], [false, 'Hide']]],
+      ['sound', 'Sound', 'A short tone with each new event.', [[false, 'Off'], [true, 'On']]],
+      ['airStart', 'Aircraft', 'Live aircraft on the map from the start.', [[false, 'When I turn them on'], [true, 'Always on']]],
+    ]],
+    ['Broadcast', [
+      ['castTour', 'Tour', 'Broadcast mode goes from the latest event to the one before by itself.', [[true, 'On'], [false, 'Off']]],
+      ['castEvery', 'Each event for', '', [[8, '8 s'], [12, '12 s'], [20, '20 s'], [30, '30 s']]],
+      ['castTicker', 'Ticker', 'The latest events running along the bottom.', [[true, 'On'], [false, 'Off']]],
+    ]],
+    ['Panels', [
+      ['left', 'Left panel', 'The brief and its parts.', [[true, 'Open'], [false, 'Closed']], 'S'],
+      ['right', 'Reports and events', '', [[true, 'Open'], [false, 'Closed']], 'S'],
+      ['dock', 'Timeline under the map', '', [[true, 'Open'], [false, 'Folded']], 'S'],
+    ]],
+  ];
+  const themeNow = () => { try { const t = localStorage.getItem('desk-theme'); return t === 'broadsheet-day' ? 'day' : t === 'broadsheet-night' ? 'night' : 'auto'; } catch (e) { return 'auto'; } };
+  function setThemePref(v) {
+    const set = app('setTheme');
+    const dev = matchMedia('(prefers-color-scheme: light)').matches ? 'broadsheet-day' : 'broadsheet-night';
+    const t = v === 'day' ? 'broadsheet-day' : v === 'night' ? 'broadsheet-night' : dev;
+    if (set) set(t, v !== 'auto');
+    if (v === 'auto') { try { localStorage.removeItem('desk-theme'); } catch (e) { /* private */ } }
+  }
+  function applyPrefs() {
+    H.dataset.opsPin = P.pin;
+    H.style.setProperty('--ops-zoom', String((Number(P.text) || 100) / 100));
+    H.classList.toggle('ops-still', !!P.still);
+  }
+  function openSettings() {
+    let el = $('.ops-set');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'ops-set';
+      el.hidden = true;
+      document.body.appendChild(el);
+      el.addEventListener('click', (ev) => {
+        if (ev.target === el || ev.target.closest('[data-set-x]')) return closeSettings();
+        if (ev.target.closest('[data-set-reset]')) {
+          Object.assign(P, PREF_DEF); keepPrefs(); applyPrefs(); setThemePref('auto');
+          Object.assign(S, { base: 'auto', names: false, grid: false, fills: false, left: true, right: true, dock: true }); keep();
+          drawBase(); paintFrame(); drawMatrix(); paintSettings(); return;
+        }
+        const b = ev.target.closest('[data-k]');
+        if (!b) return;
+        const row = SET_ROWS.flatMap((g) => g[1]).find((r) => r[0] === b.dataset.k);
+        const v = row[3][+b.dataset.i][0];
+        if (row[0] === 'theme') setThemePref(v);
+        else if (row[4] === 'S') { S[row[0]] = v; keep(); drawBase(); drawTraffic(); paintFrame(); paintLayers(); }
+        else {
+          P[row[0]] = v; keepPrefs(); applyPrefs();
+          if (row[0] === 'range') quickRange(v);
+          if (row[0] === 'airStart' && v && !S.air) { S.air = true; keep(); runTraffic(); }
+          if (row[0] === 'tz') { drawMatrix(); tick(); }
+        }
+        paintSettings();
+      });
+    }
+    paintSettings();
+    el.hidden = false;
+    if (location.hash !== '#settings') history.replaceState(null, '', '#settings');
+    const f = $('[data-set-x]', el); if (f) f.focus();
+  }
+  function closeSettings() {
+    const el = $('.ops-set');
+    if (el) el.hidden = true;
+    if (location.hash === '#settings') history.replaceState(null, '', location.pathname + location.search);
+  }
+  function paintSettings() {
+    const el = $('.ops-set');
+    if (!el) return;
+    const cur = (r) => (r[0] === 'theme' ? themeNow() : r[4] === 'S' ? (S[r[0]] == null ? r[3][0][0] : S[r[0]]) : P[r[0]]);
+    el.innerHTML = `<div class="ops-sbox" role="dialog" aria-label="Settings">
+      <header><span class="ops-sh">${LOGO}<b>Settings</b></span><button type="button" class="ops-x" data-set-x aria-label="Close">${ICON.x}</button></header>
+      <div class="ops-sbody">${SET_ROWS.map(([g, rows]) => `<section><h3>${esc(g)}</h3>${rows.map((r) => `<div class="ops-srow"><div class="ops-sl"><b>${esc(r[1])}</b>${r[2] ? `<small>${esc(r[2])}</small>` : ''}</div><div class="ops-sopts" role="group" aria-label="${esc(r[1])}">${r[3].map(([v, n], i) => `<button type="button" data-k="${r[0]}" data-i="${i}" aria-pressed="${String(cur(r) === v)}">${esc(n)}</button>`).join('')}</div></div>`).join('')}</section>`).join('')}
+        <section class="ops-sabout"><h3>About</h3><p>The Situation Room follows the wars with Iran and in Yemen from open sources: news sites, wires, official channels and social media, each report linked to where it came from. Every mark on the map is a report placed where it happened.</p><p><a href="/yemen-conflict-desk/sources">Sources and method</a> · Settings are kept in this browser only.</p></section>
+      </div>
+      <footer><button type="button" class="ops-btn" data-set-reset>Back to the defaults</button><button type="button" class="ops-btn ops-sdone" data-set-x>Done</button></footer>
+    </div>`;
+  }
+
+  /* ---------- One world: the map can't be pulled past the world's edge, nor zoomed out so far that the world
+     no longer fills it (20 Oct: broadcast mode showed "map data not available" beside the world). ---------- */
+  function oneWorld(m) {
+    const fit = () => {
+      const sz = m.getSize();
+      if (!sz.x || !sz.y) return;
+      const snap = m.options.zoomSnap || 1;
+      const z = Math.max(1, Math.ceil(Math.log2(Math.max(sz.x / 256, sz.y / (256 * 0.83))) / snap) * snap);
+      m.setMinZoom(z);
+      if (m.getZoom() < z) m.setZoom(z, { animate: false });
+    };
+    m.setMaxBounds([[-85, -180], [85, 180]]);
+    m.options.maxBoundsViscosity = 1;
+    m.options.worldCopyJump = false;
+    fit();
+    m.on('resize', fit);
+  }
+
+  /* ---------- The page's own parts, in this view's terms ---------- */
+  /* Who and What, each on its own line (20 Oct). The legend is drawn again by the page now and then. */
+  function splitLegend() {
+    const body = $('.ops-who .leg-body', root);
+    if (!body) return;
+    const heads = [...body.querySelectorAll('.leg-sec, .leg-sub')];
+    const what = heads.find((h) => /^\s*what\b/i.test(h.textContent));
+    if (what && !(what.previousElementSibling && what.previousElementSibling.classList.contains('ops-br'))) {
+      const br = document.createElement('i');
+      br.className = 'ops-br';
+      what.before(br);
+    }
+  }
+  /* Every front or arena at once, each in its box, not one at a time (20 Oct: "lay it out more professionally"). */
+  function unpage() {
+    root.querySelectorAll('.ops-left .pg-slide[inert], .ops-left .pg-slide[aria-hidden]').forEach((s) => { s.removeAttribute('inert'); s.removeAttribute('aria-hidden'); });
+    // Open, every point (20 Oct: "the latest developments open"); the page keeps a box open once it is.
+    root.querySelectorAll('.ops-left .situation:not(.sit-open)').forEach((s) => s.classList.add('sit-open'));
+    root.querySelectorAll('.ops-left .front-card:not(.open)').forEach((s) => s.classList.add('open'));
+  }
+  /* A report opened from the All page (#r=…): the reports panel, open. */
+  const OPEN_REPORT = /^#r=/.test(location.hash || '');
 
   /* ---------- Start ---------- */
   let started = false;
@@ -1100,17 +1472,19 @@
     // The page's map, made and with a size (a map read before then has no place yet).
     if (!m || !m.getContainer || !window.L || !m._loaded || !(m.getSize().y > 0)) { setTimeout(startHud, 200); return; }
     buildHud(m);
-    wireMatrix(); wireLog(); wireTraffic(); wireKeys();
+    wireMatrix(); wireLog(); wireTraffic(); wireKeys(); wireCast(); wireTrafficClicks(m);
     $('.ops-card', hud).addEventListener('click', (ev) => { if (ev.target.closest('[data-sel="x"]')) closeSel(); });
+    paintMini();
     sizeDock();
+    oneWorld(m);
     // The desk's own part of the map, in the new map box (the page fitted it to the old one).
     const own = (app('DESK_GO') || {})[PAGE === 'all' ? '/' : PAGE === 'iran' ? '/iran-conflict-desk' : '/yemen-conflict-desk'];
     if (own && !/#(at|pin)=/.test(location.hash) && !sessionStorage.getItem('desk-go')) { try { m.invalidateSize(); m.fitBounds(own.b, { padding: [8, 8] }); } catch (e) { /* kept */ } }
     openAt(m);
-    // The map opens on the last 48 hours, as the timeline under it (a link to a pin or a place keeps its own).
+    // The map opens on the reader's span, as the timeline under it (a link to a pin or a place keeps its own).
     if (!/#(at|pin)=/.test(location.hash)) {
       let tries = 0;
-      const first = () => { if (!quickRange(2) && ++tries < 20) setTimeout(first, 300); };
+      const first = () => { if (!quickRange(Number(P.range) || 2) && ++tries < 20) setTimeout(first, 300); };
       setTimeout(first, 400);
     }
     drawBase();
@@ -1118,22 +1492,42 @@
     m.on('moveend', () => { if (S.grid) drawGrid(); });
     drawMatrix();
     runTraffic();
+    if (location.hash === '#settings') openSettings();
     // The theme: the overview's tiles and the traffic's edges follow it.
     new MutationObserver(() => { themeTiles(); drawBase(); drawTraffic(); drawMatrix(); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
     // The pins are drawn again by the page now and then: fade the ones outside the hours picked again.
     let dimT = 0;
     new MutationObserver(() => { if (rng) { clearTimeout(dimT); dimT = setTimeout(dimPins, 80); } }).observe(m.getPane('markerPane'), { childList: true });
     tick(); setInterval(tick, 15000);
-    // The 48 hours roll on every minute; new events are looked for as the page brings them in.
-    setInterval(() => { drawMatrix(); watch(); if (PAGE === 'all') drawAllRail(); }, 60000);
-    let n = 0;
-    const early = setInterval(() => { drawMatrix(); watch(); if (PAGE === 'all' && n < 3) drawAllRail(); if (++n > 12) clearInterval(early); }, 2500);
+    // The page's events come in over its first seconds and then every few minutes: the panels follow them as they
+    // change (20 Oct: they waited up to half a minute and showed nothing meanwhile), checked cheaply each second.
+    let sig = '';
+    const look = () => {
+      const ev = events();
+      let top = '';
+      for (const e of ev) if (e.at > top) top = e.at;
+      const s = `${ev.length}|${top}|${PAGE === 'all' && window.__home ? window.__home.D.reports.length : ''}`;
+      if (s !== sig) { sig = s; drawMatrix(); if (PAGE === 'all') drawAllRail(); }
+      watch();
+    };
+    look();
+    setInterval(look, 1000);
+    // The 48 hours roll on every minute.
+    setInterval(drawMatrix, 60000);
   }
   function start() {
     if (started) return;
     if (!findRoot()) return;
     started = true;
-    try { build(); tick(); counts(); startHud(); } catch (e) {
+    try {
+      applyPrefs();
+      if (OPEN_REPORT) { S.right = true; S.rtab = 'rep'; S.ptab = 'rail'; }
+      build(); tick(); counts(); startHud();
+      const leg = $('.ops-who', root);
+      if (leg) { splitLegend(); new MutationObserver(splitLegend).observe(leg, { childList: true, subtree: true }); }
+      unpage();
+      new MutationObserver(unpage).observe(leftEl, { subtree: true, attributes: true, attributeFilter: ['inert', 'aria-hidden'], childList: true });
+    } catch (e) {
       // Anything wrong: the classic page, as it is.
       console.error('map view', e);
       H.dataset.view = 'classic';
@@ -1150,5 +1544,5 @@
   }, 90000);
   // A desk's page: the map's box exists from the start, so the layout is set before the map is drawn.
   start();
-  window.opsView = { setView, focusEvent };
+  window.opsView = { setView, focusEvent, traffic: T };
 })();

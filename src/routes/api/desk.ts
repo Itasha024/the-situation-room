@@ -8,9 +8,10 @@ import { unglue } from "@/lib/desk/reader";
 import { respell } from "@/lib/desk/spelling";
 import { rightOffice } from "@/lib/desk/offices";
 import { getStore } from "@/lib/desk/store";
+import { gzipped, respond } from "@/lib/desk/microcache";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
-import { serveIranPins, serveYemenPins } from "@/lib/desk/serve-map-pins";
+import { cardsOnTheirPins, serveIranPins, serveYemenPins } from "@/lib/desk/serve-map-pins";
 import { serveCard } from "@/lib/desk/copy-rules";
 import { type Card as SameCard, foldServed } from "@/lib/desk/fold-same";
 
@@ -39,8 +40,9 @@ import { type Card as SameCard, foldServed } from "@/lib/desk/fold-same";
  * database (a miss took over two seconds).
  */
 const MEMO_MS = 60_000;
+const PINS_MEMO_MS = 4 * 60_000;
 const STALE_MS = 30 * 60_000;
-const memo = new Map<string, { at: number; body: string }>();
+const memo = new Map<string, { at: number; body: string; gz?: Uint8Array }>();
 const reading = new Map<string, Promise<{ at: number; body: string }>>();
 
 async function readDesk(limit: number, before: string | undefined, desk: DeskId, since?: string) {
@@ -79,6 +81,9 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   if (desk === "iran" && Array.isArray((slice as { events?: unknown[] }).events)) {
     const s = slice as unknown as { events: Parameters<typeof serveIranPins>[0] };
     s.events = serveIranPins(s.events);
+    // A card shows the place its pin is served on (20 Oct: "Oil tanker hit by projectile near Jubail, Saudi Arabia" was
+    // stored at Byblos, Lebanon's Jbeil; its pin moves to Jubail as it is served, the card kept saying Byblos).
+    cardsOnTheirPins(slice.reports as Record<string, unknown>[], s.events);
   }
   // The Yemen map's pins: on the place a report names, one per event, no analysis or visits (serve-map-pins.ts).
   if (desk === "yemen" && Array.isArray((slice as { events?: unknown[] }).events)) {
@@ -107,7 +112,9 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
       if (k.actor) r.actor = k.actor;
     }
   }
-  return { at: Date.now(), body: JSON.stringify({ ok: true, store: store.kind, ...slice }) };
+  const body = JSON.stringify({ ok: true, store: store.kind, ...slice });
+  // Gzipped once here for the edge, which asks for gzip (microcache.ts).
+  return { at: Date.now(), body, gz: await gzipped(body) };
 }
 
 function renew(key: string, limit: number, before: string | undefined, desk: DeskId, since?: string) {
@@ -115,7 +122,10 @@ function renew(key: string, limit: number, before: string | undefined, desk: Des
   if (!p) {
     p = readDesk(limit, before, desk, since)
       .then((hit) => {
-        if (memo.size > 20) memo.clear();
+        // The oldest answer goes, never all of them: a reader paging back (?before=) once cleared the
+        // desks' main answers too, and the next visitors waited on a rebuild (20 Oct).
+        memo.delete(key);
+        if (memo.size >= 20) memo.delete(memo.keys().next().value as string);
         memo.set(key, hit);
         return hit;
       })
@@ -151,16 +161,22 @@ export const Route = createFileRoute("/api/desk")({
           let hit = memo.get(key);
           const age = hit ? Date.now() - hit.at : Infinity;
           if (!hit || age > STALE_MS) hit = await renew(key, limit, before, desk, since);
-          else if (age > MEMO_MS) renew(key, limit, before, desk, since).catch(() => {});
+          // The whole war's pins (?since=) are the heaviest answer and change only with a scan (every 5 minutes).
+          else if (age > (since ? PINS_MEMO_MS : MEMO_MS)) renew(key, limit, before, desk, since).catch(() => {});
 
-          return raw(
-            hit.body,
-            // New cards reach the page through /api/scan within minutes; this
-            // is the archive behind them, so the edge keeps it five minutes.
+          return respond(
             {
-              "cache-control": "public, max-age=30",
-              "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=86400",
+              ...hit,
+              status: 200,
+              // New cards reach the page through /api/scan within minutes; this
+              // is the archive behind them, so the edge keeps it a minute (the war's pins four).
+              headers: {
+                "content-type": "application/json; charset=utf-8",
+                "cache-control": "public, max-age=30",
+                "cdn-cache-control": `public, s-maxage=${since ? 240 : 60}, stale-while-revalidate=86400`,
+              },
             },
+            request.headers.get("accept-encoding"),
           );
         } catch (err) {
           const message = err instanceof Error ? err.message : "desk read failed";

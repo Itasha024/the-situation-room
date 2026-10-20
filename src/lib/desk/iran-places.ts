@@ -345,7 +345,7 @@ export function tallyNotEvent(headline: string): boolean {
 // 18 Oct (the unplaced cards placed): warplanes at an altitude, mock raids, flares, a plane's emergency code,
 // GPS jamming, "new tactics", launches with no impact, planes turned back, a drone crossing airspace.
 const NOT_AN_ATTACK =
-  /\b(?:fl(?:y|ies|ew|ying)\s+(?:\w+\s+){0,3}(?:over|altitude)|mock (?:raids?|attacks?)|illuminat\w* (?:flares?|bombs?|shells?|rounds?)|flares?|squawk|GPS (?:disruption|jamming|interference|spoofing)|new tactics|no impacts?|turned back|cross(?:es|ed|ing)? (?:\w+ ){0,3}(?:into )?(?:\w+ )?airspace|(?:jet|drone|UAV|aircraft|air)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|reinforces?|deploys?|presence|shipping slows|crossed|transits?|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?|evacuat\w*|unidentified (?:object|aircraft|drone))\b/i;
+  /\b(?:fl(?:y|ies|ew|ying)\s+(?:\w+\s+){0,3}(?:over|altitude)|mock (?:raids?|attacks?)|illuminat\w* (?:flares?|bombs?|shells?|rounds?)|flares?|squawk|GPS (?:disruption|jamming|interference|spoofing)|new tactics|no impacts?|turned back|cross(?:es|ed|ing)? (?:\w+ ){0,3}(?:into )?(?:\w+ )?airspace|(?:jet|drone|UAV|aircraft|air|helicopter)\s+activity|(?:seen|spotted|sighted|circl(?:e|es|ing))\s+over|in (?:the )?skies? (?:over|of|above)|violat\w* (?:\w+ ){0,2}airspace|drills?|military exercises?|manoeuvres?|maneuvers?|accident\w*|ammunition (?:blast|explosion)|explosion at (?:a |the )?(?:damaged-)?ammunition|reinforces?|deploys?|presence|shipping slows|crossed|transit\w*|(?:lifts?|raises?) (?:the )?(?:security )?alert|warns?|threatens?|evacuat\w*|unidentified (?:object|aircraft|drone))\b/i;
 const ROUNDUP =
   /\b(?:multiple|several|series of|string of|spate of|wave of|a number of)\s+(?:\w+\s+){0,2}(?:attacks|incidents|strikes)\s+(?:reported|recorded|across|in\b)|\b(?:wounded|killed|dead|casualties|injured)\s+in\s+(?:air\s+|the\s+)?(?:incidents|attacks|strikes)\b(?!\s+on\b)|\bas\s+(?:Tehran|Iran|Washington|the US|Israel)\s+(?:tries|seeks|aims|moves|looks|struggles|presses)\b|\bin\s+(?:recent|past|the past)\s+(?:days|weeks|months)\b|\bin\s+(?:one|a single)\s+day\b|\b(?:two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:separate\s+)?attacks\b/i;
 // The Baluch insurgency's attacks on Iran's forces are Iran's unrest, not the war (user's rule: no Iran unrest pins).
@@ -399,6 +399,19 @@ const PLACE_BY_NAME = new Map([...GAZ.map((g) => [g.place.name, g.place] as cons
 export function iranEventAllowed(e: { actor?: string | null; place?: string | null; label?: string | null }): boolean {
   const p = PLACE_BY_NAME.get(String(e.place ?? ""));
   return !!p && iranPinAllowed(e.actor ?? null, p, String(e.label ?? ""));
+}
+
+/**
+ * A Gulf state's own attack (user, 20 Oct: "return the gulf states as a side in purple ... and add their pins for
+ * attacks they did"): a strike, a raid or jets a Gulf state flies, alone or beside the US, or a strike laid at its
+ * door. Not its air defence. The same words as scripts/iran-research/pin-rules.cjs GULF_ATTACK (the researched pins).
+ */
+export const GULF_ATTACK = /\b(?:(?:US|U\.S\.|American)(?:\s+and\s+|-)(?:Saudi|Emirati|UAE|Qatari|Bahraini|Kuwaiti|Omani)|Saudi(?:[- ]led)?|Emirati|UAE|Qatari|Bahraini|Kuwaiti|Omani|(?<!Persian |Arabian )Gulf)\s+(?:(?:fighter|war|air|drone|naval)\s+)?(?:jets?|warplanes?|planes?|aircraft|air ?strikes?|strikes?|raids?|bombing|bombardment|artillery|shelling|helicopters?|drone strikes?|forces?\s+(?:strike|struck|hit|bomb\w*|attack\w*|shell\w*|raid\w*))\b|\b(?:attributed|blamed)\s+(?:on|to)\s+(?:the\s+)?(?:UAE|Emirates|Saudi Arabia|Saudis|Qatar|Bahrain|Kuwait|Oman)\b|\b(?:Saudi Arabia|the UAE|Emirates|Qatar|Bahrain|Kuwait|Oman)\s+(?:strikes|struck|bombs|bombed|shells|shelled|raids|raided|launch(?:es|ed)\s+(?:air ?)?strikes)\b/;
+const GULF_TARGET_BEFORE = /\b(?:on|at|against|targeting|targets?|hits?|hit|struck|over|into|toward|towards)\s+(?:the\s+|a\s+|an\s+)?$/i;
+export function gulfAttack(label: string | null | undefined): boolean {
+  const s = String(label || "");
+  const m = GULF_ATTACK.exec(s);
+  return !!m && !GULF_TARGET_BEFORE.test(s.slice(Math.max(0, m.index - 20), m.index));
 }
 
 /**

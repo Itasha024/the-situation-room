@@ -73,7 +73,8 @@ for (const g of geoms) {
   const n = g.properties?.name;
   if (!n || SIDE[n] || !g.arcs || ["Yemen", "Palestine"].includes(n)) continue;
   const hits = pins.filter((p) => holds(g, p.lng, p.lat)).length;
-  if (hits) { SIDE[n] = "gulf"; console.log("others:", n, hits, "pins"); }
+  // Lit grey with the others: purple is the Gulf states' alone (user, 20 Oct).
+  if (hits) { SIDE[n] = "other"; console.log("others:", n, hits, "pins"); }
 }
 
 const features = [];

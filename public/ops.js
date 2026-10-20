@@ -1035,7 +1035,8 @@
     const ground = T.air.filter((a) => a[16]).length;
     const seaNo = T.seaOk === false;
     // Only the counts (20 Oct: "no need for all the explanations in that menu").
-    const airTxt = S.air ? (T.at ? `<b>${(T.air.length - ground).toLocaleString('en-GB')}</b> in the air` : 'Loading…') : '';
+    const est = T.air.filter((a) => a[21] === 1).length;
+    const airTxt = S.air ? (T.at ? `<b>${(T.air.length - ground).toLocaleString('en-GB')}</b> in the air${est ? `, ${est.toLocaleString('en-GB')} of them estimated` : ''}` : 'Loading…') : '';
     const seaTxt = seaNo ? 'Not connected yet' : S.sea ? (T.seaAt ? `<b>${T.ships.length.toLocaleString('en-GB')}</b> ships` : 'Loading…') : '';
     menu.innerHTML = `<div class="ops-mh"><b>Traffic</b><button type="button" class="ops-x" data-ly="close" aria-label="Close">${ICON.x}</button></div>
       ${sw('air', S.air, `${ICON.plane}Aircraft`, airTxt)}
@@ -1136,7 +1137,8 @@
         ctx.lineWidth = 1.6;
         ctx.strokeStyle = o.edge;
         ctx.fillStyle = o.ink;
-        ctx.globalAlpha = o.gnd ? 0.6 : 1;
+        // An estimate (out of every receiver's reach, moved on along its route) is drawn faint.
+        ctx.globalAlpha = o.est ? 0.42 : o.gnd ? 0.6 : 1;
         ctx.stroke(o.ship ? BOAT : PLANE);
         ctx.fill(o.ship ? BOAT : PLANE);
         ctx.restore();
@@ -1179,7 +1181,7 @@
       const emg = a[7] === '7500' || a[7] === '7600' || a[7] === '7700';
       const sel = T.sel && T.sel.kind === 'air' && T.sel.id === a[0];
       const tag = (z >= 7.5 || (a[13] && z >= 6)) && !a[16] ? a[8] || a[9] || '' : '';
-      const mk = new Mk([a[1], a[2]], { renderer: T.rend, radius: 9, hdg: a[5], vec: a[16] ? 0 : vecOf(a[4]), ink: emg ? I.emg : a[13] ? I.mil : I.civ, edge: I.edge, selInk: I.sel, big: !!a[13] || emg, gnd: !!a[16], tag, sel, stroke: false, fill: true, interactive: false });
+      const mk = new Mk([a[1], a[2]], { renderer: T.rend, radius: 9, hdg: a[5], vec: a[16] ? 0 : vecOf(a[4]), ink: emg ? I.emg : a[13] ? I.mil : I.civ, edge: I.edge, selInk: I.sel, big: !!a[13] || emg, gnd: !!a[16], est: a[21] === 1, tag, sel, stroke: false, fill: true, interactive: false });
       // Where it was when last heard (row 17: seconds before the feed's time), to move it on at its speed.
       T.marks.push({ ll: [a[1], a[2]], air: a, mk, t: a[18] ? a[18] * 1000 : (T.airT || Date.now()) - (Number(a[17]) || 0) * 1000, kt: a[16] ? 0 : Number(a[4]) || 0, hdg: a[5] });
       T.layer.addLayer(mk);
@@ -1283,6 +1285,7 @@
       // One screen, no scrolling (20 Oct): the photo beside the name, where from and where to, the figures in three columns.
       html = `<div class="ops-ch"><span class="ops-ck ${a[13] ? 'mil' : ''}">${ICON.plane}${a[13] ? 'Military' : 'Aircraft'}</span><button type="button" class="ops-x" data-sel="x" aria-label="Close">${ICON.x}</button></div>
         <div class="ops-chead"><div class="ops-photo" data-hex="${esc(a[0])}"></div><div><h3>${esc(a[8] || a[9] || a[0].toUpperCase())}</h3><p class="ops-csub">${esc([a[11] || a[10], a[12]].filter(Boolean).join(' · '))}</p></div></div>
+        ${a[21] === 1 ? `<p class="ops-est">Estimated position: out of receivers' reach for ${esc(Math.max(1, Math.round((Number(a[17]) || 0) / 60)))} min, moved on along its route at its last speed</p>` : ''}
         ${routeBox('air', a[0])}
         <dl>${row('Altitude', a[16] ? 'Ground' : a[3] != null ? esc(fl(a[3])) : '')}${row('Speed', a[4] != null ? `${a[4]} kt` : '')}${row('Heading', a[5] != null ? `${String(a[5]).padStart(3, '0')}°` : '')}${row('Climb', a[6] ? `${a[6] > 0 ? '+' : ''}${a[6].toLocaleString('en-GB')} ft/m` : '')}${row('Squawk', sq)}${row('Reg.', esc(a[9] || String(a[0]).toUpperCase()))}</dl>
         <p class="ops-clinks"><a href="https://globe.adsb.fi/?icao=${esc(a[0])}" target="_blank" rel="noopener">adsb.fi ${ICON.ext}</a>${a[8] ? `<a href="https://www.flightradar24.com/${esc(String(a[8]).trim())}" target="_blank" rel="noopener">Flightradar24 ${ICON.ext}</a>` : ''}</p>`;
@@ -1312,7 +1315,7 @@
     const to = d && d.destination ? d.destination : aisTo ? { name: aisTo } : null;
     const known = d && (d.origin || d.destination || (d.track && d.track.length > 1));
     return `<div class="ops-route"><p class="ops-rline"><span class="ops-rp">${place(d && d.origin)}</span><i aria-hidden="true">${ICON.right}</i><span class="ops-rp">${place(to)}</span></p>
-      ${known ? `<button type="button" class="ops-rbtn" data-route aria-pressed="${!!r.show}">${r.show ? 'Hide the route' : 'Show the route on the map'}</button>` : ''}
+      ${known && kind === 'air' ? `<button type="button" class="ops-rbtn" data-route aria-pressed="${!!r.show}">${r.show ? 'Hide the route' : 'Show the route on the map'}</button>` : ''}
       ${d && d.source && d.source.length ? `<small>${esc([].concat(d.source).slice(0, 2).map((x) => String(x).replace(/ *\(.*\)/, '')).join(', '))}${d.confidence && d.confidence !== 'confirmed' ? ' · ' + esc(d.confidence) : ''}</small>` : ''}</div>`;
   }
   async function loadRoute(kind, id, cs) {
@@ -1397,7 +1400,7 @@
        everything since 28 Feb, each event lit on the map at its time.
      Controls show when the pointer moves. */
   const CAST = { timer: 0, i: -1, play: true, cur: null, idle: 0, full: false, lapse: null };
-  const CAST_MS = 4000;
+  const CAST_MS = 6000; // 4 s a report, and 2 more to read it (20 Oct)
   const WAR0 = '2026-02-28T00:00:00+03:00';
   const LAPSE_DEF = [
     ['today', 'Today', () => { const d = new Date(); const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(d); return [Date.parse(`${ymd}T00:00:00+03:00`), Date.now()]; }],
@@ -1536,21 +1539,26 @@
     // The whole span in view.
     if (lp.list.length > 1) try { m.flyToBounds(lp.list.map((e) => [e.lat, e.lng]), { padding: [60, 60], maxZoom: 7, duration: P.still ? 0 : 1 }); } catch (e) { /* kept */ }
     lp.dur = Math.max(20, Math.min(60, lp.list.length * 0.06)) * 1000;
-    setTimeout(() => { if (CAST.lapse === lp) { lp.start = performance.now(); lp.raf = requestAnimationFrame(lapseFrame); } }, P.still ? 0 : 1100);
+    // A steady clock, not the screen's frames (20 Oct: the whole war's lapse never moved where frames were held back).
+    lp.fresh = [];
+    setTimeout(() => { if (CAST.lapse === lp) { lp.start = performance.now(); lp.raf = setInterval(lapseFrame, 80); } }, P.still ? 0 : 1100);
     paintCast();
   }
-  function lapseFrame(now) {
+  function lapseFrame() {
     const lp = CAST.lapse;
     if (!lp) return;
+    const now = performance.now();
     const f = Math.min(1, (now - lp.start) / lp.dur);
     lp.t = lp.a + (lp.b - lp.a) * f;
     while (lp.i < lp.list.length && tOf(lp.list[lp.i]) <= lp.t) {
       const e = lp.list[lp.i++];
       const mk = L.circleMarker([e.lat, e.lng], { renderer: lapseRend, radius: 7, stroke: true, color: '#fff', weight: 1, fillColor: sideOf(e).c, fillOpacity: 0.95, interactive: false }).addTo(lapseLayer);
-      setTimeout(() => { try { mk.setRadius(4); mk.setStyle({ weight: 0.6, fillOpacity: 0.8 }); } catch (x) { /* gone */ } }, 700);
+      lp.fresh.push([mk, now]);
     }
+    // Each new mark lit for a moment, then settles small, a batch at a time.
+    while (lp.fresh.length && now - lp.fresh[0][1] > 700) { const [mk] = lp.fresh.shift(); mk.setRadius(4); mk.setStyle({ weight: 0.6, fillOpacity: 0.8 }); }
     paintLapse();
-    if (f < 1) lp.raf = requestAnimationFrame(lapseFrame);
+    if (f >= 1 && !lp.fresh.length) { clearInterval(lp.raf); lp.raf = 0; }
   }
   function paintLapse() {
     const lp = CAST.lapse, el = hud && $('.ops-lapse', hud);
@@ -1562,7 +1570,7 @@
   }
   function stopLapse() {
     const lp = CAST.lapse;
-    if (lp) cancelAnimationFrame(lp.raf);
+    if (lp) clearInterval(lp.raf);
     CAST.lapse = null;
     H.classList.remove('ops-lapsing');
     if (lapseLayer) { try { getMap().removeLayer(lapseLayer); } catch (e) { /* gone */ } lapseLayer = null; }
@@ -1657,7 +1665,7 @@
       ['airStart', 'Aircraft', 'Live aircraft on the map from the start.', [[false, 'When I turn them on'], [true, 'Always on']]],
     ]],
     ['Broadcast', [
-      ['castTour', 'Tour', 'Broadcast mode goes from the latest report to the one before by itself, 4 seconds each.', [[true, 'On'], [false, 'Off']]],
+      ['castTour', 'Tour', 'Broadcast mode goes from the latest report to the one before by itself, 6 seconds each.', [[true, 'On'], [false, 'Off']]],
       ['castTicker', 'Ticker', 'The most important of the latest reports, running along the bottom.', [[true, 'On'], [false, 'Off']]],
     ]],
     ['Panels', [

@@ -973,3 +973,4 @@ html[data-view="ops"] .ops-left table.list[data-ops-l] td:nth-child(2) { font-we
 html[data-view="ops"] .ops-left table.list[data-ops-l] td[data-h]::before { content: attr(data-h) ": "; color: var(--o-faint); font-size: .92em }
 /* A picked aircraft or ship: the map zoom buttons step aside for its card. */
 html[data-view="ops"] .map-wrap:has(.ops-card:not([hidden])) .leaflet-control-zoom { visibility: hidden }
+html[data-view="ops"] .ops-est { margin: 0 0 8px; padding: 5px 8px; border-left: 2px solid var(--o-sel); background: var(--o-hover); font-size: 11.5px; color: var(--o-dim) }

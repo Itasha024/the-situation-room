@@ -1012,28 +1012,53 @@ html[data-view="ops"] .ops-card .ops-rtimes { margin: 5px 0 0; font: 500 11.5px 
 /* ---------- A side menu inside the panel (user, 21 Oct: "an inside side menu to separate the categories, like the
    side menu on the left, a sub side menu; for the timelines too"): the arenas or fronts, the numbers' categories,
    the timeline's eras and the All page's desks are listed down the panel's left edge; the one picked shows beside. ---------- */
-html[data-view="ops"] .ops-left :is(:has(> .pager-fronts), :has(> .pager-timeline), :has(> .num-cat), .ops-subwrap) {
-  display: grid !important; grid-template-columns: var(--ops-sub-w, 92px) minmax(0, 1fr) !important; column-gap: 12px !important; row-gap: 0 !important; align-items: start !important; gap: 0 12px !important
+/* 21 Oct, later (user: "the sub side menu should look like the main side menu to its left, and show the main
+   menu's category it comes out of"): a second rail down the panel's whole left edge, in the main rail's look,
+   headed by the main item's icon and name; a notch on the main item points into it. */
+html[data-view="ops"] .ops-left .ops-pane.on:has(:is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)) {
+  display: grid !important; grid-template-columns: var(--ops-sub-w, 92px) minmax(0, 1fr); column-gap: 14px; align-content: start; align-items: start;
+  min-height: 100%; padding: 0 14px 22px 0 !important;
+  background: linear-gradient(to right, var(--o-bg) 0 var(--ops-sub-w, 92px), var(--o-line) var(--ops-sub-w, 92px) calc(var(--ops-sub-w, 92px) + 1px), transparent 0) !important
 }
-html[data-view="ops"] .ops-left :is(:has(> .pager-fronts), :has(> .pager-timeline), :has(> .num-cat), .ops-subwrap) > * { grid-column: 2; min-width: 0 }
+html[data-view="ops"] .ops-left .ops-pane.on:has(:is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav))::before { content: ""; grid-column: 2; height: 14px }
+html[data-view="ops"] .ops-left .ops-pane :is(:has(> .pager-fronts), :has(> .pager-timeline), :has(> .num-cat), .ops-subwrap) { display: contents !important }
+html[data-view="ops"] .ops-left .ops-pane.on:has(:is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)) :is(> *, :is(:has(> .pager-fronts), :has(> .pager-timeline), :has(> .num-cat), .ops-subwrap) > *) { grid-column: 2; min-width: 0 }
 html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) {
-  grid-column: 1 !important; grid-row: 1 / span 30; position: sticky; top: 0; align-self: start;
+  grid-column: 1 !important; grid-row: 1 / span 40; position: sticky; top: 0; align-self: start;
   display: flex !important; flex-direction: column; flex-wrap: nowrap; gap: 0; width: auto; max-width: none;
-  margin: 0 !important; padding: 0 !important; border: 0 !important; border-right: 1px solid var(--o-line) !important; border-radius: 0 !important; background: none !important
+  margin: 0 !important; padding: 0 0 6px !important; border: 0 !important; border-radius: 0 !important; background: none !important
+}
+/* The rail's head: the main item it comes out of, its icon over its name (ops.js paintFrame sets both). */
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)::before {
+  content: ""; order: -2; display: block; height: 20px; margin: 10px 0 4px;
+  background: var(--o-sel); -webkit-mask: var(--ops-sub-icon) center / 20px 20px no-repeat; mask: var(--ops-sub-icon) center / 20px 20px no-repeat
+}
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)::after {
+  content: var(--ops-sub-name, ""); order: -1; display: block; padding: 0 4px 9px; margin-bottom: 4px; border-bottom: 1px solid var(--o-line);
+  font: 700 10.5px/1 var(--ops-cond); letter-spacing: .1em; text-transform: uppercase; text-align: center; color: var(--o-sel)
 }
 html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button {
-  appearance: none; display: block; width: 100%; min-width: 0; height: auto; flex: none; margin: 0 0 0 -1px !important;
-  padding: 9px 8px 9px 10px !important; border: 0 !important; border-left: 2px solid transparent !important; border-radius: 0 !important;
-  background: none !important; box-shadow: none !important; color: var(--o-dim) !important; text-align: left !important;
-  font: 600 11px/1.25 var(--ops-cond) !important; letter-spacing: .08em !important; text-transform: uppercase; white-space: normal; overflow-wrap: anywhere; cursor: pointer
+  appearance: none; position: relative; display: block; width: 100%; min-width: 0; height: auto; flex: none; margin: 0 !important;
+  padding: 10px 6px 9px !important; border: 0 !important; border-radius: 0 !important;
+  background: none !important; box-shadow: none !important; color: var(--o-dim) !important; text-align: center !important;
+  font: 600 10.5px/1.2 var(--ops-cond) !important; letter-spacing: .1em !important; text-transform: uppercase; white-space: normal; overflow-wrap: anywhere; cursor: pointer
 }
-html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button::before,
 html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button::after { content: none !important }
-html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:hover { background: var(--o-hover) !important; color: var(--o-text) !important }
-html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) {
-  border-left-color: var(--o-sel) !important; background: color-mix(in srgb, var(--o-sel) 13%, transparent) !important; color: var(--o-strong) !important
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button::before { content: none !important }
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:hover { background: var(--o-hover) !important; color: var(--o-strong) !important }
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { color: var(--o-strong) !important; background: var(--o-panel) !important }
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:is(.on, [aria-pressed="true"], [aria-selected="true"])::before {
+  content: "" !important; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--o-sel)
 }
 html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:focus-visible { outline: 2px solid var(--o-sel); outline-offset: -2px }
+/* The panel's own title is the rail's head now. */
+html[data-view="ops"] .ops-left:has(.ops-pane.on :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)) .ops-ptitle { visibility: hidden }
+/* The main item the rail comes out of: a notch on its edge, pointing in. */
+@media (min-width: 761px) {
+  html[data-view="ops"] .ops-on:not(.ops-noleft):has(.ops-left .ops-pane.on :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)) .ops-nav button[aria-pressed="true"]::after {
+    content: ""; position: absolute; right: 0; top: 50%; transform: translateY(-50%); border: 6px solid transparent; border-right: 0; border-left: 6px solid var(--o-sel)
+  }
+}
 html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-timeline) ~ .pg-dots .pg-name { display: inline !important }
 html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-timeline) .pg-slide:not(.on) { display: none !important }
 html[data-view="ops"] .ops-th[data-th]:not(.on) { display: none }

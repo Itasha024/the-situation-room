@@ -530,6 +530,12 @@ export function sayWhat(r: Row): boolean | null {
   // A speaker's own post with no name in it: the poster spoke.
   const own = String(r.source ?? "");
   const person = /^[A-Z][\p{L}'’-]+ (?:[A-Z][\p{L}'’-]+ )?([A-Z][\p{L}'’-]+)$/u.exec(own);
+  // A fuller line of the same words under the card leads first (MTV's "Araghchi: ready for diplomacy but
+  // will keep defending ourselves; no basis to expect progress in talks now" over "Ready for diplomacy …").
+  if (best && bestN >= 2 && String(best.summary).length > h.length + 15) {
+    r.summary = String(best.summary);
+    return true;
+  }
   if (nobody && person && FAMOUS.test(person[1])) {
     r.summary = `${person[1]}: ${/^(?:I|I'm|I've)\b|^[A-Z]{2}/.test(h) ? h : h[0].toLowerCase() + h.slice(1)}`;
     return true;

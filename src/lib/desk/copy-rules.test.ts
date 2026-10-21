@@ -505,6 +505,10 @@ test("a headline says what was said, and who said it (user, 21 Oct)", async () =
   const b: Record<string, unknown> = { summary: "Ready for diplomacy and self-defence", source: "Abbas Araghchi", url: "u", text: "", alsoReportedBy: [] };
   sayWhat(b);
   assert.equal(b.summary, "Araghchi: ready for diplomacy and self-defence");
+  const c: Record<string, unknown> = { summary: "Ready for diplomacy and self-defence", source: "Abbas Araghchi", url: "u", text: "", alsoReportedBy: [{ source: "MTV Lebanon", url: "m", summary: "Araghchi: ready for diplomacy but will keep defending ourselves; no basis to expect progress in talks now" }] };
+  sayWhat(c);
+  assert.match(String(c.summary), /no basis to expect progress/);
+  assert.equal(c.source, "Abbas Araghchi");
   // Nothing says what: not shown.
   assert.equal(serveCard({ summary: "Araghchi details Iran's latest reply to the US", source: "ILNA", url: "https://t.me/ilnair/655852", text: "", type: "statement" }, "iran"), false);
 });

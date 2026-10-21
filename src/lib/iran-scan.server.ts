@@ -129,7 +129,7 @@ const TG_BACKFILL_PAGES = 4;
  * Channels read again from a post, once (the key marks it done): Araghchi's 7-part interview of 20 Oct
  * night (posts 13084–13096) was read cut short and made one card; read again under 21 Oct's rules.
  */
-const REWIND = [{ id: "s_a_araghchi", from: 13083, to: 13097, until: Date.parse("2026-10-21T20:00:00Z"), key: "rewind:s_a_araghchi:13083:v3" }];
+const REWIND = [{ id: "s_a_araghchi", from: 13083, to: 13097, until: Date.parse("2026-10-21T20:00:00Z"), key: "rewind:s_a_araghchi:13083:v4" }];
 /** A post a rewind brings back is read again though seen before (by its number, so a restart between the read
  *  and the reading does not lose it; a reading already cached under the new rules costs nothing). */
 const rewound = (url: string, now: number) => REWIND.some((x) => now < x.until && url.includes(`t.me/${x.id}/`) && tgPostNo(url) > x.from && tgPostNo(url) <= x.to);
@@ -150,7 +150,8 @@ async function readTg(src:{ id: string; name: string; lean: IranLean }, state: I
   for (let page = 0; seen && page < TG_BACKFILL_PAGES; page += 1) {
     const oldest = Math.min(...all.map((r) => tgPostNo(r.url)).filter(Boolean));
     if (!Number.isFinite(oldest) || oldest <= seen + 1) break;
-    const older = await fetchText(`https://t.me/s/${src.id}?before=${oldest}`);
+    // Telegram turns a request down now and then while the scan reads every channel at once: once more, after a pause.
+    const older = (await fetchText(`https://t.me/s/${src.id}?before=${oldest}`)) ?? (await new Promise((r) => setTimeout(r, 2000)).then(() => fetchText(`https://t.me/s/${src.id}?before=${oldest}`)));
     const more = older ? parseTelegram(older, { id: src.id, name: src.name, lean: "intl" }).filter((r) => tgPostNo(r.url) < oldest) : [];
     if (!more.length) break;
     all.push(...more);

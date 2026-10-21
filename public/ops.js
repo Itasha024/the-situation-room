@@ -432,10 +432,6 @@
     nav.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(S.left && b.dataset.tab === S.tab)));
     const cur = LEFT_TABS[PAGE].find(([id]) => id === S.tab);
     $('.ops-ptitle', leftEl).textContent = cur ? cur[1] : '';
-    // The panel's own side menu is headed by the main item it comes out of: its name and its icon (ops.css).
-    const ic = cur && NAV_ICON[cur[2]];
-    leftEl.style.setProperty('--ops-sub-name', JSON.stringify(cur ? cur[1] : ''));
-    leftEl.style.setProperty('--ops-sub-icon', ic ? `url("data:image/svg+xml,${encodeURIComponent(ic.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ').replace(/currentColor/g, '#000'))}")` : 'none');
     leftEl.querySelectorAll('.ops-pane').forEach((p) => p.classList.toggle('on', p.id === S.tab));
     rightEl.querySelectorAll('[data-rtab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.rtab === S.rtab)));
     root.querySelectorAll('[data-ptab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ptab === S.ptab)));

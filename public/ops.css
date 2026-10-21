@@ -1026,17 +1026,9 @@ html[data-view="ops"] .ops-left .ops-pane.on:has(:is(.pager-fronts ~ .pg-dots, .
 html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) {
   grid-column: 1 !important; grid-row: 1 / span 40; position: sticky; top: 0; align-self: start;
   display: flex !important; flex-direction: column; flex-wrap: nowrap; gap: 0; width: auto; max-width: none;
-  margin: 0 !important; padding: 0 0 6px !important; border: 0 !important; border-radius: 0 !important; background: none !important
+  margin: 0 !important; padding: 6px 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important
 }
-/* The rail's head: the main item it comes out of, its icon over its name (ops.js paintFrame sets both). */
-html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)::before {
-  content: ""; order: -2; display: block; height: 20px; margin: 10px 0 4px;
-  background: var(--o-sel); -webkit-mask: var(--ops-sub-icon) center / 20px 20px no-repeat; mask: var(--ops-sub-icon) center / 20px 20px no-repeat
-}
-html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)::after {
-  content: var(--ops-sub-name, ""); order: -1; display: block; padding: 0 4px 9px; margin-bottom: 4px; border-bottom: 1px solid var(--o-line);
-  font: 700 10.5px/1 var(--ops-cond); letter-spacing: .1em; text-transform: uppercase; text-align: center; color: var(--o-sel)
-}
+/* No head on the rail: the main rail beside it names it (user, 21 Oct). */
 html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button {
   appearance: none; position: relative; display: block; width: 100%; min-width: 0; height: auto; flex: none; margin: 0 !important;
   padding: 10px 6px 9px !important; border: 0 !important; border-radius: 0 !important;

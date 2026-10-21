@@ -1055,3 +1055,17 @@ html[data-view="ops"] .ops-left :has(> .num-cat) .tally-box { padding-left: 12px
 html[data-view="ops"] .ops-left :has(> .num-cat) .tally-box table { width: 100% }
 html[data-view="ops"] .ops-left :has(> .num-cat) .tally-box th { white-space: nowrap; letter-spacing: .04em !important }
 @media (max-width: 760px) { html[data-view="ops"] { --ops-sub-w: 78px } html[data-view="ops"] .ops-left :has(> .num-cat) .tally-box { padding-left: 8px !important; padding-right: 8px !important } }
+/* The side menu names the arena, the era and the desk, so the box beside it does not say it again (user, 21 Oct). */
+html[data-view="ops"] .ops-left .pager-fronts .front-card .front-head strong,
+html[data-view="ops"] .ops-left .pager-timeline .phase-head > strong,
+html[data-view="ops"] .ops-subwrap .ops-th header h3 { display: none !important }
+html[data-view="ops"] .ops-subwrap .ops-th header { justify-content: flex-end }
+html[data-view="ops"] .ops-left .pager-fronts .front-card .front-head:not(:has(> :not(strong))) { display: none !important }
+/* One box, in the brief's look, in every panel (user, 21 Oct: "the border of the boxes like the brief's"): no frame
+   round the frame; each card, table or era is the brief's raised box. */
+html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-numbers, .pager-timeline) { border: 0 !important; background: none !important; box-shadow: none !important; border-radius: 0 !important }
+html[data-view="ops"] .ops-left :is(.pager-numbers .tally-box, .pager-timeline .phase-card, .num-grid > *, .tally:not(:has(.pager)) .tally-box) {
+  margin: 0 !important; border: 1px solid var(--o-line) !important; border-radius: var(--ops-r) !important; background: var(--o-raised) !important; box-shadow: none !important
+}
+html[data-view="ops"] .ops-left .pager-timeline .phase-card { padding: 12px !important }
+html[data-view="ops"] .ops-left .pager-numbers .tally-box { padding-top: 12px !important; padding-bottom: 12px !important }

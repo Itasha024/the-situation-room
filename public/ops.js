@@ -722,13 +722,24 @@
     let start = null;
     const tAt = (ev) => { const r = svg.getBoundingClientRect(), k = svg._x; const px = ((ev.clientX - r.left) / r.width) * k.W; return k.t0 + ((px - k.LW) / (k.W - k.LW - 6)) * k.span; };
     const clampDay = (t) => Math.max(svg._x.t0, Math.min(dayOf(Date.now()), dayOf(t)));
-    svg.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('[data-mx], .cell')) return; start = tAt(ev); if (ev.pointerType === 'touch' && isPhone()) return; svg.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+    // On a phone a finger drawn across the days picks them, as a mouse does (user, 21 Oct); a zoomed chart
+    // scrolls by a drag on the side names or the dates under it.
+    let pan = null;
+    svg.addEventListener('pointerdown', (ev) => {
+      if (!ev.target.closest('[data-mx], .cell')) {
+        if (ev.pointerType === 'touch' && isPhone()) { pan = { x: ev.clientX, s: svg.parentNode.scrollLeft }; svg.setPointerCapture(ev.pointerId); }
+        return;
+      }
+      start = tAt(ev); svg.setPointerCapture(ev.pointerId); ev.preventDefault();
+    });
     svg.addEventListener('pointermove', (ev) => {
-      if (start == null || (ev.pointerType === 'touch' && isPhone())) return;
+      if (pan) { svg.parentNode.scrollLeft = pan.s - (ev.clientX - pan.x); return; }
+      if (start == null) return;
       const a = clampDay(Math.min(start, tAt(ev))), b = clampDay(Math.max(start, tAt(ev))) + DAY;
       if (!rng || rng[0] !== a || rng[1] !== b) { rng = [a, b]; drawMatrix(); }
     });
     svg.addEventListener('pointerup', (ev) => {
+      if (pan) { pan = null; return; }
       if (start == null) return;
       const t = tAt(ev);
       // A click, not a drag: the day clicked (on a phone, a second day takes in the days between; the same day clears).
@@ -742,7 +753,7 @@
       start = null;
       pickToMap();
     });
-    svg.addEventListener('pointercancel', () => { start = null; });
+    svg.addEventListener('pointercancel', () => { start = null; pan = null; });
     dock.addEventListener('click', (ev) => { if (ev.target.closest('[data-clear]')) { rng = null; drawMatrix(); openRange(P.range); } });
   }
   /* Pins outside the days picked fade (the pins drawn one by one; the whole war's canvas is left alone). Each pin

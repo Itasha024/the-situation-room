@@ -913,7 +913,7 @@ html[data-view="ops"] .ops-mz button + button { border-left: 1px solid var(--o-l
 @media (max-width: 760px) {
   html[data-view="ops"] .ops-mz { display: inline-flex }
   html[data-view="ops"] .ops-act-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
-  html[data-view="ops"] .ops-amx { touch-action: pan-x; max-height: none }
+  html[data-view="ops"] .ops-amx { touch-action: pan-y; max-height: none }
   html[data-view="ops"] .ops-amx .lab { font-size: 12px }
   html[data-view="ops"] .ops-amx .tk { font-size: 11.5px }
 }

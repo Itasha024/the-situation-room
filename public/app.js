@@ -3207,7 +3207,7 @@ const TALLY_FALLBACK = {
 function pagerHtml(kind, slides, idx, labels) {
   const many = slides.length > 1;
   const items = slides.map((s, i) => `<div class="pg-slide${i === idx ? ' on' : ''}" data-i="${i}" role="group" aria-roledescription="slide" aria-label="${escapeHtml(T('{l} ({i} of {n})', { l: T(labels[i]), i: i + 1, n: slides.length }))}"${i === idx ? '' : ' aria-hidden="true" inert'}>${s}</div>`).join('');
-  const dots = labels.map((l, i) => `<button type="button" role="tab" data-i="${i}" title="${escapeHtml(l)}" aria-label="${escapeHtml(l)}" aria-selected="${i === idx}" class="${i === idx ? 'on' : ''}"></button>`).join('');
+  const dots = labels.map((l, i) => `<button type="button" role="tab" data-i="${i}" title="${escapeHtml(l)}" aria-label="${escapeHtml(l)}" aria-selected="${i === idx}" class="${i === idx ? 'on' : ''}"><span class="pg-name">${escapeHtml(T(l))}</span></button>`).join('');
   return `<div class="pager pager-${kind}${many ? ' many' : ''}" aria-roledescription="carousel">
       <div class="pg-track">${items}</div>
       ${many ? `<button type="button" class="pg-arrow pg-prev" aria-label="Previous"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>

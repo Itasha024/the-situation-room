@@ -1008,3 +1008,27 @@ html[data-view="ops"] .ops-card h3 small { margin-left: 6px; font-size: 12px; fo
 html[data-view="ops"] .ops-card dl.ops-wide { grid-template-columns: minmax(0, 1fr); margin-top: 6px }
 html[data-view="ops"] .ops-card dl.ops-wide dd { white-space: normal; overflow-wrap: anywhere }
 html[data-view="ops"] .ops-card .ops-rtimes { margin: 5px 0 0; font: 500 11.5px var(--ops-mono); color: var(--o-dim) }
+
+/* ---------- One switcher for the panels (user, 21 Oct: "design in unison the menu switching between arenas and
+   between categories"): the arenas or fronts, and the numbers' categories, as one row of named buttons in the
+   look of the map's time buttons; an arena or a front shows one at a time, as a category does. ---------- */
+html[data-view="ops"] .ops-left :has(> .pager-fronts) { display: flex !important; flex-direction: column }
+html[data-view="ops"] .ops-left .pager-fronts ~ .pg-dots { order: -1 }
+html[data-view="ops"] .ops-left .pager-fronts .pg-slide:not(.on) { display: none !important }
+html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) {
+  display: flex !important; flex-wrap: wrap; justify-content: flex-start; gap: 4px; width: 100%; max-width: 100%;
+  margin: 0 0 10px !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; overflow: visible
+}
+html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button {
+  appearance: none; flex: 0 1 auto; min-width: 0; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  margin: 0 !important; padding: 0 10px !important; border: 1px solid var(--o-line-2) !important; border-radius: var(--ops-r) !important;
+  background: none !important; box-shadow: none !important; color: var(--o-dim) !important;
+  font: 600 11.5px/1 var(--ops-cond) !important; letter-spacing: .1em !important; text-transform: uppercase; white-space: nowrap; cursor: pointer
+}
+html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button::before { content: none !important }
+html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button:hover { border-color: var(--o-dim) !important; background: var(--o-hover) !important; color: var(--o-text) !important }
+html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) {
+  border-color: var(--o-sel) !important; background: color-mix(in srgb, var(--o-sel) 16%, transparent) !important; color: var(--o-strong) !important
+}
+html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button:focus-visible { outline: 2px solid var(--o-sel); outline-offset: 1px }
+html[data-view="ops"] .ops-left .pager-fronts ~ .pg-dots .pg-name { display: inline; overflow: hidden; text-overflow: ellipsis; max-width: 22ch }

@@ -970,6 +970,8 @@ html{scroll-behavior:smooth}
 .pg-dots button:hover::before{background:#64748b}
 .pg-dots button.on::before{width:18px;background:#cbd5e1}
 .pg-dots button:focus-visible{outline:1px solid #4a6380;outline-offset:0}
+/* A dot's name: shown only where the dots are a row of named tabs (the map view's Arenas and Fronts, ops.css). */
+.pg-dots .pg-name{display:none}
 .tally-box.claims td.none{color:var(--t-faint,#556579);font-weight:400}
 @media (prefers-reduced-motion:reduce){.pg-slide{transform:none!important}.pg-dots button::before{transition:none}}
 .prose-pin{color:inherit;text-decoration:underline dotted rgba(126,182,255,.7);text-underline-offset:3px;text-decoration-thickness:1px;cursor:pointer}

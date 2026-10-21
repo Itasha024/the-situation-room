@@ -34,7 +34,7 @@ import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatu
 import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
-import { nearerSource } from "./desk/speaker-press.ts";
+import { nearerSource, officialVoice } from "./desk/speaker-press.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead } from "./desk/site-articles.ts";
@@ -3051,6 +3051,7 @@ export async function shapeCards(
   // a card, joins one, or waits for its original. One that did none of these
   // is named in the log (the Riyadh schools report vanished with no trace).
   const approved = reports.map((r) => ({ fp: r.fp, url: r.url, source: r.source, summary: r.summary }));
+  const approvedCard = new Map(reports.map((r) => [r.fp, r]));
   const heldFps = new Set<string>();
   foldTrail.clear();
 
@@ -3312,6 +3313,17 @@ export async function shapeCards(
     for (const g of groups) for (const o of g.others) also.add(o.url);
     for (const a of approved) {
       if (placed.has(a.fp) || placed.has(a.url) || heldFps.has(a.fp) || also.has(a.url) || published.has(a.fp)) continue;
+      // An official's own post is a card of its own, unless he posted the same line already (21 Oct: parts 3 and 7
+      // of Araghchi's interview went nowhere, scan after scan, however they were folded).
+      const own = approvedCard.get(a.fp);
+      const asCard = (x: LiveReport) => x as unknown as SameCard;
+      const pool = [...uniqReports, ...stored];
+      if (own && officialVoice(own.source) && /^https:\/\/(?:t\.me|x\.com|twitter\.com)\//.test(own.url) && !pool.some((o) => linkKey(o.url) === linkKey(own.url) || (o.source === own.source && !ownParts(asCard(o), asCard(own))))) {
+        uniqReports.push(own);
+        placed.add(own.fp);
+        console.log(`[scan] an official's own post given its own card: ${own.url} — ${own.summary}`);
+        continue;
+      }
       const into = foldTrail.get(a.url) ?? foldTrail.get(a.fp);
       console.log(`[scan] approved but no card: ${a.source} ${a.url} — ${a.summary}${into ? ` (folded into ${into})` : ""}`);
     }

@@ -129,7 +129,7 @@ const TG_BACKFILL_PAGES = 4;
  * Channels read again from a post, once (the key marks it done): Araghchi's 7-part interview of 20 Oct
  * night (posts 13084–13096) was read cut short and made one card; read again under 21 Oct's rules.
  */
-const REWIND = [{ id: "s_a_araghchi", from: 13083, to: 13097, until: Date.parse("2026-10-22T06:00:00Z"), key: "rewind:s_a_araghchi:13083:v6" }];
+const REWIND = [{ id: "s_a_araghchi", from: 13083, to: 13097, until: Date.parse("2026-10-22T06:00:00Z"), key: "rewind:s_a_araghchi:13083:v7" }];
 /** A post a rewind brings back is read again though seen before (by its number, so a restart between the read
  *  and the reading does not lose it; a reading already cached under the new rules costs nothing). */
 const rewound = (url: string, now: number) => REWIND.some((x) => now < x.until && url.includes(`t.me/${x.id}/`) && tgPostNo(url) > x.from && tgPostNo(url) <= x.to);

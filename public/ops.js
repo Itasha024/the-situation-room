@@ -407,7 +407,23 @@
     setTimeout(sizeDock, 30);
     setTimeout(sizeDock, 260);
   }
+  /* The panels' pickers, one button each (21 Oct): the one shown opens the list; a pick or a click elsewhere closes it. */
+  const PICKER = '.num-cat, .pager-fronts ~ .pg-dots';
+  const isOn = (b) => b.matches('.on, [aria-pressed="true"], [aria-selected="true"]');
+  function wirePickers() {
+    leftEl.addEventListener('click', (ev) => {
+      const b = ev.target.closest('button');
+      const row = b && b.parentElement && b.parentElement.matches(PICKER) ? b.parentElement : null;
+      if (!row) return;
+      if (isOn(b)) { ev.preventDefault(); ev.stopPropagation(); row.classList.toggle('ops-open'); return; }
+      row.classList.remove('ops-open');
+    }, true);
+    document.addEventListener('click', (ev) => {
+      leftEl.querySelectorAll('.ops-open').forEach((row) => { if (!row.contains(ev.target)) row.classList.remove('ops-open'); });
+    });
+  }
   function wireFrame() {
+    wirePickers();
     root.addEventListener('click', (ev) => {
       const t = ev.target.closest('[data-op],[data-tab],[data-ptab],[data-rtab]');
       if (!t || !root.contains(t)) return;

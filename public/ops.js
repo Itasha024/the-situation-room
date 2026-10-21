@@ -346,7 +346,7 @@
   function sizeDock() {
     if (!dock) return;
     // The map keeps at least 60% of its box, whatever the strip holds.
-    const h = isPhone() || !S.dock ? 0 : Math.min(dock.offsetHeight, Math.round(mapWrap.clientHeight * (SZ.dh ? 0.75 : 0.4)));
+    const h = isPhone() ? 0 : !S.dock ? dock.offsetHeight : Math.min(dock.offsetHeight, Math.round(mapWrap.clientHeight * (SZ.dh ? 0.75 : 0.4)));
     mapWrap.style.setProperty('--dock-h', h + 'px');
     const m = getMap();
     if (m) try { m.invalidateSize({ pan: false }); } catch (e) { /* not yet */ }
@@ -427,6 +427,8 @@
     root.classList.toggle('ops-noleft', !S.left);
     root.classList.toggle('ops-noright', !S.right);
     root.classList.toggle('ops-nodock', !S.dock);
+    const fd = $('.ops-fold-d', dock);
+    if (fd) fd.title = S.dock ? 'Fold the timeline (\\)' : 'Open the timeline (\\)';
     H.classList.toggle('ops-cast', S.cast);
     H.classList.toggle('ops-fills', !!S.fills);
     root.dataset.opsPtab = S.ptab;

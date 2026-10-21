@@ -84,8 +84,12 @@ html[data-view="ops"] .ops-on .rail-splitter { display: none !important }
   html[data-view="ops"] .ops-on main.stage { flex: 1; display: block !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; max-width: none !important }
   html[data-view="ops"] .ops-on .map-wrap { position: relative; height: 100% !important; min-height: 0 !important; border: 0 !important; border-radius: 0 !important; margin: 0 !important }
   html[data-view="ops"] .ops-on :is(#map, #h-map) { position: absolute; inset: 0 0 var(--dock-h, 0) 0; height: auto !important; border-radius: 0 !important }
-  html[data-view="ops"] .ops-on.ops-nodock .ops-dock { display: none }
-  html[data-view="ops"] .ops-on.ops-nodock .map-wrap { --dock-h: 0px !important }
+  /* Folded, the strip keeps its time row with the arrow, so it opens again from where it closed (user, 21 Oct). */
+  html[data-view="ops"] .ops-on.ops-nodock .ops-dock { height: auto !important; max-height: none }
+  html[data-view="ops"] .ops-on.ops-nodock .ops-dock > .ops-drow:not(.ops-dtop) { display: none }
+  html[data-view="ops"] .ops-on.ops-nodock .ops-fold-d svg { transform: rotate(180deg) }
+  html[data-view="ops"] .ops-on .ops-fold-d { border-color: var(--o-line-2); color: var(--o-text) }
+  html[data-view="ops"] .ops-on.ops-nodock .ops-fold-d { border-color: var(--o-sel); color: var(--o-sel); background: color-mix(in srgb, var(--o-sel) 14%, transparent) }
 }
 @media (min-width: 761px) and (max-width: 1180px) {
   html[data-view="ops"] { --ops-lw: 330px; --ops-rw: 320px; --ops-nav-w: 50px }
@@ -290,7 +294,7 @@ html[data-view="ops"] .ops-unfold-right { right: 0; border-right: 0; border-radi
 html[data-view="ops"] .ops-unfold-dock { top: auto; bottom: 0; left: 50%; transform: translateX(-50%); width: auto; height: 24px; padding: 0 14px; border-bottom: 0; border-radius: var(--ops-r) var(--ops-r) 0 0; font: 600 11.5px var(--ops-cond); letter-spacing: .12em; text-transform: uppercase }
 @media (min-width: 761px) {
   html[data-view="ops"] .ops-noleft .ops-unfold-left, html[data-view="ops"] .ops-noright .ops-unfold-right { display: grid }
-  html[data-view="ops"] .ops-nodock .ops-unfold-dock { display: block }
+  html[data-view="ops"] .ops-nodock .ops-unfold-dock { display: none }
 }
 
 /* ---------- The strip under the map: time, Who and What, the last 48 hours ---------- */

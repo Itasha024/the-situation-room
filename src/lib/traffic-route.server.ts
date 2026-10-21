@@ -20,6 +20,8 @@ type Gate = { gap: number; next: number; tokens: number; perDay: number; at: num
 const gates: Record<string, Gate> = {
   "adsb.im": { gap: 1500, next: 0, tokens: 50, perDay: 3000, at: Date.now(), until: 0 },
   "adsbdb": { gap: 1000, next: 0, tokens: 50, perDay: 3000, at: Date.now(), until: 0 },
+  // A reader's click only (21 Oct: the continued tracks' look-ups had spent the budget above, and cards came back bare).
+  "adsbdb-info": { gap: 500, next: 0, tokens: 50, perDay: 2000, at: Date.now(), until: 0 },
   // OpenSky gives an anonymous address 400 credits a day.
   "opensky": { gap: 3000, next: 0, tokens: 20, perDay: 350, at: Date.now(), until: 0 },
 };
@@ -88,6 +90,24 @@ async function fromAdsbdb(cs: string): Promise<Candidate[]> {
   return o && d ? [{ source: "adsbdb.com", origin: o, destination: d }] : [];
 }
 /**
+ * The airline by the callsign's first three letters when the route record gave none (QTR83V has no
+ * route on file, but QTR is Qatar Airways); kept a day per code.
+ */
+const byCode = new Map<string, { at: number; p: Promise<Airline | null> }>();
+function airlineByCode(code: string) {
+  const had = byCode.get(code);
+  if (had && Date.now() - had.at < 86_400_000) return had.p;
+  const p = getJson("adsbdb-info", `https://api.adsbdb.com/v0/airline/${code}`).then((x) => {
+    const r = (x as { response?: Record<string, unknown>[] } | null)?.response;
+    const a = Array.isArray(r) ? r[0] : null;
+    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+    return a && str(a.name) ? { name: str(a.name)!, iata: str(a.iata), icao: str(a.icao), country: str(a.country), iso: str(a.country_iso) } : null;
+  }).catch(() => null);
+  byCode.set(code, { at: Date.now(), p });
+  return p;
+}
+
+/**
  * The airframe (21 Oct: "more details on each"): maker, type, owner and the owner's country, and a
  * photo when Planespotters has none, from adsbdb's aircraft record; kept a day per aircraft.
  */
@@ -97,7 +117,7 @@ function airframe(hex: string) {
   const had = frames.get(hex);
   if (had && Date.now() - had.at < 86_400_000) return had.p;
   if (frames.size > 5000) frames.clear();
-  const p = getJson("adsbdb", `https://api.adsbdb.com/v0/aircraft/${hex}`).then((x) => {
+  const p = getJson("adsbdb-info", `https://api.adsbdb.com/v0/aircraft/${hex}`).then((x) => {
     const a = (x as { response?: { aircraft?: Record<string, unknown> } } | null)?.response?.aircraft;
     if (!a || typeof a !== "object") return null;
     const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
@@ -144,7 +164,8 @@ export async function airRoute(hex: string, cs: string | null, pos: (LatLon & { 
   const call = cs && /^[A-Z0-9]{3,8}$/.test(cs) ? cs : null;
   const cands = call && /^[A-Z]{3}\d/.test(call)
     ? cached(candCache, call, 20 * 60_000, 3000, () => ({
-        c: Promise.all([fromAdsbIm(call, pos), fromAdsbdb(call)]).then((r) => {
+        // The continued tracks' look-ups ask adsb.im only: adsbdb's budget is kept for readers' clicks.
+        c: Promise.all([fromAdsbIm(call, pos), withTrack ? fromAdsbdb(call) : Promise.resolve([] as Candidate[])]).then((r) => {
           // Nothing found (or a source skipped for its budget): asked again after two minutes, not twenty.
           const e = candCache.get(call);
           if (!r.flat().length && e) e.at = Date.now() - 18 * 60_000;
@@ -164,7 +185,13 @@ export async function airRoute(hex: string, cs: string | null, pos: (LatLon & { 
   const source = [...pick.source];
   if (path.length) source.push("OpenSky Network (flown track)");
   if (seen.length) source.push("adsb.fi / adsb.lol positions kept by the desk");
-  const al = call ? airlines.get(call) : undefined;
+  let al = call ? airlines.get(call) : undefined;
+  if (withTrack && call && !al?.airline && /^[A-Z]{3}\d/.test(call)) {
+    const airline = await airlineByCode(call.slice(0, 3));
+    // The flight number as sold, when the callsign is the airline's code and a number (UAE203 → EK203).
+    const num = /^[A-Z]{3}(\d{1,4})$/.exec(call);
+    if (airline) al = { airline, flightNo: al?.flightNo ?? (airline.iata && num ? airline.iata + num[1] : null) };
+  }
   return { ok: true, kind: "air", hex, callsign: call, origin: pick.origin, destination: pick.destination, track, source, confidence: pick.confidence, checks: pick.checks, at: new Date().toISOString(),
     airline: al?.airline ?? null, flightNo: al?.flightNo ?? null, airframe: frame };
 }

@@ -14,9 +14,11 @@ const IRAN_17OCT = [
   "Hostile artillery fire targeted outskirts of Zoutar al-Sharqiya [r9].",
 ];
 
-test("attacks at sea come before a minister's remark, and the list stops at six", () => {
-  const out = rankPoints(IRAN_17OCT);
-  assert.equal(out.length, MAX_POINTS);
+test("attacks at sea come before a minister's remark, and the list stops at its cap", () => {
+  // A cap of six here (the desks' cap is 8 since 21 Oct): the last remark is the one to go.
+  const out = rankPoints(IRAN_17OCT, 6);
+  assert.equal(out.length, 6);
+  assert.ok(rankPoints(IRAN_17OCT).length <= MAX_POINTS);
   assert.match(out[0], /12 attacks on ships/);
   assert.match(out[1], /two tanker attacks/);
   assert.match(out[2], /artillery fire/);

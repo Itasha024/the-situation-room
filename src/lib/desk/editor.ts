@@ -241,6 +241,9 @@ function isXPost(c: Pick<Candidate, "url">): boolean {
  * the whole article, there was probably more relevant info there").
  */
 function readWhole(c: Candidate): boolean {
+  // An official's own long post (an interview's transcript, an op-ed) is read whole (21 Oct: Araghchi's
+  // 7-part interview was cut at 1,600 characters and only part 2 made a card).
+  if (officialVoice(c.source) && c.text.length > 1200) return true;
   return c.tags.includes("original") || c.tags.includes("exclusive") || (!/^https:\/\/(?:t\.me|x\.com|twitter\.com)\//.test(c.url) && majorCarrier(domainOf(c.url)));
 }
 
@@ -371,7 +374,8 @@ export async function editCandidates(
   const key = readerKey();
   const anyReader = !!key || fallbackKey();
   let modelNote = anyReader ? "" : "reader off: GEMINI_API_KEY not set";
-  unread.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  // An official's own posts are read first, then the newest (21 Oct: Araghchi's night interview lost to relays).
+  unread.sort((a, b) => +!!officialVoice(b.source) - +!!officialVoice(a.source) || Date.parse(b.at) - Date.parse(a.at));
   // A post forwarded by several channels is read once; the copies take its reading.
   const copyOf = new Map<Queued, Queued>();
   const firstOf = new Map<string, Queued>();
@@ -599,7 +603,8 @@ export async function editCandidates(
     if (v?.kind !== "publish") continue;
     const posted = xPostTime(c.url);
     if (posted && posted < Date.parse(v.report.at) - 10 * 60_000) v.report.at = new Date(posted).toISOString();
-    if (now - Date.parse(v.report.at) > LATE_MS && !c.tags.includes("original")) {
+    // An official's own post is his words whenever it is read.
+    if (now - Date.parse(v.report.at) > LATE_MS && !c.tags.includes("original") && !officialVoice(c.source)) {
       verdicts.set(c.url, { kind: "reject", reason: "late", note: "Late: older than 12 hours when it was read." });
     }
   }
@@ -638,7 +643,7 @@ export async function editCandidates(
     lastPrune = now;
     await store.prune(cfg.cachePrefix, CACHE_KEEP_MS).catch(() => 0);
   }
-  if (cfg.queueMax !== undefined) stillQueued.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  if (cfg.queueMax !== undefined) stillQueued.sort((a, b) => +!!officialVoice(b.source) - +!!officialVoice(a.source) || Date.parse(b.at) - Date.parse(a.at));
   await store.putJson(cfg.queueKey, cfg.queueMax === undefined ? stillQueued : stillQueued.slice(0, cfg.queueMax));
   await store.putJson(QUOTA_KEY, quota);
   await store.putJson(USAGE_KEY, calls24);
@@ -1146,7 +1151,9 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // Truth Social post on gasoline and Iran's bomb was turned away as
   // commentary (8 Oct) and the desk carried it only from relays. It is sent
   // back once to be written as his words.
-  if (!raw.publish && /commentary|recap|rhetoric/i.test(String(raw.reject_reason || "")) && officialVoice(c.source) && isIranWar(c.text)) {
+  // So is a long post of an official's turned away as old or repeated: a part of an interview (21 Oct).
+  const turnedAway = officialVoice(c.source) && c.text.length > 1200 ? /commentary|recap|rhetoric|old|duplicate|repeat|not new|already/i : /commentary|recap|rhetoric/i;
+  if (!raw.publish && turnedAway.test(String(raw.reject_reason || "")) && officialVoice(c.source) && isIranWar(c.text)) {
     return { kind: "reject", reason: "reader-check", note: "Own words: a government's own post on the war is never commentary; write it as their words." };
   }
   // The site's general copy rules, as on the Yemen desk (user, 8 Oct): Iran's

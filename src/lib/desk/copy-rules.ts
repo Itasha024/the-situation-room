@@ -535,11 +535,9 @@ export function sayWhat(r: Row): boolean | null {
     return true;
   }
   // The same story: two of its words at least (an unrelated line of the same day is no answer).
+  // The card keeps its own source and link (its id and time go by them; a swapped link was dropped as another post).
   if (best && bestN >= 2) {
-    r.alsoReportedBy = [{ source: r.source, url: r.url, summary: h }, ...also.filter((a) => a !== best)];
     r.summary = String(best.summary);
-    r.source = best.source;
-    r.url = best.url;
     return true;
   }
   // Words of nobody, or a card that only says someone spoke, with nothing better: off the desk unless its body says it.

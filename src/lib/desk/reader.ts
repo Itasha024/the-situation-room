@@ -1618,7 +1618,7 @@ async function callOpenAI(
     source: i.source,
     source_alignment: i.alignment,
     posted_at: i.postedAt,
-    text: i.text.slice(0, i.full ? 6000 : i.text.includes("[Said in the video]") ? 4000 : 1600),
+    text: i.text.slice(0, i.full ? FULL_TEXT_MAX : i.text.includes("[Said in the video]") ? 4000 : 1600),
     ...(spellingHints(i.text) ? { spelling: spellingHints(i.text) } : {}),
     ...(calendarHints(i.text) ? { dates: calendarHints(i.text) } : {}),
     ...(i.fix ? { fix_previous: i.fix } : {}),

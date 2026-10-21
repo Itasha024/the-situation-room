@@ -19,7 +19,11 @@ import { leadSpeaker } from "./speakers.ts";
 export const IRAN_PROMPT_VERSION = 10;
 
 export function iranContentHash(text: string): string {
-  return createHash("sha256").update(`iran v${IRAN_PROMPT_VERSION} ` + String(text || "").replace(/\s+/g, " ").trim()).digest("hex").slice(0, 24);
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  // Long posts are read again under 21 Oct's rules (an official's long post read whole, each part of an
+  // interview its own card); the rest keep their readings, so the reader is not flooded.
+  const v = t.length > 1200 ? `${IRAN_PROMPT_VERSION}.1` : String(IRAN_PROMPT_VERSION);
+  return createHash("sha256").update(`iran v${v} ` + t).digest("hex").slice(0, 24);
 }
 
 /** The arenas (the section's boxes), by id. */
@@ -144,6 +148,7 @@ STATEMENTS (event_type statement or diplomacy)
 - speaker_lead is REQUIRED: the person or body the report is about, as the headline opens with it.
 - A statement leads with its speaker and a colon, ALWAYS, never "X says": "Araghchi: Iran will not negotiate under threat", "IRGC: ...", a short exact quote 'Rubio: "Iran will never have a nuclear weapon"', and what an official or source told an outlet, "US official: ..." (Al Jazeera's US official is "US official: ...", not "US official tells Al Jazeera ..."). The speaker is named once; a quote is never empty.
 - The headline carries WHAT was said: the claim, demand, figure, warning or decision itself, never only that someone spoke ("Araghchi details Iran's latest reply to the US", "X discusses …", "X outlines …", "X comments on …", "X briefs the cabinet on …", "X gives interview" say nothing: write "Araghchi: Iran's reply asks the US to lift the blockade before talks"). A long interview, speech or transcript: its strongest new line leads, the next new lines go in the body, each as the speaker's words.
+- A numbered part of an interview or transcript on the speaker's own channel ("/۳", "part 3", questions marked "مجری:" or "المذيع:") is the speaker's own words, never a duplicate, recap or old: publish it, each part as its own card. Its strongest new answer leads ("Araghchi: …") and the other answers go in the body, each as his words; the presenter's question is only context.
 - The speaker is never left out: "We have no trust in the US" or "Ready for diplomacy and self-defence" alone is nobody's; write "Araghchi: we have no trust in the US …".
 - A report ABOUT someone (what they did, decided or discussed, or what officials, sources or an outlet say about them) is a plain sentence with no colon: "Trump held a call with Putin"; when officials or sources tell it, they speak: "US officials: Trump weighed strikes on Iran before the midterms". A state or institution may lead with a verb: "Qatar condemns the attack on Ras Laffan".
 - A person a general reader would not know (an MP, a provincial official, a commander, a deputy minister) is named by job and side only in the headline: "An Iranian MP: ...", "Iran's deputy defence minister: ...". The name goes in the body only when the report needs it ("The MP, Ahmad Naderi, said ..."). Known figures by surname: Trump, Vance, Rubio, Hegseth, Witkoff, Netanyahu, Katz, Khamenei, Pezeshkian, Araghchi, Ghalibaf, Larijani, Grossi, Guterres. Others by role: Ahmad Vahidi is "IRGC commander", Mohammad Jafar Ghaempanah (معاون اجرایی رئیس‌جمهور) "Iran's executive vice president", Ishaq Dar "Pakistani FM".

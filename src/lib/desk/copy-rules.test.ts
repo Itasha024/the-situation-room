@@ -500,11 +500,20 @@ test("a headline says what was said, and who said it (user, 21 Oct)", async () =
   const a: Record<string, unknown> = { summary: "We have no trust at all in the US administration's declared desire for peace with Iran", source: "Nidaa al-Watan", url: "u1", text: "", alsoReportedBy: [{ source: "Al-Alam", url: "u2", summary: "" }, { source: "Al Jadeed", url: "u3", summary: "Araghchi: we have no trust at all in US administration's declared desire for peace with Iran" }] };
   assert.equal(sayWhat(a), true);
   assert.match(String(a.summary), /^Araghchi: we have no trust/);
-  assert.equal(a.source, "Al Jadeed");
+  assert.equal(a.source, "Nidaa al-Watan");
   // The speaker's own channel.
   const b: Record<string, unknown> = { summary: "Ready for diplomacy and self-defence", source: "Abbas Araghchi", url: "u", text: "", alsoReportedBy: [] };
   sayWhat(b);
   assert.equal(b.summary, "Araghchi: ready for diplomacy and self-defence");
   // Nothing says what: not shown.
   assert.equal(serveCard({ summary: "Araghchi details Iran's latest reply to the US", source: "ILNA", url: "https://t.me/ilnair/655852", text: "", type: "statement" }, "iran"), false);
+});
+
+test("an official's own posts are each a card: Araghchi's 7-part interview (21 Oct)", async () => {
+  const { ownParts, talkRule } = await import("./fold-same.ts");
+  const p = (n: number, min: number) => ({ fp: `p${n}`, at: `2026-10-20T20:${String(47 + min).padStart(2, "0")}:00Z`, source: "Abbas Araghchi", url: `https://t.me/s_a_araghchi/${13084 + 2 * n}`, summary: `Araghchi: part ${n} line on the US and Hormuz`, type: "statement" });
+  assert.ok(ownParts(p(0, 0), p(1, 10)));
+  assert.equal(talkRule(p(0, 0), p(1, 10)), null);
+  // Another outlet's line is no own part.
+  assert.ok(!ownParts(p(0, 0), { ...p(1, 10), source: "Al Mayadeen", url: "https://t.me/almayadeen/1" }));
 });

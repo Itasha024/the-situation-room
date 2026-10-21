@@ -22,6 +22,7 @@
  */
 import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
 import { speechOwner, wordsInCommon } from "./copies.ts";
+import { officialVoice } from "./speaker-press.ts";
 import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteTakesLead } from "./site-articles.ts";
 
 export type Card = {
@@ -740,11 +741,20 @@ export function eventRule(a: Card, b: Card): Rule | null {
   return looseRule(a, b);
 }
 
+const OWN_POST = /^https:\/\/(?:t\.me|x\.com|twitter\.com)\//;
+/** Two posts of one official's own channel (two links of it). */
+export function ownParts(a: Card, b: Card): boolean {
+  return a.source === b.source && a.url !== b.url && OWN_POST.test(String(a.url)) && OWN_POST.test(String(b.url)) && !!officialVoice(a.source);
+}
+
 /** One speaker's words: their remarks that day, or one channel's burst of their lines. */
 export function talkRule(a: Card, b: Card): Rule | null {
   if (a === b || a.fp === b.fp) return null;
   const sa = sig(a);
   const sb = sig(b);
+  // An official's own posts are each a card: Araghchi's interview, posted in 7 parts on his channel, is 7
+  // cards as they come (user, 21 Oct). Other outlets' lines still fold into the part they tell.
+  if (ownParts(a, b)) return null;
   if (sa.remarks && sa.remarks === sb.remarks && sa.day === sb.day && oneOccasion(a, b, Math.abs(sb.t - sa.t), sa.occ, sb.occ)) return "remarks";
   if (sa.burst && a.source === b.source && sa.burst === sb.burst && Math.abs(sb.t - sa.t) <= BURST_MS) return "burst";
   return null;

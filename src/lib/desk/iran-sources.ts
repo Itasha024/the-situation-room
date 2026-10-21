@@ -92,7 +92,7 @@ export const IRAN_TG: IranSource[] = [
   // An Axis relay channel, not Hezbollah: it reposts the Houthi army and Hebrew media (audit, 8 Oct).
   { id: "C_Military1", name: "Axis military relay", lean: "axis", every: 5 },
   { id: "rahbar_ir", name: "Khamenei's office", lean: "axis", every: 15 },
-  { id: "s_a_araghchi", name: "Abbas Araghchi", lean: "axis", every: 15 },
+  { id: "s_a_araghchi", name: "Abbas Araghchi", lean: "axis", every: 5 },
   // The president's son and adviser; mostly his own writing, so only the war's posts pass.
   { id: "ypezeshkian", name: "Yousef Pezeshkian", lean: "axis", every: 30 },
   { id: "IranintlTV", name: "Iran International", lean: "opposition", every: 5 },
@@ -258,7 +258,7 @@ export const IRAN_X: IranSource[] = [
   { id: "MizanNewsAgency", name: "Mizan (judiciary agency)", lean: "axis", every: 15 },
   { id: "ir_rezaee", name: "Mohsen Rezaei", lean: "axis", every: 15 },
   { id: "drpezeshkian", name: "Masoud Pezeshkian", lean: "axis", every: 15 },
-  { id: "araghchi", name: "Abbas Araghchi", lean: "axis", every: 10 },
+  { id: "araghchi", name: "Abbas Araghchi", lean: "axis", every: 5 },
   { id: "DrSaeedJalili", name: "Saeed Jalili", lean: "axis", every: 30 },
   // The opposition.
   { id: "IranIntlbrk", name: "Iran International", lean: "opposition", every: 5 },

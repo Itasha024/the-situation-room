@@ -1231,3 +1231,119 @@ html[data-view="ops"].ops-cast .ops-hud:has(.ops-card:not([hidden])) .ops-cboard
   html[data-view="ops"] .ops-cbar { top: 8px; max-width: calc(100% - 16px); gap: 2px }
   html[data-view="ops"] .ops-cbar button span { display: none }
 }
+
+/* ---------- Round 6 (user, 22 Oct) ---------- */
+/* The Traffic button: an aircraft and a ship, the ship tucked under the wing. */
+html[data-view="ops"] .ops-trfi { position: relative; display: inline-block; width: 22px; height: 16px; flex: none; font-style: normal }
+html[data-view="ops"] .ops-btn .ops-trfi svg { position: absolute; width: 14px; height: 14px }
+html[data-view="ops"] .ops-btn .ops-trfi svg:first-child { left: 0; top: -1px; transform: rotate(45deg) }
+html[data-view="ops"] .ops-btn .ops-trfi svg:last-child { right: 0; bottom: -2px; width: 13px; height: 13px; opacity: .85 }
+/* Phones: the side menu is a row under the tabs, not a column beside the panel; a notch points up at its tab. */
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-left .ops-panes:has(> .ops-pane.on :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)) { background: var(--o-panel) }
+  html[data-view="ops"] .ops-left .ops-pane.on:has(:is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)) { display: flex !important; flex-direction: column; align-items: stretch; padding: 0 14px 22px !important }
+  html[data-view="ops"] .ops-left .ops-pane.on:has(:is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav))::before { order: -1 }
+  html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) {
+    order: -2; grid-row: auto; position: sticky; top: 41px; z-index: 6; align-self: stretch; width: calc(100% + 28px) !important; max-width: none !important; box-sizing: border-box;
+    flex-direction: row !important; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; max-height: none;
+    margin: 0 -14px !important; padding: 5px 6px 0 !important; border-bottom: 1px solid var(--o-line) !important;
+    background:
+      linear-gradient(to bottom left, var(--o-sel) 50%, transparent 50%) calc(var(--ops-nx, 50%) - 6px) 0 / 6px 5px no-repeat,
+      linear-gradient(to bottom right, var(--o-sel) 50%, transparent 50%) var(--ops-nx, 50%) 0 / 6px 5px no-repeat,
+      var(--o-bg) !important
+  }
+  html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button {
+    width: auto; flex: 1 0 auto; padding: 8px 10px 8px !important; font-size: 11px !important; letter-spacing: .08em !important; white-space: nowrap; overflow-wrap: normal !important; hyphens: none
+  }
+  html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { background: none !important }
+  html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:is(.on, [aria-pressed="true"], [aria-selected="true"])::before { left: 10px; right: 10px; top: auto; bottom: 0; width: auto; height: 2px }
+}
+/* Every "Show on map" is its pin only, in a small ring, as the attack rows' (user, 22 Oct). */
+html[data-view="ops"] .ops-on :is(.sit-map-btn, .card-map) {
+  display: inline-grid !important; place-items: center; flex: none; width: 22px !important; min-width: 0 !important; height: 22px !important; padding: 0 !important; gap: 0 !important;
+  border: 1px solid var(--o-line-2) !important; border-radius: 50% !important; background: none !important; font-size: 0 !important; letter-spacing: 0 !important; line-height: 0 !important; overflow: hidden
+}
+html[data-view="ops"] .ops-on :is(.sit-map-btn, .card-map)::before { width: 12px; height: 12px }
+html[data-view="ops"] .ops-on :is(.sit-map-btn, .card-map):is(:hover, [aria-expanded="true"]) { background: var(--o-sel) !important; border-color: var(--o-sel) !important; color: var(--o-sel-ink) !important }
+html[data-view="ops"] .ops-on :is(.sit-map-btn, .card-map) > * { display: none !important }
+/* The All page's cards: the desk as its flag in a circle, as in the bar, the pin to its left. */
+html[data-view="ops"] .ops-on .card .meta .card-map { margin-inline-start: auto !important }
+html[data-view="ops"] .ops-on .card .meta .card-map + :is(.h-tag, .h-tags) { margin-inline-start: 0 !important }
+html[data-view="ops"] .ops-on .card .meta .h-tags { gap: 3px }
+html[data-view="ops"] .ops-on .card .meta .h-tag { width: 22px; height: 22px; padding: 0 !important; justify-content: center; border-radius: 50% !important; overflow: hidden }
+html[data-view="ops"] .ops-on .card .meta .h-tag > span { display: none }
+html[data-view="ops"] .ops-on .card .meta .h-tag svg { width: 16px !important; height: 16px !important; border-radius: 50%; box-shadow: none }
+html[data-view="ops"] .ops-on .card .meta .h-tag:hover { border-color: var(--o-dim) !important }
+/* ---------- The site's own pages (the Sources list) in this view's look: a slim bar, the desks as in the map
+   view's bar, the text in a panel (user, 22 Oct). ---------- */
+html[data-view="ops"] .doc-root { background: var(--o-bg); color: var(--o-text) }
+html[data-view="ops"] .doc-root .mast { display: flex; align-items: center; gap: 14px; height: 46px; padding: 0 16px; border-bottom: 1px solid var(--o-line); background: var(--o-panel) }
+html[data-view="ops"] .doc-root .mast-date { order: 2; margin-left: auto; font: 500 12px var(--ops-mono) !important; letter-spacing: .04em; text-transform: none; color: var(--o-dim) }
+html[data-view="ops"] .doc-root .mast-mid { display: flex !important; flex-direction: row !important; align-items: baseline; gap: 12px; font-size: 1rem }
+html[data-view="ops"] .doc-root .mast-name .mn { font: 700 15px var(--ops-cond) !important; letter-spacing: .16em; text-transform: uppercase; color: var(--o-strong) }
+html[data-view="ops"] .doc-root .mast-line { font: 600 11px var(--ops-cond) !important; letter-spacing: .14em; color: var(--o-dim) }
+html[data-view="ops"] .doc-root .mast-line::before, html[data-view="ops"] .doc-root .mast-line::after { display: none }
+html[data-view="ops"] .doc-root .mast-end:empty { display: none }
+html[data-view="ops"] .doc-root .doc-top { height: 42px; padding: 0 16px 0 0; margin: 0; border-bottom: 1px solid var(--o-line); background: var(--o-panel) }
+html[data-view="ops"] .doc-root .doc-top .brand, html[data-view="ops"] .doc-root .doc-top h1 { height: 100%; margin: 0; display: flex; align-items: stretch; font-size: inherit }
+html[data-view="ops"] .doc-root .doc-top :is(.dl-pre, .dt-label) { display: none }
+html[data-view="ops"] .doc-root .doc-top .dt-row { display: flex; align-items: stretch; gap: 0; height: 100%; padding: 0; overflow-x: auto }
+html[data-view="ops"] .doc-root .doc-top .dt-btn {
+  position: relative; height: 100%; padding: 0 16px; gap: 8px; border: 0; border-radius: 0; border-right: 1px solid var(--o-line); background: none; box-shadow: none; transform: none !important;
+  color: var(--o-dim); font: 600 13px var(--ops-cond) !important; letter-spacing: .14em; text-transform: uppercase
+}
+html[data-view="ops"] .doc-root .doc-top .dt-btn::after { display: none }
+html[data-view="ops"] .doc-root .doc-top .dt-btn .dt-name { font: inherit !important }
+html[data-view="ops"] .doc-root .doc-top .dt-btn .dt-flag { width: 16px; height: 16px; box-shadow: none }
+html[data-view="ops"] .doc-root .doc-top .dt-btn .dt-globe { fill: none; stroke: currentColor; stroke-width: 1.6 }
+html[data-view="ops"] .doc-root .doc-top .dt-btn:hover { color: var(--o-strong); background: var(--o-hover) }
+html[data-view="ops"] .doc-root main.doc { max-width: 44rem; margin: 24px auto 32px; padding: 20px 24px 12px; background: var(--o-panel); border: 1px solid var(--o-line); border-radius: var(--ops-r) }
+html[data-view="ops"] .doc-root .doc-title { margin: 0 0 6px; font: 700 26px/1.1 var(--ops-cond) !important; letter-spacing: .08em; text-transform: uppercase; color: var(--o-strong) }
+html[data-view="ops"] .doc-root .doc-lede { font: 400 15px/1.5 var(--ops-ui) !important; color: var(--o-text) }
+html[data-view="ops"] .doc-root .sr-top { border-color: var(--o-line) }
+html[data-view="ops"] .doc-root :is(.sr-stamp, .sr-all, .sr-count, .sr-table th) { font-family: var(--ops-cond) !important; letter-spacing: .12em; color: var(--o-dim) }
+html[data-view="ops"] .doc-root .sr-stamp { font-size: 12px }
+html[data-view="ops"] .doc-root .sr-all { height: 26px; padding: 0 10px; border: 1px solid var(--o-line-2); border-radius: var(--ops-r); font-size: 11.5px; font-weight: 700 }
+html[data-view="ops"] .doc-root .sr-all:hover { color: var(--o-strong); background: var(--o-hover) }
+html[data-view="ops"] .doc-root .sr-group { border-color: var(--o-line) }
+html[data-view="ops"] .doc-root :is(.sr-group h3, .sr-head, .sr-name) { font: 700 16px/1.2 var(--ops-cond) !important; letter-spacing: .12em; text-transform: uppercase; color: var(--o-strong) }
+html[data-view="ops"] .doc-root .sr-head { padding: 12px 0 }
+html[data-view="ops"] .doc-root .sr-head .sw { width: 3px; height: 16px }
+html[data-view="ops"] .doc-root .sr-count { font: 600 12px var(--ops-mono) !important; letter-spacing: 0 }
+html[data-view="ops"] .doc-root .sr-chev { stroke: var(--o-dim) }
+html[data-view="ops"] .doc-root .sr-table { font: 400 14px/1.35 var(--ops-ui) !important }
+html[data-view="ops"] .doc-root .sr-table th { font-size: 11px; font-weight: 700; border-color: var(--o-line-2) }
+html[data-view="ops"] .doc-root .sr-table td { border-color: var(--o-line) }
+html[data-view="ops"] .doc-root .sr-table tr:hover td { background: var(--o-hover) }
+html[data-view="ops"] .doc-root .sr-table a:hover { color: var(--o-sel) }
+html[data-view="ops"] .doc-root .sr-rate b { font: 600 13px var(--ops-mono) !important; color: var(--o-strong) }
+html[data-view="ops"] .doc-root .sr-dot { border-radius: 1px; width: 8px; height: 8px; background: linear-gradient(90deg, var(--o-sel) var(--f), var(--o-line-2) var(--f)) }
+html[data-view="ops"] .doc-root .doc-foot { max-width: 44rem; border: 0; padding: 0 0 32px; font: 600 12px var(--ops-cond) !important; letter-spacing: .12em; text-transform: uppercase }
+html[data-view="ops"] .doc-root .doc-foot a { color: var(--o-sel); text-decoration: none }
+html[data-view="ops"] .doc-root .doc-foot a::before { content: "← " }
+@media (max-width: 760px) {
+  html[data-view="ops"] .doc-root .mast-line { display: none }
+  html[data-view="ops"] .doc-root main.doc { margin: 12px 8px 20px; padding: 14px 14px 6px }
+  html[data-view="ops"] .doc-root .doc-foot { padding: 0 16px 28px }
+}
+html[data-view="ops"] #feed-legend:has(.ops-srclink) { display: flex !important; align-items: center; gap: 8px }
+html[data-view="ops"] .ops-srclink { margin-left: auto; flex: none; font: 600 11px var(--ops-cond) !important; letter-spacing: .12em; text-transform: uppercase; color: var(--o-faint) !important; text-decoration: none !important }
+html[data-view="ops"] .ops-srclink:hover { color: var(--o-sel) !important }
+/* The box names over their boxes keep what they had inside them (22 Oct: the chart icon beside a name, its
+   size and its stroke set only inside the box, showed as a big black shape over the Economy boxes). */
+html[data-view="ops"] h3.ops-boxhead .spot svg { display: inline-block; width: 13px; height: 13px; margin-left: 5px; vertical-align: -1px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .8 }
+html[data-view="ops"] h3.ops-boxhead .spot { background: none !important; border: 0 !important; cursor: pointer }
+html[data-view="ops"] h3.ops-boxhead .spot-name { border-bottom: 1px dotted var(--o-faint) }
+html[data-view="ops"] h3.ops-boxhead .spot:is(:hover, [aria-expanded="true"]) { color: var(--o-strong) !important }
+html[data-view="ops"] h3.ops-boxhead small.unit { margin-left: 4px }
+html[data-view="ops"] h3.ops-boxhead small.unit-why { display: block; margin-top: 2px }
+html[data-view="ops"] h3.ops-boxhead svg:not([width]):not([class]) { max-width: 16px; max-height: 16px }
+/* The sides' colours everywhere are the map's (user, 22 Oct: the Houthi sources were red in the numbers, orange
+   on the map; Saudi Arabia blue beside its purple pins): the tables, the cards' edges, the sources filter, the
+   notes on the map and the Sources list (app.js THEME_SIDES). */
+html[data-view="ops"][data-theme="broadsheet-night"] { --houthi: #f08c2e; --plc: #3fb0b3; --saudi: #a855f7; --contested: #d9aa45; --mixed: #a898c4 }
+html[data-view="ops"][data-theme="broadsheet-day"] { --houthi: #e8761f; --plc: #0d7680; --saudi: #9b4dea; --contested: #b07d1a; --mixed: #7d6b99 }
+html[data-view="ops"] .lean-f[data-lean="houthi"] .sw { background: var(--houthi) !important }
+html[data-view="ops"] .lean-f[data-lean="gov"] .sw { background: var(--plc) !important }
+/* Round on every page (the theme's square buttons are more particular than the rule above). */
+html[data-view="ops"] .ops-on :is(.sit-map-btn, .card-map):not(#_) { border-radius: 50% !important }

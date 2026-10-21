@@ -15,6 +15,7 @@ a{color:inherit}
 .h-tags{display:inline-flex;gap:.3rem}
 .h-tag{display:inline-flex;align-items:center;gap:.3rem;font:700 .58rem/1 var(--f-body);letter-spacing:.11em;text-transform:uppercase;color:var(--t-text-2);text-decoration:none;border:1px solid var(--t-line-strong);padding:.2rem .38rem .2rem .3rem;border-radius:2px;white-space:nowrap;vertical-align:.12em}
 .h-tag .flag{width:13px;height:9px;flex:none}
+.h-tag .dt-flag{width:13px;height:13px;flex:none;border-radius:50%}
 .h-tag:hover{color:var(--accent-ui);border-color:var(--accent-ui)}
 .card .meta .h-tag,.card .meta .h-tags{margin-inline-start:auto}
 /* "Show on map" sits just left of the desk's tag, the tag staying top right (user, 18 Oct). */

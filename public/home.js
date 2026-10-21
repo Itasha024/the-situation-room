@@ -39,9 +39,11 @@
     const fs = app('flagSvg');
     if (d && fs) return fs(d);
     const c = id === 'iran' ? ['#239f40', '#ffffff', '#da0000'] : ['#ce1126', '#ffffff', '#000000'];
-    return `<svg class="flag" viewBox="0 0 18 12" aria-hidden="true">${c.map((x, i) => `<rect y="${i * 4}" width="18" height="4" fill="${x}"/>`).join('')}</svg>`;
+    return `<svg class="flag" viewBox="0 0 18 12" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${c.map((x, i) => `<rect y="${i * 4}" width="18" height="4" fill="${x}"/>`).join('')}</svg>`;
   };
   const FLAG = { iran: flagOf('iran'), yemen: flagOf('yemen') };
+  // A card's desk: its flag cut to a circle, as in the bar (user, 22 Oct).
+  const roundFlag = (id) => { const d = appDesks.find && appDesks.find((x) => x.id === id), ff = app('flagFill'); return d && ff ? ff(d) : FLAG[id]; };
   const ICON_EXT = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>';
 
   /* ---------- Times: the reader's own clock, as on the desks; the map's days on the desks' clock ---------- */
@@ -223,7 +225,7 @@
   /* ---------- Small pieces ---------- */
   const deskTag = (desk) => (desk === 'both'
     ? `<span class="h-tags">${deskTag('iran')}${deskTag('yemen')}</span>`
-    : `<a class="h-tag h-tag-${desk}" href="${HD[desk].href}" data-desk-go title="${esc(HD[desk].desk)}">${FLAG[desk]}<span>${esc(HD[desk].short)}</span></a>`);
+    : `<a class="h-tag h-tag-${desk}" href="${HD[desk].href}" data-desk-go title="${esc(HD[desk].desk)}">${roundFlag(desk)}<span>${esc(HD[desk].short)}</span></a>`);
   const deskOfReport = (r) => (r.desks.includes('iran') && r.desks.includes('yemen') ? 'both' : r.desks[0]);
 
   /** A report's pins on the map (one report can be pinned on several places). */

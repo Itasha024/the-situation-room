@@ -11,7 +11,7 @@
  * - on the map: the place under the pointer in degrees and MGRS, a scale, a small overview map, a ruler
  *   (distance in km and nautical miles, bearing), range rings, a link to the view, full screen;
  * - live traffic: every aircraft over the region (military marked), ships when the server has their feed;
- * - new events as they come in, flagged on the map; Space goes to the latest; a broadcast mode for screens;
+ * - new events as they come in, flagged on the map; Space goes to the latest;
  * - keys for all of it (? lists them).
  */
 (function () {
@@ -65,7 +65,6 @@
     rings: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="12" r="5.8"/><circle cx="12" cy="12" r="9.4" stroke-dasharray="2.4 2.2"/></g></svg>',
     link: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>',
     full: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>',
-    cast: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="1.5"/><path d="M8 21h8M12 17v4"/></g><circle cx="7" cy="8.5" r="1.6" fill="currentColor"/></svg>',
     theme: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="currentColor" d="M12 3.5a8.5 8.5 0 0 1 0 17z"/></svg>',
     keys: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="6" width="19" height="12" rx="1.6"/><path stroke-linecap="round" d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7.5 14h9"/></g></svg>',
     x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -163,13 +162,13 @@
   const noteOf = (e) => (e.desk === 'iran' ? A('iranPopupHtml')(e) : A('popupHtml')(e)) || esc(e.label || '');
 
   /* ---------- The frame ---------- */
-  const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, cast: false, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: false };
-  try { Object.assign(S, JSON.parse(localStorage.getItem('ops-state2') || '{}'), { tool: null, sel: null, cast: false }); } catch (e) { /* none kept */ }
+  const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: false };
+  try { Object.assign(S, JSON.parse(localStorage.getItem('ops-state2') || '{}'), { tool: null, sel: null }); } catch (e) { /* none kept */ }
   // The map writes its own place names (20 Oct: the Place names layer went from Layers).
   S.names = false;
-  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, mini, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, mini, trafficSeen })); } catch (e) { /* private */ } };
+  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, trafficSeen })); } catch (e) { /* private */ } };
   /* The reader's settings (20 Oct: "make a settings page too to make the site very customizable"). */
-  const PREF_DEF = { v: 3, tz: 'desk', range: 'today', pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, castTour: true, castEvery: 12, castTicker: true, airStart: false };
+  const PREF_DEF = { v: 3, tz: 'desk', range: 'today', pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, airStart: false };
   const P = { ...PREF_DEF };
   try { Object.assign(P, JSON.parse(localStorage.getItem('ops-prefs') || '{}')); } catch (e) { /* none kept */ }
   // Every map opens on the last 24 hours (20 Oct); settings kept before then had 48.
@@ -233,8 +232,7 @@
     const acts = document.createElement('div');
     acts.className = 'ops-acts';
     acts.innerHTML = `
-      <span class="ops-trfw"><button type="button" class="ops-btn" data-op="traffic" aria-pressed="false" title="Live aircraft and ships, on or off (T)">${ICON.plane}<span>Traffic</span></button><button type="button" class="ops-btn ops-ico ops-trfm" data-op="trafmenu" aria-expanded="false" title="Traffic options">${ICON.down}<span class="sr">Traffic options</span></button></span>
-      <button type="button" class="ops-btn ops-ico" data-op="cast" aria-pressed="false" title="Broadcast mode, for screens and TV (B)">${ICON.cast}<span class="sr">Broadcast mode</span></button>
+      <span class="ops-trfw"><button type="button" class="ops-btn" data-op="traffic" aria-pressed="false" title="Live aircraft and ships, on or off (T)"><i class="ops-trfi">${ICON.plane}${ICON.ship}</i><span>Traffic</span></button><button type="button" class="ops-btn ops-ico ops-trfm" data-op="trafmenu" aria-expanded="false" title="Traffic options">${ICON.down}<span class="sr">Traffic options</span></button></span>
       <button type="button" class="ops-btn ops-ico" data-op="theme" title="Day or night">${ICON.theme}<span class="sr">Day or night</span></button>
       <button type="button" class="ops-btn ops-ico ops-keysbtn" data-op="keys" title="Keys (?)">${ICON.keys}<span class="sr">Keys</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="settings" title="Settings (,)">${ICON.gear}<span class="sr">Settings</span></button>
@@ -312,6 +310,8 @@
     const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], tab('timeline-wrap')].filter(Boolean);
     pt.innerHTML = phone.map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
     root.insertBefore(pt, bar.nextSibling);
+    pt.addEventListener('scroll', notch, { passive: true });
+    addEventListener('resize', notch);
     if (PAGE === 'all') drawTheatres();
     paintFrame();
     if (window.ResizeObserver) new ResizeObserver(sizeDock).observe(dock);
@@ -400,7 +400,7 @@
     const wholeShown = () => { const m = getMap(), b = areaB(); try { return !!(m && b && m.getBounds().pad(0.02).contains(L.latLngBounds(b))); } catch (e) { return false; } };
     // Looking at the overview, not zoomed in on a place: no closer than the zoom that fits the area, and centred in it.
     const overview = () => { const m = getMap(), b = areaB(); try { const B = L.latLngBounds(b); return !!(m && b && B.contains(m.getCenter()) && m.getZoom() <= m.getBoundsZoom(B, false, L.point(16, 16)) + 0.5); } catch (e) { return false; } };
-    const keepWhole = (was) => { const m = getMap(), b = areaB(); if (!was || !m || !b || S.cast) return; try { m.invalidateSize({ pan: false }); if (!wholeShown()) m.fitBounds(b, { padding: [8, 8], animate: false }); } catch (e) { /* kept */ } };
+    const keepWhole = (was) => { const m = getMap(), b = areaB(); if (!was || !m || !b) return; try { m.invalidateSize({ pan: false }); if (!wholeShown()) m.fitBounds(b, { padding: [8, 8], animate: false }); } catch (e) { /* kept */ } };
     let rzWhole = null, rzT = 0;
     addEventListener('resize', () => { if (rzWhole == null) rzWhole = overview(); clearTimeout(rzT); rzT = setTimeout(() => { keepWhole(rzWhole); rzWhole = null; }, 300); });
     let raf = 0;
@@ -429,7 +429,6 @@
     root.classList.toggle('ops-nodock', !S.dock);
     const fd = $('.ops-fold-d', dock);
     if (fd) fd.title = S.dock ? 'Fold the timeline (\\)' : 'Open the timeline (\\)';
-    H.classList.toggle('ops-cast', S.cast);
     H.classList.toggle('ops-fills', !!S.fills);
     root.dataset.opsPtab = S.ptab;
     root.dataset.opsRtab = S.rtab;
@@ -439,8 +438,8 @@
     leftEl.querySelectorAll('.ops-pane').forEach((p) => p.classList.toggle('on', p.id === S.tab));
     rightEl.querySelectorAll('[data-rtab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.rtab === S.rtab)));
     root.querySelectorAll('[data-ptab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ptab === S.ptab)));
-    const c = $('[data-op="cast"]', bar); if (c) c.setAttribute('aria-pressed', String(S.cast));
     paintSlim(true);
+    notch();
     if (gripsOn) paintSizes();
     setTimeout(sizeDock, 30);
     setTimeout(sizeDock, 260);
@@ -454,6 +453,14 @@
     if (root.classList.contains('ops-slim') === on) return;
     root.classList.toggle('ops-slim', on);
     if (!quiet && gripsOn) paintSizes();
+  }
+  /* On a phone the side menu is a row under the tabs; a notch in it points up at the tab it belongs to (user, 22 Oct). */
+  function notch() {
+    if (!isPhone()) return;
+    const b = root.querySelector('.ops-ptabs [aria-selected="true"]');
+    if (!b) return;
+    const r = b.getBoundingClientRect(), l = leftEl.getBoundingClientRect();
+    root.style.setProperty('--ops-nx', Math.round(r.left + r.width / 2 - l.left) + 'px');
   }
   function wireFrame() {
     root.addEventListener('click', (ev) => {
@@ -477,7 +484,6 @@
       if (op === 'left') { S.left = !S.left; lastOpen = 'left'; keep(); paintFrame(); }
       else if (op === 'right') { S.right = !S.right; lastOpen = 'right'; keep(); paintFrame(); }
       else if (op === 'dock') { S.dock = !S.dock; keep(); paintFrame(); }
-      else if (op === 'cast') setCast(!S.cast);
       else if (op === 'keys') toggleKeys();
       else if (op === 'theme') { const set = app('setTheme'), nx = app('nextTheme'); if (set && nx) set(nx(app('THEME'))); }
       else if (op === 'layers') toggleLayers();
@@ -597,7 +603,6 @@
     const l = document.getElementById('ops-local');
     if (l && PAGE !== 'all') l.textContent = hm(now, TZ[PAGE]);
     strip && strip.querySelectorAll('[data-tz]').forEach((b) => { b.textContent = hm(now, b.dataset.tz); });
-    if (S.cast) paintCast();
   }
   function counts() {
     const now = Date.now(), ev = events();
@@ -607,7 +612,7 @@
   }
 
   /* ---------- On the map: place, scale, overview, ruler, rings, link ---------- */
-  let hud = null, coordsEl = null, mini = null, miniBox = null, miniDots = null, toolLayer = null, last = null;
+  let hud = null, coordsEl = null, toolLayer = null, last = null;
   function buildHud(m) {
     hud = document.createElement('div');
     hud.className = 'ops-hud';
@@ -619,12 +624,11 @@
       </div>
       <div class="ops-tooltip" hidden></div>
       <div class="ops-coords" aria-live="off"><span class="ops-ll">Point at the map</span><span class="ops-mgrs"></span></div>
-      <div class="ops-mini" aria-hidden="true"><div class="ops-mini-map"></div></div>
       <div class="ops-toasts" aria-live="polite"></div>
       <div class="ops-card" hidden></div>
       <div class="ops-menu ops-lyr" hidden></div>
       <div class="ops-menu ops-trf" hidden></div>
-      <div class="ops-lower" hidden></div><button type="button" data-do="layers" class="ops-lyrbtn" aria-expanded="false" title="Layers: base map, grid, control areas (Y)">${NAV_ICON.layers}<span class="sr">Layers</span></button>`;
+      <button type="button" data-do="layers" class="ops-lyrbtn" aria-expanded="false" title="Layers: base map, grid, Yemen's control areas (Y)">${NAV_ICON.layers}<span class="sr">Layers</span></button>`;
     mapWrap.appendChild(hud);
     L.DomEvent.disableClickPropagation(hud);
     L.DomEvent.disableScrollPropagation(hud);
@@ -653,7 +657,6 @@
       else if (S.tool === 'rings') addRings(ev.latlng);
     });
     m.on('dblclick', (ev) => { if (S.tool === 'ruler') { L.DomEvent.stop(ev); setTool(null, true); } });
-    buildMini(m);
   }
   function setTool(t, keepDrawn) {
     S.tool = t;
@@ -711,31 +714,6 @@
     else if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
   }
 
-  /* The overview map: the region, where the main map is looking, and the last 48 hours' events. */
-  function buildMini(m) {
-    const el = $('.ops-mini-map', hud);
-    mini = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false, tap: false, zoomSnap: 0.25 });
-    mini._t = L.tileLayer(app('TILE_URL') || 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { noWrap: true }).addTo(mini);
-    mini.fitBounds([[10, 31], [40, 63]]);
-    miniDots = L.layerGroup().addTo(mini);
-    miniBox = L.rectangle(m.getBounds(), { color: '#ffd166', weight: 1.5, fillOpacity: 0.08, interactive: false }).addTo(mini);
-    const sync = () => { try { miniBox.setBounds(m.getBounds()); } catch (e) { /* gone */ } };
-    m.on('move zoom', sync);
-    mini.on('click', (ev) => m.panTo(ev.latlng));
-    // Drag on the overview to move the map.
-    let down = false;
-    el.addEventListener('pointerdown', (ev) => { down = true; el.setPointerCapture(ev.pointerId); });
-    el.addEventListener('pointermove', (ev) => { if (!down) return; const r = el.getBoundingClientRect(); m.panTo(mini.containerPointToLatLng([ev.clientX - r.left, ev.clientY - r.top]), { animate: false }); });
-    el.addEventListener('pointerup', () => { down = false; });
-  }
-  function drawMiniDots(list) {
-    if (!miniDots) return;
-    miniDots.clearLayers();
-    list.forEach((e) => L.circleMarker([e.lat, e.lng], { radius: 1.8, stroke: false, fillColor: sideOf(e).c, fillOpacity: 0.95, interactive: false }).addTo(miniDots));
-  }
-  function themeTiles() {
-    if (mini && mini._t) mini._t.setUrl(app('TILE_URL') || mini._t._url);
-  }
 
   /* ---------- The whole war, side by side: a column a day since the desk's start (20 Oct: "since 13 Jul on the
      Yemen desk, since 28 Feb on the Iran desk and the All page") ---------- */
@@ -802,7 +780,6 @@
     if (rng) sel.innerHTML = `${esc(dm(rng[0] + 3600e3 * 4, 'Asia/Riyadh'))}${rng[1] - rng[0] > DAY ? '–' + esc(dm(rng[1] - 3600e3, 'Asia/Riyadh')) : ''} <button type="button" data-clear title="Show every day again">${ICON.x}<span class="sr">Clear</span></button>`;
     const list = recent();
     drawLog(list);
-    drawMiniDots(list);
     counts();
     if (PAGE === 'all') drawTheatres();
     dimPins();
@@ -1024,7 +1001,6 @@
     list.forEach((e) => seen.add(keyOf(e)));
     if (P.alerts) fresh.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 3).forEach((e) => { toast(e); ping(e); });
     if (fresh.length && P.sound && P.alerts) beep();
-    if (fresh.length && S.cast) castBreaking(fresh.reduce((a, b) => (a.at > b.at ? a : b)));
     if (fresh.length) { drawMatrix(); if (PAGE === 'all') drawAllRail(); }
   }
   function toast(e) {
@@ -1149,8 +1125,7 @@
       <div class="ops-bases">${BASES.map(([k, n, s]) => `<button type="button" data-base="${k}" aria-pressed="${S.base === k}" title="${esc(s)}"><i class="ops-bthumb ${k}"></i>${esc(n)}</button>`).join('')}</div>
       <p class="ops-mlab">On the map</p>
       ${sw('grid', S.grid, 'Grid', 'Latitude and longitude, named at the edges')}
-      ${sw('fills', S.fills, 'Areas of control, shaded', 'Who holds what, in colour')}
-      ${sw('mini', S.mini !== false, 'Overview map', 'The region, and where this map is looking')}`;
+      ${sw('fills', S.fills, "Yemen's control areas", 'Who holds what, in colour')}`;
   }
   function paintTraffic() {
     const menu = $('.ops-trf', hud);
@@ -1180,7 +1155,6 @@
         if (k === 'sea') S.sea = v;
         if (k === 'names') S.names = v;
         if (k === 'grid') S.grid = v;
-        if (k === 'mini') { S.mini = v; paintMini(); }
         if (k === 'fills') { S.fills = v; paintFrame(); }
         keep();
         if (/^(air|sea)$/.test(k)) runTraffic();
@@ -1196,7 +1170,6 @@
       });
     });
   }
-  function paintMini() { const el = hud && $('.ops-mini', hud); if (el) el.hidden = S.mini === false; }
   async function pull(kind) {
     try {
       const r = await fetch(`/api/traffic?kind=${kind}`, { cache: 'no-store' });
@@ -1564,6 +1537,12 @@
   }
   function wireTrafficClicks(m) {
     const box = m.getContainer();
+    // A press on the map itself closes the Layers and the Traffic menus (user, 22 Oct).
+    box.addEventListener('pointerdown', (ev) => {
+      if (ev.target.closest('.leaflet-control, .ops-hud > *')) return;
+      if (!$('.ops-lyr', hud).hidden) toggleLayers(false);
+      if (!$('.ops-trf', hud).hidden) toggleTraffic(false);
+    });
     box.addEventListener('click', (ev) => {
       if (ev.target.closest('.leaflet-control, .ops-hud > *, .leaflet-popup, .ev-wrap')) return;
       const k = trafficAt(m, ev);
@@ -1578,316 +1557,8 @@
     });
   }
 
-  /* ---------- Broadcast mode: the map alone, a title strip and the latest line ---------- */
-  /* For a screen on a wall or on air (20 Oct: "develop it more"). The map alone and full screen, and:
-     - "In the region": the latest reports of every desk on the page, one after another, 4 seconds each, the map going
-       to each one's place (only in the live view of the last 24 hours);
-     - Tehran's and Sanaa's clocks;
-     - the legend of every side and kind of event on the map, small;
-     - along the bottom, the most important of the latest reports, most important first;
-     - live traffic on or off;
-     - a time lapse: today and 7 days pin by pin with each note, and the Yemen war, Lion's Roar and Epic Fury (the 40 days from 28 Feb), or
-       everything since 28 Feb, each event lit on the map at its time.
-     Controls show when the pointer moves. */
-  const CAST = { timer: 0, i: -1, play: true, cur: null, idle: 0, full: false, lapse: null };
-  const CAST_MS = 6000; // 4 s a report, and 2 more to read it (20 Oct)
-  const WAR0 = '2026-02-28T00:00:00+03:00';
-  const LAPSE_DEF = [
-    // Today and the last 7 days go pin by pin, each with its note (user, 21 Oct; the 24 hours went: Today has it).
-    ['today', 'Today', () => { const d = new Date(); const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(d); return [Date.parse(`${ymd}T00:00:00+03:00`), Date.now()]; }, null, 'tour'],
-    ['7d', 'Last 7 days', () => [Date.now() - 7 * 864e5, Date.now()], null, 'tour'],
-    ['yemen', 'The Yemen war', () => [Date.parse('2026-07-13T00:00:00+03:00'), Date.now()], 'yemen'],
-    ['lion', 'Lion’s Roar and Epic Fury', () => [Date.parse(WAR0), Date.parse('2026-04-08T23:59:00+03:00')], 'iran'],
-    ['war', 'Since 28 Feb', () => [Date.parse(WAR0), Date.now()], 'iran'],
-  ];
-  const lapses = () => LAPSE_DEF.filter((x) => !x[3] || PAGE === 'all' || PAGE === x[3]);
-  /* The page's reports, of every desk it has, newest first: { at, h, desk, src, score, fp }. */
-  function castReports() {
-    const out = [];
-    if (PAGE === 'all') { const h = window.__home; (h && h.D.reports || []).forEach((r) => out.push({ at: r.at, h: r.h, desk: r.desks[0], src: r.src, score: r.score || 0, fp: r.fp })); }
-    else if (PAGE === 'iran') { const d = app('iranDesk'); (d && d.reports || []).forEach((r) => out.push({ at: r.at, h: r.summary, desk: 'iran', src: r.source, score: r.score || 0, fp: r.fp })); }
-    else { const d = app('data'); (d && d.reports || []).forEach((r) => out.push({ at: r.at || r.t || A('reportTime')(r), h: r.summary || r.headline || r.title, desk: 'yemen', src: r.source, score: r.score || 0, fp: r.fp })); }
-    return out.filter((r) => r.h && r.at).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
-  }
-  const day24 = (list) => list.filter((r) => Date.now() - Date.parse(r.at) < 864e5);
-  function castList() { return day24(castReports()).slice(0, 24); }
-  /* The ticker: the latest day's most important reports (the desks' own score), most important first. */
-  function castTicker() {
-    const list = day24(castReports());
-    const top = list.filter((r) => r.score > 0).sort((a, b) => b.score - a.score || Date.parse(b.at) - Date.parse(a.at));
-    return (top.length >= 6 ? top : [...top, ...list.filter((r) => !(r.score > 0))]).slice(0, 12);
-  }
-  /* A report's pin, if it has one on the map. */
-  function pinOfReport(r) {
-    if (!r || !r.fp) return null;
-    const k = String(r.fp);
-    return events(true).find((e) => String(e.fp).split('-pin-')[0] === k && typeof e.lat === 'number') || null;
-  }
-  const DESK_NAME = { iran: 'Iran', yemen: 'Yemen' };
-  function setCast(on) {
-    S.cast = on;
-    // A phone shows the map tab under broadcast.
-    if (on && isPhone()) S.ptab = 'map';
-    paintFrame();
-    clearInterval(CAST.timer); CAST.timer = 0;
-    stopLapse();
-    if (on) {
-      CAST.i = -1; CAST.play = P.castTour;
-      if (!document.fullscreenElement && H.requestFullscreen) H.requestFullscreen().then(() => { CAST.full = true; }).catch(() => {});
-      getMap().closePopup();
-      castOpening();
-      if (CAST.play) setTimeout(() => { if (S.cast && CAST.i < 0) castStep(1); }, P.still ? 0 : 3200);
-      // The tour waits while a ship's or an aircraft's card is open (21 Oct).
-      CAST.timer = setInterval(() => { if (CAST.play && !CAST.lapse && !T.sel) castStep(1, true); }, CAST_MS / 2);
-      castIdle();
-    } else {
-      if (CAST.full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
-      CAST.full = false; CAST.cur = null;
-    }
-    paintCast();
-    setTimeout(() => { const m = getMap(); if (m) m.invalidateSize(); }, 80);
-  }
-  /* As broadcast opens, the map comes in from the whole world to the desks' area (user, 21 Oct). */
-  function castOpening() {
-    const m = getMap();
-    if (!m || P.still) return;
-    const area = PAGE === 'all' ? L.latLngBounds([[10, 31], [40, 63]]) : m.getBounds();
-    m.setView([25, 45], 2, { animate: false });
-    setTimeout(() => { if (S.cast) m.flyToBounds(area, { duration: 2.6 }); }, 400);
-  }
-  /* The desk's brief in short: its first points (the All page: each desk's first two), without the reference numbers. */
-  function briefPoints() {
-    if (PAGE === 'all') {
-      const h = window.__home, out = [];
-      [['iran', h && h.D && h.D.ibrief], ['yemen', h && h.D && h.D.ybrief]].forEach(([desk, b]) => {
-        const s = b && b.situation;
-        (s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 2) : []).forEach((t) => out.push({ desk, t }));
-      });
-      return out;
-    }
-    return [...document.querySelectorAll('#situation .pts > li')].slice(0, 3).map((li) => {
-      const c = li.cloneNode(true);
-      c.querySelectorAll('sup, .ref-n, button').forEach((x) => x.remove());
-      return { desk: PAGE, t: c.textContent.replace(/\s+/g, ' ').trim() };
-    }).filter((x) => x.t);
-  }
-  /* Every eighth turn of the tour is the brief, the map showing the desk's whole area, held twice as long. */
-  const BRIEF_EVERY = 8;
-  function castBrief() {
-    const pts = briefPoints();
-    if (!pts.length) return false;
-    CAST.cur = { brief: pts };
-    CAST.hold = Date.now() + CAST_MS * 1.5;
-    const m = getMap(), b = areaB();
-    if (m && b) try { m.flyToBounds(b, { padding: [40, 40], duration: P.still ? 0 : 1.4 }); } catch (e) { /* kept */ }
-    paintCast();
-    return true;
-  }
-  /* A new event while on air: the tour stops for it, the map goes to it, Breaking on the lower third. */
-  function castBreaking(e) {
-    if (!S.cast || CAST.lapse) return;
-    CAST.cur = { breaking: e, at: e.at, desk: e.desk };
-    CAST.hold = Date.now() + CAST_MS * 2.5;
-    const m = getMap();
-    m.closePopup();
-    m.flyTo([e.lat, e.lng], Math.max(6.5, Math.min(8, m.getZoom())), { duration: P.still ? 0 : 1.4 });
-    m.once('moveend', () => { if (S.cast && CAST.cur && CAST.cur.breaking === e) ping(e); });
-    paintCast();
-  }
-  function castStep(d, auto) {
-    if (CAST.lapse) return;
-    if (auto && CAST.hold > Date.now()) return;
-    // Each turn holds for its time (the clock looks twice as often, so a Breaking or the brief ends on time).
-    CAST.hold = Date.now() + CAST_MS - 250;
-    CAST.n = (CAST.n || 0) + 1;
-    if (auto && CAST.n % BRIEF_EVERY === 0 && castBrief()) return;
-    const list = castList();
-    if (!list.length) return;
-    CAST.i = (CAST.i + d + list.length) % list.length;
-    const r = list[CAST.i];
-    CAST.cur = r;
-    const e = pinOfReport(r);
-    if (e) {
-      const m = getMap();
-      m.flyTo([e.lat, e.lng], Math.max(6, Math.min(7.5, m.getZoom())), { duration: P.still ? 0 : 1.2 });
-      m.once('moveend', () => { if (S.cast && CAST.cur === r) ping(e); });
-    }
-    paintCast();
-  }
-  function castIdle() {
-    H.classList.remove('ops-cast-idle');
-    clearTimeout(CAST.idle);
-    CAST.idle = setTimeout(() => H.classList.add('ops-cast-idle'), 3500);
-  }
-  /* Every side and kind of event on the map now (the time lapse's own while it runs), small, in one block. */
-  function castLegend(list) {
-    const sides = new Map(), kinds = new Map();
-    list.forEach((e) => { const s0 = sideOf(e); const s = /not stated/i.test(s0.name) ? { name: 'Not stated', c: s0.c } : s0; if (!sides.has(s.name)) sides.set(s.name, s); const k = kindOf(e); if (!kinds.has(k.k)) kinds.set(k.k, k); });
-    if (!sides.size) return '';
-    return `<div class="ops-cleg"><ul>${[...sides.values()].map((x) => `<li style="--c:${x.c}">${esc(x.name)}</li>`).join('')}</ul><ul class="kinds">${[...kinds.values()].map((k) => `<li><span class="g">${glyph(k.k)}</span>${esc(k.name)}</li>`).join('')}</ul></div>`;
-  }
-  function paintCast() {
-    const el = hud && $('.ops-lower', hud);
-    if (!el) return;
-    el.hidden = !S.cast;
-    if (!S.cast) { el.innerHTML = ''; return; }
-    const list = castList();
-    const r = CAST.cur || list[0];
-    const now = Date.now();
-    if (!$('.ops-cmain', el)) el.innerHTML = '<div class="ops-cmain"></div><div class="ops-clegh"></div><div class="ops-tickh"></div>';
-    // The ticker runs on: it is drawn again only when what is in it changes.
-    const tk = castTicker();
-    const tick = tk.map((x) => `<span>${esc(x.h)}</span>`).join('');
-    const th = $('.ops-tickh', el);
-    const tkey = P.castTicker && !CAST.lapse ? tick : '';
-    if (th._k !== tkey) { th._k = tkey; th.innerHTML = tkey ? `<div class="ops-tick"><b>Latest</b><div class="ops-tick-in"><div class="ops-tick-run" style="--d:${Math.max(40, tk.length * 9)}s">${tick}${tick}</div></div></div>` : ''; }
-    const lg = $('.ops-clegh', el);
-    const legList = CAST.lapse ? CAST.lapse.list : events(true).filter((e) => now - tOf(e) < 864e5);
-    const lkey = legList.length + '|' + (CAST.lapse ? CAST.lapse.k : '');
-    if (lg._k !== lkey) { lg._k = lkey; lg.innerHTML = castLegend(legList); }
-    // The lower third: a report of the tour, a new event as it comes in (Breaking), or the desk's brief in short.
-    let lb = '';
-    if (r && r.breaking) {
-      const e = r.breaking, s = sideOf(e), k = kindOf(e);
-      lb = `<div class="ops-lb ops-lbreak" style="--c:${s.c}"><div><small><b class="brk">Breaking</b> New on the map · ${esc(hm(e.at, VIEW_TZ()))}${PAGE === 'all' && DESK_NAME[e.desk] ? ` · ${esc(DESK_NAME[e.desk])}` : ''} · ${esc(s.name)} · ${esc(k.name)}</small><p>${esc(e.label || k.name)}</p></div></div>`;
-    } else if (r && r.brief) {
-      lb = `<div class="ops-lb ops-lbrief"><div><small>The brief${PAGE === 'all' ? '' : ` · ${esc(DESK_NAME[PAGE])}`}</small><ol>${r.brief.map((x) => `<li>${PAGE === 'all' ? `<i>${esc(DESK_NAME[x.desk])}</i> ` : ''}${esc(x.t)}</li>`).join('')}</ol></div></div>`;
-    } else if (r) {
-      lb = `<div class="ops-lb" style="--c:${r.desk === 'iran' ? '#e5484d' : '#f08c2e'}"><div><small>${esc(hm(r.at, VIEW_TZ()))}${PAGE === 'all' && DESK_NAME[r.desk] ? ` · ${esc(DESK_NAME[r.desk])}` : ''}${r.src ? ` · ${esc(r.src)}` : ''}</small><p>${esc(r.h)}</p></div></div>`;
-    }
-    const L3 = CAST.lapse ? '' : `<div class="ops-l3">
-        <div class="ops-lt"><span class="live">Live</span><b>In the region</b><span class="clk"><span><small>Tehran</small>${esc(hm(now, TZ.iran))}</span><span><small>Sanaa</small>${esc(hm(now, TZ.yemen))}</span></span><span class="brand">${LOGO}The Situation Room</span></div>
-        ${lb}
-      </div>`;
-    // The last 24 hours at a glance, top right: the events on the map, by who acted.
-    const day = events(true).filter((e) => now - tOf(e) < 864e5);
-    const bySide = new Map();
-    day.forEach((e) => { const s = sideOf(e); const n = /not stated/i.test(s.name) ? 'Not stated' : s.name; const x = bySide.get(n) || { n, c: s.c, k: 0 }; x.k++; bySide.set(n, x); });
-    const sides = [...bySide.values()].sort((a, b) => b.k - a.k).slice(0, 5);
-    const board = CAST.lapse ? '' : `<div class="ops-cboard"><small>Last 24 hours</small><b>${day.length.toLocaleString('en-GB')}</b><span>events on the map</span>${sides.length ? `<ul>${sides.map((x) => `<li style="--c:${x.c};--w:${Math.max(6, Math.round((x.k / sides[0].k) * 100))}%"><span>${esc(x.n)}</span><i></i><em>${x.k}</em></li>`).join('')}</ul>` : ''}</div>`;
-    const lp = CAST.lapse;
-    $('.ops-cmain', el).innerHTML = `
-      <div class="ops-cbar" role="toolbar" aria-label="Broadcast">
-        ${lp ? '' : `<button type="button" data-cast="prev" title="The one before">${ICON.left}</button>
-        <button type="button" data-cast="play" title="${CAST.play ? 'Pause' : 'Go through the latest reports'}">${CAST.play ? ICON.pause : ICON.play}</button>
-        <button type="button" data-cast="next" title="The next">${ICON.right}</button>`}
-        <label class="ops-csel"><span class="sr">Time lapse</span><select data-cast="lapse"><option value="">Live: in the region</option>${lapses().map(([k, n]) => `<option value="${k}"${lp && lp.k === k ? ' selected' : ''}>Time lapse: ${esc(n)}</option>`).join('')}</select></label>
-        <button type="button" data-cast="traffic" aria-pressed="${S.air || S.sea}" title="Live aircraft and ships">${ICON.plane}<span>Traffic</span></button>
-        <button type="button" data-cast="link" title="A link that opens this page in broadcast, for a screen or a TV">${ICON.link}<span>Screen link</span></button>
-        <button type="button" data-cast="exit" class="ops-cexit">Exit</button>
-      </div>
-      ${lp ? `<div class="ops-lapse"><b>${esc(lp.n)}</b><time></time><small></small><span class="ops-lbar"><i></i></span><button type="button" data-cast="replay">Again</button></div>` : ''}
-      ${board}
-      ${L3}`;
-    if (lp) paintLapse();
-  }
-  /* ---------- The time lapse: each event of the span lit on the map at its time, over about half a minute ---------- */
-  let lapseLayer = null, lapseRend = null;
-  async function startLapse(k) {
-    stopLapse();
-    const def = lapses().find((x) => x[0] === k);
-    if (!def) { paintCast(); return; }
-    const [a, b] = def[2]();
-    CAST.lapse = { k, n: def[1], a, b, list: [], i: 0, t: a, start: 0, raf: 0, loading: true };
-    paintCast();
-    // The span's older events are read first if the page does not have them yet.
-    if (a < Date.now() - 8 * 864e5) { try { if (PAGE === 'all') await window.__home.loadWar(); else if (PAGE === 'yemen') await A('loadAllPins')(); } catch (e) { /* what there is */ } }
-    const lp = CAST.lapse;
-    if (!lp || lp.k !== k) return;
-    // A desk's war is that desk's pins only (21 Oct: the Yemen war showed the Iran desk's on the All page).
-    lp.list = events(true).filter((e) => typeof e.lat === 'number' && tOf(e) >= a && tOf(e) <= b && (!def[3] || e.desk === def[3])).sort((x, y) => tOf(x) - tOf(y));
-    lp.tour = def[4] === 'tour';
-    // It starts at its first pin, not on weeks with none (the Yemen war's pins begin on 18 Sep, not 13 Jul).
-    if (lp.list.length) { lp.a = Math.max(lp.a, tOf(lp.list[0]) - 3600e3); lp.t = lp.a; }
-    lp.loading = false;
-    H.classList.add('ops-lapsing');
-    const m = getMap();
-    lapseRend = lapseRend || L.canvas({ padding: 0.3, pane: pane(m, 'opsLapse', 610) });
-    lapseLayer = L.layerGroup().addTo(m);
-    // The whole span in view.
-    if (lp.list.length > 1) try { m.flyToBounds(lp.list.map((e) => [e.lat, e.lng]), { padding: [60, 60], maxZoom: 7, duration: P.still ? 0 : 1 }); } catch (e) { /* kept */ }
-    lp.dur = Math.max(20, Math.min(60, lp.list.length * 0.06)) * 1000;
-    // A steady clock, not the screen's frames (20 Oct: the whole war's lapse never moved where frames were held back).
-    lp.fresh = [];
-    if (lp.tour) setTimeout(() => { if (CAST.lapse === lp) tourStep(lp); }, P.still ? 0 : 1100);
-    else setTimeout(() => { if (CAST.lapse === lp) { lp.start = performance.now(); lp.raf = setInterval(lapseFrame, 80); } }, P.still ? 0 : 1100);
-    paintCast();
-  }
-  function lapseFrame() {
-    const lp = CAST.lapse;
-    if (!lp) return;
-    const now = performance.now();
-    const f = Math.min(1, (now - lp.start) / lp.dur);
-    lp.t = lp.a + (lp.b - lp.a) * f;
-    while (lp.i < lp.list.length && tOf(lp.list[lp.i]) <= lp.t) {
-      const e = lp.list[lp.i++];
-      const mk = L.circleMarker([e.lat, e.lng], { renderer: lapseRend, radius: 7, stroke: true, color: '#fff', weight: 1, fillColor: sideOf(e).c, fillOpacity: 0.95, interactive: false }).addTo(lapseLayer);
-      lp.fresh.push([mk, now]);
-    }
-    // Each new mark lit for a moment, then settles small, a batch at a time.
-    while (lp.fresh.length && now - lp.fresh[0][1] > 700) { const [mk] = lp.fresh.shift(); mk.setRadius(4); mk.setStyle({ weight: 0.6, fillOpacity: 0.8 }); }
-    paintLapse();
-    if (f >= 1 && !lp.fresh.length) { clearInterval(lp.raf); lp.raf = 0; }
-  }
-  /* Pin by pin: each event added at its turn, the map going to it and its note open, as long as each report in
-     "In the region" (CAST_MS); the pins before it stay, small. */
-  function tourStep(lp) {
-    if (CAST.lapse !== lp) return;
-    const m = getMap();
-    if (lp.last) { lp.last.setRadius(4); lp.last.setStyle({ weight: 0.6, fillOpacity: 0.8 }); }
-    if (lp.i >= lp.list.length) { m.closePopup(); lp.t = lp.b; paintLapse(); return; }
-    const e = lp.list[lp.i++];
-    lp.t = tOf(e);
-    const mk = L.circleMarker([e.lat, e.lng], { renderer: lapseRend, radius: 8, stroke: true, color: '#fff', weight: 1.5, fillColor: sideOf(e).c, fillOpacity: 0.95, interactive: false }).addTo(lapseLayer);
-    lp.last = mk;
-    paintLapse();
-    m.closePopup();
-    const open = () => { if (CAST.lapse === lp && lp.last === mk) L.popup({ maxWidth: 300, maxHeight: 260, className: 'ops-note', autoPan: false, closeButton: false }).setLatLng([e.lat, e.lng]).setContent(noteOf(e)).openOn(m); };
-    if (P.still) open(); else { m.once('moveend', open); m.flyTo([e.lat, e.lng], Math.max(6, Math.min(7.5, m.getZoom())), { duration: 1.2 }); }
-    lp.raf = setTimeout(() => tourStep(lp), CAST_MS);
-  }
-  function paintLapse() {
-    const lp = CAST.lapse, el = hud && $('.ops-lapse', hud);
-    if (!lp || !el) return;
-    const long = lp.b - lp.a > 3 * 864e5;
-    $('time', el).textContent = lp.loading ? 'Loading…' : `${dayTxt(lp.t, VIEW_TZ())}${long ? '' : ' · ' + hm(lp.t, VIEW_TZ())}`;
-    $('small', el).textContent = lp.loading ? '' : `${lp.i.toLocaleString('en-GB')} events`;
-    $('.ops-lbar i', el).style.width = `${lp.loading ? 0 : Math.round(((lp.t - lp.a) / Math.max(1, lp.b - lp.a)) * 100)}%`;
-  }
-  function stopLapse() {
-    const lp = CAST.lapse;
-    if (lp) { clearInterval(lp.raf); clearTimeout(lp.raf); if (lp.tour) try { getMap().closePopup(); } catch (e) { /* gone */ } }
-    CAST.lapse = null;
-    H.classList.remove('ops-lapsing');
-    if (lapseLayer) { try { getMap().removeLayer(lapseLayer); } catch (e) { /* gone */ } lapseLayer = null; }
-  }
-  function wireCast() {
-    const low = $('.ops-lower', hud);
-    low.addEventListener('click', (ev) => {
-      const b = ev.target.closest('button[data-cast]');
-      if (!b) return;
-      const a = b.dataset.cast;
-      if (a === 'exit') setCast(false);
-      else if (a === 'play') { CAST.play = !CAST.play; if (CAST.play) castStep(1); else paintCast(); }
-      else if (a === 'next') castStep(1);
-      else if (a === 'prev') castStep(-1);
-      else if (a === 'traffic') { trafficOnOff(); paintCast(); }
-      else if (a === 'link') copy(`${location.origin}${location.pathname}#cast`, b);
-      else if (a === 'replay' && CAST.lapse) startLapse(CAST.lapse.k);
-    });
-    low.addEventListener('change', (ev) => {
-      if (!ev.target.matches('select[data-cast="lapse"]')) return;
-      const k = ev.target.value;
-      if (k) startLapse(k);
-      else { stopLapse(); CAST.i = -1; castStep(1); }
-    });
-    addEventListener('pointermove', () => { if (S.cast) castIdle(); }, { passive: true });
-    document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) CAST.full = false; });
-  }
-
-
   /* ---------- Keys ---------- */
-  const KEYS = [['Space', 'The latest event, then the one before'], ['T', 'Live traffic on or off: aircraft and ships'], ['Y', 'Layers: the map itself'], ['G', 'Grid'], ['S', 'Base map: plain, satellite, relief'], ['M', 'Measure a distance'], ['R', 'Range rings'], ['L', 'Copy a link to this view'], ['F', 'Full screen'], ['B', 'Broadcast mode'], [',', 'Settings'], ['[  ]', 'Close or open the left panel, the reports'], ['\\', 'Fold the timeline under the map'], ['Esc', 'Close, clear'], ['?', 'These keys']];
+  const KEYS = [['Space', 'The latest event, then the one before'], ['T', 'Live traffic on or off: aircraft and ships'], ['Y', 'Layers: the map itself'], ['G', 'Grid'], ['S', 'Base map: plain, satellite, relief'], ['M', 'Measure a distance'], ['R', 'Range rings'], ['L', 'Copy a link to this view'], ['F', 'Full screen'], [',', 'Settings'], ['[  ]', 'Close or open the left panel, the reports'], ['\\', 'Fold the timeline under the map'], ['Esc', 'Close, clear'], ['?', 'These keys']];
   function toggleKeys(force) {
     let el = $('.ops-keys');
     if (!el) {
@@ -1914,14 +1585,12 @@
         if (!$('.ops-trf', hud).hidden) return toggleTraffic(false);
         if (!$('.ops-lyr', hud).hidden) return toggleLayers(false);
         if (rng) { rng = null; return drawMatrix(); }
-        if (S.cast) setCast(false);
         return;
       }
       const act = {
-        ' ': () => (S.cast ? castStep(1) : nextLatest()), t: () => trafficOnOff(), y: () => toggleLayers(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
-        l: () => copyLink($('[data-do="link"]', hud)), f: fullScreen, b: () => setCast(!S.cast), ',': () => openSettings(),
+        ' ': () => nextLatest(), t: () => trafficOnOff(), y: () => toggleLayers(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
+        l: () => copyLink($('[data-do="link"]', hud)), f: fullScreen, ',': () => openSettings(),
         '[': () => { S.left = !S.left; keep(); paintFrame(); }, ']': () => { S.right = !S.right; keep(); paintFrame(); }, '\\': () => { S.dock = !S.dock; keep(); paintFrame(); }, '?': () => toggleKeys(),
-        ArrowRight: S.cast ? () => castStep(1) : null, ArrowLeft: S.cast ? () => castStep(-1) : null,
       }[k.length === 1 ? k.toLowerCase() : k];
       if (act) { ev.preventDefault(); act(); }
     }, true); // Before the map's own keys (it stops Esc once it has closed a note).
@@ -1942,7 +1611,7 @@
     ['Map', [
       ['base', 'Base map', '', [['auto', 'Plain'], ['sat', 'Satellite'], ['relief', 'Relief']], 'S'],
       ['grid', 'Grid', 'Latitude and longitude.', [[false, 'Off'], [true, 'On']], 'S'],
-      ['fills', 'Areas of control', 'Who holds what, shaded.', [[false, 'Off'], [true, 'On']], 'S'],
+      ['fills', "Yemen's control areas", 'Who holds what, shaded.', [[false, 'Off'], [true, 'On']], 'S'],
       ['coords', 'Place under the pointer', '', [['mgrs', 'Degrees and MGRS'], ['deg', 'Degrees'], ['dms', 'Degrees, minutes, seconds']]],
       ['units', 'Distances', 'The ruler and the range rings.', [['both', 'km and nm'], ['km', 'km'], ['nm', 'nm']]],
     ]],
@@ -1950,10 +1619,6 @@
       ['alerts', 'New events', 'A small note on the map when a new event is placed on it.', [[true, 'Show'], [false, 'Hide']]],
       ['sound', 'Sound', 'A short tone with each new event.', [[false, 'Off'], [true, 'On']]],
       ['airStart', 'Aircraft', 'Live aircraft on the map from the start.', [[false, 'When I turn them on'], [true, 'Always on']]],
-    ]],
-    ['Broadcast', [
-      ['castTour', 'Tour', 'Broadcast mode goes from the latest report to the one before by itself, 6 seconds each.', [[true, 'On'], [false, 'Off']]],
-      ['castTicker', 'Ticker', 'The most important of the latest reports, running along the bottom.', [[true, 'On'], [false, 'Off']]],
     ]],
     ['Panels', [
       ['left', 'Left panel', 'The brief and its parts.', [[true, 'Open'], [false, 'Closed']], 'S'],
@@ -2105,6 +1770,9 @@
     // Every box's name over its box, not inside it (user, 21 Oct).
     root.querySelectorAll('.ops-left .tally-box > h3:first-child').forEach((h) => { h.classList.add('ops-boxhead'); h.parentElement.before(h); });
     attackPins();
+    // The sources' ratings, in short, at the right of the sources filter over the reports (user, 22 Oct).
+    const fl = PAGE !== 'all' && document.getElementById('feed-legend');
+    if (fl && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', '<a class="ops-srclink" href="/yemen-conflict-desk/sources" title="How reliable each source has been">Source ratings</a>');
     paintSlim();
   }
 
@@ -2228,6 +1896,28 @@
       },
     });
   }
+  /* Every map pin on a computer opens its small map when the pointer rests on it, and the map closes as the
+     pointer leaves both (user, 22 Oct); the pins that only opened on a click (the Iran desk's cards and arenas,
+     the attack rows) are given it here. A phone opens it with a tap, as before. */
+  const PIN_SEL = '.card-map, .sit-map-btn, .ops-rowpin';
+  const canHover = () => matchMedia('(hover: hover)').matches && innerWidth >= 720;
+  let pinT = 0;
+  function wirePinHover() {
+    const sheet = () => document.getElementById('pin-sheet');
+    const shut = () => { const s = sheet(); if (s && s.classList.contains('as-pop') && !s.matches(':hover')) A('hideFrontFloat')(); };
+    document.addEventListener('mouseover', (ev) => {
+      const b = ev.target.closest && ev.target.closest(PIN_SEL);
+      if (!b || !canHover() || b.onmouseenter || b.matches('.card-map[data-pin-of]')) return;
+      clearTimeout(pinT);
+      pinT = setTimeout(() => { if (b.matches(':hover')) b.click(); }, 120);
+    });
+    document.addEventListener('mouseout', (ev) => {
+      const b = ev.target.closest && ev.target.closest(PIN_SEL);
+      if (!b || b.contains(ev.relatedTarget) || b.onmouseenter || b.matches('.card-map[data-pin-of]')) return;
+      clearTimeout(pinT);
+      pinT = setTimeout(shut, 300);
+    });
+  }
   /* A report opened from the All page (#r=…): the reports panel, open. */
   const OPEN_REPORT = /^#r=/.test(location.hash || '');
 
@@ -2238,9 +1928,8 @@
     // The page's map, made and with a size (a map read before then has no place yet).
     if (!m || !m.getContainer || !window.L || !m._loaded || !(m.getSize().y > 0)) { setTimeout(startHud, 200); return; }
     buildHud(m);
-    wireMatrix(); wireLog(); wireTraffic(); wireKeys(); wireCast(); wireTrafficClicks(m);
+    wireMatrix(); wireLog(); wireTraffic(); wireKeys(); wireTrafficClicks(m); wirePinHover();
     $('.ops-card', hud).addEventListener('click', (ev) => { if (ev.target.closest('[data-sel="x"]')) closeSel(); else if (ev.target.closest('[data-route]')) toggleRoute(); });
-    paintMini();
     sizeDock();
     oneWorld(m);
     // The desk's own part of the map, in the new map box (the page fitted it to the old one).
@@ -2266,13 +1955,11 @@
     warForChart();
     runTraffic();
     if (location.hash === '#settings') openSettings();
-    // A screen's link (#cast) opens the page in broadcast, to run on its own on a wall or a TV.
-    if (location.hash === '#cast') setTimeout(() => { if (!S.cast) setCast(true); }, 1500);
     // The theme: the overview's tiles and the traffic's edges follow it.
     // The tab's icon is the site's logo in the theme shown (user, 21 Oct).
     const tabIcon = () => { const l = document.querySelector('link[rel="icon"]'); if (l) l.href = `/ops-icon-${night() ? 'night' : 'day'}.svg?v=1`; };
     tabIcon();
-    new MutationObserver(() => { themeTiles(); drawBase(); drawTraffic(); drawMatrix(); tabIcon(); if (T.dn) T.dn.setTheme(night() ? 'night' : 'day'); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
+    new MutationObserver(() => { drawBase(); drawTraffic(); drawMatrix(); tabIcon(); if (T.dn) T.dn.setTheme(night() ? 'night' : 'day'); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
     // The pins are drawn again by the page now and then: fade the ones outside the hours picked again.
     let dimT = 0;
     new MutationObserver(() => { if (rng) { clearTimeout(dimT); dimT = setTimeout(dimPins, 80); } }).observe(m.getPane('markerPane'), { childList: true });

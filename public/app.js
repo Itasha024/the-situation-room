@@ -7577,9 +7577,9 @@ const IRAN_SRC_HTML = `<h3 id="ir-src-pop-h">Sources methodology</h3>
 <li><b>Only the war and its economy</b> go on. An item more than a day old is not news and is not read.</li>
 <li><b>Israeli outlets:</b> their own reporting stays; a report that only repeats a foreign outlet does not, and the original is read instead.</li>
 <li><b>One report, its source linked,</b> and the other outlets that carried it listed under it.</li>
-<li><b>Ratings:</b> this desk's sources are not yet rated 1–5 as the Yemen desk's are.</li>
+<li><b>Rated 1–5 every 24h,</b> as the Yemen desk's sources: each from its record, a report confirmed by the other side, a wire agency or a non-aligned official body scoring highest. The sides are Iran and the Axis, and Israel, the US and the Iranian opposition; Gulf and international outlets are non-aligned.</li>
 </ul>
-<p class="rel-foot"><a class="meth-full" href="/methodology#iran-sources">Full methodology →</a></p>`;
+<p class="rel-foot"><a href="/iran-conflict-desk/sources">Sources list →</a> · <a class="meth-full" href="/methodology#iran-sources">Full methodology →</a></p>`;
 function installIranMethPops() {
   wirePop(document.getElementById('btn-ir-map-meth'), 'ir-map-pop', IRAN_MAP_HTML);
   wirePop(document.getElementById('btn-ir-src'), 'ir-src-pop', IRAN_SRC_HTML);
@@ -8690,11 +8690,13 @@ function irBox(b, i = 0) {
   const mark = (label) => (b.link && b.link.mark && (b.link.on || []).includes(label) ? `<span class="ir-mark">${escapeHtml(b.link.mark)}</span>` : '');
   const spark = '';
   const SHOW = 6;
-  const more = (rows) => (rows.length > SHOW ? `<button type="button" class="toggle-phase rows-tog">All ${rows.length} rows</button>` : '');
-  const xtra = (i) => (i >= SHOW ? ' class="xtra"' : '');
+  // A box folds only when it hides three rows or more: Gulf crude's Show more opened Bahrain alone (user, 22 Oct).
+  const folds = (n) => n > SHOW + 2;
+  const more = (rows) => (folds(rows.length) ? `<button type="button" class="toggle-phase rows-tog">All ${rows.length} rows</button>` : '');
+  const xtra = (i) => (i >= SHOW && folds(b.rows.length) ? ' class="xtra"' : '');
   if (b.type === 'claims') {
     const rows = b.rows.map((r, i) => `<tr${xtra(i)}><th scope="row">${escapeHtml(r.label)}${mark(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</th>${irCell(r.off, 'off')}${irCell(r.unoff, 'u')}</tr>`).join('');
-    return `<div class="tally-box claims ir${b.rows.length > SHOW ? ' rows-more' : ''}">${head}<table><tbody><tr><th></th><th scope="col" class="o">Official</th><th scope="col" class="u">Unofficial</th></tr>${rows}</tbody></table>${more(b.rows)}${note}</div>`;
+    return `<div class="tally-box claims ir${folds(b.rows.length) ? ' rows-more' : ''}">${head}<table><tbody><tr><th></th><th scope="col" class="o">Official</th><th scope="col" class="u">Unofficial</th></tr>${rows}</tbody></table>${more(b.rows)}${note}</div>`;
   }
   let body = '';
   if (b.type === 'span3') {
@@ -8705,7 +8707,7 @@ function irBox(b, i = 0) {
     const dated = days.map((d) => d.length > 1);
     const th = `<tr>${b.cols.map((c, i) => `<th scope="col"${i === 0 ? ' class="l"' : ''}>${escapeHtml(c)}${days[i].length === 1 ? `<small class="span">(${escapeHtml(fmtDay(days[i][0]))})</small>` : ''}</th>`).join('')}</tr>`;
     const rows = b.rows.map((r, i) => `<tr${xtra(i)}><td class="l">${escapeHtml(r.label)}${mark(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</td>${r.cells.map((c, j) => (dated[j + 1] && c && c.v != null && c.date ? `<td>${irLink(c)}${irSmall(fmtDay(c.date).replace(new RegExp(" " + new Date().getFullYear() + "$"), ""))}</td>` : irCell(c))).join('')}</tr>`).join('');
-    body = `<table class="span3${b.rows.length > SHOW ? '' : ''}"><tbody>${th}${rows}</tbody></table>${more(b.rows)}${IR_KEY}`;
+    body = `<table class="span3"><tbody>${th}${rows}</tbody></table>${more(b.rows)}${IR_KEY}`;
   } else if (b.type === 'bars') {
     const max = Math.max(...b.bars.map((x) => +x.n || 0), 1e-9);
     body = `<div class="mbars">${b.bars.map((x) => `<div class="mbar${x.pre ? ' pre' : ''}"><span class="k">${escapeHtml(x.label)}${x.sub ? `<small>${escapeHtml(x.sub)}</small>` : ''}</span><span class="mb-track"><i style="width:${Math.max(1, Math.round(((+x.n || 0) / max) * 100))}%"></i></span><b>${irLink(x.c)}</b></div>`).join('')}</div>${IR_KEY}`;
@@ -8714,12 +8716,12 @@ function irBox(b, i = 0) {
   } else if (b.type === 'list' || b.type === 'incidents') {
     const th = `<tr>${b.cols.map(([h, cls]) => `<th scope="col" class="${cls || 'l'}">${escapeHtml(h)}</th>`).join('')}</tr>`;
     // The first rows show; the rest open under them with Read more (user, 18 Oct: the Sanctions lists never closed, as no row was marked to hide).
-    const rows = b.rows.map((r, i) => `<tr${i >= SHOW ? ' class="led-rest"' : ''}>${r.map((c, j) => `<td class="${(b.cols[j] && b.cols[j][1]) || 'l'}">${c && typeof c === 'object' ? irLink(c) : escapeHtml(c == null ? '' : String(c))}</td>`).join('')}</tr>`);
+    const rows = b.rows.map((r, i) => `<tr${i >= SHOW && folds(b.rows.length) ? ' class="led-rest"' : ''}>${r.map((c, j) => `<td class="${(b.cols[j] && b.cols[j][1]) || 'l'}">${c && typeof c === 'object' ? irLink(c) : escapeHtml(c == null ? '' : String(c))}</td>`).join('')}</tr>`);
     const stats = b.stats ? `<div class="stat3">${b.stats.map(([v, l]) => `<div><b>${irLink(v)}</b><span>${escapeHtml(l)}</span></div>`).join('')}</div>` : '';
-    const tog = rows.length > SHOW ? `<button type="button" class="toggle-sit led-tog" aria-expanded="false">Full list (${rows.length})</button>` : '';
+    const tog = folds(rows.length) ? `<button type="button" class="toggle-sit led-tog" aria-expanded="false">Full list (${rows.length})</button>` : '';
     body = `<div class="led-more${tog ? ' expandable' : ''}"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div>${tog}</div>`;
   }
-  return `<div class="tally-box claims ledger ir${b.type === 'table' && b.rows.length > SHOW ? ' rows-more' : ''}">${head}${body}${spark}${note}</div>`;
+  return `<div class="tally-box claims ledger ir${b.type === 'table' && folds(b.rows.length) ? ' rows-more' : ''}">${head}${body}${spark}${note}</div>`;
 }
 // The nuclear file's order (user, 20 Oct): uranium, then the days since inspectors last visited, then the sites struck.
 const nukeRank = (b) => (/uranium/i.test(b.title) ? 0 : /inspector|IAEA/i.test(b.title) ? 1 : 2);

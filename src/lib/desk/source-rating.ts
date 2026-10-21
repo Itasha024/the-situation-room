@@ -82,7 +82,8 @@ export type Verdicts = Record<string, Verdict>;
 
 export type CatalogueEntry = { name: string; url: string; lean?: string; platform: "Telegram" | "X" | "Website" };
 
-export type SourceRating = { name: string; url: string; platform: string; group: Group; rating: number; start: number; n: number };
+/** `lean`: on the Iran desk's list, the source's filter group there, shown in place of the three groups. */
+export type SourceRating = { name: string; url: string; platform: string; group: Group; rating: number; start: number; n: number; lean?: string };
 export type SourceRatings = { day: string; updatedAt: string; sources: SourceRating[] };
 
 const WIRE = /^(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Xinhua|Anadolu|dpa|EFE|ANSA|Bloomberg)\b/i;
@@ -204,12 +205,13 @@ export function blend(start: number, scores: { score: number; weight: number }[]
 /**
  * Every source in the catalogue, rated from the cards. A source the catalogue
  * does not list but that led or carried cards (an original the desk traced,
- * a learned outlet) is rated too.
+ * a learned outlet) is rated too. `sideOf` places a source in a group by its
+ * name and catalogue lean (the Iran desk's sides, `iranSide`).
  */
-export function rateSources(cards: RatedCard[], catalogue: CatalogueEntry[], verdicts: Verdicts, now = Date.now()): SourceRating[] {
+export function rateSources(cards: RatedCard[], catalogue: CatalogueEntry[], verdicts: Verdicts, now = Date.now(), sideOf: (name: string, lean?: string) => Group = groupOf): SourceRating[] {
   const byKey = new Map<string, CatalogueEntry>();
   for (const c of catalogue) if (!byKey.has(norm(c.name))) byKey.set(norm(c.name), c);
-  const groupOfName = (n: string) => groupOf(n, byKey.get(norm(n))?.lean);
+  const groupOfName = (n: string) => sideOf(n, byKey.get(norm(n))?.lean);
 
   const since = Date.parse(RATING_SINCE);
   const scores = new Map<string, { score: number; weight: number }[]>();
@@ -234,10 +236,10 @@ export function rateSources(cards: RatedCard[], catalogue: CatalogueEntry[], ver
     const k = norm(name);
     if (!k || seen.has(k)) return;
     seen.add(k);
-    const group = groupOf(name, lean);
+    const group = sideOf(name, lean);
     const start = startOf(name, group);
     const sc = scores.get(k) ?? [];
-    out.push({ name, url, platform, group, start, rating: blend(start, sc), n: sc.reduce((a, s) => a + s.weight, 0) });
+    out.push({ name, url, platform, group, start, rating: blend(start, sc), n: sc.reduce((a, s) => a + s.weight, 0), ...(lean ? { lean } : {}) });
   };
   for (const c of catalogue) if (!DROPPED.has(norm(c.name))) add(c.name, c.url, c.platform, c.lean);
   // Outlets met only on cards: listed once they have a few scored reports.
@@ -340,3 +342,18 @@ export function withSeed(stored: Verdicts | null): Verdicts {
 
 /** The groups in the order the Sources list shows them. */
 export const GROUP_LABEL: Record<Group, string> = { houthi: "Houthi-aligned", gov: "Government-aligned", nonaligned: "Non-aligned" };
+
+/**
+ * The Iran desk's ratings (user, 22 Oct), kept apart from Yemen's: the same
+ * method over the Iran desk's cards and sources. Its two sides take the
+ * places of the Yemen groups in the method: Iran and the Axis one side
+ * ("houthi"), Israel, the US and the Iranian opposition the other ("gov"),
+ * the Gulf and international outlets non-aligned. Its list shows each source
+ * under its filter group on the desk.
+ */
+export const IRAN_RATINGS_KEY = "source-ratings-iran";
+export function iranSide(lean: string | undefined): Group {
+  if (lean === "axis") return "houthi";
+  if (lean === "israel" || lean === "us" || lean === "opposition") return "gov";
+  return "nonaligned";
+}

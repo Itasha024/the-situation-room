@@ -35,7 +35,7 @@ import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { nearerSource, officialVoice } from "./desk/speaker-press.ts";
-import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
+import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, IRAN_RATINGS_KEY, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, iranSide, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead } from "./desk/site-articles.ts";
 import { relinkStoredCards } from "./desk/relink.ts";
@@ -48,7 +48,7 @@ import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves } f
 import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
 import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
-import { type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
+import { IRAN_RSS, IRAN_TG, IRAN_X, type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranDeskItem } from "./desk/iran-reader.ts";
 import { remember } from "./desk/recent-reads.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
@@ -3493,6 +3493,50 @@ export async function refreshSourceRatings(store: Awaited<ReturnType<typeof getS
   return true;
 }
 
+/** A feed's site: its own host, or the site a Google News search names. */
+function feedSite(url: string): string {
+  const u = new URL(url);
+  if (u.hostname === "news.google.com") return /site:([^\s)]+)/.exec(u.searchParams.get("q") ?? "")?.[1] ?? "";
+  return u.hostname.replace(/^(?:www|rss|rcs)\./, "");
+}
+
+/** Every source the Iran desk reads, once each by name, with its filter group as the lean (iran-sources.ts). */
+export function iranCatalogue(): CatalogueEntry[] {
+  const out: CatalogueEntry[] = [];
+  const seen = new Set<string>();
+  const add = (e: CatalogueEntry) => {
+    const k = e.name.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(e);
+  };
+  for (const c of TG) if (SHARED_TG[c.id]) add({ name: c.name, url: `https://t.me/${c.id}`, lean: SHARED_TG[c.id], platform: "Telegram" });
+  for (const c of IRAN_TG) add({ name: c.name, url: `https://t.me/${c.id}`, lean: c.lean, platform: "Telegram" });
+  for (const a of X_ACCOUNTS) if (SHARED_X[a.handle]) add({ name: a.name, url: `https://x.com/${a.handle}`, lean: SHARED_X[a.handle], platform: "X" });
+  for (const a of IRAN_X) add({ name: a.name, url: `https://x.com/${a.id}`, lean: a.lean, platform: "X" });
+  for (const f of RSS) if (SHARED_RSS[f.name] && f.site) add({ name: f.name, url: `https://${f.site}`, lean: SHARED_RSS[f.name], platform: "Website" });
+  for (const f of IRAN_RSS) {
+    const site = feedSite(f.url);
+    add({ name: f.name, url: site ? `https://${site}` : "", lean: f.lean, platform: "Website" });
+  }
+  return out;
+}
+
+/** The Iran desk's ratings, once a day as Yemen's: its own cards, its own sources, its two sides (`iranSide`). */
+export async function refreshIranSourceRatings(store: Awaited<ReturnType<typeof getStore>>, now = new Date()): Promise<boolean> {
+  const stored = await store.getJson<SourceRatings>(IRAN_RATINGS_KEY);
+  if (!ratingsDue(stored, now)) return false;
+  const slice = await store.recentDesk(8000, undefined, { desk: "iran", events: false });
+  const own = (await store.getJson<Verdicts>(VERDICTS_KEY)) ?? {};
+  const rated = rateSources(ratedCards(slice.reports), iranCatalogue(), withSeed(own), now.getTime(), (n, lean) => iranSide(lean || iranLeanOfSource(n)));
+  // An outlet met only on the cards is listed under the group the desk files it in.
+  const sources = rated.map((s) => (s.lean ? s : { ...s, lean: iranLeanOfSource(s.name) }));
+  const { day, startedAt } = deskDay(now.getTime());
+  await store.putJson(IRAN_RATINGS_KEY, { day, updatedAt: new Date(startedAt).toISOString(), sources } satisfies SourceRatings);
+  console.log(`[source-ratings] Iran: ${sources.length} sources rated`);
+  return true;
+}
+
 /** The last ticks' database traffic and CPU, for the status page. */
 export const TICK_USAGE_KEY = "tick-usage";
 export type TickUsage = { at: string; tookMs: number; cpuMs: number; dbReadKB: number; dbWrittenKB: number; queries: number };
@@ -3588,6 +3632,11 @@ export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | 
     await refreshSourceRatings(store);
   } catch (err) {
     console.error("[desk] source ratings failed:", err instanceof Error ? err.message : err);
+  }
+  try {
+    await refreshIranSourceRatings(store);
+  } catch (err) {
+    console.error("[desk] Iran source ratings failed:", err instanceof Error ? err.message : err);
   }
   // What this tick cost: Supabase bills egress, Vercel bills CPU.
   const cpu = cpu0 ? process.cpuUsage(cpu0) : null;

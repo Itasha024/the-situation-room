@@ -692,6 +692,8 @@ html .map-wrap .map-chip.chip-hl{max-width:min(420px,calc(100% - 110px))}
 @media (prefers-reduced-motion:reduce){.sr-body,.sr-chev{transition:none}}
 .sr-houthi .sw{background:var(--houthi)}
 .sr-gov .sw{background:var(--plc)}
+/* The Iran desk's groups, in its cards' colours (desk.css). */
+.sr-axis .sw{background:#c45c26}.sr-opposition .sw{background:#a855f7}.sr-israel .sw{background:#3b82f6}.sr-us .sw{background:#ef4444}.sr-gulf .sw{background:#22c55e}.sr-intl .sw{background:#94a3b8}
 .sr-table{width:100%;border-collapse:collapse;font:400 .9rem/1.35 var(--f-body,inherit)}
 .sr-table th{padding:.35rem 0;border-bottom:1px solid var(--t-line-strong,#4a433d);font:600 .6rem/1.2 var(--f-body,inherit);letter-spacing:.1em;text-transform:uppercase;color:var(--t-muted,#a99d93);text-align:start}
 .sr-table th:last-child,.sr-table td.sr-rate{text-align:end;width:9.5rem}

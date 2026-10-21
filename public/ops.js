@@ -1772,7 +1772,7 @@
     attackPins();
     // The sources' ratings, in short, at the right of the sources filter over the reports (user, 22 Oct).
     const fl = PAGE !== 'all' && document.getElementById('feed-legend');
-    if (fl && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', '<a class="ops-srclink" href="/yemen-conflict-desk/sources" title="How reliable each source has been">Source ratings</a>');
+    if (fl && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', `<a class="ops-srclink" href="/${PAGE}-conflict-desk/sources" title="How reliable each source has been">Source ratings</a>`);
     paintSlim();
   }
 

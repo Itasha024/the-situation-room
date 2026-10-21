@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deskDay } from "./brief.ts";
-import { type RatedCard, blend, groupOf, laterCandidates, rateSources, ratingsDue, reportScore, startOf, withSeed } from "./source-rating.ts";
+import { type RatedCard, blend, groupOf, iranSide, laterCandidates, rateSources, ratingsDue, reportScore, startOf, withSeed } from "./source-rating.ts";
 
 const NOW = Date.parse("2026-10-02T06:00:00Z");
 const old = "2026-09-20T10:00:00Z";
@@ -122,4 +122,23 @@ test("the EU, the GCC and any foreign office start as official bodies; the GCC i
   assert.equal(startOf("Pakistan Foreign Office", "nonaligned"), 4);
   assert.equal(groupOf("GCC"), "gov");
   assert.equal(groupOf("Sheba Intelligence", "gov"), "nonaligned");
+});
+
+test("the Iran desk's list: Israel confirming an Axis outlet lifts it to the top score; each source keeps its filter group", () => {
+  const cat = [
+    { name: "Tasnim", url: "https://t.me/Tasnimnews_EN", lean: "axis", platform: "Telegram" as const },
+    { name: "Ynet", url: "https://www.ynet.co.il", lean: "israel", platform: "Website" as const },
+    { name: "Iran International", url: "https://x.com/IranIntl", lean: "opposition", platform: "X" as const },
+  ];
+  const side = (_n: string, lean?: string) => iranSide(lean);
+  const lone = rateSources([card("Tasnim")], cat, {}, NOW, side).find((r) => r.name === "Tasnim")!;
+  const both = rateSources([card("Tasnim", ["Ynet"])], cat, {}, NOW, side).find((r) => r.name === "Tasnim")!;
+  assert.equal(lone.rating, 3);
+  assert.ok(both.rating > lone.rating);
+  // The opposition is on Israel's side: it does not confirm Ynet, as the Axis would.
+  const sameSide = rateSources([card("Ynet", ["Iran International"])], cat, {}, NOW, side).find((r) => r.name === "Ynet")!;
+  const otherSide = rateSources([card("Ynet", ["Tasnim"])], cat, {}, NOW, side).find((r) => r.name === "Ynet")!;
+  assert.ok(otherSide.rating > sameSide.rating);
+  assert.equal(both.lean, "axis");
+  assert.equal(iranSide("gulf"), "nonaligned");
 });

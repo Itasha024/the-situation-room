@@ -8452,7 +8452,7 @@ function renderTrumpPin() {
   const n = list.length;
   el.innerHTML = `<div class="tp-head"><b>Trump's latest</b>${PIN_ICON}</div>
     ${n ? trumpCardHtml(list[0]) : `<p class="soon">Nothing yet: what he posts or says on ${deskOf().id === 'yemen' ? 'Yemen and the Houthis' : 'Iran'} appears here within five minutes.</p>`}
-    ${n ? `<button type="button" class="tp-all" aria-haspopup="dialog">All his statements (${n}) <span aria-hidden="true">→</span></button>` : ''}`;
+    ${n ? `<button type="button" class="tp-all" aria-haspopup="dialog">All his statements <span aria-hidden="true">→</span></button>` : ''}`;
   el.querySelectorAll('.card').forEach(wireFeedCard);
   const all = el.querySelector('.tp-all');
   if (all) all.addEventListener('click', () => openTrumpPop(all));
@@ -8461,7 +8461,7 @@ function renderTrumpList() {
   const box = document.querySelector('#trump-pop .tp-list');
   if (!box) return;
   const list = trumpFeed.list.slice(0, trumpFeed.shown);
-  box.innerHTML = list.map(trumpCardHtml).join('') + (trumpFeed.list.length > list.length ? `<button type="button" class="more" id="tp-more">Show earlier statements (+${Math.min(30, trumpFeed.list.length - list.length)})</button>` : '');
+  box.innerHTML = list.map(trumpCardHtml).join('') + (trumpFeed.list.length > list.length ? `<button type="button" class="more" id="tp-more">Show earlier statements</button>` : '');
   box.querySelectorAll('.card').forEach(wireFeedCard);
   const more = document.getElementById('tp-more');
   if (more) more.addEventListener('click', () => { trumpFeed.shown += 30; renderTrumpList(); });

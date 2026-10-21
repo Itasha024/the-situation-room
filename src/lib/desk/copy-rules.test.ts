@@ -489,3 +489,22 @@ test("two verbs with no joiner: the name before the first is the speaker (Iran I
     "Araghchi: restricted access suggests nothing",
   ]) assert.equal(twoVerbs(ok), null, ok);
 });
+
+test("a headline says what was said, and who said it (user, 21 Oct)", async () => {
+  const { saysNothing, noSpeaker, sayWhat, serveCard } = await import("./copy-rules.ts");
+  for (const bad of ["Araghchi details Iran's latest reply to the US", "Araghchi briefs cabinet on latest talks with visiting delegations", "Pezeshkian gives interview to Al Jazeera"]) assert.ok(saysNothing(bad), bad);
+  for (const ok of ["Araghchi: Iran is in a state of war", "Washington discussed Houthi presence in Iraq", "Araghchi in interview: no basis to expect progress"]) assert.ok(!saysNothing(ok), ok);
+  for (const bad of ["We have no trust at all in the US administration's declared desire for peace with Iran", "Ready for diplomacy and self-defence"]) assert.ok(noSpeaker(bad), bad);
+  assert.ok(!noSpeaker("Araghchi: we have no trust"));
+  // A line under the card with the speaker leads.
+  const a: Record<string, unknown> = { summary: "We have no trust at all in the US administration's declared desire for peace with Iran", source: "Nidaa al-Watan", url: "u1", text: "", alsoReportedBy: [{ source: "Al-Alam", url: "u2", summary: "" }, { source: "Al Jadeed", url: "u3", summary: "Araghchi: we have no trust at all in US administration's declared desire for peace with Iran" }] };
+  assert.equal(sayWhat(a), true);
+  assert.match(String(a.summary), /^Araghchi: we have no trust/);
+  assert.equal(a.source, "Al Jadeed");
+  // The speaker's own channel.
+  const b: Record<string, unknown> = { summary: "Ready for diplomacy and self-defence", source: "Abbas Araghchi", url: "u", text: "", alsoReportedBy: [] };
+  sayWhat(b);
+  assert.equal(b.summary, "Araghchi: ready for diplomacy and self-defence");
+  // Nothing says what: not shown.
+  assert.equal(serveCard({ summary: "Araghchi details Iran's latest reply to the US", source: "ILNA", url: "https://t.me/ilnair/655852", text: "", type: "statement" }, "iran"), false);
+});

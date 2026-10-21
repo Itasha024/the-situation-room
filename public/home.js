@@ -239,7 +239,10 @@
   function card(r, o) {
     const opts = o || {};
     const parent = r.replyTo && byFp.get(String(r.replyTo));
-    const reply = parent && !opts.noReply && parent.at < r.at ? `<a class="reply-to" href="${esc(parent.url)}" target="_blank" rel="noopener">↩ Follows ${esc(fmt(parent.at))} · ${esc(parent.h)}</a>` : '';
+    // Leads to the earlier report's card, as on the desks (user, 21 Oct: it opened the source); with no card of
+    // its own here, to that card on its desk.
+    const pd = parent && parent.desks && parent.desks[0] && HD[parent.desks[0]];
+    const reply = parent && !opts.noReply && parent.at < r.at ? `<a class="reply-to" href="${pd ? `${pd.href}#r=${encodeURIComponent(parent.fp)}` : esc(parent.url)}" data-parent="${esc(parent.fp)}">↩ Follows ${esc(fmt(parent.at))} · ${esc(parent.h)}</a>` : '';
     const seen = new Set([r.src]);
     const also = r.also.filter((a) => { const n = srcName(a.source); return n && !seen.has(n) && seen.add(n); });
     return `<article class="card ${leanCls(r)}" data-fp="${esc(r.fp)}">
@@ -855,6 +858,18 @@
     ev.preventDefault();
     ev.stopPropagation();
     showPinPop(b.dataset.pinOf, b);
+  });
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest && ev.target.closest('.reply-to[data-parent]');
+    if (!a || ev.ctrlKey || ev.metaKey) return;
+    const fp = CSS.escape(a.dataset.parent), own = a.closest('.card');
+    const list = own && own.parentNode;
+    const target = (list && list.querySelector(`:scope > .card[data-fp="${fp}"]`)) || document.querySelector(`.card[data-fp="${fp}"]`);
+    if (!target) return; // its desk's page, by the link
+    ev.preventDefault();
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('flash');
+    setTimeout(() => target.classList.remove('flash'), 1600);
   });
   function scrollToMap() {
     const el = document.querySelector('.toolbar');

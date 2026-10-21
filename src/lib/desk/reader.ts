@@ -482,6 +482,12 @@ STATEMENTS (event_type statement or diplomacy)
   week", "Rubio: \"We will not let the Houthis close the Red Sea\"" (a short
   exact quote), "US official: …" for what an official told an outlet. The
   speaker is named once, and a quote is never empty.
+  The headline carries WHAT was said (the claim, demand, figure, warning or
+  decision), never only that someone spoke: "X details …", "X discusses …",
+  "X outlines …", "X comments on …", "X gives interview" say nothing. A long
+  interview or speech: its strongest new line leads, the next ones go in the
+  body. The speaker is never left out: "We have no trust in the US" alone is
+  nobody's.
   A report ABOUT someone (what they did, decided or discussed, or what
   officials, sources or an outlet say about them) is a plain sentence with no
   colon: "Trump held a phone call with Yemen's Presidential Council head

@@ -490,11 +490,69 @@ export function cleanBody(text: string, source: string): string {
   return t;
 }
 
+/**
+ * A headline that tells only that someone spoke, not what (user, 21 Oct: "Araghchi details Iran's latest
+ * reply to the US" — "this is not a report, bring what he says"). Never one after a colon: "Araghchi: …"
+ * carries the words.
+ */
+const SAYS_NOTHING = /^[^:]{0,70}?\b(?:details|detailed|outlines|outlined|explains|explained|elaborates on|speaks (?:about|on)|talks about|comments on|commented on|sheds light on|briefs (?:the )?[\w-]+(?: \w+)? on|briefed (?:the )?[\w-]+(?: \w+)? on|gives (?:an? |his |her )?(?:interview|speech|details|account)|in (?:an? )?(?:long |lengthy |televised )?interview)\b(?![^:]{0,40}:)/i;
+export function saysNothing(headline: string): boolean {
+  const h = String(headline || "");
+  return !/^[^:]{2,60}:\s/.test(h) && SAYS_NOTHING.test(h);
+}
+/** Words with no speaker: "We have no trust at all in …", "Ready for diplomacy and self-defence" (21 Oct). */
+export function noSpeaker(headline: string): boolean {
+  const h = String(headline || "");
+  if (/^[^:]{2,60}:\s/.test(h) || /\b(?:says?|said|told|tells|claims?|according to)\b/i.test(h)) return false;
+  return /^(?:We|We're|We've|Our|Us|I|I'm|I've|My|Ready (?:for|to)|No basis|Not ready|Never|Will not|Won't|Cannot)\b/.test(h);
+}
+const KEY_WORDS = (s: string) => new Set(String(s || "").toLowerCase().match(/[a-z]{4,}/g) ?? []);
+/**
+ * A stored card whose headline says nothing or names no one: another outlet's line under it that carries the
+ * speaker and the words leads instead (that outlet then the source); a speaker who is the source itself
+ * ("Abbas Araghchi" posting on his channel) is put in front. Null: nothing to mend; false: the card is not
+ * shown (it says only that someone spoke, and nothing under it says what).
+ */
+export function sayWhat(r: Row): boolean | null {
+  const h = String(r.summary ?? "");
+  const empty = saysNothing(h), nobody = !empty && noSpeaker(h);
+  if (!empty && !nobody) return null;
+  const mine = KEY_WORDS(h);
+  const also = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []) as Row[];
+  let best: Row | null = null, bestN = 0;
+  for (const a of also) {
+    const s = String(a?.summary ?? "");
+    if (!a?.url || !/^[^:]{2,60}:\s\S/.test(s) || saysNothing(s.replace(/^[^:]{2,60}:\s/, "")) || noSpeaker(s) || s.length < 25) continue;
+    let n = 0;
+    for (const w of KEY_WORDS(s)) if (mine.has(w)) n++;
+    if (n > bestN) { best = a; bestN = n; }
+  }
+  // A speaker's own post with no name in it: the poster spoke.
+  const own = String(r.source ?? "");
+  const person = /^[A-Z][\p{L}'’-]+ (?:[A-Z][\p{L}'’-]+ )?([A-Z][\p{L}'’-]+)$/u.exec(own);
+  if (nobody && person && FAMOUS.test(person[1])) {
+    r.summary = `${person[1]}: ${/^(?:I|I'm|I've)\b|^[A-Z]{2}/.test(h) ? h : h[0].toLowerCase() + h.slice(1)}`;
+    return true;
+  }
+  // The same story: two of its words at least (an unrelated line of the same day is no answer).
+  if (best && bestN >= 2) {
+    r.alsoReportedBy = [{ source: r.source, url: r.url, summary: h }, ...also.filter((a) => a !== best)];
+    r.summary = String(best.summary);
+    r.source = best.source;
+    r.url = best.url;
+    return true;
+  }
+  // Words of nobody, or a card that only says someone spoke, with nothing better: off the desk unless its body says it.
+  return String(r.text ?? "").trim().length >= 60 ? null : false;
+}
+
 /** Garbled copy a second writing should mend (new cards only). */
 export function garbled(headline: string, sourceText = ""): string | null {
   const h = String(headline || "");
   // "Clash in Abyan linked to vehicle linked to former Al-Qaeda leader".
   if (/\b(\w+ed (?:to|by|in|on|with))\b(?:\s+\S+){1,4}?\s+\1\b/i.test(h)) return "garbled: a phrase written twice";
+  if (saysNothing(h)) return "garbled: the headline says only that someone spoke; write what was said (the claim, demand, figure or decision), with the speaker and a colon";
+  if (noSpeaker(h)) return "garbled: the headline's words are nobody's; open with the speaker and a colon";
   // "Houthis missile attack hits Aden …; coalition says …, Iran says …" (CNBC, 16 Oct): three stories in one.
   if ((h.match(/\b(?:says|said|claims|reports)\b/g) ?? []).length >= 2 && /;/.test(h)) return "garbled: one headline tells several parties' stories; keep the first";
   // The headline says sanctions; the text says they were eased (Reuters, 16 Oct).
@@ -782,7 +840,9 @@ export function serveCard(r: Row, desk: "yemen" | "iran"): boolean {
   }
   // A card about its footage is shown with that footage or not at all (user, 18 Oct: "Houthi media publishes new footage …" with no video).
   if (aboutFootage({ summary }) && !r.media) return false;
-  let h = speakerByRole(ungarble(fix(summary)), text);
+  // Says only that someone spoke, or names no one (21 Oct): the words and the speaker from a line under it.
+  if (sayWhat(r) === false) return false;
+  let h = speakerByRole(ungarble(fix(String(r.summary ?? ""))), text);
   if (desk === "yemen" && houthi) h = houthiClaim(h, type, source);
   r.summary = h;
   // The other outlets' lines under the card get the same offices and titles.

@@ -534,3 +534,6 @@ html[data-theme="broadsheet-day"] .h-co-line path{filter:drop-shadow(0 1px 1px r
 body.map-focus #g-body{display:none}
 body.map-focus .h-solo .map-wrap{height:calc(100svh - 110px)}
 @media (max-width:720px){body.map-focus .h-solo .map-wrap{height:calc(100svh - 100px)}}
+
+/* The earlier report a "Follows" link leads to, lit for a moment (21 Oct). */
+.card.flash{outline:2px solid #9fb4cc;outline-offset:2px;transition:outline-color 1.2s}

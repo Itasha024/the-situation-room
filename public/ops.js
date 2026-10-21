@@ -1528,16 +1528,16 @@
      - the legend of every side and kind of event on the map, small;
      - along the bottom, the most important of the latest reports, most important first;
      - live traffic on or off;
-     - a time lapse: today, 24 hours, 7 days, the Yemen war, Lion's Roar and Epic Fury (the 40 days from 28 Feb), or
+     - a time lapse: today and 7 days pin by pin with each note, and the Yemen war, Lion's Roar and Epic Fury (the 40 days from 28 Feb), or
        everything since 28 Feb, each event lit on the map at its time.
      Controls show when the pointer moves. */
   const CAST = { timer: 0, i: -1, play: true, cur: null, idle: 0, full: false, lapse: null };
   const CAST_MS = 6000; // 4 s a report, and 2 more to read it (20 Oct)
   const WAR0 = '2026-02-28T00:00:00+03:00';
   const LAPSE_DEF = [
-    ['today', 'Today', () => { const d = new Date(); const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(d); return [Date.parse(`${ymd}T00:00:00+03:00`), Date.now()]; }],
-    ['24h', 'Last 24 hours', () => [Date.now() - 864e5, Date.now()]],
-    ['7d', 'Last 7 days', () => [Date.now() - 7 * 864e5, Date.now()]],
+    // Today and the last 7 days go pin by pin, each with its note (user, 21 Oct; the 24 hours went: Today has it).
+    ['today', 'Today', () => { const d = new Date(); const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(d); return [Date.parse(`${ymd}T00:00:00+03:00`), Date.now()]; }, null, 'tour'],
+    ['7d', 'Last 7 days', () => [Date.now() - 7 * 864e5, Date.now()], null, 'tour'],
     ['yemen', 'The Yemen war', () => [Date.parse('2026-07-13T00:00:00+03:00'), Date.now()], 'yemen'],
     ['lion', 'Lion’s Roar and Epic Fury', () => [Date.parse(WAR0), Date.parse('2026-04-08T23:59:00+03:00')], 'iran'],
     ['war', 'Since 28 Feb', () => [Date.parse(WAR0), Date.now()], 'iran'],
@@ -1575,7 +1575,8 @@
       CAST.i = -1; CAST.play = P.castTour;
       if (!document.fullscreenElement && H.requestFullscreen) H.requestFullscreen().then(() => { CAST.full = true; }).catch(() => {});
       getMap().closePopup();
-      if (CAST.play) castStep(1);
+      castOpening();
+      if (CAST.play) setTimeout(() => { if (S.cast && CAST.i < 0) castStep(1); }, P.still ? 0 : 3200);
       CAST.timer = setInterval(() => { if (CAST.play && !CAST.lapse) castStep(1); }, CAST_MS);
       castIdle();
     } else {
@@ -1584,6 +1585,14 @@
     }
     paintCast();
     setTimeout(() => { const m = getMap(); if (m) m.invalidateSize(); }, 80);
+  }
+  /* As broadcast opens, the map comes in from the whole world to the desks' area (user, 21 Oct). */
+  function castOpening() {
+    const m = getMap();
+    if (!m || P.still) return;
+    const area = PAGE === 'all' ? L.latLngBounds([[10, 31], [40, 63]]) : m.getBounds();
+    m.setView([25, 45], 2, { animate: false });
+    setTimeout(() => { if (S.cast) m.flyToBounds(area, { duration: 2.6 }); }, 400);
   }
   function castStep(d) {
     if (CAST.lapse) return;
@@ -1641,7 +1650,7 @@
         ${lp ? '' : `<button type="button" data-cast="prev" title="The one before">${ICON.left}</button>
         <button type="button" data-cast="play" title="${CAST.play ? 'Pause' : 'Go through the latest reports'}">${CAST.play ? ICON.pause : ICON.play}</button>
         <button type="button" data-cast="next" title="The next">${ICON.right}</button>`}
-        <label class="ops-csel"><span class="sr">Time lapse</span><select data-cast="lapse"><option value="">Live, last 24 hours</option>${lapses().map(([k, n]) => `<option value="${k}"${lp && lp.k === k ? ' selected' : ''}>Time lapse: ${esc(n)}</option>`).join('')}</select></label>
+        <label class="ops-csel"><span class="sr">Time lapse</span><select data-cast="lapse"><option value="">Live: in the region</option>${lapses().map(([k, n]) => `<option value="${k}"${lp && lp.k === k ? ' selected' : ''}>Time lapse: ${esc(n)}</option>`).join('')}</select></label>
         <button type="button" data-cast="traffic" aria-pressed="${S.air || S.sea}" title="Live aircraft and ships">${ICON.plane}<span>Traffic</span></button>
         <button type="button" data-cast="exit" class="ops-cexit">Exit</button>
       </div>
@@ -1662,7 +1671,11 @@
     if (a < Date.now() - 8 * 864e5) { try { if (PAGE === 'all') await window.__home.loadWar(); else if (PAGE === 'yemen') await A('loadAllPins')(); } catch (e) { /* what there is */ } }
     const lp = CAST.lapse;
     if (!lp || lp.k !== k) return;
-    lp.list = events(true).filter((e) => typeof e.lat === 'number' && tOf(e) >= a && tOf(e) <= b).sort((x, y) => tOf(x) - tOf(y));
+    // A desk's war is that desk's pins only (21 Oct: the Yemen war showed the Iran desk's on the All page).
+    lp.list = events(true).filter((e) => typeof e.lat === 'number' && tOf(e) >= a && tOf(e) <= b && (!def[3] || e.desk === def[3])).sort((x, y) => tOf(x) - tOf(y));
+    lp.tour = def[4] === 'tour';
+    // It starts at its first pin, not on weeks with none (the Yemen war's pins begin on 18 Sep, not 13 Jul).
+    if (lp.list.length) { lp.a = Math.max(lp.a, tOf(lp.list[0]) - 3600e3); lp.t = lp.a; }
     lp.loading = false;
     H.classList.add('ops-lapsing');
     const m = getMap();
@@ -1673,7 +1686,8 @@
     lp.dur = Math.max(20, Math.min(60, lp.list.length * 0.06)) * 1000;
     // A steady clock, not the screen's frames (20 Oct: the whole war's lapse never moved where frames were held back).
     lp.fresh = [];
-    setTimeout(() => { if (CAST.lapse === lp) { lp.start = performance.now(); lp.raf = setInterval(lapseFrame, 80); } }, P.still ? 0 : 1100);
+    if (lp.tour) setTimeout(() => { if (CAST.lapse === lp) tourStep(lp); }, P.still ? 0 : 1100);
+    else setTimeout(() => { if (CAST.lapse === lp) { lp.start = performance.now(); lp.raf = setInterval(lapseFrame, 80); } }, P.still ? 0 : 1100);
     paintCast();
   }
   function lapseFrame() {
@@ -1692,6 +1706,23 @@
     paintLapse();
     if (f >= 1 && !lp.fresh.length) { clearInterval(lp.raf); lp.raf = 0; }
   }
+  /* Pin by pin: each event added at its turn, the map going to it and its note open, as long as each report in
+     "In the region" (CAST_MS); the pins before it stay, small. */
+  function tourStep(lp) {
+    if (CAST.lapse !== lp) return;
+    const m = getMap();
+    if (lp.last) { lp.last.setRadius(4); lp.last.setStyle({ weight: 0.6, fillOpacity: 0.8 }); }
+    if (lp.i >= lp.list.length) { m.closePopup(); lp.t = lp.b; paintLapse(); return; }
+    const e = lp.list[lp.i++];
+    lp.t = tOf(e);
+    const mk = L.circleMarker([e.lat, e.lng], { renderer: lapseRend, radius: 8, stroke: true, color: '#fff', weight: 1.5, fillColor: sideOf(e).c, fillOpacity: 0.95, interactive: false }).addTo(lapseLayer);
+    lp.last = mk;
+    paintLapse();
+    m.closePopup();
+    const open = () => { if (CAST.lapse === lp && lp.last === mk) L.popup({ maxWidth: 300, maxHeight: 260, className: 'ops-note', autoPan: false, closeButton: false }).setLatLng([e.lat, e.lng]).setContent(noteOf(e)).openOn(m); };
+    if (P.still) open(); else { m.once('moveend', open); m.flyTo([e.lat, e.lng], Math.max(6, Math.min(7.5, m.getZoom())), { duration: 1.2 }); }
+    lp.raf = setTimeout(() => tourStep(lp), CAST_MS);
+  }
   function paintLapse() {
     const lp = CAST.lapse, el = hud && $('.ops-lapse', hud);
     if (!lp || !el) return;
@@ -1702,7 +1733,7 @@
   }
   function stopLapse() {
     const lp = CAST.lapse;
-    if (lp) clearInterval(lp.raf);
+    if (lp) { clearInterval(lp.raf); clearTimeout(lp.raf); if (lp.tour) try { getMap().closePopup(); } catch (e) { /* gone */ } }
     CAST.lapse = null;
     H.classList.remove('ops-lapsing');
     if (lapseLayer) { try { getMap().removeLayer(lapseLayer); } catch (e) { /* gone */ } lapseLayer = null; }

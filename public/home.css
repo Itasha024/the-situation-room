@@ -537,3 +537,6 @@ body.map-focus .h-solo .map-wrap{height:calc(100svh - 110px)}
 
 /* The earlier report a "Follows" link leads to, lit for a moment (21 Oct). */
 .card.flash{outline:2px solid #9fb4cc;outline-offset:2px;transition:outline-color 1.2s}
+.jump-back{position:fixed;bottom:18px;transform:translateX(-50%);z-index:900;background:var(--t-surface-3,#1a2433);color:var(--t-text,#eaf0f6);border:1px solid #4a6280;border-radius:999px;padding:.4rem .9rem;font:inherit;font-size:.78rem;cursor:pointer;box-shadow:0 4px 14px #0009}
+.jump-back:hover{background:var(--t-surface-4,#243447)}
+.jump-back[hidden]{display:none}

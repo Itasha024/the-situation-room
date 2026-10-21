@@ -870,7 +870,48 @@
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     target.classList.add('flash');
     setTimeout(() => target.classList.remove('flash'), 1600);
+    if (own) jumpBackTo(own, list);
   });
+  /* "↑ Back" to the report the reader came from, as on the desks (user, 21 Oct): shown while that card is out
+     of sight, at the foot of its column, for 20 seconds. */
+  let jumpBack = null;
+  function jumpBackTo(from, list) {
+    if (jumpBack) jumpBack();
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'jump-back';
+    btn.innerHTML = '<span aria-hidden="true">↑</span> Back';
+    btn.setAttribute('aria-label', 'Back to the report you came from');
+    btn.hidden = true;
+    const place = () => {
+      const box = (list || document.body).getBoundingClientRect();
+      btn.style.left = `${Math.round(box.left + box.width / 2)}px`;
+      btn.style.bottom = `${Math.max(18, Math.round(window.innerHeight - Math.min(box.bottom, window.innerHeight) + 14))}px`;
+    };
+    const onMove = () => { if (!btn.hidden) place(); };
+    // The All page's column scrolls inside its panel: any scroll moves the button.
+    document.addEventListener('scroll', onMove, { passive: true, capture: true });
+    window.addEventListener('resize', onMove);
+    const io = new IntersectionObserver(([e]) => { btn.hidden = e.isIntersecting; if (!btn.hidden) place(); });
+    const timer = setTimeout(() => stop(), 20000);
+    function stop() {
+      io.disconnect();
+      clearTimeout(timer);
+      document.removeEventListener('scroll', onMove, { capture: true });
+      window.removeEventListener('resize', onMove);
+      btn.remove();
+      if (jumpBack === stop) jumpBack = null;
+    }
+    btn.onclick = () => {
+      from.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      from.classList.add('flash');
+      setTimeout(() => from.classList.remove('flash'), 1600);
+      stop();
+    };
+    document.body.appendChild(btn);
+    setTimeout(() => io.observe(from), 400);
+    jumpBack = stop;
+  }
   function scrollToMap() {
     const el = document.querySelector('.toolbar');
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 6, behavior: 'smooth' });

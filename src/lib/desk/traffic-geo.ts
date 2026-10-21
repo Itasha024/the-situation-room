@@ -33,8 +33,47 @@ export const SEA_ROW = {
   posTime: 14,
   /** ETA the crew set in AIS (ISO, UTC), or null */
   eta: 15,
+  /** (21 Oct) the deepest draught the crew set in AIS, metres, or null */
+  draughtM: 16,
+  /** (21 Oct) the beam from the AIS dimensions, metres, or null */
+  beamM: 17,
+  /** (21 Oct) the flag: ISO 3166 two-letter code of the country that issued the MMSI (its MID), or null */
+  flag: 18,
 } as const;
-export const SEA_ROW_LEN = 16;
+export const SEA_ROW_LEN = 19;
+
+/**
+ * The flag of an MMSI: its first three digits (the Maritime Identification Digits, ITU) name the
+ * country that issued it. Null for numbers that are not a ship station's.
+ */
+const MID_TABLE =
+  "201AL202AD203AT204PT205BE206BY207BG208VA209CY210CY211DE212CY213GE214MD215MT216AM218DE219DK220DK224ES225ES226FR227FR228FR229MT230FI231FO232GB233GB234GB235GB236GI237GR238HR239GR240GR241GR242MA243HU244NL245NL246NL247IT248MT249MT250IE251IS252LI253LU254MC255PT256MT257NO258NO259NO261PL262ME263PT264RO265SE266SE267SK268SM269CH270CZ271TR272UA273RU274MK275LV276EE277LT278SI279RS" +
+  "301AI303US304AG305AG306CW307AW308BS309BS310BM311BS312BZ314BB316CA319KY321CR323CU325DM327DO329GP330GD331GL332GT334HN336HT338US339JM341KN343LC345MX347MQ348MS350NI351PA352PA353PA354PA355PA356PA357PA358PR359SV361PM362TT364TC366US367US368US369US370PA371PA372PA373PA374PA375VC376VC377VC378VG379VI" +
+  "401AF403SA405BD408BH410BT412CN413CN414CN416TW417LK419IN422IR423AZ425IQ428IL431JP432JP434TM436KZ437UZ438JO440KR441KR443PS445KP447KW450LB451KG453MO455MV457MN459NP461OM463PK466QA468SY470AE471AE472TJ473YE475YE477HK478BA" +
+  "503AU506MM508BN510FM511PW512NZ514KH515KH516CX518CK520FJ523CC525ID529KI531LA533MY536MP538MH540NC542NU544NR546PF548PH550TL553PG555PN557SB559AS561WS563SG564SG565SG566SG567TH570TO572TV574VN576VU577VU578WF" +
+  "601ZA603AO605DZ608SH609BI610BJ611BW612CF613CM615CG616KM617CV619CI620KM621DJ622EG624ET625ER626GA627GH629GM630GW631GQ632GN633BF634KE636LR637LR638SS642LY644LS645MU647MG649ML650MZ654MR655MW656NE657NG659NA660RE661RW662SD663SN664SC665SH666SO667SL668ST669SZ670TD671TG672TN674TZ675UG676CD677TZ678ZM679ZW" +
+  "701AR710BR720BO725CL730CO735EC740FK745GF750GY755PY760PE765SR770UY775VE";
+const MID = new Map<string, string>();
+for (let i = 0; i + 5 <= MID_TABLE.length; i += 5) MID.set(MID_TABLE.slice(i, i + 3), MID_TABLE.slice(i + 3, i + 5));
+export function flagOf(mmsi: number): string | null {
+  const s = String(mmsi);
+  return s.length === 9 && /^[2-7]/.test(s) ? MID.get(s.slice(0, 3)) ?? null : null;
+}
+
+/**
+ * A ship's reported position that cannot be (21 Oct: a Dutch cargo ship shown at Asyut, in the
+ * middle of Egypt; GPS is jammed and spoofed across the region): a jump from its last position
+ * faster than 60 knots, more than 20 km away, within two hours. The caller holds such a jump back
+ * until a second report agrees with it, so a ship whose earlier position was the false one gets
+ * its true one on the next report.
+ */
+export function shipJump(last: { lat: number; lon: number; t: number } | null, lat: number, lon: number, t: number) {
+  if (!last || !last.t) return false;
+  const h = (t - last.t) / 3600_000;
+  if (h <= 0 || h > 2) return false;
+  const d = km(last.lat, last.lon, lat, lon);
+  return d > 20 && d / 1.852 / Math.max(h, 1 / 60) > 60;
+}
 
 /** The live traffic region (user, 20 Oct: every aircraft and ship in the region, without exception). */
 export const AIR_BOX = { s: 8, n: 42, w: 25, e: 65 } as const;

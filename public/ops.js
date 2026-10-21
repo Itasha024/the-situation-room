@@ -1297,21 +1297,33 @@
       const a = T.air.find((x) => x[0] === T.sel.id);
       if (!a) return;
       const sq = a[7] && SQUAWK[a[7]] ? `<b class="emg">${esc(a[7])} · ${SQUAWK[a[7]]}</b>` : esc(a[7] || '');
+      // The route answer's details (21 Oct: "as many details as Flightradar24"): the airline and the flight number as
+      // sold, the airframe's maker, owner and the owner's country.
+      const d = T.route && T.route.id === a[0] && T.route.d ? T.route.d : null;
+      const al = d && d.airline, fr = d && d.airframe;
+      const cs = String(a[8] || '').trim();
+      const title = d && d.flightNo && d.flightNo !== cs ? `${d.flightNo} <small>${esc(cs)}</small>` : esc(cs || a[9] || a[0].toUpperCase());
+      const sub = [al ? `${flagImg(al.iso)}${esc(al.name)}` : esc(a[12] || ''), esc(a[11] || a[10] || '')].filter(Boolean).join(' · ');
+      const kind = fr && (fr.maker || fr.type) ? [fr.maker, fr.type].filter(Boolean).join(' ') : a[11] || a[10] || '';
       // One screen, no scrolling (20 Oct): the photo beside the name, where from and where to, the figures in three columns.
       html = `<div class="ops-ch"><span class="ops-ck ${a[13] ? 'mil' : ''}">${ICON.plane}${a[13] ? 'Military' : 'Aircraft'}</span><button type="button" class="ops-x" data-sel="x" aria-label="Close">${ICON.x}</button></div>
-        <div class="ops-chead"><div class="ops-photo" data-hex="${esc(a[0])}"></div><div><h3>${esc(a[8] || a[9] || a[0].toUpperCase())}</h3><p class="ops-csub">${esc([a[11] || a[10], a[12]].filter(Boolean).join(' · '))}</p></div></div>
+        <div class="ops-chead"><div class="ops-photo" data-hex="${esc(a[0])}"></div><div><h3>${title}</h3><p class="ops-csub">${sub}</p></div></div>
         ${a[21] === 1 ? `<p class="ops-est">Estimated position: out of receivers' reach for ${esc(Math.max(1, Math.round((Number(a[17]) || 0) / 60)))} min, moved on along its route at its last speed</p>` : ''}
         ${routeBox('air', a[0])}
-        <dl>${row('Altitude', a[16] ? 'Ground' : a[3] != null ? esc(fl(a[3])) : '')}${row('Speed', a[4] != null ? `${a[4]} kt` : '')}${row('Heading', a[5] != null ? `${String(a[5]).padStart(3, '0')}°` : '')}${row('Climb', a[6] ? `${a[6] > 0 ? '+' : ''}${a[6].toLocaleString('en-GB')} ft/m` : '')}${row('Squawk', sq)}${row('Reg.', esc(a[9] || String(a[0]).toUpperCase()))}</dl>
+        <dl>${row('Altitude', a[16] ? 'Ground' : a[3] != null ? esc(fl(a[3])) : '')}${row('Speed', a[4] != null ? `${a[4]} kt` : '')}${row('Heading', a[5] != null ? `${String(a[5]).padStart(3, '0')}°` : '')}${row('Climb', a[6] ? `${a[6] > 0 ? '+' : ''}${a[6].toLocaleString('en-GB')} ft/m` : '')}${row('Squawk', sq)}${row('Reg.', esc(a[9] || (fr && fr.reg) || String(a[0]).toUpperCase()))}${row('Mode S', esc(String(a[0]).toUpperCase()))}${row('Seen', esc(a[17] != null ? (a[17] < 60 ? `${a[17]} s ago` : `${Math.round(a[17] / 60)} min ago`) : ''))}${row('Source', esc({ fi: 'adsb.fi', lol: 'adsb.lol', os: 'OpenSky' }[a[20]] || ''))}</dl>
+        ${kind || (fr && fr.owner) ? `<dl class="ops-wide">${row('Aircraft', esc(kind))}${row('Owner', fr && fr.owner ? `${flagImg(fr.ownerIso)}${esc(fr.owner)}` : '')}</dl>` : ''}
         <p class="ops-clinks"><a href="https://globe.adsb.fi/?icao=${esc(a[0])}" target="_blank" rel="noopener">adsb.fi ${ICON.ext}</a>${a[8] ? `<a href="https://www.flightradar24.com/${esc(String(a[8]).trim())}" target="_blank" rel="noopener">Flightradar24 ${ICON.ext}</a>` : ''}</p>`;
     } else {
       const s = T.ships.find((x) => x[0] === T.sel.id);
       if (!s) return;
+      // 21 Oct (user: "look how many details on each vessel" on MarineTraffic): the flag, a photo by its IMO number,
+      // draught, size, IMO and call sign, where it left and when, where it is going and its ETA, and the past track.
+      const flag = s[18] ? `${flagImg(s[18])}${esc(country(s[18]))}` : '';
       html = `<div class="ops-ch"><span class="ops-ck">${ICON.ship}${esc(SHIP_TYPE(s[8]) || 'Ship')}</span><button type="button" class="ops-x" data-sel="x" aria-label="Close">${ICON.x}</button></div>
-        <h3>${esc(s[1] || 'MMSI ' + s[0])}</h3>
+        <div class="ops-chead"><div class="ops-photo" data-imo="${esc(s[11] || '')}" data-hex="ship-${esc(s[0])}"></div><div><h3>${esc(s[1] || 'MMSI ' + s[0])}</h3><p class="ops-csub">${[flag, esc(SHIP_TYPE(s[8]) || '')].filter(Boolean).join(' · ')}</p></div></div>
         ${routeBox('sea', s[0], s[9])}
-        <dl>${row('Speed', s[4] != null ? `${s[4]} kt` : '')}${row('Course', s[5] != null ? `${Math.round(s[5])}°` : '')}${row('Status', esc(NAV[s[7]] || ''))}${row('Length', s[12] ? `${s[12]} m` : '')}${row('MMSI', esc(s[0]))}${row('Seen', esc(ago(s[13])))}</dl>
-        <p class="ops-clinks"><a href="https://www.marinetraffic.com/en/ais/details/ships/mmsi:${esc(s[0])}" target="_blank" rel="noopener">MarineTraffic ${ICON.ext}</a></p>`;
+        <dl>${row('Speed', s[4] != null ? `${s[4]} kt` : '')}${row('Course', s[5] != null ? `${Math.round(s[5])}°` : '')}${row('Heading', s[6] != null ? `${Math.round(s[6])}°` : '')}${row('Status', esc(NAV[s[7]] || ''))}${row('Draught', s[16] ? `${s[16]} m` : '')}${row('Size', s[12] ? `${s[12]}${s[17] ? ' × ' + s[17] : ''} m` : '')}${row('IMO', esc(s[11] || ''))}${row('MMSI', esc(s[0]))}${row('Call sign', esc(s[10] || ''))}${row('Seen', esc(ago(s[13])))}</dl>
+        <p class="ops-clinks"><a href="https://www.marinetraffic.com/en/ais/details/ships/mmsi:${esc(s[0])}" target="_blank" rel="noopener">MarineTraffic ${ICON.ext}</a><a href="${s[11] ? 'https://www.vesselfinder.com/vessels/details/' + esc(s[11]) : 'https://www.vesselfinder.com/?mmsi=' + esc(s[0])}" target="_blank" rel="noopener">VesselFinder ${ICON.ext}</a></p>`;
     }
     // The card is drawn again every ten seconds: the photo found once is kept.
     const ph = $('.ops-photo', card);
@@ -1319,8 +1331,12 @@
     card.innerHTML = html;
     card.hidden = false;
     const ph2 = $('.ops-photo', card);
-    if (ph2) { if (keepPh != null) ph2.innerHTML = keepPh; else photoOf(ph2.dataset.hex, card); }
+    if (ph2) { if (keepPh != null) ph2.innerHTML = keepPh; else photoOf(ph2.dataset.hex, card, ph2.dataset.imo); }
   }
+  /* A small flag (flagcdn.com's free flag images; Windows shows no flag emoji) and a country's name in English. */
+  const flagImg = (iso) => (iso && /^[A-Za-z]{2}$/.test(iso) ? `<img class="ops-flag" src="https://flagcdn.com/w40/${iso.toLowerCase()}.png" alt="" width="16" height="12" loading="lazy">` : '');
+  let REGION = null;
+  const country = (iso) => { try { REGION = REGION || new Intl.DisplayNames(['en'], { type: 'region' }); return REGION.of(String(iso).toUpperCase()) || iso; } catch (e) { return iso; } };
   /* Where from, where to, and the route on the map at a click: read once when a mark is picked (/api/traffic?route=). */
   const place = (x) => (x ? `<b>${esc(x.iata || x.icao || x.locode || '')}</b><span>${esc(x.city || x.name || '')}</span>` : '<b>—</b><span>Not known</span>');
   function routeBox(kind, id, aisTo) {
@@ -1328,10 +1344,34 @@
     const d = r && r.d;
     if (!r || r.loading) return `<div class="ops-route"><p class="ops-rline"><span class="ops-rwait">Finding where it came from and where it is going…</span></p></div>`;
     const to = d && d.destination ? d.destination : aisTo ? { name: aisTo } : null;
-    const known = d && (d.origin || d.destination || (d.track && d.track.length > 1));
+    // Ships: shown with their past track only (21 Oct: the route button came back once the desk kept twelve hours of it).
+    const known = d && (kind === 'air' ? d.origin || d.destination || (d.track && d.track.length > 1) : d.track && d.track.length > 2);
     return `<div class="ops-route"><p class="ops-rline"><span class="ops-rp">${place(d && d.origin)}</span><i aria-hidden="true">${ICON.right}</i><span class="ops-rp">${place(to)}</span></p>
-      ${known && kind === 'air' ? `<button type="button" class="ops-rbtn" data-route aria-pressed="${!!r.show}">${r.show ? 'Hide the route' : 'Show the route on the map'}</button>` : ''}
+      ${routeTimes(kind, id, d)}
+      ${known ? `<button type="button" class="ops-rbtn" data-route aria-pressed="${!!r.show}">${r.show ? 'Hide the route' : kind === 'air' ? 'Show the route on the map' : 'Show the past track'}</button>` : ''}
       ${d && d.source && d.source.length ? `<small>${esc([].concat(d.source).slice(0, 2).map((x) => String(x).replace(/ *\(.*\)/, '')).join(', '))}${d.confidence && d.confidence !== 'confirmed' ? ' · ' + esc(d.confidence) : ''}</small>` : ''}</div>`;
+  }
+  /* Under the route: for a flight, how far it has flown, how far is left and when it should land at its speed; for a
+     ship, when it left (where it lay still last) and the ETA its crew set. */
+  function routeTimes(kind, id, d) {
+    if (!d) return '';
+    const bits = [];
+    const tz = VIEW_TZ();
+    if (kind === 'air') {
+      const a = T.air.find((x) => x[0] === id);
+      const o = d.origin, t = d.destination;
+      if (a && o && t && o.lat != null && t.lat != null && !a[16]) {
+        const here = { lat: a[1], lng: a[2] };
+        const done = distKm({ lat: o.lat, lng: o.lon }, here), left = distKm(here, { lat: t.lat, lng: t.lon });
+        bits.push(`${Math.round(done).toLocaleString('en-GB')} km flown`, `${Math.round(left).toLocaleString('en-GB')} km to go`);
+        if (a[4] > 120 && left > 5) bits.push(`lands about ${hm(Date.now() + (left / (a[4] * 1.852)) * 3600e3 + 10 * 60e3, tz)}`);
+      }
+    } else {
+      const o = d.origin, t = d.destination;
+      if (o && o.left) bits.push(`left ${hm(Date.parse(o.left), tz)}, ${esc(dm(Date.parse(o.left), tz))}`);
+      if (t && t.eta) bits.push(`ETA ${hm(Date.parse(t.eta), tz)}, ${esc(dm(Date.parse(t.eta), tz))}`);
+    }
+    return bits.length ? `<p class="ops-rtimes">${bits.join(' · ')}</p>` : '';
   }
   async function loadRoute(kind, id, cs) {
     T.route = { id, kind, loading: true, show: false };
@@ -1343,21 +1383,47 @@
   }
   /* A photo of the airframe, from Planespotters' open photo service, credited and linked. */
   const PHOTOS = new Map();
-  async function photoOf(hex, card) {
+  async function photoOf(hex, card, imo) {
     let html = PHOTOS.get(hex);
     if (html == null) {
       html = '';
       try {
-        const r = await fetch(`https://api.planespotters.net/pub/photos/hex/${encodeURIComponent(hex)}`);
-        const j = r.ok ? await r.json() : null;
-        const p = j && j.photos && j.photos[0];
-        if (p && p.thumbnail_large) html = `<a href="${esc(p.link)}" target="_blank" rel="noopener"><img src="${esc(p.thumbnail_large.src)}" alt="" loading="lazy"><small>Photo: ${esc(p.photographer || 'Planespotters.net')}</small></a>`;
+        if (hex.startsWith('ship-')) html = imo ? await shipPhoto(imo) : '';
+        else {
+          const r = await fetch(`https://api.planespotters.net/pub/photos/hex/${encodeURIComponent(hex)}`);
+          const j = r.ok ? await r.json() : null;
+          const p = j && j.photos && j.photos[0];
+          if (p && p.thumbnail_large) html = `<a href="${esc(p.link)}" target="_blank" rel="noopener"><img src="${esc(p.thumbnail_large.src)}" alt="" loading="lazy"><small>Photo: ${esc(p.photographer || 'Planespotters.net')}</small></a>`;
+          else {
+            // None there: the photo adsbdb lists for the airframe (airport-data.com), once the route answer has it.
+            const d = await routeOf('air', hex);
+            const f = d && d.airframe;
+            if (f && (f.thumb || f.photo)) html = `<a href="${esc(f.photo || f.thumb)}" target="_blank" rel="noopener"><img src="${esc(f.thumb || f.photo)}" alt="" loading="lazy"><small>Photo: airport-data.com</small></a>`;
+          }
+        }
       } catch (e) { /* none */ }
       PHOTOS.set(hex, html);
     }
     card._ph = { hex, html };
     const el = $(`.ops-photo[data-hex="${CSS.escape(hex)}"]`, card);
     if (el) el.innerHTML = html;
+  }
+  /* A ship's photo from Wikimedia Commons, where ships are filed by their IMO number ("Category:IMO 9321483": the
+     photos, or the ship's own category holding them); credited and linked. Free and open to any page. */
+  async function shipPhoto(imo) {
+    const api = (q) => fetch('https://commons.wikimedia.org/w/api.php?format=json&origin=*&' + q).then((r) => (r.ok ? r.json() : null));
+    const files = (cat) => api('action=query&generator=categorymembers&gcmtype=file&gcmlimit=1&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=320&iiextmetadatafilter=Artist&gcmtitle=' + encodeURIComponent(cat));
+    let j = await files('Category:IMO ' + imo);
+    let pages = j && j.query && j.query.pages;
+    if (!pages) {
+      const c = await api('action=query&list=categorymembers&cmtype=subcat&cmlimit=1&cmtitle=' + encodeURIComponent('Category:IMO ' + imo));
+      const sub = c && c.query && c.query.categorymembers && c.query.categorymembers[0];
+      if (sub) { j = await files(sub.title); pages = j && j.query && j.query.pages; }
+    }
+    const pg = pages && Object.values(pages)[0], ii = pg && pg.imageinfo && pg.imageinfo[0];
+    if (!ii || !ii.thumburl) return '';
+    const by = ii.extmetadata && ii.extmetadata.Artist ? String(ii.extmetadata.Artist.value).replace(/<[^>]*>/g, '').trim().slice(0, 40) : '';
+    return `<a href="${esc(ii.descriptionurl)}" target="_blank" rel="noopener"><img src="${esc(ii.thumburl)}" alt="" loading="lazy"><small>Photo: ${esc(by || 'Wikimedia Commons')}</small></a>`;
   }
   function closeSel() { T.sel = null; T.route = null; paintSel(); drawTraffic(); }
   /* The route on the map, or off again; shown, the map takes in the whole of it. */

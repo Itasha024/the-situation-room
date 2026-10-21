@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { tidyShips, AIR_BOX, AIR_ROW, AIR_ROW_LEN, aisEta, bearing, continues, destPoint, EST, project, inAirBox, inSeaBox, km, lattice, History, joinTracks, matchPort, nearestPort, pickRoute, routeFits, SEA_ROW, SEA_ROW_LEN, type Place } from "./traffic-geo.ts";
+import { flagOf, shipJump, tidyShips, AIR_BOX, AIR_ROW, AIR_ROW_LEN, aisEta, bearing, continues, destPoint, EST, project, inAirBox, inSeaBox, km, lattice, History, joinTracks, matchPort, nearestPort, pickRoute, routeFits, SEA_ROW, SEA_ROW_LEN, type Place } from "./traffic-geo.ts";
 
 /** Commas outside brackets: the number of fields of a row literal, less one. */
 function topCommas(src: string) {
@@ -208,4 +208,20 @@ test("ships: positions kept six hours, name and destination a day, the cap drops
   assert.equal(m.get(2)?.t, 0); // too old to show, kept for its name
   tidyShips(m, now, 1);
   assert.deepEqual([...m.keys()], [1]);
+});
+
+test("ships: the flag from the MMSI, and a false jump is held back (21 Oct)", () => {
+  assert.equal(flagOf(244660255), "NL"); // WESTLANDGRACHT
+  assert.equal(flagOf(470123456), "AE");
+  assert.equal(flagOf(636012345), "LR");
+  assert.equal(flagOf(353000000), "PA");
+  assert.equal(flagOf(992351234), null); // an aid to navigation
+  const t = 1_800_000_000_000;
+  // From the Gulf of Suez to Asyut in ten minutes: held.
+  assert.ok(shipJump({ lat: 29.9, lon: 32.55, t }, 27.15, 30.8, t + 600_000));
+  // Twelve knots for an hour: a ship's real move.
+  assert.ok(!shipJump({ lat: 29.9, lon: 32.55, t }, 29.9 + 0.2, 32.55, t + 3600_000));
+  // A first position, or an old one: nothing to hold against.
+  assert.ok(!shipJump(null, 27.15, 30.8, t));
+  assert.ok(!shipJump({ lat: 29.9, lon: 32.55, t }, 27.15, 30.8, t + 3 * 3600_000));
 });

@@ -72,14 +72,42 @@ async function fromAdsbIm(cs: string, pos: LatLon | null): Promise<Candidate[]> 
   for (let i = 0; i + 1 < A.length; i++) out.push({ source: "adsb.im (adsb.lol routes)", origin: A[i], destination: A[i + 1] });
   return out;
 }
+/** The airline and the flight number as sold (EK203 for UAE203), from adsbdb's answer for the callsign (21 Oct). */
+export type Airline = { name: string; iata: string | null; icao: string | null; country: string | null; iso: string | null };
+const airlines = new Map<string, { airline: Airline | null; flightNo: string | null }>();
 async function fromAdsbdb(cs: string): Promise<Candidate[]> {
   const x = (await getJson("adsbdb", `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(cs)}`)) as { response?: { flightroute?: Record<string, Record<string, unknown>> } } | null;
   const fr = x?.response && typeof x.response === "object" ? x.response.flightroute : undefined;
   if (!fr) return [];
+  const al = fr.airline as Record<string, unknown> | undefined;
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  if (airlines.size > 5000) airlines.clear();
+  airlines.set(cs, { airline: al && str(al.name) ? { name: str(al.name)!, iata: str(al.iata), icao: str(al.icao), country: str(al.country), iso: str(al.country_iso) } : null, flightNo: str(fr.callsign_iata) });
   const p = (a: Record<string, unknown> | undefined) => a && place({ name: a.name as string, iata: a.iata_code as string, icao: a.icao_code as string, location: a.municipality as string, lat: a.latitude as number, lon: a.longitude as number });
   const o = p(fr.origin), d = p(fr.destination);
   return o && d ? [{ source: "adsbdb.com", origin: o, destination: d }] : [];
 }
+/**
+ * The airframe (21 Oct: "more details on each"): maker, type, owner and the owner's country, and a
+ * photo when Planespotters has none, from adsbdb's aircraft record; kept a day per aircraft.
+ */
+export type Airframe = { maker: string | null; type: string | null; owner: string | null; ownerCountry: string | null; ownerIso: string | null; reg: string | null; photo: string | null; thumb: string | null };
+const frames = new Map<string, { at: number; p: Promise<Airframe | null> }>();
+function airframe(hex: string) {
+  const had = frames.get(hex);
+  if (had && Date.now() - had.at < 86_400_000) return had.p;
+  if (frames.size > 5000) frames.clear();
+  const p = getJson("adsbdb", `https://api.adsbdb.com/v0/aircraft/${hex}`).then((x) => {
+    const a = (x as { response?: { aircraft?: Record<string, unknown> } } | null)?.response?.aircraft;
+    if (!a || typeof a !== "object") return null;
+    const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+    const https = (v: unknown) => { const u = s(v); return u && /^https?:\/\//.test(u) ? u.replace(/^http:/, "https:") : null; };
+    return { maker: s(a.manufacturer), type: s(a.type), owner: s(a.registered_owner), ownerCountry: s(a.registered_owner_country_name), ownerIso: s(a.registered_owner_country_iso_name), reg: s(a.registration), photo: https(a.url_photo), thumb: https(a.url_photo_thumbnail) };
+  }).catch(() => null);
+  frames.set(hex, { at: Date.now(), p });
+  return p;
+}
+
 /** OpenSky's live track: [time, lat, lon, baro altitude m, track, on ground]. */
 async function openskyTrack(hex: string) {
   const x = (await getJson("opensky", `https://opensky-network.org/api/tracks/all?icao24=${hex}&time=0`)) as { path?: (number | boolean | null)[][] } | null;
@@ -105,6 +133,7 @@ export type AirRouteAnswer = {
   ok: true; kind: "air"; hex: string; callsign: string | null;
   origin: Place | null; destination: Place | null; track: TrackPoint[]; source: string[];
   confidence: "confirmed" | "likely" | "unknown"; checks: ReturnType<typeof pickRoute>["checks"]; at: string;
+  airline?: Airline | null; flightNo?: string | null; airframe?: Airframe | null;
 };
 
 /**
@@ -125,7 +154,7 @@ export async function airRoute(hex: string, cs: string | null, pos: (LatLon & { 
     : Promise.resolve([] as Candidate[]);
   // Continued tracks ask for the route only: OpenSky's track is spent on readers' clicks.
   const trk = withTrack ? cached(trackCache, hex, 3 * 60_000, 500, () => ({ p: openskyTrack(hex) })).p : Promise.resolve([] as Awaited<ReturnType<typeof openskyTrack>>);
-  const [c, path] = await Promise.all([cands, trk]);
+  const [c, path, frame] = await Promise.all([cands, trk, withTrack ? airframe(hex) : Promise.resolve(null)]);
   // A track that began low and slow was a take-off its receivers saw: where it began is the origin.
   const first = path[0];
   const start = first && (first.gnd || (first.altM != null && first.altM < 1500)) ? { lat: first.lat, lon: first.lon } : null;
@@ -135,5 +164,7 @@ export async function airRoute(hex: string, cs: string | null, pos: (LatLon & { 
   const source = [...pick.source];
   if (path.length) source.push("OpenSky Network (flown track)");
   if (seen.length) source.push("adsb.fi / adsb.lol positions kept by the desk");
-  return { ok: true, kind: "air", hex, callsign: call, origin: pick.origin, destination: pick.destination, track, source, confidence: pick.confidence, checks: pick.checks, at: new Date().toISOString() };
+  const al = call ? airlines.get(call) : undefined;
+  return { ok: true, kind: "air", hex, callsign: call, origin: pick.origin, destination: pick.destination, track, source, confidence: pick.confidence, checks: pick.checks, at: new Date().toISOString(),
+    airline: al?.airline ?? null, flightNo: al?.flightNo ?? null, airframe: frame };
 }

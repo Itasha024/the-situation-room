@@ -974,3 +974,14 @@ html[data-view="ops"] .ops-left table.list[data-ops-l] td[data-h]::before { cont
 /* A picked aircraft or ship: the map zoom buttons step aside for its card. */
 html[data-view="ops"] .map-wrap:has(.ops-card:not([hidden])) .leaflet-control-zoom { visibility: hidden }
 html[data-view="ops"] .ops-est { margin: 0 0 8px; padding: 5px 8px; border-left: 2px solid var(--o-sel); background: var(--o-hover); font-size: 11.5px; color: var(--o-dim) }
+
+/* 21 Oct (user: the note's text blended into its background in light mode): the notes and pin sheets take the
+   view's own text colour in both themes; the token they used is the page's background in this view. */
+html[data-view="ops"] :is(.leaflet-popup, .pin-sheet) { --t-on-light: var(--o-text) }
+html[data-view="ops"] .leaflet-popup-content .pop-h { color: var(--o-strong) }
+/* 21 Oct: more on each aircraft and ship (flags, the flight number as sold, airframe and owner, times on the route). */
+html[data-view="ops"] .ops-flag { display: inline-block; width: 16px; height: 12px; margin: 0 5px 0 0; vertical-align: -1px; border-radius: 1px; box-shadow: 0 0 0 1px var(--o-line); object-fit: cover }
+html[data-view="ops"] .ops-card h3 small { margin-left: 6px; font-size: 12px; font-weight: 500; color: var(--o-dim); letter-spacing: .04em }
+html[data-view="ops"] .ops-card dl.ops-wide { grid-template-columns: minmax(0, 1fr); margin-top: 6px }
+html[data-view="ops"] .ops-card dl.ops-wide dd { white-space: normal; overflow-wrap: anywhere }
+html[data-view="ops"] .ops-card .ops-rtimes { margin: 5px 0 0; font: 500 11.5px var(--ops-mono); color: var(--o-dim) }

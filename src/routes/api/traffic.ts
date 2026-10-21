@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { metered } from "@/lib/desk/cpu-meter";
-import { AIR_BOX, aisEta, SEA_KEEP, tidyShips, angleDiff, bearing, continues, History, inAirBox, inSeaBox, joinTracks, km, lattice, matchPort, nearestPort, project, SEA_BOX, type LatLon } from "@/lib/desk/traffic-geo";
+import { AIR_BOX, aisEta, SEA_KEEP, tidyShips, angleDiff, bearing, continues, flagOf, History, shipJump, inAirBox, inSeaBox, joinTracks, km, lattice, matchPort, nearestPort, project, SEA_BOX, type LatLon } from "@/lib/desk/traffic-geo";
+import { shipInland } from "@/lib/desk/ship-land";
 import { airRoute } from "@/lib/traffic-route.server";
 
 /**
@@ -348,10 +349,12 @@ function airRows() {
  * stop: where the ship last lay still (speed under half a knot, or moored / at anchor) and until
  * when; once it moves on, that is where it came from (AIS has no origin).
  */
-type Ship = { mmsi: number; name: string; lat: number; lon: number; sog: number | null; cog: number | null; hdg: number | null; nav: number | null; type?: number; dest?: string; cs?: string; imo?: number; len?: number; eta?: string | null; t: number; sAt?: number;
+type Ship = { mmsi: number; name: string; lat: number; lon: number; sog: number | null; cog: number | null; hdg: number | null; nav: number | null; type?: number; dest?: string; cs?: string; imo?: number; len?: number; beam?: number; draught?: number; eta?: string | null; t: number; sAt?: number;
+  /** a position that jumped too far too fast, held until a second report agrees (shipJump) */
+  jump?: { lat: number; lon: number; t: number };
   stop?: { lat: number; lon: number; from: number; to: number } };
-/** Each ship's own positions, one per ten minutes for six hours. */
-const seaHist = new History(600, 6 * 3600, 40, 8000);
+/** Each ship's own positions, one per quarter hour for twelve hours (21 Oct: the past track on the card). */
+const seaHist = new History(900, 12 * 3600, 48, 9000);
 const sea = { ships: new Map<number, Ship>(), asked: 0, ws: null as WebSocket | null, note: "", openedAt: 0, tidyAt: 0 };
 type Msg = Record<string, Record<string, unknown> | undefined> & { MetaData?: Record<string, unknown>; Message?: Record<string, Record<string, unknown> | undefined>; error?: string };
 function seaOpen() {
@@ -381,7 +384,12 @@ function seaOpen() {
       const M = m.Message || {};
       const pr = M.PositionReport || M.StandardClassBPositionReport || M.ExtendedClassBPositionReport;
       const num = (v: unknown) => (typeof v === "number" ? v : null);
-      if (pr && typeof md.latitude === "number" && typeof md.longitude === "number") {
+      const lat = Number(md.latitude), lon = Number(md.longitude), now = Date.now();
+      // A false jump (spoofed GPS) is held back until a second report agrees with it.
+      const held = pr && Number.isFinite(lat) && Number.isFinite(lon) && shipJump(s, lat, lon, now) && !(s.jump && km(s.jump.lat, s.jump.lon, lat, lon) < 10 && now - s.jump.t < 3600_000);
+      if (held) s.jump = { lat, lon, t: now };
+      if (pr && !held && typeof md.latitude === "number" && typeof md.longitude === "number") {
+        s.jump = undefined;
         Object.assign(s, { lat: +md.latitude.toFixed(4), lon: +md.longitude.toFixed(4), sog: num(pr.Sog), cog: num(pr.Cog), hdg: pr.TrueHeading === 511 ? null : num(pr.TrueHeading), nav: num(pr.NavigationalStatus) ?? s.nav, t: Date.now() });
         const still = (s.sog != null && s.sog < 0.5) || s.nav === 1 || s.nav === 5;
         if (still) {
@@ -393,7 +401,7 @@ function seaOpen() {
       const st = M.ShipStaticData;
       if (st) {
         const D = (st.Dimension || {}) as Record<string, number>;
-        Object.assign(s, { type: st.Type, dest: String(st.Destination || "").trim(), cs: String(st.CallSign || "").trim(), imo: st.ImoNumber || undefined, len: (D.A || 0) + (D.B || 0) || undefined, eta: aisEta(st.Eta), sAt: Date.now() });
+        Object.assign(s, { type: st.Type, dest: String(st.Destination || "").trim(), cs: String(st.CallSign || "").trim(), imo: st.ImoNumber || undefined, len: (D.A || 0) + (D.B || 0) || undefined, beam: (D.C || 0) + (D.D || 0) || undefined, draught: typeof st.MaximumStaticDraught === "number" && st.MaximumStaticDraught > 0 ? st.MaximumStaticDraught : undefined, eta: aisEta(st.Eta), sAt: Date.now() });
       }
       const sd = M.StaticDataReport as Record<string, Record<string, unknown> | undefined> | undefined;
       if (sd) {
@@ -402,7 +410,7 @@ function seaOpen() {
         const B = sd.ReportB;
         if (B) {
           const D = (B.Dimension || {}) as Record<string, number>;
-          Object.assign(s, { type: B.ShipType ?? s.type, cs: String(B.CallSign || s.cs || "").trim(), len: (D.A || 0) + (D.B || 0) || s.len });
+          Object.assign(s, { type: B.ShipType ?? s.type, cs: String(B.CallSign || s.cs || "").trim(), len: (D.A || 0) + (D.B || 0) || s.len, beam: (D.C || 0) + (D.D || 0) || s.beam });
         }
       }
       sea.ships.set(id, s);
@@ -426,7 +434,7 @@ function seaTidy() {
 /** A ship's route: the AIS destination (and ETA) its crew set, where it last lay still, and the track we kept. */
 function seaRoute(mmsi: number) {
   const s = sea.ships.get(mmsi);
-  const track = joinTracks(300, seaHist.get(mmsi), s && s.t ? [[s.lat, s.lon, Math.round(s.t / 1000)]] : []);
+  const track = joinTracks(300, seaHist.get(mmsi).filter((p) => !shipInland(p[0], p[1])), s && s.t ? [[s.lat, s.lon, Math.round(s.t / 1000)]] : []);
   if (!s) return { ok: true, kind: "sea", mmsi, origin: null, destination: null, track, source: [], confidence: "unknown", note: "no position in the last six hours" };
   const moving = s.sog != null && s.sog >= 0.5 && s.nav !== 1 && s.nav !== 5;
   let origin = null;
@@ -494,8 +502,9 @@ export const Route = createFileRoute("/api/traffic")({
           sea.asked = Date.now();
           seaOpen();
           seaTidy();
-          const ships = [...sea.ships.values()].filter((s) => s.t && inSeaBox(s.lat, s.lon));
-          return json({ ok: true, live: sea.note === "live", note: sea.note, at: new Date().toISOString(), ships: ships.map((s) => [s.mmsi, s.name, s.lat, s.lon, s.sog, s.cog, s.hdg, s.nav, s.type ?? null, s.dest || null, s.cs || null, s.imo ?? null, s.len ?? null, new Date(s.t).toISOString(), Math.round(s.t / 1000), s.eta ?? null]) });
+          // Not a ship deep inland (a false position, see ship-land.ts).
+          const ships = [...sea.ships.values()].filter((s) => s.t && inSeaBox(s.lat, s.lon) && !shipInland(s.lat, s.lon));
+          return json({ ok: true, live: sea.note === "live", note: sea.note, at: new Date().toISOString(), ships: ships.map((s) => [s.mmsi, s.name, s.lat, s.lon, s.sog, s.cog, s.hdg, s.nav, s.type ?? null, s.dest || null, s.cs || null, s.imo ?? null, s.len ?? null, new Date(s.t).toISOString(), Math.round(s.t / 1000), s.eta ?? null, s.draught ?? null, s.beam ?? null, flagOf(s.mmsi)]) });
         }
         air.asked = Date.now();
         if (air.wake) air.wake();

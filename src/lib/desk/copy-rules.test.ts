@@ -515,7 +515,7 @@ test("a headline says what was said, and who said it (user, 21 Oct)", async () =
 
 test("an official's own posts are each a card: Araghchi's 7-part interview (21 Oct)", async () => {
   const { ownParts, talkRule } = await import("./fold-same.ts");
-  const p = (n: number, min: number) => ({ fp: `p${n}`, at: `2026-10-20T20:${String(47 + min).padStart(2, "0")}:00Z`, source: "Abbas Araghchi", url: `https://t.me/s_a_araghchi/${13084 + 2 * n}`, summary: `Araghchi: part ${n} line on the US and Hormuz`, type: "statement" });
+  const p = (n: number, min: number) => ({ fp: `p${n}`, at: `2026-10-20T20:${String(47 + min).padStart(2, "0")}:00Z`, source: "Abbas Araghchi", url: `https://t.me/s_a_araghchi/${13084 + 2 * n}`, summary: `Araghchi: ${["talks via Pakistan continue", "Hormuz closed until conditions met", "Gulf waters are internal", "sanctions relief first", "no talks under threat", "Oman lanes agreed"][n]}`, type: "statement" });
   assert.ok(ownParts(p(0, 0), p(1, 10)));
   assert.equal(talkRule(p(0, 0), p(1, 10)), null);
   // Nor does a looser event rule join them: the part on talks via Pakistan folded into the part on Hormuz.
@@ -525,6 +525,11 @@ test("an official's own posts are each a card: Araghchi's 7-part interview (21 O
   assert.equal(eventRule(talks, hormuz), null);
   assert.equal(eventRule(hormuz, talks), null);
   assert.equal(foldServed([talks, hormuz, { ...p(2, 40), summary: "Araghchi: Strait of Hormuz closed until US accepts Iran's conditions" }]).reports.length, 3);
+  // One line posted twice on his channel (13093 and 13094) is one card, not two parts.
+  const a1 = { ...p(4, 50), summary: "Araghchi: Iran will not negotiate under threat; nuclear issue is a pretext for US pressure" };
+  const a2 = { ...p(5, 52), summary: "Araghchi says nuclear issue is a pretext for US pressure and Iran will not negotiate under threat" };
+  assert.ok(!ownParts(a1, a2));
+  assert.equal(foldServed([a1, a2]).reports.length, 1);
   // Another outlet's line is no own part.
   assert.ok(!ownParts(p(0, 0), { ...p(1, 10), source: "Al Mayadeen", url: "https://t.me/almayadeen/1" }));
 });

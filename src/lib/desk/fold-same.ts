@@ -21,7 +21,7 @@
  *   en.khabaragency1.net), and one channel's same headline is one card.
  */
 import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
-import { speechOwner, wordsInCommon } from "./copies.ts";
+import { headWords, speechOwner, wordsInCommon } from "./copies.ts";
 import { officialVoice } from "./speaker-press.ts";
 import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteTakesLead } from "./site-articles.ts";
 
@@ -745,9 +745,18 @@ export function eventRule(a: Card, b: Card): Rule | null {
 }
 
 const OWN_POST = /^https:\/\/(?:t\.me|x\.com|twitter\.com)\//;
-/** Two posts of one official's own channel (two links of it). */
+/** Most of two headlines' words shared: one line posted twice (a text, then its clip). */
+function nearSame(a: string, b: string): boolean {
+  const x = headWords(a), y = headWords(b);
+  if (!x.size || !y.size) return false;
+  let both = 0;
+  for (const w of x) if (y.has(w)) both += 1;
+  return both / (x.size + y.size - both) >= 0.6;
+}
+
+/** Two posts of one official's own channel (two links of it), saying two different things. */
 export function ownParts(a: Card, b: Card): boolean {
-  return a.source === b.source && a.url !== b.url && OWN_POST.test(String(a.url)) && OWN_POST.test(String(b.url)) && !!officialVoice(a.source);
+  return a.source === b.source && a.url !== b.url && OWN_POST.test(String(a.url)) && OWN_POST.test(String(b.url)) && !!officialVoice(a.source) && !nearSame(a.summary, b.summary);
 }
 
 /** One speaker's words: their remarks that day, or one channel's burst of their lines. */

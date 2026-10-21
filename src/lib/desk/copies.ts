@@ -4,7 +4,7 @@
  */
 
 /** Content words of a headline, without the speaker it opens with. */
-function headWords(summary: string): Set<string> {
+export function headWords(summary: string): Set<string> {
   const said = String(summary || "").replace(/^[^:]{2,60}:\s/, "");
   return new Set(
     (said.toLowerCase().match(/[a-z][a-z'-]{2,}/g) || []).filter((w) => !HEAD_STOP.has(w)).map((w) => w.replace(/s$/, "")),

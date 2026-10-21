@@ -3173,6 +3173,14 @@ export async function shapeCards(
     pipe.combineSystem,
   );
   lap("combine");
+  // An official's own posts are each a card (21 Oct): a group that took in another post of its lead's own channel
+  // gives it back as its own card; as an "Also" of its own channel it went nowhere (Araghchi's interview, parts 3 and 7).
+  for (const g of [...groups]) {
+    const own = g.others.filter((o) => ownParts(g.lead as unknown as SameCard, o as unknown as SameCard));
+    if (!own.length) continue;
+    g.others = g.others.filter((o) => !own.includes(o));
+    for (const o of own) groups.push({ lead: o, others: [] });
+  }
   for (const { lead, others } of groups) {
     if (!others.length) continue;
     // Distinct outlets only: three posts from one channel is one account.

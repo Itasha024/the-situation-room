@@ -1123,7 +1123,7 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .led-detail{margin-top:.5rem}
 .led-more:not(.open) tr.led-rest{display:none}
 .led-more .led-tog{display:block;margin-top:.6rem}
-.led-more.expandable,.front-card.expandable{cursor:pointer}
+.led-more.expandable,.front-card.expandable,.tally-box.expandable{cursor:pointer}
 .tally-box.ledger td small.flag{display:inline;font-size:.64rem}
 .tally-box.ledger th small.span{display:block;margin-top:.1rem;font-size:.58rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--t-muted,#8fa3b6)}
 .tally-box.ledger table.list td.d{width:4.2rem}

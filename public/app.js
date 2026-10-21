@@ -6417,7 +6417,7 @@ function renderTimeline(d) {
       ${detail ? `<div class="full">
         <p>${escapeHtml(detail)}</p>
         ${p.mapNote && !isNow ? `<p class="muted">${T('On the map: {t}', { t: escapeHtml(p.mapNote) })}</p>` : ''}
-        <div class="srcs">${asOf ? `${T('Updated {t}', { t: escapeHtml(asOf) })} · ` : ''}${T('Source:')} ${sourceCreditsHtml(p.sources || [], '')}</div>
+        <div class="srcs">${asOf ? `${T('Updated {t}', { t: escapeHtml(asOf) })}` : ''}${(p.sources || []).length ? `<details class="src-list"><summary>${T('Sources')} (${(p.sources || []).length})</summary><p>${sourceCreditsHtml(p.sources || [], '')}</p></details>` : ''}</div>
       </div>
       <button type="button" class="toggle-phase">Read more</button>` : ''}
     </article>`;

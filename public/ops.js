@@ -236,8 +236,9 @@
       <span class="ops-trfw"><button type="button" class="ops-btn" data-op="traffic" aria-pressed="false" title="Live aircraft and ships, on or off (T)">${ICON.plane}<span>Traffic</span></button><button type="button" class="ops-btn ops-ico ops-trfm" data-op="trafmenu" aria-expanded="false" title="Traffic options">${ICON.down}<span class="sr">Traffic options</span></button></span>
       <button type="button" class="ops-btn ops-ico" data-op="cast" aria-pressed="false" title="Broadcast mode, for screens and TV (B)">${ICON.cast}<span class="sr">Broadcast mode</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="theme" title="Day or night">${ICON.theme}<span class="sr">Day or night</span></button>
+      <button type="button" class="ops-btn ops-ico ops-keysbtn" data-op="keys" title="Keys (?)">${ICON.keys}<span class="sr">Keys</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="settings" title="Settings (,)">${ICON.gear}<span class="sr">Settings</span></button>
-      <button type="button" class="ops-btn ops-ico" data-op="full" title="Full screen (F)">${ICON.full}<span class="sr">Full screen</span></button>`;
+      ${document.fullscreenEnabled ? `<button type="button" class="ops-btn ops-ico" data-op="full" title="Full screen (F)">${ICON.full}<span class="sr">Full screen</span></button>` : ''}`;
     bar.appendChild(acts);
     root.insertBefore(bar, root.firstChild);
     root.insertBefore(strip, bar);
@@ -247,10 +248,8 @@
     nav = document.createElement('nav');
     nav.className = 'ops-nav';
     nav.setAttribute('aria-label', 'Panels');
-    nav.innerHTML = tabs.map(([id, n, ic]) => `<button type="button" data-tab="${id}" title="${esc(n)}">${NAV_ICON[ic]}<span>${esc(n)}</span></button>`).join('')
-      // The All page keeps Layers on the map, at its bottom right (user, 21 Oct).
-      + (PAGE === 'all' ? '' : `<span class="ops-nav-sp"></span><button type="button" data-op="layers" aria-expanded="false" title="Layers: base map, names, grid, control areas (Y)">${NAV_ICON.layers}<span>Layers</span></button>`)
-      + `<button type="button" data-op="keys" title="Keys (?)">${ICON.keys}<span>Keys</span></button>`;
+    // Layers sit on the map at its bottom right and Keys in the bar, on every page (user, 21 Oct).
+    nav.innerHTML = tabs.map(([id, n, ic]) => `<button type="button" data-tab="${id}" title="${esc(n)}">${NAV_ICON[ic]}<span>${esc(n)}</span></button>`).join('');
     leftEl = document.createElement('aside');
     leftEl.className = 'ops-left';
     leftEl.innerHTML = `<div class="ops-phead"><h2 class="ops-ptitle"></h2><button type="button" class="ops-fold" data-op="left" title="Close the panel ([)">${ICON.left}</button></div><div class="ops-panes"></div>`;
@@ -308,7 +307,10 @@
     // The phone's tabs: the map, then each part of the page.
     const pt = document.createElement('nav');
     pt.className = 'ops-ptabs';
-    pt.innerHTML = [['map', 'Map'], ...tabs, ['rail', 'Reports'], ['events', 'Events']].map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
+    // Map, Brief, Reports, the fronts or arenas, Numbers, Events, Timeline (user, 21 Oct).
+    const tab = (id) => tabs.find((x) => x[0] === id);
+    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], tab('timeline-wrap')].filter(Boolean);
+    pt.innerHTML = phone.map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
     root.insertBefore(pt, bar.nextSibling);
     if (PAGE === 'all') drawTheatres();
     paintFrame();
@@ -436,9 +438,20 @@
     rightEl.querySelectorAll('[data-rtab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.rtab === S.rtab)));
     root.querySelectorAll('[data-ptab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ptab === S.ptab)));
     const c = $('[data-op="cast"]', bar); if (c) c.setAttribute('aria-pressed', String(S.cast));
+    paintSlim(true);
     if (gripsOn) paintSizes();
     setTimeout(sizeDock, 30);
     setTimeout(sizeDock, 260);
+  }
+  /* A panel with its own side menu (the fronts or arenas, the numbers, the timeline, the All page's desks): the main
+     rail beside it is its icons only, so the two menus do not take the panel's room (user, 21 Oct). */
+  const SUB_SEL = '.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav';
+  function paintSlim(quiet) {
+    const p = S.left && !isPhone() && document.getElementById(S.tab);
+    const on = !!(p && p.querySelector(SUB_SEL));
+    if (root.classList.contains('ops-slim') === on) return;
+    root.classList.toggle('ops-slim', on);
+    if (!quiet && gripsOn) paintSizes();
   }
   function wireFrame() {
     root.addEventListener('click', (ev) => {
@@ -601,7 +614,6 @@
         <button type="button" data-tool="ruler" title="Measure: click points, double-click to end (M)">${ICON.ruler}<span class="sr">Measure</span></button>
         <button type="button" data-tool="rings" title="Range rings: click a place (R)">${ICON.rings}<span class="sr">Range rings</span></button>
         <button type="button" data-do="link" title="Copy a link to this view (L)">${ICON.link}<span class="sr">Link to this view</span></button>
-        <button type="button" data-do="layers" class="ops-ph" title="Layers">${NAV_ICON.layers}<span class="sr">Layers</span></button>
       </div>
       <div class="ops-tooltip" hidden></div>
       <div class="ops-coords" aria-live="off"><span class="ops-ll">Point at the map</span><span class="ops-mgrs"></span></div>
@@ -610,7 +622,7 @@
       <div class="ops-card" hidden></div>
       <div class="ops-menu ops-lyr" hidden></div>
       <div class="ops-menu ops-trf" hidden></div>
-      <div class="ops-lower" hidden></div>${PAGE === 'all' ? `<button type="button" data-do="layers" class="ops-lyrbtn" aria-expanded="false" title="Layers: base map, grid, control areas (Y)">${NAV_ICON.layers}<span>Layers</span></button>` : ''}`;
+      <div class="ops-lower" hidden></div><button type="button" data-do="layers" class="ops-lyrbtn" aria-expanded="false" title="Layers: base map, grid, control areas (Y)">${NAV_ICON.layers}<span class="sr">Layers</span></button>`;
     mapWrap.appendChild(hud);
     L.DomEvent.disableClickPropagation(hud);
     L.DomEvent.disableScrollPropagation(hud);
@@ -1010,6 +1022,7 @@
     list.forEach((e) => seen.add(keyOf(e)));
     if (P.alerts) fresh.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 3).forEach((e) => { toast(e); ping(e); });
     if (fresh.length && P.sound && P.alerts) beep();
+    if (fresh.length && S.cast) castBreaking(fresh.reduce((a, b) => (a.at > b.at ? a : b)));
     if (fresh.length) { drawMatrix(); if (PAGE === 'all') drawAllRail(); }
   }
   function toast(e) {
@@ -1611,6 +1624,8 @@
   const DESK_NAME = { iran: 'Iran', yemen: 'Yemen' };
   function setCast(on) {
     S.cast = on;
+    // A phone shows the map tab under broadcast.
+    if (on && isPhone()) S.ptab = 'map';
     paintFrame();
     clearInterval(CAST.timer); CAST.timer = 0;
     stopLapse();
@@ -1621,7 +1636,7 @@
       castOpening();
       if (CAST.play) setTimeout(() => { if (S.cast && CAST.i < 0) castStep(1); }, P.still ? 0 : 3200);
       // The tour waits while a ship's or an aircraft's card is open (21 Oct).
-      CAST.timer = setInterval(() => { if (CAST.play && !CAST.lapse && !T.sel) castStep(1); }, CAST_MS);
+      CAST.timer = setInterval(() => { if (CAST.play && !CAST.lapse && !T.sel) castStep(1, true); }, CAST_MS / 2);
       castIdle();
     } else {
       if (CAST.full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -1638,8 +1653,52 @@
     m.setView([25, 45], 2, { animate: false });
     setTimeout(() => { if (S.cast) m.flyToBounds(area, { duration: 2.6 }); }, 400);
   }
-  function castStep(d) {
+  /* The desk's brief in short: its first points (the All page: each desk's first two), without the reference numbers. */
+  function briefPoints() {
+    if (PAGE === 'all') {
+      const h = window.__home, out = [];
+      [['iran', h && h.D && h.D.ibrief], ['yemen', h && h.D && h.D.ybrief]].forEach(([desk, b]) => {
+        const s = b && b.situation;
+        (s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 2) : []).forEach((t) => out.push({ desk, t }));
+      });
+      return out;
+    }
+    return [...document.querySelectorAll('#situation .pts > li')].slice(0, 3).map((li) => {
+      const c = li.cloneNode(true);
+      c.querySelectorAll('sup, .ref-n, button').forEach((x) => x.remove());
+      return { desk: PAGE, t: c.textContent.replace(/\s+/g, ' ').trim() };
+    }).filter((x) => x.t);
+  }
+  /* Every eighth turn of the tour is the brief, the map showing the desk's whole area, held twice as long. */
+  const BRIEF_EVERY = 8;
+  function castBrief() {
+    const pts = briefPoints();
+    if (!pts.length) return false;
+    CAST.cur = { brief: pts };
+    CAST.hold = Date.now() + CAST_MS * 1.5;
+    const m = getMap(), b = areaB();
+    if (m && b) try { m.flyToBounds(b, { padding: [40, 40], duration: P.still ? 0 : 1.4 }); } catch (e) { /* kept */ }
+    paintCast();
+    return true;
+  }
+  /* A new event while on air: the tour stops for it, the map goes to it, Breaking on the lower third. */
+  function castBreaking(e) {
+    if (!S.cast || CAST.lapse) return;
+    CAST.cur = { breaking: e, at: e.at, desk: e.desk };
+    CAST.hold = Date.now() + CAST_MS * 2.5;
+    const m = getMap();
+    m.closePopup();
+    m.flyTo([e.lat, e.lng], Math.max(6.5, Math.min(8, m.getZoom())), { duration: P.still ? 0 : 1.4 });
+    m.once('moveend', () => { if (S.cast && CAST.cur && CAST.cur.breaking === e) ping(e); });
+    paintCast();
+  }
+  function castStep(d, auto) {
     if (CAST.lapse) return;
+    if (auto && CAST.hold > Date.now()) return;
+    // Each turn holds for its time (the clock looks twice as often, so a Breaking or the brief ends on time).
+    CAST.hold = Date.now() + CAST_MS - 250;
+    CAST.n = (CAST.n || 0) + 1;
+    if (auto && CAST.n % BRIEF_EVERY === 0 && castBrief()) return;
     const list = castList();
     if (!list.length) return;
     CAST.i = (CAST.i + d + list.length) % list.length;
@@ -1684,10 +1743,26 @@
     const legList = CAST.lapse ? CAST.lapse.list : events(true).filter((e) => now - tOf(e) < 864e5);
     const lkey = legList.length + '|' + (CAST.lapse ? CAST.lapse.k : '');
     if (lg._k !== lkey) { lg._k = lkey; lg.innerHTML = castLegend(legList); }
+    // The lower third: a report of the tour, a new event as it comes in (Breaking), or the desk's brief in short.
+    let lb = '';
+    if (r && r.breaking) {
+      const e = r.breaking, s = sideOf(e), k = kindOf(e);
+      lb = `<div class="ops-lb ops-lbreak" style="--c:${s.c}"><div><small><b class="brk">Breaking</b> New on the map · ${esc(hm(e.at, VIEW_TZ()))}${PAGE === 'all' && DESK_NAME[e.desk] ? ` · ${esc(DESK_NAME[e.desk])}` : ''} · ${esc(s.name)} · ${esc(k.name)}</small><p>${esc(e.label || k.name)}</p></div></div>`;
+    } else if (r && r.brief) {
+      lb = `<div class="ops-lb ops-lbrief"><div><small>The brief${PAGE === 'all' ? '' : ` · ${esc(DESK_NAME[PAGE])}`}</small><ol>${r.brief.map((x) => `<li>${PAGE === 'all' ? `<i>${esc(DESK_NAME[x.desk])}</i> ` : ''}${esc(x.t)}</li>`).join('')}</ol></div></div>`;
+    } else if (r) {
+      lb = `<div class="ops-lb" style="--c:${r.desk === 'iran' ? '#e5484d' : '#f08c2e'}"><div><small>${esc(hm(r.at, VIEW_TZ()))}${PAGE === 'all' && DESK_NAME[r.desk] ? ` · ${esc(DESK_NAME[r.desk])}` : ''}${r.src ? ` · ${esc(r.src)}` : ''}</small><p>${esc(r.h)}</p></div></div>`;
+    }
     const L3 = CAST.lapse ? '' : `<div class="ops-l3">
         <div class="ops-lt"><span class="live">Live</span><b>In the region</b><span class="clk"><span><small>Tehran</small>${esc(hm(now, TZ.iran))}</span><span><small>Sanaa</small>${esc(hm(now, TZ.yemen))}</span></span><span class="brand">${LOGO}The Situation Room</span></div>
-        ${r ? `<div class="ops-lb" style="--c:${r.desk === 'iran' ? '#e5484d' : '#f08c2e'}"><div><small>${esc(hm(r.at, VIEW_TZ()))}${PAGE === 'all' && DESK_NAME[r.desk] ? ` · ${esc(DESK_NAME[r.desk])}` : ''}${r.src ? ` · ${esc(r.src)}` : ''}</small><p>${esc(r.h)}</p></div></div>` : ''}
+        ${lb}
       </div>`;
+    // The last 24 hours at a glance, top right: the events on the map, by who acted.
+    const day = events(true).filter((e) => now - tOf(e) < 864e5);
+    const bySide = new Map();
+    day.forEach((e) => { const s = sideOf(e); const n = /not stated/i.test(s.name) ? 'Not stated' : s.name; const x = bySide.get(n) || { n, c: s.c, k: 0 }; x.k++; bySide.set(n, x); });
+    const sides = [...bySide.values()].sort((a, b) => b.k - a.k).slice(0, 5);
+    const board = CAST.lapse ? '' : `<div class="ops-cboard"><small>Last 24 hours</small><b>${day.length.toLocaleString('en-GB')}</b><span>events on the map</span>${sides.length ? `<ul>${sides.map((x) => `<li style="--c:${x.c};--w:${Math.max(6, Math.round((x.k / sides[0].k) * 100))}%"><span>${esc(x.n)}</span><i></i><em>${x.k}</em></li>`).join('')}</ul>` : ''}</div>`;
     const lp = CAST.lapse;
     $('.ops-cmain', el).innerHTML = `
       <div class="ops-cbar" role="toolbar" aria-label="Broadcast">
@@ -1696,9 +1771,11 @@
         <button type="button" data-cast="next" title="The next">${ICON.right}</button>`}
         <label class="ops-csel"><span class="sr">Time lapse</span><select data-cast="lapse"><option value="">Live: in the region</option>${lapses().map(([k, n]) => `<option value="${k}"${lp && lp.k === k ? ' selected' : ''}>Time lapse: ${esc(n)}</option>`).join('')}</select></label>
         <button type="button" data-cast="traffic" aria-pressed="${S.air || S.sea}" title="Live aircraft and ships">${ICON.plane}<span>Traffic</span></button>
+        <button type="button" data-cast="link" title="A link that opens this page in broadcast, for a screen or a TV">${ICON.link}<span>Screen link</span></button>
         <button type="button" data-cast="exit" class="ops-cexit">Exit</button>
       </div>
       ${lp ? `<div class="ops-lapse"><b>${esc(lp.n)}</b><time></time><small></small><span class="ops-lbar"><i></i></span><button type="button" data-cast="replay">Again</button></div>` : ''}
+      ${board}
       ${L3}`;
     if (lp) paintLapse();
   }
@@ -1793,6 +1870,7 @@
       else if (a === 'next') castStep(1);
       else if (a === 'prev') castStep(-1);
       else if (a === 'traffic') { trafficOnOff(); paintCast(); }
+      else if (a === 'link') copy(`${location.origin}${location.pathname}#cast`, b);
       else if (a === 'replay' && CAST.lapse) startLapse(CAST.lapse.k);
     });
     low.addEventListener('change', (ev) => {
@@ -1971,16 +2049,44 @@
 
   /* ---------- The page's own parts, in this view's terms ---------- */
   /* Who and What, each on its own line (20 Oct). The legend is drawn again by the page now and then. */
+  /* 21 Oct (user: Who and What "taking too much space and heavy on the eyes"): each one line, its name fixed at
+     the start and its marks sliding sideways, faded at the edge where more are hidden. */
   function splitLegend() {
     const body = $('.ops-who .leg-body', root);
     if (!body) return;
-    const heads = [...body.querySelectorAll('.leg-sec, .leg-sub')];
-    const what = heads.find((h) => /^\s*what\b/i.test(h.textContent));
-    if (what && !(what.previousElementSibling && what.previousElementSibling.classList.contains('ops-br'))) {
-      const br = document.createElement('i');
-      br.className = 'ops-br';
-      what.before(br);
-    }
+    const loose = [...body.children].filter((c) => c.matches('.leg-sec, .leg-sub, .leg-item'));
+    if (!loose.length) return;
+    let chips = null;
+    loose.forEach((el) => {
+      if (!el.classList.contains('leg-item')) {
+        const row = document.createElement('div');
+        row.className = 'ops-lrow';
+        chips = document.createElement('div');
+        chips.className = 'ops-lchips';
+        el.before(row);
+        row.append(el, chips);
+        chips.addEventListener('scroll', () => edgeFade(chips), { passive: true });
+        // A mouse wheel slides the line sideways.
+        chips.addEventListener('wheel', (ev) => { if (Math.abs(ev.deltaY) > Math.abs(ev.deltaX) && chips.scrollWidth > chips.clientWidth) { chips.scrollLeft += ev.deltaY; ev.preventDefault(); } }, { passive: false });
+        return;
+      }
+      if (!chips) {
+        const row = document.createElement('div');
+        row.className = 'ops-lrow';
+        chips = document.createElement('div');
+        chips.className = 'ops-lchips';
+        el.before(row);
+        row.append(chips);
+      }
+      chips.appendChild(el);
+    });
+    body.querySelectorAll('.ops-br').forEach((b) => b.remove());
+    body.querySelectorAll('.ops-lchips').forEach(edgeFade);
+  }
+  function edgeFade(c) {
+    const more = c.scrollWidth - c.clientWidth;
+    c.classList.toggle('ops-fade-r', more > 2 && c.scrollLeft < more - 2);
+    c.classList.toggle('ops-fade-l', more > 2 && c.scrollLeft > 2);
   }
   /* Every front or arena at once, each in its box, not one at a time (20 Oct: "lay it out more professionally"). */
   function unpage() {
@@ -1993,6 +2099,131 @@
       t.dataset.opsL = '1';
       const heads = [...t.querySelectorAll('tr:first-child th')].map((h) => h.textContent.trim());
       t.querySelectorAll('tr').forEach((tr, i) => { if (!i) return; [...tr.children].forEach((td, j) => { if (j > 1 && heads[j]) td.dataset.h = heads[j]; }); });
+    });
+    // Every box's name over its box, not inside it (user, 21 Oct).
+    root.querySelectorAll('.ops-left .tally-box > h3:first-child').forEach((h) => { h.classList.add('ops-boxhead'); h.parentElement.before(h); });
+    attackPins();
+    paintSlim();
+  }
+
+  /* ---------- The attacks on ships and on energy sites, each row with its place on the map (user, 21 Oct) ----------
+     A row is matched to its pin on the desk's map (the same day or the day either side, the same kind of event, a
+     word of its place in the pin's); a row with no pin opens on its place from the map's own list of places. The
+     pin opens the small map, as every Show on map does. */
+  const PIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5a7 7 0 0 0-7 7c0 5.1 6.1 11.4 6.4 11.7a.8.8 0 0 0 1.2 0c.3-.3 6.4-6.6 6.4-11.7a7 7 0 0 0-7-7zm0 9.7a2.7 2.7 0 1 1 0-5.4 2.7 2.7 0 0 1 0 5.4z"/></svg>';
+  const MON3 = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+  /** "13 Oct" (or "13 Oct 2026") as a day, in the year that puts it last before today. */
+  function rowDay(txt) {
+    const m = /(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?(?:\s+(\d{4}))?/.exec(String(txt || ''));
+    if (!m || MON3[m[2].toLowerCase()] == null) return null;
+    const now = new Date();
+    let y = m[3] ? +m[3] : now.getUTCFullYear();
+    let t = Date.UTC(y, MON3[m[2].toLowerCase()], +m[1], 12);
+    if (!m[3] && t > Date.now() + 2 * 864e5) t = Date.UTC(--y, MON3[m[2].toLowerCase()], +m[1], 12);
+    return t;
+  }
+  const STOP = /^(?:the|of|in|at|on|off|near|and|by|from|to|nautical|miles?|km|north|south|east|west|northern|southern|eastern|western|coast|port|station|stations|pump|field|gas|oil|crude|pipeline|refinery|refineries|depot|plant|terminals?|regions?|province|headquarters|facility|facilities|processing|electricity|power|fuel|bulk|airport|city|central|three|two|four|five|six|one|vessel|ship|tanker|attack|attacked|saudi|arabia|yemen|iran|iraq|red|sea|gulf|al)$/i;
+  const words = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').split(/[^A-Za-z]+/).filter((w) => w.length > 3 && !STOP.test(w)).map((w) => w.toLowerCase());
+  const SEA_KINDS = /vessel|ship|maritime|sea|naval/;
+  const LAND_KINDS = /port|energy|infra|strike|oil/;
+  // The same place under the spellings the sources use.
+  const SAME = { mukha: 'mocha', makha: 'mocha', jizan: 'jazan', gizan: 'jazan', hudaydah: 'hodeidah', hodeida: 'hodeidah', mukalla: 'mukalla' };
+  function rowPin(kind, day, place, desk) {
+    if (day == null) return null;
+    const ws = words(place).map((w) => SAME[w] || w);
+    const near = events(true).filter((e) => e.desk === desk && typeof e.lat === 'number' && Math.abs(Date.parse(e.at) - day) < 1.6 * 864e5)
+      .filter((e) => { const k = kindOf(e).k; return kind === 'sea' ? SEA_KINDS.test(k) : LAND_KINDS.test(k) || SEA_KINDS.test(k); });
+    // A ship's row with no place of its own ("Off the Yemeni coast"): the one attack on a ship that day, if there is one.
+    const sameDay = (e) => Math.abs(Date.parse(e.at) - day) < 0.6 * 864e5;
+    const lone = () => { const d = near.filter(sameDay); return kind === 'sea' && d.length === 1 ? d[0] : null; };
+    if (!ws.length) return lone();
+    let best = null, bestN = 0;
+    for (const e of near) {
+      const hay = words(`${e.place || ''} ${e.label || ''} ${e.text || ''}`).map((w) => SAME[w] || w).join(' ');
+      const n = ws.filter((w) => hay.includes(w)).length;
+      if (n > bestN || (n === bestN && best && Math.abs(Date.parse(e.at) - day) < Math.abs(Date.parse(best.at) - day))) { best = e; bestN = n; }
+    }
+    return bestN ? best : lone();
+  }
+  /* The places a row can name: the region's cities and the desks' list of places; a country, when that is all it names. */
+  let CITIES = null;
+  function loadCities() {
+    if (CITIES) return;
+    CITIES = [];
+    fetch('/iran-cities.json').then((r) => r.json()).then((j) => { CITIES = (j.cities || []).map((c) => ({ name: c[0], ll: [c[1], c[2]], rank: c[3] })); attackPins(true); }).catch(() => { /* the desks' places only */ });
+  }
+  // The seas, straits and oil sites the attack lists name that are not towns.
+  const WATERS = [['Strait of Hormuz', 26.57, 56.25], ['Gulf of Oman', 24.6, 58.3], ['Gulf of Aden', 12.6, 47.5], ['Arabian Sea', 16.5, 61], ['Persian Gulf', 27.2, 51.3], ['Arabian Gulf', 27.2, 51.3], ['Bab al-Mandab', 12.6, 43.35], ['Suez Canal', 30.6, 32.33], ['Kharg Island', 29.25, 50.32], ['Lavan Island', 26.8, 53.36], ['Sirri Island', 25.9, 54.54], ['Asaluyeh', 27.47, 52.61], ['Mahshahr', 30.56, 49.2], ['Jubail', 27.0, 49.66], ['Khurais', 25.07, 48.0], ['Manifa', 27.6, 48.98], ['Juaymah', 26.85, 50.03], ['Shedgum', 25.66, 49.4], ['Tanajib', 27.83, 48.88], ['Ras Laffan', 25.9, 51.55], ['Mina al-Fahal', 23.63, 58.52], ['Mina al-Ahmadi', 29.06, 48.15], ['South Pars', 27.47, 52.61], ['Khor Mor', 35.07, 44.83], ['Medina', 24.47, 39.61], ['Jazan', 16.89, 42.55], ['Jizan', 16.89, 42.55], ['Basra', 30.51, 47.81], ['Fordow', 34.88, 50.99], ['Duqm', 19.66, 57.7], ['Ras Tanura', 26.64, 50.16], ['Bonji', 25.7, 57.6]].map(([name, a, b]) => ({ name, ll: [a, b], rank: 2 }));
+  const COUNTRY_LL = { kuwait: [29.31, 47.98], bahrain: [26.07, 50.55], qatar: [25.3, 51.2], 'united arab emirates': [24.3, 54.4], uae: [24.3, 54.4], oman: [21.5, 57], israel: [31.6, 34.9], iraq: [33.2, 43.7], jordan: [31.2, 36.5], lebanon: [33.9, 35.8], syria: [35, 38.5], cyprus: [35, 33.2], djibouti: [11.7, 42.6], eritrea: [15.3, 39], somalia: [6, 46], sudan: [16, 30], egypt: [27, 30] };
+  const plain = (s) => ` ${String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, '').replace(/[^a-z]+/g, ' ').trim()} `;
+  /** A place the map knows by name, from the row's words (the longest name first). */
+  function rowPlace(place) {
+    loadCities();
+    const t = plain(place);
+    const gaz = ((app('GAZ') || {}).places || []).flatMap((p) => [p.name, ...(p.aliases || [])].map((n) => ({ name: n, ll: [p.lat, p.lng], rank: 2, shown: p.name })));
+    let best = null;
+    for (const c of [...gaz, ...WATERS, ...(CITIES || [])]) {
+      const n = plain(c.name);
+      const at = n.length < 6 ? -1 : t.indexOf(n);
+      if (at < 0) continue;
+      // The place named first (the site, before its province or country), then the longest name.
+      if (!best || at < best.at || (at === best.at && (n.length > best.n.length || (n.length === best.n.length && c.rank < best.c.rank)))) best = { c, n, at };
+    }
+    if (best) return { ll: best.c.ll, name: best.c.shown || best.c.name };
+    const spans = A('placeSpans')(` in ${place}`) || [];
+    const sp = spans.find((s) => s[2] && (s[2].ll || s[2].kind === 'area'));
+    if (!sp) {
+      const k = Object.keys(COUNTRY_LL).find((x) => t.includes(` ${x} `));
+      return k ? { ll: COUNTRY_LL[k], name: k.replace(/\b\w/g, (c) => c.toUpperCase()).replace('Uae', 'UAE'), country: true } : null;
+    }
+    const en = sp[2];
+    if (en.ll) return { ll: en.ll, name: en.name };
+    try { const f = en.kind === 'gov' ? null : en.ref; const c = f && L.geoJSON(f).getBounds().getCenter(); return c ? { ll: [c.lat, c.lng], name: en.name } : null; } catch (e) { return null; }
+  }
+  function attackPins(retry) {
+    root.querySelectorAll('.ops-left table.list').forEach((t) => {
+      const ships = t.classList.contains('ships') || /maritime|vessel|ship|incident/i.test(t.className);
+      const heads = [...t.querySelectorAll('tr:first-child th')].map((h) => h.textContent.trim().toLowerCase());
+      const placeCol = heads.findIndex((h) => /^(?:location|place|site|where|target|facility)/.test(h));
+      const sites = t.classList.contains('sites') || placeCol >= 0 && /site|facility|target/.test(heads[placeCol]);
+      if (!ships && !sites) return;
+      const desk = PAGE === 'all' ? null : PAGE;
+      if (!desk || placeCol < 0) return;
+      t.querySelectorAll('tr').forEach((tr, i) => {
+        // A row with no place found yet is looked at again when the map's events change.
+        if (!i || tr.dataset.opsPin === '1' || (tr.dataset.opsPin === '0' && !retry)) return;
+        const cells = [...tr.children];
+        const place = cells[placeCol] ? cells[placeCol].textContent.trim() : '';
+        const day = rowDay(cells[0] && cells[0].textContent);
+        const e = rowPin(ships ? 'sea' : 'land', day, place, desk);
+        const spot = e ? null : rowPlace(place);
+        tr.dataset.opsPin = e || spot ? '1' : '0';
+        if (!e && !spot) return;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ops-rowpin';
+        b.title = 'Show on map';
+        b.setAttribute('aria-label', `Show ${place} on the map`);
+        b.innerHTML = PIN_ICON;
+        b.addEventListener('click', (ev) => { ev.stopPropagation(); openRowMap(e, spot, place, b); });
+        cells[placeCol].appendChild(b);
+      });
+    });
+  }
+  function openRowMap(e, spot, place, anchor) {
+    const wide = !isPhone() ? anchor : null;
+    if (e && e.desk === 'iran') return A('openIranMapPop')([e], e.label || place, wide, () => A('showIranPin')(String(e.fp)));
+    if (e) return A('openPinSheet')(e, wide);
+    const pop = app('openMapPop');
+    if (!pop || !spot) return;
+    pop({
+      title: place,
+      anchor: wide,
+      legend: '',
+      build: (m) => {
+        m.setView(spot.ll, spot.country ? 5.5 : 7);
+        L.circleMarker(spot.ll, { radius: 9, color: '#fff', weight: 2, fillColor: '#e0a43c', fillOpacity: 0.95 }).bindTooltip(spot.name, { permanent: true, direction: 'top', offset: [0, -8] }).addTo(m);
+      },
     });
   }
   /* A report opened from the All page (#r=…): the reports panel, open. */
@@ -2033,6 +2264,8 @@
     warForChart();
     runTraffic();
     if (location.hash === '#settings') openSettings();
+    // A screen's link (#cast) opens the page in broadcast, to run on its own on a wall or a TV.
+    if (location.hash === '#cast') setTimeout(() => { if (!S.cast) setCast(true); }, 1500);
     // The theme: the overview's tiles and the traffic's edges follow it.
     // The tab's icon is the site's logo in the theme shown (user, 21 Oct).
     const tabIcon = () => { const l = document.querySelector('link[rel="icon"]'); if (l) l.href = `/ops-icon-${night() ? 'night' : 'day'}.svg?v=1`; };
@@ -2049,8 +2282,10 @@
       const ev = events();
       let top = '';
       for (const e of ev) if (e.at > top) top = e.at;
-      const s = `${ev.length}|${top}|${PAGE === 'all' && window.__home ? window.__home.D.reports.length : ''}`;
-      if (s !== sig) { sig = s; drawMatrix(); if (PAGE === 'all') drawAllRail(); }
+      // The All page's briefs come in after its events: the panel shows them as they do (it said Loading for up to a minute).
+      const h = PAGE === 'all' && window.__home;
+      const s = `${ev.length}|${top}|${h ? [h.D.reports.length, h.D.ibrief && h.D.ibrief.updatedAt, h.D.ybrief && h.D.ybrief.updatedAt].join(',') : ''}`;
+      if (s !== sig) { sig = s; drawMatrix(); if (PAGE === 'all') drawAllRail(); attackPins(true); }
       watch();
     };
     look();
@@ -2068,6 +2303,7 @@
       applyPrefs();
       if (OPEN_REPORT) { S.right = true; S.rtab = 'rep'; S.ptab = 'rail'; }
       build(); tick(); counts(); startHud();
+      if (PAGE !== 'all') loadCities();
       const leg = $('.ops-who', root);
       if (leg) { splitLegend(); new MutationObserver(splitLegend).observe(leg, { childList: true, subtree: true }); }
       unpage();

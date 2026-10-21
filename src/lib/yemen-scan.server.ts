@@ -3327,6 +3327,10 @@ export async function shapeCards(
         console.log(`[scan] an official's own post given its own card: ${own.url} — ${own.summary}`);
         continue;
       }
+      if (own && officialVoice(own.source)) {
+        const twin = pool.find((o) => linkKey(o.url) === linkKey(own.url) || sameLine(o));
+        console.log(`[scan] own post held back: ${own.url} ownPost=${ownPost(own.url)} twin=${twin ? `${twin.fp} ${twin.url} ${twin.summary.slice(0, 80)}` : "none"}`);
+      } else if (officialVoice(a.source)) console.log(`[scan] own post not found by fp: ${a.fp} ${a.url}`);
       const into = foldTrail.get(a.url) ?? foldTrail.get(a.fp);
       console.log(`[scan] approved but no card: ${a.source} ${a.url} — ${a.summary}${into ? ` (folded into ${into})` : ""}`);
     }

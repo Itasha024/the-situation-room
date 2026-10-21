@@ -3061,7 +3061,8 @@ function openDevelopmentsMap(anchor) {
   const many = areas.length > 1;
   document.querySelectorAll('.sit-map-btn').forEach((b) => b.setAttribute('aria-expanded', 'true'));
   openMapPop({
-    title: `${T('Latest developments')}${briefHours() ? ` · ${briefHours()}` : ''}`,
+    // Named as the panel is (user, 21 Oct: 'should say Brief, not Latest developments').
+    title: `${T('Brief')}${briefHours() ? ` · ${briefHours()}` : ''}`,
     anchor,
     legend: devLegendHtml(marks, true),
     wide: true,
@@ -3087,14 +3088,19 @@ function openDevelopmentsMap(anchor) {
       const go = (fly) => {
         const b = boundsOf(areas[at]);
         say();
-        if (edge) m.removeLayer(edge);
         const feat = areas[at].feat || (areas[at].id === 'SA' && saudiGeoCache);
-        edge = feat ? L.geoJSON(feat, { interactive: false, style: { color: '#f8fafc', weight: 2.4, opacity: 0.9, fill: false } }).addTo(m) : null;
+        const outline = () => { if (edge) m.removeLayer(edge); edge = feat ? L.geoJSON(feat, { interactive: false, style: { color: '#f8fafc', weight: 2.4, opacity: 0.9, fill: false } }).addTo(m) : null; };
         m.setMinZoom(4);
-        m.once('moveend', hold);
         const c = b.getCenter();
-        if (fly) { try { m.flyToBounds(L.latLngBounds(b.getSouthWest(), b.getNorthEast()).extend([c.lat - 0.22, c.lng - 0.22]).extend([c.lat + 0.22, c.lng + 0.22]), { padding: [44, 44], maxZoom: 9.5, duration: 0.6 }); } catch (e) {} }
-        else devFit(m, b, 9.5, 0.22);
+        // A smooth flight from one area to the next (user, 21 Oct: it jumped): longer the farther it goes, the outline
+        // moving with it once it lands, and the tiles kept round the way.
+        if (fly) {
+          m.stop();
+          if (edge) { m.removeLayer(edge); edge = null; }
+          m.once('moveend', () => { outline(); hold(); });
+          const far = m.getCenter().distanceTo(c) / 1000;
+          try { m.flyToBounds(L.latLngBounds(b.getSouthWest(), b.getNorthEast()).extend([c.lat - 0.22, c.lng - 0.22]).extend([c.lat + 0.22, c.lng + 0.22]), { padding: [44, 44], maxZoom: 9.5, duration: Math.min(1.8, 0.9 + far / 900), easeLinearity: 0.2 }); } catch (e) { outline(); }
+        } else { outline(); m.once('moveend', hold); devFit(m, b, 9.5, 0.22); }
       };
       go(false);
       drawDevMarks(m, marks, L.latLngBounds([]));
@@ -3155,7 +3161,7 @@ function renderSituation(d) {
   // Numbered points with references (user, 9 Oct): the first one, the rest on Read more.
   const pts = derived && Array.isArray(brief.situation.points) && brief.situation.points.length ? brief.situation : null;
   const btnNeeded = pts ? pts.points.length > 1 : moreParas.length || lineParas.length > 1;
-  el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2>${mapBtn}</div>${cadenceStamp(true)}
+  el.innerHTML = `<div class="sit-head"><h2>Brief</h2>${mapBtn}</div>${cadenceStamp(true)}
     <div class="sit-body">${pts ? pointsHtml(pts.points, pts.refs, { show: 1, link: true, toggle: btnNeeded ? sitBtn(open) : '' }) : `${lineParas.map((x, i) => para(x, i ? 'sit-rest' : '')).join('')}${moreParas.length ? `<div class="sit-more">${moreParas.map((x) => para(x)).join('')}</div>` : ''}`}</div>${btnNeeded && !pts ? sitBtn(open) : ''}`;
   wirePlaceLinks(el);
   if (pts) wireRefs(el, pts.refs);
@@ -7284,7 +7290,7 @@ function installThemeButton() {
 const SECTIONS = [
   ['map-wrap', 'Map'],
   ['rail', 'Latest reports'],
-  ['situation', 'Latest developments'],
+  ['situation', 'Brief'],
   ['fronts-wrap', 'Fronts'],
   ['cas-wrap', 'The conflict in numbers'],
   ['timeline-wrap', 'Timeline'],
@@ -7433,7 +7439,7 @@ const MAP_HTML = `<h3 id="map-pop-h">Map methodology</h3>
 <li>it stays contested until one side's full control of it is confirmed the same way.</li>
 </ul></li>
 <li><b>A side's gains inside a district it already holds</b> change nothing.</li>
-<li><b>The same rule draws the flags</b> on the Latest developments and Fronts maps. A capture reported by one side only is drawn as an advance.</li>
+<li><b>The same rule draws the flags</b> on the Brief and Fronts maps. A capture reported by one side only is drawn as an advance.</li>
 </ul>
 <p class="rel-foot">Colours update every 6h. <a class="meth-full" href="/methodology#meth-map">Full methodology →</a></p>`;
 
@@ -8841,7 +8847,7 @@ function renderIranBrief() {
   const s = b.situation || {};
   if (el && Array.isArray(s.points) && s.points.length) {
     const open = el.classList.contains('sit-open');
-    el.innerHTML = `<div class="sit-head"><h2>Latest developments</h2></div>${cadenceStamp(true, b)}
+    el.innerHTML = `<div class="sit-head"><h2>Brief</h2></div>${cadenceStamp(true, b)}
       <div class="sit-body">${pointsHtml(s.points, s.refs, { show: 1, toggle: s.points.length > 1 ? sitBtn(open) : '' })}</div>`;
     wireBoxToggle(el, el.querySelector('.toggle-sit'), 'sit-open');
     wireRefs(el, s.refs);

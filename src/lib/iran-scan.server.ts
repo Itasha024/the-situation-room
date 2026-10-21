@@ -129,7 +129,7 @@ const TG_BACKFILL_PAGES = 4;
  * Channels read again from a post, once (the key marks it done): Araghchi's 7-part interview of 20 Oct
  * night (posts 13084–13096) was read cut short and made one card; read again under 21 Oct's rules.
  */
-const REWIND = [{ id: "s_a_araghchi", from: 13083, to: 13097, until: Date.parse("2026-10-21T20:00:00Z"), key: "rewind:s_a_araghchi:13083:v2" }];
+const REWIND = [{ id: "s_a_araghchi", from: 13083, to: 13097, until: Date.parse("2026-10-21T20:00:00Z"), key: "rewind:s_a_araghchi:13083:v3" }];
 /** A post a rewind brings back is read again though seen before (by its number, so a restart between the read
  *  and the reading does not lose it; a reading already cached under the new rules costs nothing). */
 const rewound = (url: string, now: number) => REWIND.some((x) => now < x.until && url.includes(`t.me/${x.id}/`) && tgPostNo(url) > x.from && tgPostNo(url) <= x.to);
@@ -161,6 +161,7 @@ async function readTg(src:{ id: string; name: string; lean: IranLean }, state: I
       return seen ? n > seen || !n : Date.parse(r.at) > now - FIRST_SIGHT_MS;
     })
     .map((r) => ({ ...r, lean: src.lean }));
+  if (rw) console.log(`[iran] rewind ${src.id} from ${rw.from}: ${all.length} posts on its pages, ${rows.length} read again`);
   if (newest > 0) state.lastTgPost[src.id] = Math.max(seen, newest);
   return { rows, ok };
 }
@@ -340,6 +341,8 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
     if (!had || h.text.length > had.text.length) byUrl.set(h.url, h);
   }
   const hits = [...byUrl.values()].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  const back = hits.filter((h) => rewound(h.url, now));
+  if (back.length) console.log(`[iran] rewound posts to read: ${back.map((h) => tgPostNo(h.url)).join(" ")}`);
 
   // 4. A teaser is not enough to read: the article is opened (Google's links
   //    resolved first), a few a tick, newest first.

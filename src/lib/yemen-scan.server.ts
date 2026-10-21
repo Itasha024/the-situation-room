@@ -3318,7 +3318,10 @@ export async function shapeCards(
       const own = approvedCard.get(a.fp);
       const asCard = (x: LiveReport) => x as unknown as SameCard;
       const pool = [...uniqReports, ...stored];
-      if (own && officialVoice(own.source) && /^https:\/\/(?:t\.me|x\.com|twitter\.com)\//.test(own.url) && !pool.some((o) => linkKey(o.url) === linkKey(own.url) || (o.source === own.source && !ownParts(asCard(o), asCard(own))))) {
+      const ownPost = (u: string) => /^https:\/\/(?:t\.me|x\.com|twitter\.com)\//.test(String(u || ""));
+      // The same line: another of his own posts that is no other part (ownParts tells two lines apart).
+      const sameLine = (o: LiveReport) => o.source === own!.source && o.url !== own!.url && ownPost(o.url) && !ownParts(asCard(o), asCard(own!));
+      if (own && officialVoice(own.source) && ownPost(own.url) && !pool.some((o) => linkKey(o.url) === linkKey(own.url) || sameLine(o))) {
         uniqReports.push(own);
         placed.add(own.fp);
         console.log(`[scan] an official's own post given its own card: ${own.url} — ${own.summary}`);

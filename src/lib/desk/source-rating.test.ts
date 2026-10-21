@@ -142,3 +142,8 @@ test("the Iran desk's list: Israel confirming an Axis outlet lifts it to the top
   assert.equal(both.lean, "axis");
   assert.equal(iranSide("gulf"), "nonaligned");
 });
+
+test("the Iran war's officials start as officials: the IDF, the Guards, Gulf governments, US embassies", () => {
+  for (const n of ["IDF", "Avichay Adraee", "IRGC Navy", "Masoud Pezeshkian", "QNA", "US Embassy Doha", "Iran's Supreme National Security Council"]) assert.equal(startOf(n, "gov"), 4, n);
+  assert.equal(startOf("Reza Pahlavi", "gov"), 3);
+});

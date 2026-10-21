@@ -84,7 +84,8 @@ export type CatalogueEntry = { name: string; url: string; lean?: string; platfor
 
 /** `lean`: on the Iran desk's list, the source's filter group there, shown in place of the three groups. */
 export type SourceRating = { name: string; url: string; platform: string; group: Group; rating: number; start: number; n: number; lean?: string };
-export type SourceRatings = { day: string; updatedAt: string; sources: SourceRating[] };
+/** `v`: the Iran list's rules version; a list made under older rules is made again at once. */
+export type SourceRatings = { day: string; updatedAt: string; sources: SourceRating[]; v?: number };
 
 const WIRE = /^(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Xinhua|Anadolu|dpa|EFE|ANSA|Bloomberg)\b/i;
 
@@ -95,6 +96,10 @@ const WIRE = /^(?:Reuters|AP|Associated Press|AFP|Agence France-Presse|Xinhua|An
 const OFFICIAL =
   /^(?:Yahya Saree|Mohammed Abdulsalam|Yemeni Army (?:spokesman|Media)|Coalition spokesman|Rashad al-Alimi|Muammar al-Eryani|Abu Zaraa al-Mahrami|Abdullah al-Alimi|Shaya al-Zindani|Afrah al-Zouba|Tareq Saleh|Aidarous al-Zubaidi|Hezam al-Asad|Hussein al-Ezzi|Mohammed Ali al-Houthi|Marco Rubio|Ursula von der Leyen|António Guterres|UKMTO|SPA|WAM|Saba(?: \((?:government|Houthi-run)\))?|Southern Transitional Council|National Resistance(?: Political Bureau)?|GCC(?: Secretariat)?|EU|State Department|United Nations|UN(?: in Yemen| OCHA)?|EU in Yemen|European Commission|US (?:Energy Department|Treasury|Embassy Yemen)|Suez Canal Authority|Taiz military axis|Yemen Coast Guard|Yemen's human rights minister|UK Middle East minister|CENTCOM|White House(?: Rapid Response)?|Donald Trump|JD Vance|Pentagon|.+ Foreign (?:Ministry|Office))$/i;
 
+/** The Iran war's officials and official bodies, by their names in iran-sources.ts (22 Oct): the start the method gives every official. */
+const IRAN_WAR_OFFICIAL =
+  /^(?:Ahmad Vahidi|Ahmad-Reza Radan.*|Ali Akbar Velayati|Amir Hatami.*|Atomic Energy Organization of Iran|Ebrahim Azizi|Ebrahim Rezaei|Esmaeil Saghab Esfahani|Gholam-Hossein Mohseni-Ejei.*|IRGC(?: Navy)?|Iran's Supreme National Security Council|Iran's ambassador to .+|Kazem Gharibabadi|Mahmoud Nabavian|Masoud Pezeshkian|Mehdi Tabatabaei|Mizan \(judiciary agency\)|Mohammad Bagher Ghalibaf.*|Mohammad Mokhber|Mohsen Rezaei|Persian Gulf Strait Authority|Sadegh Amoli Larijani|Saeed Jalili|Khamenei's office|Abu Dhabi Media Office|Dubai Media Office|Anwar Gargash|Emir of Qatar|Kuwait Petroleum Corporation|Lebanese Army|Lebanese presidency|Nawaf Salam|Oman News Agency|QNA|Qatar's Amiri Diwan|UAE emergency authority \(NCEMA\)|Shehbaz Sharif|Avichay Adraee|Ella Waweya.*|IDF(?: Farsi| Arabic)?|Mossad Farsi|US Embassy .+|US Mission to .+)$/i;
+
 /** Placed by hand where the catalogue and the card leans disagree (checked 2 Oct). */
 const GROUP_BY_NAME: Record<string, Group> = { gcc: "gov", "gcc secretariat": "gov", "sheba intelligence": "nonaligned", "clash report": "nonaligned", osintdefender: "nonaligned", "clearwater dynamics": "nonaligned" };
 
@@ -103,7 +108,7 @@ export function isWire(name: string): boolean {
 }
 export function isOfficial(name: string): boolean {
   const n = String(name || "").trim();
-  return OFFICIAL.test(n) || isOfficialBody(n);
+  return OFFICIAL.test(n) || IRAN_WAR_OFFICIAL.test(n) || isOfficialBody(n);
 }
 
 /** Which of the three groups a source is in: its catalogue lean first, then its name. */
@@ -352,6 +357,8 @@ export const GROUP_LABEL: Record<Group, string> = { houthi: "Houthi-aligned", go
  * under its filter group on the desk.
  */
 export const IRAN_RATINGS_KEY = "source-ratings-iran";
+/** 2: the Iran war's officials start at 4 (22 Oct). */
+export const IRAN_RATINGS_V = 2;
 export function iranSide(lean: string | undefined): Group {
   if (lean === "axis") return "houthi";
   if (lean === "israel" || lean === "us" || lean === "opposition") return "gov";

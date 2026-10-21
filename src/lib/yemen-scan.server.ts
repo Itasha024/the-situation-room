@@ -35,7 +35,7 @@ import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { nearerSource, officialVoice } from "./desk/speaker-press.ts";
-import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, IRAN_RATINGS_KEY, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, iranSide, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
+import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, IRAN_RATINGS_KEY, IRAN_RATINGS_V, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, iranSide, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead } from "./desk/site-articles.ts";
 import { relinkStoredCards } from "./desk/relink.ts";
@@ -3525,14 +3525,14 @@ export function iranCatalogue(): CatalogueEntry[] {
 /** The Iran desk's ratings, once a day as Yemen's: its own cards, its own sources, its two sides (`iranSide`). */
 export async function refreshIranSourceRatings(store: Awaited<ReturnType<typeof getStore>>, now = new Date()): Promise<boolean> {
   const stored = await store.getJson<SourceRatings>(IRAN_RATINGS_KEY);
-  if (!ratingsDue(stored, now)) return false;
+  if (!ratingsDue(stored, now) && stored?.v === IRAN_RATINGS_V) return false;
   const slice = await store.recentDesk(8000, undefined, { desk: "iran", events: false });
   const own = (await store.getJson<Verdicts>(VERDICTS_KEY)) ?? {};
   const rated = rateSources(ratedCards(slice.reports), iranCatalogue(), withSeed(own), now.getTime(), (n, lean) => iranSide(lean || iranLeanOfSource(n)));
   // An outlet met only on the cards is listed under the group the desk files it in.
   const sources = rated.map((s) => (s.lean ? s : { ...s, lean: iranLeanOfSource(s.name) }));
   const { day, startedAt } = deskDay(now.getTime());
-  await store.putJson(IRAN_RATINGS_KEY, { day, updatedAt: new Date(startedAt).toISOString(), sources } satisfies SourceRatings);
+  await store.putJson(IRAN_RATINGS_KEY, { day, updatedAt: new Date(startedAt).toISOString(), sources, v: IRAN_RATINGS_V } satisfies SourceRatings);
   console.log(`[source-ratings] Iran: ${sources.length} sources rated`);
   return true;
 }

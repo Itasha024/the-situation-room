@@ -176,6 +176,9 @@
   // Maps open on today (20 Oct, later: "today should be the default"; the 24-hour button went).
   if (!(P.v >= 3)) { P.v = 3; P.range = 'today'; }
   const keepPrefs = () => { try { localStorage.setItem('ops-prefs', JSON.stringify(P)); } catch (e) { /* private */ } };
+  // The panels' and the strip's sizes as the reader dragged them (lw, rw, dh in pixels; see paintSizes).
+  let SZ = {};
+  try { SZ = JSON.parse(localStorage.getItem('ops-sizes') || '{}') || {}; } catch (e) { /* none kept */ }
   if (P.airStart) S.air = true;
 
   let shell, strip, bar, nav, leftEl, rightEl, dock, stage, mapWrap;
@@ -311,6 +314,7 @@
     if (window.ResizeObserver) new ResizeObserver(sizeDock).observe(dock);
     sizeDock();
     wireFrame();
+    wireGrips();
   }
   /* The last day, two days or week on the map, through the page's own period boxes. */
   const shiftYmd = (ymd, n) => { const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -339,10 +343,46 @@
   function sizeDock() {
     if (!dock) return;
     // The map keeps at least 60% of its box, whatever the strip holds.
-    const h = isPhone() || !S.dock ? 0 : Math.min(dock.offsetHeight, Math.round(mapWrap.clientHeight * 0.4));
+    const h = isPhone() || !S.dock ? 0 : Math.min(dock.offsetHeight, Math.round(mapWrap.clientHeight * (SZ.dh ? 0.75 : 0.4)));
     mapWrap.style.setProperty('--dock-h', h + 'px');
     const m = getMap();
     if (m) try { m.invalidateSize({ pan: false }); } catch (e) { /* not yet */ }
+  }
+  /* On a wide screen the side panels and the strip under the map are as wide or as tall as the reader drags them
+     (user, 21 Oct); a double-click on a handle puts it back. Kept per browser (SZ). */
+  function paintSizes() {
+    const W = innerWidth, room = W - 380; // the map keeps at least 380 pixels
+    const lw = SZ.lw && Math.max(220, Math.min(SZ.lw, room - (S.right ? (SZ.rw || 320) : 0)));
+    const rw = SZ.rw && Math.max(240, Math.min(SZ.rw, room - (S.left ? (lw || 300) : 0)));
+    root.style.setProperty('--ops-lw', lw ? lw + 'px' : '');
+    root.style.setProperty('--ops-rw', rw ? rw + 'px' : '');
+    if (!lw) root.style.removeProperty('--ops-lw');
+    if (!rw) root.style.removeProperty('--ops-rw');
+    dock.style.height = SZ.dh && !isPhone() ? Math.max(90, Math.min(SZ.dh, Math.round(mapWrap.clientHeight * 0.75))) + 'px' : '';
+    dock.classList.toggle('ops-dock-sized', !!SZ.dh && !isPhone());
+    sizeDock();
+  }
+  function wireGrips() {
+    const grip = (host, cls, title) => { const g = document.createElement('div'); g.className = 'ops-grip ' + cls; g.title = title; g.setAttribute('aria-hidden', 'true'); host.appendChild(g); return g; };
+    const parts = [
+      [grip(leftEl, 'ops-grip-l', 'Drag to widen or narrow (double-click: back to the start)'), 'lw', (ev, r) => ev.clientX - r.left, leftEl],
+      [grip(rightEl, 'ops-grip-r', 'Drag to widen or narrow (double-click: back to the start)'), 'rw', (ev, r) => r.right - ev.clientX, rightEl],
+      // On the map's box, not the strip, so it stays on the strip's top edge when the strip scrolls.
+      [grip(mapWrap, 'ops-grip-d', 'Drag to make the strip taller or shorter (double-click: back to the start)'), 'dh', (ev, r) => r.bottom - ev.clientY, mapWrap],
+    ];
+    let raf = 0;
+    const redraw = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { paintSizes(); drawMatrix(); }); };
+    parts.forEach(([g, k, size, box]) => {
+      let r = null;
+      g.addEventListener('pointerdown', (ev) => { if (ev.button) return; r = box.getBoundingClientRect(); g.setPointerCapture(ev.pointerId); H.classList.add('ops-sizing'); ev.preventDefault(); });
+      g.addEventListener('pointermove', (ev) => { if (!r) return; SZ[k] = Math.round(size(ev, r)); redraw(); });
+      const end = () => { if (!r) return; r = null; H.classList.remove('ops-sizing'); try { localStorage.setItem('ops-sizes', JSON.stringify(SZ)); } catch (e) { /* private */ } };
+      g.addEventListener('pointerup', end);
+      g.addEventListener('pointercancel', end);
+      g.addEventListener('dblclick', () => { delete SZ[k]; redraw(); try { localStorage.setItem('ops-sizes', JSON.stringify(SZ)); } catch (e) { /* private */ } });
+    });
+    addEventListener('resize', redraw);
+    paintSizes();
   }
   // Between a phone and a wide screen one side panel is open at a time, so the map keeps its room (20 Oct: at
   // 900 pixels both panels left the map 230 pixels).

@@ -90,6 +90,24 @@ html[data-view="ops"] .ops-on .rail-splitter { display: none !important }
 @media (min-width: 761px) and (max-width: 1180px) {
   html[data-view="ops"] { --ops-lw: 300px; --ops-rw: 320px; --ops-nav-w: 50px }
 }
+/* Handles to widen the side panels and raise the strip under the map (21 Oct). */
+html[data-view="ops"] .ops-grip { display: none }
+@media (min-width: 761px) {
+  html[data-view="ops"] .ops-on > :is(.ops-left, .ops-right) { position: relative }
+  html[data-view="ops"] .ops-grip { display: block; position: absolute; z-index: 950; touch-action: none }
+  html[data-view="ops"] .ops-grip::after { content: ""; position: absolute; background: var(--o-sel); opacity: 0; transition: opacity .12s }
+  html[data-view="ops"] .ops-grip:hover::after, html[data-view="ops"].ops-sizing .ops-grip::after { opacity: .7 }
+  html[data-view="ops"] :is(.ops-grip-l, .ops-grip-r) { top: 0; bottom: 0; width: 8px; cursor: col-resize }
+  html[data-view="ops"] .ops-grip-l { right: -4px }
+  html[data-view="ops"] .ops-grip-r { left: -4px }
+  html[data-view="ops"] :is(.ops-grip-l, .ops-grip-r)::after { top: 0; bottom: 0; left: 3px; width: 2px }
+  html[data-view="ops"] .ops-grip-d { left: 0; right: 0; bottom: calc(var(--dock-h, 0px) - 4px); height: 7px; cursor: row-resize }
+  html[data-view="ops"] .ops-nodock .ops-grip-d { display: none }
+  html[data-view="ops"] .ops-grip-d::after { left: 0; right: 0; top: 2px; height: 2px }
+  html[data-view="ops"] .ops-dock.ops-dock-sized { max-height: none; overflow-y: auto }
+  html[data-view="ops"].ops-sizing, html[data-view="ops"].ops-sizing * { user-select: none !important }
+  html[data-view="ops"].ops-sizing iframe { pointer-events: none }
+}
 
 /* ---------- The status strip ---------- */
 html[data-view="ops"] .ops-strip {

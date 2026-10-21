@@ -564,7 +564,7 @@
     el.innerHTML = `<nav class="ops-subnav" aria-label="Desks">${Object.entries(DESK_INFO).map(([desk, [name]]) => `<button type="button" data-th="${desk}" aria-pressed="${S.th === desk}">${esc(name)}</button>`).join('')}</nav>` + Object.entries(DESK_INFO).map(([desk, [name, , href]]) => {
       const b = briefs[desk];
       const s = b && b.situation;
-      const pts = s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 5) : [];
+      const pts = s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 8) : [];
       return `<article class="ops-th${S.th === desk ? ' on' : ''}" data-th="${desk}">
         <header><h3><a href="${href}" data-desk-go>${esc(name)}</a></h3><a class="ops-th-go" href="${href}" data-desk-go>Open desk ${ICON.right}</a></header>
         ${b && b.updatedAt ? `<p class="ops-th-sub">The desk’s brief · updated ${esc(when(b.updatedAt))}</p>` : ''}

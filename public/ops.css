@@ -1043,8 +1043,6 @@ html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ 
   content: "" !important; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--o-sel)
 }
 html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:focus-visible { outline: 2px solid var(--o-sel); outline-offset: -2px }
-/* The panel's own title is the rail's head now. */
-html[data-view="ops"] .ops-left:has(.ops-pane.on :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)) .ops-ptitle { visibility: hidden }
 /* The main item the rail comes out of: a notch on its edge, pointing in. */
 @media (min-width: 761px) {
   html[data-view="ops"] .ops-on:not(.ops-noleft):has(.ops-left .ops-pane.on :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav)) .ops-nav button[aria-pressed="true"]::after {
@@ -1086,3 +1084,8 @@ html[data-view="ops"] .ops-left :is(.pager-numbers .tally-box, .pager-timeline .
 }
 html[data-view="ops"] .ops-left .pager-timeline .phase-card { padding: 12px !important }
 html[data-view="ops"] .ops-left .pager-numbers .tally-box { padding-top: 12px !important; padding-bottom: 12px !important }
+/* A timeline era is read whole: no Read more or Show less (user, 21 Oct). */
+html[data-view="ops"] .ops-left .phase-card .full { display: block !important }
+html[data-view="ops"] .ops-left .phase-card .toggle-phase { display: none !important }
+html[data-view="ops"] .ops-left .phase-card.expandable { cursor: auto }
+html[data-view="ops"] .ops-left .phase-card .full p { font-size: inherit; line-height: 1.5 }

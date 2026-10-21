@@ -13,7 +13,8 @@
  *      dropped whenever a point of a stronger band is there
  */
 
-export const MAX_POINTS = 6;
+// Up to 8 (user, 21 Oct: "more reports, up to 8, but interesting and the most important since the last update").
+export const MAX_POINTS = 8;
 
 const DEATHS = /\b(?:killed|kills|killing|dead|deaths?|wounded|wounding|injured|injuring|casualt(?:y|ies))\b/i;
 const ATTACK = /\b(?:struck|strikes?|striking|attack(?:s|ed|ing)?|hit|hits|missiles?|drones?|rockets?|projectiles?|shell(?:ed|ing|s)?|artillery|bombard\w*|air ?strikes?|raids?|seiz(?:ed|es|ing)|sank|sunk|sinking|explosions?|intercept\w*|shot down|clash(?:es|ed)?|fighting|advanc(?:ed|es|ing)|captur(?:ed|es|ing)|siege|offensive|assault)\b/i;

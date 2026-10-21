@@ -64,8 +64,8 @@ const RETRY_MS = 10 * 60_000;
 const SYSTEM = `You are the editor of a live news desk on the Iran war (the US–Iran war since 28 February 2026: the strikes, the Strait of Hormuz, the talks, the nuclear file, sanctions, Iran's allies, and the war at home in Iran, the US, Israel and the Gulf).
 You get the reports published in the last ${HOURS} hours, and Trump's own statements on Iran in that time. Each line is: [its id] outlet (its group): headline — body. Trump's own statements have the ids t1, t2…
 Write in English wire style (Reuters/AP):
-- "points": the latest developments of these ${HOURS} hours as a numbered list for a reader with a minute: 4-6 points (fewer only when less happened), each ONE development in 1-2 short sentences (at most 40 words), ordered from the most important to the least. Importance is what changes the war most. A point with no new fact (someone condemned, congratulated, discussed "regional issues", expressed support or solidarity, or a general statement) is the least important and is left out whenever there are points with a fact. What a leader or government actually said or decided outranks reports of what they might do: Trump's own words on Iran usually come first, unless they are minor. Strikes and their deaths, attacks at sea, decisions on war and on talks come before reactions, commentary and local items, which come last or are left out. Two reports of one event are one point.
-- "arenas": for each arena id below, a list of 0-4 points on that arena from these ${HOURS} hours, most important first, written the same way. Only reports that belong to that arena; [] when none does. A report goes in the one arena it is most about (two at most): Trump's words go where their subject is, not in every arena. Commentary and analysis go nowhere.
+- "points": the latest developments of these ${HOURS} hours as a numbered list for a reader with a minute: 4-8 points (fewer only when less happened: only what is important and interesting since the last update, never padding), each ONE development in 1-2 short sentences (at most 40 words), ordered from the most important to the least. Importance is what changes the war most. A point with no new fact (someone condemned, congratulated, discussed "regional issues", expressed support or solidarity, or a general statement) is the least important and is left out whenever there are points with a fact. What a leader or government actually said or decided outranks reports of what they might do: Trump's own words on Iran usually come first, unless they are minor. Strikes and their deaths, attacks at sea, decisions on war and on talks come before reactions, commentary and local items, which come last or are left out. Two reports of one event are one point.
+- "arenas": for each arena id below, a list of 0-8 points on that arena (up to 8 only when that many important, interesting things happened there since the last update) from these ${HOURS} hours, most important first, written the same way. Only reports that belong to that arena; [] when none does. A report goes in the one arena it is most about (two at most): Trump's words go where their subject is, not in every arena. Commentary and analysis go nowhere.
 ARENAS:
 ${ARENAS.map((a) => `- ${a.id} = ${a.name}: ${a.about}`).join("\n")}
 In every point, after the words each report supports, put that report's id in square brackets, before the full stop: "The IRGC Navy seized a tanker off Fujairah [r4]." Every point carries at least one id, and only ids from the lines given. When several reports tell the same fact, give the id of ONE: the speaker's or the country's own account first (Trump's own post for his words, the US Treasury for its sanctions, the IDF for Israel's army, Iran's own agencies for Iran's officials), then a wire agency, then the fullest report. Two ids in a point only when it joins two different facts.
@@ -112,14 +112,14 @@ export function fromAnswer(j: Record<string, unknown>, refOf: Record<string, Ref
   // A report serves two arenas at most: Trump's one post was in five (9 Oct).
   const uses = new Map<string, number>();
   for (const a of ARENAS) {
-    const own = dropEmpty(onePointEach(cleanPoints(aj[a.id], 6), outlets).filter((p) => fits(a.id, stripRefs(p)))).filter((p) => {
+    const own = dropEmpty(onePointEach(cleanPoints(aj[a.id], 8), outlets).filter((p) => fits(a.id, stripRefs(p)))).filter((p) => {
       const ids = [...p.matchAll(/[rt]\d+/gi)].map((m) => m[0].toLowerCase());
       if (ids.length && ids.every((id) => (uses.get(id) ?? 0) >= 2)) return false;
       for (const id of ids) uses.set(id, (uses.get(id) ?? 0) + 1);
       return true;
     });
     // Lebanon's arena cites Lebanon's own sources, Israel's for Israel's acts, a wire, or an exclusive (user, 9 Oct).
-    const got = marked(numberRefs(own.slice(0, 4), a.id === "lebanon" ? (id, p) => israelRef(look(id, p)) : look));
+    const got = marked(numberRefs(own.slice(0, 8), a.id === "lebanon" ? (id, p) => israelRef(look(id, p)) : look));
     // A point with no reference the writer could show is not kept in an arena.
     if (got.points.length && got.refs.length) arenas[a.id] = got;
   }

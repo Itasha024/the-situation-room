@@ -129,9 +129,10 @@ const TG_BACKFILL_PAGES = 4;
  * Channels read again from a post, once (the key marks it done): Araghchi's 7-part interview of 20 Oct
  * night (posts 13084–13096) was read cut short and made one card; read again under 21 Oct's rules.
  */
-const REWIND = [{ id: "s_a_araghchi", from: 13083, until: Date.parse("2026-10-21T20:00:00Z"), key: "rewind:s_a_araghchi:13083" }];
-/** Posts a rewind brought back: read again though seen before. */
-const REWOUND = new Set<string>();
+const REWIND = [{ id: "s_a_araghchi", from: 13083, to: 13097, until: Date.parse("2026-10-21T20:00:00Z"), key: "rewind:s_a_araghchi:13083:v2" }];
+/** A post a rewind brings back is read again though seen before (by its number, so a restart between the read
+ *  and the reading does not lose it; a reading already cached under the new rules costs nothing). */
+const rewound = (url: string, now: number) => REWIND.some((x) => now < x.until && url.includes(`t.me/${x.id}/`) && tgPostNo(url) > x.from && tgPostNo(url) <= x.to);
 
 async function readTg(src:{ id: string; name: string; lean: IranLean }, state: IranState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
   const html = await fetchText(`https://t.me/s/${src.id}`);
@@ -140,7 +141,6 @@ async function readTg(src:{ id: string; name: string; lean: IranLean }, state: I
   // Once: a channel read again from a post (REWIND), its posts read again whatever was seen.
   const rw = REWIND.find((x) => x.id === src.id && now < x.until && !state.lastTgPost[x.key]);
   if (rw) state.lastTgPost[rw.key] = now;
-  const rewind = !!rw;
   const seen = rw ? rw.from : state.lastTgPost[src.id] ?? 0;
   const newest = newestTgPost(html as string, src.id);
   if (seen && newest <= seen) return { rows: [], ok };
@@ -155,7 +155,6 @@ async function readTg(src:{ id: string; name: string; lean: IranLean }, state: I
     if (!more.length) break;
     all.push(...more);
   }
-  if (rewind) for (const r of all) if (tgPostNo(r.url) > seen) REWOUND.add(r.url);
   const rows = all
     .filter((r) => {
       const n = Number(/\/(\d+)(?:#|$)/.exec(r.url)?.[1] ?? 0);
@@ -335,8 +334,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   const byUrl = new Map<string, RawHit>();
   for (const h of [...own, ...inbox, ...(state.pending ?? [])]) {
     const t = Date.parse(h.at);
-    if ((state.seen[h.url] && !REWOUND.has(h.url)) || (Number.isFinite(t) && now - t > MAX_AGE_MS)) continue;
-    REWOUND.delete(h.url);
+    if ((state.seen[h.url] && !rewound(h.url, now)) || (Number.isFinite(t) && now - t > MAX_AGE_MS)) continue;
     if (Number.isFinite(t) && t > now + 10 * 60_000) h.at = seenAt;
     const had = byUrl.get(h.url);
     if (!had || h.text.length > had.text.length) byUrl.set(h.url, h);

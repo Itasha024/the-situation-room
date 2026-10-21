@@ -52,6 +52,7 @@ import {
   parseFxStatuses,
   parseRss,
   parseTelegram,
+  tgPostNo,
   WAR_ONLY,
 } from "./yemen-scan.server.ts";
 
@@ -123,14 +124,39 @@ const GEMINI_LITE_SHARE = 300;
 
 const due = (state: IranState, id: string, everyMin: number, now: number) => now - (state.lastScanAt[id] ?? 0) >= everyMin * 60_000 - 20_000;
 
-async function readTg(src: { id: string; name: string; lean: IranLean }, state: IranState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
+const TG_BACKFILL_PAGES = 4;
+/**
+ * Channels read again from a post, once (the key marks it done): Araghchi's 7-part interview of 20 Oct
+ * night (posts 13084–13096) was read cut short and made one card; read again under 21 Oct's rules.
+ */
+const REWIND = [{ id: "s_a_araghchi", from: 13083, until: Date.parse("2026-10-21T20:00:00Z"), key: "rewind:s_a_araghchi:13083" }];
+/** Posts a rewind brought back: read again though seen before. */
+const REWOUND = new Set<string>();
+
+async function readTg(src:{ id: string; name: string; lean: IranLean }, state: IranState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
   const html = await fetchText(`https://t.me/s/${src.id}`);
   const ok = !!(html && html.includes("tgme_widget_message"));
   if (!ok) return { rows: [], ok };
-  const seen = state.lastTgPost[src.id] ?? 0;
+  // Once: a channel read again from a post (REWIND), its posts read again whatever was seen.
+  const rw = REWIND.find((x) => x.id === src.id && now < x.until && !state.lastTgPost[x.key]);
+  if (rw) state.lastTgPost[rw.key] = now;
+  const rewind = !!rw;
+  const seen = rw ? rw.from : state.lastTgPost[src.id] ?? 0;
   const newest = newestTgPost(html as string, src.id);
   if (seen && newest <= seen) return { rows: [], ok };
-  const rows = parseTelegram(html as string, { id: src.id, name: src.name, lean: "intl" })
+  const all = parseTelegram(html as string, { id: src.id, name: src.name, lean: "intl" });
+  // A busy channel can post more between two reads than its page holds (Araghchi's interview: a video and a
+  // text for each of 7 parts, 21 Oct): page back to the last post read, as the Yemen desk does.
+  for (let page = 0; seen && page < TG_BACKFILL_PAGES; page += 1) {
+    const oldest = Math.min(...all.map((r) => tgPostNo(r.url)).filter(Boolean));
+    if (!Number.isFinite(oldest) || oldest <= seen + 1) break;
+    const older = await fetchText(`https://t.me/s/${src.id}?before=${oldest}`);
+    const more = older ? parseTelegram(older, { id: src.id, name: src.name, lean: "intl" }).filter((r) => tgPostNo(r.url) < oldest) : [];
+    if (!more.length) break;
+    all.push(...more);
+  }
+  if (rewind) for (const r of all) if (tgPostNo(r.url) > seen) REWOUND.add(r.url);
+  const rows = all
     .filter((r) => {
       const n = Number(/\/(\d+)(?:#|$)/.exec(r.url)?.[1] ?? 0);
       return seen ? n > seen || !n : Date.parse(r.at) > now - FIRST_SIGHT_MS;
@@ -309,7 +335,8 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   const byUrl = new Map<string, RawHit>();
   for (const h of [...own, ...inbox, ...(state.pending ?? [])]) {
     const t = Date.parse(h.at);
-    if (state.seen[h.url] || (Number.isFinite(t) && now - t > MAX_AGE_MS)) continue;
+    if ((state.seen[h.url] && !REWOUND.has(h.url)) || (Number.isFinite(t) && now - t > MAX_AGE_MS)) continue;
+    REWOUND.delete(h.url);
     if (Number.isFinite(t) && t > now + 10 * 60_000) h.at = seenAt;
     const had = byUrl.get(h.url);
     if (!had || h.text.length > had.text.length) byUrl.set(h.url, h);

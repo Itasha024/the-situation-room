@@ -1,3 +1,5 @@
+import { setDefaultAutoSelectFamilyAttemptTimeout } from "node:net";
+
 import { joinTracks, pickRoute, type Candidate, type LatLon, type Place, type TrackPoint } from "./desk/traffic-geo.ts";
 
 /**
@@ -14,6 +16,10 @@ import { joinTracks, pickRoute, type Candidate, type LatLon, type Place, type Tr
  * Each route is checked against the live position before it is shown; none that fits = "unknown".
  */
 const UA = { "user-agent": "TheSituationRoom/1.0 (+https://thesituationroom.live)" };
+// The VM has no IPv6, and Node gives each address only 250 ms before trying the next: adsbdb (in Germany) takes
+// longer than that from us-east1 over IPv4, so every call failed with ETIMEDOUT (21 Oct: cards came back without the
+// airline or the airframe). Two and a half seconds per address, for the whole process.
+setDefaultAutoSelectFamilyAttemptTimeout(2500);
 
 /** One call at a time per host, at least `gap` ms apart, and a daily budget; a call that would wait too long is skipped. */
 type Gate = { gap: number; next: number; tokens: number; perDay: number; at: number; until: number };

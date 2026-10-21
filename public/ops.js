@@ -1577,7 +1577,8 @@
       getMap().closePopup();
       castOpening();
       if (CAST.play) setTimeout(() => { if (S.cast && CAST.i < 0) castStep(1); }, P.still ? 0 : 3200);
-      CAST.timer = setInterval(() => { if (CAST.play && !CAST.lapse) castStep(1); }, CAST_MS);
+      // The tour waits while a ship's or an aircraft's card is open (21 Oct).
+      CAST.timer = setInterval(() => { if (CAST.play && !CAST.lapse && !T.sel) castStep(1); }, CAST_MS);
       castIdle();
     } else {
       if (CAST.full && document.fullscreenElement) document.exitFullscreen().catch(() => {});

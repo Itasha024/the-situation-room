@@ -757,7 +757,7 @@ html[data-view="ops"] .ops-tick-run span { display: inline-flex; align-items: ba
 html[data-view="ops"] .ops-tick-run span::after { content: "■"; margin-left: 18px; font-size: 8px; color: #d32f2f; align-self: center }
 html[data-view="ops"] .ops-tick-run time { font: 600 14px var(--ops-mono); color: #ffb547 }
 @keyframes ops-crawl { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-html[data-view="ops"].ops-cast .ops-on :is(.ops-mini, .ops-toasts, .ops-card, .ops-trf, .ops-lyr, .leaflet-control-scale, .leaflet-control-attribution) { display: none !important }
+html[data-view="ops"].ops-cast .ops-on :is(.ops-mini, .ops-toasts, .ops-trf, .ops-lyr, .leaflet-control-scale, .leaflet-control-attribution) { display: none !important }
 @media (max-width: 760px) {
   html[data-view="ops"] .ops-l3 { left: 8px; right: 8px; bottom: 48px }
   html[data-view="ops"] .ops-lb p { font-size: 16px }
@@ -954,6 +954,11 @@ html[data-view="ops"] .ops-cleg .g svg { width: 13px; height: 13px }
 html[data-view="ops"] .ops-cbar { flex-wrap: wrap; justify-content: center; max-width: calc(100% - 32px) }
 html[data-view="ops"] .ops-cbar button { gap: 6px; display: inline-flex; align-items: center }
 html[data-view="ops"] .ops-cbar button[aria-pressed="true"] { background: #e0a43c; color: #17110a }
+/* The button's own word takes the button's colour, not the dim one of the bar's labels (21 Oct: "Traffic" unclear). */
+html[data-view="ops"] .ops-cbar button span { padding: 0; color: inherit; font: inherit }
+html[data-view="ops"] .ops-cbar button[data-cast="traffic"] { border: 1px solid rgba(255, 255, 255, .28) }
+/* A ship's or an aircraft's card shows in broadcast too (21 Oct), clear of the bar at the top. */
+html[data-view="ops"].ops-cast .ops-on .ops-card { top: 64px }
 html[data-view="ops"] .ops-csel select { height: 32px; max-width: 250px; padding: 0 8px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 2px; background: #0b0e11; color: #e8ecef; font: 600 12.5px var(--ops-ui) }
 html[data-view="ops"] .ops-lapse { position: absolute; left: 32px; bottom: 32px; display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 18px; padding: 12px 16px; background: rgba(8, 11, 14, .88); color: #fff; border-left: 4px solid #e0a43c; pointer-events: auto }
 html[data-view="ops"] .ops-lapse b { grid-column: 1 / -1; font: 700 13px var(--ops-cond); letter-spacing: .16em; text-transform: uppercase; color: #e0a43c }

@@ -49,6 +49,7 @@ import {
 import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
 import { ownRead } from "./recent-reads.ts";
 import { siteAlsoOnly } from "./site-articles.ts";
+import { officialVoice } from "./speaker-press.ts";
 
 export type Cited = {
   name: string;
@@ -1054,6 +1055,9 @@ export async function traceOrigins(
     // Never the post of the man the speaker answers (Round 4 of 20 Oct: Iran's judiciary spokesman on
     // "Rubio's remarks in Greece" was traced to Rubio's own X post).
     if (wrongSource(r.summary, f.source)) return;
+    // An official's own post is the original: Araghchi's interview parts on his Telegram were each given one of
+    // his X posts, the wrong one, and two of them vanished as copies of the others (21 Oct).
+    if (officialVoice(r.source) && /^https:\/\/(?:t\.me|x\.com|twitter\.com)\//.test(String(r.url || ""))) return;
     // An original posted over twelve hours before its relay is old news: the card keeps the original's time.
     const posted = xPostTime(f.url);
     if (posted && posted < Date.parse(r.at) - LATE_MS) r.at = new Date(posted).toISOString();

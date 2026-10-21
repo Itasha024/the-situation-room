@@ -44,7 +44,8 @@ export const Route = createRootRoute({
       },
     ],
     links: [
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg?v=sr1" },
+      // The map view's tab icon is its own logo, in the reader's theme (ops.js follows the theme switch).
+      { rel: "icon", type: "image/svg+xml", href: OPS_VIEW === "off" ? "/favicon.svg?v=sr1" : "/ops-icon.svg?v=1" },
       { rel: "stylesheet", href: appCss },
       {
         rel: "stylesheet",

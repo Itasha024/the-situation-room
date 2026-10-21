@@ -518,6 +518,13 @@ test("an official's own posts are each a card: Araghchi's 7-part interview (21 O
   const p = (n: number, min: number) => ({ fp: `p${n}`, at: `2026-10-20T20:${String(47 + min).padStart(2, "0")}:00Z`, source: "Abbas Araghchi", url: `https://t.me/s_a_araghchi/${13084 + 2 * n}`, summary: `Araghchi: part ${n} line on the US and Hormuz`, type: "statement" });
   assert.ok(ownParts(p(0, 0), p(1, 10)));
   assert.equal(talkRule(p(0, 0), p(1, 10)), null);
+  // Nor does a looser event rule join them: the part on talks via Pakistan folded into the part on Hormuz.
+  const { eventRule, foldServed } = await import("./fold-same.ts");
+  const hormuz = { ...p(1, 28), summary: "Iran says Strait of Hormuz closed until US accepts conditions, agrees new shipping lanes with Oman" };
+  const talks = { ...p(0, 0), summary: "Araghchi: indirect talks with US continue via Pakistan and Qatar; US agreed to seven-day proposal but wants added clauses" };
+  assert.equal(eventRule(talks, hormuz), null);
+  assert.equal(eventRule(hormuz, talks), null);
+  assert.equal(foldServed([talks, hormuz, { ...p(2, 40), summary: "Araghchi: Strait of Hormuz closed until US accepts Iran's conditions" }]).reports.length, 3);
   // Another outlet's line is no own part.
   assert.ok(!ownParts(p(0, 0), { ...p(1, 10), source: "Al Mayadeen", url: "https://t.me/almayadeen/1" }));
 });

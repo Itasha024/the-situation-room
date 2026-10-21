@@ -734,6 +734,9 @@ export function eventRule(a: Card, b: Card): Rule | null {
     if (a.source === b.source && gap <= OWN_HEAD_MS) return "own-headline";
     if (gap <= (sa.field || sb.field ? HEADLINE_FIELD_MS : HEADLINE_MS)) return "headline";
   }
+  // An official's own posts are each a card, unless word for word (above): Araghchi's interview part on the
+  // talks via Pakistan folded into his part on Hormuz by a looser rule (21 Oct).
+  if (ownParts(a, b)) return null;
   if (sa.ship && sb.ship && gap <= SHIP_MS && sameShip(sa.ship, sb.ship)) return "ship";
   if (sa.intercept && sa.intercept === sb.intercept && gap <= INTERCEPT_MS) return "intercept";
   if (sa.kit && sa.kit === sb.kit && gap <= KIT_MS) return "kit";
@@ -767,6 +770,7 @@ export function talkRule(a: Card, b: Card): Rule | null {
  * names Maqbanah.
  */
 export function looseRule(a: Card, b: Card): Rule | null {
+  if (ownParts(a, b)) return null;
   const sa = sig(a);
   const sb = sig(b);
   const gap = Math.abs(sb.t - sa.t);

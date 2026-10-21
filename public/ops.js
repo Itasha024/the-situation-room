@@ -248,7 +248,8 @@
     nav.className = 'ops-nav';
     nav.setAttribute('aria-label', 'Panels');
     nav.innerHTML = tabs.map(([id, n, ic]) => `<button type="button" data-tab="${id}" title="${esc(n)}">${NAV_ICON[ic]}<span>${esc(n)}</span></button>`).join('')
-      + `${PAGE === 'all' ? '' : '<span class="ops-nav-sp"></span>'}<button type="button" data-op="layers" aria-expanded="false" title="Layers: base map, names, grid, control areas (Y)">${NAV_ICON.layers}<span>Layers</span></button>`
+      // The All page keeps Layers on the map, at its bottom right (user, 21 Oct).
+      + (PAGE === 'all' ? '' : `<span class="ops-nav-sp"></span><button type="button" data-op="layers" aria-expanded="false" title="Layers: base map, names, grid, control areas (Y)">${NAV_ICON.layers}<span>Layers</span></button>`)
       + `<button type="button" data-op="keys" title="Keys (?)">${ICON.keys}<span>Keys</span></button>`;
     leftEl = document.createElement('aside');
     leftEl.className = 'ops-left';
@@ -350,14 +351,36 @@
   }
   /* On a wide screen the side panels and the strip under the map are as wide or as tall as the reader drags them
      (user, 21 Oct); a double-click on a handle puts it back. Kept per browser (SZ). */
+  // The desk's own part of the map: what the page opens on.
+  const areaB = () => { const o = (app('DESK_GO') || {})[PAGE === 'all' ? '/' : PAGE === 'iran' ? '/iran-conflict-desk' : '/yemen-conflict-desk']; return o && o.b; };
+  /* The map is never narrower than the desk's whole area needs at the map's height (user, 21 Oct: "in max narrow of
+     the map we should still see the full area"). */
+  function mapMinW() {
+    const m = getMap(), b = areaB();
+    let need = 380;
+    if (m && b) try {
+      const B = L.latLngBounds(b), nw = m.project(B.getNorthWest(), 0), se = m.project(B.getSouthEast(), 0);
+      const h = mapWrap.clientHeight - (parseFloat(mapWrap.style.getPropertyValue('--dock-h')) || 0) - 16;
+      if (h > 120) need = Math.max(need, Math.round(h * (se.x - nw.x) / (se.y - nw.y)) + 16);
+    } catch (e) { /* no map yet */ }
+    return Math.min(need, innerWidth - 2 * 240 - 56);
+  }
+  let sizing = '', gripsOn = false;
   function paintSizes() {
-    const W = innerWidth, room = W - 380; // the map keeps at least 380 pixels
-    const lw = SZ.lw && Math.max(220, Math.min(SZ.lw, room - (S.right ? (SZ.rw || 320) : 0)));
-    const rw = SZ.rw && Math.max(240, Math.min(SZ.rw, room - (S.left ? (lw || 300) : 0)));
-    root.style.setProperty('--ops-lw', lw ? lw + 'px' : '');
-    root.style.setProperty('--ops-rw', rw ? rw + 'px' : '');
-    if (!lw) root.style.removeProperty('--ops-lw');
-    if (!rw) root.style.removeProperty('--ops-rw');
+    const W = innerWidth;
+    if (isPhone()) { root.style.removeProperty('--ops-lw'); root.style.removeProperty('--ops-rw'); }
+    else {
+      const mid = W <= 1180;
+      const defL = mid ? 330 : Math.max(340, Math.min(0.26 * W, 440)), defR = mid ? 320 : Math.max(320, Math.min(0.24 * W, 400));
+      const MINL = 260, MINR = 240;
+      let lw = Math.max(MINL, SZ.lw || defL), rw = Math.max(MINR, SZ.rw || defR);
+      // The panels give way, the one not being dragged first, so the map keeps its whole area.
+      let over = (S.left ? lw : 0) + (S.right ? rw : 0) - (W - (nav.offsetWidth || 56) - mapMinW());
+      const give = (k) => { if (over <= 0) return; if (k === 'lw' && S.left) { const c = Math.min(over, lw - MINL); lw -= c; over -= c; } if (k === 'rw' && S.right) { const c = Math.min(over, rw - MINR); rw -= c; over -= c; } };
+      if (sizing === 'lw') { give('rw'); give('lw'); } else { give(sizing === 'rw' ? 'lw' : 'rw'); give(sizing === 'rw' ? 'rw' : 'lw'); }
+      root.style.setProperty('--ops-lw', Math.round(lw) + 'px');
+      root.style.setProperty('--ops-rw', Math.round(rw) + 'px');
+    }
     dock.style.height = SZ.dh && !isPhone() ? Math.max(90, Math.min(SZ.dh, Math.round(mapWrap.clientHeight * 0.75))) + 'px' : '';
     dock.classList.toggle('ops-dock-sized', !!SZ.dh && !isPhone());
     sizeDock();
@@ -370,18 +393,27 @@
       // On the map's box, not the strip, so it stays on the strip's top edge when the strip scrolls.
       [grip(mapWrap, 'ops-grip-d', 'Drag to make the strip taller or shorter (double-click: back to the start)'), 'dh', (ev, r) => r.bottom - ev.clientY, mapWrap],
     ];
+    // A map that showed the desk's whole area still shows all of it after a drag or a new window size.
+    let whole = false;
+    const wholeShown = () => { const m = getMap(), b = areaB(); try { return !!(m && b && m.getBounds().pad(0.02).contains(L.latLngBounds(b))); } catch (e) { return false; } };
+    // Looking at the overview, not zoomed in on a place: no closer than the zoom that fits the area, and centred in it.
+    const overview = () => { const m = getMap(), b = areaB(); try { const B = L.latLngBounds(b); return !!(m && b && B.contains(m.getCenter()) && m.getZoom() <= m.getBoundsZoom(B, false, L.point(16, 16)) + 0.5); } catch (e) { return false; } };
+    const keepWhole = (was) => { const m = getMap(), b = areaB(); if (!was || !m || !b || S.cast) return; try { m.invalidateSize({ pan: false }); if (!wholeShown()) m.fitBounds(b, { padding: [8, 8], animate: false }); } catch (e) { /* kept */ } };
+    let rzWhole = null, rzT = 0;
+    addEventListener('resize', () => { if (rzWhole == null) rzWhole = overview(); clearTimeout(rzT); rzT = setTimeout(() => { keepWhole(rzWhole); rzWhole = null; }, 300); });
     let raf = 0;
     const redraw = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { paintSizes(); drawMatrix(); }); };
     parts.forEach(([g, k, size, box]) => {
       let r = null;
-      g.addEventListener('pointerdown', (ev) => { if (ev.button) return; r = box.getBoundingClientRect(); g.setPointerCapture(ev.pointerId); H.classList.add('ops-sizing'); ev.preventDefault(); });
+      g.addEventListener('pointerdown', (ev) => { if (ev.button) return; r = box.getBoundingClientRect(); sizing = k; whole = overview(); g.setPointerCapture(ev.pointerId); H.classList.add('ops-sizing'); ev.preventDefault(); });
       g.addEventListener('pointermove', (ev) => { if (!r) return; SZ[k] = Math.round(size(ev, r)); redraw(); });
-      const end = () => { if (!r) return; r = null; H.classList.remove('ops-sizing'); try { localStorage.setItem('ops-sizes', JSON.stringify(SZ)); } catch (e) { /* private */ } };
+      const end = () => { if (!r) return; r = null; H.classList.remove('ops-sizing'); paintSizes(); sizing = ''; setTimeout(() => keepWhole(whole), 60); try { localStorage.setItem('ops-sizes', JSON.stringify(SZ)); } catch (e) { /* private */ } };
       g.addEventListener('pointerup', end);
       g.addEventListener('pointercancel', end);
       g.addEventListener('dblclick', () => { delete SZ[k]; redraw(); try { localStorage.setItem('ops-sizes', JSON.stringify(SZ)); } catch (e) { /* private */ } });
     });
     addEventListener('resize', redraw);
+    gripsOn = true;
     paintSizes();
   }
   // Between a phone and a wide screen one side panel is open at a time, so the map keeps its room (20 Oct: at
@@ -404,26 +436,11 @@
     rightEl.querySelectorAll('[data-rtab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.rtab === S.rtab)));
     root.querySelectorAll('[data-ptab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ptab === S.ptab)));
     const c = $('[data-op="cast"]', bar); if (c) c.setAttribute('aria-pressed', String(S.cast));
+    if (gripsOn) paintSizes();
     setTimeout(sizeDock, 30);
     setTimeout(sizeDock, 260);
   }
-  /* The panels' pickers, one button each (21 Oct): the one shown opens the list; a pick or a click elsewhere closes it. */
-  const PICKER = '.num-cat, .pager-fronts ~ .pg-dots';
-  const isOn = (b) => b.matches('.on, [aria-pressed="true"], [aria-selected="true"]');
-  function wirePickers() {
-    leftEl.addEventListener('click', (ev) => {
-      const b = ev.target.closest('button');
-      const row = b && b.parentElement && b.parentElement.matches(PICKER) ? b.parentElement : null;
-      if (!row) return;
-      if (isOn(b)) { ev.preventDefault(); ev.stopPropagation(); row.classList.toggle('ops-open'); return; }
-      row.classList.remove('ops-open');
-    }, true);
-    document.addEventListener('click', (ev) => {
-      leftEl.querySelectorAll('.ops-open').forEach((row) => { if (!row.contains(ev.target)) row.classList.remove('ops-open'); });
-    });
-  }
   function wireFrame() {
-    wirePickers();
     root.addEventListener('click', (ev) => {
       const t = ev.target.closest('[data-op],[data-tab],[data-ptab],[data-rtab]');
       if (!t || !root.contains(t)) return;
@@ -453,6 +470,13 @@
       else if (op === 'trafmenu') toggleTraffic();
       else if (op === 'settings') openSettings();
       else if (op === 'full') fullScreen();
+    });
+    leftEl.addEventListener('click', (ev) => {
+      const b = ev.target.closest('.ops-subnav [data-th]');
+      if (!b) return;
+      S.th = b.dataset.th;
+      leftEl.querySelectorAll('.ops-subnav [data-th]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      leftEl.querySelectorAll('article.ops-th').forEach((a) => a.classList.toggle('on', a.dataset.th === S.th));
     });
     dock.addEventListener('click', (ev) => {
       const q = ev.target.closest('[data-qr]');
@@ -534,11 +558,14 @@
     if (el._k === key) return;
     el._k = key;
     const when = (t) => (t ? `${hm(t, 'Asia/Jerusalem')}, ${dm(t, 'Asia/Jerusalem')}` : '');
-    el.innerHTML = Object.entries(DESK_INFO).map(([desk, [name, , href]]) => {
+    // One desk at a time, picked from the panel's own side menu (user, 21 Oct).
+    if (!DESK_INFO[S.th]) S.th = 'iran';
+    el.classList.add('ops-subwrap');
+    el.innerHTML = `<nav class="ops-subnav" aria-label="Desks">${Object.entries(DESK_INFO).map(([desk, [name]]) => `<button type="button" data-th="${desk}" aria-pressed="${S.th === desk}">${esc(name)}</button>`).join('')}</nav>` + Object.entries(DESK_INFO).map(([desk, [name, , href]]) => {
       const b = briefs[desk];
       const s = b && b.situation;
       const pts = s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 5) : [];
-      return `<article class="ops-th">
+      return `<article class="ops-th${S.th === desk ? ' on' : ''}" data-th="${desk}">
         <header><h3><a href="${href}" data-desk-go>${esc(name)}</a></h3><a class="ops-th-go" href="${href}" data-desk-go>Open desk ${ICON.right}</a></header>
         ${b && b.updatedAt ? `<p class="ops-th-sub">The desk’s brief · updated ${esc(when(b.updatedAt))}</p>` : ''}
         ${pts.length ? `<ol class="ops-th-pts">${pts.map((p) => `<li>${esc(p)}</li>`).join('')}</ol>` : `<p class="ops-empty">${b ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
@@ -583,7 +610,7 @@
       <div class="ops-card" hidden></div>
       <div class="ops-menu ops-lyr" hidden></div>
       <div class="ops-menu ops-trf" hidden></div>
-      <div class="ops-lower" hidden></div>`;
+      <div class="ops-lower" hidden></div>${PAGE === 'all' ? `<button type="button" data-do="layers" class="ops-lyrbtn" aria-expanded="false" title="Layers: base map, grid, control areas (Y)">${NAV_ICON.layers}<span>Layers</span></button>` : ''}`;
     mapWrap.appendChild(hud);
     L.DomEvent.disableClickPropagation(hud);
     L.DomEvent.disableScrollPropagation(hud);
@@ -1077,7 +1104,7 @@
     if (!menu) return;
     const open = force != null ? force : menu.hidden;
     menu.hidden = !open;
-    root.querySelectorAll('[data-op="layers"]').forEach((b) => b.setAttribute('aria-expanded', String(open)));
+    root.querySelectorAll('[data-op="layers"], .ops-lyrbtn').forEach((b) => b.setAttribute('aria-expanded', String(open)));
     if (open) { if (isPhone()) toggleTraffic(false); paintLayers(); }
   }
   function toggleTraffic(force) {
@@ -2007,7 +2034,10 @@
     runTraffic();
     if (location.hash === '#settings') openSettings();
     // The theme: the overview's tiles and the traffic's edges follow it.
-    new MutationObserver(() => { themeTiles(); drawBase(); drawTraffic(); drawMatrix(); if (T.dn) T.dn.setTheme(night() ? 'night' : 'day'); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
+    // The tab's icon is the site's logo in the theme shown (user, 21 Oct).
+    const tabIcon = () => { const l = document.querySelector('link[rel="icon"]'); if (l) l.href = `/ops-icon-${night() ? 'night' : 'day'}.svg?v=1`; };
+    tabIcon();
+    new MutationObserver(() => { themeTiles(); drawBase(); drawTraffic(); drawMatrix(); tabIcon(); if (T.dn) T.dn.setTheme(night() ? 'night' : 'day'); }).observe(H, { attributes: true, attributeFilter: ['data-theme'] });
     // The pins are drawn again by the page now and then: fade the ones outside the hours picked again.
     let dimT = 0;
     new MutationObserver(() => { if (rng) { clearTimeout(dimT); dimT = setTimeout(dimPins, 80); } }).observe(m.getPane('markerPane'), { childList: true });

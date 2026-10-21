@@ -9,7 +9,7 @@
  * operations room, Day a newsroom page; the reader's device picks unless they do.
  */
 html[data-view="ops"] {
-  --ops-lw: clamp(300px, 23vw, 380px);
+  --ops-lw: clamp(340px, 26vw, 440px);
   --ops-rw: clamp(320px, 24vw, 400px);
   --ops-nav-w: 56px;
   --ops-strip-h: 26px;
@@ -88,7 +88,7 @@ html[data-view="ops"] .ops-on .rail-splitter { display: none !important }
   html[data-view="ops"] .ops-on.ops-nodock .map-wrap { --dock-h: 0px !important }
 }
 @media (min-width: 761px) and (max-width: 1180px) {
-  html[data-view="ops"] { --ops-lw: 300px; --ops-rw: 320px; --ops-nav-w: 50px }
+  html[data-view="ops"] { --ops-lw: 330px; --ops-rw: 320px; --ops-nav-w: 50px }
 }
 /* Handles to widen the side panels and raise the strip under the map (21 Oct). */
 html[data-view="ops"] .ops-grip { display: none }
@@ -1009,36 +1009,49 @@ html[data-view="ops"] .ops-card dl.ops-wide { grid-template-columns: minmax(0, 1
 html[data-view="ops"] .ops-card dl.ops-wide dd { white-space: normal; overflow-wrap: anywhere }
 html[data-view="ops"] .ops-card .ops-rtimes { margin: 5px 0 0; font: 500 11.5px var(--ops-mono); color: var(--o-dim) }
 
-/* ---------- One switcher for the panels (user, 21 Oct: "design in unison the menu switching between arenas and
-   between categories"): the arenas or fronts, and the numbers' categories, as one row of named buttons in the
-   look of the map's time buttons; an arena or a front shows one at a time, as a category does. ---------- */
-html[data-view="ops"] .ops-left :has(> .pager-fronts) { display: flex !important; flex-direction: column }
-html[data-view="ops"] .ops-left .pager-fronts ~ .pg-dots { order: -1 }
-html[data-view="ops"] .ops-left .pager-fronts .pg-slide:not(.on) { display: none !important }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) {
-  display: flex !important; flex-wrap: wrap; justify-content: flex-start; gap: 4px; width: 100%; max-width: 100%;
-  margin: 0 0 10px !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important; overflow: visible
+/* ---------- A side menu inside the panel (user, 21 Oct: "an inside side menu to separate the categories, like the
+   side menu on the left, a sub side menu; for the timelines too"): the arenas or fronts, the numbers' categories,
+   the timeline's eras and the All page's desks are listed down the panel's left edge; the one picked shows beside. ---------- */
+html[data-view="ops"] .ops-left :is(:has(> .pager-fronts), :has(> .pager-timeline), :has(> .num-cat), .ops-subwrap) {
+  display: grid !important; grid-template-columns: var(--ops-sub-w, 92px) minmax(0, 1fr) !important; column-gap: 12px !important; row-gap: 0 !important; align-items: start !important; gap: 0 12px !important
 }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button {
-  appearance: none; flex: 0 1 auto; min-width: 0; height: 28px; display: inline-flex; align-items: center; justify-content: center;
-  margin: 0 !important; padding: 0 10px !important; border: 1px solid var(--o-line-2) !important; border-radius: var(--ops-r) !important;
-  background: none !important; box-shadow: none !important; color: var(--o-dim) !important;
-  font: 600 11.5px/1 var(--ops-cond) !important; letter-spacing: .1em !important; text-transform: uppercase; white-space: nowrap; cursor: pointer
+html[data-view="ops"] .ops-left :is(:has(> .pager-fronts), :has(> .pager-timeline), :has(> .num-cat), .ops-subwrap) > * { grid-column: 2; min-width: 0 }
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) {
+  grid-column: 1 !important; grid-row: 1 / span 30; position: sticky; top: 0; align-self: start;
+  display: flex !important; flex-direction: column; flex-wrap: nowrap; gap: 0; width: auto; max-width: none;
+  margin: 0 !important; padding: 0 !important; border: 0 !important; border-right: 1px solid var(--o-line) !important; border-radius: 0 !important; background: none !important
 }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button::before { content: none !important }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button:hover { border-color: var(--o-dim) !important; background: var(--o-hover) !important; color: var(--o-text) !important }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) {
-  border-color: var(--o-sel) !important; background: color-mix(in srgb, var(--o-sel) 16%, transparent) !important; color: var(--o-strong) !important
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button {
+  appearance: none; display: block; width: 100%; min-width: 0; height: auto; flex: none; margin: 0 0 0 -1px !important;
+  padding: 9px 8px 9px 10px !important; border: 0 !important; border-left: 2px solid transparent !important; border-radius: 0 !important;
+  background: none !important; box-shadow: none !important; color: var(--o-dim) !important; text-align: left !important;
+  font: 600 11px/1.25 var(--ops-cond) !important; letter-spacing: .08em !important; text-transform: uppercase; white-space: normal; overflow-wrap: anywhere; cursor: pointer
 }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button:focus-visible { outline: 2px solid var(--o-sel); outline-offset: 1px }
-html[data-view="ops"] .ops-left .pager-fronts ~ .pg-dots .pg-name { display: inline; overflow: hidden; text-overflow: ellipsis; max-width: 22ch }
-/* One button, not a row (user, 21 Oct: "make the menu of categories one button, not many; it's heavy on the eyes"):
-   the one shown, with a caret; a click opens the list of them all, a pick closes it (ops.js wirePickers). */
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots):not(.ops-open) button:not(.on, [aria-pressed="true"], [aria-selected="true"]) { display: none !important }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots) button:is(.on, [aria-pressed="true"], [aria-selected="true"])::after { content: ""; width: 0; height: 0; margin-left: 8px; border: 4px solid transparent; border-top-color: currentColor; transform: translateY(2px) }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots).ops-open { flex-direction: column; gap: 0; border: 1px solid var(--o-line-2) !important; border-radius: var(--ops-r) !important; background: var(--o-raised) !important }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots).ops-open button { width: 100%; justify-content: flex-start; height: 30px; border: 0 !important; border-radius: 0 !important; border-top: 1px solid var(--o-line) !important }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots).ops-open button:first-child { border-top: 0 !important }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots).ops-open button:is(.on, [aria-pressed="true"], [aria-selected="true"]) { order: -1; border-top: 0 !important; border-bottom: 1px solid var(--o-line-2) !important }
-html[data-view="ops"] .ops-left :is(.num-cat, .pager-fronts ~ .pg-dots).ops-open button:is(.on, [aria-pressed="true"], [aria-selected="true"])::after { border-top-color: transparent; border-bottom-color: currentColor; transform: translateY(-2px) }
-html[data-view="ops"] .ops-left .pager-fronts ~ .pg-dots.ops-open .pg-name { max-width: none }
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button::before,
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button::after { content: none !important }
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:hover { background: var(--o-hover) !important; color: var(--o-text) !important }
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:is(.on, [aria-pressed="true"], [aria-selected="true"]) {
+  border-left-color: var(--o-sel) !important; background: color-mix(in srgb, var(--o-sel) 13%, transparent) !important; color: var(--o-strong) !important
+}
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button:focus-visible { outline: 2px solid var(--o-sel); outline-offset: -2px }
+html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-timeline) ~ .pg-dots .pg-name { display: inline !important }
+html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-timeline) .pg-slide:not(.on) { display: none !important }
+html[data-view="ops"] .ops-th[data-th]:not(.on) { display: none }
+html[data-view="ops"] .ops-subwrap .ops-th { border-bottom: 0; margin-bottom: 0 }
+@media (max-width: 760px) { html[data-view="ops"] { --ops-sub-w: 84px } }
+/* The All page's Layers sit on the map at its bottom right (user, 21 Oct); the menu opens above the button. */
+html[data-view="ops"] .ops-lyrbtn {
+  position: absolute; right: 10px; bottom: 28px; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px;
+  border: 1px solid var(--o-line-2); border-radius: var(--ops-r); background: var(--o-glass); color: var(--o-text); cursor: pointer;
+  font: 700 11.5px var(--ops-cond); letter-spacing: .12em; text-transform: uppercase
+}
+html[data-view="ops"] .ops-lyrbtn svg { width: 17px; height: 17px }
+html[data-view="ops"] .ops-lyrbtn:hover, html[data-view="ops"] .ops-lyrbtn[aria-expanded="true"] { border-color: var(--o-sel); color: var(--o-strong) }
+html[data-view="ops"] .ops-hud:has(.ops-lyrbtn) .ops-lyr { left: auto; right: 10px; top: auto; bottom: 68px }
+html[data-view="ops"].ops-cast .ops-lyrbtn { display: none }
+@media (max-width: 760px) { html[data-view="ops"] .ops-lyrbtn { display: none } }
+/* Beside the side menu the numbers' boxes keep their room for the figures. */
+html[data-view="ops"] .ops-left :has(> .num-cat) .tally-box { padding-left: 12px !important; padding-right: 12px !important }
+html[data-view="ops"] .ops-left :has(> .num-cat) .tally-box table { width: 100% }
+html[data-view="ops"] .ops-left :has(> .num-cat) .tally-box th { white-space: nowrap; letter-spacing: .04em !important }
+@media (max-width: 760px) { html[data-view="ops"] { --ops-sub-w: 78px } html[data-view="ops"] .ops-left :has(> .num-cat) .tally-box { padding-left: 8px !important; padding-right: 8px !important } }

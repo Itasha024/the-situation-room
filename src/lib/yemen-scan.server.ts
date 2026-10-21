@@ -27,7 +27,7 @@ import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, tr
 import { isOfficialBody } from "./desk/numbers.ts";
 import { leadSpeaker } from "./desk/speakers.ts";
 import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS, STRIKE_ABROAD_MS, sameStrikeAbroad, OWN_RETELL_MS, ownRetelling, ONE_EVENT_MS, oneEventTwoTypes, RARE_FIGURE_MS, sameRareFigure } from "./desk/copies.ts";
-import { type Card as SameCard, eventRule, joinInto, type Rule as FoldRule, talkRule } from "./desk/fold-same.ts";
+import { type Card as SameCard, eventRule, joinInto, ownParts, type Rule as FoldRule, talkRule } from "./desk/fold-same.ts";
 import { exclusiveUrl } from "./desk/copy-rules.ts";
 import { type OutletSide, homeOutlet, isAggregator, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
@@ -1902,6 +1902,8 @@ export function foldIntoPublished(
     // over (Round 4, 20 Oct: Yemen's foreign ministry on the Saudi ambassador's words, posted 18:58, led
     // a card on a Washington protest timed 01:29; copy-rules.ts postTimes splits the stored ones).
     if (home && lateOtherStory(home, r)) home = undefined;
+    // An official's own posts are each a card (21 Oct: Araghchi's interview in parts).
+    if (home && ownParts(home as unknown as SameCard, r as unknown as SameCard)) home = undefined;
     // One event, one card (fold-same.ts, 18 Oct review): one official's
     // remarks that day, one ship incident in 24 hours, one district's toll,
     // one blast abroad, one article on a mirror host, one channel's same

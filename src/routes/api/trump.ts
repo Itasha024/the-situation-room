@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/trump")({
               const d = s.desks ?? desksOf(s.text);
               return d.includes(desk) || (desk === "iran" && !d.length);
             };
-            const body = JSON.stringify({ ok: true, statements: feed.statements.filter((s) => shownYet(s) && onDesk(s)).map(({ tries: _t, off: _o, desks: _d, ...s }) => (s.headline ? { ...s, ...shownCard({ headline: s.headline, body: s.body }) } : { ...s, ...plainCard(s) })), checkedAt: feed.checkedAt ?? null, down: feed.down ?? [] });
+            const body = JSON.stringify({ ok: true, statements: feed.statements.filter((s) => shownYet(s) && onDesk(s)).map(({ tries: _t, off: _o, desks: _d, body: _b, ...s }) => (s.headline ? { ...s, ...shownCard({ headline: s.headline, body: _b }) } : { ...s, ...plainCard({ ...s, body: _b }) })), checkedAt: feed.checkedAt ?? null, down: feed.down ?? [] });
             return { status: 200, body, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60", "cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=86400" } };
           }, request.headers.get("accept-encoding"));
         } catch (err) {

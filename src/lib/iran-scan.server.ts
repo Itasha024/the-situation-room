@@ -156,6 +156,8 @@ const GEMINI_LITE_SHARE = 300;
 const due = (state: IranState, id: string, everyMin: number, now: number) => now - (state.lastScanAt[id] ?? 0) >= everyMin * 60_000 - 20_000;
 
 const TG_BACKFILL_PAGES = 4;
+/** Sources read at once. */
+const SOURCES_AT_ONCE = 16;
 /**
  * Channels read again from a post, once (the key marks it done): Araghchi's 7-part interview of 20 Oct
  * night (posts 13084–13096) was read cut short and made one card; read again under 21 Oct's rules.
@@ -287,28 +289,33 @@ export async function fetchIranSources(state: FetchState, now: number): Promise<
   const iState = state as IranState;
   const status: SourceStatus[] = [];
   const own: RawHit[] = [];
-  const jobs: Promise<void>[] = [];
+  const jobs: (() => Promise<void>)[] = [];
   const run = (id: string, name: string, kind: SourceStatus["kind"], every: number, read: () => Promise<{ rows: RawHit[]; ok: boolean }>) => {
     if (!due(iState, id, every, now)) return;
-    jobs.push(
-      (async () => {
-        let res = { rows: [] as RawHit[], ok: false };
-        try {
-          res = await read();
-        } catch {
-          // Unread this tick; the status says so.
-        }
-        iState.lastScanAt[id] = Date.now();
-        own.push(...res.rows);
-        status.push({ id, name, kind, ok: res.ok, cadence: every >= 60 ? "hourly" : `every ${every} min`, hits: res.rows.length });
-      })(),
-    );
+    jobs.push(async () => {
+      let res = { rows: [] as RawHit[], ok: false };
+      try {
+        res = await read();
+      } catch {
+        // Unread this tick; the status says so.
+      }
+      // A source that did not answer is tried again next tick, not after its whole interval.
+      if (res.ok) iState.lastScanAt[id] = Date.now();
+      own.push(...res.rows);
+      status.push({ id, name, kind, ok: res.ok, cadence: every >= 60 ? "hourly" : `every ${every} min`, hits: res.rows.length });
+    });
   };
   for (const s of IRAN_TG) run(`tg:${s.id}`, s.name, "tg", s.every, () => readTg(s, iState, now));
   for (const s of IRAN_X) run(`x:${s.id}`, s.name, "x", s.every, () => readX(s, iState, now));
   for (const f of [...IRAN_RSS, ...SEARCHES]) run(`web:${f.id}`, f.name, "web", f.every, () => readFeed(f));
   run("web:nna", "NNA", "web", 5, () => readNna(iState, now));
-  await Promise.allSettled(jobs);
+  // A few at a time: some 140 requests at once on the small server timed half of them out every tick (22 Oct).
+  let next = 0;
+  await Promise.allSettled(
+    Array.from({ length: SOURCES_AT_ONCE }, async () => {
+      while (next < jobs.length) await jobs[next++]();
+    }),
+  );
   remember(own);
 
   return { hits: own.filter((h) => passesOwnSourceGate(h)), status, yemen: toYemen(own) };

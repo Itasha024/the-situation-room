@@ -858,6 +858,21 @@ function toLiveReport(source: string, url: string, rawText: string, at: string, 
 }
 
 export async function fetchText(url: string, ms = 8000): Promise<string | null> {
+  // Sixteen at a time: both scans asked for some 280 pages at once and half of them timed out (22 Oct).
+  // The clock starts when the request goes out, not while it waits its turn.
+  if (pageSlots > 0) pageSlots -= 1;
+  else await new Promise<void>((r) => pageWaiters.push(r));
+  try {
+    return await fetchTextNow(url, ms);
+  } finally {
+    const next = pageWaiters.shift();
+    if (next) next();
+    else pageSlots += 1;
+  }
+}
+let pageSlots = 16;
+const pageWaiters: (() => void)[] = [];
+async function fetchTextNow(url: string, ms: number): Promise<string | null> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
   try {

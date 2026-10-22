@@ -51,7 +51,8 @@ import {
 } from "./originals.ts";
 import type { DeskId } from "../desks.ts";
 import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
-import { ownRead } from "./recent-reads.ts";
+import { ownRead, ownedBy, recentReads } from "./recent-reads.ts";
+import { PRESS_LANGS, pressCandidates, pressOf } from "./state-press.ts";
 import { siteAlsoOnly } from "./site-articles.ts";
 import { officialVoice } from "./speaker-press.ts";
 
@@ -630,6 +631,8 @@ type Waiting = {
   keys: string[];
   arKeys?: string[];
   trKeys?: string[];
+  /** The keys in the languages of the owner's country's media, for the look in the site's own reads. */
+  pressKeys?: string[];
   firstAt: number;
   lastAt: number;
   report: LiveReport;
@@ -673,6 +676,8 @@ export type TraceOptions = {
 
 /** How far back a relay is matched against the desk's own cards of the outlet it cites. */
 const ON_DESK_MS = 72 * 3600_000;
+/** Looks in the site's own reads a tick that reach the model: each is one short call. */
+const PRESS_BUDGET = 12;
 
 /** Paths that are never the article itself: video, photo and live pages, a bare front page. */
 // A live blog is many stories under one address: an SNN post of Trump's words was traced to Al Jazeera's
@@ -925,6 +930,27 @@ const hostOf = (u: string) => {
   }
 };
 
+/** A country's adjective at the head of a speaker's role: "Iranian MP", "Iran's deputy FM", "Senior Iranian security official". */
+const ROLE_COUNTRY: [RegExp, string][] = [
+  [/\b(?:Iranian|Iran's|IRGC)\b/, "IR"], [/\b(?:Russian|Russia's|Kremlin)\b/, "RU"], [/\b(?:Iraqi|Iraq's)\b/, "IQ"], [/\b(?:Lebanese|Lebanon's|Hezbollah)\b/, "LB"],
+  [/\b(?:Qatari|Qatar's)\b/, "QA"], [/\b(?:Pakistani|Pakistan's)\b/, "PK"], [/\b(?:Saudi)\b/, "SA"], [/\b(?:Omani|Oman's)\b/, "OM"], [/\b(?:Emirati|UAE)\b/, "AE"],
+  [/\b(?:Israeli|Israel's|IDF)\b/, "IL"], [/\b(?:US|American|Pentagon|White House)\b/, "US"], [/\b(?:Turkish|Turkey's)\b/, "TR"], [/\b(?:Chinese|China's)\b/, "CN"],
+  [/\b(?:Egyptian|Egypt's)\b/, "EG"], [/\b(?:Syrian|Syria's)\b/, "SY"], [/\b(?:Houthi)\b/, "YE"],
+];
+const ROLE_WORD = /\b(?:official|minister|MP|lawmaker|spokes\w*|commander|general|adviser|advisor|ambassador|envoy|president|leader|speaker|deputy|chief|diplomat|source|sources|officer|governor|judiciary|army|navy|ministry|government)\b/i;
+/**
+ * A headline led by another country's official ("Senior Iranian security official: …") on an outlet
+ * that is not that country's own is a relay even when the speaker is no one the desk knows by name:
+ * his words are looked for in his country's media (user, 22 Oct).
+ */
+export function foreignOfficial(summary: string, source: string): Cited | null {
+  const lead = /^([^:"“]{4,80}):\s/.exec(String(summary || "").trim())?.[1];
+  if (!lead || !ROLE_WORD.test(lead)) return null;
+  const country = ROLE_COUNTRY.find(([re]) => re.test(lead))?.[1];
+  if (!country || pressOf(source, country) >= 0) return null;
+  return { name: lead, site: "", lang: "en", kind: "official", country };
+}
+
 /** Under this, an article's text in hand is its teaser, not the article. */
 const TEASER_CHARS = 600;
 
@@ -1172,7 +1198,10 @@ ${text}`.trim(),
       const to = spokeTo(`${lead}\n${text}`);
       return { name: sp.name, site: sp.official ?? "", lang: "en", kind: "official", country: sp.country, speaker: sp.name, ...(to.length ? { spokeTo: to } : {}) };
     }
-    return findGroup(text, r.url) ?? findGroup(lead, r.url);
+    // Words told to the carrier itself are its exclusive: never looked for elsewhere.
+    const told = saidTo(`${text}
+${lead}`, r.source) || !!r.flags?.includes("exclusive");
+    return findGroup(text, r.url) ?? findGroup(lead, r.url) ?? (told ? null : foreignOfficial(r.summary, r.source));
   };
 
   /**
@@ -1182,6 +1211,37 @@ ${text}`.trim(),
    * elsewhere, its country's press; last, the outlet's own recent articles,
    * read and matched by a model.
    */
+  /**
+   * The original among what the site read in the last twelve hours (state-press.ts): an outlet's own
+   * posts only (its story or exclusive is its own); an official's own channel, then his country's
+   * state media and main outlets. Keywords in the country's languages, a model to pick the post.
+   */
+  let presses = part(PRESS_BUDGET);
+  const pressOriginal = async (e: Waiting, owner: { names: string[]; x?: string; site?: string }, country?: string): Promise<Found | null> => {
+    if (e.cited.kind === "group" || presses <= 0 || !inTime()) return null;
+    const outlet = e.cited.kind === "outlet" && !e.cited.speaker;
+    const at = Date.parse(e.report.at);
+    const langs = outlet ? [] : (PRESS_LANGS[country ?? ""] ?? []);
+    if (!e.pressKeys) {
+      const own = e.cited.lang === "ar" ? ["Arabic"] : [];
+      const all = await Promise.all([...new Set([...langs, ...own, ...(outlet && country === "IR" ? ["Persian"] : [])])].map((l) => translateKeys(e.keys, l)));
+      e.pressKeys = all.flat();
+      dirty = true;
+    }
+    const keys = [...e.keys, ...(e.arKeys ?? []), ...e.pressKeys];
+    const cands = pressCandidates(recentReads(now), { own: (r) => ownedBy(r, owner), country: outlet ? undefined : country }, keys, at, e.report.url).filter(
+      (c) => c.source !== e.report.source,
+    );
+    if (!cands.length) return null;
+    presses -= 1;
+    const claim = `${e.report.summary}. ${e.report.text ?? ""}`.trim();
+    const i = await whichCarries(claim, cands.map((c) => c.text));
+    if (i < 0) return null;
+    const c = cands[i];
+    console.log(`[origin] ${e.report.fp}: the original in the site's own reads: ${c.source}${c.own ? " (own channel)" : " (its country's media)"}`);
+    return { url: c.url, source: c.source, title: c.text.split("\n")[0].slice(0, 140), text: c.text };
+  };
+
   /**
    * The cited article already on the desk as its own card (user, 22 Oct: after the WSJ's
    * "Diplomats race to head off escalation" went out, Bin Saeed, Unews and Al-Araby each
@@ -1228,6 +1288,9 @@ ${text}`.trim(),
       console.log(`[origin] ${e.report.fp}: the original was in the site's own reads: ${read.source}`);
       return { url: read.url, source: read.source, title: read.text.split("\n")[0].slice(0, 140), text: read.text };
     }
+    // In the site's own reads, in their languages: the owner's channel, then the country's own media.
+    const press = await pressOriginal(e, owner, sp?.country ?? e.cited.country);
+    if (press) return press;
     if (sp) {
       if (!e.trKeys) e.trKeys = await translateKeys(e.keys, sp.lang);
       const hit = await searchSpeaker(sp, e.keys, e.trKeys, at, (o) => ISRAELI.test(o), e.cited.spokeTo ?? [], `${e.report.summary}\n${e.report.text ?? ""}`);

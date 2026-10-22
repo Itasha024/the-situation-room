@@ -55,6 +55,8 @@ import {
   parseRss,
   parseTelegram,
   tgPostNo,
+  ownPostNo,
+  TG_MARK_SLACK,
   WAR_ONLY,
 } from "./yemen-scan.server.ts";
 
@@ -170,14 +172,16 @@ async function readTg(src:{ id: string; name: string; lean: IranLean }, state: I
   // Once: a channel read again from a post (REWIND), its posts read again whatever was seen.
   const rw = REWIND.find((x) => x.id === src.id && now < x.until && !state.lastTgPost[x.key]);
   if (rw) state.lastTgPost[rw.key] = now;
-  const seen = rw ? rw.from : state.lastTgPost[src.id] ?? 0;
   const newest = newestTgPost(html as string, src.id);
+  // A mark past anything the channel posted is no mark (Al-Akhbar's, 22 Oct).
+  const stored = state.lastTgPost[src.id] ?? 0;
+  const seen = rw ? rw.from : newest > 0 && stored > newest + TG_MARK_SLACK ? newest : stored;
   if (seen && newest <= seen) return { rows: [], ok };
   const all = parseTelegram(html as string, { id: src.id, name: src.name, lean: "intl" });
   // A busy channel can post more between two reads than its page holds (Araghchi's interview: a video and a
   // text for each of 7 parts, 21 Oct): page back to the last post read, as the Yemen desk does.
   for (let page = 0; seen && page < TG_BACKFILL_PAGES; page += 1) {
-    const oldest = Math.min(...all.map((r) => tgPostNo(r.url)).filter(Boolean));
+    const oldest = Math.min(...all.map((r) => ownPostNo(r.url, src.id)).filter(Boolean));
     if (!Number.isFinite(oldest) || oldest <= seen + 1) break;
     // Telegram turns a request down now and then while the scan reads every channel at once: once more, after a pause.
     const older = (await fetchText(`https://t.me/s/${src.id}?before=${oldest}`)) ?? (await new Promise((r) => setTimeout(r, 2000)).then(() => fetchText(`https://t.me/s/${src.id}?before=${oldest}`)));

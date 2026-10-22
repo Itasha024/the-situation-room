@@ -16,7 +16,8 @@ export type Read = { source: string; url: string; text: string; at: number };
 
 const KEEP_MS = 48 * 3600_000;
 const MAX = 8000;
-const TEXT = 1500;
+// Whole statements: Fars's post of the security official ran past 1,500 characters (22 Oct).
+const TEXT = 4000;
 const reads = new Map<string, Read>();
 
 /** The scan's items, as read (a picture post with its picture's words). */

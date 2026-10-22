@@ -1382,6 +1382,14 @@ export function tgPostNo(url: string): number {
   return m ? Number(m[1]) : 0;
 }
 
+/** A post number only when the address is the channel's own post (t.me/<channel>/<n>), else 0. */
+export function ownPostNo(url: string, channel: string): number {
+  const m = /^https?:\/\/t\.me\/(?:s\/)?([\w]+)\/(\d+)(?:[?#]|$)/i.exec(String(url || ""));
+  return m && m[1].toLowerCase() === channel.toLowerCase() ? Number(m[2]) : 0;
+}
+/** How far past the channel page's newest post a stored mark may stand before it is taken as wrong. */
+export const TG_MARK_SLACK = 50;
+
 /** The newest post number on a channel page, without parsing its posts. */
 export function newestTgPost(html: string, channel: string): number {
   const own = channel.toLowerCase();
@@ -2490,7 +2498,11 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
       (async () => {
         const html = await fetchText(`https://t.me/s/${ch.id}`);
         const ok = !!(html && html.includes("tgme_widget_message"));
-        const seen = state.lastTgPost?.[ch.id] ?? 0;
+        // A mark past anything the channel has posted is no mark (22 Oct: Al-Akhbar's stood at an
+        // article's number, 905496, against posts near 98000, and shut the channel out for four weeks).
+        const page0 = ok ? newestTgPost(html as string, ch.id) : 0;
+        const stored = state.lastTgPost?.[ch.id] ?? 0;
+        const seen = page0 > 0 && stored > page0 + TG_MARK_SLACK ? page0 : stored;
         // Nothing posted since the last read: the page is not parsed at all
         // (most ticks, for most channels; Vercel bills the processor time).
         const inRun = inReplay(ch.id) && replaying(state, ch.id, now);
@@ -2500,10 +2512,10 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
         // holds. Page back until we reach the last post already read, so a
         // burst never leaves a gap. First sight of a channel: no backfill.
         for (let page = 0; ok && seen && page < TG_BACKFILL_PAGES; page += 1) {
-          const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));
+          const oldest = Math.min(...rows.map((r) => ownPostNo(r.url, ch.id)).filter(Boolean));
           if (!Number.isFinite(oldest) || oldest <= seen + 1) break;
           const older = await fetchText(`https://t.me/s/${ch.id}?before=${oldest}`);
-          const more = older ? parseTelegram(older, ch).filter((r) => tgPostNo(r.url) < oldest) : [];
+          const more = older ? parseTelegram(older, ch).filter((r) => (ownPostNo(r.url, ch.id) || tgPostNo(r.url)) < oldest) : [];
           if (!more.length) break;
           rows.push(...more);
         }
@@ -2514,7 +2526,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
           // A page that fails to load leaves the replay unfinished, to go on next tick.
           let done = true;
           for (let page = 0; page < REPLAY.pages; page += 1) {
-            const oldest = Math.min(...rows.map((r) => tgPostNo(r.url)).filter(Boolean));
+            const oldest = Math.min(...rows.map((r) => ownPostNo(r.url, ch.id)).filter(Boolean));
             const oldestAt = Math.min(...rows.map((r) => Date.parse(r.at)).filter(Number.isFinite));
             if (!Number.isFinite(oldest) || oldestAt < REPLAY.since) break;
             const older = await replayFetch(`https://t.me/s/${ch.id}?before=${oldest}`);
@@ -2528,7 +2540,8 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
           }
           if (done) state.lastScanAt[replayKey] = now;
         }
-        const newest = Math.max(seen, ok ? newestTgPost(html as string, ch.id) : 0, ...rows.map((r) => tgPostNo(r.url)));
+        // Only the channel's own post numbers: a row filed under the article it links has the article's.
+        const newest = Math.max(seen, page0, ...rows.map((r) => ownPostNo(r.url, ch.id)));
         if (newest > 0) (state.lastTgPost ??= {})[ch.id] = newest;
         if (ok) sourcesOk += 1;
         hits.push(...rows);

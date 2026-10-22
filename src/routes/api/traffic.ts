@@ -212,6 +212,19 @@ async function routeOf(cs: string) {
   else if (r) { routes.set(cs, r); air.ver++; }
 }
 const vrsNone = new Set<string>();
+/** The from/to of the flights on the map, a few after each circle read (22 Oct: they filled only while the page asked, 8 a time). */
+function fillRoutes(n: number) {
+  // Flights not yet asked first; then those waiting on adsbdb's budget.
+  for (const again of [false, true]) {
+    for (const { a } of air.seen.values()) {
+      if (n <= 0) return;
+      const f = String(a.flight || "").trim();
+      if (!/^[A-Z]{3}\d/.test(f) || routes.has(f) || air.mil.has(a.hex) || vrsNone.has(f) !== again) continue;
+      n--;
+      void routeOf(f);
+    }
+  }
+}
 
 /** Merged by hex: the freshest position of the feeds wins; the others fill what it lacks. */
 function put(a: Ac, now: number, src: Src) {
@@ -293,6 +306,7 @@ async function airLoop() {
         await readCircle(i, lolTurn.has(i) && lolSpend());
         if (osDue()) await readOpenSky();
         ghostRoute();
+        fillRoutes(6);
         await sleep(1050); // adsb.fi: one call a second
       }
       if (osDue()) await readOpenSky();

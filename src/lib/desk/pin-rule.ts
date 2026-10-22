@@ -11,6 +11,12 @@
 /** Pictures or footage of damage already done: never a new attack. */
 export const OLD_PICTURE_RE = /\bsatellite (?:images?|imagery|photos?|pictures?|footage)\b|\b(?:images?|imagery|photos?|pictures?|footage|videos?)\b[^.]{0,40}\b(?:show(?:s|ing|ed)?|reveal\w*|document\w*|captur\w*)\b[^.]{0,40}\b(?:damage\w*|aftermath|destruction|destroyed|wreckage|ruins|smoke|charred|burn(?:t|ed|ing)?)\b|\baftermath of\b|\bdamage assessment\b/i;
 
+/**
+ * A video put out now of an attack that happened before (user, 23 Oct: "Iranian missile hits Al Dhafra US base in
+ * UAE, Iranian channel posts first footage" — the video was new, the attack was not): never a pin, never a report.
+ */
+export const FIRST_FOOTAGE_RE = /\b(?:first|new|unseen|previously unseen|never[- ]before[- ]seen)\s+(?:footage|videos?|images|pictures|clips?|scenes)\b|\b(?:footage|videos?|clips?|images|scenes)\s+(?:published|released|aired|shown|posted)\s+for the first time\b|\b(?:posts?|posted|publish(?:es|ed)?|releases?|released|shares?|shared|airs?|aired|broadcasts?)\s+(?:the\s+)?(?:first\s+|new\s+)?(?:footage|video|clip|images|scenes)\b|(?:فيديو|مشاهد|لقطات|صور)\s+(?:\S+\s+){0,2}(?:للمرة الأولى|لأول مرة)/i;
+
 /** Not an event at a place: maps, analysis, build-ups, drills, threats, visits, funerals, protests, arrests. */
 export const NOT_EVENT_RE = /\b(?:maps? (?:of|shows?)|front[- ]line maps?|analys[ie]s|explainer|what we know|deploy(?:s|ed|ing|ment|ments)?|redeploy\w*|reinforcements?|reinforc(?:es|ed|ing)|mobili[sz]\w*|build-?up|military parade|parades?|drills?|military exercises?|manoeuvres|maneuvers|graduat\w*|threat(?:s|en|ens|ened)?|warn(?:s|ed)|vows?|vowed|ultimatum|visit(?:s|ed|ing)?|tours?|inspect\w*|funerals?|mourn\w*|burial|protests?|protesters?|rall(?:y|ies)|demonstrat\w*|sit-in|arrest\w*|detain\w*)\b/i;
 
@@ -51,7 +57,7 @@ export function oldPicture(headline: string): boolean {
  */
 export function notNewEvent(headline: string): boolean {
   const h = String(headline || "");
-  if (roundup(h)) return true;
+  if (roundup(h) || FIRST_FOOTAGE_RE.test(h)) return true;
   const pic = h.search(OLD_PICTURE_RE);
   if (pic >= 0) return !NEW_HIT_RE.test(h.slice(0, pic));
   if (!NOT_EVENT_RE.test(h) || ALERT_RE.test(h)) return false;

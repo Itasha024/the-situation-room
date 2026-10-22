@@ -1397,3 +1397,13 @@ html[data-view="ops"] .ops-on .tally-box.ledger table.list :is(td, th).t:not(#_)
 html[data-view="ops"] .ops-toasts:not(#_) { top: auto; right: auto; left: 10px; bottom: 86px; transform: none; width: min(300px, calc(100% - 80px)); flex-direction: column-reverse; justify-content: flex-start; max-height: calc(100% - 320px); overflow: hidden }
 html[data-view="ops"] .ops-toast:not(#_) { animation: ops-up .2s ease-out }
 @media (max-width: 760px) { html[data-view="ops"] .ops-toasts:not(#_) { bottom: 80px; width: calc(100% - 70px); max-height: calc(100% - 300px) } }
+
+/* Yemen's Territory box as the other numbers boxes (user, 23 Oct): one bar split by side, a row a side. */
+html[data-view="ops"] .ctrl-box .ctrl-stack { display: flex; height: 10px; margin: 4px 0 12px; border-radius: 2px; overflow: hidden; background: var(--o-line) }
+html[data-view="ops"] .ctrl-box .ctrl-stack i { display: block; height: 100%; min-width: 2px }
+html[data-view="ops"] .ctrl-box .ctrl-stack i + i { box-shadow: -1px 0 0 var(--o-panel) }
+html[data-view="ops"] .ctrl-box table.ctrl-rows { width: 100% }
+html[data-view="ops"] .ctrl-box table.ctrl-rows th { text-align: left; font-weight: 500 }
+html[data-view="ops"] .ctrl-box table.ctrl-rows th[scope="col"] { text-align: right }
+html[data-view="ops"] .ctrl-box table.ctrl-rows td { text-align: right; font-family: var(--ops-mono) !important; font-weight: 600; color: var(--o-strong) }
+html[data-view="ops"] .ctrl-box .sw { display: inline-block; width: 10px; height: 10px; margin: 0 8px 0 0; border-radius: 2px; vertical-align: -1px }

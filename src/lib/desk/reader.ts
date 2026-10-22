@@ -285,7 +285,11 @@ PUBLISH ONLY IF ALL OF THESE HOLD
    programme title, a video segment, a battle map, a documentary, an analysis,
    an anniversary, a recap. "Marib and Taiz: the map of the battles #ThisDay"
    is a programme clip, not a report of clashes — publish=false,
-   reject_reason "recap". A RECAP is any post that sums up events already
+   reject_reason "recap". A video or pictures put out now of an attack that
+   happened before ("video published for the first time of ...", "first
+   footage of the strike on ...", "فيديو ينشر للمرة الأولى") is not current:
+   only the video is new — publish=false, reject_reason "old attack, new
+   video" (user, 23 Oct). A RECAP is any post that sums up events already
    reported one by one — "over the past 24 hours refineries in Riyadh and
    Yanbu were attacked", "flights at Riyadh airport were disrupted while
    explosions were reported in Asir", a channel's news package or

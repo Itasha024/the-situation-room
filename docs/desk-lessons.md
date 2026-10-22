@@ -115,3 +115,6 @@ User: "find the things the desk didnt pick and fix the mechanisms so itll find t
 
 ## 23 Oct: a card's body never restates its headline
 A Trump card showed "We've knocked the hell out of them — and we may do it a little bit further" under the headline "Trump: We've knocked the hell out of the Houthis and may do it a little bit further". When a short remark is all he said, the headline holds it and there is no body or Read more. `bodyRepeats()` in src/lib/desk/trump.ts drops such a body at serve time; the writer is told to return "" for it.
+
+## 23 Oct: new video of an old attack is not news
+Al-Mihwar posted "a video published for the first time" of an Iranian missile falling on Al Dhafra; the desk published "Iranian missile hits Al Dhafra US base in UAE, Iranian channel posts first footage" and pinned it as a new strike. Only the video was new. Such a post is no report and no pin: `FIRST_FOOTAGE_RE` (pin-rule.ts) is read by `notNewEvent`, `iranPinAllowed` and `notNews`, and both readers' prompts say publish=false, "old attack, new video". This replaces the 18 Oct rule that let "publishes new footage of attacks" through when the card carried the video.

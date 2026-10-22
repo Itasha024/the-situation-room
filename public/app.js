@@ -1460,8 +1460,11 @@ const NEW_HIT_RE = /\b(?:air ?strikes?|air ?raids?|strikes?|struck|hit|hits|kill
 const FUTURE_RE = /\b(?:threat\w*|warn\w*|vow\w*|ultimatum)\b[^.]{0,30}\b(?:to|of|against)\b/i;
 const ALERT_PIN_RE = /\b(?:sirens?|alerts?|civil defen[cs]e)\b/i;
 const ROUNDUP_RE = /\s(?:as|while|amid|meanwhile)\s/i;
+/* A video put out now of an attack that happened before (src/lib/desk/pin-rule.ts FIRST_FOOTAGE_RE; user, 23 Oct). */
+const FIRST_FOOTAGE_RE = /\b(?:first|new|unseen|previously unseen|never[- ]before[- ]seen)\s+(?:footage|videos?|images|pictures|clips?|scenes)\b|\b(?:footage|videos?|clips?|images|scenes)\s+(?:published|released|aired|shown|posted)\s+for the first time\b|\b(?:posts?|posted|publish(?:es|ed)?|releases?|released|shares?|shared|airs?|aired|broadcasts?)\s+(?:the\s+)?(?:first\s+|new\s+)?(?:footage|video|clip|images|scenes)\b|(?:فيديو|مشاهد|لقطات|صور)\s+(?:\S+\s+){0,2}(?:للمرة الأولى|لأول مرة)/i;
 function notNewEvent(headline) {
   const h = String(headline || '');
+  if (FIRST_FOOTAGE_RE.test(h)) return true;
   const ru = h.match(ROUNDUP_RE);
   if (ru && NEW_HIT_RE.test(h.slice(0, ru.index)) && NEW_HIT_RE.test(h.slice(ru.index + ru[0].length))) return true;
   const pic = h.search(OLD_PICTURE_RE);
@@ -3699,7 +3702,7 @@ function renderCasualties() {
   const el = document.getElementById('casualties');
   if (!el) return;
   let slides;
-  if (numCat === 'control') slides = [['Territory', `<div class="tally-box ctrl-box">${controlHtml || '<p class="ctrl-wait">Working out the shares…</p>'}</div>`]];
+  if (numCat === 'control') slides = [['Territory', `<div class="tally-box claims ctrl-box">${controlHtml || '<p class="ctrl-wait">Working out the shares…</p>'}</div>`]];
   else if (numCat === 'sea') slides = seaBoxes(brief && brief.ledger, brief && brief.transits);
   else if (numCat === 'energy') slides = energyBoxes(brief && brief.ledger, brief && brief.transits);
   else {
@@ -3772,17 +3775,13 @@ function renderBars(d) {
   // governorate count (the "9% contested" flash), so nothing is drawn yet.
   if ((!districtGeo && !districtsTried) || !briefTried) return;
   const shares = computeControlShares(d);
-  const rows = (d.control || []).filter((c) => c.id !== 'saudi').map((c) => {
-    const pct = shares[c.id] != null ? shares[c.id] : c.pct;
-    const color = c.id === 'plc' ? COLORS.plc : sideColor(c);
-    return `<div class="bar" title="${escapeHtml(c.note || '')}">
-      <h3>${escapeHtml(c.name)}</h3>
-      <div class="pct" style="color:${color}">${pct}%</div>
-      <div class="track"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
-    </div>`;
-  }).join('');
+  // One box as the other numbers boxes (user, 23 Oct: the three big bars were the old design): one bar split by
+  // side, then a row a side with its share.
+  const sides = (d.control || []).filter((c) => c.id !== 'saudi').map((c) => ({ c, pct: shares[c.id] != null ? shares[c.id] : c.pct, color: c.id === 'plc' ? COLORS.plc : sideColor(c) }));
+  const stack = sides.map((x) => `<i style="width:${x.pct}%;background:${x.color}" title="${escapeHtml(x.c.name)}: ${x.pct}%"></i>`).join('');
+  const rows = sides.map((x) => `<tr title="${escapeHtml(x.c.note || '')}"><th scope="row"><i class="sw" style="background:${x.color}"></i>${escapeHtml(x.c.name)}</th><td>${x.pct}%</td></tr>`).join('');
   // Drawn in the numbers column, under "Territory".
-  const html = rows ? `<div class="bars">${rows}</div>` : '';
+  const html = rows ? `<h3>${escapeHtml(T('Who holds Yemen'))} <small class="unit">(${escapeHtml(T('share of its land'))})</small></h3><div class="ctrl-stack" role="img" aria-label="${escapeHtml(sides.map((x) => `${x.c.name} ${x.pct}%`).join(', '))}">${stack}</div><table class="ctrl-rows"><tbody><tr><th></th><th scope="col">${escapeHtml(T("Share"))}</th></tr>${rows}</tbody></table>` : '';
   if (html === controlHtml) return;
   controlHtml = html;
   if (numCat === 'control') renderCasualties();
@@ -4837,8 +4836,14 @@ function allFronts(d) {
   const opened = ((brief && brief.fronts) || [])
     .filter((f) => f.extra && Array.isArray(f.spot) && !base.some((b) => b.id === f.id))
     .map((f) => ({ id: f.id, name: f.name, where: f.where || '', importance: 50, mapFocus: { ids: [], spot: f.spot, spots: Array.isArray(f.spots) ? f.spots : undefined, spotRadius: 15000 } }));
-  return [...base, ...opened];
+  // Saudi Arabia first, then Sanaa, then the rest as before (user, 23 Oct).
+  const lead = (x) => (x.id === 'saudi-home' ? 0 : x.id === 'x-sanaa' || /^Sanaa$/i.test(x.name || '') ? 1 : 2);
+  // A tracked front with nothing reported for a week goes, as an opened one closes after a week (new-fronts.ts):
+  // the list follows what is happening (user, 23 Oct).
+  const live = (x) => { const act = frontActivity(x.id); const t = act && Date.parse(act.lastNewsAt || ''); return !t || Date.now() - t < FRONT_QUIET_MS; };
+  return [...base.filter(live), ...opened].map((x, i) => [x, i]).sort((p, q) => lead(p[0]) - lead(q[0]) || p[1] - q[1]).map((p) => p[0]);
 }
+const FRONT_QUIET_MS = 7 * 864e5;
 
 /**
  * A front with no reports in this update keeps its last text: say when that
@@ -4855,7 +4860,7 @@ function frontAsOf(act) {
 
 /*
  * One front at a time, in the shared pager (dots under the box, arrows inside
- * it on a wide screen, a swipe on a phone). Every load opens on Bab al-Mandab.
+ * it on a wide screen, a swipe on a phone). Every load opens on the first, Saudi Arabia.
  */
 let frontIdx = null;
 
@@ -4863,7 +4868,8 @@ function renderFronts(d) {
   const fronts = allFronts(d);
   const stamp = document.getElementById('fronts-stamp');
   if (stamp) stamp.innerHTML = cadenceStamp(true);
-  if (frontIdx == null || frontIdx >= fronts.length) frontIdx = Math.max(0, fronts.findIndex((f) => f.id === 'bab' || /Bab al-Mandab/i.test(f.name || '')));
+  // Every load opens on the first front, Saudi Arabia (user, 23 Oct).
+  if (frontIdx == null || frontIdx >= fronts.length) frontIdx = 0;
   ensurePlaceData();
   const cards = fronts.map((f, i) => {
     const act = frontActivity(f.id);

@@ -8,6 +8,7 @@
 import { anglicise } from "./anglicise.ts";
 import type { DeskType } from "./digest.ts";
 import { aboutFootage } from "./media.ts";
+import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
 import { isWireSource, officialVoice, sourceNation, subjectNation } from "./speaker-press.ts";
 
@@ -73,6 +74,7 @@ export function notNews(headline: string, body = "", type = ""): string | null {
   if (PROTOCOL.test(h)) return "protocol: condolences, attendance and courtesy talks are not news";
   if (FEATURE.test(h)) return "feature: not a report of the day's events";
   if (OLD_NEWS.test(lead)) return "old news retold";
+  if (FIRST_FOOTAGE_RE.test(lead)) return "old attack, new video: footage put out now of an attack told before is not a report";
   if (OFF_TOPIC.test(h) && !WAR_WORD.test(h)) return "off-topic: nothing of the war in it";
   if (/\bblood donation\b|\bdonation campaign\b/i.test(h)) return "off-topic: a civic campaign is not a report";
   if (OUTLET_ANALYSIS.test(h)) return "analysis: an outlet's own assessment is not a report";

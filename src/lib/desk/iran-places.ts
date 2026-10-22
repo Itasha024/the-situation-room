@@ -14,6 +14,7 @@
  * Coordinates checked against OpenStreetMap's Nominatim (9 Oct 2026).
  */
 import { IRAN_GAZ } from "./iran-gazetteer.ts";
+import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { makeSea } from "../../../scripts/iran-research/offshore.mjs";
 import LAND from "../../../public/iran-land.json" with { type: "json" };
 
@@ -369,7 +370,7 @@ const PURSUERS: Record<string, Set<string>> = {
 export function iranPinAllowed(actor: string | null | undefined, place: Pick<IranPlace, "country"> & Partial<Pick<IranPlace, "lat" | "lng">>, headline: string): boolean {
   const a = String(actor || "unclear");
   if (place.lat != null && place.lng != null && place.lat < 20.3 && place.lng > 32 && place.lng < 52) return false;
-  if ((a === "houthi" && place.country !== "Israel") || NOT_AN_ATTACK.test(headline) || NOT_NEW_OR_NOT_A_STRIKE.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
+  if ((a === "houthi" && place.country !== "Israel") || NOT_AN_ATTACK.test(headline) || NOT_NEW_OR_NOT_A_STRIKE.test(headline) || FIRST_FOOTAGE_RE.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
   if (/\bsirens?\b/i.test(headline) && place.country === "Israel") return false;
   if (place.country === "Yemen" || place.country === "Gaza" || place.country === "Palestine") return false;
   if (AXIS.has(a)) return place.country !== "Iran" || (a === "iran" && AIR_DEFENCE.test(headline) && !INTERNAL.test(headline));

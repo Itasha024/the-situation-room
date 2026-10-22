@@ -433,7 +433,8 @@ test("a card about its footage is served with its video or not at all (Shajab Ne
     "Houthi forces broadcast footage of an AH-6i attack helicopter downed off Najran",
   ]) assert.equal(serveCard({ summary, type: "strike", source: "X" }, "yemen"), false, summary);
   const shown: Record<string, unknown> = { ...bare, media: { kind: "video", from: "tg", post: "u", thumb: "t" } };
-  assert.ok(serveCard(shown, "yemen"));
+  // New footage of an earlier attack is no report even with its video (user, 23 Oct: "only the video is new").
+  assert.equal(serveCard(shown, "yemen"), false);
   assert.ok(serveCard({ summary: "Houthi missiles strike Saudi Aramco facilities in Jazan", type: "strike", source: "Masirah" }, "yemen"));
 });
 

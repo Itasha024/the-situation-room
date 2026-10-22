@@ -48,3 +48,17 @@ test("oldPicture: earlier damage only, never a new hit before it", async () => {
   assert.equal(oldPicture("Saudi warplanes strike Hodeidah port"), false);
   assert.equal(oldPicture("Houthis threaten to strike Riyadh"), false);
 });
+
+test("a video put out now of an earlier attack is no pin and no report (23 Oct)", async () => {
+  const { notNewEvent } = await import("./pin-rule.ts");
+  const { notNews } = await import("./copy-rules.ts");
+  const { iranPinAllowed } = await import("./iran-places.ts");
+  const h = "Iranian missile hits Al Dhafra US base in UAE, Iranian channel posts first footage";
+  assert.equal(notNewEvent(h), true);
+  assert.ok(notNews(h));
+  assert.ok(notNews("Missile strike", "فيديو ينشر للمرة الأولى يوثق اللحظات الأولى لسقوط صاروخ ايراني على قاعدة الظفرة"));
+  assert.equal(iranPinAllowed("iran", { country: "UAE", lat: 24.25, lng: 54.55 }, h), false);
+  // A new strike stays one.
+  assert.equal(notNewEvent("Iranian missile hits Al Dhafra US base in UAE"), false);
+  assert.equal(notNews("Iranian missile hits Al Dhafra US base in UAE"), null);
+});

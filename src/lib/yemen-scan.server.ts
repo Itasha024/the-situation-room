@@ -48,8 +48,8 @@ import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves } f
 import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
 import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
-import { IRAN_RSS, IRAN_TG, IRAN_X, type IranLean, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
-import { isIranDeskItem } from "./desk/iran-reader.ts";
+import { IRAN_RSS, IRAN_TG, IRAN_X, IRAQI_MEDIA, type IranLean, LEBANESE_MEDIA, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
+import { isIranDeskItem, passesIraqiMediaGate, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
 import { remember } from "./desk/recent-reads.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
 import { attributeVerdict, colonSpeaker, tidySpeaker } from "./desk/reader.ts";
@@ -2399,7 +2399,10 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
     // Every item read is kept in memory for two days: where a relay's original is looked for first (recent-reads.ts).
     remember(rows);
     const lean = group ?? "intl";
-    for (const r of rows) if (isIranDeskItem(`${r.title ?? ""} ${r.text}`)) iranInbox.push({ ...r, lean, picked: undefined });
+    // Lebanon's and Iraq's own outlets also pass on their countries' politics around Hezbollah and the militias.
+    const passes = (r: RawHit, t: string) =>
+      isIranDeskItem(t) || (LEBANESE_MEDIA.has(r.source) && passesLebaneseMediaGate(t)) || (IRAQI_MEDIA.has(r.source) && passesIraqiMediaGate(t));
+    for (const r of rows) if (passes(r, `${r.title ?? ""} ${r.text}`)) iranInbox.push({ ...r, lean, picked: undefined });
   };
   const status: SourceStatus[] = [];
   const jobs: Promise<void>[] = [];

@@ -96,3 +96,11 @@ test("a relay channel's own exclusive, sirens or strike is its own", () => {
   ];
   assert.deepEqual(earlierTellers(relays, { notSource: "Sabereen News" }, keys, at).map((c) => c.source), ["Khabar Fori"]);
 });
+
+test("Lebanon's and Iraq's outlets read by the Yemen scan get their countries' gates", async () => {
+  const { LEBANESE_MEDIA, IRAQI_MEDIA } = await import("./iran-sources.ts");
+  for (const n of ["Al-Akhbar", "Al Mayadeen", "Hezbollah War Media", "NNA"]) assert.ok(LEBANESE_MEDIA.has(n), n);
+  for (const n of ["INA", "Naya", "Sabereen News", "Shajab News"]) assert.ok(IRAQI_MEDIA.has(n), n);
+  // Al-Akhbar, 22 Oct 07:27: its own information on the presidents' talks before the cabinet session.
+  assert.ok(passesLebaneseMediaGate("شهدت الساعات التي سبقت جلسة مجلس الوزراء المقرر انعقادها اليوم، بحسب معلومات «الأخبار»، اتصالات مُكثّفة بين الرؤساء جوزيف عون ونبيه بري ونواف سلام"));
+});

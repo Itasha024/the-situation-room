@@ -454,8 +454,13 @@ export const IRAN_NOT_READ: { what: string; why: string }[] = [
 
 /** The display names of the Israeli outlets and reporters (stage 4c). */
 export const ISRAELI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG, ...IRAN_RSS].filter((s) => s.israeliMedia).map((s) => s.name));
-export const LEBANESE_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG.filter((s) => s.lebaneseMedia).map((s) => s.name), "NNA"]);
-export const IRAQI_MEDIA: ReadonlySet<string> = new Set(IRAN_TG.filter((s) => s.iraqiMedia).map((s) => s.name));
+// With the Lebanese and Iraqi outlets the Yemen scan reads and hands on: Al-Akhbar's morning exclusive on the
+// cabinet's talks over Hezbollah's arms (22 Oct) was held to the Iran-war words and never reached the desk.
+export const LEBANESE_MEDIA: ReadonlySet<string> = new Set([
+  ...IRAN_TG.filter((s) => s.lebaneseMedia).map((s) => s.name),
+  ...["NNA", "Al-Akhbar", "Al Mayadeen", "Ad-Diyar", "Al-Modon", "Nidaa al-Watan"],
+]);
+export const IRAQI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG.filter((s) => s.iraqiMedia).map((s) => s.name), ...["Naya", "Sabereen News", "Shajab News"]]);
 
 /** Every Iran-desk source's filter group, by the source's display name. */
 export function iranLeanOf(name: string): IranLean | undefined {

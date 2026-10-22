@@ -162,12 +162,12 @@
   const noteOf = (e) => (e.desk === 'iran' ? A('iranPopupHtml')(e) : A('popupHtml')(e)) || esc(e.label || '');
 
   /* ---------- The frame ---------- */
-  const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: true, fillsV: 2 };
+  const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: true, fillsV: 3 };
   try { Object.assign(S, JSON.parse(localStorage.getItem('ops-state2') || '{}'), { tool: null, sel: null }); } catch (e) { /* none kept */ }
   // The map writes its own place names (20 Oct: the Place names layer went from Layers).
   S.names = false;
   // Every map shows the sides' colours again (user, 22 Oct: "return the colors on the map according to each side"); an Off kept from before goes.
-  if (!(S.fillsV >= 2)) { S.fills = true; S.fillsV = 2; }
+  if (!(S.fillsV >= 3)) { S.fills = true; S.fillsV = 3; }
   const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, fillsV, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, fillsV, trafficSeen })); } catch (e) { /* private */ } };
   /* The reader's settings (20 Oct: "make a settings page too to make the site very customizable"). */
   const PREF_DEF = { v: 3, tz: 'desk', range: 'today', pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, airStart: false };

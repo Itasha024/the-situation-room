@@ -11,6 +11,7 @@
  */
 
 import type { DeskStore } from "./store.ts";
+import { askChain, NUMBERS_MODELS } from "./models.ts";
 
 export const OFAC_KEY = "iran:ofac";
 export const OFAC_BASE = "https://ofac.treasury.gov";
@@ -35,6 +36,12 @@ export type OfacAction = OfacListItem & {
   names: string[];
   /** Iran measures in the action's text other than listings: alerts, determinations, general licences. */
   measures: string[];
+  /** The Treasury press release's opening paragraphs, its own words (23 Oct). */
+  lead?: string;
+  /** Why, in one short plain line written from `lead` only (user, 23 Oct: "explain it better based only on the official statement"). */
+  why?: string;
+  /** Tries at writing `why`. */
+  whyTries?: number;
 };
 export type OfacStore = { checkedAt: string; actions: OfacAction[] };
 
@@ -149,6 +156,16 @@ export function addedWords(a: OfacAdded): string {
   return [part(a.people, "person", "people"), part(a.firms, "firm", "firms"), part(a.vessels, "ship", "ships"), part(a.aircraft, "aircraft", "aircraft")].filter(Boolean).join(", ");
 }
 
+/**
+ * An action's own title with no press release yet: only its Iran parts, in plain words (21 Oct: "Iran-related
+ * Designations; Belarus and North Korea Designations Removals; Issuance of ... General Licenses" for one action).
+ */
+export function iranTitle(title: string): string {
+  const parts = title.split(/;\s*/).filter((p) => ON_IRAN.test(p));
+  const plain = parts.map((p) => /Designations?$/i.test(p) && !/Removal/i.test(p) ? "New sanctions on Iran-linked people, firms or ships" : /General License/i.test(p) ? "Licences to wind down dealings with those sanctioned" : pressWhy(p));
+  return [...new Set(plain)].join("; ") || pressWhy(title);
+}
+
 /** A press release's title in the desk's plain, neutral words. */
 export function pressWhy(title: string): string {
   return title
@@ -162,6 +179,43 @@ export function pressWhy(title: string): string {
 }
 
 type Fetcher = (url: string) => Promise<string | null>;
+type Asker = (lead: string) => Promise<string | null>;
+
+/** A Treasury press release's opening: the paragraphs from "WASHINGTON", officials' quotes left out, about 1,200 characters. */
+export function pressLead(html: string): string {
+  const body = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "");
+  // The paragraph that opens with it (the page's description repeats the start in its head).
+  const at = body.search(/<p[^>]*>(?:\s|<[^>]+>)*WASHINGTON(?:\s|<[^>]+>)*(?:—|–|-|&mdash;)/i);
+  if (at < 0) return "";
+  const paras = body.slice(at).split(/<\/p>/i).map(text).filter((p) => p.length > 40 && !/^[“"]/.test(p));
+  // The release's own line under its title ("Law Firms, Shipping Agents, and Vessels Helped Conceal ..."), first.
+  const sub = /<em>([^<]{20,200})<\/em>\s*<\/p>\s*$/i.exec(body.slice(Math.max(0, at - 600), at))?.[1];
+  let out = sub ? text(sub) : "";
+  for (const p of paras.slice(0, 5)) {
+    if (/^(?:OPERATION|BACKGROUND|SANCTIONS IMPLICATIONS)\b/.test(p)) break;
+    if (out.length + p.length > 1400) break;
+    out += (out ? "\n\n" : "") + p;
+  }
+  return out.replace(/^WASHINGTON\s*(?:—|–|-)\s*/, "");
+}
+
+const WHY_SYSTEM = `You explain one US Treasury sanctions action on Iran to a general reader. You get the opening of the Treasury's own press release. Return JSON only: {"why": "..."}.
+- One short plain line, at most 20 words: who was sanctioned (the kind and the country, e.g. "a Panama- and Greece-based law firm and UAE and Singapore shipping agents") and what, by the Treasury's account, they did for Iran.
+- Only facts in the text. No names of officials, no quotes, no slogans or operation names.
+- No sanctions jargon: never "designations", "designated", "E.O.", "SDN", "general license", "OFAC", "pursuant to".
+- Neutral words: "Iran's government" for "the Iranian regime"; "helped" for "supported"; keep "shadow fleet", "oil", "weapons" as written.`;
+
+/** The plain "why" from the press release's opening, or null. */
+export async function askWhy(lead: string): Promise<string | null> {
+  const got = await askChain("ofac-why", WHY_SYSTEM, lead, {
+    models: NUMBERS_MODELS,
+    timeoutMs: 45_000,
+    accept: (j) => (typeof j.why === "string" && j.why.trim().length > 15 && j.why.length <= 200 ? null : "no usable why"),
+  });
+  const w = got && typeof got.json.why === "string" ? cleanWhy(got.json.why) : "";
+  return w || null;
+}
+export const cleanWhy = (w: string) => w.replace(/\s+/g, " ").trim().replace(/^["“]|["”]$/g, "").replace(/\.$/, "").replace(/^[a-z]/, (c) => c.toUpperCase());
 
 const UA = "Mozilla/5.0 (compatible; TheDesk/2.0; +https://thesituationroom.live)";
 async function get(url: string): Promise<string | null> {
@@ -182,7 +236,7 @@ export function worthOpening(item: OfacListItem): boolean {
  * Read OFAC's list and open the actions not yet read. A failed read keeps what
  * was stored; OFAC is read once an hour at most. Returns what is stored.
  */
-export async function refreshOfac(store: DeskStore, now = new Date(), fetchHtml: Fetcher = get): Promise<OfacStore | null> {
+export async function refreshOfac(store: DeskStore, now = new Date(), fetchHtml: Fetcher = get, ask: Asker = askWhy): Promise<OfacStore | null> {
   const saved = (await store.getJson<OfacStore>(OFAC_KEY)) ?? null;
   if (saved && now.getTime() - Date.parse(saved.checkedAt) < OFAC_EVERY_MS) return saved;
   const since = new Date(now.getTime() - KEEP_DAYS * 86_400_000).toISOString().slice(0, 10);
@@ -207,6 +261,14 @@ export async function refreshOfac(store: DeskStore, now = new Date(), fetchHtml:
   let opened = 0;
   for (const item of list.filter((x) => x.date >= since)) {
     const had = known.get(item.id);
+    // OFAC links the press release some hours after the action (21 Oct): a recent Iran action read without one is read again.
+    const recent = now.getTime() - Date.parse(`${item.date}T00:00:00Z`) < 5 * 86_400_000;
+    if (had && had.iran && !had.press.length && recent && opened < OPEN_MAX) {
+      opened++;
+      const html = await fetchHtml(item.url);
+      actions.push(html ? { ...parseAction(item, html), why: had.why, whyTries: had.whyTries } : had);
+      continue;
+    }
     if (had) {
       actions.push(had);
       continue;
@@ -219,6 +281,22 @@ export async function refreshOfac(store: DeskStore, now = new Date(), fetchHtml:
     opened++;
     const html = await fetchHtml(item.url);
     if (html) actions.push(parseAction(item, html));
+  }
+  // The why in plain words, from the press release only: a few a run, three tries each.
+  let wrote = 0;
+  for (const a of actions) {
+    if (wrote >= 3 || !a.iran || a.why || (a.whyTries ?? 0) >= 3 || addedTotal(a.added) === 0) continue;
+    const p = a.press.find((x) => ON_IRAN.test(x.title));
+    if (!p) continue;
+    wrote++;
+    if (!a.lead) {
+      const html = await fetchHtml(p.url);
+      a.lead = html ? pressLead(html) : "";
+    }
+    if (!a.lead) { a.whyTries = (a.whyTries ?? 0) + 1; continue; }
+    const w = await ask(a.lead).catch(() => null);
+    if (w) a.why = w;
+    else a.whyTries = (a.whyTries ?? 0) + 1;
   }
   const out: OfacStore = { checkedAt: now.toISOString(), actions };
   await store.putJson(OFAC_KEY, out);
@@ -260,7 +338,7 @@ export function liveSanctionBoxes(file: NumbersFile, live: OfacStore | null): { 
   const rowOf = (a: OfacAction) => {
     const p = a.press.find((x) => ON_IRAN.test(x.title)) || a.press[0];
     const who = [addedWords(a.added), a.names.length ? `among them ${a.names.join(", ")}` : ""].filter(Boolean).join(": ");
-    const why = a.press.filter((x) => ON_IRAN.test(x.title)).map((x) => pressWhy(x.title)).join("; ") || pressWhy(a.title);
+    const why = a.why || a.press.filter((x) => ON_IRAN.test(x.title)).map((x) => pressWhy(x.title)).join("; ") || iranTitle(a.title);
     return [{ v: dm(a.date), k: "off", src: "US Treasury (OFAC)", url: p?.url || a.url, date: a.date } satisfies Cell, who, why];
   };
   nextUs.rows = [...listed.map(rowOf), ...us.rows];

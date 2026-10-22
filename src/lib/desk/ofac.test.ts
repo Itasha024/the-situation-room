@@ -121,3 +121,14 @@ test("no live read: the researched boxes stand", () => {
   assert.equal(liveSanctionBoxes(NUMBERS as never, null), null);
   assert.equal(liveSanctionBoxes(NUMBERS as never, { checkedAt: "", actions: [] } satisfies OfacStore), null);
 });
+
+test("the plain why comes from the press release's own opening, quotes left out (23 Oct)", async () => {
+  const { pressLead, iranTitle } = await import("./ofac.ts");
+  const html = `<meta name=description content="WASHINGTON—Today x"><div><p style=text-align:center><em>Law Firms, Shipping Agents, and Vessels Helped Conceal and Transport Iranian Commodities</em></p><p><strong>WASHINGTON</strong>—Today, the U.S. Department of the Treasury sanctioned Panama- and Greece-based law firm Karnakis and Karnakis, which has supported illicit Iranian shipping activity for years.</p><p>“Whether you are conducting illegal oil transfers at sea, we will find you,” said Secretary of the Treasury Scott Bessent.</p><p>OPERATION ECONOMIC OUTCAST IS ISOLATING THE IRANIAN REGIME and more words here to pass the length.</p></div>`;
+  const lead = pressLead(html);
+  assert.match(lead, /^Law Firms, Shipping Agents/);
+  assert.match(lead, /Panama- and Greece-based law firm/);
+  assert.doesNotMatch(lead, /Bessent|OPERATION/);
+  // With no press release yet, only the title's Iran parts, in plain words.
+  assert.equal(iranTitle("Iran-related Designations; Belarus and North Korea Designations Removals; Issuance of Iran-related and Russia-related General Licenses and Amended Frequently Asked Questions"), "New sanctions on Iran-linked people, firms or ships; Licences to wind down dealings with those sanctioned");
+});

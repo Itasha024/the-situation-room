@@ -1550,7 +1550,9 @@
   function wireTrafficClicks(m) {
     const box = m.getContainer();
     // A press on the map itself closes the Layers and the Traffic menus (user, 22 Oct).
+    let down = null;
     box.addEventListener('pointerdown', (ev) => {
+      down = { x: ev.clientX, y: ev.clientY };
       if (ev.target.closest('.leaflet-control, .ops-hud > *')) return;
       if (!$('.ops-lyr', hud).hidden) toggleLayers(false);
       if (!$('.ops-trf', hud).hidden) toggleTraffic(false);
@@ -1558,7 +1560,8 @@
     box.addEventListener('click', (ev) => {
       if (ev.target.closest('.leaflet-control, .ops-hud > *, .leaflet-popup, .ev-wrap')) return;
       const k = trafficAt(m, ev);
-      if (!k) return;
+      // A click on the map away from any aircraft or ship closes the open card (user, 22 Oct); a drag does not.
+      if (!k) { if (T.sel && down && Math.hypot(ev.clientX - down.x, ev.clientY - down.y) < 6) closeSel(); return; }
       ev.stopPropagation(); ev.preventDefault();
       if (k.air) selectAc(k.air); else selectShip(k.sea);
     }, true);

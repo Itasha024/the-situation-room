@@ -1354,3 +1354,8 @@ html[data-view="ops"] .lean-f[data-lean="houthi"] .sw { background: var(--houthi
 html[data-view="ops"] .lean-f[data-lean="gov"] .sw { background: var(--plc) !important }
 /* Round on every page (the theme's square buttons are more particular than the rule above). */
 html[data-view="ops"] .ops-on :is(.sit-map-btn, .card-map):not(#_) { border-radius: 50% !important }
+/* An aircraft's or a ship's card stays inside the map, scrolling when it is taller (user, 22 Oct: it ran over the timeline). */
+html[data-view="ops"] .ops-hud > .ops-card:not(#_) { max-height: calc(100% - 20px); overflow-y: auto; overscroll-behavior: contain }
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-hud > .ops-card:not(#_) { max-height: calc(100% - 16px) }
+}

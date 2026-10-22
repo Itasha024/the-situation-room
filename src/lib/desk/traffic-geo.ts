@@ -434,3 +434,33 @@ export function nearestPort(lat: number, lon: number, maxKm = 30) {
   for (const p of PORTS) { const d = km(lat, lon, p.lat, p.lon); if (d <= bd) { bd = d; best = p; } }
   return best;
 }
+
+/**
+ * Where a ship came from, from a history of positions (the ship monitor keeps 30 days, one each
+ * half hour; 22 Oct: "the places it took off and goes to … also for ships"): the stops are the
+ * runs of still fixes (under half a knot) within 5 km of each other, two fixes at least. A moving
+ * ship came from its last stop 10 km or more behind it; a still one from the stop before the one
+ * it lies at, 20 km or more away. `left` is the last still fix there (unix s).
+ */
+export type HistFix = { lat: number; lon: number; t: number; speed: number | null };
+export function cameFrom(fixes: HistFix[]): { lat: number; lon: number; arrived: number; left: number } | null {
+  const P = fixes.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && Number.isFinite(p.t)).sort((a, b) => a.t - b.t);
+  if (!P.length) return null;
+  const stops: { lat: number; lon: number; arrived: number; left: number; n: number; last: boolean }[] = [];
+  let cur: (typeof stops)[number] | null = null;
+  P.forEach((p, i) => {
+    const still = p.speed != null && p.speed < 0.5;
+    if (still && cur && km(cur.lat, cur.lon, p.lat, p.lon) < 5) { cur.left = p.t; cur.n += 1; cur.last = i === P.length - 1; return; }
+    if (cur && cur.n >= 2) stops.push(cur);
+    cur = still ? { lat: p.lat, lon: p.lon, arrived: p.t, left: p.t, n: 1, last: i === P.length - 1 } : null;
+  });
+  const end = cur as (typeof stops)[number] | null;
+  if (end && end.n >= 2) stops.push(end);
+  const now = P[P.length - 1];
+  const lyingStill = now.speed != null && now.speed < 0.5;
+  for (let i = stops.length - 1; i >= 0; i--) {
+    const s = stops[i];
+    if (km(s.lat, s.lon, now.lat, now.lon) >= (lyingStill ? 20 : 10)) return { lat: s.lat, lon: s.lon, arrived: s.arrived, left: s.left };
+  }
+  return null;
+}

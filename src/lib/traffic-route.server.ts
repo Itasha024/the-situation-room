@@ -28,6 +28,8 @@ const gates: Record<string, Gate> = {
   "adsbdb": { gap: 1000, next: 0, tokens: 50, perDay: 3000, at: Date.now(), until: 0 },
   // A reader's click only (21 Oct: the continued tracks' look-ups had spent the budget above, and cards came back bare).
   "adsbdb-info": { gap: 500, next: 0, tokens: 50, perDay: 2000, at: Date.now(), until: 0 },
+  // The map list's from/to for flight numbers adsb.lol's routes do not know (22 Oct: "the places it took off and goes to").
+  "adsbdb-list": { gap: 2500, next: 0, tokens: 30, perDay: 2500, at: Date.now(), until: 0 },
   // OpenSky gives an anonymous address 400 credits a day.
   "opensky": { gap: 3000, next: 0, tokens: 20, perDay: 350, at: Date.now(), until: 0 },
 };
@@ -83,8 +85,8 @@ async function fromAdsbIm(cs: string, pos: LatLon | null): Promise<Candidate[]> 
 /** The airline and the flight number as sold (EK203 for UAE203), from adsbdb's answer for the callsign (21 Oct). */
 export type Airline = { name: string; iata: string | null; icao: string | null; country: string | null; iso: string | null };
 const airlines = new Map<string, { airline: Airline | null; flightNo: string | null }>();
-async function fromAdsbdb(cs: string): Promise<Candidate[]> {
-  const x = (await getJson("adsbdb", `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(cs)}`)) as { response?: { flightroute?: Record<string, Record<string, unknown>> } } | null;
+async function fromAdsbdb(cs: string, gate: "adsbdb" | "adsbdb-list" = "adsbdb"): Promise<Candidate[]> {
+  const x = (await getJson(gate,`https://api.adsbdb.com/v0/callsign/${encodeURIComponent(cs)}`)) as { response?: { flightroute?: Record<string, Record<string, unknown>> } } | null;
   const fr = x?.response && typeof x.response === "object" ? x.response.flightroute : undefined;
   if (!fr) return [];
   const al = fr.airline as Record<string, unknown> | undefined;
@@ -94,6 +96,22 @@ async function fromAdsbdb(cs: string): Promise<Candidate[]> {
   const p = (a: Record<string, unknown> | undefined) => a && place({ name: a.name as string, iata: a.iata_code as string, icao: a.icao_code as string, location: a.municipality as string, lat: a.latitude as number, lon: a.longitude as number });
   const o = p(fr.origin), d = p(fr.destination);
   return o && d ? [{ source: "adsbdb.com", origin: o, destination: d }] : [];
+}
+/** Whether a gate would take a call now (its budget, its back-off, and no long queue). */
+function gateOpen(name: keyof typeof gates) {
+  const g = gates[name];
+  const now = Date.now();
+  return now >= g.until && g.tokens + ((now - g.at) * g.perDay) / 86_400_000 >= 1 && g.next - now <= 8000;
+}
+/**
+ * The map list's from/to for one flight number from adsbdb, within its own budget: undefined when
+ * the budget did not allow the call (asked again later), null when adsbdb has no route.
+ */
+export async function listRoute(cs: string): Promise<{ from: string; to: string } | null | undefined> {
+  if (!gateOpen("adsbdb-list")) return undefined;
+  const c = (await fromAdsbdb(cs, "adsbdb-list"))[0];
+  const at = (p: Place) => [p.iata || p.icao, p.city || p.name].filter(Boolean).join(" ");
+  return c ? { from: at(c.origin), to: at(c.destination) } : null;
 }
 /**
  * The airline by the callsign's first three letters when the route record gave none (QTR83V has no

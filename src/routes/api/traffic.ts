@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { metered } from "@/lib/desk/cpu-meter";
-import { AIR_BOX, aisEta, SEA_KEEP, tidyShips, angleDiff, bearing, continues, flagOf, History, shipJump, inAirBox, inSeaBox, joinTracks, km, lattice, matchPort, nearestPort, project, SEA_BOX, type LatLon } from "@/lib/desk/traffic-geo";
+import { AIR_BOX, aisEta, cameFrom, type HistFix, type TrackPoint, SEA_KEEP, tidyShips, angleDiff, bearing, continues, flagOf, History, shipJump, inAirBox, inSeaBox, joinTracks, km, lattice, matchPort, nearestPort, project, SEA_BOX, type LatLon } from "@/lib/desk/traffic-geo";
 import { shipInland } from "@/lib/desk/ship-land";
-import { airRoute } from "@/lib/traffic-route.server";
+import { airRoute, listRoute } from "@/lib/traffic-route.server";
 
 /**
  * Live traffic for the map-first view's "Live traffic" button (user, 19 Oct: every aircraft and
@@ -198,13 +198,20 @@ async function routeOf(cs: string) {
   if (routes.has(cs) || !/^[A-Z]{3}\d/.test(cs)) return;
   if (routes.size > 6000) routes.clear();
   routes.set(cs, null);
-  try {
+  if (!vrsNone.has(cs)) try {
     const x = await getJson(`https://vrs-standing-data.adsb.lol/routes/${cs.slice(0, 2)}/${cs}.json`);
     const A = x._airports || [];
     const at = (a: (typeof A)[number]) => [a.iata || a.icao, a.location || a.name].filter(Boolean).join(" ");
-    if (A.length >= 2) routes.set(cs, { from: at(A[0]), to: at(A[A.length - 1]) });
+    if (A.length >= 2) { routes.set(cs, { from: at(A[0]), to: at(A[A.length - 1]) }); return; }
   } catch { /* none */ }
+  // Not in adsb.lol's routes: adsbdb's (22 Oct), within its own budget; when that is spent, asked again on a later rebuild.
+  if (vrsNone.size > 6000) vrsNone.clear();
+  vrsNone.add(cs);
+  const r = await listRoute(cs).catch(() => null);
+  if (r === undefined) routes.delete(cs);
+  else if (r) { routes.set(cs, r); air.ver++; }
 }
+const vrsNone = new Set<string>();
 
 /** Merged by hex: the freshest position of the feeds wins; the others fill what it lacks. */
 function put(a: Ac, now: number, src: Src) {
@@ -440,8 +447,16 @@ function seaTidy() {
  * flag, size, deadweight, draught and destination. It polls every 30 minutes, so it is read every
  * 15; a fresher AISStream position of the same ship wins.
  */
-const MONITOR = ["https://hormuz.data-tracking.net/api/ships", "https://hormuz.data-tracking.net/api/bab/ships"];
+const HZ = "https://hormuz.data-tracking.net/api/";
+/**
+ * Also (22 Oct, "more ships"): the ships it tracks outside its zones (the Arabian Sea off Iran,
+ * Pakistan and Oman; about 850 heard in the last two hours), from its ship directory, which
+ * answers 500 at a time: four orders between them give nearly all.
+ */
+const MONITOR = [`${HZ}ships`, `${HZ}bab/ships`, ...["", "&sort=last_position&order=asc", "&sort=name", "&sort=dwt"].map((o) => `${HZ}ships/directory?zone=outside${o}`)];
 const monitor = { at: 0, busy: false, n: 0 };
+/** Which of the monitor's two areas a ship is in: its history is asked of that one. */
+const hzBab = new Set<number>();
 /** The monitor's category as the AIS type the map colours by. */
 function typeOfCategory(c: string): number | undefined {
   if (/tanker|lng|lpg|gas carrier/i.test(c)) return 80;
@@ -452,21 +467,24 @@ function typeOfCategory(c: string): number | undefined {
   if (/fishing/i.test(c)) return 30;
   return undefined;
 }
-type MonitorShip = { mmsi: string; name?: string; ship_category?: string; flag?: string; length?: number | null; width?: number | null; dwt?: number | null; destination?: string | null; draught?: number | null; latitude: number; longitude: number; speed?: number | null; course?: number | null; hdg?: number | null; timestamp: string; still?: boolean };
+type MonitorShip = { mmsi: string; name?: string; ship_category?: string; flag?: string; length?: number | null; width?: number | null; dwt?: number | null; destination?: string | null; draught?: number | null; latitude: number; longitude: number; speed?: number | null; course?: number | null; hdg?: number | null; timestamp?: string; last_position?: string; still?: boolean };
 async function monitorRead() {
   if (monitor.busy || Date.now() - monitor.at < 15 * 60_000) return;
   monitor.busy = true;
   monitor.at = Date.now();
   try {
-    let n = 0;
+    const got = new Set<number>();
     for (const url of MONITOR) {
       const r = await fetch(url, { ...UA, signal: AbortSignal.timeout(30_000) }).catch(() => null);
       if (!r || !r.ok) continue;
-      const list = (await r.json().catch(() => [])) as MonitorShip[];
+      const body = (await r.json().catch(() => [])) as MonitorShip[] | { ships?: MonitorShip[] };
+      const list = Array.isArray(body) ? body : body.ships;
       if (!Array.isArray(list)) continue;
       for (const m of list) {
-        const id = Number(m.mmsi), t = Date.parse(m.timestamp);
-        if (!id || !Number.isFinite(m.latitude) || !Number.isFinite(m.longitude) || !Number.isFinite(t)) continue;
+        const id = Number(m.mmsi), t = Date.parse(m.timestamp || m.last_position || "");
+        // The directory also lists ships last heard weeks ago: only the last six hours are a position.
+        if (!id || !Number.isFinite(m.latitude) || !Number.isFinite(m.longitude) || !Number.isFinite(t) || Date.now() - t > SEA_KEEP.posMs) continue;
+        if (url.includes("/bab/")) hzBab.add(id);
         const s: Ship = sea.ships.get(id) || { mmsi: id, name: "", lat: 0, lon: 0, sog: null, cog: null, hdg: null, nav: null, t: 0 };
         s.name = s.name || String(m.name || "").trim();
         const cat = String(m.ship_category || "").trim();
@@ -488,22 +506,56 @@ async function monitorRead() {
           seaHist.add(id, s.lat, s.lon, t / 1000);
         }
         sea.ships.set(id, s);
-        n += 1;
+        got.add(id);
       }
     }
-    if (n) monitor.n = n;
+    if (got.size) monitor.n = got.size;
   } catch { /* tried again in 15 minutes */ }
   finally { monitor.busy = false; }
 }
 
-/** A ship's route: the AIS destination (and ETA) its crew set, where it last lay still, and the track we kept. */
-function seaRoute(mmsi: number) {
+/**
+ * A ship's 30 days from the monitor (one fix each half hour), for where it came from and a longer
+ * past track: asked only when a reader opens the ship, kept 30 minutes, one call at a time.
+ */
+const hzHist = new Map<number, { at: number; p: Promise<HistFix[]> }>();
+const hzGate = { next: 0 };
+function hzHistory(mmsi: number) {
+  const had = hzHist.get(mmsi);
+  if (had && Date.now() - had.at < 30 * 60_000) return had.p;
+  if (hzHist.size > 400) hzHist.clear();
+  const wait = Math.max(0, hzGate.next - Date.now());
+  hzGate.next = Date.now() + wait + 1000;
+  const p = sleep(wait)
+    .then(() => fetch(`${HZ}${hzBab.has(mmsi) ? "bab/" : ""}ship/history?mmsi=${mmsi}`, { ...UA, signal: AbortSignal.timeout(15_000) }))
+    .then((r) => (r.ok ? r.json() : []))
+    .then((x: unknown) => (Array.isArray(x) ? x : []).map((f: Record<string, unknown>) => ({ lat: Number(f.latitude), lon: Number(f.longitude), t: Date.parse(String(f.timestamp)) / 1000, speed: typeof f.speed === "number" ? f.speed : null })))
+    .catch(() => [] as HistFix[]);
+  hzHist.set(mmsi, { at: Date.now(), p });
+  return p;
+}
+/** A place for a stop: the port there, else "off" the port within 80 km, else the sea position. */
+function stopPlace(lat: number, lon: number) {
+  const p = nearestPort(lat, lon, 30);
+  if (p) return { name: p.name, locode: p.code ?? null };
+  const q = nearestPort(lat, lon, 80);
+  return { name: q ? `off ${q.name}` : `at sea ${lat.toFixed(2)}°N ${lon.toFixed(2)}°E`, locode: null };
+}
+
+/** A ship's route: the AIS destination (and ETA) its crew set, where it came from, and its past track. */
+async function seaRoute(mmsi: number) {
   const s = sea.ships.get(mmsi);
-  const track = joinTracks(300, seaHist.get(mmsi).filter((p) => !shipInland(p[0], p[1])), s && s.t ? [[s.lat, s.lon, Math.round(s.t / 1000)]] : []);
+  // The monitor's 30 days for its ships: where it last stopped before now, and two days of track.
+  const hist = s && s.cat ? await hzHistory(mmsi) : [];
+  const recent = hist.filter((f) => f.t > Date.now() / 1000 - 48 * 3600 && !shipInland(f.lat, f.lon)).map((f) => [+f.lat.toFixed(4), +f.lon.toFixed(4), Math.round(f.t)] as TrackPoint);
+  const track = joinTracks(300, recent, seaHist.get(mmsi).filter((p) => !shipInland(p[0], p[1])), s && s.t ? [[s.lat, s.lon, Math.round(s.t / 1000)]] : []);
   if (!s) return { ok: true, kind: "sea", mmsi, origin: null, destination: null, track, source: [], confidence: "unknown", note: "no position in the last six hours" };
   const moving = s.sog != null && s.sog >= 0.5 && s.nav !== 1 && s.nav !== 5;
   let origin = null;
-  if (s.stop && moving) {
+  const from = hist.length ? cameFrom(hist) : null;
+  if (from) {
+    origin = { ...stopPlace(from.lat, from.lon), lat: from.lat, lon: from.lon, left: new Date(from.left * 1000).toISOString() };
+  } else if (s.stop && moving) {
     const p = nearestPort(s.stop.lat, s.stop.lon, 30);
     origin = { name: p ? p.name : null, locode: p?.code ?? null, lat: s.stop.lat, lon: s.stop.lon, left: new Date(s.stop.to).toISOString() };
   } else if (!moving) {
@@ -520,7 +572,8 @@ function seaRoute(mmsi: number) {
     if (d < 50 || angleDiff(bearing(s.lat, s.lon, port.lat, port.lon), s.cog) <= 75) confidence = "confirmed";
   }
   const source = [s.by === "hz" ? "Strait of Hormuz Ship Monitor, hormuz.data-tracking.net (AIS destination as set by the crew)" : "AISStream (AIS destination and ETA as set by the crew)"];
-  if (origin) source.push("the desk's own kept positions (where the ship last lay still)");
+  if (from) source.push("the monitor's 30-day history of the ship (where it last lay still)");
+  else if (origin) source.push("the desk's own kept positions (where the ship last lay still)");
   return { ok: true, kind: "sea", mmsi, name: s.name || null, origin, destination, track, source, confidence };
 }
 
@@ -547,7 +600,7 @@ export const Route = createFileRoute("/api/traffic")({
           const mmsi = Number(q.get("mmsi"));
           if (!Number.isInteger(mmsi) || mmsi <= 0) return json({ ok: false, why: "bad mmsi" });
           if (!process.env.AISSTREAM_KEY) return json({ ok: false, kind: "sea", mmsi, origin: null, destination: null, track: [], source: [], confidence: "unknown", note: "no-key" });
-          return json(seaRoute(mmsi));
+          return json(await seaRoute(mmsi));
         }
         const hex = (q.get("route") || "").toLowerCase();
         if (q.has("route")) {

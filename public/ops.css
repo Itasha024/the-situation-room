@@ -249,7 +249,7 @@ html[data-view="ops"] .ops-evf .ops-log-n { font: 500 11px var(--ops-mono); colo
 html[data-view="ops"] .ops-log-l { list-style: none; margin: 0; padding: 0 8px 18px; overflow: auto; flex: 1; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--o-line-2) transparent }
 html[data-view="ops"] .ops-day { position: sticky; top: 0; z-index: 1; padding: 8px 8px 4px; background: var(--o-panel); font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint); border-bottom: 1px solid var(--o-line) }
 html[data-view="ops"] .ops-log-l button {
-  appearance: none; width: 100%; display: grid; grid-template-columns: 42px 20px minmax(0, 1fr); align-items: start; gap: 8px; padding: 8px 8px 8px 6px;
+  appearance: none; width: 100%; display: grid; grid-template-columns: 42px 20px minmax(0, 1fr) 20px; align-items: start; gap: 8px; padding: 8px 8px 8px 6px;
   border: 0; border-left: 2px solid var(--c); border-bottom: 1px solid var(--o-line); border-radius: 0; background: none; color: var(--o-text); font: 13px/1.35 var(--ops-ui); text-align: left; cursor: pointer;
 }
 html[data-view="ops"] .ops-log-l button:hover { background: var(--o-hover) }
@@ -1150,6 +1150,10 @@ html[data-view="ops"] .ops-left table.list[data-ops-l] td:empty { display: none 
 /* The place's pin, after its name: opens the small map. */
 html[data-view="ops"] .ops-rowpin { appearance: none; display: inline-grid; place-items: center; width: 20px; height: 20px; margin: -2px 0 0 5px; padding: 0; vertical-align: middle; border: 1px solid var(--o-line-2); border-radius: 50%; background: none; color: var(--o-sel); cursor: pointer }
 html[data-view="ops"] .ops-rowpin svg { width: 12px; height: 12px }
+/* Every event is on the map: its pin beside it, as on the reports (user, 22 Oct); the row's click shows it. */
+html[data-view="ops"] .ops-evpin { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--o-line-2); border-radius: 50%; color: var(--o-sel) }
+html[data-view="ops"] .ops-evpin svg { width: 12px; height: 12px }
+html[data-view="ops"] .ops-log-l button:hover .ops-evpin { background: var(--o-sel); border-color: var(--o-sel); color: var(--o-sel-ink) }
 html[data-view="ops"] .ops-rowpin:hover { background: var(--o-sel); border-color: var(--o-sel); color: var(--o-sel-ink) }
 html[data-view="ops"] .ops-rowpin:focus-visible { outline: 2px solid var(--o-sel); outline-offset: 1px }
 /* Every Show on map on the page in the same look: the pin before the words. */

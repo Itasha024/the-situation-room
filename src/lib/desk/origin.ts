@@ -937,7 +937,7 @@ const ROLE_COUNTRY: [RegExp, string][] = [
   [/\b(?:Israeli|Israel's|IDF)\b/, "IL"], [/\b(?:US|American|Pentagon|White House)\b/, "US"], [/\b(?:Turkish|Turkey's)\b/, "TR"], [/\b(?:Chinese|China's)\b/, "CN"],
   [/\b(?:Egyptian|Egypt's)\b/, "EG"], [/\b(?:Syrian|Syria's)\b/, "SY"], [/\b(?:Houthi)\b/, "YE"],
 ];
-const ROLE_WORD = /\b(?:official|minister|MP|lawmaker|spokes\w*|commander|general|adviser|advisor|ambassador|envoy|president|leader|speaker|deputy|chief|diplomat|source|sources|officer|governor|judiciary|army|navy|ministry|government)\b/i;
+const ROLE_WORD = /\b(?:official|secretary|head|chairman|member|aide|negotiator|representative|minister|MP|lawmaker|spokes\w*|commander|general|adviser|advisor|ambassador|envoy|president|leader|speaker|deputy|chief|diplomat|source|sources|officer|governor|judiciary|army|navy|ministry|government)\b/i;
 /**
  * A headline led by another country's official ("Senior Iranian security official: …") on an outlet
  * that is not that country's own is a relay even when the speaker is no one the desk knows by name:

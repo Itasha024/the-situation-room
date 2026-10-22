@@ -914,7 +914,7 @@
       const d = dm(e.at, VIEW_TZ());
       const head = d !== day ? `<li class="ops-day">${esc(d)}${new Date(tOf(e)).getFullYear() !== year ? ' ' + new Date(tOf(e)).getFullYear() : ''}</li>` : '';
       day = d;
-      return `${head}<li><button type="button" data-ev="${i}" style="--c:${s.c}"><time>${e.dayOnly ? '' : esc(hm(e.at, VIEW_TZ()))}</time><span class="k" title="${esc(k.name)}">${glyph(k.k)}</span><span class="t"><b>${esc(e.label || e.place || k.name)}</b><small>${esc([s.name, k.name, e.label ? e.place : ''].filter(Boolean).join(' · '))}${e.source ? ` · <i>${esc(e.source)}</i>` : ''}</small></span></button></li>`;
+      return `${head}<li><button type="button" data-ev="${i}" style="--c:${s.c}"><time>${e.dayOnly ? '' : esc(hm(e.at, VIEW_TZ()))}</time><span class="k" title="${esc(k.name)}">${glyph(k.k)}</span><span class="t"><b>${esc(e.label || e.place || k.name)}</b><small>${esc([s.name, k.name, e.label ? e.place : ''].filter(Boolean).join(' · '))}${e.source ? ` · <i>${esc(e.source)}</i>` : ''}</small></span><span class="ops-evpin" title="Show on map">${PIN_ICON}</span></button></li>`;
     }).join('') + (pick.length > logN || (!rng && logOld !== 'done' && PAGE !== 'iran') ? '<li class="ops-log-more"><button type="button" class="more" data-log-more>Earlier events</button></li>' : '') || '<li class="ops-empty">No events here.</li>';
   }
   async function moreLog() {

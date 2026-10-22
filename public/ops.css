@@ -1391,3 +1391,9 @@ html[data-view="ops"] .ops-on .tally-box.ledger table.list :is(td, th).t:not(#_)
   html[data-view="ops"] .ops-on.ops-nodock :is(#map, #h-map):not(#_) { height: calc(100svh - 190px) !important }
   html[data-view="ops"] .ops-on.ops-nodock .ops-hud:not(#_) { height: calc(100svh - 190px) }
 }
+
+/* "New on the map" notes sit on the left, between the coordinates and the map's tools: the first just above the
+   coordinates, the next ones building up from it (user, 23 Oct). */
+html[data-view="ops"] .ops-toasts:not(#_) { top: auto; right: auto; left: 10px; bottom: 86px; transform: none; width: min(300px, calc(100% - 80px)); flex-direction: column-reverse; justify-content: flex-start; max-height: calc(100% - 320px); overflow: hidden }
+html[data-view="ops"] .ops-toast:not(#_) { animation: ops-up .2s ease-out }
+@media (max-width: 760px) { html[data-view="ops"] .ops-toasts:not(#_) { bottom: 80px; width: calc(100% - 70px); max-height: calc(100% - 300px) } }

@@ -282,10 +282,10 @@ export async function refreshOfac(store: DeskStore, now = new Date(), fetchHtml:
     const html = await fetchHtml(item.url);
     if (html) actions.push(parseAction(item, html));
   }
-  // The why in plain words, from the press release only: a few a run, three tries each.
+  // The why in plain words, from the press release only: a few a run, twelve tries each (an hour apart: the free models run out of a night).
   let wrote = 0;
   for (const a of actions) {
-    if (wrote >= 3 || !a.iran || a.why || (a.whyTries ?? 0) >= 3 || addedTotal(a.added) === 0) continue;
+    if (wrote >= 3 || !a.iran || a.why || (a.whyTries ?? 0) >= 12 || addedTotal(a.added) === 0) continue;
     const p = a.press.find((x) => ON_IRAN.test(x.title));
     if (!p) continue;
     wrote++;

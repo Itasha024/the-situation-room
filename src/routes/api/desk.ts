@@ -37,9 +37,11 @@ import { type Card as SameCard, foldServed } from "@/lib/desk/fold-same";
  * The edge asks each region's copy anew; one instance serves several regions.
  * The same answer is kept here: a minute fresh, and after that still served at
  * once while a new one is read behind it, so a visitor never waits on the
- * database (a miss took over two seconds).
+ * database (a miss took over two seconds). Three minutes fresh: on the small server
+ * a read blocks the site while it is made, up to a minute when the machine is
+ * throttled (22 Oct), and the scans write new cards only every few minutes.
  */
-const MEMO_MS = 60_000;
+const MEMO_MS = 3 * 60_000;
 const PINS_MEMO_MS = 4 * 60_000;
 const STALE_MS = 30 * 60_000;
 const memo = new Map<string, { at: number; body: string; gz?: Uint8Array }>();

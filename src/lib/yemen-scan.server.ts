@@ -2631,8 +2631,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
           // have filled up since the last read and dropped some unseen.
           const inWindow = listed.filter((it) => !Number.isFinite(it.at) || now - it.at <= window).length;
           const rolled = !firstSight && !!lastRead && inWindow >= 20 && fresh === inWindow;
-          // A listing that did not answer is due again next tick.
-          if (ok) state.lastScanAt[`web:${feed.id}`] = Date.now();
+                    state.lastScanAt[`web:${feed.id}`] = Date.now();
           status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length, rolled, listed: listed.length, fresh });
           return;
         }
@@ -2650,8 +2649,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
         // thing is to make the possibility visible rather than assume it away.
         const times = rows.map((r) => Date.parse(r.at)).filter(Number.isFinite);
         const rolled = !!lastRead && times.length > 0 && Math.min(...times) > lastRead;
-        // A listing that did not answer is due again next tick.
-        if (ok) state.lastScanAt[`web:${feed.id}`] = Date.now();
+                state.lastScanAt[`web:${feed.id}`] = Date.now();
         status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length, rolled });
       })(),
     );

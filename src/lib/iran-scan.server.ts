@@ -299,8 +299,9 @@ export async function fetchIranSources(state: FetchState, now: number): Promise<
       } catch {
         // Unread this tick; the status says so.
       }
-      // A source that did not answer is tried again next tick, not after its whole interval.
-      if (res.ok) iState.lastScanAt[id] = Date.now();
+      // A source that did not answer waits its interval too: tried again every tick, the failures on the
+      // throttled server fed the load that made them fail (22 Oct, the site down for an hour).
+      iState.lastScanAt[id] = Date.now();
       own.push(...res.rows);
       status.push({ id, name, kind, ok: res.ok, cadence: every >= 60 ? "hourly" : `every ${every} min`, hits: res.rows.length });
     });

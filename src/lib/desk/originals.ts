@@ -26,7 +26,7 @@ import { findVenue } from "./venue.ts";
  * The quick matcher and translator: Groq's two first, then NVIDIA's and Gemma when Groq's rate limit is hit
  * (22 Oct: 29 of 58 matches in three hours came back HTTP 429, and the relay went out unmatched).
  */
-const MATCH_MODELS = [...TRIAGE_MODELS.slice(0, 2), { provider: "nvidia" as const, id: "nvidia/nemotron-3-super-120b-a12b" }, TRIAGE_MODELS[3]];
+const MATCH_MODELS = [...TRIAGE_MODELS.slice(0, 2), { provider: "nvidia" as const, id: "nvidia/nemotron-3-ultra-550b-a55b" }, TRIAGE_MODELS[3]];
 
 export type Hit = { url: string; source: string; title?: string; /** An interview he gave this outlet: its exclusive. */ told?: boolean };
 

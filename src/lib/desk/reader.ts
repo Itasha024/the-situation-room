@@ -1355,9 +1355,12 @@ export function fitHeadline<T extends Pick<Reading, "headline" | "body">>(r: T):
 export function dropChannelLabels(headline: string): string {
   let h = String(headline || "").trim();
   h = h.replace(/^(?:OSINT|BREAKING|Breaking|URGENT|Urgent|JUST IN|Just in|ALERT|Alert|FLASH|Flash)\s*[:|—–-]\s*/u, "");
-  h = h.replace(/^(?:OSINT|open[- ]source)\s+(?:sources|accounts|analysts|monitors|researchers)\s+(?:report|say|said|claim|reported)s?\s+(?:that\s+)?/i, "Reports of ");
+  const who = String.raw`(?:OSINT|open[- ]source)\s+(?:sources?|accounts?|analysts?|monitors?|researchers?|trackers?)(?:\s+(?!reports?\b|says?\b|claims?\b)[A-Z][\w-]*)?`;
+  h = h.replace(new RegExp(String.raw`^${who}\s*:\s*`, "i"), "");
+  h = h.replace(new RegExp(String.raw`^${who}\s+(?:report|say|said|claim|reported)s?\s+(?:that\s+)?(?:an?\s+)?`, "i"), "Reports of a ");
+  h = h.replace(/^Reports of a (?=(?:[a-z]+\s+)?(?:explosions|strikes|launches|blasts|attacks)\b)/, "Reports of ");
+  h = h.replace(new RegExp(String.raw`,\s+${who}\s+(?:says?|said|reports?|claims?)$`, "i"), ", an online tracker reports");
   h = h.replace(/\b(?:OSINT|open-source intelligence)\s+(?=(?:sources|accounts|analysts|monitors|researchers|footage|images)\b)/gi, "");
-  h = h.replace(/,\s+(?:OSINT|open-source)\s+(?:sources|accounts)\s+(?:say|said|report|claim)s?$/i, ", accounts online say");
   return h ? h.charAt(0).toUpperCase() + h.slice(1) : h;
 }
 

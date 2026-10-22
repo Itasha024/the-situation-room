@@ -51,7 +51,16 @@ test("a channel's labels are not copy", () => {
     dropChannelLabels("OSINT: ballistic missile transport observed on five trucks in Pouneh tunnel, Khorramabad"),
     "Ballistic missile transport observed on five trucks in Pouneh tunnel, Khorramabad",
   );
-  assert.equal(dropChannelLabels("OSINT sources report large explosion in Strait of Hormuz"), "Reports of large explosion in Strait of Hormuz");
+  assert.equal(dropChannelLabels("OSINT sources report large explosion in Strait of Hormuz"), "Reports of a large explosion in Strait of Hormuz");
+  assert.equal(
+    dropChannelLabels('OSINT account BeamTracker reports heavy explosion in Strait of Hormuz at location where "non-compliant" ships were previously targeted'),
+    'Reports of a heavy explosion in Strait of Hormuz at location where "non-compliant" ships were previously targeted',
+  );
+  assert.equal(dropChannelLabels("OSINT tracker: Iranian air force Kowsar fighter over Tabriz"), "Iranian air force Kowsar fighter over Tabriz");
+  assert.equal(
+    dropChannelLabels("Iranian air force Kowsar fighters patrol from Dezful base in Khuzestan, OSINT tracker reports"),
+    "Iranian air force Kowsar fighters patrol from Dezful base in Khuzestan, an online tracker reports",
+  );
   assert.equal(dropChannelLabels("BREAKING: IRGC says two tankers seized"), "IRGC says two tankers seized");
   assert.equal(dropChannelLabels("Araghchi: Iran will not negotiate under threat"), "Araghchi: Iran will not negotiate under threat");
 });

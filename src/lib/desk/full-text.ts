@@ -95,7 +95,7 @@ export function sameProvider(provider: string, names: string[]): boolean {
 export async function msnCopy(url: string, title: string, source = "", get: (u: string) => Promise<string> = page): Promise<string> {
   const names = msnNames(url, source);
   if (!names || !title.trim()) return "";
-  const copy = await bingResolve(title, "msn.com");
+  const copy = await bingResolve(title, "msn.com", fetch, true);
   const id = msnId(copy);
   if (!id) return "";
   const a = msnArticle(await get(`https://assets.msn.com/content/view/v2/Detail/en-us/${id}`));

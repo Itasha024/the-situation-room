@@ -96,12 +96,13 @@ export function pickBing(items: { title: string; url: string }[], title: string,
 }
 
 /** The article on `site` carrying this headline, or "" (none found, or no search left). */
-export async function bingResolve(title: string, site: string, fetcher: typeof fetch = fetch): Promise<string> {
+export async function bingResolve(title: string, site: string, fetcher: typeof fetch = fetch, within = false): Promise<string> {
   const clean = title.replace(/\s+-\s+[^-]{2,40}$/, "").trim();
   if (!clean || !site || bingLeft() <= 0) return "";
   spentAt.push(Date.now());
   try {
-    const res = await fetcher(`https://www.bing.com/news/search?q=${encodeURIComponent(clean)}&format=rss`, {
+    // `within`: the search is kept to the site (MSN's copies come up only so).
+    const res = await fetcher(`https://www.bing.com/news/search?q=${encodeURIComponent(within ? `${clean} site:${site}` : clean)}&format=rss`, {
       headers: { "user-agent": BROWSER_UA },
       signal: AbortSignal.timeout(8000),
     });

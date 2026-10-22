@@ -22,6 +22,9 @@
  */
 import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
 import { headWords, speechOwner, wordsInCommon } from "./copies.ts";
+import { isAggregator } from "./credibility.ts";
+import { sameOutlet } from "./originals.ts";
+import { countryIn, isRelayChannel, pressOf } from "./state-press.ts";
 import { officialVoice } from "./speaker-press.ts";
 import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteTakesLead } from "./site-articles.ts";
 
@@ -849,7 +852,11 @@ export function joinInto(home: Card, copy: Card, rule: Rule): Card {
     home.alsoReportedBy = siteAlsoOnly(mergeAlso(home.alsoReportedBy, [{ source: copy.source, url: copy.url, summary: copy.summary }, ...(copy.alsoReportedBy ?? [])], home));
     return home;
   }
-  if ((rule === "remarks" || rule === "burst") && ownChannelOf(remarksOwner(home), copy.source) && !ownChannelOf(remarksOwner(home), home.source)) {
+  const ownLead = (rule === "remarks" || rule === "burst") && ownChannelOf(remarksOwner(home), copy.source) && !ownChannelOf(remarksOwner(home), home.source);
+  // The original leads and its relays go under "Also", never the other way round (user, 22 Oct: "dont
+  // ever put the og source in Also, it should always be the main source").
+  const original = !ownLead && !home.flags?.includes("exclusive") && !ownChannelOf(remarksOwner(home), home.source) && moreOriginal(copy, home);
+  if (ownLead || original) {
     const was = { source: home.source, url: home.url, summary: home.summary };
     const oldText = String(home.text ?? "");
     home.source = copy.source;
@@ -896,6 +903,21 @@ function appendLine(text: string, line: string): string {
   const l = /[.!?]$/.test(line) ? line : `${line}.`;
   return text.trim() ? `${text.trim()}\n${l}` : l;
 }
+/**
+ * Is `copy` nearer the story's source than `home`? The outlet `home` cites is; the speaker's own
+ * country's media are over anyone else's; anyone who reports is over a relay channel.
+ */
+type Teller = { source: string; summary: string; citing?: unknown };
+export function moreOriginal(copy: Teller, home: Teller): boolean {
+  const cites = (c: Teller) => (typeof c.citing === "string" ? c.citing : "");
+  if (cites(home) && sameOutlet(copy.source, cites(home))) return true;
+  if (cites(copy) && sameOutlet(home.source, cites(copy))) return false;
+  const speaker = /^([^:"“]{3,90}):\s/.exec(String(home.summary || "").trim())?.[1];
+  const country = speaker ? countryIn(speaker) : undefined;
+  const rank = (c: Teller) => (isRelayChannel(c.source) || isAggregator(c.source) ? 0 : country && pressOf(c.source, country) >= 0 ? 2 : 1);
+  return rank(copy) > rank(home);
+}
+
 function addAlso(list: Card["alsoReportedBy"], a: { source: string; url: string; summary?: string }, lead: string) {
   return mergeAlso(list, [a], { source: lead, url: "" }, 12);
 }

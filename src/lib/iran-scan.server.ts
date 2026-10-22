@@ -14,8 +14,8 @@
  * services before Gemini, and Gemini's lite models only while today's use of
  * them leaves the Yemen reader its share.
  */
-import { IRAN_RSS, IRAN_TG, IRAN_X, ISRAELI_MEDIA, LEBANESE_MEDIA, type IranLean } from "./desk/iran-sources.ts";
-import { isIranWar, passesIranOwnGate, passesIsraeliMediaGate, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
+import { IRAN_RSS, IRAN_TG, IRAN_X, IRAQI_MEDIA, ISRAELI_MEDIA, LEBANESE_MEDIA, NNA_LATEST, type IranLean, nnaStory } from "./desk/iran-sources.ts";
+import { isIranWar, passesIranOwnGate, passesIraqiMediaGate, passesIsraeliMediaGate, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
 import { type Candidate, IRAN_READER, USAGE_KEY, type Usage, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
 import { iranPlaceFromWords } from "./desk/iran-places.ts";
@@ -213,6 +213,38 @@ async function readX(src: { id: string; name: string; lean: IranLean }, state: I
   return { rows, ok: true };
 }
 
+/**
+ * Lebanon's state agency from its own site (user, 22 Oct): the latest list, then the full text of each new
+ * story that passes the Lebanese gate on its headline (NNA posts some 300 stories a day, most of them local).
+ */
+async function readNna(state: IranState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
+  type Story = { id: number; title?: string; url?: string; publish_date?: number; is_exclusive?: boolean };
+  let list: Story[] = [];
+  try {
+    list = (JSON.parse((await fetchText(NNA_LATEST, 15_000)) ?? "") as { data?: { news?: Story[] } }).data?.news ?? [];
+  } catch {
+    return { rows: [], ok: false };
+  }
+  if (!list.length) return { rows: [], ok: false };
+  const seen = state.lastTgPost[NNA_MARK] ?? 0;
+  const fresh = list.filter((s) => s.id > seen && s.title && (seen || (s.publish_date ?? 0) * 1000 > now - FIRST_SIGHT_MS));
+  const rows: RawHit[] = [];
+  for (const s of fresh.filter((x) => passesLebaneseMediaGate(x.title ?? "")).slice(0, 12)) {
+    let text = "";
+    try {
+      const j = JSON.parse((await fetchText(nnaStory(s.id), 15_000)) ?? "") as { data?: { data?: { content?: string } } };
+      text = articleText(`<article>${j.data?.data?.content ?? ""}</article>`) || String(j.data?.data?.content ?? "").replace(/<[^>]+>/g, " ");
+    } catch {
+      // The headline alone, as the channel gives it.
+    }
+    const at = s.publish_date ? jerusalemIso(new Date(s.publish_date * 1000)) : jerusalemIso(new Date(now));
+    rows.push({ source: "NNA", url: s.url ?? `https://nna-leb.gov.lb/ar/news/short/${s.id}`, title: s.title, text: `${s.title}\n${text.replace(/\s+\n/g, "\n").trim()}`.slice(0, 6000), at, lean: "gulf", fromTg: false, ...(s.is_exclusive ? { feedBody: text } : {}) });
+  }
+  state.lastTgPost[NNA_MARK] = Math.max(seen, ...list.map((s) => s.id));
+  return { rows, ok: true };
+}
+const NNA_MARK = "nna-leb";
+
 async function readFeed(f: Feed): Promise<{ rows: RawHit[]; ok: boolean }> {
   const body = await fetchText(f.url, 10_000);
   // A feed with nothing new still answered (Google's listing of a slow site).
@@ -275,6 +307,7 @@ export async function fetchIranSources(state: FetchState, now: number): Promise<
   for (const s of IRAN_TG) run(`tg:${s.id}`, s.name, "tg", s.every, () => readTg(s, iState, now));
   for (const s of IRAN_X) run(`x:${s.id}`, s.name, "x", s.every, () => readX(s, iState, now));
   for (const f of [...IRAN_RSS, ...SEARCHES]) run(`web:${f.id}`, f.name, "web", f.every, () => readFeed(f));
+  run("web:nna", "NNA", "web", 5, () => readNna(iState, now));
   await Promise.allSettled(jobs);
   remember(own);
 
@@ -307,7 +340,10 @@ export function passesOwnSourceGate(h: Pick<RawHit, "source" | "title" | "text">
   const text = `${h.title ?? ""} ${h.text}`;
   if (ISRAELI_MEDIA.has(h.source)) return passesIsraeliMediaGate(text);
   if (LEBANESE_MEDIA.has(h.source)) return passesLebaneseMediaGate(text);
-  if (h.source === "IAEA") return isIranWar(text);
+  if (IRAQI_MEDIA.has(h.source)) return passesIraqiMediaGate(text);
+  if (h.source === "IAEA" || /^Rafael Grossi/.test(h.source)) return isIranWar(text);
+  // Russia's and RT's feeds cover the world: only what names Iran's war.
+  if (/^(?:TASS|RIA Novosti|RT|RT Arabic|Russia Foreign Ministry|Maria Zakharova)$/.test(h.source)) return isIranWar(text);
   return passesIranOwnGate(text);
 }
 

@@ -14,6 +14,16 @@
  */
 
 import type { Read } from "./recent-reads.ts";
+import { IRAN_TG, IRAN_X } from "./iran-sources.ts";
+
+/**
+ * Iran's officials and bodies on their own X and Telegram accounts (user, 22 Oct: "iran also has the
+ * many x accounts i gave you of officials like araghci etc"): one official's words are often first on
+ * another's account (the spokesman quoting the minister), so every one of them is Iran's own.
+ */
+const IRAN_OFFICIAL_ACCOUNTS = [...IRAN_X, ...IRAN_TG]
+  .filter((s) => s.lean === "axis" && !s.lebaneseMedia && !s.iraqiMedia && !/Tasnim|relay|Khabar|Fori|Unews|Emtedad|Press TV Hebrew|Al-Alam|ISNA|ILNA|IMNA|Ad-Diyar/i.test(s.name))
+  .map((s) => s.name);
 
 /**
  * Each country's own media as the site names its sources: state agencies and
@@ -24,6 +34,7 @@ export const STATE_PRESS: Record<string, string[]> = {
   IR: [
     "Khamenei's office", "Iran's Supreme National Security Council", "Iran Foreign Ministry", "IRNA", "IRIB News", "Tasnim", "Fars News",
     "Mehr News", "ISNA", "ILNA", "IMNA", "Mizan", "Press TV", "Tehran Times", "Nour News", "SNN", "Al-Alam", "Atomic Energy Organization of Iran", "IRGC Navy",
+    ...IRAN_OFFICIAL_ACCOUNTS,
   ],
   LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon"],
   IQ: ["Iraq Foreign Ministry", "INA", "Iraqi News Agency", "Iraqi government", "Shafaq News", "Iraqinews", "Rudaw", "Kurdistan24", "Al-Sumaria", "Baghdad Today"],
@@ -34,7 +45,7 @@ export const STATE_PRESS: Record<string, string[]> = {
   KW: ["KUNA", "Kuwait Petroleum Corporation", "Kuwait Foreign Ministry"],
   BH: ["BNA", "Bahrain Foreign Ministry"],
   PK: ["Pakistan's prime minister's office", "Shehbaz Sharif", "Ishaq Dar", "Pakistan Foreign Office", "ISPR", "Pakistan Armed Forces", "APP", "Dawn", "Samaa", "Geo"],
-  RU: ["Kremlin", "Russia Foreign Ministry", "TASS", "RIA Novosti", "Interfax", "RT"],
+  RU: ["Kremlin", "Russia Foreign Ministry", "Maria Zakharova", "TASS", "RIA Novosti", "Interfax", "RT", "Sputnik"],
   CN: ["China Foreign Ministry", "Xinhua", "Global Times", "CGTN"],
   TR: ["Turkey Foreign Ministry", "Anadolu", "TRT"],
   EG: ["Egypt Foreign Ministry", "Egyptian presidency", "Al-Ahram"],
@@ -58,6 +69,40 @@ export const PRESS_LANGS: Record<string, string[]> = {
   LB: ["Arabic"], IQ: ["Arabic"], QA: ["Arabic"], OM: ["Arabic"], AE: ["Arabic"], SA: ["Arabic"], KW: ["Arabic"], BH: ["Arabic"], YE: ["Arabic"], SY: ["Arabic"], JO: ["Arabic"], EG: ["Arabic"],
   RU: ["Russian"], CN: ["Chinese"], TR: ["Turkish"], IL: ["Hebrew", "Arabic"], FR: ["French"], DE: ["German"], IT: ["Italian"], PK: ["Urdu"],
 };
+
+/**
+ * Channels that post others' news, mostly without saying whose (user, 22 Oct: "many times a relay
+ * report wont state the og source"): never an original, and their items are looked for among the
+ * site's own reads of the outlets that do report.
+ */
+const RELAY_CHANNELS =
+  /^(?:Khabar Fori|Khabari Plus|Akhbar-e Fori|Tehran Fori|Unews|Emtedad|Tasnim \(Arabic relay\)|Axis military relay|Sabereen News|Ali Bk|Al-Mihwar|Alfaqaar|Shajab News|Naya|Bin Saeed|Saudi News|Al-Yemen Now|Clash Report|OSINT ?defender|OSINT Hexagone|Egypt OSINT|Shin Persian|War Cube|Sentdefender)$/i;
+export const isRelayChannel = (source: string): boolean => RELAY_CHANNELS.test(String(source || "").trim());
+
+/** A country's name or adjective at the head of a speaker's role: "Iranian MP", "Iran's deputy FM", "Lavrov". */
+export const ROLE_COUNTRY: [RegExp, string][] = [
+  [/\b(?:Iranian|Iran's|IRGC|Iran|SNSC|Tehran|Khamenei|Pezeshkian|Araghchi|Baghaei|Ghalibaf|Larijani|Rezaei|Gharibabadi|Khatibzadeh|Mohajerani)\b/, "IR"],
+  [/\b(?:Russian|Russia's|Russia|Kremlin|Lavrov|Zakharova|Putin|Peskov)\b/, "RU"], [/\b(?:Iraqi|Iraq's|Iraq|PMF|Kataib Hezbollah|Nujaba|al-Zaidi)\b/, "IQ"],
+  [/\b(?:Lebanese|Lebanon's|Lebanon|Hezbollah|Berri|Aoun|Nawaf Salam|Qassem|Raggi)\b/, "LB"], [/\b(?:Qatari|Qatar's)\b/, "QA"], [/\b(?:Pakistani|Pakistan's)\b/, "PK"], [/\b(?:Saudi)\b/, "SA"],
+  [/\b(?:Omani|Oman's)\b/, "OM"], [/\b(?:Emirati|UAE)\b/, "AE"], [/\b(?:Israeli|Israel's|IDF)\b/, "IL"], [/\b(?:US|American|Pentagon|White House)\b/, "US"],
+  [/\b(?:Turkish|Turkey's)\b/, "TR"], [/\b(?:Chinese|China's)\b/, "CN"], [/\b(?:Egyptian|Egypt's)\b/, "EG"], [/\b(?:Syrian|Syria's)\b/, "SY"], [/\b(?:Houthi)\b/, "YE"],
+];
+
+/** The first country named in these words ("Lebanese minister on Iran ties" is Lebanon's). */
+export function countryIn(words: string): string | undefined {
+  let best: { at: number; c: string } | undefined;
+  for (const [re, c] of ROLE_COUNTRY) {
+    const m = re.exec(words);
+    if (m && (!best || m.index < best.at)) best = { at: m.index, c };
+  }
+  return best?.c;
+}
+
+/** The country a headline's teller belongs to: the words before its colon, else its first words. */
+export function leadCountry(summary: string): string | undefined {
+  const s = String(summary || "").trim();
+  return countryIn(/^([^:"“]{3,90}):\s/.exec(s)?.[1] ?? s.slice(0, 60));
+}
 
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
@@ -94,6 +139,24 @@ export function carried(text: string, keys: string[]): number {
 }
 
 export type PressCandidate = Read & { own: boolean; rank: number; hits: number };
+
+/**
+ * A relay channel's item that names no source: whoever reported it before it, among what the site
+ * read (from twelve hours before to ten minutes after: two scans may read them in either order),
+ * the country's own media first, then any outlet that is not itself a relay. Three of its keywords
+ * in any language, so a story's surroundings do not match.
+ */
+export function earlierTellers(reads: Read[], o: { country?: string; notSource: string }, keys: string[], reportAt: number, n = 5): PressCandidate[] {
+  const out: PressCandidate[] = [];
+  for (const r of reads) {
+    if (r.source === o.notSource || isRelayChannel(r.source) || r.at < reportAt - 12 * 3600_000 || r.at > reportAt + 10 * 60_000) continue;
+    const hits = carried(r.text, keys);
+    if (hits < 3) continue;
+    const rank = o.country ? pressOf(r.source, o.country) : -1;
+    out.push({ ...r, own: false, rank: rank < 0 ? 999 : rank, hits });
+  }
+  return out.sort((a, b) => +(a.rank === 999) - +(b.rank === 999) || b.hits - a.hits || a.at - b.at).slice(0, n);
+}
 
 /**
  * The posts that may be the original: the owner's own and the country's own

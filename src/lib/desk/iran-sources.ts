@@ -30,7 +30,7 @@ export const IRAN_LEAN_LABELS: Record<IranLean, string> = {
  * reporting on the Iran war is kept; a report that only repeats a foreign
  * outlet is dropped (the original is read directly), and exclusives are kept.
  */
-export type IranSource = { id: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; note?: string; israeliMedia?: true; lebaneseMedia?: true };
+export type IranSource = { id: string; name: string; lean: IranLean; every: 5 | 10 | 15 | 30; note?: string; israeliMedia?: true; lebaneseMedia?: true; iraqiMedia?: true };
 
 /** Telegram channels the Yemen desk reads that the Iran desk reads too (t.me ids). */
 export const SHARED_TG: Record<string, IranLean> = {
@@ -126,6 +126,11 @@ export const IRAN_TG: IranSource[] = [
   { id: "bintjbeilnews", name: "Bint Jbeil News", lean: "axis", every: 5, lebaneseMedia: true },
   // The page kept in the name of Al-Manar's south Lebanon reporter, killed in the war: the day's attacks village by village.
   { id: "alichoeib1970", name: "Ali Shoaib's page", lean: "axis", every: 10, lebaneseMedia: true },
+  // Iraq's state agency (user, 22 Oct): its site turns the server away (403); its channel posts each story's headline.
+  { id: "inainaiq", name: "INA", lean: "gulf", every: 5, iraqiMedia: true },
+  // Russia's own voice (user, 22 Oct: Lavrov's words were found 0 times in 35): the foreign ministry and its spokeswoman.
+  { id: "MID_Russia", name: "Russia Foreign Ministry", lean: "intl", every: 15 },
+  { id: "MariaVladimirovnaZakharova", name: "Maria Zakharova", lean: "intl", every: 15 },
 ];
 
 /** X accounts the Yemen desk reads that the Iran desk reads too (handles). */
@@ -314,6 +319,8 @@ export const IRAN_X: IranSource[] = [
   // Lebanese papers whose sites turn the server away (user, 18 Oct): their posts carry each story's headline.
   { id: "NidaaWatan", name: "Nidaa al-Watan", lean: "gulf", every: 15 },
   { id: "AddiyarNews", name: "Ad-Diyar", lean: "axis", every: 15 },
+  // The IAEA's chief (22 Oct): iaea.org turns the server away, and the agency's own X handle is gone.
+  { id: "rafaelmgrossi", name: "Rafael Grossi (IAEA)", lean: "intl", every: 15 },
 ];
 
 /** Websites and feeds the Yemen desk reads that the Iran desk reads too (by their names in the scanner). */
@@ -409,7 +416,19 @@ export const IRAN_RSS: { id: string; url: string; name: string; lean: IranLean; 
   { id: "c13", url: gnSite("13tv.co.il"), name: "Channel 13", lean: "israel", every: 15, israeliMedia: true },
   // Trump's interviews (user, 16 Oct). newsmax.com does not answer the server; its listing on Google News does.
   { id: "newsmax", url: gnSiteEn("newsmax.com"), name: "Newsmax", lean: "us", every: 10 },
+  // Russia's state media (user, 22 Oct): what Lavrov, Peskov and Putin say is in them first.
+  { id: "tass", url: "https://tass.com/rss/v2.xml", name: "TASS", lean: "intl", every: 5 },
+  { id: "ria", url: "https://ria.ru/export/rss2/archive/index.xml", name: "RIA Novosti", lean: "intl", every: 10 },
+  { id: "rt", url: "https://www.rt.com/rss/news/", name: "RT", lean: "intl", every: 10 },
+  { id: "rt-arabic", url: "https://arabic.rt.com/rss/", name: "RT Arabic", lean: "intl", every: 5 },
 ];
+
+/**
+ * Lebanon's state agency, from its own site (user, 22 Oct: "naa from their site"): the site's own
+ * data service lists the latest stories and gives each one's full text. Its RSS feed stopped on 22 Sep.
+ */
+export const NNA_LATEST = "https://nna-leb.gov.lb/api/proxy/v2/ar/news/latest?_rv=0";
+export const nnaStory = (id: number | string) => `https://nna-leb.gov.lb/api/proxy/v2/ar/news/${id}?_rv=0`;
 
 /**
  * Tried on 8 Oct and not read, with the reason, so they are not tried again
@@ -434,10 +453,12 @@ export const IRAN_NOT_READ: { what: string; why: string }[] = [
 
 /** The display names of the Israeli outlets and reporters (stage 4c). */
 export const ISRAELI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG, ...IRAN_RSS].filter((s) => s.israeliMedia).map((s) => s.name));
-export const LEBANESE_MEDIA: ReadonlySet<string> = new Set(IRAN_TG.filter((s) => s.lebaneseMedia).map((s) => s.name));
+export const LEBANESE_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG.filter((s) => s.lebaneseMedia).map((s) => s.name), "NNA"]);
+export const IRAQI_MEDIA: ReadonlySet<string> = new Set(IRAN_TG.filter((s) => s.iraqiMedia).map((s) => s.name));
 
 /** Every Iran-desk source's filter group, by the source's display name. */
 export function iranLeanOf(name: string): IranLean | undefined {
   for (const s of [...IRAN_TG, ...IRAN_X, ...IRAN_RSS]) if (s.name === name) return s.lean;
+  if (name === "NNA") return "gulf";
   return SHARED_RSS[name];
 }

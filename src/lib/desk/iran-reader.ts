@@ -83,6 +83,8 @@ WHAT TO PUBLISH (publish: true)
 - Sanctions: new US, EU and UN sanctions, waivers, enforcement, shadow-fleet seizures.
 - The US in the region: what the US itself does or says there (its forces, bases, warships, deployments, arms deals, its own dealings with the Gulf, Iraq and Israel) and inside the US when it is about this war (Congress, war powers, polls, gasoline prices).
 - Israel's war beyond its borders: its strikes and raids in Lebanon, Gaza, Syria, Iraq, Iran or anywhere else; attacks on Israel and its forces, and the Israeli dead and wounded from them; the cabinet's and the army's war decisions. Israel's home affairs (politics, courts, the economy, daily life) are not published, reject_reason "not iran".
+- Lebanon (user, 22 Oct): besides Israel's war there, everything about Hezbollah inside Lebanon: its arms and the disarmament plan, the state's and the army's dealings with it, Lebanon–Hezbollah relations, its money, clashes or unrest tied to it; the explosives-truck case of early October and everything that followed it; the decisions, meetings and statements of the cabinet, parliament, Speaker Nabih Berri, the president and the prime minister when they touch Hezbollah, the war, the ceasefire, the talks with Israel or the army's role. A major Lebanese event outside these (the government falls, a big security incident, mass unrest) is published too. Lebanon's routine domestic news (local services, appointments, the economy apart from the war) is not, reject_reason "not iran".
+- Iraq (user, 22 Oct): everything about the Iraqi militias and the Popular Mobilization Forces (PMF): their statements, claims and threats, their arms and disarmament, the state's monopoly on arms, the PMF law in parliament; what the prime minister (al-Zaidi) and his circle say on these; the forming of the government and the Coordination Framework's moves, above all where Iran or Iran-backed figures are involved; US pressure and sanctions on Baghdad and US forces in Iraq; Iran's dealings with Iraq (borders and crossings, gas and power, Iranian Kurdish groups). Iraq's routine domestic news is not, reject_reason "not iran".
 - Israel's own words and acts come from Israel's own sources (the IDF, Israeli officials, Israeli media), and its strikes in Lebanon from Lebanon's own sources. Iran's and other countries' outlets retelling them are relays, reject_reason "relay", unless it is that outlet's own exclusive.
 - News reports that rest on officials or sources ("the White House asked the Pentagon for strike options, US officials say"), an investigation's findings, a leak, a first figure: something newly FOUND about an earlier event is current.
 - An open-source (OSINT) analyst's OWN finding is a report: satellite imagery it read, footage it geolocated, ships it tracked. Say how it was seen only when the post says so.
@@ -174,7 +176,7 @@ maritime_attack is any event that happens TO a named vessel at sea or in port: h
 FIELDS
 - event_type: air_strike, missile_launch, drone_attack, interception, air_raid_alert, shelling, ground_clash, advance_or_capture, maritime_attack, statement, diplomacy, economy.
 - actor_side: who acted or spoke: iran, hezbollah, iraqi_militias (Iraqi and Syrian militias), us, israel, gulf (any Gulf state), houthi, other, unclear.
-- arenas: one or two arena ids, by SUBJECT, not by speaker (the US Treasury Secretary on Iran's oil is "sanctions"; a Qatari minister on the talks is "talks"; the war at sea, the blockade, ship attacks and strikes or threats around the Gulf are "hormuz"). "inside_iran" is only for life and politics inside Iran (shortages, prices, protests, arrests, executions, internet, rifts at the top), never for what Iran's officials say about the war. "lebanon" is Israel's strikes and ground war in Lebanon, everything Hezbollah does, and Israeli–Lebanese talks. "us" is what the US itself does and says on the war, abroad and at home (Congress, polls, gasoline prices). The ids: hormuz, talks, nuclear, inside_iran, sanctions, lebanon, axis (the Iraqi and Syrian militias, the Houthis' Iran side), us.
+- arenas: one or two arena ids, by SUBJECT, not by speaker (the US Treasury Secretary on Iran's oil is "sanctions"; a Qatari minister on the talks is "talks"; the war at sea, the blockade, ship attacks and strikes or threats around the Gulf are "hormuz"). "inside_iran" is only for life and politics inside Iran (shortages, prices, protests, arrests, executions, internet, rifts at the top), never for what Iran's officials say about the war. "lebanon" is Israel's strikes and ground war in Lebanon, everything Hezbollah does, Israeli–Lebanese talks, and Lebanon's politics and unrest around Hezbollah and the war. "axis" takes Iraq too: its militias and the PMF, their disarmament, the PMF law, the government's forming and US pressure on Baghdad. "us" is what the US itself does and says on the war, abroad and at home (Congress, polls, gasoline prices). The ids: hormuz, talks, nuclear, inside_iran, sanctions, lebanon, axis (the Iraqi and Syrian militias, the Houthis' Iran side), us.
 - targets: English names of places struck or where the event happened, as the text names them. origins: places a weapon or aircraft came from. Statements: both [].
 - interest: "for" if the report favours the side of the outlet carrying it, "against" if it harms it (an outlet admitting its own side's losses), else "neutral".
 - has_time: the text gives the time of the event.
@@ -192,7 +194,7 @@ export const IRAN_PROMPT: ReaderPrompt = { system: IRAN_SYSTEM_PROMPT, schema: I
  * decides whether the Iran reader sees an item.
  */
 export const IRAN_GATE =
-  /\b(?:Iran\w*|Tehran|IRGC|Revolutionary Guards?|Khamenei|Pezeshkian|Araghchi|Larijani|Ghalibaf|Baghaei|Hormuz|Persian Gulf|Bandar Abbas|Kharg|Bushehr|Natanz|Fordow|Isfahan|Parchin|IAEA|Grossi|enrichment|enriched uranium|Hezbollah|Hizbollah|Kataib Hezbollah|Nujaba|Islamic Resistance in Iraq|Popular Mobili[sz]ation|PMF|Hashd|Witkoff|PGSA|shadow fleet|snapback|JCPOA|MoU)\b|[إا]يران|إيراني|طهران|الحرس الثوري|خامنئي|بزشكيان|عراقجي|لاريجاني|قاليباف|هرمز|الخليج الفارسي|بندر عباس|نطنز|فوردو|أصفهان|بوشهر|الوكالة الدولية للطاقة الذرية|غروسي|تخصيب|حزب الله|كتائب حزب الله|النجباء|المقاومة الإسلامية في العراق|الحشد الشعبي|ویتکاف|ایران|تهران|سپاه|خامنه|پزشکیان|عراقچی|لاریجانی|قالیباف|هرمز|غنی‌سازی|آژانس|حزب‌الله|איראן|טהרן|חיזבאללה/i;
+  /\b(?:Iran\w*|Tehran|IRGC|Revolutionary Guards?|Khamenei|Pezeshkian|Araghchi|Larijani|Ghalibaf|Baghaei|Hormuz|Persian Gulf|Bandar Abbas|Kharg|Bushehr|Natanz|Fordow|Isfahan|Parchin|IAEA|Grossi|enrichment|enriched uranium|Hezbollah|Hizbollah|Kataib Hezbollah|Nujaba|Islamic Resistance in Iraq|Popular Mobili[sz]ation|PMF|Hashd|Witkoff|PGSA|shadow fleet|snapback|JCPOA|MoU)\b|[إا]يران|إيراني|طهران|الحرس الثوري|خامنئي|بزشكيان|عراقجي|لاريجاني|قاليباف|هرمز|الخليج الفارسي|بندر عباس|نطنز|فوردو|أصفهان|بوشهر|الوكالة الدولية للطاقة الذرية|غروسي|تخصيب|حزب الله|كتائب حزب الله|النجباء|المقاومة الإسلامية في العراق|الحشد الشعبي|ویتکاف|ایران|تهران|سپاه|خامنه|پزشکیان|عراقچی|لاریجانی|قالیباف|هرمز|غنی‌سازی|آژانس|حزب‌الله|איראן|טהרן|חיזבאללה|Иран|Тегеран|Ормуз|Хезболл|Аракчи|Пезешкиан|Хаменеи|МАГАТЭ|Гросси|\b(?:Hezbollah'?s? (?:arms|weapons|disarm\w*)|disarm\w* (?:of )?Hezbollah|Coordination Framework|PMF law)\b|حصر السلاح|نزع سلاح|سلاح الحزب|الفصائل المسلحة|الإطار التنسيقي|قانون الحشد|هيئة الحشد/i;
 
 /**
  * The Iran desk's own sources post about Iran and little else, much of it
@@ -304,11 +306,30 @@ export function passesIsraeliMediaGate(text: string): boolean {
  * strikes and raids, Hezbollah, the talks, the ceasefire and its monitors.
  */
 const LEBANON_WAR = /إسرائيل|اسرائيل|الاحتلال|العدو|معادي|معادٍ|معادية|غارة|غارات|مسيّرة|مسيرة|محلقة|قصف|قذائف|قنابل|توغل|تفجير|المقاومة|حزب الله|مفاوضات|التفاوض|الميكانيزم|الناقورة|اليونيفيل|وقف إطلاق النار|وقف النار|الخط الأزرق|أورتاغوس|إيران|طهران/;
+/**
+ * Lebanon's politics around Hezbollah and the war (user, 22 Oct): its arms and the state's dealings with
+ * it, the explosives-truck case of early October, the cabinet, parliament and Speaker Berri, the army,
+ * clashes and unrest inside. The reader decides what of it is news.
+ */
+const LEBANON_POLITICS =
+  /السلاح|مجلس الوزراء|جلسة الحكومة|الحكومة اللبنانية|مجلس النواب|المجلس النيابي|البرلمان|نبيه بري|الرئيس بري|عين التينة|الرئيس عون|جوزاف عون|نواف سلام|رئيس الحكومة|الجيش اللبناني|قائد الجيش|شاحنة|متفجرات|المتفجرات|اشتباك|إشكال مسلح|إطلاق نار|الثنائي الشيعي|حركة أمل/;
 
-/** A Lebanese outlet's item: about the Iran war, or Lebanon's war with Israel, never the rest of Lebanon's news. */
+/** A Lebanese outlet's item: the Iran war, Lebanon's war with Israel, and Lebanon's politics around them. */
 export function passesLebaneseMediaGate(text: string): boolean {
   const t = String(text || "");
-  return isIranWar(t) || LEBANON_WAR.test(t);
+  return isIranWar(t) || LEBANON_WAR.test(t) || LEBANON_POLITICS.test(t);
+}
+
+/**
+ * Iraq in Iraqi outlets' words (user, 22 Oct): the militias and the PMF, their arms and disarmament, the
+ * PMF law, the prime minister and his circle on these, the government's forming, the US's pressure and
+ * sanctions, and Iran's dealings with Iraq.
+ */
+const IRAQ_MATTERS =
+  /الحشد|الفصائل|المقاومة|السلاح|الإطار التنسيقي|تشكيل الحكومة|الحكومة المقبلة|الكتلة الأكبر|رئيس الوزراء|الزيدي|مجلس النواب|البرلمان|العقوبات|الخزانة الأمريكية|الخزانة الأميركية|واشنطن|الولايات المتحدة|الأمريكي|الأميركي|السفارة|التحالف الدولي|القوات الأمريكية|إيران|إيراني|طهران|المنافذ|الحدود|كتائب|النجباء|عصائب|منظمة بدر|الصدر|إسرائيل|غارة|قصف|مسيرة|مسيّرة/;
+export function passesIraqiMediaGate(text: string): boolean {
+  const t = String(text || "");
+  return isIranWar(t) || IRAQ_MATTERS.test(t);
 }
 
 /**

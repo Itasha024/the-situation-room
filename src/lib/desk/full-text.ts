@@ -54,6 +54,12 @@ export const ON_MSN: Record<string, string[]> = {
   "theguardian.com": ["Guardian"],
   "politico.com": ["Politico"],
   "axios.com": ["Axios"],
+  // Found on MSN on 22 Oct: the Post's paywall, Times of Israel's and Newsmax's bot checks stand in front of their own pages.
+  "washingtonpost.com": ["The Washington Post", "Washington Post"],
+  "timesofisrael.com": ["The Times of Israel", "Times of Israel"],
+  "newsmax.com": ["Newsmax"],
+  "jpost.com": ["The Jerusalem Post", "Jerusalem Post"],
+  "dw.com": ["DW"],
 };
 
 /** The MSN names an outlet goes by, from its host or its name ("WSJ"), or null when MSN does not carry it. */

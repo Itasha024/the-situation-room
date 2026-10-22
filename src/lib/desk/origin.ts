@@ -52,7 +52,7 @@ import {
 import type { DeskId } from "../desks.ts";
 import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
 import { ownRead, ownedBy, recentReads } from "./recent-reads.ts";
-import { PRESS_LANGS, pressCandidates, pressOf } from "./state-press.ts";
+import { PRESS_LANGS, countryIn, earlierTellers, isRelayChannel, leadCountry, pressCandidates, pressOf } from "./state-press.ts";
 import { siteAlsoOnly } from "./site-articles.ts";
 import { officialVoice } from "./speaker-press.ts";
 
@@ -930,13 +930,6 @@ const hostOf = (u: string) => {
   }
 };
 
-/** A country's adjective at the head of a speaker's role: "Iranian MP", "Iran's deputy FM", "Senior Iranian security official". */
-const ROLE_COUNTRY: [RegExp, string][] = [
-  [/\b(?:Iranian|Iran's|IRGC)\b/, "IR"], [/\b(?:Russian|Russia's|Kremlin)\b/, "RU"], [/\b(?:Iraqi|Iraq's)\b/, "IQ"], [/\b(?:Lebanese|Lebanon's|Hezbollah)\b/, "LB"],
-  [/\b(?:Qatari|Qatar's)\b/, "QA"], [/\b(?:Pakistani|Pakistan's)\b/, "PK"], [/\b(?:Saudi)\b/, "SA"], [/\b(?:Omani|Oman's)\b/, "OM"], [/\b(?:Emirati|UAE)\b/, "AE"],
-  [/\b(?:Israeli|Israel's|IDF)\b/, "IL"], [/\b(?:US|American|Pentagon|White House)\b/, "US"], [/\b(?:Turkish|Turkey's)\b/, "TR"], [/\b(?:Chinese|China's)\b/, "CN"],
-  [/\b(?:Egyptian|Egypt's)\b/, "EG"], [/\b(?:Syrian|Syria's)\b/, "SY"], [/\b(?:Houthi)\b/, "YE"],
-];
 const ROLE_WORD = /\b(?:official|secretary|head|chairman|member|aide|negotiator|representative|minister|MP|lawmaker|spokes\w*|commander|general|adviser|advisor|ambassador|envoy|president|leader|speaker|deputy|chief|diplomat|source|sources|officer|governor|judiciary|army|navy|ministry|government)\b/i;
 /**
  * A headline led by another country's official ("Senior Iranian security official: …") on an outlet
@@ -946,7 +939,7 @@ const ROLE_WORD = /\b(?:official|secretary|head|chairman|member|aide|negotiator|
 export function foreignOfficial(summary: string, source: string): Cited | null {
   const lead = /^([^:"“]{4,80}):\s/.exec(String(summary || "").trim())?.[1];
   if (!lead || !ROLE_WORD.test(lead)) return null;
-  const country = ROLE_COUNTRY.find(([re]) => re.test(lead))?.[1];
+  const country = countryIn(lead);
   if (!country || pressOf(source, country) >= 0) return null;
   return { name: lead, site: "", lang: "en", kind: "official", country };
 }
@@ -1243,6 +1236,32 @@ ${lead}`, r.source) || !!r.flags?.includes("exclusive");
   };
 
   /**
+   * A relay channel's item that names no source (user, 22 Oct: "many times a relay report wont state
+   * the og source"): the outlet that told it first among the site's own reads, the country's own media
+   * first, then any outlet that is not a relay. Keywords in the country's languages and in English.
+   */
+  const unnamedOriginal = async (r: LiveReport, text: string): Promise<{ found: Found; keys: string[] } | null> => {
+    if (presses <= 0 || !inTime()) return null;
+    const copy = `${r.summary}\n${r.text ?? ""}`;
+    const keys = searchKeys(copy, { name: r.source });
+    if (keys.length < 3) return null;
+    const country = leadCountry(r.summary) ?? countryIn(copy);
+    const langs = [...new Set([...(PRESS_LANGS[country ?? ""] ?? []), ...(/[ء-ي]/.test(text) ? ["Arabic"] : []), ...(country === "IR" || /[پچژگ]/.test(text) ? ["Persian"] : [])])];
+    const tr = (await Promise.all(langs.map((l) => translateKeys(keys, l)))).flat();
+    const at = Date.parse(r.at);
+    const cands = earlierTellers(recentReads(now), { country, notSource: r.source }, [...keys, ...(/[ء-ي]/.test(text) ? arabicKeys(text) : []), ...tr], at).filter(
+      (c) => c.url !== r.url,
+    );
+    if (!cands.length) return null;
+    presses -= 1;
+    const i = await whichCarries(`${r.summary}. ${r.text ?? ""}`.trim(), cands.map((c) => c.text));
+    if (i < 0) return null;
+    const c = cands[i];
+    console.log(`[origin] ${r.fp}: ${r.source} named no source; told first by ${c.source}${c.rank < 999 ? " (its country's media)" : ""}`);
+    return { found: { url: c.url, source: c.source, title: c.text.split("\n")[0].slice(0, 140), text: c.text }, keys };
+  };
+
+  /**
    * The cited article already on the desk as its own card (user, 22 Oct: after the WSJ's
    * "Diplomats race to head off escalation" went out, Bin Saeed, Unews and Al-Araby each
    * carried a line of it as their own card). A relay of the outlet whose claim one of its
@@ -1386,6 +1405,14 @@ ${lead}`, r.source) || !!r.flags?.includes("exclusive");
         cache[r.fp] = { cited: le.cited, keys: le.keys, firstAt: now, lastAt: now, report: { ...r }, holdUntil: le.holdUntil, follows: lfp };
         opts.held?.add(r.fp);
         dirty = true;
+      } else if (isRelayChannel(r.source) && !r.flags?.includes("exclusive")) {
+        const hit = await unnamedOriginal(r, text);
+        if (hit) {
+          const e = (cache[r.fp] = { found: hit.found, at: now, keys: hit.keys });
+          apply(r, hit.found);
+          await readFrom(r, e);
+          dirty = true;
+        }
       }
       continue;
     }

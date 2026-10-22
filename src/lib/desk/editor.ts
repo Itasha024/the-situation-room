@@ -144,6 +144,8 @@ const BACKLOG_CALLS_PER_CYCLE = 9;
 const BACKLOG_ITEMS = 150;
 /** Reader calls in flight at once: a cycle waits on the slowest of three, not on the sum. */
 const PARALLEL_CALLS = 3;
+/** An item queued this long is read before the newer ones. */
+const OVERDUE_MS = 40 * 60_000;
 
 /**
  * `loose`: failed a strict check twice and went out anyway (see the repair).
@@ -385,7 +387,15 @@ export async function editCandidates(
   const anyReader = !!key || fallbackKey();
   let modelNote = anyReader ? "" : "reader off: GEMINI_API_KEY not set";
   // An official's own posts are read first, then the newest (21 Oct: Araghchi's night interview lost to relays).
-  unread.sort((a, b) => +!!officialVoice(b.source) - +!!officialVoice(a.source) || Date.parse(b.at) - Date.parse(a.at));
+  // Then whatever has waited past OVERDUE_MS, oldest first: newest-first alone left Al-Akhbar's morning posts
+  // two and a half hours in the queue behind each new cycle's items (22 Oct).
+  const overdue = (c: Queued) => now - c.queuedAt > OVERDUE_MS;
+  unread.sort(
+    (a, b) =>
+      +!!officialVoice(b.source) - +!!officialVoice(a.source) ||
+      +overdue(b) - +overdue(a) ||
+      (overdue(a) ? a.queuedAt - b.queuedAt : Date.parse(b.at) - Date.parse(a.at)),
+  );
   // A post forwarded by several channels is read once; the copies take its reading.
   const copyOf = new Map<Queued, Queued>();
   const firstOf = new Map<string, Queued>();
@@ -1272,8 +1282,9 @@ export const IRAN_READER: DeskReader = {
   models: ["gemini-3.1-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash-lite"],
   // The other free services first, so the Yemen reader's Gemini quota lasts the day.
   fallbacksFirst: true,
-  // NVIDIA reads five items a call in a few seconds (8 Oct): six calls a cycle.
-  maxCalls: 6,
+  // NVIDIA reads five items a call in a few seconds (8 Oct): ten calls a cycle, as 20–30 items come in
+  // each cycle and the new sources of 22 Oct (NNA, INA, TASS, RT, RIA) add to them.
+  maxCalls: 10,
   queueMax: 200,
   // A busy hour is 30 cards: the reader sees the day's last few hours, so a
   // story retold all afternoon is one card (audit of 8 Oct: ten for Araghchi's reply).

@@ -3533,6 +3533,7 @@ export function iranCatalogue(): CatalogueEntry[] {
     const site = feedSite(f.url);
     add({ name: f.name, url: site ? `https://${site}` : "", lean: f.lean, platform: "Website" });
   }
+  add({ name: "NNA", url: "https://nna-leb.gov.lb", lean: "gulf", platform: "Website" });
   return out;
 }
 

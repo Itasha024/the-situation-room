@@ -488,12 +488,13 @@ async function monitorRead() {
   monitor.at = Date.now();
   try {
     const got = new Set<number>();
+    let failed = 0;
     for (const url of MONITOR) {
-      const r = await fetch(url, { ...UA, signal: AbortSignal.timeout(30_000) }).catch(() => null);
-      if (!r || !r.ok) continue;
+      const r = await fetch(url, { ...UA, signal: AbortSignal.timeout(60_000) }).catch((e) => (console.error(`[ships] ${url}: ${e instanceof Error ? e.message : e}`), null));
+      if (!r || !r.ok) { failed++; continue; }
       const body = (await r.json().catch(() => [])) as MonitorShip[] | { ships?: MonitorShip[] };
       const list = Array.isArray(body) ? body : body.ships;
-      if (!Array.isArray(list)) continue;
+      if (!Array.isArray(list) || !list.length) { failed++; continue; }
       for (const m of list) {
         const id = Number(m.mmsi), t = Date.parse(m.timestamp || m.last_position || "");
         // The directory also lists ships last heard weeks ago: only the last six hours are a position.
@@ -524,7 +525,10 @@ async function monitorRead() {
       }
     }
     if (got.size) monitor.n = got.size;
-  } catch { /* tried again in 15 minutes */ }
+    // A list that failed (23 Oct: the first read after a restart lost the Gulf's 4,400 ships for a quarter of an
+    // hour) is read again in two minutes, not fifteen.
+    if (failed) monitor.at = Date.now() - 13 * 60_000;
+  } catch { monitor.at = Date.now() - 13 * 60_000; }
   finally { monitor.busy = false; }
 }
 

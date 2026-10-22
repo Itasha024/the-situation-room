@@ -1411,10 +1411,12 @@
       // 21 Oct (user: "look how many details on each vessel" on MarineTraffic): the flag, a photo by its IMO number,
       // draught, size, IMO and call sign, where it left and when, where it is going and its ETA, and the past track.
       const flag = s[18] ? `${flagImg(s[18])}${esc(country(s[18]))}` : '';
-      html = `<div class="ops-ch"><span class="ops-ck">${ICON.ship}${esc(SHIP_TYPE(s[8]) || 'Ship')}</span><button type="button" class="ops-x" data-sel="x" aria-label="Close">${ICON.x}</button></div>
-        <div class="ops-chead"><div class="ops-photo" data-imo="${esc(s[11] || '')}" data-hex="ship-${esc(s[0])}"></div><div><h3>${esc(s[1] || 'MMSI ' + s[0])}</h3><p class="ops-csub">${[flag, esc(SHIP_TYPE(s[8]) || '')].filter(Boolean).join(' · ')}</p></div></div>
+      // 22 Oct: the Hormuz monitor's own category ("Crude Oil Tanker") when it gave one; its deadweight; whose position.
+      const kindOf = s[19] || SHIP_TYPE(s[8]);
+      html = `<div class="ops-ch"><span class="ops-ck">${ICON.ship}${esc(kindOf || 'Ship')}</span><button type="button" class="ops-x" data-sel="x" aria-label="Close">${ICON.x}</button></div>
+        <div class="ops-chead"><div class="ops-photo" data-imo="${esc(s[11] || '')}" data-hex="ship-${esc(s[0])}"></div><div><h3>${esc(s[1] || 'MMSI ' + s[0])}</h3><p class="ops-csub">${[flag, esc(kindOf || '')].filter(Boolean).join(' · ')}</p></div></div>
         ${routeBox('sea', s[0], s[9])}
-        <dl>${row('Speed', s[4] != null ? `${s[4]} kt` : '')}${row('Course', s[5] != null ? `${Math.round(s[5])}°` : '')}${row('Heading', s[6] != null ? `${Math.round(s[6])}°` : '')}${row('Status', esc(NAV[s[7]] || ''))}${row('Draught', s[16] ? `${s[16]} m` : '')}${row('Size', s[12] ? `${s[12]}${s[17] ? ' × ' + s[17] : ''} m` : '')}${row('IMO', esc(s[11] || ''))}${row('MMSI', esc(s[0]))}${row('Call sign', esc(s[10] || ''))}${row('Seen', esc(ago(s[13])))}</dl>
+        <dl>${row('Speed', s[4] != null ? `${s[4]} kt` : '')}${row('Course', s[5] != null ? `${Math.round(s[5])}°` : '')}${row('Heading', s[6] != null ? `${Math.round(s[6])}°` : '')}${row('Status', esc(NAV[s[7]] || ''))}${row('Draught', s[16] ? `${s[16]} m` : '')}${row('Size', s[12] ? `${s[12]}${s[17] ? ' × ' + s[17] : ''} m` : '')}${row('Deadweight', s[20] ? `${Math.round(s[20]).toLocaleString('en-GB')} t` : '')}${row('IMO', esc(s[11] || ''))}${row('MMSI', esc(s[0]))}${row('Call sign', esc(s[10] || ''))}${row('Seen', esc(ago(s[13])))}${row('Source', s[21] === 'hz' ? '<a href="https://hormuz.data-tracking.net/" target="_blank" rel="noopener">Hormuz Ship Monitor</a>' : s[21] === 'ais' ? 'AISStream' : '')}</dl>
         <p class="ops-clinks"><a href="https://www.marinetraffic.com/en/ais/details/ships/mmsi:${esc(s[0])}" target="_blank" rel="noopener">MarineTraffic ${ICON.ext}</a><a href="${s[11] ? 'https://www.vesselfinder.com/vessels/details/' + esc(s[11]) : 'https://www.vesselfinder.com/?mmsi=' + esc(s[0])}" target="_blank" rel="noopener">VesselFinder ${ICON.ext}</a></p>`;
     }
     // The card is drawn again every ten seconds: the photo found once is kept.

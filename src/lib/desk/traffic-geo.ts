@@ -39,8 +39,14 @@ export const SEA_ROW = {
   beamM: 17,
   /** (21 Oct) the flag: ISO 3166 two-letter code of the country that issued the MMSI (its MID), or null */
   flag: 18,
+  /** (22 Oct) the Hormuz Ship Monitor's category ("Crude Oil Tanker"), or null */
+  category: 19,
+  /** (22 Oct) deadweight, tonnes, or null */
+  dwt: 20,
+  /** (22 Oct) whose position: "ais" AISStream, "hz" the Hormuz Ship Monitor */
+  source: 21,
 } as const;
-export const SEA_ROW_LEN = 19;
+export const SEA_ROW_LEN = 22;
 
 /**
  * The flag of an MMSI: its first three digits (the Maritime Identification Digits, ITU) name the

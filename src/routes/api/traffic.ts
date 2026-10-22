@@ -350,6 +350,8 @@ function airRows() {
  * when; once it moves on, that is where it came from (AIS has no origin).
  */
 type Ship = { mmsi: number; name: string; lat: number; lon: number; sog: number | null; cog: number | null; hdg: number | null; nav: number | null; type?: number; dest?: string; cs?: string; imo?: number; len?: number; beam?: number; draught?: number; eta?: string | null; t: number; sAt?: number;
+  /** the monitor's category ("Crude Oil Tanker"), its flag, deadweight, and who gave the position: "ais" AISStream, "hz" the monitor */
+  cat?: string; flag?: string; dwt?: number; by?: "ais" | "hz";
   /** a position that jumped too far too fast, held until a second report agrees (shipJump) */
   jump?: { lat: number; lon: number; t: number };
   stop?: { lat: number; lon: number; from: number; to: number } };
@@ -390,7 +392,7 @@ function seaOpen() {
       if (held) s.jump = { lat, lon, t: now };
       if (pr && !held && typeof md.latitude === "number" && typeof md.longitude === "number") {
         s.jump = undefined;
-        Object.assign(s, { lat: +md.latitude.toFixed(4), lon: +md.longitude.toFixed(4), sog: num(pr.Sog), cog: num(pr.Cog), hdg: pr.TrueHeading === 511 ? null : num(pr.TrueHeading), nav: num(pr.NavigationalStatus) ?? s.nav, t: Date.now() });
+        Object.assign(s, { lat: +md.latitude.toFixed(4), lon: +md.longitude.toFixed(4), sog: num(pr.Sog), cog: num(pr.Cog), hdg: pr.TrueHeading === 511 ? null : num(pr.TrueHeading), nav: num(pr.NavigationalStatus) ?? s.nav, t: Date.now(), by: "ais" });
         const still = (s.sog != null && s.sog < 0.5) || s.nav === 1 || s.nav === 5;
         if (still) {
           if (s.stop && s.stop.to > s.t - 1800_000 && km(s.stop.lat, s.stop.lon, s.lat, s.lon) < 5) s.stop.to = s.t;
@@ -431,6 +433,69 @@ function seaTidy() {
   seaHist.prune(cut / 1000);
 }
 
+/**
+ * The Gulf, Hormuz, the Gulf of Oman, the Red Sea and the Gulf of Aden from the Strait of Hormuz
+ * Ship Monitor's public JSON API (hormuz.data-tracking.net, documented for reuse in its llms.txt):
+ * on 22 Oct AISStream's volunteers heard 2 ships there and the monitor listed 5,400, with category,
+ * flag, size, deadweight, draught and destination. It polls every 30 minutes, so it is read every
+ * 15; a fresher AISStream position of the same ship wins.
+ */
+const MONITOR = ["https://hormuz.data-tracking.net/api/ships", "https://hormuz.data-tracking.net/api/bab/ships"];
+const monitor = { at: 0, busy: false, n: 0 };
+/** The monitor's category as the AIS type the map colours by. */
+function typeOfCategory(c: string): number | undefined {
+  if (/tanker|lng|lpg|gas carrier/i.test(c)) return 80;
+  if (/naval|navy|military|warship|law enforcement|coast ?guard/i.test(c)) return 35;
+  if (/passenger|ferry|cruise|ro-?pax/i.test(c)) return 60;
+  if (/cargo|bulk|container|carrier|ro-?ro|reefer/i.test(c)) return 70;
+  if (/tug|towing/i.test(c)) return 52;
+  if (/fishing/i.test(c)) return 30;
+  return undefined;
+}
+type MonitorShip = { mmsi: string; name?: string; ship_category?: string; flag?: string; length?: number | null; width?: number | null; dwt?: number | null; destination?: string | null; draught?: number | null; latitude: number; longitude: number; speed?: number | null; course?: number | null; hdg?: number | null; timestamp: string; still?: boolean };
+async function monitorRead() {
+  if (monitor.busy || Date.now() - monitor.at < 15 * 60_000) return;
+  monitor.busy = true;
+  monitor.at = Date.now();
+  try {
+    let n = 0;
+    for (const url of MONITOR) {
+      const r = await fetch(url, { ...UA, signal: AbortSignal.timeout(30_000) }).catch(() => null);
+      if (!r || !r.ok) continue;
+      const list = (await r.json().catch(() => [])) as MonitorShip[];
+      if (!Array.isArray(list)) continue;
+      for (const m of list) {
+        const id = Number(m.mmsi), t = Date.parse(m.timestamp);
+        if (!id || !Number.isFinite(m.latitude) || !Number.isFinite(m.longitude) || !Number.isFinite(t)) continue;
+        const s: Ship = sea.ships.get(id) || { mmsi: id, name: "", lat: 0, lon: 0, sog: null, cog: null, hdg: null, nav: null, t: 0 };
+        s.name = s.name || String(m.name || "").trim();
+        const cat = String(m.ship_category || "").trim();
+        if (cat) s.cat = cat;
+        if (s.type == null) s.type = typeOfCategory(cat);
+        if (m.flag) s.flag = m.flag;
+        if (m.dwt) s.dwt = m.dwt;
+        if (!s.len && m.length) s.len = m.length;
+        if (!s.beam && m.width) s.beam = m.width;
+        if (!s.draught && m.draught) s.draught = m.draught;
+        if (!s.dest && m.destination) s.dest = String(m.destination).trim();
+        s.sAt = Math.max(s.sAt ?? 0, t);
+        if (t > s.t) {
+          Object.assign(s, { lat: +m.latitude.toFixed(4), lon: +m.longitude.toFixed(4), sog: m.speed ?? null, cog: m.course ?? null, hdg: m.hdg ?? null, t, by: "hz" });
+          if (m.still || (s.sog != null && s.sog < 0.5)) {
+            if (s.stop && s.stop.to > t - 3 * 3600_000 && km(s.stop.lat, s.stop.lon, s.lat, s.lon) < 5) s.stop.to = t;
+            else s.stop = { lat: s.lat, lon: s.lon, from: t, to: t };
+          }
+          seaHist.add(id, s.lat, s.lon, t / 1000);
+        }
+        sea.ships.set(id, s);
+        n += 1;
+      }
+    }
+    if (n) monitor.n = n;
+  } catch { /* tried again in 15 minutes */ }
+  finally { monitor.busy = false; }
+}
+
 /** A ship's route: the AIS destination (and ETA) its crew set, where it last lay still, and the track we kept. */
 function seaRoute(mmsi: number) {
   const s = sea.ships.get(mmsi);
@@ -454,7 +519,7 @@ function seaRoute(mmsi: number) {
     // Ships follow coasts and straits, so the course is held to the destination only loosely.
     if (d < 50 || angleDiff(bearing(s.lat, s.lon, port.lat, port.lon), s.cog) <= 75) confidence = "confirmed";
   }
-  const source = ["AISStream (AIS destination and ETA as set by the crew)"];
+  const source = [s.by === "hz" ? "Strait of Hormuz Ship Monitor, hormuz.data-tracking.net (AIS destination as set by the crew)" : "AISStream (AIS destination and ETA as set by the crew)"];
   if (origin) source.push("the desk's own kept positions (where the ship last lay still)");
   return { ok: true, kind: "sea", mmsi, name: s.name || null, origin, destination, track, source, confidence };
 }
@@ -464,6 +529,8 @@ function seaRoute(mmsi: number) {
 if (process.env.NODE_ENV === "production" && process.env.NITRO_PORT && process.env.NITRO_PORT !== "3001") {
   void airLoop();
   seaOpen();
+  void monitorRead();
+  setInterval(() => void monitorRead(), 5 * 60_000).unref?.();
 }
 
 const json = (body: unknown, cache = "public, max-age=0, must-revalidate") =>
@@ -501,10 +568,13 @@ export const Route = createFileRoute("/api/traffic")({
           if (!process.env.AISSTREAM_KEY) return json({ ok: false, live: false, note: "no-key", ships: [], why: "The live ship feed needs a free AISStream key on the server (AISSTREAM_KEY); none is set." });
           sea.asked = Date.now();
           seaOpen();
+          void monitorRead();
           seaTidy();
           // Not a ship deep inland (a false position, see ship-land.ts).
           const ships = [...sea.ships.values()].filter((s) => s.t && inSeaBox(s.lat, s.lon) && !shipInland(s.lat, s.lon));
-          return json({ ok: true, live: sea.note === "live", note: sea.note, at: new Date().toISOString(), ships: ships.map((s) => [s.mmsi, s.name, s.lat, s.lon, s.sog, s.cog, s.hdg, s.nav, s.type ?? null, s.dest || null, s.cs || null, s.imo ?? null, s.len ?? null, new Date(s.t).toISOString(), Math.round(s.t / 1000), s.eta ?? null, s.draught ?? null, s.beam ?? null, flagOf(s.mmsi)]) });
+          return json({ ok: true, live: sea.note === "live", note: sea.note, at: new Date().toISOString(), src: { ais: sea.note, monitor: monitor.n }, ships: ships.map((s) => [s.mmsi, s.name, s.lat, s.lon, s.sog, s.cog, s.hdg, s.nav, s.type ?? null, s.dest || null, s.cs || null, s.imo ?? null, s.len ?? null, new Date(s.t).toISOString(), Math.round(s.t / 1000), s.eta ?? null, s.draught ?? null, s.beam ?? null, s.flag || flagOf(s.mmsi),
+            // 22 Oct (at the end): the monitor's category; deadweight in tonnes; whose position (SEA_ROW).
+            s.cat ?? null, s.dwt ?? null, s.by ?? null]) });
         }
         air.asked = Date.now();
         if (air.wake) air.wake();

@@ -76,6 +76,9 @@ if [ -f /srv/desk/live-port ] && [ -f /etc/systemd/system/desk-web@.service ]; t
   LIVE=$(cat /srv/desk/live-port)
   if [ "$LIVE" = 3010 ]; then NEXT=3011; else NEXT=3010; fi
   ln -sfn $R /srv/desk/slot-$NEXT
+  # The new one starts and warms on what CPU the live one leaves (22 Oct: warming at equal weight, one
+  # live request in eleven timed out); it gets its full share once it is the live one.
+  sudo systemctl set-property --runtime desk-web@$NEXT CPUWeight=10
   sudo systemctl restart desk-web@$NEXT
   if ! up $NEXT; then
     sudo systemctl stop desk-web@$NEXT
@@ -86,6 +89,7 @@ if [ -f /srv/desk/live-port ] && [ -f /etc/systemd/system/desk-web@.service ]; t
   echo "server 127.0.0.1:$NEXT;" | sudo tee /etc/nginx/desk-upstream.conf >/dev/null
   sudo nginx -t -q && sudo systemctl reload nginx
   echo $NEXT > /srv/desk/live-port
+  sudo systemctl set-property --runtime desk-web@$NEXT CPUWeight=100
   ln -sfn $R /srv/desk/current
   sudo systemctl enable -q desk-web@$NEXT
   # Requests under way on the old one finish first.

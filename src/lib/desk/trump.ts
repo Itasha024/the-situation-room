@@ -193,9 +193,23 @@ export function quoteBody(paras: string[]): string {
  */
 export const shownYet = (s: TrumpStatement) => !s.off && !s.in && (!!s.headline || !/^(?:fb|ap)-/.test(s.id) || (s.tries ?? 0) >= 3);
 
+const SMALL = new Set("a an and the of to in on at it its is are was were be we us our you they them their he him his i me my that this so or but for with as by do did will would may might can just very".split(" "));
+const wordsOf = (x: string) => x.toLowerCase().replace(/[’']/g, "").match(/[a-z0-9]+/g) ?? [];
+/**
+ * A body that only says the headline again, in other words or with a word or two more (user, 23 Oct: "We've knocked
+ * the hell out of them — and we may do it a little bit further" under the same headline): no body, that is all he said.
+ */
+export function bodyRepeats(headline: string, body: string): boolean {
+  const head = new Set(wordsOf(headline.replace(/^Trump:\s*/, "")));
+  const said = wordsOf(body);
+  const big = said.filter((w) => !SMALL.has(w));
+  const fresh = big.filter((w) => !head.has(w));
+  return big.length - fresh.length >= 3 && fresh.length <= 2 && said.length <= head.size + 8;
+}
+
 /** A card as the page shows it, whichever form it was written in. */
 export const shownCard = (c: { headline: string; body?: string }) => {
-  const body = c.body ? quoteBody(c.body.split(/\n\n+/)) : "";
+  const body = c.body && !bodyRepeats(c.headline, c.body) ? quoteBody(c.body.split(/\n\n+/)) : "";
   return { headline: headlineWords(c.headline), ...(body ? { body } : {}) };
 };
 
@@ -222,7 +236,7 @@ You get one thing he said (a Truth Social post or his words on camera), or what 
 - relevant: false only when nothing in it bears on Iran, the war, the Strait of Hormuz, the blockade, Iran's nuclear programme, the talks with Iran or the war's effects (gasoline and oil prices because of the war count), or on Yemen, the Houthis, their attacks and the war against them.
 - When he answers a question with a short "yes" or "I think so", the headline says what he agreed to, in his voice ("Trump: Saudi Arabia will accept Israel's help against the Houthis; Israel has been very helpful"). The body never holds a reporter's question or a sentence made from one: only sentences he spoke, as he spoke them ("I think they will, sure. Israel's been very helpful to Saudi Arabia.").
 - headline: "Trump: " then his main points on Iran and the war (or Yemen and the Houthis), without quotation marks, as if he is speaking, in the first person. Build it from his own sentences, shortened; rephrase only where needed to join them or make the point clear. Lead with the hardest news in it (a decision, a threat, a deadline, a deal, a number). One or two sentences, at most 220 characters. No outlet, no "said", no "posted".
-- body: only the parts of what he said that bear on Iran and the war (or Yemen and the Houthis), in his own words, without quotation marks, a paragraph per point, separated by a blank line. Leave out every part on other subjects (elections, rivals, the media) unless it explains his point on Iran. Keep his facts and numbers. Put the capital letters he uses for emphasis in normal case. "" when the headline already holds everything relevant.
+- body: only the parts of what he said that bear on Iran and the war (or Yemen and the Houthis), in his own words, without quotation marks, a paragraph per point, separated by a blank line. Leave out every part on other subjects (elections, rivals, the media) unless it explains his point on Iran. Keep his facts and numbers. Put the capital letters he uses for emphasis in normal case. "" when the headline already holds everything relevant, and "" when the body would only say the headline again in his exact words (a short remark the headline already quotes needs no body).
 - Keep his meaning exactly: a question, a comparison or a "what if" stays one, and is never turned into a claim or a threat he did not make.
 - Each body paragraph is a whole sentence of his, starting with a capital letter.
 - Never add facts, context or comment of your own.`;

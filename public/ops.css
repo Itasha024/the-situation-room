@@ -590,17 +590,18 @@ html[data-view="ops"] { --pin-d: 22px }
 html[data-view="ops"][data-ops-pin="s"] { --pin-d: 17px }
 html[data-view="ops"][data-ops-pin="l"] { --pin-d: 28px }
 html[data-view="ops"] .ops-on .ev-wrap .ev { animation: none !important; will-change: auto }
-html[data-view="ops"] .ops-on .ev .ev-glyph {
+html[data-view="ops"] :is(.ops-on, #pin-sheet) .ev .ev-glyph {
   position: absolute; left: calc(17px - var(--pin-d) / 2); top: calc(40px - var(--pin-d) / 2); width: var(--pin-d); height: var(--pin-d); box-sizing: border-box;
   border-radius: 50% !important; border: 1.5px solid rgba(255, 255, 255, .92) !important; box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 2px 5px rgba(0, 0, 0, .35) !important
 }
-html[data-view="ops"][data-theme="broadsheet-day"] .ops-on .ev .ev-glyph { box-shadow: 0 0 0 1px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .25) !important }
-html[data-view="ops"] .ops-on .ev .ev-glyph svg { width: calc(var(--pin-d) * .58); height: calc(var(--pin-d) * .58) }
-html[data-view="ops"] .ops-on .ev .ev-stem { display: none }
-html[data-view="ops"] .ops-on .ev::after { display: none }
-html[data-view="ops"] .ops-on .ev:hover .ev-glyph { transform: scale(1.15) }
-html[data-view="ops"] .ops-on .ev .ev-count { top: calc(40px - var(--pin-d) / 2 - 8px); right: calc(17px - var(--pin-d) / 2 - 10px) }
-html[data-view="ops"] .ops-on .ev.fresh .ev-glyph { animation: ops-fresh 2.4s ease-out infinite }
+html[data-view="ops"][data-theme="broadsheet-day"] :is(.ops-on, #pin-sheet) .ev .ev-glyph { box-shadow: 0 0 0 1px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .25) !important }
+html[data-view="ops"] :is(.ops-on, #pin-sheet) .ev .ev-glyph svg { width: calc(var(--pin-d) * .58); height: calc(var(--pin-d) * .58) }
+html[data-view="ops"] :is(.ops-on, #pin-sheet) .ev .ev-stem { display: none }
+html[data-view="ops"] :is(.ops-on, #pin-sheet) .ev::after { display: none }
+html[data-view="ops"] :is(.ops-on, #pin-sheet) .ev:hover .ev-glyph { transform: scale(1.15) }
+html[data-view="ops"] :is(.ops-on, #pin-sheet) .ev .ev-count { top: calc(40px - var(--pin-d) / 2 - 8px); right: calc(17px - var(--pin-d) / 2 - 10px) }
+html[data-view="ops"] :is(.ops-on, #pin-sheet) .ev.fresh .ev-glyph { animation: ops-fresh 2.4s ease-out infinite }
+html[data-view="ops"] #pin-sheet .ev.pin-pulse { transform-origin: 17px 40px }
 @keyframes ops-fresh { 0% { box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 0 0 0 color-mix(in srgb, var(--ev-ink) 70%, transparent) } 70% { box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 0 0 9px transparent } 100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 0 0 0 transparent } }
 html[data-view="ops"].ops-cast .ops-on .ev-wrap .ev { transform: scale(1.2); transform-origin: 17px 40px }
 html[data-view="ops"] .ops-ping span { left: -13px; top: -13px; width: 26px; height: 26px; border-radius: 50%; animation-name: ops-ring2 }
@@ -1358,4 +1359,35 @@ html[data-view="ops"] .ops-on :is(.sit-map-btn, .card-map):not(#_) { border-radi
 html[data-view="ops"] .ops-hud > .ops-card:not(#_) { max-height: calc(100% - 20px); overflow-y: auto; overscroll-behavior: contain }
 @media (max-width: 760px) {
   html[data-view="ops"] .ops-hud > .ops-card:not(#_) { max-height: calc(100% - 16px) }
+}
+
+/* The name and "Open-source intelligence" sit together in the middle of the bar, not one at its top and one at its bottom (user, 23 Oct). */
+html[data-view="ops"] .ops-bar .mast-mid:not(#_) { gap: 0; row-gap: 0; align-self: center; height: auto; justify-content: center }
+html[data-view="ops"] .ops-bar .mast-name:not(#_), html[data-view="ops"] .ops-bar .mast-name .mn:not(#_) { line-height: 1 !important }
+html[data-view="ops"] .ops-bar .mast-line:not(#_) { margin: 5px 0 0 !important; line-height: 1 !important }
+
+/* The All page's one brief, from every desk: each point marked with its desk's flag in a circle (user, 23 Oct). */
+html[data-view="ops"] .ops-th-one { border-bottom: 0 !important; margin-bottom: 0 !important }
+html[data-view="ops"] .ops-th-flag { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin: 0 7px 0 0; vertical-align: -3px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1px var(--o-line-2) }
+html[data-view="ops"] .ops-th-flag svg { width: 16px !important; height: 16px !important; display: block }
+html[data-view="ops"] .ops-th-links { display: flex; flex-direction: column; gap: 2px; margin: 10px 0 0 }
+html[data-view="ops"] .ops-th-links .ops-th-more { margin-top: 0 }
+html[data-view="ops"] .ops-phead > .ops-ptitle:not(#_) { flex: 0 1 auto }
+html[data-view="ops"] .ops-phead > .ops-fold:not(#_) { margin-left: auto }
+html[data-view="ops"] .ops-phead > .ops-headpin { margin: 0 0 0 2px }
+
+/* The Yemen desk's numbers boxes as the Iran desk's (user, 23 Oct): a site's state is its linked words, coloured by
+   who says it (official or not), not a coloured badge; the state's column reads from the left as the others. */
+html[data-view="ops"] .ops-on .tally-box.ledger .st:not(#_) { display: inline; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: none }
+html[data-view="ops"] .ops-on .tally-box.ledger table.list :is(td, th).t:not(#_) { width: auto; text-align: left }
+
+/* A phone folds the part under the map too, with the same arrow as a computer (user, 23 Oct): folded, the time row
+   stays under the map and the map takes the room. */
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-on .ops-fold-d:not(#_) { display: inline-grid !important; flex: none }
+  html[data-view="ops"] .ops-on.ops-nodock .ops-dock > .ops-drow:not(.ops-dtop) { display: none }
+  html[data-view="ops"] .ops-on.ops-nodock .ops-fold-d svg { transform: rotate(180deg) }
+  html[data-view="ops"] .ops-on.ops-nodock .ops-fold-d { border-color: var(--o-sel); color: var(--o-sel); background: color-mix(in srgb, var(--o-sel) 14%, transparent) }
+  html[data-view="ops"] .ops-on.ops-nodock :is(#map, #h-map):not(#_) { height: calc(100svh - 190px) !important }
+  html[data-view="ops"] .ops-on.ops-nodock .ops-hud:not(#_) { height: calc(100svh - 190px) }
 }

@@ -3388,7 +3388,8 @@ function srcLink(html, s, cls) {
 const SL_KEY = '<p class="sl-key"><span class="sl-off">Official</span><span class="sl-unoff">Unofficial</span></p>';
 
 const ledEmpty = (text) => `<p class="num-empty">${escapeHtml(text)}</p>`;
-const ledBox = (title, body, unit) => `<div class="tally-box claims ledger"><h3>${escapeHtml(title)}${unit ? ` <small class="unit">(${escapeHtml(unit)})</small>` : ''}</h3>${body}</div>`;
+// A box's graph opens from the chart sign by its name, as the Iran desk's boxes (user, 23 Oct).
+const ledBox = (title, body, unit, spot) => `<div class="tally-box claims ledger"><h3>${spot && spotCharts[spot] ? `<button type="button" class="spot" data-spot="${spot}" aria-haspopup="dialog" aria-expanded="false">${spotLabel(title)}</button>` : escapeHtml(title)}${unit ? ` <small class="unit">(${escapeHtml(unit)})</small>` : ''}</h3>${body}</div>`;
 const ledNum = (v, digits = 0) => Number(v).toLocaleString(LOC, { maximumFractionDigits: digits });
 const capFirst = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : '');
 
@@ -3559,7 +3560,7 @@ function trafficBody(tr) {
     const pName = T(p.name);
     const chart = lineChart({ lines: [{ name: T('Ships a day, 7-day average'), cls: 's1', pts: avg7(days, 'total') }], bases: base ? [{ value: base, label: T('{l} ({n} a day)', { l: T(BEFORE_LABEL), n: ledNum(base, 1) }) }] : [], zero: true, label: T('Ships a day through {p}', { p: pName }) });
     spotCharts[p.id] = chart ? `<p class="chart-title">${escapeHtml(pName)}</p>${chart}` : '';
-    const name = spotCharts[p.id] ? `<button type="button" class="spot" data-spot="${escapeHtml(p.id)}" aria-haspopup="dialog" aria-expanded="false">${spotLabel(pName)}</button>` : escapeHtml(pName);
+    const name = escapeHtml(pName);
     const lastCell = last ? `${srcLink(ledNum(last.total), pw)}<small>${escapeHtml(ledDay(last.date))}</small>${pctTag}` : '—';
     return `<tr><th scope="row">${name}</th><td>${lastCell}</td><td>${srcLink(ledNum(sum(week)), pw)}<small>${T('{n} a day', { n: ledNum(wAvg, 1) })}</small></td><td>${srcLink(ledNum(sum(war)), pw)}<small>${T('{n} a day', { n: war.length ? ledNum(sum(war) / war.length, 1) : '—' })}</small></td><td>${base != null ? srcLink(ledNum(base, 1), pw) : '—'}<small>a day</small></td></tr>`;
   };
@@ -3572,10 +3573,16 @@ function oilBody(led) {
   return bars ? `${bars}${SL_KEY}` : ledEmpty('No crude oil figure yet.');
 }
 
+/** Both spots' graphs behind the box's name, one under the other. */
+function shipsBox(tr) {
+  const body = trafficBody(tr);
+  spotCharts['ye-ships'] = ['bab', 'suez'].map((k) => spotCharts[k] || '').join('');
+  return ledBox('Ships through Bab al-Mandab and Suez', body, '', 'ye-ships');
+}
 function seaBoxes(led, tr) {
   return [
     ['Incidents', ledBox('Incidents', shipsBody(led))],
-    ['Ships', ledBox('Ships through Bab al-Mandab and Suez', trafficBody(tr))],
+    ['Ships', shipsBox(tr)],
     ['Crude oil', ledBox('Crude oil through Bab al-Mandab', oilBody(led), 'million barrels a day')],
   ];
 }
@@ -3676,14 +3683,15 @@ function priceBody(tr) {
   const cell = (d) => (d ? `${srcLink(usd(d.value), eia)}<small>${escapeHtml(ledDay(d.date))}</small>` : '—');
   const table = `<table class="span3"><tr><th scope="col">${isToday ? 'Today' : 'Latest'}</th><th scope="col">${isToday ? '7 days ago' : '7 days earlier'}</th><th scope="col">${BEFORE_LABEL}<small class="span">(${BASE_SPAN})</small></th></tr><tr><td class="big">${cell(last)}${pct != null ? `<small class="q ${pct > 0 ? 'down' : 'up'}">${T('{p}% vs before conflict', { p: `${pct > 0 ? '+' : ''}${pct}` })}</small>` : ''}</td><td>${cell(weekAgo)}</td><td>${base ? srcLink(usd(base), eia) : '—'}<small>average</small></td></tr></table>`;
   const chart = lineChart({ lines: [{ name: T('Brent'), cls: 's1', pts: days }], bases: base ? [{ value: base, label: `${T(BEFORE_LABEL)} (${usd(base)})` }] : [], fmt: (v) => `$${ledNum(v)}`, label: T('Brent crude oil price, dollars a barrel, day by day') });
-  return `${table}${chart}`;
+  spotCharts.brent = chart ? `<p class="chart-title">${escapeHtml(T('Brent crude oil price, dollars a barrel, day by day'))}</p>${chart}` : '';
+  return table;
 }
 
 function energyBoxes(led, tr) {
   return [
     ['Attacks on energy infrastructure', ledBox('Attacks on energy infrastructure', sitesBody(led))],
     ['Saudi crude oil exports', ledBox('Saudi crude oil exports', exportsBody(led), 'million barrels a day')],
-    ['Crude oil price', ledBox('Crude oil price', priceBody(tr), 'Brent, dollars a barrel')],
+    ['Crude oil price', ledBox('Crude oil price', priceBody(tr), 'Brent, dollars a barrel', 'brent')],
   ];
 }
 

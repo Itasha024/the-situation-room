@@ -453,7 +453,26 @@
   /* A panel with its own side menu (the fronts or arenas, the numbers, the timeline, the All page's desks): the main
      rail beside it is its icons only, so the two menus do not take the panel's room (user, 21 Oct). */
   const SUB_SEL = '.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav';
+  /* A brief's map pin sits beside the panel's "Brief" heading on a computer (user, 23 Oct); a phone has no heading
+     row, so it stays in the brief. A brief drawn again brings a new pin, and the old one goes. */
+  function headPin() {
+    const head = $('.ops-phead', leftEl);
+    if (!head) return;
+    const phone = isPhone();
+    head.querySelectorAll('.ops-headpin').forEach((b) => {
+      if (!b._home || !b._home.isConnected) b.remove();
+      else if (phone || b._pane !== S.tab) { b.classList.remove('ops-headpin'); b._home.appendChild(b); }
+    });
+    const pane = !phone && S.left && document.getElementById(S.tab);
+    const btn = pane && pane.querySelector('.sit-head > .sit-map-btn:not(.front-map-btn)');
+    if (!btn) return;
+    btn._home = btn.parentElement;
+    btn._pane = S.tab;
+    btn.classList.add('ops-headpin');
+    $('.ops-ptitle', leftEl).after(btn);
+  }
   function paintSlim(quiet) {
+    headPin();
     const p = S.left && !isPhone() && document.getElementById(S.tab);
     const on = !!(p && p.querySelector(SUB_SEL));
     if (root.classList.contains('ops-slim') === on) return;
@@ -589,20 +608,23 @@
     if (el._k === key) return;
     el._k = key;
     const when = (t) => (t ? `${hm(t, 'Asia/Jerusalem')}, ${dm(t, 'Asia/Jerusalem')}` : '');
-    // One desk at a time, picked from the panel's own side menu (user, 21 Oct).
-    if (!DESK_INFO[S.th]) S.th = 'iran';
-    el.classList.add('ops-subwrap');
-    el.innerHTML = `<nav class="ops-subnav" aria-label="Desks">${Object.entries(DESK_INFO).map(([desk, [name]]) => `<button type="button" data-th="${desk}" aria-pressed="${S.th === desk}">${esc(name)}</button>`).join('')}</nav>` + Object.entries(DESK_INFO).map(([desk, [name, , href]]) => {
-      const b = briefs[desk];
-      const s = b && b.situation;
-      const pts = s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 8) : [];
-      return `<article class="ops-th${S.th === desk ? ' on' : ''}" data-th="${desk}">
-        <header><h3><a href="${href}" data-desk-go>${esc(name)}</a></h3><a class="ops-th-go" href="${href}" data-desk-go>Open desk ${ICON.right}</a></header>
-        ${b && b.updatedAt ? `<p class="ops-th-sub">The desk’s brief · updated ${esc(when(b.updatedAt))}</p>` : ''}
-        ${pts.length ? `<ol class="ops-th-pts">${pts.map((p) => `<li>${esc(p)}</li>`).join('')}</ol>` : `<p class="ops-empty">${b ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
-        <a class="ops-th-more" href="${href}" data-desk-go>The full brief, ${desk === 'iran' ? 'arenas' : 'fronts'}, numbers and timeline ${ICON.right}</a>
+    // One brief made from every desk's (user, 23 Oct: "only one brief, from all desks"): each desk's points in its own
+    // order of importance, taken in turn, each marked with its desk's flag.
+    const lists = Object.keys(DESK_INFO).map((desk) => {
+      const s = briefs[desk] && briefs[desk].situation;
+      return (s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 6) : []).map((p) => [desk, p]);
+    });
+    const pts = [];
+    for (let i = 0; pts.length < 10 && lists.some((l) => l[i]); i++) lists.forEach((l) => { if (l[i] && pts.length < 10) pts.push(l[i]); });
+    const latest = Object.values(briefs).map((b) => b && b.updatedAt).filter(Boolean).sort().pop();
+    const ff = app('flagFill'), desks = app('DESKS') || [];
+    const flag = (desk) => { const d = desks.find && desks.find((x) => x.id === desk); return d && ff ? ff(d) : ''; };
+    el.classList.remove('ops-subwrap');
+    el.innerHTML = `<article class="ops-th ops-th-one">
+        ${latest ? `<p class="ops-th-sub">From the Iran and Yemen desks · updated ${esc(when(latest))}</p>` : ''}
+        ${pts.length ? `<ol class="ops-th-pts">${pts.map(([desk, p]) => `<li><a class="ops-th-flag" href="${DESK_INFO[desk][2]}" data-desk-go title="${esc(DESK_INFO[desk][0])} desk" aria-label="${esc(DESK_INFO[desk][0])} desk">${flag(desk)}</a>${esc(p)}</li>`).join('')}</ol>` : `<p class="ops-empty">${briefs.iran || briefs.yemen ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
+        <p class="ops-th-links">${Object.entries(DESK_INFO).map(([desk, [name, , href]]) => `<a class="ops-th-more" href="${href}" data-desk-go>${esc(name)} desk: the full brief, ${desk === 'iran' ? 'arenas' : 'fronts'}, numbers ${ICON.right}</a>`).join('')}</p>
       </article>`;
-    }).join('');
   }
 
   /* ---------- Clocks ---------- */

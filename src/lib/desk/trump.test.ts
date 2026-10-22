@@ -94,3 +94,11 @@ test("a written card survives the next read; an edited post is written again", (
   assert.equal(mergeStatements(written, [s], from)[0].headline, "Trump: “Iran”");
   assert.equal(mergeStatements(written, [{ ...s, text: "Iran, edited" }], from)[0].headline, undefined);
 });
+
+test("a body that only says the headline again is left out (23 Oct)", () => {
+  const c = shownCard({ headline: "Trump: We've knocked the hell out of the Houthis and may do it a little bit further", body: "We've knocked the hell out of them — and we may do it a little bit further" });
+  assert.equal(c.body, undefined);
+  // A body with more of his words stays.
+  const d = shownCard({ headline: "Trump: We've knocked the hell out of the Houthis", body: "We've knocked the hell out of them. Saudi Arabia will pay for the ships and the navy will stay in the Red Sea." });
+  assert.ok(d.body);
+});

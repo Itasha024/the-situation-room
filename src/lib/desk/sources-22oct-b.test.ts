@@ -14,7 +14,12 @@ test("an official's own, then his state's media, then the later tier", () => {
   assert.ok(pressOf("Iran International", "IR") >= LATER_RANK);
   assert.ok(pressOf("Sabereen News", "IQ") >= LATER_RANK);
   assert.ok(pressOf("Iraq's prime minister's office", "IQ") < pressOf("INA", "IQ"));
-  assert.ok(pressOf("Clash Report", "US") >= LATER_RANK);
+  // Clash Report after the White House and Trump's own posts, with the American outlets (user, 22 Oct, fourth message).
+  assert.ok(pressOf("Rapid Response 47", "US") < pressOf("Clash Report", "US") && pressOf("Clash Report", "US") < LATER_RANK);
+  assert.ok(pressOf("Clash Report", "US") < pressOf("Reuters", "US"));
+  // Saudi Arabia: its official channels, then Saudi media, then the Gulf's.
+  assert.ok(pressOf("Saudi Foreign Ministry", "SA") < pressOf("Al Arabiya", "SA"));
+  assert.ok(pressOf("Al Hadath", "SA") < LATER_RANK && pressOf("Sky News Arabia", "SA") >= LATER_RANK);
   assert.ok(pressOf("Benjamin Netanyahu", "IL") >= 0 && pressOf("Benjamin Netanyahu", "IL") < pressOf("N12", "IL"));
   const at = Date.parse("2026-10-22T10:00:00Z");
   const keys = ["araghchi", "talks", "under", "fire"];
@@ -25,6 +30,9 @@ test("an official's own, then his state's media, then the later tier", () => {
   ];
   const own = (r: { source: string }) => r.source === "Abbas Araghchi";
   assert.deepEqual(pressCandidates(reads, { own, country: "IR" }, keys, at).map((c) => c.source), ["Abbas Araghchi", "Tasnim", "Iran International"]);
+  // Another official's account before the regime's media, however well the medium matches.
+  const spokesman = { source: "Esmaeil Baghaei (foreign ministry spokesman)", url: "https://x.com/IRIMFA_SPOX/status/1", text: "Araghchi talks", at: at - 20_000 };
+  assert.deepEqual(pressCandidates([reads[1], spokesman], { own: () => false, country: "IR" }, ["araghchi", "talks"], at).map((c) => c.source)[0], spokesman.source);
   assert.deepEqual(earlierTellers(reads.slice(0, 2), { country: "IR", notSource: "Khabar Fori" }, keys, at).map((c) => c.source), ["Tasnim", "Iran International"]);
 });
 
@@ -33,6 +41,7 @@ test("a US official's words: an American relay leads over a foreign one", () => 
   assert.equal(leadCountry("Netanyahu: we will topple the regime"), "IL");
   assert.ok(moreOriginal({ source: "Clash Report", summary: "x" }, { source: "Iran International", summary: "Trump: deal is close" }));
   assert.ok(moreOriginal({ source: "White House", summary: "x" }, { source: "Clash Report", summary: "Trump: deal is close" }));
+  assert.ok(!moreOriginal({ source: "Reuters", summary: "x" }, { source: "Clash Report", summary: "Trump: deal is close" }));
 });
 
 test("Lebanon Debate, Elnashra and Al-Joumhouria; the leaders' own accounts", () => {

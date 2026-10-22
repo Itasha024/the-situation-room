@@ -9,10 +9,18 @@
  *   1. builds (skip with --no-build),
  *   2. sends `.output` and migrations/ to /srv/desk/releases/<time>,
  *   3. applies migrations the server's database hasn't had yet,
- *   4. waits for a scan under way, points current at the release and restarts the site,
- *   5. waits for /api/status; if it doesn't answer, goes back to the previous release,
+ *   4. waits for a scan under way, then starts the release beside the live one,
+ *   5. waits for /api/status and warms its caches, then switches nginx to it
+ *      and stops the old one; if it never answers, the live site is left as it was,
  *   6. keeps the newest 3 releases.
  * The old PC host (scripts/deploy-host.mjs) is `npm run deploy:pc`.
+ *
+ * No gap on a deploy (user, 22 Oct: "make sure it doesnt go down"): nginx holds
+ * port 3000 (where the Cloudflare link points) and passes to desk-web@3010 or
+ * desk-web@3011, whichever /srv/desk/live-port names. Each release runs from
+ * /srv/desk/slot-<port>. Before that set-up a deploy restarted desk-server, and
+ * the site was away for its restart and slow until its caches were warm; a
+ * server without it still deploys that way.
  */
 
 import { execSync, spawn } from "node:child_process";
@@ -59,27 +67,47 @@ done
 PREV=$(readlink -f /srv/desk/current)
 # A scan under way finishes first (up to 4 minutes): a restart cut it off.
 for i in $(seq 80); do systemctl is-active --quiet desk-tick.service || systemctl is-active --quiet desk-iran-tick.service || break; [ $i = 1 ] && echo "[deploy] waiting for the scan to finish"; sleep 3; done
-ln -sfn $R /srv/desk/current
-sudo systemctl restart desk-server
-# The scans run in their own process (desk-worker, port 3001, 18 Oct), so the site never waits on one.
-if systemctl list-unit-files desk-worker.service >/dev/null 2>&1; then sudo systemctl restart desk-worker; fi
-ok=
-for i in $(seq 30); do
-  sleep 3
-  if curl -sf -o /dev/null -m 10 http://127.0.0.1:3000/api/status; then ok=1; break; fi
-done
-if [ -z "$ok" ]; then
-  ln -sfn $PREV /srv/desk/current
-  sudo systemctl restart desk-server
-  if systemctl list-unit-files desk-worker.service >/dev/null 2>&1; then sudo systemctl restart desk-worker; fi
-  echo "[deploy] new release did not answer /api/status — back on $PREV"
-  exit 1
-fi
 # The first visitor after a restart does not pay for the cold caches: the pages and the desks' data are read once now.
 # The map's whole-war pins (?since=, the heaviest answers) and the scan's are among them (20 Oct).
-for u in / /yemen-conflict-desk /iran-conflict-desk "/api/desk?desk=yemen" "/api/desk?desk=iran" "/api/desk?limit=400" "/api/desk?desk=yemen&since=2026-07-13" "/api/desk?desk=iran&since=2026-02-28" "/api/brief?desk=yemen" "/api/brief?desk=iran" /api/brief /api/scan "/api/scan?only=time" "/api/scan?desk=iran&only=time" /api/trump "/api/trump?desk=yemen"; do curl -s -o /dev/null -m 90 "http://127.0.0.1:3000$u" || true; done
-echo "[deploy] caches warmed"
-ls -1d /srv/desk/releases/* | sort -r | tail -n +4 | grep -v -x -e "$R" -e "$PREV" | xargs -r rm -rf
+warm() { for u in / /yemen-conflict-desk /iran-conflict-desk "/api/desk?desk=yemen" "/api/desk?desk=iran" "/api/desk?limit=400" "/api/desk?desk=yemen&since=2026-07-13" "/api/desk?desk=iran&since=2026-02-28" "/api/brief?desk=yemen" "/api/brief?desk=iran" /api/brief /api/scan "/api/scan?only=time" "/api/scan?desk=iran&only=time" /api/trump "/api/trump?desk=yemen"; do curl -s -o /dev/null -m 90 "http://127.0.0.1:$1$u" || true; done; echo "[deploy] caches warmed"; }
+up() { for i in $(seq 30); do sleep 3; if curl -sf -o /dev/null -m 10 http://127.0.0.1:$1/api/status; then return 0; fi; done; return 1; }
+restart_worker() { if systemctl list-unit-files desk-worker.service >/dev/null 2>&1; then sudo systemctl restart desk-worker; fi; }
+if [ -f /srv/desk/live-port ] && [ -f /etc/systemd/system/desk-web@.service ]; then
+  LIVE=$(cat /srv/desk/live-port)
+  if [ "$LIVE" = 3010 ]; then NEXT=3011; else NEXT=3010; fi
+  ln -sfn $R /srv/desk/slot-$NEXT
+  sudo systemctl restart desk-web@$NEXT
+  if ! up $NEXT; then
+    sudo systemctl stop desk-web@$NEXT
+    echo "[deploy] new release did not answer /api/status — the live site was not touched"
+    exit 1
+  fi
+  warm $NEXT
+  echo "server 127.0.0.1:$NEXT;" | sudo tee /etc/nginx/desk-upstream.conf >/dev/null
+  sudo nginx -t -q && sudo systemctl reload nginx
+  echo $NEXT > /srv/desk/live-port
+  ln -sfn $R /srv/desk/current
+  sudo systemctl enable -q desk-web@$NEXT
+  # Requests under way on the old one finish first.
+  sleep 8
+  sudo systemctl disable -q desk-web@$LIVE
+  sudo systemctl stop desk-web@$LIVE
+  # The scans run in their own process (desk-worker, port 3001, 18 Oct), so the site never waits on one.
+  restart_worker
+else
+  ln -sfn $R /srv/desk/current
+  sudo systemctl restart desk-server
+  restart_worker
+  if ! up 3000; then
+    ln -sfn $PREV /srv/desk/current
+    sudo systemctl restart desk-server
+    restart_worker
+    echo "[deploy] new release did not answer /api/status — back on $PREV"
+    exit 1
+  fi
+  warm 3000
+fi
+ls -1d /srv/desk/releases/* | sort -r | tail -n +4 | grep -v -x -e "$R" -e "$PREV" -e "$(readlink -f /srv/desk/slot-3010)" -e "$(readlink -f /srv/desk/slot-3011)" | xargs -r rm -rf
 echo "[deploy] live: $R"`;
 
 const tar = spawn(TAR, ["-czf", "-", ".output", "migrations"], { stdio: ["ignore", "pipe", "inherit"] });

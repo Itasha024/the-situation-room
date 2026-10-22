@@ -120,6 +120,24 @@ const LEADS_PER_TICK = 40;
 const POST_LINKS_PER_TICK = 8;
 /** Articles a tick whose page refused the server, read from MSN's copy or the reading service. */
 const BLOCKED_PER_TICK = 4;
+/**
+ * Lebanese papers behind Cloudflare, known by Google's headline alone (user,
+ * 22 Oct: "they have a lot of exclusive stuff in the mornings"). Their "we have
+ * learned" is in the article, never the headline: their links are resolved
+ * first and their articles get their own openings through the reading service.
+ */
+const LEBANESE_PAPER_HOST = /(?:^|\.)(?:nidaalwatan\.com|addiyar\.com|elnashra\.com|aljoumhouria\.com|al-akhbar\.com)$/i;
+export const lebanesePaper = (h: Pick<RawHit, "url" | "site">) => {
+  const host = (u: string) => {
+    try {
+      return new URL(u).hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  };
+  return LEBANESE_PAPER_HOST.test(h.site ?? "") || LEBANESE_PAPER_HOST.test(host(h.url));
+};
+const LEBANESE_OPENS_PER_TICK = 4;
 
 /**
  * An article's text: its own page; if that refuses the server, the outlet's
@@ -434,7 +452,8 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   let resolved = 0;
   const gnBudget = Math.min(GNEWS_PER_TICK, canResolve("lead") ? resolvesLeft() : bingLeft());
   await Promise.allSettled(
-    hits
+    // The Lebanese papers' links first: the newest of everything else took every turn.
+    [...hits.filter(lebanesePaper), ...hits.filter((h) => !lebanesePaper(h))]
       .filter((h) => !h.fromTg && h.text.length < 600 && (!isGnews(h.url) || !!knownResolve(h.url) || resolved++ < gnBudget))
       .slice(0, LEADS_PER_TICK)
       .map(async (h) => {
@@ -455,9 +474,10 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   const postOf = new Map<RawHit, string>();
   let links = POST_LINKS_PER_TICK;
   let blocked = BLOCKED_PER_TICK;
+  let lebanese = LEBANESE_OPENS_PER_TICK;
   await Promise.allSettled(
-    hits
-      .filter((h) => !isGnews(h.url) && h.text.length < 1500 && passesIranOwnGate(h.text))
+    [...hits.filter(lebanesePaper), ...hits.filter((h) => !lebanesePaper(h))]
+      .filter((h) => !isGnews(h.url) && h.text.length < 1500 && (passesIranOwnGate(h.text) || (lebanesePaper(h) && passesLebaneseMediaGate(h.text))))
       .map(async (h) => {
         if (isPostUrl(h.url)) {
           const link = articleLink(h.text);
@@ -475,8 +495,9 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
             h.url = url;
           }
           opened += 1;
-        } else if (!h.fromTg && h.text.length < 600 && blocked > 0) {
-          blocked -= 1;
+        } else if (!h.fromTg && h.text.length < 600 && (blocked > 0 || (lebanese > 0 && lebanesePaper(h)))) {
+          if (lebanesePaper(h) && lebanese > 0) lebanese -= 1;
+          else blocked -= 1;
           const text = await openArticle(h.url, h.title || h.text.split("\n")[0], h.source, false);
           if (text.length > h.text.length) h.text = `${h.title ?? ""}\n${text}`.trim().slice(0, 8600);
         }
@@ -485,7 +506,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   // A Google item still on Google's redirect waits for the next tick.
   const readable = hits.filter((h) => !isGnews(h.url));
   for (const h of readable) if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
-  state.pending = hits.filter((h) => isGnews(h.url)).slice(0, 60);
+  state.pending = [...hits.filter((h) => isGnews(h.url) && lebanesePaper(h)), ...hits.filter((h) => isGnews(h.url) && !lebanesePaper(h))].slice(0, 60);
 
   // 5. A video's spoken words join its post before the reader sees it, as on
   //    the Yemen desk; the Iran desk keeps its own half of the day's listening.

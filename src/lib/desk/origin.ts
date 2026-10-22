@@ -683,6 +683,13 @@ const ON_DESK_MS = 72 * 3600_000;
 /** Looks in the site's own reads a tick that reach the model: each is one short call. */
 const PRESS_BUDGET = 12;
 /**
+ * Open searches a run for a relay's item that names no source and is in none of
+ * the site's reads (user, 22 Oct: "search in google like an osint researcher …
+ * alongside what you already do"): Google News, the country's outlets, then any
+ * major outlet, only what came out before the relay.
+ */
+const WEB_BUDGET = 3;
+/**
  * A relay's item with no source is looked for twice, half an hour apart, while under six hours old:
  * looked for every tick, the misses took the trace's whole time and the hourly retries of released
  * reports never ran (22 Oct, 25 ticks in a row "out of time").
@@ -804,7 +811,7 @@ export function searchPlan(cited: Cited, keys: string[], arKeys: string[] = []):
  * UNICEF event. Such a find counts only when a model reads its page and finds
  * the claim there.
  */
-async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: number, claim = "", firstHand = false): Promise<Found | null> {
+async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: number, claim = "", firstHand = false, before = Infinity): Promise<Found | null> {
   // Its own X account first: a firm or a body often posts its figures there before anyone carries them.
   if (cited.x) {
     // A firm posts about oil and ships all day: three of the story's words, and its figure when it gives one.
@@ -818,6 +825,8 @@ async function search(cited: Cited, keys: string[], arKeys: string[], reportAt: 
     // Enough shared words to count, then the best fit: a word ranked early (the
     // post's leading names, "Trump") weighs more than one from deep in the body.
     const ranked = items
+      // An original told it before its relay did (ten minutes' grace for the two clocks).
+      .filter((i) => !(i.at > before + 10 * 60_000))
       .filter((i) => (t.min ? overlap(i.title, t.keys, i.at, reportAt) >= t.min : overlap(i.title, [], i.at, reportAt) === 0 && inWindow(i.at, reportAt)) && t.credit(i))
       // The headline sharing most of the story's own words first; then more
       // words in all; then the fit with its leading names.
@@ -1224,6 +1233,7 @@ ${lead}`, r.source) || !!r.flags?.includes("exclusive");
    * state media and main outlets. Keywords in the country's languages, a model to pick the post.
    */
   let presses = part(PRESS_BUDGET);
+  let webs = part(WEB_BUDGET);
   const pressOriginal = async (e: Waiting, owner: { names: string[]; x?: string; site?: string }, country?: string): Promise<Found | null> => {
     if (e.cited.kind === "group" || presses <= 0 || !inTime()) return null;
     const outlet = e.cited.kind === "outlet" && !e.cited.speaker;
@@ -1268,13 +1278,25 @@ ${lead}`, r.source) || !!r.flags?.includes("exclusive");
     const langs = [...new Set([...(PRESS_LANGS[country ?? ""] ?? []), ...(/[ء-ي]/.test(text) ? ["Arabic"] : []), ...(country === "IR" || /[پچژگ]/.test(text) ? ["Persian"] : [])])];
     const tr = (await Promise.all(langs.map((l) => translateKeys(keys, l)))).flat();
     // Sirens or a strike the channel reports itself: the original is only one that told it before.
-    const cands = earlierTellers(recentReads(now), { country, notSource: r.source, onlyBefore: firstHand(r) },[...keys, ...(/[ء-ي]/.test(text) ? arabicKeys(text) : []), ...tr], at).filter(
+    const arKeys = /[ء-ي]/.test(text) ? arabicKeys(text) : [];
+    const cands = earlierTellers(recentReads(now), { country, notSource: r.source, onlyBefore: firstHand(r) }, [...keys, ...arKeys, ...tr], at).filter(
       (c) => c.url !== r.url,
     );
-    if (!cands.length) return null;
+    const claim = `${r.summary}. ${r.text ?? ""}`.trim();
+    // Not among the site's reads: searched for beyond them.
+    const onTheWeb = async () => {
+      if (webs <= 0 || !canWork()) return null;
+      webs -= 1;
+      const cited: Cited = { name: "", site: "", lang: arKeys.length ? "ar" : "en", kind: "official", ...(country ? { country } : {}) };
+      const found = await search(cited, keys, arKeys, at, claim, firstHand(r), at);
+      if (!found || found.source === r.source) return null;
+      console.log(`[origin] ${r.fp}: ${r.source} named no source; found on the web: ${found.source}`);
+      return { found, keys };
+    };
+    if (!cands.length) return onTheWeb();
     presses -= 1;
-    const i = await whichCarries(`${r.summary}. ${r.text ?? ""}`.trim(), cands.map((c) => c.text));
-    if (i < 0) return null;
+    const i = await whichCarries(claim, cands.map((c) => c.text));
+    if (i < 0) return onTheWeb();
     const c = cands[i];
     console.log(`[origin] ${r.fp}: ${r.source} named no source; told first by ${c.source}${c.rank < 999 ? " (its country's media)" : ""}`);
     return { found: { url: c.url, source: c.source, title: c.text.split("\n")[0].slice(0, 140), text: c.text }, keys };

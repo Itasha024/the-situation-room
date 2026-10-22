@@ -32,11 +32,12 @@ const IRAN_OFFICIAL_ACCOUNTS = [...IRAN_X, ...IRAN_TG]
  */
 export const STATE_PRESS: Record<string, string[]> = {
   IR: [
-    "Khamenei's office", "Iran's Supreme National Security Council", "Iran Foreign Ministry", "IRNA", "IRIB News", "Tasnim", "Fars News",
-    "Mehr News", "ISNA", "ILNA", "IMNA", "Mizan", "Press TV", "Tehran Times", "Nour News", "SNN", "Al-Alam", "Atomic Energy Organization of Iran", "IRGC Navy",
+    // The officials and bodies on their own accounts first (user, 22 Oct: "first of all araghchi own telegram channel and x then the regime media").
+    "Khamenei's office", "Iran's Supreme National Security Council", "Iran Foreign Ministry", "Atomic Energy Organization of Iran", "IRGC Navy", ...IRAN_OFFICIAL_ACCOUNTS,
+    "IRNA", "IRIB News", "Tasnim", "Fars News",
+    "Mehr News", "ISNA", "ILNA", "IMNA", "Mizan", "Press TV", "Tehran Times", "Nour News", "SNN", "Al-Alam",
     // Every regime outlet the site reads is above (user, 22 Oct: "why not the rest"); its relay channels
     // (Khabar Fori, Akhbar-e Fori, Tehran Fori) never are: they tell others' news.
-    ...IRAN_OFFICIAL_ACCOUNTS,
   ],
   LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "Hezbollah War Media", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon", "Lebanon Debate", "Elnashra", "Al-Joumhouria"],
   // The prime minister's own office and the government, the state agency, then Iraq's outlets (user, 22 Oct).
@@ -44,7 +45,9 @@ export const STATE_PRESS: Record<string, string[]> = {
   QA: ["Emir of Qatar", "Qatar's Amiri Diwan", "Qatar's prime minister", "Majed al-Ansari", "QNA", "Qatar Foreign Ministry", "Al Jazeera"],
   OM: ["Oman News Agency", "Badr Albusaidi", "Oman Foreign Ministry"],
   AE: ["WAM", "Abu Dhabi Media Office", "Dubai Media Office", "Anwar Gargash", "UAE emergency authority", "UAE Foreign Ministry", "The National"],
-  SA: ["SPA", "Saudi Press Agency", "Saudi Foreign Ministry", "Saudi Energy Ministry", "Saudi Defense Ministry", "Al Arabiya", "Asharq Al-Awsat", "Al Ekhbariya", "Arab News", "Saudi Gazette"],
+  // The kingdom's official channels, then Saudi media (Al Arabiya, Al Hadath and Asharq are Saudi-owned); the Gulf's after (PRESS_LATER).
+  SA: ["Saudi Foreign Ministry", "Saudi Defense Ministry", "Saudi Energy Ministry", "MoEnergy_Saudi", "Saudi Civil Defense", "Saudi-led coalition", "Coalition", "SPA", "Saudi Press Agency",
+    "Al Arabiya", "Al Hadath", "Asharq News", "Asharq Al-Awsat", "Al Ekhbariya", "Arab News", "Saudi Gazette", "Okaz", "Sabq", "Al Riyadh"],
   KW: ["KUNA", "Kuwait Petroleum Corporation", "Kuwait Foreign Ministry"],
   BH: ["BNA", "Bahrain Foreign Ministry"],
   PK: ["Pakistan's prime minister's office", "Shehbaz Sharif", "Ishaq Dar", "Pakistan Foreign Office", "ISPR", "Pakistan Armed Forces", "APP", "Dawn", "Samaa", "Geo"],
@@ -54,6 +57,8 @@ export const STATE_PRESS: Record<string, string[]> = {
   EG: ["Egypt Foreign Ministry", "Egyptian presidency", "Al-Ahram"],
   US: [
     "White House", "Truth Social (Trump)", "Donald Trump", "Rapid Response 47", "JD Vance", "State Department", "Pentagon", "CENTCOM", "Treasury", "Scott Bessent", "Marco Rubio", "Pete Hegseth",
+    // Clash Report is quick on what US officials say (user, 22 Oct: "go there after rapid response white house stuff his posts … and before american outlets or at the same time").
+    "Clash Report",
     "Reuters", "AP", "Bloomberg", "WSJ", "NYT", "Washington Post", "Axios", "CNN", "CBS", "NBC News", "ABC", "Fox News", "Politico", "NY Post", "Newsmax",
   ],
   UK: ["UK Foreign Office", "Downing Street", "UKMTO", "BBC", "The Telegraph", "The Guardian", "Financial Times", "The Times", "Sky News"],
@@ -75,12 +80,27 @@ export const STATE_PRESS: Record<string, string[]> = {
 export const PRESS_LATER: Record<string, string[]> = {
   IR: ["Iran International", "Manoto", "Radio Farda", "VOA Farsi", "BBC Persian", "IranWire", "Vahid Online", "Reza Pahlavi", "Ilia Hashemi", "United Students", "MEK", "NCRI"],
   IQ: ["Naya", "Sabereen News", "Shajab News", "Al-Mihwar", "Alfaqaar"],
-  US: ["Barak Ravid", "Natasha Bertrand", "Trey Yingst", "Jennifer Griffin", "Alhurra", "VOA Farsi", "Radio Farda", "Clash Report", "OSINTdefender"],
-  SA: ["Al Hadath", "Sky News Arabia", "Asharq News", "Saudi News", "Al Jazeera", "Erem News"],
+  US: ["Barak Ravid", "Natasha Bertrand", "Trey Yingst", "Jennifer Griffin", "Alhurra", "VOA Farsi", "Radio Farda", "OSINTdefender"],
+  SA: ["Sky News Arabia", "Al Jazeera", "Erem News", "The National", "Al Ain", "Saudi News"],
   IL: ["Amit Segal", "Israel 1", "Hazfon 1", "US2020US", "Kan (Arab affairs)"],
 };
 /** Ranks from here on are the later tier's. */
 export const LATER_RANK = 500;
+/** A country's own media rank from here; below it, its official channels. */
+export const MEDIA_RANK = 100;
+/**
+ * How many of each list's first names are official channels (the state, its
+ * leaders and bodies on their own accounts): they come before its media, however
+ * well a medium's item matches (user, 22 Oct: "all after saudi official channels").
+ */
+const OFFICIAL_COUNT: Record<string, number> = {
+  IR: 5 + IRAN_OFFICIAL_ACCOUNTS.length,
+  LB: 5,
+  IQ: 3,
+  SA: 9,
+  US: 12,
+  IL: 10,
+};
 
 /** The languages a country's own media write in, beyond English. */
 export const PRESS_LANGS: Record<string, string[]> = {
@@ -151,7 +171,7 @@ export function pressOf(source: string, country: string): number {
       return x.length >= 2 && (s === x || s.startsWith(`${x} `) || (x.length >= 4 && s.startsWith(x)));
     });
   const i = at(STATE_PRESS[country] ?? []);
-  if (i >= 0) return i;
+  if (i >= 0) return i < (OFFICIAL_COUNT[country] ?? 0) ? i : MEDIA_RANK + i;
   const j = at(PRESS_LATER[country] ?? []);
   return j >= 0 ? LATER_RANK + j : -1;
 }
@@ -231,5 +251,5 @@ export function pressCandidates(
   return out.sort((a, b) => +b.own - +a.own || tier(a.rank) - tier(b.rank) || b.hits - a.hits || a.rank - b.rank || a.at - b.at).slice(0, n);
 }
 
-/** The speaker's own and his state's media, then the later tier, then anyone (user, 22 Oct: "first … then … then"). */
-const tier = (rank: number) => (rank < 0 ? 0 : rank < LATER_RANK ? 1 : rank < 999 ? 2 : 3);
+/** The speaker's own, his state's official channels, its media, then the later tier, then anyone (user, 22 Oct: "first … then … then"). */
+const tier = (rank: number) => (rank < 0 ? 0 : rank < MEDIA_RANK ? 1 : rank < LATER_RANK ? 2 : rank < 999 ? 3 : 4);

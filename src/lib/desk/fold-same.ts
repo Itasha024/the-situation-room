@@ -24,7 +24,7 @@ import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
 import { headWords, speechOwner, wordsInCommon } from "./copies.ts";
 import { isAggregator } from "./credibility.ts";
 import { sameOutlet } from "./originals.ts";
-import { LATER_RANK, countryIn, firstHand, isRelayChannel, pressOf } from "./state-press.ts";
+import { LATER_RANK, MEDIA_RANK, countryIn, firstHand, isRelayChannel, pressOf } from "./state-press.ts";
 import { officialVoice } from "./speaker-press.ts";
 import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteTakesLead } from "./site-articles.ts";
 
@@ -918,6 +918,8 @@ export function moreOriginal(copy: Teller, home: Teller): boolean {
   // The country's own media first; then its later tier (Iran's opposition, an American relay of a US official), a relay channel or not (user, 22 Oct).
   const rank = (c: Teller) => {
     const p = country ? pressOf(c.source, country) : -1;
+    // Its official channels over its media (user, 22 Oct: "after saudi official channels").
+    if (p >= 0 && p < MEDIA_RANK) return 4;
     if (p >= 0 && p < LATER_RANK) return 3;
     if (p >= LATER_RANK) return 2;
     return (isRelayChannel(c.source) && !firstHand(c)) || isAggregator(c.source) ? 0 : 1;

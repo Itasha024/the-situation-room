@@ -37,7 +37,7 @@ export const STATE_PRESS: Record<string, string[]> = {
     ...IRAN_OFFICIAL_ACCOUNTS,
   ],
   LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon"],
-  IQ: ["Iraq Foreign Ministry", "INA", "Iraqi News Agency", "Iraqi government", "Shafaq News", "Iraqinews", "Rudaw", "Kurdistan24", "Al-Sumaria", "Baghdad Today"],
+  IQ: ["Iraq Foreign Ministry", "INA", "Iraqi News Agency", "Iraqi government", "Naya", "Shafaq News", "Iraqinews", "Rudaw", "Kurdistan24", "Al-Sumaria", "Baghdad Today"],
   QA: ["Emir of Qatar", "Qatar's Amiri Diwan", "Qatar's prime minister", "Majed al-Ansari", "QNA", "Qatar Foreign Ministry", "Al Jazeera"],
   OM: ["Oman News Agency", "Badr Albusaidi", "Oman Foreign Ministry"],
   AE: ["WAM", "Abu Dhabi Media Office", "Dubai Media Office", "Anwar Gargash", "UAE emergency authority", "UAE Foreign Ministry", "The National"],
@@ -76,7 +76,7 @@ export const PRESS_LANGS: Record<string, string[]> = {
  * site's own reads of the outlets that do report.
  */
 const RELAY_CHANNELS =
-  /^(?:Khabar Fori|Khabari Plus|Akhbar-e Fori|Tehran Fori|Unews|Emtedad|Tasnim \(Arabic relay\)|Axis military relay|Sabereen News|Ali Bk|Al-Mihwar|Alfaqaar|Shajab News|Naya|Bin Saeed|Saudi News|Al-Yemen Now|Clash Report|OSINT ?defender|OSINT Hexagone|Egypt OSINT|Shin Persian|War Cube|Sentdefender)$/i;
+  /^(?:Khabar Fori|Khabari Plus|Akhbar-e Fori|Tehran Fori|Unews|Emtedad|Tasnim \(Arabic relay\)|Axis military relay|Sabereen News|Ali Bk|Al-Mihwar|Alfaqaar|Shajab News|Bin Saeed|Saudi News|Al-Yemen Now|Clash Report|OSINT ?defender|OSINT Hexagone|Egypt OSINT|Shin Persian|War Cube|Sentdefender)$/i;
 export const isRelayChannel = (source: string): boolean => RELAY_CHANNELS.test(String(source || "").trim());
 
 /** A country's name or adjective at the head of a speaker's role: "Iranian MP", "Iran's deputy FM", "Lavrov". */

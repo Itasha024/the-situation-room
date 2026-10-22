@@ -22,6 +22,12 @@ import type { DeskStore } from "./store.ts";
 import { TRIAGE_MODELS } from "./triage.ts";
 import { findVenue } from "./venue.ts";
 
+/**
+ * The quick matcher and translator: Groq's two first, then NVIDIA's and Gemma when Groq's rate limit is hit
+ * (22 Oct: 29 of 58 matches in three hours came back HTTP 429, and the relay went out unmatched).
+ */
+const MATCH_MODELS = [...TRIAGE_MODELS.slice(0, 2), { provider: "nvidia" as const, id: "nvidia/nemotron-3-super-120b-a12b" }, TRIAGE_MODELS[3]];
+
 export type Hit = { url: string; source: string; title?: string; /** An interview he gave this outlet: its exclusive. */ told?: boolean };
 
 /** Each country's press, where its leaders' words are first reported. */
@@ -67,7 +73,7 @@ export async function translateKeys(keys: string[], lang: string): Promise<strin
     "keys",
     `Translate each search keyword into ${lang} as a journalist writing in ${lang} would put it. Place names in their usual ${lang} spelling. Return ONLY JSON {"keys":["..."]}, same order, at most 6.`,
     keys.slice(0, 6).join("\n"),
-    { temperature: 0, models: TRIAGE_MODELS.slice(0, 2), timeoutMs: 12_000 },
+    { temperature: 0, models: MATCH_MODELS, timeoutMs: 12_000 },
   );
   const out = Array.isArray(got?.json.keys) ? (got!.json.keys as unknown[]).map((k) => String(k).trim()).filter((k) => k.length >= 2 && k.length <= 40) : [];
   return out.slice(0, 6);
@@ -285,7 +291,7 @@ export async function whichCarries(claim: string, texts: string[]): Promise<numb
     "origin-match",
     `A news channel relayed a claim from an outlet. Below are that outlet's recent articles. Which one reports the claim (the same facts, not just the same topic)? Return ONLY JSON {"article": <number>} or {"article": 0} if none does.`,
     [`CLAIM: ${claim}`, ...texts.map((t, i) => `ARTICLE ${i + 1}:\n${t.slice(0, 3500)}`)].join("\n\n"),
-    { temperature: 0, models: TRIAGE_MODELS.slice(0, 2), timeoutMs: 20_000 },
+    { temperature: 0, models: MATCH_MODELS, timeoutMs: 20_000 },
   );
   const n = Number(got?.json.article);
   return Number.isInteger(n) && n >= 1 && n <= texts.length ? n - 1 : -1;

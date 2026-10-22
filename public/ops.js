@@ -162,11 +162,13 @@
   const noteOf = (e) => (e.desk === 'iran' ? A('iranPopupHtml')(e) : A('popupHtml')(e)) || esc(e.label || '');
 
   /* ---------- The frame ---------- */
-  const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: false };
+  const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: true, fillsV: 2 };
   try { Object.assign(S, JSON.parse(localStorage.getItem('ops-state2') || '{}'), { tool: null, sel: null }); } catch (e) { /* none kept */ }
   // The map writes its own place names (20 Oct: the Place names layer went from Layers).
   S.names = false;
-  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, trafficSeen })); } catch (e) { /* private */ } };
+  // Every map shows the sides' colours again (user, 22 Oct: "return the colors on the map according to each side"); an Off kept from before goes.
+  if (!(S.fillsV >= 2)) { S.fills = true; S.fillsV = 2; }
+  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, fillsV, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, fillsV, trafficSeen })); } catch (e) { /* private */ } };
   /* The reader's settings (20 Oct: "make a settings page too to make the site very customizable"). */
   const PREF_DEF = { v: 3, tz: 'desk', range: 'today', pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, airStart: false };
   const P = { ...PREF_DEF };
@@ -178,6 +180,8 @@
   // The panels' and the strip's sizes as the reader dragged them (lw, rw, dh in pixels; see paintSizes).
   let SZ = {};
   try { SZ = JSON.parse(localStorage.getItem('ops-sizes') || '{}') || {}; } catch (e) { /* none kept */ }
+  // The left panel opens narrower (user, 22 Oct: "too wide right now"); a width dragged before then goes.
+  if (!(SZ.v >= 2)) { delete SZ.lw; SZ.v = 2; }
   if (P.airStart) S.air = true;
 
   let shell, strip, bar, nav, leftEl, rightEl, dock, stage, mapWrap;
@@ -209,10 +213,8 @@
     strip.innerHTML = `<span class="ops-live"><i></i>Live</span>
       <span class="ops-sf"><b id="ops-date">${esc(dayTxt(Date.now()))}</b></span>
       ${PAGE !== 'all' ? `<span class="ops-sf"><small>${esc(CAP[PAGE])}</small><b id="ops-local">--:--</b></span>` : `<span class="ops-sf"><small>Sanaa</small><b data-tz="Asia/Aden">--:--</b></span><span class="ops-sf"><small>Tehran</small><b data-tz="Asia/Tehran">--:--</b></span><span class="ops-sf"><small>Jerusalem</small><b data-tz="Asia/Jerusalem">--:--</b></span>`}
-      <span class="ops-sf ops-upd"></span>
-      <span class="ops-sf ops-cnt"><small>Events 24 h</small><b id="ops-n24">–</b></span>
-      <span class="ops-sf ops-cnt"><small>48 h</small><b id="ops-n48">–</b></span>
-      <span class="ops-tag">Open source</span>`;
+      <span class="ops-sf ops-upd"></span>`;
+    // No event counts in the strip, the last update at its right end, "Open-source intelligence" under the name (user, 22 Oct).
     // The bar: the mark and name, the theatres, the view's own buttons.
     bar = document.createElement('div');
     bar.className = 'ops-bar';
@@ -258,8 +260,10 @@
       el.classList.add('ops-pane');
       panes.appendChild(el);
     });
+    // The All page's footer is the tiles' credit, which the map carries already.
     const foot = root.querySelector(':scope > footer');
-    if (foot) panes.appendChild(foot);
+    if (foot && PAGE === 'all') foot.hidden = true;
+    else if (foot) panes.appendChild(foot);
     if (!tabs.some(([id]) => id === S.tab)) S.tab = tabs[0] && tabs[0][0];
     stage = $('main.stage', root);
     // The stage's own box in the page (the All page keeps it in a wrapper).
@@ -318,6 +322,8 @@
     sizeDock();
     wireFrame();
     wireGrips();
+    new MutationObserver(slimSoon).observe(leftEl, { childList: true, subtree: true });
+    document.addEventListener('fullscreenchange', () => { paintFrame(); });
   }
   /* The last day, two days or week on the map, through the page's own period boxes. */
   const shiftYmd = (ymd, n) => { const d = new Date(`${ymd}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -373,7 +379,7 @@
     if (isPhone()) { root.style.removeProperty('--ops-lw'); root.style.removeProperty('--ops-rw'); }
     else {
       const mid = W <= 1180;
-      const defL = mid ? 330 : Math.max(340, Math.min(0.26 * W, 440)), defR = mid ? 320 : Math.max(320, Math.min(0.24 * W, 400));
+      const defL = mid ? 300 : Math.max(300, Math.min(0.19 * W, 360)), defR = mid ? 320 : Math.max(320, Math.min(0.24 * W, 400));
       const MINL = 260, MINR = 240;
       let lw = Math.max(MINL, SZ.lw || defL), rw = Math.max(MINR, SZ.rw || defR);
       // The panels give way, the one not being dragged first, so the map keeps its whole area.
@@ -454,6 +460,10 @@
     root.classList.toggle('ops-slim', on);
     if (!quiet && gripsOn) paintSizes();
   }
+  // A side menu drawn after the panel opened (the All page's desks come with the data), and full screen, check it
+  // again (user, 22 Oct: the rail kept its words beside the desks' menu in full screen).
+  let slimRaf = 0;
+  const slimSoon = () => { cancelAnimationFrame(slimRaf); slimRaf = requestAnimationFrame(() => paintSlim(false)); };
   /* On a phone the side menu is a row under the tabs; a notch in it points up at the tab it belongs to (user, 22 Oct). */
   function notch() {
     if (!isPhone()) return;
@@ -1125,7 +1135,7 @@
       <div class="ops-bases">${BASES.map(([k, n, s]) => `<button type="button" data-base="${k}" aria-pressed="${S.base === k}" title="${esc(s)}"><i class="ops-bthumb ${k}"></i>${esc(n)}</button>`).join('')}</div>
       <p class="ops-mlab">On the map</p>
       ${sw('grid', S.grid, 'Grid', 'Latitude and longitude, named at the edges')}
-      ${sw('fills', S.fills, "Yemen's control areas", 'Who holds what, in colour')}`;
+      ${sw('fills', S.fills, "Sides' colours", 'Who holds what, in each side’s colour')}`;
   }
   function paintTraffic() {
     const menu = $('.ops-trf', hud);
@@ -1611,7 +1621,7 @@
     ['Map', [
       ['base', 'Base map', '', [['auto', 'Plain'], ['sat', 'Satellite'], ['relief', 'Relief']], 'S'],
       ['grid', 'Grid', 'Latitude and longitude.', [[false, 'Off'], [true, 'On']], 'S'],
-      ['fills', "Yemen's control areas", 'Who holds what, shaded.', [[false, 'Off'], [true, 'On']], 'S'],
+      ['fills', "Sides' colours", 'Who holds what, in each side’s colour.', [[false, 'Off'], [true, 'On']], 'S'],
       ['coords', 'Place under the pointer', '', [['mgrs', 'Degrees and MGRS'], ['deg', 'Degrees'], ['dms', 'Degrees, minutes, seconds']]],
       ['units', 'Distances', 'The ruler and the range rings.', [['both', 'km and nm'], ['km', 'km'], ['nm', 'nm']]],
     ]],
@@ -1650,7 +1660,7 @@
         if (ev.target === el || ev.target.closest('[data-set-x]')) return closeSettings();
         if (ev.target.closest('[data-set-reset]')) {
           Object.assign(P, PREF_DEF); keepPrefs(); applyPrefs(); setThemePref('auto');
-          Object.assign(S, { base: 'auto', names: false, grid: false, fills: false, left: true, right: true, dock: true }); keep();
+          Object.assign(S, { base: 'auto', names: false, grid: false, fills: true, left: true, right: true, dock: true }); keep();
           drawBase(); paintFrame(); drawMatrix(); paintSettings(); return;
         }
         const b = ev.target.closest('[data-k]');
@@ -1892,6 +1902,14 @@
       legend: '',
       build: (m) => {
         m.setView(spot.ll, spot.country ? 5.5 : 7);
+        // The sides' colours, as every other small map has them (user, 22 Oct).
+        if (PAGE === 'yemen') A('devBaseMap')(m);
+        else {
+          const geo = (app('iranPins') || {}).countryGeo;
+          if (geo) L.geoJSON(geo, { style: app('iranCountryStyle'), interactive: false }).addTo(m);
+          A('iranYemenLayer')(m, 'overlayPane');
+          A('drawAdminLayer')(m);
+        }
         L.circleMarker(spot.ll, { radius: 9, color: '#fff', weight: 2, fillColor: '#e0a43c', fillOpacity: 0.95 }).bindTooltip(spot.name, { permanent: true, direction: 'top', offset: [0, -8] }).addTo(m);
       },
     });

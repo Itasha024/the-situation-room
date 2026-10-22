@@ -2994,7 +2994,11 @@ function devFit(m, bounds, maxZoom, half) {
   return true;
 }
 
-function devBaseMap(m, withSaudi) {
+/** Saudi Arabia in its side's colour on a Yemen pop-up map (user, 22 Oct: every small map shaded, not some). */
+function saudiShade(m) {
+  if (saudiGeoCache) L.geoJSON(saudiGeoCache, { interactive: false, style: { fillColor: COLORS.saudi, fillOpacity: controlVisible('saudi') ? 0.3 : 0, color: EDGE, weight: 0.8, opacity: 0.7 } }).addTo(m);
+}
+function devBaseMap(m) {
   const byIso = controlByIso(data);
   if (geoCache) {
     const mainland = splitIslandFeatures(geoCache).mainland;
@@ -3002,9 +3006,7 @@ function devBaseMap(m, withSaudi) {
     L.geoJSON(mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(m);
     govNameLayer(m, mainland.features, byIso);
   }
-  if (saudiGeoCache && withSaudi) {
-    L.geoJSON(saudiGeoCache, { interactive: false, style: { fillColor: COLORS.saudi, fillOpacity: 0.3, color: EDGE, weight: 0.8, opacity: 0.7 } }).addTo(m);
-  }
+  saudiShade(m);
   saudiCityLayer(m);
   drawAdminLayer(m, YEMEN_MAP_SKIP);
 }
@@ -3068,7 +3070,7 @@ function openDevelopmentsMap(anchor) {
     wide: true,
     tools: `<div class="dev-step" role="group" aria-label="Areas with events">${many ? '<button type="button" data-d="-1" aria-label="Previous area">&lsaquo;</button>' : ''}<span class="dev-step-at" aria-live="polite"></span>${many ? '<button type="button" data-d="1" aria-label="Next area">&rsaquo;</button>' : ''}</div>`,
     build: (m, box) => {
-      devBaseMap(m, true);
+      devBaseMap(m);
       let at = 0;
       // Framed on the area's events (the outline shows the rest of it), with room round them.
       const boundsOf = (a) => {
@@ -4539,8 +4541,7 @@ async function buildFrontMap(m, front, d) {
   for (const spot of frontSpots(front.mapFocus)) lit.extend(L.latLng(spot).toBounds((front.mapFocus.spotRadius || 15000) * 3));
   // Everything recorded on this front, played as on the developments' map.
   const marks = devMarksOf((frontActivity(front.id) || {}).map);
-  const saudi = front.id === 'saudi-home' || marks.some((x) => devInSaudi(x.ll));
-  if (saudiGeoCache && saudi) L.geoJSON(saudiGeoCache, { interactive: false, style: { fillColor: COLORS.saudi, fillOpacity: 0.3, color: EDGE, weight: 0.8, opacity: 0.7 } }).addTo(m);
+  saudiShade(m);
   // Framed once, before anything is drawn, so nothing moves after it opens.
   const seen = L.latLngBounds(marks.map((x) => x.ll));
   // Saudi Arabia's front always shows the kingdom's south-west with its events.
@@ -5304,6 +5305,7 @@ function openPinSheet(pin, anchor) {
         districtLayer(m, byIso);
         L.geoJSON(mainland, { style: (f) => styleFeature(f, byIso), interactive: false }).addTo(m);
         govNameLayer(m, mainland.features, byIso);
+        saudiShade(m);
         saudiCityLayer(m);
         drawAdminLayer(m, YEMEN_MAP_SKIP);
       });
@@ -7725,6 +7727,7 @@ function bootOtherDesk(el) {
   else window.addEventListener('load', () => setTimeout(again, 100), { once: true });
   iranPins.drawn = '';
   iranPins.countries = null;
+  iranPins.yemen = null;
   iranPins.adm = null;
   iranPins.day = iranToday(); // the map opens on today (user, 10 Oct), not the whole war
   renderIranLegend();
@@ -7903,7 +7906,28 @@ async function drawIranCountries() {
     }
     if (iranPins.countries) { try { map.removeLayer(iranPins.countries); } catch (e) {} }
     iranPins.countries = L.geoJSON(iranPins.countryGeo, { pane: 'irCountries', interactive: false, style: iranCountryStyle }).addTo(map);
+    if (iranPins.yemen) { try { map.removeLayer(iranPins.yemen); } catch (e) {} }
+    iranPins.yemen = await iranYemenLayer(map, 'irCountries');
   } catch (e) { console.warn('iran countries', e); }
+}
+/*
+ * Yemen on the Iran war's maps, district by district in its holder's colour as the Yemen desk shades it
+ * (user, 22 Oct: "in iran all the sides including yemen and saudia"). The governorates come from data.json,
+ * which every page preloads; the Houthi side ticked off in the legend leaves its areas clear.
+ */
+let iranYemenByIso = null;
+async function iranYemenLayer(m, pane) {
+  if (!m || !window.L) return null;
+  if (!iranYemenByIso) {
+    try { iranYemenByIso = controlByIso(data || (await fetchData()) || {}); } catch (e) { return null; }
+  }
+  if (!(await loadDistricts())) return null;
+  return L.geoJSON(districtGeo, { pane, interactive: false, style: iranYemenStyle }).addTo(m);
+}
+function iranYemenStyle(f) {
+  const ctrl = districtSide(f.properties, iranYemenByIso || {});
+  const on = ctrl === 'houthi' ? iranPins.on.houthi !== false : true;
+  return { fillColor: COLORS[ctrl] || COLORS.contested, fillOpacity: on ? 0.38 : 0, color: EDGE, weight: 0.35, opacity: on ? 0.45 : 0.1 };
 }
 /*
  * Provinces, districts and towns in every coloured country (user, 12 Oct), as the Yemen map
@@ -8184,6 +8208,7 @@ function iranPopupHtml(ev) {
 function drawIranPins() {
   renderIranLegend();
   if (iranPins.countries) { try { iranPins.countries.setStyle(iranCountryStyle); } catch (e) {} }
+  if (iranPins.yemen) { try { iranPins.yemen.setStyle(iranYemenStyle); } catch (e) {} }
   const r = iranPins.range;
   const inTime = (ev) => { const d = iranDayOf(ev); return r ? d >= r.from && d <= r.to : !iranPins.day || d === iranPins.day; };
   const w = iranPins.where;
@@ -8281,6 +8306,7 @@ function openIranMapPop(evs, title, anchor, go) {
     build: (m, box, later = (fn) => fn()) => {
       later(() => {
         if (iranPins.countryGeo) L.geoJSON(iranPins.countryGeo, { style: iranCountryStyle, interactive: false }).addTo(m);
+        iranYemenLayer(m, 'overlayPane');
         drawAdminLayer(m);
       });
       all.forEach((e) => {

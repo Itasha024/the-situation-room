@@ -9,7 +9,7 @@
  * operations room, Day a newsroom page; the reader's device picks unless they do.
  */
 html[data-view="ops"] {
-  --ops-lw: clamp(340px, 26vw, 440px);
+  --ops-lw: clamp(300px, 19vw, 360px);
   --ops-rw: clamp(320px, 24vw, 400px);
   --ops-nav-w: 56px;
   --ops-strip-h: 26px;
@@ -92,7 +92,7 @@ html[data-view="ops"] .ops-on .rail-splitter { display: none !important }
   html[data-view="ops"] .ops-on.ops-nodock .ops-fold-d { border-color: var(--o-sel); color: var(--o-sel); background: color-mix(in srgb, var(--o-sel) 14%, transparent) }
 }
 @media (min-width: 761px) and (max-width: 1180px) {
-  html[data-view="ops"] { --ops-lw: 330px; --ops-rw: 320px; --ops-nav-w: 50px }
+  html[data-view="ops"] { --ops-lw: 300px; --ops-rw: 320px; --ops-nav-w: 50px }
 }
 /* Handles to widen the side panels and raise the strip under the map (21 Oct). */
 html[data-view="ops"] .ops-grip { display: none }
@@ -124,7 +124,7 @@ html[data-view="ops"] .ops-live i { width: 7px; height: 7px; border-radius: 50%;
 html[data-view="ops"] .ops-sf { display: inline-flex; align-items: baseline; gap: 6px; padding: 0 14px; border-right: 1px solid var(--o-line); line-height: 25px }
 html[data-view="ops"] .ops-sf small { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--o-faint) }
 html[data-view="ops"] .ops-sf b { font-size: 12px; font-weight: 500; color: var(--o-text); font-variant-numeric: tabular-nums; letter-spacing: .02em }
-html[data-view="ops"] .ops-upd { min-width: 0; overflow: hidden }
+html[data-view="ops"] .ops-upd { min-width: 0; overflow: hidden; margin-left: auto; border-right: 0; border-left: 1px solid var(--o-line) }
 html[data-view="ops"] .ops-upd .stamp { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 0; font: 500 11.5px var(--ops-mono); color: var(--o-dim) }
 html[data-view="ops"] .ops-upd .stamp .ye-clock { display: none }
 html[data-view="ops"] .ops-upd .stamp .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--o-ok); box-shadow: none; animation: none }
@@ -136,10 +136,12 @@ html[data-view="ops"] .ops-bar {
   padding: 0 12px 0 0; background: var(--o-panel); border-bottom: 1px solid var(--o-line); position: relative; z-index: 1200;
 }
 html[data-view="ops"] .ops-bar .mast { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; border: 0; background: none; min-height: 0; height: 100%; flex: none; position: static }
-html[data-view="ops"] .ops-bar .mast::before, html[data-view="ops"] .ops-bar .mast::after, html[data-view="ops"] .ops-bar .mast-end, html[data-view="ops"] .ops-bar .mast-line { display: none !important }
+html[data-view="ops"] .ops-bar .mast::before, html[data-view="ops"] .ops-bar .mast::after, html[data-view="ops"] .ops-bar .mast-end { display: none !important }
+/* "Open-source intelligence", small and plain under the name (user, 22 Oct). */
+html[data-view="ops"] .ops-bar .mast-line { display: block !important; position: static !important; margin: 2px 0 0 !important; padding: 0 !important; border: 0 !important; background: none !important; font: 600 10px/1 var(--ops-cond) !important; letter-spacing: .14em; text-transform: uppercase; color: var(--o-faint) !important; white-space: nowrap }
 html[data-view="ops"] .ops-bar .mast-date { order: 0; position: static; transform: none; margin: 0; flex: none; width: var(--ops-nav-w); height: 100%; display: grid; place-items: center; border-right: 1px solid var(--o-line) }
 html[data-view="ops"] .ops-bar .mast-menu { color: var(--o-text) }
-html[data-view="ops"] .ops-bar .mast-mid { display: flex; align-items: center; position: static; transform: none; margin: 0 0 0 16px; text-align: left }
+html[data-view="ops"] .ops-bar .mast-mid { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; position: static; transform: none; margin: 0 0 0 16px; text-align: left }
 html[data-view="ops"] .ops-bar .mast-name { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--o-strong) }
 html[data-view="ops"] .ops-bar .mast-name::before { content: ""; width: 14px; height: 14px; flex: none; border: 2px solid var(--o-strong); transform: rotate(45deg) scale(.82); box-sizing: border-box; background: linear-gradient(var(--o-sel), var(--o-sel)) center / 4px 4px no-repeat }
 html[data-view="ops"] .ops-bar .mast-name .mn { font: 700 15px var(--ops-cond) !important; letter-spacing: .2em; text-transform: uppercase; white-space: nowrap }
@@ -496,6 +498,7 @@ html[data-view="ops"] .ops-lb time { font-size: 15px; font-weight: 700; color: #
   html[data-view="ops"] .ops-on { display: flex; flex-direction: column; background: var(--o-bg) }
   html[data-view="ops"] .ops-strip { order: 0; height: 24px; flex: none; overflow-x: auto; scrollbar-width: none }
   html[data-view="ops"] .ops-strip :is(.ops-cnt, .ops-tag, .ops-upd) { display: none }
+  html[data-view="ops"] .ops-bar .mast-line { display: none !important }
   html[data-view="ops"] .ops-bar { height: 46px; flex: none; gap: 8px; padding-right: 8px }
   html[data-view="ops"] .ops-bar .mast-date { width: 44px }
   html[data-view="ops"] .ops-bar .mast-mid { margin-left: 10px }

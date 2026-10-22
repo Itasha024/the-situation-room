@@ -289,12 +289,15 @@ export async function whichCarries(claim: string, texts: string[]): Promise<numb
   if (!texts.length) return -1;
   const got = await askChain(
     "origin-match",
-    `A news channel relayed a claim from an outlet. Below are that outlet's recent articles. Which one reports the claim (the same facts, not just the same topic)? Return ONLY JSON {"article": <number>} or {"article": 0} if none does.`,
+    `A news channel relayed a claim from an outlet. Below are that outlet's recent articles. Which of them report the claim (the same facts, not just the same topic)? Return ONLY JSON {"articles": [<numbers>]}, every one that does, or {"articles": []} if none does.`,
     [`CLAIM: ${claim}`, ...texts.map((t, i) => `ARTICLE ${i + 1}:\n${t.slice(0, 3500)}`)].join("\n\n"),
     { temperature: 0, models: MATCH_MODELS, timeoutMs: 20_000 },
   );
-  const n = Number(got?.json.article);
-  return Number.isInteger(n) && n >= 1 && n <= texts.length ? n - 1 : -1;
+  // The texts come in the desk's order (the speaker's own, then his state's media, then the later tier: user, 22 Oct),
+  // so of all that carry it the first leads, not the one a model happened to name.
+  const raw = got?.json.articles ?? got?.json.article;
+  const ns = (Array.isArray(raw) ? raw : [raw]).map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= texts.length);
+  return ns.length ? Math.min(...ns) - 1 : -1;
 }
 
 /* ------------------------------------------------------------------ *

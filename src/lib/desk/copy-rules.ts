@@ -225,7 +225,7 @@ export function houthiClaim(headline: string, type: string, source: string): str
 }
 
 /** Lebanon in a card: a Lebanese outlet or a Lebanese place. */
-const LEBANESE_OUTLET = /^(?:NBN|LBCI|Al-Manar|Al Manar|NNA|National News Agency|MTV Lebanon|Al Mayadeen|Al-Akhbar|Ali Shoaib|Unews|Lebanon 24|L'Orient|Al-Modon|Nidaa al-Watan|Ad-Diyar)/i;
+const LEBANESE_OUTLET = /^(?:NBN|LBCI|Al-Manar|Al Manar|NNA|National News Agency|MTV Lebanon|Al Mayadeen|Al-Akhbar|Ali Shoaib|Unews|Lebanon 24|L'Orient|Al-Modon|Nidaa al-Watan|Ad-Diyar|Lebanon Debate|Elnashra|Al-Joumhouria)/i;
 const LEBANON_PLACE = /\b(?:Lebanon|Lebanese|Beirut|Dahiyeh|Bint Jbeil|Tyre|Sidon|Nabatieh|Nabatiyeh|Marjayoun|Bekaa|Baalbek|Khiam|Naqoura|Litani|Kfar \w+|Zoutar|Zawtar|Kfar Shuba|Kfar Shouba|Kfar Tibnit|Tolain|Wadi al-Hujeir)\b/i;
 export const lebanonContext = (copy: string, source: string): boolean => LEBANESE_OUTLET.test(String(source || "").trim()) || LEBANON_PLACE.test(String(copy || ""));
 
@@ -411,12 +411,19 @@ export function rightWayRound(headline: string): string {
 /**
  * Titles (7 and 8, Iran): Araghchi is foreign minister, not UN ambassador;
  * a bare surname opening a headline gets its office; "Sardar" is the IRGC's
- * word for a general; Iraq's prime minister is Ali al-Zaidi (since 14 May).
+ * word for a general; Iraq's prime minister is Ali al-Zaidi (since 14 May);
+ * Lebanon's is Nawaf Salam (since February 2025), not Najib Mikati (user, 22 Oct).
  */
 export function officeTitles(s: string): string {
   let out = String(s || "");
   out = out.replace(/\b(?:Iran's |Iranian )?(?:UN ambassador|ambassador to the UN|envoy to the UN)( Abbas)? Araghchi\b/g, "Iran's foreign minister$1 Araghchi");
   out = out.replace(/\b(Iraq(?:i|'s) (?:Prime Minister|PM)) (?:Mohammed (?:Shia['’]? )?)?(?:Al-|al-)?Sudani\b/g, "$1 Ali al-Zaidi");
+  // The prime minister named as Mikati: the rest of the card's Mikati is him too, unless it says "former".
+  const pmMikati = /(?<!\b[Ff]ormer )\b(Leban(?:ese|on's) (?:Prime Minister|PM)) (?:Najib )?Mikati\b/g;
+  if (pmMikati.test(out)) {
+    out = out.replace(pmMikati, "$1 Nawaf Salam");
+    out = out.replace(/(?<!\b[Ff]ormer (?:Lebanese )?(?:(?:Prime Minister|PM) )?)\b(?:Najib )?Mikati\b/g, "Salam");
+  }
   // "Acting defence minister Sardar Ebnolreza": the office says it. Elsewhere Sardar is General.
   out = out.replace(/\b((?:minister|commander|chief|spokesman|adviser|deputy|head)\s+)Sardar\s+/gi, "$1");
   out = out.replace(/\bSardar\s+(?=[A-Z])/g, "General ");

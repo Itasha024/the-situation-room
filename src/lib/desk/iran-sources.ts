@@ -127,8 +127,14 @@ export const IRAN_TG: IranSource[] = [
   { id: "alichoeib1970", name: "Ali Shoaib's page", lean: "axis", every: 10, lebaneseMedia: true },
   // Hezbollah's own War Media (الإعلام الحربي): its statements and footage, first-hand (22 Oct).
   { id: "mmirleb", name: "Hezbollah War Media", lean: "axis", every: 5, lebaneseMedia: true },
+  // Lebanon Debate's own channel (user, 22 Oct): its scoops and its politics; its site is read for the whole text.
+  { id: "lebanondebate", name: "Lebanon Debate", lean: "gulf", every: 5, lebaneseMedia: true },
   // Iraq's state agency (user, 22 Oct): its site turns the server away (403); its channel posts each story's headline.
   { id: "inainaiq", name: "INA", lean: "gulf", every: 5, iraqiMedia: true },
+  // The prime minister's media office posts each statement here first (22 Oct); Facebook turns the server away.
+  { id: "IraqiPMO", name: "Iraq's prime minister's office", lean: "gulf", every: 5, iraqiMedia: true },
+  // The army's own channel, often before its X account.
+  { id: "IDFofficial", name: "IDF", lean: "israel", every: 5 },
   // Russia's own voice (user, 22 Oct: Lavrov's words were found 0 times in 35): the foreign ministry and its spokeswoman.
   { id: "MID_Russia", name: "Russia Foreign Ministry", lean: "intl", every: 15 },
   { id: "MariaVladimirovnaZakharova", name: "Maria Zakharova", lean: "intl", every: 15 },
@@ -283,6 +289,10 @@ export const IRAN_X: IranSource[] = [
   { id: "IDFFarsi", name: "IDF Farsi", lean: "israel", every: 10 },
   { id: "CaptainElla1", name: "Ella Waweya (IDF Arabic spokesperson)", lean: "israel", every: 10 },
   { id: "avichayadraee", name: "Avichay Adraee", lean: "israel", every: 30 },
+  // The prime minister and his ministers on their own accounts (user, 22 Oct: their words from them first).
+  { id: "netanyahu", name: "Benjamin Netanyahu", lean: "israel", every: 10 },
+  { id: "Israel_katz", name: "Israel Katz", lean: "israel", every: 15 },
+  { id: "gidonsaar", name: "Gideon Sa'ar", lean: "israel", every: 15 },
   // The US.
   { id: "RadioFarda_", name: "Radio Farda", lean: "us", every: 10 },
   { id: "USEmbMuscat", name: "US Embassy Muscat", lean: "us", every: 30 },
@@ -317,6 +327,9 @@ export const IRAN_X: IranSource[] = [
   { id: "MIshaqDar50", name: "Ishaq Dar (Pakistan's foreign minister)", lean: "intl", every: 15 },
   { id: "PakPMO", name: "Pakistan's prime minister's office", lean: "intl", every: 15 },
   { id: "CMShehbaz", name: "Shehbaz Sharif", lean: "intl", every: 15 },
+  // Iraq's prime minister's media office and the government (user, 22 Oct): al-Zaidi's words from his own office first.
+  { id: "IraqiPMO", name: "Iraq's prime minister's office", lean: "gulf", every: 10 },
+  { id: "IraqiGovt", name: "Iraqi government", lean: "gulf", every: 15 },
   // Lebanese papers whose sites turn the server away (user, 18 Oct): their posts carry each story's headline.
   { id: "NidaaWatan", name: "Nidaa al-Watan", lean: "gulf", every: 15 },
   { id: "AddiyarNews", name: "Ad-Diyar", lean: "axis", every: 15 },
@@ -341,6 +354,10 @@ export const SHARED_RSS: Record<string, IranLean> = {
   "Al-Modon": "gulf",
   "Nidaa al-Watan": "gulf",
   "Ad-Diyar": "axis",
+  // Lebanon Debate, Elnashra and Al-Joumhouria (user, 22 Oct): Beirut's independent sites, close to none of the axis.
+  "Lebanon Debate": "gulf",
+  Elnashra: "gulf",
+  "Al-Joumhouria": "gulf",
   "Erem News": "gulf",
   Alhurra: "us",
   SPA: "gulf",
@@ -458,7 +475,7 @@ export const ISRAELI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG, ...IRAN_R
 // cabinet's talks over Hezbollah's arms (22 Oct) was held to the Iran-war words and never reached the desk.
 export const LEBANESE_MEDIA: ReadonlySet<string> = new Set([
   ...IRAN_TG.filter((s) => s.lebaneseMedia).map((s) => s.name),
-  ...["NNA", "Al-Akhbar", "Al Mayadeen", "Ad-Diyar", "Al-Modon", "Nidaa al-Watan"],
+  ...["NNA", "Al-Akhbar", "Al Mayadeen", "Ad-Diyar", "Al-Modon", "Nidaa al-Watan", "Elnashra", "Al-Joumhouria"],
 ]);
 export const IRAQI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG.filter((s) => s.iraqiMedia).map((s) => s.name), ...["Naya", "Sabereen News", "Shajab News"]]);
 

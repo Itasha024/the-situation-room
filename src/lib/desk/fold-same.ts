@@ -24,7 +24,7 @@ import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
 import { headWords, speechOwner, wordsInCommon } from "./copies.ts";
 import { isAggregator } from "./credibility.ts";
 import { sameOutlet } from "./originals.ts";
-import { countryIn, firstHand, isRelayChannel, pressOf } from "./state-press.ts";
+import { LATER_RANK, countryIn, firstHand, isRelayChannel, pressOf } from "./state-press.ts";
 import { officialVoice } from "./speaker-press.ts";
 import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteTakesLead } from "./site-articles.ts";
 
@@ -905,7 +905,7 @@ function appendLine(text: string, line: string): string {
 }
 /**
  * Is `copy` nearer the story's source than `home`? The outlet `home` cites is; the speaker's own
- * country's media are over anyone else's; anyone who reports is over a relay channel, unless the
+ * country's media are over anyone else's (PRESS_LATER after them); anyone who reports is over a relay channel, unless the
  * channel tells it first-hand (its exclusive, sirens, a strike: user, 22 Oct).
  */
 type Teller = { source: string; summary: string; citing?: unknown; flags?: string[] };
@@ -915,7 +915,13 @@ export function moreOriginal(copy: Teller, home: Teller): boolean {
   if (cites(copy) && sameOutlet(home.source, cites(copy))) return false;
   const speaker = /^([^:"“]{3,90}):\s/.exec(String(home.summary || "").trim())?.[1];
   const country = speaker ? countryIn(speaker) : undefined;
-  const rank = (c: Teller) => ((isRelayChannel(c.source) && !firstHand(c)) || isAggregator(c.source) ? 0 : country && pressOf(c.source, country) >= 0 ? 2 : 1);
+  // The country's own media first; then its later tier (Iran's opposition, an American relay of a US official), a relay channel or not (user, 22 Oct).
+  const rank = (c: Teller) => {
+    const p = country ? pressOf(c.source, country) : -1;
+    if (p >= 0 && p < LATER_RANK) return 3;
+    if (p >= LATER_RANK) return 2;
+    return (isRelayChannel(c.source) && !firstHand(c)) || isAggregator(c.source) ? 0 : 1;
+  };
   return rank(copy) > rank(home);
 }
 

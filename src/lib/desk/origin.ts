@@ -52,7 +52,7 @@ import {
 import type { DeskId } from "../desks.ts";
 import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
 import { ownRead, ownedBy, recentReads } from "./recent-reads.ts";
-import { PRESS_LANGS, countryIn, earlierTellers, firstHand, isRelayChannel, leadCountry, pressCandidates, pressOf } from "./state-press.ts";
+import { LATER_RANK, PRESS_LANGS, countryIn, earlierTellers, firstHand, isRelayChannel, leadCountry, pressCandidates, pressOf } from "./state-press.ts";
 import { siteAlsoOnly } from "./site-articles.ts";
 import { officialVoice } from "./speaker-press.ts";
 
@@ -159,6 +159,10 @@ const CITABLE: [RegExp, Cited][] = [
   [/(?:موقع|صحيفة|جريدة)\s+[«"]?المدن|[«"]المدن[»"]|Al-?Modon/i, O("Al-Modon", "almodon.com", "LB", { lang: "ar" })],
   [/نداء الوطن|Nidaa al-Watan|Nidaa Al Watan/i, O("Nidaa al-Watan", "nidaalwatan.com", "LB", { lang: "ar" })],
   [/(?:صحيفة|جريدة)\s+[«"]?الديار|[«"]الديار[»"]|Ad-?Diyar|Al-Diyar/i, O("Ad-Diyar", "addiyar.com", "LB", { lang: "ar" })],
+  // Three more (user, 22 Oct). Bare "النشرة" is "the bulletin" and "الجمهورية" "the republic": only the site or paper.
+  [/ليبانون ديبايت|Lebanon ?Debate/i, O("Lebanon Debate", "lebanondebate.com", "LB", { lang: "ar" })],
+  [/موقع\s+[«"]?النشرة|[«"]النشرة[»"]|El-?Nashra|Al-Nashra/i, O("Elnashra", "elnashra.com", "LB", { lang: "ar" })],
+  [/(?:صحيفة|جريدة)\s+[«"]?الجمهورية(?! الإسلامية)|[«"]الجمهورية[»"]|Al-?Joumhouria|Al-Jumhuriya/i, O("Al-Joumhouria", "aljoumhouria.com", "LB", { lang: "ar" })],
   [/وزارة الدفاع السعودية|الدفاع السعودية|Saudi (?:Defen[cs]e|defen[cs]e) Ministry|Saudi Ministry of Defen[cs]e/i, B("Saudi Defense Ministry", "spa.gov.sa", "SA")],
   [/المتحدث (?:الرسمي )?باسم (?:قوات )?التحالف|تحالف دعم الشرعية|coalition spokesman/i, B("Coalition (SPA)", "spa.gov.sa", "SA")],
   [/الخارجية السعودية|Saudi (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Saudi Foreign Ministry", "spa.gov.sa", "SA")],
@@ -949,7 +953,8 @@ export function foreignOfficial(summary: string, source: string): Cited | null {
   const lead = /^([^:"“]{4,80}):\s/.exec(String(summary || "").trim())?.[1];
   if (!lead || !ROLE_WORD.test(lead)) return null;
   const country = countryIn(lead);
-  if (!country || pressOf(source, country) >= 0) return null;
+  const p = country ? pressOf(source, country) : -1;
+  if (!country || (p >= 0 && p < LATER_RANK)) return null;
   return { name: lead, site: "", lang: "en", kind: "official", country };
 }
 

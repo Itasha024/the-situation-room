@@ -34,10 +34,13 @@ export const STATE_PRESS: Record<string, string[]> = {
   IR: [
     "Khamenei's office", "Iran's Supreme National Security Council", "Iran Foreign Ministry", "IRNA", "IRIB News", "Tasnim", "Fars News",
     "Mehr News", "ISNA", "ILNA", "IMNA", "Mizan", "Press TV", "Tehran Times", "Nour News", "SNN", "Al-Alam", "Atomic Energy Organization of Iran", "IRGC Navy",
+    // Every regime outlet the site reads is above (user, 22 Oct: "why not the rest"); its relay channels
+    // (Khabar Fori, Akhbar-e Fori, Tehran Fori) never are: they tell others' news.
     ...IRAN_OFFICIAL_ACCOUNTS,
   ],
-  LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "Hezbollah War Media", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon"],
-  IQ: ["Iraq Foreign Ministry", "INA", "Iraqi News Agency", "Iraqi government", "Naya", "Sabereen News", "Shajab News", "Shafaq News", "Iraqinews", "Rudaw", "Kurdistan24", "Al-Sumaria", "Baghdad Today"],
+  LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "Hezbollah War Media", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon", "Lebanon Debate", "Elnashra", "Al-Joumhouria"],
+  // The prime minister's own office and the government, the state agency, then Iraq's outlets (user, 22 Oct).
+  IQ: ["Iraq's prime minister's office", "Iraqi government", "Iraq Foreign Ministry", "INA", "Iraqi News Agency", "Shafaq News", "Iraqinews", "Rudaw", "Kurdistan24", "Al-Sumaria", "Baghdad Today"],
   QA: ["Emir of Qatar", "Qatar's Amiri Diwan", "Qatar's prime minister", "Majed al-Ansari", "QNA", "Qatar Foreign Ministry", "Al Jazeera"],
   OM: ["Oman News Agency", "Badr Albusaidi", "Oman Foreign Ministry"],
   AE: ["WAM", "Abu Dhabi Media Office", "Dubai Media Office", "Anwar Gargash", "UAE emergency authority", "UAE Foreign Ministry", "The National"],
@@ -50,11 +53,12 @@ export const STATE_PRESS: Record<string, string[]> = {
   TR: ["Turkey Foreign Ministry", "Anadolu", "TRT"],
   EG: ["Egypt Foreign Ministry", "Egyptian presidency", "Al-Ahram"],
   US: [
-    "White House", "Truth Social (Trump)", "State Department", "Pentagon", "CENTCOM", "Treasury", "Scott Bessent", "Marco Rubio", "Pete Hegseth",
-    "Reuters", "AP", "Bloomberg", "WSJ", "NYT", "Washington Post", "Axios", "CNN", "CBS", "NBC News", "ABC", "Fox News", "Politico",
+    "White House", "Truth Social (Trump)", "Donald Trump", "Rapid Response 47", "JD Vance", "State Department", "Pentagon", "CENTCOM", "Treasury", "Scott Bessent", "Marco Rubio", "Pete Hegseth",
+    "Reuters", "AP", "Bloomberg", "WSJ", "NYT", "Washington Post", "Axios", "CNN", "CBS", "NBC News", "ABC", "Fox News", "Politico", "NY Post", "Newsmax",
   ],
   UK: ["UK Foreign Office", "Downing Street", "UKMTO", "BBC", "The Telegraph", "The Guardian", "Financial Times", "The Times", "Sky News"],
-  IL: ["Israel PM Office", "IDF", "IDF Farsi", "IDF Arabic", "Avichay Adraee", "Ella Waweya", "Mossad Farsi", "N12", "Kan", "Channel 13", "Channel 14", "Ynet", "Walla", "Haaretz", "Israel Hayom", "Jerusalem Post", "i24 News"],
+  // The prime minister and his ministers on their own accounts first (user, 22 Oct), then the army, then the Hebrew press.
+  IL: ["Israel PM Office", "Benjamin Netanyahu", "Israel Katz", "Gideon Sa'ar", "IDF", "IDF Farsi", "IDF Arabic", "Avichay Adraee", "Ella Waweya", "Mossad Farsi", "N12", "Kan", "Channel 13", "Channel 14", "Ynet", "Walla", "Haaretz", "Israel Hayom", "Jerusalem Post", "i24 News"],
   YE: ["Al-Masirah", "Saba", "Yahya Saree", "Houthi Armed Forces"],
   SY: ["SANA", "Syria Foreign Ministry"],
   JO: ["Petra", "Jordan Foreign Ministry"],
@@ -62,6 +66,21 @@ export const STATE_PRESS: Record<string, string[]> = {
   DE: ["Germany Foreign Office", "DW"],
   IT: ["ANSA", "Italy Foreign Ministry"],
 };
+
+/**
+ * Where to look once the country's own media have not told it (user, 22 Oct): Iran's opposition media
+ * after the regime's; Iraq's militia channels after the state's; any American outlet or relay that
+ * carries a US official's words whole (Clash Report too); the Gulf's news channels after Saudi Arabia's.
+ */
+export const PRESS_LATER: Record<string, string[]> = {
+  IR: ["Iran International", "Manoto", "Radio Farda", "VOA Farsi", "BBC Persian", "IranWire", "Vahid Online", "Reza Pahlavi", "Ilia Hashemi", "United Students", "MEK", "NCRI"],
+  IQ: ["Naya", "Sabereen News", "Shajab News", "Al-Mihwar", "Alfaqaar"],
+  US: ["Barak Ravid", "Natasha Bertrand", "Trey Yingst", "Jennifer Griffin", "Alhurra", "VOA Farsi", "Radio Farda", "Clash Report", "OSINTdefender"],
+  SA: ["Al Hadath", "Sky News Arabia", "Asharq News", "Saudi News", "Al Jazeera", "Erem News"],
+  IL: ["Amit Segal", "Israel 1", "Hazfon 1", "US2020US", "Kan (Arab affairs)"],
+};
+/** Ranks from here on are the later tier's. */
+export const LATER_RANK = 500;
 
 /** The languages a country's own media write in, beyond English. */
 export const PRESS_LANGS: Record<string, string[]> = {
@@ -99,8 +118,8 @@ export function firstHand(t: { summary?: string; text?: string; flags?: string[]
 export const ROLE_COUNTRY: [RegExp, string][] = [
   [/\b(?:Iranian|Iran's|IRGC|Iran|SNSC|Tehran|Khamenei|Pezeshkian|Araghchi|Baghaei|Ghalibaf|Larijani|Rezaei|Gharibabadi|Khatibzadeh|Mohajerani)\b/, "IR"],
   [/\b(?:Russian|Russia's|Russia|Kremlin|Lavrov|Zakharova|Putin|Peskov)\b/, "RU"], [/\b(?:Iraqi|Iraq's|Iraq|PMF|Kataib Hezbollah|Nujaba|al-Zaidi)\b/, "IQ"],
-  [/\b(?:Lebanese|Lebanon's|Lebanon|Hezbollah|Berri|Aoun|Nawaf Salam|Qassem|Raggi)\b/, "LB"], [/\b(?:Qatari|Qatar's)\b/, "QA"], [/\b(?:Pakistani|Pakistan's)\b/, "PK"], [/\b(?:Saudi)\b/, "SA"],
-  [/\b(?:Omani|Oman's)\b/, "OM"], [/\b(?:Emirati|UAE)\b/, "AE"], [/\b(?:Israeli|Israel's|IDF)\b/, "IL"], [/\b(?:US|American|Pentagon|White House)\b/, "US"],
+  [/\b(?:Lebanese|Lebanon's|Lebanon|Hezbollah|Berri|Aoun|Nawaf Salam|Qassem|Raggi)\b/, "LB"], [/\b(?:Qatari|Qatar's)\b/, "QA"], [/\b(?:Pakistani|Pakistan's)\b/, "PK"], [/\b(?:Saudi|Faisal bin Farhan|bin Salman|MBS)\b/, "SA"],
+  [/\b(?:Omani|Oman's)\b/, "OM"], [/\b(?:Emirati|UAE)\b/, "AE"], [/\b(?:Israeli|Israel's|IDF|Netanyahu|Katz|Sa'?ar|Zamir|Herzog)\b/, "IL"], [/\b(?:US|American|Pentagon|White House|Trump|Vance|Rubio|Hegseth|Witkoff|Bessent|Leavitt|CENTCOM)\b/, "US"],
   [/\b(?:Turkish|Turkey's)\b/, "TR"], [/\b(?:Chinese|China's)\b/, "CN"], [/\b(?:Egyptian|Egypt's)\b/, "EG"], [/\b(?:Syrian|Syria's)\b/, "SY"], [/\b(?:Houthi)\b/, "YE"],
 ];
 
@@ -122,16 +141,19 @@ export function leadCountry(summary: string): string | undefined {
 
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
-/** Is this source one of the country's own media? */
+/** Is this source one of the country's own media? Its place in the list, or LATER_RANK and on for the later tier, or -1. */
 export function pressOf(source: string, country: string): number {
-  const names = STATE_PRESS[country] ?? [];
   const s = norm(source);
   // The list's order is its rank: the state's own channels before its outlets.
-  const i = names.findIndex((n) => {
-    const x = norm(n);
-    return x.length >= 2 && (s === x || s.startsWith(`${x} `) || (x.length >= 4 && s.startsWith(x)));
-  });
-  return i;
+  const at = (names: string[]) =>
+    names.findIndex((n) => {
+      const x = norm(n);
+      return x.length >= 2 && (s === x || s.startsWith(`${x} `) || (x.length >= 4 && s.startsWith(x)));
+    });
+  const i = at(STATE_PRESS[country] ?? []);
+  if (i >= 0) return i;
+  const j = at(PRESS_LATER[country] ?? []);
+  return j >= 0 ? LATER_RANK + j : -1;
 }
 
 /** Persian and Arabic digits as Latin, and Persian letters as the Arabic ones, so figures and names match. */
@@ -179,7 +201,7 @@ export function earlierTellers(
     const rank = o.country ? pressOf(r.source, o.country) : -1;
     out.push({ ...r, own: false, rank: rank < 0 ? 999 : rank, hits });
   }
-  return out.sort((a, b) => +(a.rank === 999) - +(b.rank === 999) || b.hits - a.hits || a.at - b.at).slice(0, n);
+  return out.sort((a, b) => tier(a.rank) - tier(b.rank) || b.hits - a.hits || a.at - b.at).slice(0, n);
 }
 
 /**
@@ -206,5 +228,8 @@ export function pressCandidates(
     if (hits < 2) continue;
     out.push({ ...r, own, rank, hits });
   }
-  return out.sort((a, b) => +b.own - +a.own || b.hits - a.hits || a.rank - b.rank || a.at - b.at).slice(0, n);
+  return out.sort((a, b) => +b.own - +a.own || tier(a.rank) - tier(b.rank) || b.hits - a.hits || a.rank - b.rank || a.at - b.at).slice(0, n);
 }
+
+/** The speaker's own and his state's media, then the later tier, then anyone (user, 22 Oct: "first … then … then"). */
+const tier = (rank: number) => (rank < 0 ? 0 : rank < LATER_RANK ? 1 : rank < 999 ? 2 : 3);

@@ -465,6 +465,9 @@ const RSS: RssFeed[] = [
   { id: "almodon", lang: "ar", url: "https://www.almodon.com/rss", name: "Al-Modon", cadence: C10, whole: true, site: "almodon.com" },
   { id: "nidaalwatan", lang: "ar", url: gnews("site:nidaalwatan.com when:2h", "ar", "LB", "LB:ar"), name: "Nidaa al-Watan", cadence: C10, whole: true, site: "nidaalwatan.com" },
   { id: "addiyar", lang: "ar", url: gnews("site:addiyar.com when:2h", "ar", "LB", "LB:ar"), name: "Ad-Diyar", cadence: C10, whole: true, site: "addiyar.com" },
+  // Elnashra and Al-Joumhouria (user, 22 Oct) answer the server with Cloudflare's check too: Google News lists them.
+  { id: "elnashra", lang: "ar", url: gnews("site:elnashra.com when:2h", "ar", "LB", "LB:ar"), name: "Elnashra", cadence: C10, whole: true, site: "elnashra.com" },
+  { id: "aljoumhouria", lang: "ar", url: gnews("site:aljoumhouria.com when:2h", "ar", "LB", "LB:ar"), name: "Al-Joumhouria", cadence: C10, whole: true, site: "aljoumhouria.com" },
   { id: "erem", lang: "ar", url: gnews("site:eremnews.com when:2h", "ar", "AE", "AE:ar"), name: "Erem News", cadence: C10, whole: true, site: "eremnews.com" },
   { id: "alhurra", lang: "ar", url: "https://www.alhurra.com/rss", name: "Alhurra", cadence: C5, whole: true, site: "alhurra.com" },
   { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C5, whole: true, site: "arabnews.com" },

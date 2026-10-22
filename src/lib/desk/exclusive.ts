@@ -34,6 +34,10 @@ const OWN_NAMES: Record<string, { en: string[]; ar: string[] }> = {
   "Al-Modon": { en: ["Al-Modon", "Almodon", "Al Modon"], ar: ["المدن"] },
   "Nidaa al-Watan": { en: ["Nidaa al-Watan", "Nidaa Al Watan"], ar: ["نداء الوطن"] },
   "Ad-Diyar": { en: ["Ad-Diyar", "Addiyar", "Al-Diyar"], ar: ["الديار"] },
+  // And three more (user, 22 Oct).
+  "Lebanon Debate": { en: ["Lebanon Debate", "LebanonDebate"], ar: ["ليبانون ديبايت"] },
+  Elnashra: { en: ["Elnashra", "El Nashra", "Al-Nashra"], ar: ["النشرة"] },
+  "Al-Joumhouria": { en: ["Al-Joumhouria", "Al Joumhouria", "Aljoumhouria", "Al-Jumhuriya"], ar: ["الجمهورية"] },
   Alhurra: { en: ["Alhurra", "Al-Hurra", "Al Hurra"], ar: ["الحرة"] },
   "Arab News": { en: ["Arab News"], ar: ["عرب نيوز"] },
   // Their websites (18 Oct); their channels are posts, not sites, and pass as before.

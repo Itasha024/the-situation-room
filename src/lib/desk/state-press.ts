@@ -36,8 +36,8 @@ export const STATE_PRESS: Record<string, string[]> = {
     "Mehr News", "ISNA", "ILNA", "IMNA", "Mizan", "Press TV", "Tehran Times", "Nour News", "SNN", "Al-Alam", "Atomic Energy Organization of Iran", "IRGC Navy",
     ...IRAN_OFFICIAL_ACCOUNTS,
   ],
-  LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon"],
-  IQ: ["Iraq Foreign Ministry", "INA", "Iraqi News Agency", "Iraqi government", "Naya", "Shafaq News", "Iraqinews", "Rudaw", "Kurdistan24", "Al-Sumaria", "Baghdad Today"],
+  LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "Hezbollah War Media", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon"],
+  IQ: ["Iraq Foreign Ministry", "INA", "Iraqi News Agency", "Iraqi government", "Naya", "Sabereen News", "Shajab News", "Shafaq News", "Iraqinews", "Rudaw", "Kurdistan24", "Al-Sumaria", "Baghdad Today"],
   QA: ["Emir of Qatar", "Qatar's Amiri Diwan", "Qatar's prime minister", "Majed al-Ansari", "QNA", "Qatar Foreign Ministry", "Al Jazeera"],
   OM: ["Oman News Agency", "Badr Albusaidi", "Oman Foreign Ministry"],
   AE: ["WAM", "Abu Dhabi Media Office", "Dubai Media Office", "Anwar Gargash", "UAE emergency authority", "UAE Foreign Ministry", "The National"],
@@ -76,7 +76,7 @@ export const PRESS_LANGS: Record<string, string[]> = {
  * outlets that do report, except what they tell first-hand (firstHand below).
  */
 const RELAY_CHANNELS =
-  /^(?:Khabar Fori|Khabari Plus|Akhbar-e Fori|Tehran Fori|Unews|Emtedad|Tasnim \(Arabic relay\)|Axis military relay|Sabereen News|Ali Bk|Al-Mihwar|Alfaqaar|Shajab News|Bin Saeed|Saudi News|Al-Yemen Now|Clash Report|OSINT ?defender|OSINT Hexagone|Egypt OSINT|Shin Persian|War Cube|Sentdefender)$/i;
+  /^(?:Khabar Fori|Khabari Plus|Akhbar-e Fori|Tehran Fori|Unews|Tasnim \(Arabic relay\)|Axis military relay|Sabereen News|Ali Bk|Al-Mihwar|Alfaqaar|Shajab News|Bin Saeed|Saudi News|Al-Yemen Now|Clash Report|OSINT ?defender|OSINT Hexagone|Egypt OSINT|Shin Persian|War Cube|Sentdefender)$/i;
 export const isRelayChannel = (source: string): boolean => RELAY_CHANNELS.test(String(source || "").trim());
 
 /** Sirens, blasts, interceptions, strikes and clashes as they happen: what a channel on the ground tells first. */

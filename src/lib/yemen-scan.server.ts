@@ -112,7 +112,9 @@ const TG: ChannelScan[] = [
   { id: "army21ye", name: "Yahya Saree", lean: "houthi", cadence: C5 },
   { id: "abdulsalamsalah", name: "Mohammed Abdulsalam", lean: "houthi", cadence: C5 },
   { id: "almasirah2", name: "Al-Masirah", lean: "houthi", cadence: C5 },
-  { id: "alagsa3agel", name: "Al-Aqsa TV", lean: "houthi", cadence: C5 },
+  // Not Al-Aqsa TV, as it was long named here: the channel calls itself Al Mashhad Now (المشهد الآن), a
+  // general news channel that also posts Lebanon's weather (checked 22 Oct).
+  { id: "alagsa3agel", name: "Al Mashhad Now", lean: "houthi", cadence: C5 },
   // Their sites refuse automated readers (403); their channels post each
   // story's headline and first line, minutes after publication.
   { id: "Alakhbar_News", name: "Al-Akhbar", lean: "houthi", cadence: C5 },

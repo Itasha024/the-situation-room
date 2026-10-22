@@ -88,7 +88,6 @@ export const IRAN_TG: IranSource[] = [
   { id: "PressTVhebrew", name: "Press TV Hebrew", lean: "axis", every: 15 },
   // Lebanese, Iran-aligned; now and then a scoop of its own.
   { id: "unewschannel", name: "Unews", lean: "axis", every: 5 },
-  // Hezbollah's own statements.
   // An Axis relay channel, not Hezbollah: it reposts the Houthi army and Hebrew media (audit, 8 Oct).
   { id: "C_Military1", name: "Axis military relay", lean: "axis", every: 5 },
   { id: "rahbar_ir", name: "Khamenei's office", lean: "axis", every: 15 },
@@ -126,6 +125,8 @@ export const IRAN_TG: IranSource[] = [
   { id: "bintjbeilnews", name: "Bint Jbeil News", lean: "axis", every: 5, lebaneseMedia: true },
   // The page kept in the name of Al-Manar's south Lebanon reporter, killed in the war: the day's attacks village by village.
   { id: "alichoeib1970", name: "Ali Shoaib's page", lean: "axis", every: 10, lebaneseMedia: true },
+  // Hezbollah's own War Media (الإعلام الحربي): its statements and footage, first-hand (22 Oct).
+  { id: "mmirleb", name: "Hezbollah War Media", lean: "axis", every: 5, lebaneseMedia: true },
   // Iraq's state agency (user, 22 Oct): its site turns the server away (403); its channel posts each story's headline.
   { id: "inainaiq", name: "INA", lean: "gulf", every: 5, iraqiMedia: true },
   // Russia's own voice (user, 22 Oct: Lavrov's words were found 0 times in 35): the foreign ministry and its spokeswoman.

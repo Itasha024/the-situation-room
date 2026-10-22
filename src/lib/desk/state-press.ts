@@ -72,12 +72,28 @@ export const PRESS_LANGS: Record<string, string[]> = {
 
 /**
  * Channels that post others' news, mostly without saying whose (user, 22 Oct: "many times a relay
- * report wont state the og source"): never an original, and their items are looked for among the
- * site's own reads of the outlets that do report.
+ * report wont state the og source"): their items are looked for among the site's own reads of the
+ * outlets that do report, except what they tell first-hand (firstHand below).
  */
 const RELAY_CHANNELS =
   /^(?:Khabar Fori|Khabari Plus|Akhbar-e Fori|Tehran Fori|Unews|Emtedad|Tasnim \(Arabic relay\)|Axis military relay|Sabereen News|Ali Bk|Al-Mihwar|Alfaqaar|Shajab News|Bin Saeed|Saudi News|Al-Yemen Now|Clash Report|OSINT ?defender|OSINT Hexagone|Egypt OSINT|Shin Persian|War Cube|Sentdefender)$/i;
 export const isRelayChannel = (source: string): boolean => RELAY_CHANNELS.test(String(source || "").trim());
+
+/** Sirens, blasts, interceptions, strikes and clashes as they happen: what a channel on the ground tells first. */
+const ON_THE_GROUND =
+  /\b(?:sirens?|explosions?|blasts?|intercept(?:ed|ion|s)?|air ?raid|alarms?|air strikes?|airstrikes?|strikes? (?:on|hit)|struck|shelling|gunfire|clashes|drones? (?:attack|strike|hit|launched)|missiles? (?:launched|fired|hit|attack)|rockets? (?:fired|launched)|attack(?:ed|s)? on)\b|صفارات|انفجار|دوي|اعتراض|غارة|غارات|قصف|استهداف|اشتباكات|آژیر|صدای انفجار|رهگیری|پدافند|אזעק|פיצוץ|יירוט/i;
+
+/**
+ * A relay channel's own news (user, 22 Oct: relays "can be og source if they report an exclusive
+ * thing, or in sirens attacks and stuff like that"): its exclusive, or an attack, siren or blast it
+ * reports, not someone's words ("Araghchi: the attack on…" is a statement, told by his ministry).
+ */
+export function firstHand(t: { summary?: string; text?: string; flags?: string[] }): boolean {
+  const s = String(t.summary || "").trim();
+  if (t.flags?.includes("exclusive") || /\bexclusive\b|حصري|اختصاصی/i.test(s)) return true;
+  if (/^[^:"“]{3,90}:\s/.test(s)) return false;
+  return ON_THE_GROUND.test(s) || (!s && ON_THE_GROUND.test(String(t.text || "").slice(0, 300)));
+}
 
 /** A country's name or adjective at the head of a speaker's role: "Iranian MP", "Iran's deputy FM", "Lavrov". */
 export const ROLE_COUNTRY: [RegExp, string][] = [
@@ -146,10 +162,18 @@ export type PressCandidate = Read & { own: boolean; rank: number; hits: number }
  * the country's own media first, then any outlet that is not itself a relay. Three of its keywords
  * in any language, so a story's surroundings do not match.
  */
-export function earlierTellers(reads: Read[], o: { country?: string; notSource: string }, keys: string[], reportAt: number, n = 5): PressCandidate[] {
+export function earlierTellers(
+  reads: Read[],
+  o: { country?: string; notSource: string; onlyBefore?: boolean },
+  keys: string[],
+  reportAt: number,
+  n = 5,
+): PressCandidate[] {
   const out: PressCandidate[] = [];
   for (const r of reads) {
-    if (r.source === o.notSource || isRelayChannel(r.source) || r.at < reportAt - 12 * 3600_000 || r.at > reportAt + 10 * 60_000) continue;
+    if (r.source === o.notSource || r.at < reportAt - 12 * 3600_000 || r.at > reportAt + (o.onlyBefore ? 0 : 10 * 60_000)) continue;
+    // Another relay's item counts only where it told it first-hand.
+    if (isRelayChannel(r.source) && !firstHand({ text: r.text })) continue;
     const hits = carried(r.text, keys);
     if (hits < 3) continue;
     const rank = o.country ? pressOf(r.source, o.country) : -1;

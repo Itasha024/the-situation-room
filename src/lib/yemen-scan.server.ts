@@ -32,7 +32,7 @@ import { exclusiveUrl } from "./desk/copy-rules.ts";
 import { type OutletSide, homeOutlet, isAggregator, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { pgSafe } from "./desk/store.pg.ts";
-import { type Listed, fetchListing, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
+import { type Listed, fetchListing, inTurn, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { nearerSource, officialVoice } from "./desk/speaker-press.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, IRAN_RATINGS_KEY, IRAN_RATINGS_V, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, iranSide, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
@@ -858,20 +858,8 @@ function toLiveReport(source: string, url: string, rawText: string, at: string, 
 }
 
 export async function fetchText(url: string, ms = 8000): Promise<string | null> {
-  // Sixteen at a time: both scans asked for some 280 pages at once and half of them timed out (22 Oct).
-  // The clock starts when the request goes out, not while it waits its turn.
-  if (pageSlots > 0) pageSlots -= 1;
-  else await new Promise<void>((r) => pageWaiters.push(r));
-  try {
-    return await fetchTextNow(url, ms);
-  } finally {
-    const next = pageWaiters.shift();
-    if (next) next();
-    else pageSlots += 1;
-  }
+  return inTurn(() => fetchTextNow(url, ms));
 }
-let pageSlots = 16;
-const pageWaiters: (() => void)[] = [];
 async function fetchTextNow(url: string, ms: number): Promise<string | null> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -2638,7 +2626,8 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
           // have filled up since the last read and dropped some unseen.
           const inWindow = listed.filter((it) => !Number.isFinite(it.at) || now - it.at <= window).length;
           const rolled = !firstSight && !!lastRead && inWindow >= 20 && fresh === inWindow;
-          state.lastScanAt[`web:${feed.id}`] = Date.now();
+          // A listing that did not answer is due again next tick.
+          if (ok) state.lastScanAt[`web:${feed.id}`] = Date.now();
           status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length, rolled, listed: listed.length, fresh });
           return;
         }
@@ -2656,7 +2645,8 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
         // thing is to make the possibility visible rather than assume it away.
         const times = rows.map((r) => Date.parse(r.at)).filter(Number.isFinite);
         const rolled = !!lastRead && times.length > 0 && Math.min(...times) > lastRead;
-        state.lastScanAt[`web:${feed.id}`] = Date.now();
+        // A listing that did not answer is due again next tick.
+        if (ok) state.lastScanAt[`web:${feed.id}`] = Date.now();
         status.push({ id: feed.id, name: feed.name, kind: "web", ok, cadence: cadenceLabel(feed.cadence), hits: rows.length, rolled });
       })(),
     );

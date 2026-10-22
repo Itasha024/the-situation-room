@@ -72,6 +72,29 @@ export function parseListing(xml: string): Listed[] {
  * client 200.
  */
 export async function fetchListing(url: string, ua = "YemenDesk/2.0 (OSINT desk)", ms = 10_000): Promise<string | null> {
+  return inTurn(() => fetchListingNow(url, ua, ms));
+}
+
+/**
+ * Sixteen pages at a time, every page either scan asks for: both scans asked
+ * for some 280 at once on the small server and half of them timed out (22
+ * Oct). The clock of a request starts when it goes out, not while it waits.
+ */
+export async function inTurn<T>(go: () => Promise<T>): Promise<T> {
+  if (pageSlots > 0) pageSlots -= 1;
+  else await new Promise<void>((r) => pageWaiters.push(r));
+  try {
+    return await go();
+  } finally {
+    const next = pageWaiters.shift();
+    if (next) next();
+    else pageSlots += 1;
+  }
+}
+let pageSlots = 16;
+const pageWaiters: (() => void)[] = [];
+
+async function fetchListingNow(url: string, ua: string, ms: number): Promise<string | null> {
   try {
     const res = await fetch(url, {
       headers: { "user-agent": ua, accept: "application/rss+xml,application/atom+xml,application/xml,text/xml,*/*" },

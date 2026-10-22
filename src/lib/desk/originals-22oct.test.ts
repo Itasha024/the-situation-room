@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { countryIn, earlierTellers, isRelayChannel, leadCountry, pressOf } from "./state-press.ts";
+import { countryIn, earlierTellers, firstHand, isRelayChannel, leadCountry, pressOf } from "./state-press.ts";
 import { moreOriginal } from "./fold-same.ts";
 import { passesIraqiMediaGate, passesLebaneseMediaGate, isIranWar } from "./iran-reader.ts";
 import { msnNames } from "./full-text.ts";
@@ -69,4 +69,30 @@ test("MSN carries the Post, Times of Israel and Newsmax in full", () => {
   assert.ok(msnNames("https://www.washingtonpost.com/world/2026/10/21/x/", "Washington Post"));
   assert.ok(msnNames("https://www.timesofisrael.com/liveblog_entry/x/", "Times of Israel"));
   assert.ok(msnNames("https://www.newsmax.com/world/x/", "Newsmax"));
+});
+
+// User, 22 Oct: relays "can be og source if they report an exclusive thing, or in sirens attacks and stuff like that".
+test("a relay channel's own exclusive, sirens or strike is its own", () => {
+  assert.ok(firstHand({ summary: "Sirens sound in Haifa after launches from Lebanon" }));
+  assert.ok(firstHand({ summary: "Explosions heard in Isfahan; air defence active" }));
+  assert.ok(firstHand({ summary: "Exclusive: IRGC moved missile launchers to the coast" }));
+  assert.ok(firstHand({ summary: "x", flags: ["exclusive"] }));
+  assert.ok(firstHand({ text: "دوي انفجارات في أصفهان" }));
+  assert.ok(!firstHand({ summary: "Araghchi: the attack on our facilities was a crime" }));
+  assert.ok(!firstHand({ summary: "Oil passes $111" }));
+  // A relay telling sirens first keeps the lead over the outlet that told it after.
+  assert.ok(!moreOriginal({ source: "Reuters", summary: "x" }, { source: "Sabereen News", summary: "Sirens sound in Haifa after launches from Lebanon" }));
+  assert.ok(moreOriginal({ source: "Reuters", summary: "x" }, { source: "Sabereen News", summary: "Oil passes $111" }));
+  // Its item is matched only to one who told it before.
+  const at = Date.parse("2026-10-22T10:00:00Z");
+  const keys = ["sirens", "haifa", "launches", "lebanon"];
+  const reads = [{ source: "Al Mayadeen", url: "https://t.me/almayadeen/1", text: "Sirens in Haifa after launches from Lebanon", at: at + 5 * 60_000 }];
+  assert.equal(earlierTellers(reads, { notSource: "Sabereen News", onlyBefore: true }, keys, at).length, 0);
+  assert.equal(earlierTellers(reads, { notSource: "Sabereen News" }, keys, at).length, 1);
+  // Another relay's earlier first-hand item counts as a teller; its relayed words do not.
+  const relays = [
+    { source: "Khabar Fori", url: "https://t.me/khabarfori/1", text: "Sirens in Haifa after launches from Lebanon", at: at - 60_000 },
+    { source: "Akhbar-e Fori", url: "https://t.me/akhbarefori/1", text: "Oil passes $111 a barrel in Asia trade", at: at - 60_000 },
+  ];
+  assert.deepEqual(earlierTellers(relays, { notSource: "Sabereen News" }, keys, at).map((c) => c.source), ["Khabar Fori"]);
 });

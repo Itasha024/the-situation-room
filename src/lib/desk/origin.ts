@@ -52,7 +52,7 @@ import {
 import type { DeskId } from "../desks.ts";
 import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
 import { ownRead, ownedBy, recentReads } from "./recent-reads.ts";
-import { PRESS_LANGS, countryIn, earlierTellers, isRelayChannel, leadCountry, pressCandidates, pressOf } from "./state-press.ts";
+import { PRESS_LANGS, countryIn, earlierTellers, firstHand, isRelayChannel, leadCountry, pressCandidates, pressOf } from "./state-press.ts";
 import { siteAlsoOnly } from "./site-articles.ts";
 import { officialVoice } from "./speaker-press.ts";
 
@@ -678,6 +678,15 @@ export type TraceOptions = {
 const ON_DESK_MS = 72 * 3600_000;
 /** Looks in the site's own reads a tick that reach the model: each is one short call. */
 const PRESS_BUDGET = 12;
+/**
+ * A relay's item with no source is looked for twice, half an hour apart, while under six hours old:
+ * looked for every tick, the misses took the trace's whole time and the hourly retries of released
+ * reports never ran (22 Oct, 25 ticks in a row "out of time").
+ */
+const unnamedTried = new Map<string, { n: number; at: number }>();
+const UNNAMED_TRIES = 2;
+const UNNAMED_GAP_MS = 30 * 60_000;
+const UNNAMED_AGE_MS = 6 * 3600_000;
 
 /** Paths that are never the article itself: video, photo and live pages, a bare front page. */
 // A live blog is many stories under one address: an SNN post of Trump's words was traced to Al Jazeera's
@@ -1242,14 +1251,19 @@ ${lead}`, r.source) || !!r.flags?.includes("exclusive");
    */
   const unnamedOriginal = async (r: LiveReport, text: string): Promise<{ found: Found; keys: string[] } | null> => {
     if (presses <= 0 || !inTime()) return null;
+    const at = Date.parse(r.at);
+    const tried = unnamedTried.get(r.fp);
+    if (!(now - at < UNNAMED_AGE_MS) || (tried && (tried.n >= UNNAMED_TRIES || now - tried.at < UNNAMED_GAP_MS))) return null;
+    unnamedTried.set(r.fp, { n: (tried?.n ?? 0) + 1, at: now });
+    for (const [fp, t] of unnamedTried) if (now - t.at > UNNAMED_AGE_MS) unnamedTried.delete(fp);
     const copy = `${r.summary}\n${r.text ?? ""}`;
     const keys = searchKeys(copy, { name: r.source });
     if (keys.length < 3) return null;
     const country = leadCountry(r.summary) ?? countryIn(copy);
     const langs = [...new Set([...(PRESS_LANGS[country ?? ""] ?? []), ...(/[ء-ي]/.test(text) ? ["Arabic"] : []), ...(country === "IR" || /[پچژگ]/.test(text) ? ["Persian"] : [])])];
     const tr = (await Promise.all(langs.map((l) => translateKeys(keys, l)))).flat();
-    const at = Date.parse(r.at);
-    const cands = earlierTellers(recentReads(now), { country, notSource: r.source }, [...keys, ...(/[ء-ي]/.test(text) ? arabicKeys(text) : []), ...tr], at).filter(
+    // Sirens or a strike the channel reports itself: the original is only one that told it before.
+    const cands = earlierTellers(recentReads(now), { country, notSource: r.source, onlyBefore: firstHand(r) },[...keys, ...(/[ء-ي]/.test(text) ? arabicKeys(text) : []), ...tr], at).filter(
       (c) => c.url !== r.url,
     );
     if (!cands.length) return null;

@@ -219,6 +219,14 @@ function yemenSideRows(present) {
   return YEMEN_PIN_SIDES().filter(([k]) => !YEMEN_GROUND_SIDES.includes(k) && present.has(k))
     .map(([k, c, n]) => sideLegendRow(c, n, yemenSidesOn[k] !== false, `data-side="${k}"`)).join('');
 }
+/* The Who rows filter the pins, never the ground's colours (user, 23 Oct): the Houthis', the government's and Saudi
+   Arabia's rows hide those sides' pins; the other sides have rows of their own. */
+const YEMEN_GROUND_KEY = { houthi: 'houthi', government: 'plc', saudi: 'saudi' };
+function yemenSideShown(ev) {
+  const s = yemenSideOf(ev);
+  const g = YEMEN_GROUND_KEY[s];
+  return yemenSidesOn[s] !== false && (!g || layersOn[g] !== false);
+}
 const yemenInk = (ev) => YEMEN_PIN_SIDES().find(([k]) => k === yemenSideOf(ev))[1];
 /* What happened on the Iran map: the researched pins carry it (map-pack.cjs), the live ones are read the same way. */
 const IRAN_KINDS = ['strike', 'combat', 'vessel', 'port', 'nuclear'];
@@ -5104,7 +5112,8 @@ function controlLayerKey(ctrl) {
   return 'contested';
 }
 
-function controlVisible(ctrl) { return !!layersOn[controlLayerKey(ctrl)]; }
+// The ground's colours always show; the Who rows filter the pins (user, 23 Oct).
+function controlVisible() { return true; }
 
 function styleFeature(feature, byIso) {
   const iso = feature.properties.shapeISO;
@@ -5324,7 +5333,7 @@ function openPinSheet(pin, anchor) {
         drawAdminLayer(m, YEMEN_MAP_SKIP);
       });
       const ymd = jerusalemYmd(pin.at);
-      [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false).forEach((p) => {
+      [...mappableByFp.values()].filter((p) => jerusalemYmd(p.at) === ymd && layersOn[p.mapCat] !== false && yemenSideShown(p)).forEach((p) => {
         const me = p.fp === pin.fp;
         const icon = L.divIcon({ className: 'ev-wrap', html: sidePinHtml(p.mapCat, yemenInk(p), me ? ' pin-pulse' : '', escapeHtml(p.label || '')), iconSize: [34, 42], iconAnchor: [17, 40] });
         L.marker([p.lat, p.lng], { icon, zIndexOffset: me ? 2000 : 0 }).bindPopup(popupHtml(p), { maxWidth: 260, className: popLeanClass(p) }).addTo(m);
@@ -5607,7 +5616,7 @@ function placeMapPin(ev) {
     if (!YEMEN_GROUND_SIDES.includes(pinSide)) setTimeout(() => { try { if (data) renderLegend(data); } catch (e) {} }, 0);
   }
   if (!layersOn[cat]) return;
-  if (yemenSidesOn[pinSide] === false) return;
+  if (!yemenSideShown(ev)) return;
   const key = pinPaintKey(ev);
   if (paintedPinKeys.has(key)) return;
   paintedPinKeys.add(key);
@@ -5684,7 +5693,7 @@ function renderEvents(d) {
     const t = (ev.type || '').toLowerCase();
     const cat = ev.mapCat || classifyForMap(ev.text || ev.label || '', t) || pinCategory(t);
     if (!['strike', 'combat', 'vessel', 'port'].includes(cat)) return;
-    if (!layersOn[cat]) return;
+    if (!layersOn[cat] || !yemenSideShown(ev)) return;
     const key = `${Math.round(ev.lat * 100)},${Math.round(ev.lng * 100)}`;
     if (!atSpot.has(key)) atSpot.set(key, []);
     atSpot.get(key).push({ ...ev, mapCat: cat });
@@ -8050,7 +8059,8 @@ function drawIranAdmin() {
 function iranCountryStyle(f) {
   const side = f && f.properties && f.properties.side;
   const ink = IRAN_PIN_INK[side] || '#94a3b8';
-  const on = iranPins.on[side] !== false;
+  // Always coloured: the Who rows filter the pins, not the countries (user, 23 Oct).
+  const on = true;
   // The Yemen map's look (user, 9 Oct: one style across the site): a solid fill under dark borders.
   return { fillColor: ink, fillOpacity: on ? 0.38 : 0, color: EDGE, weight: 0.8, opacity: on ? 0.75 : 0.15 };
 }

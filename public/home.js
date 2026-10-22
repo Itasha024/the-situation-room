@@ -419,7 +419,7 @@
   const INK = new Map();
   const inkOf = (e) => { const k = e.desk + '|' + e.actor; let c = INK.get(k); if (!c) { c = e.desk === 'iran' ? irInk(e) : yeInk(e); INK.set(k, c); } return c; };
   function ticked(e) {
-    if (e.desk === 'yemen') return yeLayers()[e.cat] !== false && yeSides()[A('yemenSideOf')(e) || 'unclear'] !== false;
+    if (e.desk === 'yemen') return yeLayers()[e.cat] !== false && yeSides()[A('yemenSideOf')(e) || 'unclear'] !== false && A('yemenSideShown')(e) !== false;
     const p = irPins();
     const w = p.where || { land: true, sea: true };
     const sea = !!e.sea || e.cat === 'vessel';

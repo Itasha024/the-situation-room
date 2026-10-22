@@ -33,6 +33,8 @@ import {
   SECOND_LOOK_MODELS,
   OUTLET_LEAD,
   checkReading,
+  dropChannelLabels,
+  fitHeadline,
   colonAfterLead,
   nextPacificMidnight,
   pacificDay,
@@ -149,7 +151,10 @@ const PARALLEL_CALLS = 3;
  * attempted and no model answered (all of them out of quota). Without the
  * second stamp the item came back every single cycle, forever.
  */
-type CacheEntry = { reading: Reading; at: number; second?: boolean; secondTriedAt?: number; loose?: boolean };
+/** `fix`: repairs asked for that no model answered; the item waits for the next cycle's repair (22 Oct). */
+type CacheEntry = { reading: Reading; at: number; second?: boolean; secondTriedAt?: number; loose?: boolean; fix?: number };
+/** Cycles a repair no model answered is asked for again before the item is let go. */
+const FIX_TRIES = 4;
 
 /** Rejected field reports, with what the second look made of them (admin page). */
 export type Missed = { at: string; source: string; url: string; text: string; reason: string; second: string };
@@ -351,11 +356,16 @@ export async function editCandidates(
   const verdicts = new Map<string, EditorVerdict>();
   const readingOf = new Map<string, Reading>();
   const unread: Queued[] = [];
+  // A reading whose repair no model answered goes to the repair again (22 Oct: 30 items in 18 hours,
+  // Fars's whole interview among them, were lost as "unread" after one unanswered repair).
+  const fixes: { c: Queued; note: string }[] = [];
   for (const c of all) {
     const hit = cache[cfg.hash(c.text)];
     if (hit && !stale(hit, c)) {
-      verdicts.set(c.url, cfg.decide(hit.reading, c, !hit.loose));
+      const v = cfg.decide(hit.reading, c, !hit.loose);
+      verdicts.set(c.url, v);
       readingOf.set(c.url, hit.reading);
+      if (hit.fix && v.kind === "reject" && v.reason === "reader-check" && repairable(v.note)) fixes.push({ c, note: v.note });
     } else unread.push(c);
   }
 
@@ -400,7 +410,6 @@ export async function editCandidates(
     r.follows_up = parent && parent.at < Date.parse(c.at) ? parent.fp : "";
     r.duplicate_of = refToFp.get(String(r.duplicate_of || ""))?.fp ?? "";
   };
-  const fixes: { c: Queued; note: string }[] = [];
   if (unread.length && anyReader) {
     try {
       const { reports } = await store.recentDesk(cfg.recentMax ?? RECENT_MAX, undefined, { events: false, desk: cfg.desk });
@@ -518,6 +527,15 @@ export async function editCandidates(
         verdicts.set(c.url, v);
         readingOf.set(c.url, entry.reading);
         setEntry(cfg.hash(c.text), entry);
+      } else if (!second) {
+        // No model answered: the item is not let go on a reading that failed; it waits for the next cycle's repair.
+        const hash = cfg.hash(c.text);
+        const tries = (cache[hash]?.fix ?? 0) + 1;
+        if (tries <= FIX_TRIES) {
+          setEntry(hash, { reading: first, at: now, fix: tries });
+          stillQueued.push(c);
+          outcome = `unread: repair asked again next cycle (${tries} of ${FIX_TRIES})`;
+        }
       }
       missed.unshift({ at: new Date(now).toISOString(), source: c.source, url: c.url, text: c.text.replace(/\s+/g, " ").slice(0, 280), reason: `check: ${note}`, second: outcome });
     });
@@ -900,6 +918,8 @@ ${raw.body}`, c.text) : null;
   if (redundantBody(r.headline, r.body, c.text)) r.body = "";
   const review = r.publish ? reviewReject(r, c, "yemen", strict) : null;
   if (review) return review;
+  // A channel's own labels off; a headline over the limit gives its tail to the body (22 Oct).
+  Object.assign(r, fitHeadline({ headline: dropChannelLabels(r.headline), body: r.body }));
   const problem = checkReading(r, c.text, strict);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
@@ -1198,6 +1218,8 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   r.body = cleanBody(r.body, c.source);
   const rival = r.publish ? rivalRelay(r.headline, c.source, c.lean ?? "", isExclusive(c.text, c.source)) : null;
   if (rival) return { kind: "reject", reason: "reader", note: sentence(rival) };
+  // A channel's own labels off; a headline over the limit gives its tail to the body (22 Oct).
+  Object.assign(r, fitHeadline({ headline: dropChannelLabels(r.headline), body: r.body }));
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);

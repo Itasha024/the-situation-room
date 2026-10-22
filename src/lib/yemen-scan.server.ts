@@ -1616,7 +1616,7 @@ const FOOTAGE_WINDOW_MS = 12 * 3600_000;
 export function linkKey(u: string): string {
   const [base, q] = String(u || "").split("?");
   if (!q) return base;
-  const kept = q.split("&").filter((p) => p && !/^(?:utm_[a-z]+|fbclid|gclid|ref|cmp|outputType|at_[a-z]+)=/i.test(p));
+  const kept = q.split("&").filter((p) => p && !/^(?:utm_[a-z]+|fbclid|gclid|ref|cmp|cmpid|outputType|at_[a-z]+|mod|smid|smtyp|taid|traffic_source|ocid|oc)=/i.test(p));
   return kept.length ? `${base}?${kept.sort().join("&")}` : base;
 }
 
@@ -3067,6 +3067,7 @@ export async function shapeCards(
       knownHost: readsHost,
       cacheKey: pipe.originCacheKey,
       share: pipe.traceShare,
+      desk: pipe.desk,
     });
     // A relay whose original is still being looked for is not published yet.
     for (let i = reports.length - 1; i >= 0; i -= 1) if (held.has(reports[i].fp)) reports.splice(i, 1);

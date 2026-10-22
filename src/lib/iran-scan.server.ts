@@ -26,6 +26,8 @@ import { exclusiveUrl } from "./desk/copy-rules.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
 import { canResolve, cleanUrl, isGnews, knownResolve, outletFromHost, resolvesLeft } from "./desk/gnews.ts";
 import { bingLeft } from "./desk/bing.ts";
+import { articleLink, isPostUrl, msnCopy, ownStory, readerService, unshorten } from "./desk/full-text.ts";
+import { LIVE_BLOG, articleText } from "./desk/origin.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 import { scanTrump } from "./trump-feed.server.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
@@ -112,6 +114,33 @@ const FIRST_SIGHT_MS = 4 * 3600_000;
 const SEEN_KEEP_MS = 3 * 24 * 3600_000;
 /** Articles opened a tick (a teaser is not enough to read). */
 const LEADS_PER_TICK = 40;
+/** Posts a tick whose linked article is opened and read with them. */
+const POST_LINKS_PER_TICK = 8;
+/** Articles a tick whose page refused the server, read from MSN's copy or the reading service. */
+const BLOCKED_PER_TICK = 4;
+
+/**
+ * An article's text: its own page; if that refuses the server, the outlet's
+ * licensed copy on MSN; then the reading service (never for a paywalled site,
+ * whose page there is its teaser too).
+ */
+async function openArticle(url: string, title: string, source: string, ownFirst = true): Promise<string> {
+  let best = "";
+  if (ownFirst) {
+    const html = await fetchText(url, 8000);
+    best = html ? extractLead(html) : "";
+    if (best.length >= 600) return best;
+  }
+  const msn = articleText(await msnCopy(url, title, source));
+  if (msn.length >= 400) return msn;
+  if (!PAYWALL_HOST.test(url)) {
+    const html = await readerService(url);
+    const text = html ? extractLead(html) : "";
+    if (text.length > best.length) best = text;
+  }
+  return best;
+}
+const PAYWALL_HOST = /^https?:\/\/(?:[^/]*\.)?(?:wsj\.com|bloomberg\.com|ft\.com|nytimes\.com|washingtonpost\.com|economist\.com|thetimes\.com|telegraph\.co\.uk|barrons\.com|foreignpolicy\.com)\//i;
 const GNEWS_PER_TICK = 4;
 const PAYLOAD_REPORTS = 300;
 const RAW_HITS = 200;
@@ -337,6 +366,8 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   for (const h of [...own, ...inbox, ...(state.pending ?? [])]) {
     const t = Date.parse(h.at);
     if ((state.seen[h.url] && !rewound(h.url, now)) || (Number.isFinite(t) && now - t > MAX_AGE_MS)) continue;
+    // A whole live blog is many stories under one address: its entries come from their own sources.
+    if (LIVE_BLOG.test(h.url)) continue;
     if (Number.isFinite(t) && t > now + 10 * 60_000) h.at = seenAt;
     const had = byUrl.get(h.url);
     if (!had || h.text.length > had.text.length) byUrl.set(h.url, h);
@@ -371,6 +402,38 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
         opened += 1;
       }),
   );
+  // 4b. The article behind a post, and an article whose page refused the server (user, 22 Oct:
+  //     "if you see a link on x dont just take the 2 sentences in the x post but go to the link").
+  const postOf = new Map<RawHit, string>();
+  let links = POST_LINKS_PER_TICK;
+  let blocked = BLOCKED_PER_TICK;
+  await Promise.allSettled(
+    hits
+      .filter((h) => !isGnews(h.url) && h.text.length < 1500 && passesIranOwnGate(h.text))
+      .map(async (h) => {
+        if (isPostUrl(h.url)) {
+          const link = articleLink(h.text);
+          if (!link || links <= 0) return;
+          links -= 1;
+          const url = cleanUrl(await unshorten(link));
+          if (isPostUrl(url) || !/^https?:\/\/[^/]+\/./.test(url)) return;
+          const outlet = outletFromHost(url);
+          const text = await openArticle(url, h.title || h.text.split("\n")[0], outlet);
+          if (text.length < 300) return;
+          h.text = `${h.text}\n\n[The linked article${outlet ? `, ${outlet}` : ""}]\n${text}`.slice(0, 8600);
+          // An outlet's post of its own story is that story: the card links the article.
+          if (ownStory(url, outlet, h.source)) {
+            postOf.set(h, h.url);
+            h.url = url;
+          }
+          opened += 1;
+        } else if (!h.fromTg && h.text.length < 600 && blocked > 0) {
+          blocked -= 1;
+          const text = await openArticle(h.url, h.title || h.text.split("\n")[0], h.source, false);
+          if (text.length > h.text.length) h.text = `${h.title ?? ""}\n${text}`.trim().slice(0, 8600);
+        }
+      }),
+  );
   // A Google item still on Google's redirect waits for the next tick.
   const readable = hits.filter((h) => !isGnews(h.url));
   for (const h of readable) if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
@@ -396,7 +459,11 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
     score: 1,
     tags: [],
   }));
-  for (const h of readable) state.seen[h.url] = now;
+  for (const h of readable) {
+    state.seen[h.url] = now;
+    const post = postOf.get(h);
+    if (post) state.seen[post] = now;
+  }
   const usage = await store.getJson<Usage>(USAGE_KEY);
   const liteToday = Object.entries(usage?.calls ?? {})
     .filter(([m]) => IRAN_READER.models.includes(m))

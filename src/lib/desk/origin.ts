@@ -22,7 +22,8 @@
  * Code finds the citation and checks the match; no model call is spent.
  */
 
-import { BROWSER_UA, type Edition, type GnewsItem, canResolve, resolveCount, resolveGoogleNews, searchCount, searchGoogleNews } from "./gnews.ts";
+import { BROWSER_UA, type Edition, type GnewsItem, canResolve, cleanUrl, isGnews, resolveCount, resolveGoogleNews, searchCount, searchGoogleNews } from "./gnews.ts";
+import { isShortLink, msnCopy, readerService, unshorten } from "./full-text.ts";
 import { FULL_TEXT_MAX } from "./reader.ts";
 import { LATE_MS, wrongSource, xPostTime } from "./copy-rules.ts";
 import type { DeskStore } from "./store.ts";
@@ -44,8 +45,11 @@ import {
   searchSpeaker,
   speakerNamed,
   translateKeys,
+  sameOutlet,
+  shared,
   whichCarries,
 } from "./originals.ts";
+import type { DeskId } from "../desks.ts";
 import { BODIES, OFFICIAL_BODIES, OFFICIAL_PRESS, UN_BODY } from "./officials.ts";
 import { ownRead } from "./recent-reads.ts";
 import { siteAlsoOnly } from "./site-articles.ts";
@@ -663,10 +667,19 @@ export type TraceOptions = {
    * server's searches only so often, and the Yemen desk's trace keeps the whole.
    */
   share?: number;
+  /** The desk whose own cards a relay is first matched against. */
+  desk?: DeskId;
 };
 
+/** How far back a relay is matched against the desk's own cards of the outlet it cites. */
+const ON_DESK_MS = 72 * 3600_000;
+
 /** Paths that are never the article itself: video, photo and live pages, a bare front page. */
-const NOT_ARTICLE = /\/(?:video|videos|pictures|graphics|live)\//i;
+// A live blog is many stories under one address: an SNN post of Trump's words was traced to Al Jazeera's
+// live blog and rewritten from its other entries as an IRGC commander's (22 Oct).
+const NOT_ARTICLE = /\/(?:video|videos|pictures|graphics|live|liveblog|live-news|live-updates)\//i;
+/** A whole live blog (Al Jazeera's), not one of its entries (Middle East Eye's live-blog-update pages are one each). */
+export const LIVE_BLOG = /\/(?:liveblog|live-news|live-updates)\//i;
 function articlePath(url: string): boolean {
   try {
     const p = new URL(url).pathname;
@@ -894,7 +907,7 @@ export function sameTitle(a: string, b: string): boolean {
 
 /** How each site's original was read, and how often it could not be: the admin record. */
 export const ROUTES_KEY = "origin-routes";
-export type Route = "page" | "copy" | "wayback" | "coverage" | "none";
+export type Route = "page" | "copy" | "msn" | "reader" | "wayback" | "coverage" | "none";
 export type RouteLog = Record<string, { routes: Partial<Record<Route, number>>; lastAt: number; last: Route }>;
 export function logRoute(log: RouteLog, url: string, route: Route, now = Date.now()): void {
   const host = hostOf(url);
@@ -911,6 +924,9 @@ const hostOf = (u: string) => {
     return "";
   }
 };
+
+/** Under this, an article's text in hand is its teaser, not the article. */
+const TEASER_CHARS = 600;
 
 /** Sites that open on a teaser: WSJ, Bloomberg, FT, NYT and the like. */
 const PAYWALLED = /(?:^|\.)(?:wsj\.com|bloomberg\.com|ft\.com|nytimes\.com|washingtonpost\.com|economist\.com|thetimes\.com|telegraph\.co\.uk|barrons\.com|theinformation\.com|foreignpolicy\.com)$/;
@@ -957,14 +973,24 @@ export async function readOriginal(
   note: (r: Route) => void = () => {},
   coverage?: Coverage,
 ): Promise<string> {
-  const own = articleText(await page(f.url));
+  // A short link (nyti.ms, on.wsj.com) is read where it lands.
+  const url = isShortLink(f.url) ? cleanUrl(await unshorten(f.url)) : f.url;
+  const own = articleText(await page(url));
   // A paywalled page opens on its first paragraphs: enough to count as read,
   // not enough to write the whole story from. The other routes are tried too.
-  const enough = PAYWALLED.test(hostOf(f.url)) ? 1500 : 400;
+  const enough = PAYWALLED.test(hostOf(url)) ? 1500 : 400;
   if (own.length >= enough) return note("page"), own;
+  // The outlet's licensed copy on MSN, whole (22 Oct: 123 WSJ reads in a row had come back empty).
+  const msn = f.title ? articleText(await msnCopy(url, f.title, f.source)) : "";
+  if (msn.length >= 400) return note("msn"), msn;
+  // A page that refuses the server's address (state.gov) opens to the reading service; a paywall does not.
+  if (!PAYWALLED.test(hostOf(url)) && !isGnews(url)) {
+    const opened = articleText(await readerService(url));
+    if (opened.length >= enough) return note("reader"), opened;
+  }
   const rest = async () => {
     // A copy the Wayback Machine already holds; a new capture is never asked for.
-    const text = articleText(await page(await archived(f.url)));
+    const text = articleText(await page(await archived(url)));
     if (text.length >= enough) return note("wayback"), text;
     const cover = coverage ? await reconstruct(f, coverage) : "";
     if (cover.length >= enough) return note("coverage"), cover;
@@ -1087,10 +1113,20 @@ export async function traceOrigins(
     reads -= 1;
     dirty = true;
     const cover = e.keys && covers > 0 ? { name: f.source, keys: e.keys, at: Date.parse(r.at) } : undefined;
-    const text = f.text ?? (await readOriginal(f, e.cited ? editionOf(hostOf(f.url), e.cited.lang) : "en", (route) => {
-      logRoute((routes ??= {}), f.url, route, now);
-      if (route === "coverage") covers -= 1;
-    }, cover));
+    const read = (g: Found) =>
+      readOriginal(g, e.cited ? editionOf(hostOf(g.url), e.cited.lang) : "en", (route) => {
+        logRoute((routes ??= {}), g.url, route, now);
+        if (route === "coverage") covers -= 1;
+      }, cover);
+    let text = f.text ?? (await read(f));
+    // An article found in the site's own reads with only its teaser in hand (a Google News item:
+    // headline and outlet) is read in full: the WSJ's cards went out as their teaser (22 Oct).
+    if (f.text && f.text.length < TEASER_CHARS && !/^https:\/\/(?:t\.me|x\.com|twitter\.com)\//.test(f.url)) {
+      const real = isGnews(f.url) && canResolve("trace") ? await resolveGoogleNews(f.url, "trace") : "";
+      if (real) f.url = cleanUrl(real);
+      const whole = await read({ ...f, text: undefined });
+      if (whole.length > text.length) text = whole;
+    }
     if (text.length < (f.text ? 40 : 400)) {
       if (!canResolve("trace")) return; // not the page's fault: tried again next tick
       f.fails = (f.fails ?? 0) + 1;
@@ -1146,10 +1182,47 @@ ${text}`.trim(),
    * elsewhere, its country's press; last, the outlet's own recent articles,
    * read and matched by a model.
    */
-  const find = async (e: Waiting, firstHand = false): Promise<Found | null> => {
+  /**
+   * The cited article already on the desk as its own card (user, 22 Oct: after the WSJ's
+   * "Diplomats race to head off escalation" went out, Bin Saeed, Unews and Al-Araby each
+   * carried a line of it as their own card). A relay of the outlet whose claim one of its
+   * cards of the last three days carries is that card: it is dropped as its copy.
+   */
+  type Card = { fp: string; url: string; at: string; source: string; summary: string; text: string };
+  let deskCards: Card[] | null = null;
+  const onDesk = async (e: Waiting): Promise<Found | null> => {
+    if (e.cited.kind === "group" || !canWork()) return null;
+    if (!deskCards) {
+      try {
+        deskCards = (await store.recentDesk(600, undefined, { events: false, ...(opts.desk ? { desk: opts.desk } : {}) })).reports
+          .map((c) => ({ fp: String(c.fp ?? ""), url: String(c.url ?? ""), at: String(c.at ?? ""), source: String(c.source ?? ""), summary: String(c.summary ?? ""), text: String(c.text ?? "") }))
+          .filter((c) => c.url && now - Date.parse(c.at) <= ON_DESK_MS);
+      } catch {
+        deskCards = [];
+      }
+    }
+    const name = e.cited.speaker ?? e.cited.name;
+    const fits = deskCards
+      .filter((c) => c.url !== e.report.url && c.fp !== e.report.fp && sameOutlet(c.source, name))
+      .map((c) => ({ c, n: shared(`${c.summary}\n${c.text ?? ""}`, e.keys) }))
+      .filter((x) => x.n >= 2)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 3);
+    if (!fits.length) return null;
+    const claim = `${e.report.summary}. ${e.report.text ?? ""}`.trim();
+    const i = await whichCarries(claim, fits.map(({ c }) => `${c.summary}\n${c.text ?? ""}`));
+    if (i < 0) return null;
+    const c = fits[i].c;
+    console.log(`[origin] ${e.report.fp}: a relay of ${c.source}'s card already on the desk (${c.fp})`);
+    return { url: c.url, source: c.source, title: c.summary, readBy: c.fp, text: `${c.summary}\n${c.text ?? ""}` };
+  };
+
+  const findRaw = async (e: Waiting, firstHand = false): Promise<Found | null> => {
     const at = Date.parse(e.report.at);
     const sp = e.cited.speaker ? speakerNamed(e.cited.speaker) : null;
     const owner = sp ? { names: [sp.name], x: sp.x, site: sp.official } : { names: [e.cited.name], x: e.cited.x, site: e.cited.site };
+    const card = await onDesk(e);
+    if (card) return card;
     const read = e.cited.kind === "group" ? null : ownRead(owner, e.keys, at, e.report.url);
     if (read && read.source !== e.report.source) {
       console.log(`[origin] ${e.report.fp}: the original was in the site's own reads: ${read.source}`);
@@ -1180,6 +1253,16 @@ ${text}`.trim(),
     const found = await search(e.cited, e.keys, e.arKeys ?? [], at, claim, firstHand);
     if (found || ours) return found;
     return own();
+  };
+
+  /**
+   * The found original at the address its link lands on (22 Oct: the NYT's nyti.ms link and its
+   * nytimes.com address made two cards of one article, forty minutes apart).
+   */
+  const find = async (e: Waiting, firstHand = false): Promise<Found | null> => {
+    const f = await findRaw(e, firstHand);
+    if (f && isShortLink(f.url)) f.url = cleanUrl(await unshorten(f.url));
+    return f;
   };
 
   /** A found original at an outlet the desk does not read becomes one of its sources. */

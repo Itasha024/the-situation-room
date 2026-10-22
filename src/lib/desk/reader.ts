@@ -372,7 +372,13 @@ ${SPELLING_RULES}
   wounded: "Saudi air strike on Al-Sabrah district in Ibb wounds two people")
   and body is "" (empty). Never a body that says the headline again in more
   words, and never a body just to add a little: a place name, a detail or a
-  casualty figure belongs in the headline.
+  casualty figure belongs in the headline. When the facts do not fit in 110
+  characters, the headline keeps the main one and the body carries the
+  others: never a headline past 110 characters.
+- A channel's labels are not news and never go in the copy: "OSINT",
+  "BREAKING", "URGENT", "عاجل", hashtags. An anonymous account's sighting
+  or claim is told as a report ("Reports of …", "Footage posted online
+  shows …"), never as the desk's fact.
 - A longer item, as a wire story: the headline carries the most important
   facts; the body adds the next ones — detail, figures, context from the
   text — never a rephrasing of the headline. A body earns its place with at
@@ -1291,6 +1297,88 @@ export function thinExclusive(sourceText: string, body: string): boolean {
   return told < 3;
 }
 
+/**
+ * A headline over the limit keeps its main fact and gives the rest to the body
+ * (user, 22 Oct: in 18 hours 95 items were lost to "headline length", the
+ * richest among them — Fars's whole interview with a senior security official
+ * went nowhere while four channels' one-line relays of it went out). Cut at
+ * the last clause break that leaves a full headline; the cut-off part opens
+ * the body unless the body already says it.
+ */
+const HEADLINE_MAX = 140;
+/** "Senior Iranian security official" → "The senior Iranian security official"; "Araghchi", "IRGC", "Iran's FM" stay. */
+function theSpeaker(s: string): string {
+  const a = /^an?\s+(.+)$/i.exec(s);
+  if (a) return `The ${a[1]}`;
+  if (/^the\s/i.test(s) || /^\S+'s\s/.test(s) || !/\s[a-z]/.test(s)) return s;
+  const [first, ...more] = s.split(/\s+/);
+  const keep = /^(?:[A-Z]{2,}|Iranian|Israeli|American|Iraqi|Lebanese|Qatari|Saudi|Emirati|Omani|Pakistani|Russian|Chinese|Turkish|Egyptian|British|French|German|European|Gulf|Arab|Houthi|Hezbollah|Yemeni|Western|Kurdish)$/.test(first);
+  return `The ${keep ? first : first.toLowerCase()} ${more.join(" ")}`;
+}
+const CLAUSE_BREAKS = [/;\s+/g, /\s+[—–]\s+/g, /,\s+(?=(?:and|but|while|as|after|amid|saying|adding|warning|calling|with)\b)/g, /,\s+/g, /\s+(?=(?:as|after|amid|while|and|but)\s)/g];
+export function fitHeadline<T extends Pick<Reading, "headline" | "body">>(r: T): T {
+  const h = String(r.headline || "").trim();
+  if (h.length <= HEADLINE_MAX) return r;
+  for (const re of CLAUSE_BREAKS) {
+    let at = -1;
+    let len = 0;
+    for (const m of h.matchAll(re)) {
+      if (m.index! >= 40 && m.index! <= HEADLINE_MAX - 5) {
+        at = m.index!;
+        len = m[0].length;
+      }
+    }
+    if (at < 0) continue;
+    const head = h.slice(0, at).replace(/[\s,;:—–-]+$/, "");
+    // A quote opened in the headline is closed where it is cut.
+    const quotes = (head.match(/["“”]/g) ?? []).length;
+    const fixedHead = quotes % 2 ? `${head}"` : head;
+    let rest = h.slice(at + len).replace(/^(?:and|but)\s+/i, "").trim();
+    if (!rest) continue;
+    const speaker = /^([^:"“]{2,70}):\s/.exec(head)?.[1];
+    rest = rest.replace(/^["“”]|["“”]$/g, "");
+    const sentence = speaker ? `${theSpeaker(speaker)} also said ${rest}` : `${rest.charAt(0).toUpperCase()}${rest.slice(1)}`;
+    const body = String(r.body || "").trim();
+    const known = new Set(body.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? []);
+    const restWords = rest.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? [];
+    const told = restWords.length > 0 && restWords.filter((w) => known.has(w)).length / restWords.length >= 0.7;
+    return { ...r, headline: fixedHead, body: told ? body : `${sentence.replace(/[.\s]+$/, "")}.${body ? ` ${body}` : ""}` };
+  }
+  return r;
+}
+
+/**
+ * Labels a channel puts on its own post are not the news (user, 22 Oct: "no
+ * need for the word osint … dont copy them from og reports without thinking").
+ * "OSINT: …" loses the label; "OSINT sources report X" is "Reports of X".
+ */
+export function dropChannelLabels(headline: string): string {
+  let h = String(headline || "").trim();
+  h = h.replace(/^(?:OSINT|BREAKING|Breaking|URGENT|Urgent|JUST IN|Just in|ALERT|Alert|FLASH|Flash)\s*[:|—–-]\s*/u, "");
+  h = h.replace(/^(?:OSINT|open[- ]source)\s+(?:sources|accounts|analysts|monitors|researchers)\s+(?:report|say|said|claim|reported)s?\s+(?:that\s+)?/i, "Reports of ");
+  h = h.replace(/\b(?:OSINT|open-source intelligence)\s+(?=(?:sources|accounts|analysts|monitors|researchers|footage|images)\b)/gi, "");
+  h = h.replace(/,\s+(?:OSINT|open-source)\s+(?:sources|accounts)\s+(?:say|said|report|claim)s?$/i, ", accounts online say");
+  return h ? h.charAt(0).toUpperCase() + h.slice(1) : h;
+}
+
+/** A body, not a person: what a text may open with when the state itself speaks. */
+const STATE_TELLER =
+  /^(?:إيران|ايران|ایران|طهران|تهران|الجمهورية الإسلامية|جمهوری اسلامی|الحكومة|دولت|الخارجية|وزارة|وزارت|الحرس|سپاه|الجيش|ارتش|البيت الأبيض|الرئاسة|ریاست|قطر|السعودية|الإمارات|إسرائيل|اسرائیل|العراق|Iran|Tehran|Islamic Republic|Government|Foreign Ministry|Ministry|IRGC|Army|White House)/i;
+const COUNTRY_SAYS = /^(?:Iran|Tehran|Israel|Qatar|Saudi Arabia|the UAE|UAE|Iraq|Oman|Pakistan|Russia|China|the US|US|Washington|Lebanon|Hezbollah)(?:'s government)?\s*(?::|\s(?:says?|said|demands?|warns?|rejects?|insists?|calls?|vows?|threatens?|tells?|urges?|denies)\b)/i;
+/**
+ * One person's words are never the state's (user, 22 Oct: an MP's "we asked
+ * for a high-level delegation to Doha" went out as "Iran says Qatar's
+ * explanations insufficient"). When the text opens with a person and a colon,
+ * a headline that opens with the country is sent back to name the person.
+ */
+export function personAsCountry(headline: string, sourceText: string): string | null {
+  if (!COUNTRY_SAYS.test(headline.trim())) return null;
+  const who = OPENS_WITH_SPEAKER.exec(String(sourceText || ""))?.[1]?.trim() ?? "";
+  if (!who || NOT_A_TELLER.test(who) || STATE_TELLER.test(who) || OUTLET_LEAD.test(`${who}:`)) return null;
+  // An outlet's relay ("فارس عن مسؤول") names its teller further on: the person is still the teller.
+  return `does not lead with its speaker: the text gives one person's words ("${who}"); the headline opens with that person by role and a colon ("Iranian MP: …"), never the country as if the state said it`;
+}
+
 export function checkReading(r: Reading, sourceText: string, strict = true): string | null {
   if (!r.publish) return r.reject_reason || "not publishable";
   const h = String(r.headline || "").trim();
@@ -1320,7 +1408,7 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
     if (lead && !h.toLowerCase().startsWith(lead.toLowerCase())) return "statement does not lead with its speaker";
   }
   if (OUTLET_LEAD.test(h)) return "headline leads with outlet";
-  const unsaid = unattributed(h, r.event_type, sourceText);
+  const unsaid = unattributed(h, r.event_type, sourceText) ?? personAsCountry(h, sourceText);
   if (unsaid) return unsaid;
   const added =SAUDI_SITES.find(([en, src]) => en.test(`${h} ${b}`) && !src.test(sourceText));
   if (added) return `place not in source: ${added[0].source.split("|")[0].replace(/\\b/g, "")} — name only the places the text names`;

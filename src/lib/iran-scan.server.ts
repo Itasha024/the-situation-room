@@ -548,7 +548,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   // 5. A video's spoken words join its post before the reader sees it, as on
   //    the Yemen desk; the Iran desk keeps its own half of the day's listening.
   try {
-    const heard = await listenToVideos(store, readable, now, { worth: (h) => hearable(h) && passesIranOwnGate(h.text), dayKey: "iran:listen-day" });
+    const heard = await listenToVideos(store, readable, now, { worth: (h) => hearable(h) && passesIranOwnGate(h.text), dayKey: "iran:listen-day", daySeconds: 10_000 });
     if (heard) console.log(`[iran] [listen] ${heard} post(s) given their video's words`);
   } catch (err) {
     console.error("[iran] [listen] failed:", err instanceof Error ? err.message : err);

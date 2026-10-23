@@ -60,3 +60,46 @@ test("the desk is listed, hidden, and has its own reader", () => {
   assert.equal(GAZA_READER.queueKey, "gaza:reader-queue");
   assert.equal(GAZA_READER.desk, "gaza");
 });
+
+// User, 23 Oct (round 2): the gate check's misses, the relay rule, the landmarks, one pool, the queue.
+test("the gate check's misses now pass, unrelated news still does not", async () => {
+  const ir = await import("./iran-reader.ts");
+  const { WAR_ONLY } = await import("../yemen-scan.server.ts");
+  assert.ok(ir.isIranDeskItem("مسؤول مطلع مقرب من البحرية التابعة لحرس الثورة الإسلامية: الإجراءات أكثر فتكا"));
+  assert.ok(ir.isIranDeskItem("السفارة الأميركية تأمر جميع الموظفين الأميركيين وعائلاتهم بمغادرة الإمارات"));
+  assert.ok(ir.isIranDeskItem("مصدر أميركي: اختتام اجتماعات تامبا بين لبنان وإسرائيل"));
+  assert.ok(ir.passesIranOwnGate("مصادر لبنانية: قصف مدفعي معادي على بلدة كفرتبنيت"));
+  assert.ok(passesGazaOwnGate("اطلاق نار من الزوارق في بحر مدينة خانيونس"));
+  assert.ok(isGazaDeskItem("وزير الدفاع الإسرائيلي: المخربون ومن يرسلهم سيدفعون ثمنا باهظا"));
+  assert.ok(isGazaDeskItem("ALERT: a drone is above the Freedom Flotilla"));
+  assert.ok(isGazaDeskItem("مستعمرون يحرقون أشجار الزيتون في برقا"));
+  assert.ok(WAR_ONLY.test("وزير الخارجية المصري: ندين الهجمات التي تستهدف السعودية"));
+  for (const s of ["French police: one killed in shooting near Paris", "الشرطة الفرنسية: قتيل في إطلاق نار قرب باريس"]) {
+    assert.ok(!ir.isIranDeskItem(s) && !isGazaDeskItem(s) && !WAR_ONLY.test(s), s);
+  }
+});
+
+test("an Israeli outlet passed on by another is a relay on the Gaza and Iran desks", async () => {
+  const { relayOf } = await import("./copy-rules.ts");
+  assert.ok(relayOf({ headline: "Channel 14: Israel begins demolishing homes in Hebron", source: "Al Jazeera", desk: "gaza" }));
+  assert.ok(relayOf({ headline: "Attackers changed target after reaching Hebron, Yedioth Ahronoth reports", source: "Al Jazeera", desk: "gaza" }));
+  assert.equal(relayOf({ headline: "Israeli forces raid Jenin camp, arrest five", source: "WAFA", desk: "gaza" }), null);
+  assert.equal(relayOf({ headline: "Channel 14: Israel begins demolishing homes", source: "Channel 14", desk: "gaza" }), null);
+});
+
+test("landmarks and the places that only say where they are", () => {
+  const names = (c: string, s: string) => gazaPins(c, s).map((p) => p.name);
+  assert.deepEqual(names("IDF carries out demolition at Kamal Adwan Hospital in northern Gaza", "هدم في مستشفى كمال عدوان شمال غزة"), ["Kamal Adwan Hospital"]);
+  assert.deepEqual(names("Strike near Nasser Medical Complex in Khan Younis", "غارة قرب مجمع ناصر الطبي في خانيونس"), ["Nasser Medical Complex"]);
+});
+
+test("the Gaza desk's queue: official channels first, its colonists are Israeli citizens", async () => {
+  const { gazaTierOf } = await import("./gaza-sources.ts");
+  assert.equal(gazaTierOf("Hamas", () => false), 1);
+  assert.equal(gazaTierOf("Safa", () => false), 2);
+  assert.equal(gazaTierOf("Nuseirat News", () => false), 3);
+  assert.equal(gazaTierOf("Egypt Foreign Ministry", () => true), 1);
+  assert.equal(gazaTierOf("Al Jazeera", () => false), 2);
+  assert.equal(GAZA_READER.nearCopies, true);
+  assert.equal(gazaWords("Colonists burn olive trees in Burqa"), "Israeli extremists burn olive trees in Burqa");
+});

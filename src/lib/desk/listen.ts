@@ -140,7 +140,7 @@ export async function transcribe(src: string): Promise<{ text: string } | { none
  * Write out this scan's videos worth hearing and add their words to the posts,
  * in place. Returns how many posts gained words.
  */
-export async function listenToVideos(store: DeskStore, hits: Hit[], now = Date.now(), opts: { worth?: (h: Hit) => boolean; dayKey?: string } = {}): Promise<number> {
+export async function listenToVideos(store: DeskStore, hits: Hit[], now = Date.now(), opts: { worth?: (h: Hit) => boolean; dayKey?: string; daySeconds?: number } = {}): Promise<number> {
   if (!groqKey()) return 0;
   const DAY_KEY = opts.dayKey ?? YEMEN_DAY_KEY;
   const want = hits.filter(opts.worth ?? worthListening);
@@ -170,7 +170,7 @@ export async function listenToVideos(store: DeskStore, hits: Hit[], now = Date.n
       }
       continue;
     }
-    if (sent >= TICK_FILES || log.files >= DAY_FILES || log.secs >= DAY_SECONDS) continue;
+    if (sent >= TICK_FILES || log.files >= DAY_FILES || log.secs >= (opts.daySeconds ?? DAY_SECONDS)) continue;
     sent += 1;
     const secs = h.media?.duration ?? 60;
     log.files += 1;

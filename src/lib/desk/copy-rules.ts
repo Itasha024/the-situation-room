@@ -123,6 +123,10 @@ const IRANIAN_OUTLET =
   /^(?:IRNA|Tasnim|Fars|ISNA|Mehr|IRIB|Press TV|Nour News|Tehran Times|Al-Alam|ILNA|IMNA|SNN|Khabari Plus|Akhbar-e Fori|Shin Persian|Emtedad|Iran International|VOA Farsi|Radio Farda|Vahid Online|Kayhan|Javan|Entekhab)\b/i;
 const UKMTO_TOLD = /\b(?:UKMTO|UKTMO|UK Maritime Trade|United Kingdom Maritime Trade|British maritime security agency)\b/i;
 
+const HEBREW_OUTLET = String.raw`(?:Israel's |Israeli )?(?:Channel 1[1-4]|Kan(?: News| 11)?|N12|Ynet|Yedioth Ahronoth|Yediot Aharonot|Maariv|Haaretz|Israel Hayom|Walla|i24(?: News)?|Army Radio|Galei Tzahal|Times of Israel|Jerusalem Post|Hebrew media|Israeli media|Israeli Broadcasting Authority)`;
+const HEBREW_OUTLET_LEAD = new RegExp(String.raw`^${HEBREW_OUTLET}\s*:`, "i");
+const HEBREW_OUTLET_TELLS = new RegExp(String.raw`(?:,\s*|\bas\s+|\baccording to\s+)${HEBREW_OUTLET}\s+(?:reports?|reported|says|said)?\s*$|\b(?:according to|citing)\s+${HEBREW_OUTLET}\b`, "i");
+
 export type RelayInput = { headline: string; body?: string; source: string; lean?: string; desk: DeskId; own?: boolean };
 
 /**
@@ -143,6 +147,9 @@ export function relayOf(x: RelayInput): string | null {
   const usLead = (lead && US_VOICE.test(lead) && subjectNation(lead) === "us") || /^(?:the )?(?:US |U\.S\. )?(?:Central Command|CENTCOM|Treasury|State Department|Pentagon|military)\b/.test(h) || /\b(?:CENTCOM|Central Command|Pentagon|US Treasury|State Department|White House) says\b/.test(h);
   if (usLead && mine !== "us") return `relay: the US is told from its own accounts and press, not ${s}`;
   if (lead && ISRAEL_VOICE.test(lead) && subjectNation(lead) === "israel" && mine !== "israel") return `relay: Israel is told from its own sources, not ${s}`;
+  // An Israeli outlet's report passed on by another (23 Oct, Gaza desk: Al Jazeera's "Channel 14: Israel begins
+  // demolishing homes…", "…, Yedioth Ahronoth reports"): the desk reads the Israeli outlets themselves.
+  if (x.desk !== "yemen" && mine !== "israel" && (HEBREW_OUTLET_LEAD.test(h) || HEBREW_OUTLET_TELLS.test(h))) return `relay: the Israeli outlets are read directly, not through ${s}`;
   const iranSpeaks = subjectNation(lead || h) === "iran" || IRAN_ACTOR_WORD.test(lead) || /\b(?:Mokhber|Khatibzadeh|Gharibabadi|Ebnolreza|Velayati|Shamkhani|Qaani|Vahidi|Mousavi|Hatami)\b/.test(lead);
   if (x.desk === "yemen" && IRANIAN_OUTLET.test(s) && !iranSpeaks) return `relay: an Iranian outlet on the Yemen desk tells Iran's own words only, not ${s}'s retelling`;
   return null;

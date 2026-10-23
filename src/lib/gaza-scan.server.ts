@@ -8,7 +8,9 @@
  * (gaza-reader.ts); its cards are this desk's alone ("gz-…", desks ["gaza"]). It runs on its own clock
  * and lock, and reads with the free services the other desks use least.
  */
-import { GAZA_SEARCHES, GAZA_TG, GAZA_X } from "./desk/gaza-sources.ts";
+import { GAZA_SEARCHES, GAZA_TG, GAZA_X, WAFA_SITE } from "./desk/gaza-sources.ts";
+import { hearable, listenToVideos } from "./desk/listen.ts";
+import { runGateAudit, setYemenGate } from "./desk/gate-audit.ts";
 import { isGazaDeskItem, passesGazaOwnGate } from "./desk/gaza-reader.ts";
 import { type Candidate, GAZA_READER, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
@@ -22,7 +24,7 @@ import { bingLeft } from "./desk/bing.ts";
 import { articleLink, isPostUrl, ownStory, unshorten } from "./desk/full-text.ts";
 import { LIVE_BLOG } from "./desk/origin.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
-import { type DeskPipe, shapeCards, GAZA_INBOX, GAZA_PAYLOAD, type RawHit, articleOf, extractLead, fetchText, fpOf, jerusalemIso } from "./yemen-scan.server.ts";
+import { type DeskPipe, shapeCards, GAZA_INBOX, GAZA_PAYLOAD, type RawHit, articleOf, extractLead, fetchText, fpOf, jerusalemIso, WAR_ONLY } from "./yemen-scan.server.ts";
 import { type IranState, openArticle, readFeed, readTg, readX } from "./iran-scan.server.ts";
 
 const STATE_KEY = "gaza:scan-state";
@@ -31,7 +33,10 @@ const FETCH_STATE_KEY = "gaza:fetch-state";
 export const GAZA_TICK_USAGE_KEY = "gaza:tick-usage";
 
 type GazaState = IranState;
-type FetchState = Pick<GazaState, "lastScanAt" | "lastTgPost" | "lastXPost">;
+type FetchState = Pick<GazaState, "lastScanAt" | "lastTgPost" | "lastXPost"> & {
+  /** A site's stories already listed (WAFA's front page): url → when first seen. */
+  web?: Record<string, number>;
+};
 /** A row of the inbox: `own` rows are this desk's sources with their status; the rest come from the other desks' sources. */
 export type GazaInboxRow = { hits: RawHit[]; status?: SourceStatus[]; own?: boolean };
 
@@ -70,7 +75,29 @@ export const GAZA_PIPE: DeskPipe = {
 };
 
 /** This desk's own sources, each on its own clock, and what of theirs passes its gate. */
-export async function fetchGazaSources(state: FetchState, now: number): Promise<{ hits: RawHit[]; status: SourceStatus[] }> {
+/**
+ * WAFA's own site (user, 23 Oct): its front page's stories, each once, by title; the cycle opens each article.
+ * The links are "/news/2026/10/23/<title>", the day in the address.
+ */
+async function readWafa(state: FetchState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
+  const html = await fetchText(WAFA_SITE, 15_000);
+  if (!html) return { rows: [], ok: false };
+  const seen = (state.web ??= {});
+  for (const [u, t] of Object.entries(seen)) if (now - t > 3 * 24 * 3600_000) delete seen[u];
+  const rows: RawHit[] = [];
+  const at = jerusalemIso(new Date(now));
+  for (const m of html.matchAll(/href="(\/news\/(\d{4})\/(\d{2})\/(\d{2})\/[^"]+)"[^>]*>([^<]{12,300})</g)) {
+    const url = new URL(m[1], WAFA_SITE).toString();
+    const title = m[5].replace(/&#xA0;|&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&amp;/g, "&").trim();
+    // Today's and yesterday's only; each once.
+    if (seen[url] || now - Date.parse(`${m[2]}-${m[3]}-${m[4]}T12:00:00+03:00`) > 36 * 3600_000) continue;
+    seen[url] = now;
+    rows.push({ source: "WAFA", url, title, text: title, at, lean: "pa", fromTg: false });
+  }
+  return { rows, ok: true };
+}
+
+export async function fetchGazaSources(state: FetchState, now: number): Promise<{ hits: RawHit[]; status: SourceStatus[]; all: RawHit[] }> {
   const gState = { seen: {}, ...state } as GazaState;
   const status: SourceStatus[] = [];
   const own: RawHit[] = [];
@@ -92,6 +119,7 @@ export async function fetchGazaSources(state: FetchState, now: number): Promise<
   for (const s of GAZA_TG) run(`tg:${s.id}`, s.name, "tg", s.every, () => readTg(s, gState, now));
   for (const s of GAZA_X) run(`x:${s.id}`, s.name, "x", s.every, () => readX(s, gState, now));
   for (const f of GAZA_SEARCHES) run(`web:${f.id}`, f.name, "web", f.every, () => readFeed(f));
+  run("web:wafa", "WAFA (site)", "web", 10, () => readWafa(state, now));
   let next = 0;
   await Promise.allSettled(
     Array.from({ length: SOURCES_AT_ONCE }, async () => {
@@ -99,16 +127,17 @@ export async function fetchGazaSources(state: FetchState, now: number): Promise<
     }),
   );
   remember(own);
-  return { hits: own.filter((h) => passesGazaOwnGate(`${h.title ?? ""} ${h.text}`)), status };
+  // `all`: every item read, for the other desks' gates (user, 23 Oct: one pool of sources).
+  return { hits: own.filter((h) => passesGazaOwnGate(`${h.title ?? ""} ${h.text}`)), status, all: own };
 }
 
 /** The site scan's part for this desk: its own sources read, into its inbox. */
-export async function scanGazaSources(store: Awaited<ReturnType<typeof getStore>>, now: number): Promise<number> {
+export async function scanGazaSources(store: Awaited<ReturnType<typeof getStore>>, now: number): Promise<{ n: number; all: RawHit[] }> {
   const state: FetchState = { lastScanAt: {}, lastTgPost: {}, lastXPost: {}, ...((await store.getJson<FetchState>(FETCH_STATE_KEY)) ?? {}) };
-  const { hits, status } = await fetchGazaSources(state, now);
+  const { hits, status, all } = await fetchGazaSources(state, now);
   await store.putMany(GAZA_INBOX, { [`own-${now}`]: { hits, status, own: true } satisfies GazaInboxRow });
-  await store.putJson(FETCH_STATE_KEY, { lastScanAt: state.lastScanAt, lastTgPost: state.lastTgPost, lastXPost: state.lastXPost });
-  return hits.length;
+  await store.putJson(FETCH_STATE_KEY, { lastScanAt: state.lastScanAt, lastTgPost: state.lastTgPost, lastXPost: state.lastXPost, web: state.web });
+  return { n: hits.length, all };
 }
 
 /** Another desk's items about Gaza or Judea and Samaria, handed to this desk's inbox. */
@@ -207,6 +236,15 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
   for (const h of readable) if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
   state.pending = hits.filter((h) => isGnews(h.url)).slice(0, PENDING_MAX);
 
+  // A video's spoken words join its post before the reader sees it (user, 23 Oct: many of the channels' reports are
+  // videos, Jusoor's above all), within this desk's share of the free listening.
+  try {
+    const heard = await listenToVideos(store, readable, now, { worth: (h) => hearable(h) && passesGazaOwnGate(h.text), dayKey: "gaza:listen-day", daySeconds: 9000 });
+    if (heard) console.log(`[gaza] [listen] ${heard} post(s) given their video's words`);
+  } catch (err) {
+    console.error("[gaza] [listen] failed:", err instanceof Error ? err.message : err);
+  }
+
   // 4. The reader.
   const candidates: Candidate[] = readable.map((h) => ({ source: h.source, url: h.url, text: h.text, at: h.at, lean: h.lean, fp: `gz-${fpOf(h.url, h.text.slice(0, 80))}`, score: 1, tags: [] }));
   for (const h of readable) {
@@ -280,6 +318,13 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
     /* the meter must never cost the tick */
   }
   console.log(`[gaza] ${note} ${Math.round(tookMs / 1000)}s`);
+  // The gates' daily check, all three desks (gate-audit.ts): once a day, or now when asked (json:gate-audit-now).
+  setYemenGate(WAR_ONLY);
+  void (async () => {
+    const asked = !!(await store.getJson<number>("gate-audit-now"));
+    if (asked) await store.putJson("gate-audit-now", 0);
+    await runGateAudit(store, Date.now(), asked);
+  })().catch((err) => console.error("[gate-audit]", err instanceof Error ? err.message : err));
   return { ok: !merge.error, scannedAt: seenAt, sourcesTried: statusAll.length, fromInbox: inbox.length, candidates: candidates.length, reportsAdded: merge.reportsAdded, note, tookMs, ...(merge.error ? { error: merge.error } : {}) };
 }
 

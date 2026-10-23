@@ -66,8 +66,12 @@ export function gazaPins(copy: string, sourceText: string, headline = copy): Gaz
   if (tallyNotEvent(headline)) return [];
   const all = gazaPlacesIn(copy, sourceText);
   // "Yatta, south of Hebron": the second place only says where the first is.
-  const locator = (p: GazaPlace) => new RegExp(String.raw`\b(?:north|south|east|west|north-?east|north-?west|south-?east|south-?west|near|outside|close to)\s+(?:of\s+)?(?:the\s+)?${p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\b`, "i").test(copy);
-  return all.length > 1 ? [all[0], ...all.slice(1).filter((p) => !locator(p))] : all;
+  // "…Kamal Adwan Hospital in northern Gaza": the region is a locator too.
+  const locator = (p: GazaPlace) => new RegExp(String.raw`\b(?:north|south|east|west|north-?east|north-?west|south-?east|south-?west|near|outside|close to|northern|southern|central|eastern|western)\s+(?:of\s+)?(?:the\s+)?${p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\b`, "i").test(copy);
+  // "Nasser Medical Complex in Khan Younis": after a landmark, the town it is in says where it is.
+  const landmark = /\b(?:Hospital|Medical Complex|corridor|crossing|Camp)\b/i.test(all[0]?.name ?? "");
+  const inTown = (p: GazaPlace) => landmark && new RegExp(String.raw`\bin\s+(?:the\s+)?${p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\b`, "i").test(copy);
+  return all.length > 1 ? [all[0], ...all.slice(1).filter((p) => !locator(p) && !inTown(p))] : all;
 }
 
 /** A place for a card stored with none, from its own headline and body. */

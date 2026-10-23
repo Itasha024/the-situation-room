@@ -130,9 +130,10 @@ export const GAZA_PROMPT: ReaderPrompt = { system: GAZA_SYSTEM_PROMPT, schema: G
  */
 export const GAZA_GATE = new RegExp(
   [
-    String.raw`\b(?:Gaza\w*|West Bank|Judea|Samaria|Hamas|Qassam|Islamic Jihad|PIJ|Saraya al-Quds|Al-Quds Brigades|UNRWA|Board of Peace|Mladenov|NCAG|Rafah|Khan Y[ou]nis|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Shuja'?iyya|Zeitoun|Hebron|Jenin|Nablus|Tulkarm|Nur Shams|Balata|Ramallah|Bethlehem|Qalqilya|Tubas|Jericho|Jordan Valley|Kerem Shalom|Zikim|Kissufim|Allenby|settlers?|settlements?|outposts?|Palestinians?|Palestine|Mahmoud Abbas|President Abbas|Hussein al-Sheikh|Fatah|Al-Aqsa|Temple Mount|Popular Forces|Abu Shabab|yellow line|olive harvest|olive pickers)\b`,
+    String.raw`\b(?:Gaza\w*|West Bank|Judea|Samaria|Hamas|Qassam|Islamic Jihad|PIJ|Saraya al-Quds|Al-Quds Brigades|UNRWA|Board of Peace|Mladenov|NCAG|Rafah|Khan Y[ou]nis|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Shuja'?iyya|Zeitoun|Hebron|Jenin|Nablus|Tulkarm|Nur Shams|Balata|Ramallah|Bethlehem|Qalqilya|Tubas|Jericho|Jordan Valley|Kerem Shalom|Zikim|Kissufim|Allenby|settlers?|settlements?|outposts?|Palestinians?|Palestine|Mahmoud Abbas|President Abbas|Hussein al-Sheikh|Fatah|Al-Aqsa|Temple Mount|Popular Forces|Abu Shabab|yellow line|olive harvest|olive pickers|[Ff]lotilla|Homesh|ramming attack|car-ramming)\b`,
     // Not "فتح" ("opened"), "القطاع" ("the sector") or a bare "عباس" (Iran's Araghchi is Abbas too).
-    "غزة|قطاع غزة|الضفة|يهودا|السامرة|حماس|القسام|الجهاد الإسلامي|سرايا القدس|الأونروا|مجلس السلام|ملادينوف|لجنة إدارة غزة|رفح|خان يونس|جباليا|دير البلح|النصيرات|البريج|المغازي|بيت لاهيا|بيت حانون|الشجاعية|الزيتون|الخليل|جنين|نابلس|طولكرم|نور شمس|بلاطة|رام الله|بيت لحم|قلقيلية|طوباس|أريحا|الأغوار|كرم أبو سالم|زيكيم|الكرامة|مستوطن|الاستيطان|مستوطنة|بؤرة|الفلسطيني|فلسطين|محمود عباس|الرئيس عباس|أبو مازن|حسين الشيخ|حركة فتح|الأقصى|القوات الشعبية|أبو شباب|الخط الأصفر|الزيتون|قطف الزيتون",
+    // The gate check of 23 Oct: Khan Younis in one word, Israel's own words for attackers, the flotillas.
+    "غزة|قطاع غزة|خانيونس|الضفة|المخربون|المخربين|مخربين|المخرب|عملية الدهس|عملية دهس|منفذو العمليات|منفذي العمليات|منفذا العملية|منفذي العملية|أسطول الحرية|أسطول الصمود|يهودا|السامرة|حماس|القسام|الجهاد الإسلامي|سرايا القدس|الأونروا|مجلس السلام|ملادينوف|لجنة إدارة غزة|رفح|خان يونس|جباليا|دير البلح|النصيرات|البريج|المغازي|بيت لاهيا|بيت حانون|الشجاعية|الزيتون|الخليل|جنين|نابلس|طولكرم|نور شمس|بلاطة|رام الله|بيت لحم|قلقيلية|طوباس|أريحا|الأغوار|كرم أبو سالم|زيكيم|الكرامة|مستوطن|مستعمر|الاستيطان|مستوطنة|بؤرة|الفلسطيني|فلسطين|محمود عباس|الرئيس عباس|أبو مازن|حسين الشيخ|حركة فتح|الأقصى|القوات الشعبية|أبو شباب|الخط الأصفر|الزيتون|قطف الزيتون",
     "עזה|רצועת|חמאס|יהודה ושומרון|יו\"ש|שומרון|הג'יהאד|פיגוע|מחבל|רפיח|חאן יונס|ג'נין|שכם|טול כרם|רמאללה|חברון|בית לחם|קלקיליה|מתנחל|התנחלות|מאחז|אבו מאזן|הרשות הפלסטינית|הר הבית|אל-אקצא|הקו הצהוב|מסיק",
   ].join("|"),
   "i",
@@ -143,7 +144,7 @@ export const GAZA_GATE = new RegExp(
  * conflict's general words too.
  */
 const GAZA_OWN_GATE = new RegExp(
-  `${GAZA_GATE.source}|\\b(?:IDF|Israel\\w*|strikes?|raids?|arrest\\w*|killed|wounded|shot|shooting|stabbing|ramming|attack\\w*|aid|trucks?|crossings?|ceasefire|truce|demolish\\w*|sanctions?)\\b|الاحتلال|الإسرائيلي|إسرائيل|شهيد|شهداء|إصابة|اقتحام|اعتقال|قصف|غارة|استهداف|هدم|مساعدات|شاحنات|معبر|هدنة|وقف إطلاق النار|عقوبات|צה"ל|צה״ל|ירי|דקירה|דריסה|פיגוע|נעצר|עצורים|הריסה`,
+  `${GAZA_GATE.source}|\\b(?:IDF|Israel\\w*|strikes?|raids?|arrest\\w*|killed|wounded|shot|shooting|stabbing|ramming|attack\\w*|aid|trucks?|crossings?|ceasefire|truce|demolish\\w*|sanctions?)\\b|الاحتلال|الإسرائيلي|إسرائيل|شهيد|شهداء|إصابة|اقتحام|اعتقال|قصف|غارة|استهداف|هدم|مساعدات|شاحنات|معبر|هدنة|وقف إطلاق النار|عقوبات|الزوارق|كواد كابتر|كوادكابتر|الأباتشي|تحليق|تجريف|العجز المالي|الرواتب|المقاصة|\\b(?:OCHA|UN|humanitarian|coordination|flotilla)\\b|צה"ל|צה״ל|ירי|דקירה|דריסה|פיגוע|נעצר|עצורים|הריסה`,
   "i",
 );
 

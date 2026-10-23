@@ -32,7 +32,8 @@ import { getStore } from "./desk/store.ts";
 import type { ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { scanIranSources } from "./iran-scan.server.ts";
 import { scanGazaSources, toGaza } from "./gaza-scan.server.ts";
-import { type RawHit, type TickResult, type YemenFetch, fetchYemenSources, readYemen, runScanCycle, yemenCandidates } from "./yemen-scan.server.ts";
+import { IRAN_INBOX, type RawHit, type TickResult, WAR_ONLY, type YemenFetch, fetchYemenSources, readYemen, runScanCycle, yemenCandidates } from "./yemen-scan.server.ts";
+import { isIranDeskItem } from "./desk/iran-reader.ts";
 
 export type SiteMode = "off" | "shadow" | "on";
 export const SITE_MODE_KEY = "site-scan-mode";
@@ -93,8 +94,15 @@ async function scanThenReadYemen(state: ScanState, prev: ScanPayload | null): Pr
     })
     .catch((err) => console.error("[site] Iran sources:", err instanceof Error ? err.message : err));
   // The Gaza – Judea & Samaria desk's own sources (user, 23 Oct), beside the others'.
+  // One pool (user, 23 Oct): what of theirs is about Iran's war or Yemen's goes to those desks through their gates.
   const gazaOwn = scanGazaSources(store, Date.now())
-    .then((n) => console.log(`[site] Gaza sources: ${n} item(s) to the Gaza inbox`))
+    .then(async ({ n, all }) => {
+      const iranItems = all.filter((h) => isIranDeskItem(`${h.title ?? ""} ${h.text}`)).map((h) => ({ ...h, lean: "intl" }));
+      if (iranItems.length) await store.putMany(IRAN_INBOX, { [`gaza-${Date.now()}`]: { hits: iranItems } });
+      const yemenItems = all.filter((h) => WAR_ONLY.test(`${h.title ?? ""} ${h.text}`)).map((h) => ({ ...h, lean: "intl" }));
+      if (yemenItems.length) await store.putMany(YEMEN_INBOX, { [`gaza-${Date.now()}`]: { at: Date.now(), hits: yemenItems, status: [], sourcesOk: 0, learnedIds: [], iranShared: [], extra: true } satisfies YemenFetch });
+      console.log(`[site] Gaza sources: ${n} item(s) to the Gaza inbox, ${iranItems.length} to the Iran inbox, ${yemenItems.length} to the Yemen inbox`);
+    })
     .catch((err) => console.error("[site] Gaza sources:", err instanceof Error ? err.message : err));
   const got = await fetchYemenSources(state, prev);
   remember(got.hits);

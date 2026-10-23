@@ -1313,5 +1313,15 @@ export const GAZA_GAZ: [string, number, number, string, string[], string[]][] = 
 ["Nir Oz",31.3105,34.4011,"Israel",["Nir Oz"],["نير عوز","ניר עוז"]],
 ["Ashkelon",31.6688,34.5743,"Israel",["Ashkelon"],["عسقلان","אשקלון"]],
 ["Jerusalem",31.7784,35.2066,"Jerusalem",["Jerusalem"],["القدس","ירושלים"]],
+["Kamal Adwan Hospital",31.5384,34.4988,"Gaza",["Kamal Adwan Hospital","Kamal Adwan"],["مستشفى كمال عدوان","כמאל עדוואן"]],
+["Al-Shifa Hospital",31.5236,34.4433,"Gaza",["Al-Shifa Hospital","Shifa Hospital","Al-Shifa"],["مجمع الشفاء الطبي","مستشفى الشفاء","שיפא"]],
+["Nasser Medical Complex",31.3466,34.2989,"Gaza",["Nasser Medical Complex","Nasser Hospital"],["مجمع ناصر الطبي","مستشفى ناصر"]],
+["Al-Aqsa Martyrs Hospital",31.4166,34.354,"Gaza",["Al-Aqsa Martyrs Hospital","Al-Aqsa Hospital"],["مستشفى شهداء الأقصى"]],
+["Indonesian Hospital",31.5435,34.505,"Gaza",["Indonesian Hospital"],["المستشفى الإندونيسي"]],
+["European Gaza Hospital",31.317,34.3468,"Gaza",["European Gaza Hospital","European Hospital"],["المستشفى الأوروبي"]],
+["Al-Ahli Arab Hospital",31.5048,34.4614,"Gaza",["Al-Ahli Arab Hospital","Al-Ahli Hospital","Baptist Hospital"],["المستشفى الأهلي العربي","المستشفى المعمداني"]],
+["Netzarim corridor",31.47,34.4,"Gaza",["Netzarim corridor","Netzarim Corridor"],["محور نتساريم","ציר נצרים"]],
+["Philadelphi corridor",31.25,34.255,"Gaza",["Philadelphi corridor","Philadelphi Corridor"],["محور فيلادلفيا","ציר פילדלפי"]],
+["Homesh",32.3196,35.195,"Judea and Samaria",["Homesh"],["حومش","חומש"]],
 ["Temple Mount",31.7781,35.2354,"Jerusalem",["Temple Mount","Al-Aqsa","Al-Aqsa Mosque","Haram al-Sharif"],["المسجد الأقصى","الأقصى","הר הבית"]]
 ];

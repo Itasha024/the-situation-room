@@ -72,7 +72,7 @@ import { iranPinAllowed, iranPins, tallyNotEvent } from "./iran-places.ts";
 import { GAZA_ARENAS, GAZA_PROMPT, gazaContentHash } from "./gaza-reader.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { gazaPins } from "./gaza-places.ts";
-import { GAZA_ALIGNMENT, type GazaLean } from "./gaza-sources.ts";
+import { GAZA_ALIGNMENT, type GazaLean, gazaTierOf } from "./gaza-sources.ts";
 import { copyKey } from "./copies.ts";
 import {
   HOUTHI_OUTLET,
@@ -309,6 +309,10 @@ export type DeskReader = {
   queueMax?: number;
   /** Published cards the reader sees to mark copies and follow-ups; unset, RECENT_MAX. */
   recentMax?: number;
+  /** The order waiting items are read in, lowest first; unset, an official's own posts first. */
+  rank?: (c: Candidate) => number;
+  /** A post reworded by another channel (most of its words, no new figure) is read once too. */
+  nearCopies?: boolean;
 };
 
 export const YEMEN_READER: DeskReader = {
@@ -394,9 +398,10 @@ export async function editCandidates(
   // Then whatever has waited past OVERDUE_MS, oldest first: newest-first alone left Al-Akhbar's morning posts
   // two and a half hours in the queue behind each new cycle's items (22 Oct).
   const overdue = (c: Queued) => now - c.queuedAt > OVERDUE_MS;
+  const rankOf = cfg.rank ?? ((c: Candidate) => (officialVoice(c.source) ? 0 : 1));
   unread.sort(
     (a, b) =>
-      +!!officialVoice(b.source) - +!!officialVoice(a.source) ||
+      rankOf(a) - rankOf(b) ||
       +overdue(b) - +overdue(a) ||
       (overdue(a) ? a.queuedAt - b.queuedAt : Date.parse(b.at) - Date.parse(a.at)),
   );
@@ -408,6 +413,18 @@ export async function editCandidates(
     const first = k ? firstOf.get(k) : undefined;
     if (first) copyOf.set(c, first);
     else if (k) firstOf.set(k, c);
+  }
+  // Channels that repost each other in their own words (user, 23 Oct: the Gaza desk's 70 channels).
+  if (cfg.nearCopies) {
+    const firsts: { c: Queued; w: Set<string>; n: Set<string> }[] = [];
+    for (const c of unread) {
+      if (copyOf.has(c)) continue;
+      const w = new Set(String(c.text).toLowerCase().match(/[\p{L}]{4,}/gu) ?? []);
+      const n = new Set(String(c.text).match(/\d+/g) ?? []);
+      const like = w.size >= 6 ? firsts.find((f) => { let both = 0; for (const x of w) if (f.w.has(x)) both += 1; return both / Math.min(w.size, f.w.size) >= 0.8 && [...n].every((x) => f.n.has(x)); }) : undefined;
+      if (like) copyOf.set(c, like.c);
+      else firsts.push({ c, w, n });
+    }
   }
   const toRead = unread.filter((c) => !copyOf.has(c));
   const stillQueued: Queued[] = [];
@@ -1370,9 +1387,13 @@ export const GAZA_READER: DeskReader = {
   // Gemini stays the Yemen and Iran readers': this desk reads with the other free services.
   models: [],
   fallbacksFirst: true,
-  maxCalls: 6,
-  queueMax: 150,
+  // Every 5 minutes, ten calls of five items (user, 23 Oct): some 600 items an hour. Official channels first,
+  // then the faction media and agencies, then the local channels; reposts read once; the rest wait.
+  maxCalls: 10,
+  queueMax: 400,
   recentMax: 60,
+  rank: (c) => gazaTierOf(c.source, (s) => !!officialVoice(s)),
+  nearCopies: true,
   secondLook: false,
   geocode: false,
 };

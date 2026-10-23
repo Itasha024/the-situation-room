@@ -172,7 +172,7 @@ export const SKY_OWN = /لـ?\s*[«"“]?\s*سكاي\s*نيوز\s*عربية|ع�
  * Saudi–Houthi fighting, the Red Sea, Bab al-Mandab, the Gulf of Aden, or Saudi
  * energy under attack. In English, Arabic, Turkish and Persian.
  */
-export const WAR_ONLY = /\b(?:Yemen\w*|Houthis?|Ansar ?Allah|Sanaa|Sana'a|Aden|Hodeidah|Marib|Taiz|Red Sea|Bab (?:al|el)[- ]Mandeb|Bab (?:al|el)[- ]Mandab|Gulf of Aden|Aramco|Yanbu|Jazan|Jizan|Najran|East[- ]West pipeline|Yemen'?s|Husi\w*|Kızıldeniz|Babülmendep)\b|اليمن|يمني|الحوثي|أنصار الله|صنعاء|عدن|الحديدة|مأرب|تعز|البحر الأحمر|باب المندب|خليج عدن|أرامكو|ينبع|جازان|نجران|یمن|حوثی|انصارالله|دریای سرخ|باب‌المندب/i;
+export const WAR_ONLY = /\b(?:Yemen\w*|Houthis?|Ansar ?Allah|Sanaa|Sana'a|Aden|Hodeidah|Marib|Taiz|Red Sea|Bab (?:al|el)[- ]Mandeb|Bab (?:al|el)[- ]Mandab|Gulf of Aden|Aramco|Yanbu|Jazan|Jizan|Najran|East[- ]West pipeline|Yemen'?s|Husi\w*|Kızıldeniz|Babülmendep)\b|اليمن|يمني|الحوثي|أنصار الله|صنعاء|عدن|الحديدة|مأرب|تعز|البحر الأحمر|باب المندب|خليج عدن|أرامكو|ينبع|جازان|نجران|یمن|حوثی|انصارالله|دریای سرخ|باب‌المندب|(?:الهجمات|الهجوم|الاعتداءات|الاعتداء)[^.\n]{0,30}(?:على|تستهدف|التي تستهدف|ضد)\s+(?:المملكة|السعودية)|الدفاع عن السعودية|الاجتماع الرباعي لوزراء خارجية/i;
 /**
  * The sea and energy accounts' posts about this war: WAR_ONLY, plus Suez
  * traffic and Saudi exports moving between the Gulf and the Red Sea.
@@ -2930,7 +2930,8 @@ export async function readYemen(state: ScanState, prev: ScanPayload | null, got:
   for (const h of hits) if (Date.parse(h.at) > now + 10 * 60_000) h.at = cycleSeenAt;
   // A video's spoken words join its post before the gate and the reader see it (listen.ts).
   try {
-    const heard = await listenToVideos(await getStore(), hits, now);
+    // Its share of Groq's free day, now that three desks listen (23 Oct).
+    const heard = await listenToVideos(await getStore(), hits, now, { daySeconds: 9000 });
     if (heard) console.log(`[listen] ${heard} post(s) given their video's words`);
   } catch (err) {
     console.error("[listen] failed:", err instanceof Error ? err.message : err);

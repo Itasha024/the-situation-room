@@ -230,6 +230,8 @@ function yemenSideShown(ev) {
 const yemenInk = (ev) => YEMEN_PIN_SIDES().find(([k]) => k === yemenSideOf(ev))[1];
 /* What happened on the Iran map: the researched pins carry it (map-pack.cjs), the live ones are read the same way. */
 const IRAN_KINDS = ['strike', 'combat', 'vessel', 'port', 'nuclear'];
+// The Gaza – Judea & Samaria desk has no energy sites or nuclear file on its map (23 Oct).
+const GAZA_KINDS = ['strike', 'combat', 'vessel'];
 // A named nuclear site, not the town near it (user, 18 Oct); the same words as scripts/iran-research/pin-rules.cjs NUCLEAR_SITE.
 const IRAN_NUCLEAR_RE = /\bnuclear (?:site|facilit|plant|power|reactor|complex|installation)|\b(?:fordow|natanz|khondab|heavy[- ]water|enrichment|uranium|yellowcake|ardakan|saghand|IR-40|tehran research reactor|(?:bushehr|arak|isfahan|karaj) (?:nuclear|reactor|power plant|npp|uranium|ucf))\b|محطة بوشهر النووية|نطنز|فوردو|نیروگاه اتمی بوشهر/i;
 const IRAN_ENERGY_RE = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel (?:depot|tank|storage)|storage tank|pipeline|power (?:station|plant)|gas (?:field|plant|facilit)|petrochem|\blng\b|desalination|electricity (?:station|grid)|south pars|kharg|ras tanura|abqaiq/i;
@@ -8242,7 +8244,7 @@ function renderIranLegend() {
 /** The Iran legend's kinds of event (the marks). The home page's map shows the same rows. */
 function iranKindRows(on = (k) => iranPins.kinds[k] !== false) {
   return `<p class="leg-sub">What</p>
-      ${IRAN_KINDS.map((k) => kindLegendRow(k, IRAN_KIND_LABEL[k], on(k), `data-kind="${k}"`)).join('')}`;
+      ${(deskOf().id === 'gaza' ? GAZA_KINDS : IRAN_KINDS).map((k) => kindLegendRow(k, IRAN_KIND_LABEL[k], on(k), `data-kind="${k}"`)).join('')}`;
 }
 /** The note: the report as the card tells it, its time and place, its source. Nothing more to open. */
 function iranPopupHtml(ev) {

@@ -76,3 +76,15 @@ test("talk, not reports", () => {
   assert.ok(!voicesOf("نتنياهو يتوعد بعملية واسعة في الخليل").includes("threat"));
   assert.deepEqual(voicesOf("خروج مظاهرات في درعا احتجاجا على الوجود الاسرائيلي في سوريا"), []);
 });
+
+// User, 23 Oct: "multiple messages of Hamas just from different channels": one item, with its other channels.
+test("a statement reposted by many channels is one item", () => {
+  const now = Date.parse("2026-10-23T12:30:00Z");
+  const x = "حماس: نوجه النداء لكل من يحمل السلاح من أحرار شعبنا وشبابنا الثائر لتوجيه الرصاص إلى صدور المحتلين";
+  const mk = (ch: string, pre: string): WatchPost => ({ u: `https://t.me/${ch}/1`, at: new Date(now - 3600_000).toISOString(), ch, a: "gaza", t: topicsOf(pre + x), x: pre + x, v: 10 });
+  const posts = [mk("a", "⭕️ "), mk("b", "🔵 متابعة شهاب | "), mk("c", "")];
+  const s = summarise(posts, {}, now, 3, 3);
+  const g = s.areas.find((a) => a.area === "gaza")!;
+  assert.equal(g.top.length, 1);
+  assert.equal((g.top[0] as WatchPost & { n: number }).n, 3);
+});

@@ -307,14 +307,19 @@ export function summarise(posts: WatchPost[], counts: Record<string, HourCounts>
     const loud = new Set(["praise", "anger_hamas", "anger_pa", "rumour"]);
     const hours = (p: WatchPost) => (now - Date.parse(p.at)) / H;
     const score = (p: WatchPost & { k: string[] }) => (p.k.some((k) => alarm.has(k)) ? 3 : 0) + (p.k.some((k) => loud.has(k)) ? 1.5 : 0) + (p.k.length ? 0.5 : 0) + (p.c ? 1.5 : Math.log10(1 + p.v)) - hours(p) * 0.3;
-    const calls = mine.filter((p) => p.k.some((k) => alarm.has(k))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 25);
-    const seen = new Set<string>();
-    const top = [...mine].sort((a, b) => score(b) - score(a)).filter((p) => {
-      const k = plainArabic(p.x).slice(0, 60);
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    }).slice(0, 60);
+    // One statement reposted by many channels is one item (user, 23 Oct: Hamas's call, five times over): the most-read copy, with how many channels carried it.
+    const ranked = [...mine].sort((a, b) => score(b) - score(a));
+    const groups: { p: (typeof mine)[number]; w: Set<string>; chs: Set<string> }[] = [];
+    for (const p of ranked) {
+      const w = new Set(plainArabic(p.x).replace(/#\S+/g, "").split(/[^\p{L}]+/u).filter((x) => x.length >= 3));
+      const same = w.size >= 4 ? groups.find((g) => { let both = 0; for (const x of w) if (g.w.has(x)) both += 1; return both / Math.min(w.size, g.w.size) >= 0.6; }) : groups.find((g) => plainArabic(g.p.x).slice(0, 60) === plainArabic(p.x).slice(0, 60));
+      if (same) { same.chs.add(p.ch); continue; }
+      groups.push({ p, w, chs: new Set([p.ch]) });
+    }
+    const folded = groups.map((g) => ({ ...g.p, n: g.chs.size, also: [...g.chs].filter((c) => c !== g.p.ch).slice(0, 6) }));
+    const calls = folded.filter((p) => p.k.some((k) => alarm.has(k))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 25);
+    // Only what says something (a call, a threat, praise, anger, a complaint, grief, a rumour) or a comment.
+    const top = folded.filter((p) => p.k.length || p.c).slice(0, 60);
     const placeN = new Map<string, number>();
     for (const p of mine) for (const n of placesTalked(p.x)) placeN.set(n, (placeN.get(n) ?? 0) + 1);
     const tagsOf = (ps: WatchPost[]) => {

@@ -2065,7 +2065,7 @@
   function onPost(p, call) {
     const t = Date.parse(p.at);
     const who = p.c ? `comment on @${esc(p.ch)}` : `@${esc(p.ch)}`;
-    return `<li class="ops-on-post${call ? ' call' : ''}${p.c ? ' cmt-own' : ''}"><div class="ops-on-meta"><a href="${esc(p.u)}" target="_blank" rel="noopener">${who}</a><span>${esc(hm(t, VIEW_TZ()))}</span>${p.v ? `<span>${p.v >= 1000 ? `${(p.v / 1000).toFixed(1)}K` : p.v} views</span>` : ''}${p.m ? '<span>media</span>' : ''}</div><p dir="auto">${esc(p.x.length > 280 ? `${p.x.slice(0, 280)}…` : p.x)}</p></li>`;
+    return `<li class="ops-on-post${call ? ' call' : ''}${p.c ? ' cmt-own' : ''}"><div class="ops-on-meta"><a href="${esc(p.u)}" target="_blank" rel="noopener">${who}</a><span>${esc(hm(t, VIEW_TZ()))}</span>${p.v ? `<span>${p.v >= 1000 ? `${(p.v / 1000).toFixed(1)}K` : p.v} views</span>` : ''}${p.m ? '<span>media</span>' : ''}${p.n > 1 ? `<span class="ops-on-n" title="${esc((p.also || []).map((c) => `@${c}`).join(' '))}">also on ${p.n - 1} channel${p.n > 2 ? 's' : ''}</span>` : ''}</div><p dir="auto">${esc(p.x.length > 280 ? `${p.x.slice(0, 280)}…` : p.x)}</p></li>`;
   }
   /** Bars for what the talk says or is about; a click shows only those posts. */
   function onBars(list, prefix) {

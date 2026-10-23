@@ -121,8 +121,9 @@ const has = (p: string, words: Set<string>, k: Key) => ("word" in k ? words.has(
 /** Israel's leaders and army: their threats are the Reports tab's news, not Palestinian talk. */
 const ISRAELI_SPEAKER = ["نتنياهو", "سموتريتش", "بن غفير", "كاتس", "زامير", "الجيش الاسرائيلي", "جيش الاحتلال", "حكومه الاحتلال", "الكابينت", "وزير الدفاع الاسرائيلي", "الشاباك"].map(keyOf);
 /** Other countries' streets (Syria's protests, Jordan's shooting): not this desk's talk, unless Palestine is in it. */
-const ELSEWHERE = ["سوريا", "السوريه", "سوري", "درعا", "دمشق", "الاردن", "الاردنيه", "الكرك", "لبنان", "اللبناني", "اليمن", "ايران", "العراق"].map(keyOf);
-const HOME = ["فلسطين", "الفلسطيني", "الفلسطينيه", "شعبنا", "غزه", "الضفه", "القدس", "الاقصى", "الخليل", "جنين", "نابلس", "طولكرم", "رام الله", "خانيونس", "رفح", "المخيم", "مخيم"].map(keyOf);
+const ELSEWHERE = ["سوريا", "السوريه", "سوري", "درعا", "دمشق", "الاردن", "الاردني", "الاردنيه", "كنيسه", "الكرك", "لبنان", "اللبناني", "اليمن", "ايران", "العراق"].map(keyOf);
+// Places only: a Palestinian faction condemning a shooting in Jordan is still about Jordan.
+const HOME = ["غزه", "الضفه", "القدس", "الاقصى", "الخليل", "جنين", "نابلس", "طولكرم", "رام الله", "خانيونس", "رفح", "المخيم", "مخيم"].map(keyOf);
 export function voicesOf(text: string): string[] {
   const p = plainArabic(text);
   const words = tokensOf(p);
@@ -264,7 +265,7 @@ export type AreaSummary = {
   talked: { post: WatchPost; n: number; comments: WatchPost[] }[];
   comments: number;
 };
-export type WatchSummary = { at: string; windowHours: number; channels: number; areas: AreaSummary[] };
+export type WatchSummary = { at: string; windowHours: number; channels: number; areas: AreaSummary[]; /** The same for the last day. */ day?: AreaSummary[] };
 
 /**
  * The tab's summary: each area's topics in the last `win` hours against the same hours of the days before
@@ -319,7 +320,7 @@ export function summarise(posts: WatchPost[], counts: Record<string, HourCounts>
     const folded = groups.map((g) => ({ ...g.p, n: g.chs.size, also: [...g.chs].filter((c) => c !== g.p.ch).slice(0, 6) }));
     const calls = folded.filter((p) => p.k.some((k) => alarm.has(k))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 25);
     // Only what says something (a call, a threat, praise, anger, a complaint, grief, a rumour) or a comment.
-    const top = folded.filter((p) => p.k.length || p.c).slice(0, 60);
+    const top = folded.filter((p) => p.k.length || p.c).slice(0, win > 6 ? 150 : 80);
     const placeN = new Map<string, number>();
     for (const p of mine) for (const n of placesTalked(p.x)) placeN.set(n, (placeN.get(n) ?? 0) + 1);
     const tagsOf = (ps: WatchPost[]) => {

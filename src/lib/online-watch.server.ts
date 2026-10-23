@@ -9,12 +9,16 @@ import type { DeskStore } from "./desk/store.ts";
 import { WATCH_TG } from "./desk/online-sources.ts";
 import { type HourCounts, type WatchPost, countHour, parseComments, parseWatchPage, summarise } from "./desk/online-watch.ts";
 import { fetchText } from "./yemen-scan.server.ts";
+import { type Briefs, writeBriefs } from "./desk/online-brief.ts";
 
 export const WATCH_HOURS = "gaza:online:h";
 export const WATCH_COUNTS = "gaza:online-counts";
 export const WATCH_SUMMARY = "gaza:online-summary";
 const WATCH_STATE = "gaza:online-state";
-const EVERY_MS = 15 * 60_000;
+const WATCH_BRIEFS = "gaza:online-briefs";
+// Briefs every 3 hours; the messages themselves come in live (user, 23 Oct).
+const BRIEF_EVERY_MS = 3 * 3600_000;
+const EVERY_MS = 10 * 60_000;
 const AT_ONCE = 4;
 const H = 3600_000;
 /** Comment threads read a tick, and how often one post's thread is read again. */
@@ -42,8 +46,8 @@ export async function runOnlineWatch(store: DeskStore, now = Date.now()): Promis
   const state: State = { lastAt: {}, lastPost: {}, ...((await store.getJson<State>(WATCH_STATE)) ?? {}) };
   const talk = (state.talk ??= {});
   const threadAt = (state.threadAt ??= {});
-  // A third of the channels each 5-minute tick, so each is read every 15 minutes and Telegram sees a steady pace.
-  const due = WATCH_TG.filter((c) => now - (state.lastAt[c.id] ?? 0) >= EVERY_MS - 60_000).slice(0, Math.ceil(WATCH_TG.length / 3) + 5);
+  // Half the channels each 5-minute tick, so each is read every 10 minutes and Telegram sees a steady pace.
+  const due = WATCH_TG.filter((c) => now - (state.lastAt[c.id] ?? 0) >= EVERY_MS - 60_000).slice(0, Math.ceil(WATCH_TG.length / 2) + 5);
   const fresh: WatchPost[] = [];
   let read = 0;
   await pool(due, async (c) => {
@@ -113,7 +117,20 @@ export async function runOnlineWatch(store: DeskStore, now = Date.now()): Promis
   await store.putJson(WATCH_STATE, state);
   await store.prune(WATCH_HOURS, 30 * H).catch(() => 0);
   const posts = keys.slice(0, 25).flatMap((k) => rows[k] ?? []);
-  await store.putJson(WATCH_SUMMARY, summarise(posts, counts, now, 3, WATCH_TG.length));
+  // The last 3 hours, and the last day (user, 23 Oct: the 3 hours alone looked empty).
+  const day = summarise(posts, counts, now, 24, WATCH_TG.length).areas;
+  const recent = summarise(posts, counts, now, 3, WATCH_TG.length);
+  // Each kind of talk briefed in a few sentences, and the whole day (user, 23 Oct).
+  let briefs = await store.getJson<Briefs>(WATCH_BRIEFS);
+  if (!briefs || now - Date.parse(briefs.at) > BRIEF_EVERY_MS) {
+    try {
+      briefs = await writeBriefs(recent.areas, day, briefs, now);
+      await store.putJson(WATCH_BRIEFS, briefs);
+    } catch (err) {
+      console.error('[online] briefs:', err instanceof Error ? err.message : err);
+    }
+  }
+  await store.putJson(WATCH_SUMMARY, { ...recent, day, briefs });
   const withTalk = Object.values(talk).filter((t) => t.yes > 0).length;
   console.log(`[online] ${read} of ${due.length} channels read, ${fresh.length} new posts; ${picks.length} comment threads read, ${comments.length} comments (${withTalk} channels with comments); ${posts.length} in the last day`);
   return { read, posts: fresh.length, comments: comments.length };

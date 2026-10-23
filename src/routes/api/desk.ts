@@ -10,6 +10,7 @@ import { rightOffice } from "@/lib/desk/offices";
 import { getStore } from "@/lib/desk/store";
 import { gzipped, respond } from "@/lib/desk/microcache";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
+import { gazaLeanOf } from "@/lib/desk/gaza-sources";
 import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
 import { cardsOnTheirPins, serveIranPins, serveYemenPins } from "@/lib/desk/serve-map-pins";
 import { exclusivesOut, idOrderTimes, postTimes, serveCard } from "@/lib/desk/copy-rules";
@@ -65,6 +66,7 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     if (r.text) r.text = rightOffice(respell(String(r.text)));
     // The Iran desk's filter buttons go by the source's group.
     if (desk === "iran") (r as Record<string, unknown>).lean = iranLeanOfSource(String(r.source ?? ""));
+    if (desk === "gaza") (r as Record<string, unknown>).lean = gazaLeanOf(String(r.source ?? ""));
     // Who acted, for its map pin's colour (user, 17 Oct): the Yemen map draws its pins from the cards.
     if (desk === "yemen") {
       const x = { type: String(r.type ?? ""), label: String(r.summary ?? ""), text: String(r.text ?? ""), source: String(r.source ?? ""), place: String(r.place ?? "") };

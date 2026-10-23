@@ -61,7 +61,8 @@ test("the served Yemen pin: the Southern forces' pins are the government's (user
 });
 
 test("Iran legend: every side a pin can take has a Who row, Not stated when such pins are shown", () => {
-  const from = app.indexOf("const IRAN_PIN_SIDES = [");
+  // A let since the Gaza desk swaps in its own sides (user, 23 Oct).
+  const from = app.indexOf("let IRAN_PIN_SIDES = [");
   const end = app.indexOf("];", from) + 2;
   const ctx: Record<string, unknown> = {};
   vm.createContext(ctx);
@@ -73,4 +74,16 @@ test("Iran legend: every side a pin can take has a Who row, Not stated when such
   // The desk's and the All page's legends leave out only "Not stated", and only with no such pin.
   assert.match(app, /IRAN_PIN_SIDES\.filter\(\(\[k\]\) => k !== 'other' \|\| counts\.other\)/);
   assert.match(home, /IRAN_PIN_SIDES'\) \|\| \[\]\)\.filter\(\(\[k\]\) => k !== 'other' \|\| D\.events\.some/);
+});
+
+test("Gaza legend: every side the reader can name has a Who row (user, 23 Oct)", async () => {
+  const { GAZA_SIDES } = await import("./gaza-reader.ts");
+  const from = app.indexOf("const GAZA_PIN_SIDES = [");
+  const end = app.indexOf("];", from) + 2;
+  const ctx: Record<string, unknown> = {};
+  vm.createContext(ctx);
+  vm.runInContext(`${app.slice(from, end)}\nthis.out = GAZA_PIN_SIDES;`, ctx);
+  const keys = new Set((ctx.out as string[][]).map(([k]) => k));
+  for (const s of GAZA_SIDES) if (s !== "unclear") assert.ok(keys.has(s), s);
+  assert.ok(keys.has("other"));
 });

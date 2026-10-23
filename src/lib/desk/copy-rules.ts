@@ -7,6 +7,8 @@
  */
 import { anglicise } from "./anglicise.ts";
 import type { DeskType } from "./digest.ts";
+import type { DeskId } from "../desks.ts";
+import { gazaWords } from "./gaza-words.ts";
 import { aboutFootage } from "./media.ts";
 import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
@@ -121,7 +123,7 @@ const IRANIAN_OUTLET =
   /^(?:IRNA|Tasnim|Fars|ISNA|Mehr|IRIB|Press TV|Nour News|Tehran Times|Al-Alam|ILNA|IMNA|SNN|Khabari Plus|Akhbar-e Fori|Shin Persian|Emtedad|Iran International|VOA Farsi|Radio Farda|Vahid Online|Kayhan|Javan|Entekhab)\b/i;
 const UKMTO_TOLD = /\b(?:UKMTO|UKTMO|UK Maritime Trade|United Kingdom Maritime Trade|British maritime security agency)\b/i;
 
-export type RelayInput = { headline: string; body?: string; source: string; lean?: string; desk: "yemen" | "iran"; own?: boolean };
+export type RelayInput = { headline: string; body?: string; source: string; lean?: string; desk: DeskId; own?: boolean };
 
 /**
  * A relay the desk reads first-hand instead: a US body or Trump through Al
@@ -823,7 +825,7 @@ type Row = Record<string, unknown>;
  * Social card that is not Trump's); otherwise its copy and type fixed in
  * place. The row in the database is left as it is.
  */
-export function serveCard(r: Row, desk: "yemen" | "iran"): boolean {
+export function serveCard(r: Row, desk: DeskId): boolean {
   const summary = String(r.summary ?? "");
   const text = String(r.text ?? "");
   const source = String(r.source ?? "");
@@ -840,6 +842,8 @@ export function serveCard(r: Row, desk: "yemen" | "iran"): boolean {
   const fix = (s: string) => {
     let out = officeTitles(partisanWords(respell(s), lebanon, desk === "iran"));
     if (desk === "yemen") out = houthiWords(out, houthi);
+    // The Gaza desk's own words on every stored card too (gaza-words.ts).
+    if (desk === "gaza") out = gazaWords(out);
     return out;
   };
   // A link to another story: the first other account leads, or the card is not shown (Round 4 of 20 Oct).

@@ -66,7 +66,7 @@ for f in /srv/desk/migrations/0*.sql; do
 done
 PREV=$(readlink -f /srv/desk/current)
 # A scan under way finishes first (up to 4 minutes): a restart cut it off.
-for i in $(seq 80); do systemctl is-active --quiet desk-tick.service || systemctl is-active --quiet desk-iran-tick.service || break; [ $i = 1 ] && echo "[deploy] waiting for the scan to finish"; sleep 3; done
+for i in $(seq 80); do systemctl is-active --quiet desk-tick.service || systemctl is-active --quiet desk-iran-tick.service || systemctl is-active --quiet desk-gaza-tick.service || break; [ $i = 1 ] && echo "[deploy] waiting for the scan to finish"; sleep 3; done
 # The first visitor after a restart does not pay for the cold caches: the pages and the desks' data are read once now.
 # The map's whole-war pins (?since=, the heaviest answers) and the scan's are among them (20 Oct).
 warm() { for u in / /yemen-conflict-desk /iran-conflict-desk "/api/desk?desk=yemen" "/api/desk?desk=iran" "/api/desk?limit=400" "/api/desk?desk=yemen&since=2026-07-13" "/api/desk?desk=iran&since=2026-02-28" "/api/brief?desk=yemen" "/api/brief?desk=iran" /api/brief /api/scan "/api/scan?only=time" "/api/scan?desk=iran&only=time" /api/trump "/api/trump?desk=yemen"; do curl -s -o /dev/null -m 90 "http://127.0.0.1:$1$u" || true; done; echo "[deploy] caches warmed"; }

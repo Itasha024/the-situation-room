@@ -48,14 +48,17 @@
   let root = null, PAGE = null;
   const findRoot = () => {
     const d = document.getElementById('yemen-desk-root');
-    if (d && d.querySelector('#map')) { root = d; PAGE = d.dataset.desk === 'iran' ? 'iran' : 'yemen'; return true; }
+    if (d && d.querySelector('#map')) { root = d; PAGE = d.dataset.desk === 'iran' || d.dataset.desk === 'gaza' ? d.dataset.desk : 'yemen'; return true; }
     const h = document.getElementById('home-root');
     if (h && h.querySelector('#h-map') && window.__home) { root = h; PAGE = 'all'; return true; }
     return false;
   };
   const isPhone = () => matchMedia('(max-width:760px)').matches;
-  const TZ = { iran: 'Asia/Tehran', yemen: 'Asia/Aden' };
-  const CAP = { iran: 'Tehran', yemen: 'Sanaa' };
+  const TZ = { iran: 'Asia/Tehran', yemen: 'Asia/Aden', gaza: 'Asia/Jerusalem' };
+  const CAP = { iran: 'Tehran', yemen: 'Sanaa', gaza: 'Jerusalem' };
+  // The desks app.js draws with the Iran desk's code: Iran's and the Gaza – Judea & Samaria desk's (user, 23 Oct).
+  const IRAN_LIKE = (d) => d === 'iran' || d === 'gaza';
+  const DESK_PATH = { all: '/', iran: '/iran-conflict-desk', yemen: '/yemen-conflict-desk', gaza: '/gaza-judea-samaria-desk' };
 
   /* ---------- Small helpers ---------- */
   const ICON = {
@@ -137,14 +140,14 @@
   function events(withResearched) {
     const own = (e) => withResearched || !e.researched;
     if (PAGE === 'all') { const h = window.__home; return h && h.D ? h.D.events.filter(own) : []; }
-    if (PAGE === 'iran') { const p = app('iranPins'); return p && p.events ? p.events.filter(own).map((e) => (e.desk ? e : Object.assign(e, { desk: 'iran' }))) : []; }
+    if (IRAN_LIKE(PAGE)) { const p = app('iranPins'); return p && p.events ? p.events.filter(own).map((e) => (e.desk ? e : Object.assign(e, { desk: PAGE }))) : []; }
     const d = app('data');
     return d && d.events ? d.events.filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number').map((e) => (e.desk ? e : Object.assign(e, { desk: 'yemen' }))) : [];
   }
   const keyOf = (e) => `${e.desk}|${e.fp}`;
   /** Who acted, in the colour the desk gives them. */
   function sideOf(e) {
-    if (e.desk === 'iran') {
+    if (IRAN_LIKE(e.desk)) {
       const k = A('iranSideOf')(e) || 'other';
       const r = (app('IRAN_PIN_SIDES') || []).find((x) => x[0] === k);
       return { name: r ? r[2] : 'Not stated', c: r ? r[1] : '#94a3b8' };
@@ -154,12 +157,12 @@
     return { name: r ? r[2] : 'Not stated', c: r ? r[1] : '#94a3b8' };
   }
   function kindOf(e) {
-    if (e.desk === 'iran') { const k = A('iranKindOf')(e) || 'strike'; return { k, name: (app('IRAN_KIND_LABEL') || {})[k] || k }; }
+    if (IRAN_LIKE(e.desk)) { const k = A('iranKindOf')(e) || 'strike'; return { k, name: (app('IRAN_KIND_LABEL') || {})[k] || k }; }
     const k = e.mapCat || e.cat || (A('classifyForMap')(`${e.label || ''} ${e.text || ''}`, String(e.type || '').toLowerCase())) || 'strike';
     return { k, name: (app('CATEGORY_LABEL') || {})[k] || k };
   }
   const glyph = (k) => ((app('EVENT_SVG') || {})[k] || '');
-  const noteOf = (e) => (e.desk === 'iran' ? A('iranPopupHtml')(e) : A('popupHtml')(e)) || esc(e.label || '');
+  const noteOf = (e) => (IRAN_LIKE(e.desk) ? A('iranPopupHtml')(e) : A('popupHtml')(e)) || esc(e.label || '');
 
   /* ---------- The frame ---------- */
   const S = { left: true, right: true, dock: true, tab: null, rtab: 'rep', ptab: 'map', sel: null, tool: null, air: false, airMil: false, airGround: false, sea: false, base: 'auto', names: false, grid: false, fills: true, fillsV: 3 };
@@ -196,9 +199,10 @@
   const LEFT_TABS = {
     yemen: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Fronts', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
     iran: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
+    gaza: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers']],
     all: [['ops-theatres', 'Brief', 'brief']],
   };
-  const PAGE_NAME = { all: 'All theatres', iran: 'Iran', yemen: 'Yemen' };
+  const PAGE_NAME = { all: 'All theatres', iran: 'Iran', yemen: 'Yemen', gaza: 'Gaza – Judea & Samaria' };
   /* The day, plainly: Tue 20 Oct 2026 (20 Oct: a military date-time group read as the 26th). */
   const dayTxt = (t, tz) => new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: tz });
   /* The site's mark: a plotting scope in a room's frame, its sweep in the view's amber. */
@@ -360,7 +364,7 @@
   /* On a wide screen the side panels and the strip under the map are as wide or as tall as the reader drags them
      (user, 21 Oct); a double-click on a handle puts it back. Kept per browser (SZ). */
   // The desk's own part of the map: what the page opens on.
-  const areaB = () => { const o = (app('DESK_GO') || {})[PAGE === 'all' ? '/' : PAGE === 'iran' ? '/iran-conflict-desk' : '/yemen-conflict-desk']; return o && o.b; };
+  const areaB = () => { const o = (app('DESK_GO') || {})[DESK_PATH[PAGE]]; return o && o.b; };
   /* The map is never narrower than the desk's whole area needs at the map's height (user, 21 Oct: "in max narrow of
      the map we should still see the full area"). */
   function mapMinW() {
@@ -906,7 +910,7 @@
   /* Every event since the desk's start (20 Oct: Yemen from 13 Jul, Iran and the All page from 28 Feb), newest first; the
      hours picked under the map, when picked. Drawn a page at a time as the reader scrolls; the older ones are read
      from the server only when the reader reaches them. */
-  const LOG_FROM = { yemen: Date.parse('2026-07-13T00:00:00+03:00'), iran: Date.parse('2026-02-28T00:00:00+03:00'), all: Date.parse('2026-02-28T00:00:00+03:00') };
+  const LOG_FROM = { yemen: Date.parse('2026-07-13T00:00:00+03:00'), iran: Date.parse('2026-02-28T00:00:00+03:00'), gaza: Date.parse('2026-10-23T00:00:00+03:00'), all: Date.parse('2026-02-28T00:00:00+03:00') };
   const LOG_STEP = 100;
   let logList = [], evQ = '', logN = LOG_STEP, logOld = 'no';
   const tOf = (e) => { if (e._t == null) e._t = Date.parse(e.at) || 0; return e._t; };
@@ -947,12 +951,12 @@
       const head = d !== day ? `<li class="ops-day">${esc(d)}${new Date(tOf(e)).getFullYear() !== year ? ' ' + new Date(tOf(e)).getFullYear() : ''}</li>` : '';
       day = d;
       return `${head}<li><button type="button" data-ev="${i}" style="--c:${s.c}"><time>${e.dayOnly ? '' : esc(hm(e.at, VIEW_TZ()))}</time><span class="k" title="${esc(k.name)}">${glyph(k.k)}</span><span class="t"><b>${esc(e.label || e.place || k.name)}</b><small>${esc([s.name, k.name, e.label ? e.place : ''].filter(Boolean).join(' · '))}${e.source ? ` · <i>${esc(e.source)}</i>` : ''}</small></span><span class="ops-evpin" title="Show on map">${PIN_ICON}</span></button></li>`;
-    }).join('') + (pick.length > logN || (!rng && logOld !== 'done' && PAGE !== 'iran') ? '<li class="ops-log-more"><button type="button" class="more" data-log-more>Earlier events</button></li>' : '') || '<li class="ops-empty">No events here.</li>';
+    }).join('') + (pick.length > logN || (!rng && logOld !== 'done' && !IRAN_LIKE(PAGE)) ? '<li class="ops-log-more"><button type="button" class="more" data-log-more>Earlier events</button></li>' : '') || '<li class="ops-empty">No events here.</li>';
   }
   async function moreLog() {
     const from = LOG_FROM[PAGE] || 0;
     const have = events(true).filter((e) => tOf(e) >= from).length;
-    if (logN >= have && logOld !== 'done' && PAGE !== 'iran') await olderEvents();
+    if (logN >= have && logOld !== 'done' && !IRAN_LIKE(PAGE)) await olderEvents();
     logN += LOG_STEP;
     drawLog();
   }
@@ -1809,7 +1813,7 @@
     attackPins();
     // The sources' ratings, in short, at the right of the sources filter over the reports (user, 22 Oct).
     const fl = PAGE !== 'all' && document.getElementById('feed-legend');
-    if (fl && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', `<a class="ops-srclink" href="/${PAGE}-conflict-desk/sources" title="How reliable each source has been">Source ratings</a>`);
+    if (fl && PAGE !== 'gaza' && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', `<a class="ops-srclink" href="/${PAGE}-conflict-desk/sources" title="How reliable each source has been">Source ratings</a>`);
     paintSlim();
   }
 
@@ -1919,7 +1923,7 @@
   }
   function openRowMap(e, spot, place, anchor) {
     const wide = !isPhone() ? anchor : null;
-    if (e && e.desk === 'iran') return A('openIranMapPop')([e], e.label || place, wide, () => A('showIranPin')(String(e.fp)));
+    if (e && IRAN_LIKE(e.desk)) return A('openIranMapPop')([e], e.label || place, wide, () => A('showIranPin')(String(e.fp)));
     if (e) return A('openPinSheet')(e, wide);
     const pop = app('openMapPop');
     if (!pop || !spot) return;
@@ -1978,7 +1982,7 @@
     sizeDock();
     oneWorld(m);
     // The desk's own part of the map, in the new map box (the page fitted it to the old one).
-    const own = (app('DESK_GO') || {})[PAGE === 'all' ? '/' : PAGE === 'iran' ? '/iran-conflict-desk' : '/yemen-conflict-desk'];
+    const own = (app('DESK_GO') || {})[DESK_PATH[PAGE]];
     if (own && !/#(at|pin)=/.test(location.hash) && !sessionStorage.getItem('desk-go')) { try { m.invalidateSize(); m.fitBounds(own.b, { padding: [8, 8], animate: false }); } catch (e) { /* kept */ } }
     // The map shows once it is in its place (20 Oct: the Yemen map shook for a second as the frame settled round it).
     // The page fits its map again as the frame settles: the map shows when it has held still for 400 ms.

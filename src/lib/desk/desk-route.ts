@@ -11,7 +11,7 @@
 import type { DeskId } from "../desks.ts";
 import type { LiveReport } from "./types.ts";
 
-export const DESK_IDS: DeskId[] = ["yemen", "iran"];
+export const DESK_IDS: DeskId[] = ["yemen", "iran", "gaza"];
 export const DEFAULT_DESK: DeskId = "yemen";
 
 /** The desk a request asks for (`?desk=`); anything else is Yemen, as before. */

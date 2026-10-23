@@ -50,6 +50,7 @@ import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
 import { IRAN_RSS, IRAN_TG, IRAN_X, IRAQI_MEDIA, type IranLean, LEBANESE_MEDIA, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranDeskItem, passesIraqiMediaGate, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
+import { isGazaDeskItem } from "./desk/gaza-reader.ts";
 import { remember } from "./desk/recent-reads.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
 import { attributeVerdict, colonSpeaker, tidySpeaker } from "./desk/reader.ts";
@@ -598,6 +599,9 @@ const LEARNED_NAME = "Learned outlets";
 export const IRAN_INBOX = "iran-inbox";
 /** The Iran scan's last payload (its cards and its scan box). */
 export const IRAN_PAYLOAD = "iran:payload";
+/** The Gaza – Judea & Samaria desk's inbox and last payload (gaza-scan.server.ts, user 23 Oct). */
+export const GAZA_INBOX = "gaza-inbox";
+export const GAZA_PAYLOAD = "gaza:payload";
 
 /**
  * Outlets where the origin search found an original the desk had not been
@@ -2376,6 +2380,8 @@ export type YemenFetch = {
   learnedIds: string[];
   /** For the Iran desk, after the Yemen reader has read them. */
   iranShared: RawHit[];
+  /** The items about Gaza or Judea and Samaria, for that desk's inbox (site-scan.server.ts). */
+  gazaShared?: RawHit[];
   /** Another desk's sources' items on Yemen's war (site-scan): items only, no status of the Yemen read. */
   extra?: boolean;
 };
@@ -2410,6 +2416,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   // handed to the Iran desk's scan (iran-scan.server.ts), which reads them
   // with its own reader. Each source is still fetched once (Round 30).
   const iranInbox: RawHit[] = [];
+  const gazaShared: RawHit[] = [];
   // Every source's items on that war go there, a source with no group listed (a learned outlet) as International.
   const toIran = (rows: RawHit[], group: IranLean | undefined) => {
     // Every item read is kept in memory for two days: where a relay's original is looked for first (recent-reads.ts).
@@ -2419,6 +2426,8 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
     const passes = (r: RawHit, t: string) =>
       isIranDeskItem(t) || (LEBANESE_MEDIA.has(r.source) && passesLebaneseMediaGate(t)) || (IRAQI_MEDIA.has(r.source) && passesIraqiMediaGate(t));
     for (const r of rows) if (passes(r, `${r.title ?? ""} ${r.text}`)) iranInbox.push({ ...r, lean, picked: undefined });
+    // And what is about Gaza or Judea and Samaria to that desk (user, 23 Oct).
+    for (const r of rows) if (isGazaDeskItem(`${r.title ?? ""} ${r.text}`)) gazaShared.push({ ...r, picked: undefined });
   };
   const status: SourceStatus[] = [];
   const jobs: Promise<void>[] = [];
@@ -2867,7 +2876,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   await saveHeld(hits.filter((h) => isGnews(h.url) && worthLookup(h)), now);
   hits.length = 0;
   hits.push(...resolved);
-  return { at: now, hits, status, sourcesOk, learnedIds: learnedFeeds(learned).map((f) => f.id), iranShared: iranInbox };
+  return { at: now, hits, status, sourcesOk, learnedIds: learnedFeeds(learned).map((f) => f.id), iranShared: iranInbox, gazaShared };
 }
 
 /**

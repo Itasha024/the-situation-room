@@ -1157,6 +1157,11 @@ a.tier:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
 .card.ir-us,.card.ir-us:hover,.card.ir-us.open{border-inline-start-color:#ef4444!important}
 .card.ir-gulf,.card.ir-gulf:hover,.card.ir-gulf.open{border-inline-start-color:#22c55e!important}
 .card.ir-intl,.card.ir-intl:hover,.card.ir-intl.open{border-inline-start-color:#94a3b8!important}
+/* The Gaza – Judea & Samaria desk's groups (user, 23 Oct); Israeli and International as above. */
+.card.ir-pa,.card.ir-pa:hover,.card.ir-pa.open{border-inline-start-color:#eab308!important}
+.card.ir-factions,.card.ir-factions:hover,.card.ir-factions.open{border-inline-start-color:#16a34a!important}
+.card.ir-palestinian,.card.ir-palestinian:hover,.card.ir-palestinian.open{border-inline-start-color:#ef4444!important}
+.card.ir-arab,.card.ir-arab:hover,.card.ir-arab.open{border-inline-start-color:#c45c26!important}
 .ls-note{margin:0 0 8px;font-size:12px;opacity:.75}
 .ls-verdict{margin-inline-start:auto;font-size:11px;opacity:.7}
 /* A group picked: its × clears the filter, unturned and a touch larger to hit. */

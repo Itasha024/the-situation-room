@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
 import { runSiteCycle, siteMode } from "@/lib/site-scan.server";
 import { runIranCycle } from "@/lib/iran-scan.server";
+import { runGazaCycle } from "@/lib/gaza-scan.server";
 import { getStore } from "@/lib/desk/store";
 
 /**
@@ -165,11 +166,46 @@ async function runIranLocked(): Promise<Record<string, unknown>> {
   }
 }
 
+/** The Gaza – Judea & Samaria desk's cycle (`?desk=gaza`, user 23 Oct): the host's desk-gaza-tick.timer, its own lock. */
+const GAZA_LOCK_KEY = "gaza:tick-lock";
+let runningGaza: Promise<Record<string, unknown>> | null = null;
+async function runGazaLocked(): Promise<Record<string, unknown>> {
+  if (runningGaza) return { ok: true, skipped: "a Gaza cycle is already running" };
+  runningGaza = (async () => {
+    const startedAt = Date.now();
+    let store: Awaited<ReturnType<typeof getStore>>;
+    try {
+      store = await getStore();
+      const held = await store.getJson<{ at: number }>(GAZA_LOCK_KEY);
+      if (held && Date.now() - held.at < LOCK_TTL_MS) return { ok: true, skipped: "a Gaza cycle is already running" };
+      await store.putJson(GAZA_LOCK_KEY, { at: Date.now() });
+    } catch (err) {
+      return { ok: false, error: `database unreachable: ${err instanceof Error ? err.message : String(err)}`, tookMs: Date.now() - startedAt };
+    }
+    try {
+      return { ...(await runGazaCycle()) };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Gaza tick failed", tookMs: Date.now() - startedAt };
+    } finally {
+      await store.putJson(GAZA_LOCK_KEY, { at: 0 }).catch(() => {});
+    }
+  })();
+  try {
+    return await runningGaza;
+  } finally {
+    runningGaza = null;
+  }
+}
+
 async function tick(request: Request): Promise<Response> {
   const denied = authorize(request);
   if (denied) return json({ ok: false, error: denied }, 401);
   if (new URL(request.url).searchParams.get("desk") === "iran") {
     const result = await runIranLocked();
+    return json(result, result.ok === false ? 500 : 200);
+  }
+  if (new URL(request.url).searchParams.get("desk") === "gaza") {
+    const result = await runGazaLocked();
     return json(result, result.ok === false ? 500 : 200);
   }
 
@@ -195,5 +231,6 @@ function json(body: unknown, status = 200) {
 
 /** The CPU meter keeps the two desks' cycles apart. */
 function tickLabel(request: Request): string {
-  return new URL(request.url).searchParams.get("desk") === "iran" ? "tick-iran" : "tick";
+  const desk = new URL(request.url).searchParams.get("desk");
+  return desk === "iran" ? "tick-iran" : desk === "gaza" ? "tick-gaza" : "tick";
 }

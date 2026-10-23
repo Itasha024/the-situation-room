@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
 import { deskParam, onDesk } from "@/lib/desk/desk-route";
-import { IRAN_PAYLOAD, scanYemenSources } from "@/lib/yemen-scan.server";
+import { GAZA_PAYLOAD, IRAN_PAYLOAD, scanYemenSources } from "@/lib/yemen-scan.server";
 import { getStore } from "@/lib/desk/store";
 import { cachedResponse } from "@/lib/desk/microcache";
 import type { ScanPayload } from "@/lib/desk/types";
@@ -39,11 +39,12 @@ export const Route = createFileRoute("/api/scan")({
 });
 
 async function readScan(desk: ReturnType<typeof deskParam>, only: string) {
-  const payload =
-    desk === "iran"
-      ? ((await (await getStore()).getJson<ScanPayload>(IRAN_PAYLOAD)) ?? { ok: true as const, scannedAt: "", reports: [], sourcesTried: 0, sourcesOk: 0, rawHits: [], sourceStatus: [] })
-      : await scanYemenSources();
-  if (desk !== "iran") payload.reports = payload.reports.filter((r) => onDesk(r, desk));
+  // The Iran and Gaza desks' scan boxes are their own scans'.
+  const own = desk === "iran" ? IRAN_PAYLOAD : desk === "gaza" ? GAZA_PAYLOAD : "";
+  const payload = own
+    ? ((await (await getStore()).getJson<ScanPayload>(own)) ?? { ok: true as const, scannedAt: "", reports: [], sourcesTried: 0, sourcesOk: 0, rawHits: [], sourceStatus: [] })
+    : await scanYemenSources();
+  if (!own) payload.reports = payload.reports.filter((r) => onDesk(r, desk));
   // The home page asks only when each desk last looked (user, 17 Oct: its clock is the desks' clock).
   const body = only === "time" ? { ok: true, scannedAt: payload.scannedAt } : payload;
   return {

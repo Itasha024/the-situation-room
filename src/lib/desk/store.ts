@@ -80,7 +80,7 @@ export interface DeskStore {
    * Yemen desk cards of a pin's kind stored with no place since `since`: each one its words place
    * (`placeOf`) is given that place and its pin (17 Oct: 1,775 such cards had no pin). Returns how many.
    */
-  placeUnplaced?(since: string, placeOf: (summary: string, type: string, card: { body: string; flags: string[] }) => { name: string; lat: number; lng: number } | null, desk?: "yemen" | "iran"): Promise<number>;
+  placeUnplaced?(since: string, placeOf: (summary: string, type: string, card: { body: string; flags: string[] }) => { name: string; lat: number; lng: number } | null, desk?: DeskId): Promise<number>;
 
   /** Cards stored under a Google News link, newest first, but those in `skip` (relink.ts gives them their article's own). */
   gnewsLinks?(limit: number, skip?: string[]): Promise<{ fp: string; url: string; source: string; at: string }[]>;

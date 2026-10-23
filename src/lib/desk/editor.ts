@@ -69,6 +69,10 @@ import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
 import { mapsAsPin, normaliseArabic } from "./relevance.ts";
 import { iranPinAllowed, iranPins, tallyNotEvent } from "./iran-places.ts";
+import { GAZA_ARENAS, GAZA_PROMPT, gazaContentHash } from "./gaza-reader.ts";
+import { gazaWords } from "./gaza-words.ts";
+import { gazaPins } from "./gaza-places.ts";
+import { GAZA_ALIGNMENT, type GazaLean } from "./gaza-sources.ts";
 import { copyKey } from "./copies.ts";
 import {
   HOUTHI_OUTLET,
@@ -1288,6 +1292,86 @@ export const IRAN_READER: DeskReader = {
   queueMax: 200,
   // A busy hour is 30 cards: the reader sees the day's last few hours, so a
   // story retold all afternoon is one card (audit of 8 Oct: ten for Araghchi's reply).
+  recentMax: 60,
+  secondLook: false,
+  geocode: false,
+};
+
+/**
+ * The Gaza – Judea & Samaria reader's checks (user, 23 Oct): the site's copy rules as on the Iran desk,
+ * the desk's own words (gaza-words.ts), its sides and arenas, and pins from its own places.
+ */
+function decideGaza(raw: Reading, c: Candidate, strict = true): EditorVerdict {
+  const fix = (s: string) => gazaWords(officeTitles(partisanWords(rightOffice(westernDates(reword(respell(anglicise(s))))), false, true)));
+  const r: Reading = { ...raw, headline: firstEvent(fixHeadline(fix(raw.headline))), body: fix(raw.body) };
+  r.headline = dropInventedRole(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.text);
+  r.body = stripOwnOutlet(r.body, c.source);
+  if (r.speaker_lead) r.speaker_lead = dropInventedRole(stripOwnOutlet(r.speaker_lead, c.source), c.text);
+  let lead = String(r.speaker_lead || "").trim().replace(/\s*:+\s*$/, "");
+  if (OUTLET_LEAD.test(`${lead}:`)) lead = "";
+  r.speaker_lead = lead || null;
+  const surname = (lead.split(/\s+/).pop() ?? "").toLowerCase();
+  const named = surname.length > 2 && r.headline.slice(0, 70).toLowerCase().split(/[^\p{L}'-]+/u).includes(surname);
+  if (named && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) r.speaker_lead = null;
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && lead && !named && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
+    r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
+  }
+  if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
+  if (r.event_type === "statement" || r.event_type === "diplomacy") r.headline = colonAfterLead(r.headline, r.speaker_lead);
+  r.headline = stripSpellingNotes(r.headline);
+  r.body = stripSpellingNotes(r.body);
+  if (r.body && sourceSentences(c.text) <= 4) {
+    const h = casualtyHeadline(r.headline, r.body);
+    if (h) [r.headline, r.body] = [h, ""];
+  }
+  if (redundantBody(r.headline, r.body, c.text)) r.body = "";
+  if (r.publish && /:\s*$/.test(r.headline.trim())) return { kind: "reject", reason: "reader-check", note: "Headline is only its speaker: say what they said." };
+  const review = r.publish ? reviewReject(r, c, "gaza", strict) : null;
+  if (review) return review;
+  r.headline = gazaWords(byRole(r, ungarble(r.headline), c.text));
+  r.body = gazaWords(cleanBody(r.body, c.source));
+  Object.assign(r, fitHeadline({ headline: dropChannelLabels(r.headline), body: r.body }));
+  const problem = checkReading(r, c.text, strict);
+  if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
+  const report = toReport(r, c);
+  pinGaza(report, r, c.text);
+  const arenas = (r.arenas ?? []).filter((a) => a in GAZA_ARENAS).slice(0, 2);
+  report.flags = [...(report.flags ?? []), ...arenas.map((a) => `arena:${a}`), ...(r.actor_side ? [`actor:${r.actor_side}`] : [])];
+  report.desks = ["gaza"];
+  return { kind: "publish", report };
+}
+
+/** A Gaza – Judea & Samaria card's pins: the places its targets and copy name that its source names too. */
+function pinGaza(report: LiveReport, r: Reading, sourceText: string): void {
+  delete report.place;
+  delete report.lat;
+  delete report.lng;
+  delete report.places;
+  if (!mapsAsPin(report.type)) return;
+  const from = new Set(gazaPins((r.origins ?? []).join(", "), sourceText).map((p) => p.name));
+  const pins = gazaPins(`${(r.targets ?? []).join(", ")}. ${r.headline}`, sourceText, r.headline).filter((p) => !from.has(p.name));
+  if (!pins.length) return;
+  const [first, ...more] = pins;
+  report.place = first.name;
+  report.lat = first.lat;
+  report.lng = first.lng;
+  if (more.length) report.places = more.map((p) => ({ name: p.name, lat: p.lat, lng: p.lng }));
+}
+
+export const GAZA_READER: DeskReader = {
+  desk: "gaza",
+  queueKey: deskKey("gaza", QUEUE_KEY),
+  cachePrefix: "gaza-read",
+  missedKey: deskKey("gaza", MISSED_KEY),
+  hash: gazaContentHash,
+  decide: (r, c, strict = true) => decideGaza(r, c, strict),
+  alignment: (c) => GAZA_ALIGNMENT[c.lean as GazaLean] ?? "no declared alignment",
+  prompt: GAZA_PROMPT,
+  // Gemini stays the Yemen and Iran readers': this desk reads with the other free services.
+  models: [],
+  fallbacksFirst: true,
+  maxCalls: 6,
+  queueMax: 150,
   recentMax: 60,
   secondLook: false,
   geocode: false,

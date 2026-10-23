@@ -3,7 +3,7 @@
  * public/app.js keeps the same list (DESKS) for the headline menu and the side
  * menu. Yemen's numbers here are the ones it has always run on.
  */
-export type DeskId = "yemen" | "iran";
+export type DeskId = "yemen" | "iran" | "gaza";
 
 export type Desk = {
   id: DeskId;
@@ -21,6 +21,8 @@ export type Desk = {
   /** Latest reports start here (ISO); no card older is served on this desk. */
   feedFrom?: string;
   description: string;
+  /** Built but not yet shown: out of the menus, the home page and the All map; its page opens by its address. */
+  hidden?: boolean;
 };
 
 export const DESKS: Desk[] = [
@@ -50,6 +52,21 @@ export const DESKS: Desk[] = [
     feedFrom: "2026-10-08T00:00:00+03:00",
     description:
       "Live open-source reporting on the war with Iran: strikes on every side, the Strait of Hormuz, the talks, the nuclear file and the numbers, from every side's sources.",
+  },
+  {
+    // User, 23 Oct: the third desk. It counts from the day it began reading, not from a war's first day.
+    id: "gaza",
+    name: "Gaza – Judea & Samaria Desk",
+    path: "/gaza-judea-samaria-desk",
+    flag: ["#0038b8", "#ffffff", "#0038b8"],
+    tz: "Asia/Jerusalem",
+    clockLabel: "Jerusalem",
+    cadenceHours: 3,
+    mapFrom: "2026-10-23",
+    feedFrom: "2026-10-23T00:00:00+03:00",
+    description:
+      "Live open-source reporting on Gaza and Judea and Samaria: the IDF's operations, attacks and clashes, aid and the crossings, the Board of Peace, statements and sanctions, and what is said online, from every side's sources.",
+    hidden: true,
   },
 ];
 

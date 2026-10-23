@@ -229,13 +229,13 @@ export function iranPins(copy: string, sourceText: string, vessel: boolean): Ira
 const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => Math.hypot((a.lat - b.lat) * 111, (a.lng - b.lng) * 111 * Math.cos((a.lat * Math.PI) / 180));
 const ARTICLE = /^(?:al|el|ad|an|ar|as|ash|at|az|ad-)$/;
 /** A Latin text's words, lower case, without the Arabic article ("al-Qantara" is "qantara"). */
-const latinWords = (s: string) =>
+export const latinWords = (s: string) =>
   s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\b(?:al|el|ad|an|ar|as|ash|at|az)-/g, "").split(/[^a-z]+/).filter((w) => w && !ARTICLE.test(w));
 /** A spelling's consonants: "Kfar Tibnit" and "Kafr Tebnit" are both "kfrtbnt". */
-const skeleton = (words: string[]) => words.join("").replace(/q|c/g, "k").replace(/[aeiouy]/g, "").replace(/(.)\1+/g, "$1");
+export const skeleton = (words: string[]) => words.join("").replace(/q|c/g, "k").replace(/[aeiouy]/g, "").replace(/(.)\1+/g, "$1");
 /** Arabic and Persian letters made one: hamzas, ta marbuta, alif maqsura, Persian kaf and yeh. */
 const nativeNorm = (s: string) => s.replace(/[ً-ٟـ]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/[ىی]/g, "ي").replace(/ک/g, "ك");
-const nativeWords = (s: string) => nativeNorm(s).split(/[^\p{L}]+/u).filter(Boolean);
+export const nativeWords = (s: string) => nativeNorm(s).split(/[^\p{L}]+/u).filter(Boolean);
 /**
  * A name's consonants by sound, in either script, so an English spelling the
  * lists lack still meets the source's Arabic or Persian (user, 11 Oct): "Kfar
@@ -245,12 +245,12 @@ const SOUND: Record<string, string> = {
   ب: "B", پ: "B", ت: "T", ث: "T", ط: "T", ج: "J", چ: "C", خ: "K", د: "D", ذ: "D", ض: "D", ظ: "D", ر: "R", ز: "Z", ژ: "Z",
   س: "S", ش: "S", ص: "S", غ: "G", ف: "F", ق: "K", ك: "K", ک: "K", گ: "G", ل: "L", م: "M", ن: "N",
 };
-const nativeSound = (name: string) =>
+export const nativeSound = (name: string) =>
   nativeWords(name).map((w) => w.replace(/^ال/, "")).join("").split("").map((c) => SOUND[c] ?? "").join("").replace(/(.)\1+/g, "$1");
-const latinSound = (words: string[]) =>
+export const latinSound = (words: string[]) =>
   words.join("").replace(/ch/g, "C").replace(/h/g, "").replace(/[qck]/g, "K").replace(/[pb]/g, "B").replace(/[vf]/g, "F").replace(/[aeiouyw']/g, "").toUpperCase().replace(/(.)\1+/g, "$1");
 /** The run is a name in the copy: each of its words capitalised ("tells" is no Tallousa). */
-const isName = (copy: string, run: string[]) => {
+export const isName = (copy: string, run: string[]) => {
   const caps = new Set(latinWords((copy.match(/(?<![\p{L}])[A-Z][\p{L}'’-]*/gu) ?? []).join(" ")));
   return run.every((w) => caps.has(w));
 };
@@ -272,7 +272,7 @@ for (const g of GAZ) {
   }
 }
 /** Each run of one to four words, as the key of a name. */
-function windows(words: string[], each: (key: string, at: number, run: string[]) => void): void {
+export function windows(words: string[], each: (key: string, at: number, run: string[]) => void): void {
   for (let i = 0; i < words.length; i++) for (let n = 1; n <= 4 && i + n <= words.length; n++) each(words.slice(i, i + n).join(" "), i, words.slice(i, i + n));
 }
 /** The hand list's names blanked out, so no wider place is read inside one ("Jbeil" in "Bint Jbeil"). */

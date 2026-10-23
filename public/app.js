@@ -4174,7 +4174,7 @@ async function runFeedSearch(q) {
   if (rail && rail.scrollTop > 0) rail.scrollTop = 0;
   const ask = async (fast) => {
     // Each desk searches its own reports (user, 18 Oct: the Iran desk has the search too).
-    const res = await fetch('/api/search?q=' + encodeURIComponent(q) + (fast ? '&fast=1' : '') + (ON_IRAN_DESK() ? '&desk=iran' : ''));
+    const res = await fetch('/api/search?q=' + encodeURIComponent(q) + (fast ? '&fast=1' : '') + (ON_IRAN_DESK() ? '&desk=' + deskOf().id : ''));
     const body = await res.json().catch(() => ({}));
     if (!res.ok || !body.ok) throw new Error(body.error || 'The search did not answer. Try again in a moment.');
     return body;
@@ -4353,7 +4353,8 @@ function wireFeedSearch() {
   wireLeanMenu();
 }
 
-const ON_IRAN_DESK = () => /^\/iran-conflict-desk/.test(location.pathname);
+// The desks the Iran desk's code draws: Iran's, and the Gaza – Judea & Samaria desk's (user, 23 Oct).
+const ON_IRAN_DESK = () => /^\/(?:iran-conflict-desk|gaza-judea-samaria-desk)/.test(location.pathname);
 function renderFeed(d) {
   if (ON_IRAN_DESK()) { renderIranFeed(); return; }
   if (!d) return;
@@ -7102,6 +7103,8 @@ try { setFavicon(THEME); } catch (e) {}
 const DESKS = [
   { id: 'yemen', name: 'Yemen Conflict Desk', short: 'Yemen conflict', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden' },
   { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Live', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran' },
+  // Being built (user, 23 Oct): in the menus only on its own page or with ?desks=1.
+  { id: 'gaza', name: 'Gaza – Judea & Samaria Desk', short: 'Gaza – Judea & Samaria', href: '/gaza-judea-samaria-desk', sub: 'Being built', soon: true, flag: ['#0038b8', '#ffffff', '#0038b8'], tz: 'Asia/Jerusalem' },
 ];
 function deskOf() {
   const el = document.querySelector('[data-desk]');
@@ -7132,7 +7135,7 @@ const SITE_PAGES = () => desksShown().map((d) => [d.href, d.name, d.sub, d.kids,
  * a round flag beside the name (user, 17 Oct); more desks than fit scroll
  * sideways. Picking one goes over to it on the map (deskGo).
  */
-const DESK_COUNTRY = { yemen: 'Yemen', iran: 'Iran' };
+const DESK_COUNTRY = { yemen: 'Yemen', iran: 'Iran', gaza: 'Gaza – J&S' };
 /** A desk's flag in its button: the full drawing, cropped to a circle. */
 const flagFill = (d) => (FLAG_ART[d.id]
   ? `<svg class="dt-flag" viewBox="0 0 630 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${FLAG_ART[d.id]().replace(/irf-/g, 'irb-')}</svg>`
@@ -7165,6 +7168,7 @@ const DESK_GO = {
   '/': { b: [[11.5, 32.5], [38.5, 61]], fit: {} },
   '/yemen-conflict-desk': { b: [[12.3, 38.0], [25.0, 48.0]], fit: { paddingTopLeft: [6, 44], paddingBottomRight: [6, 6] } },
   '/iran-conflict-desk': { b: [[12.0, 31.5], [40.5, 63.5]], fit: { padding: [6, 6] } },
+  '/gaza-judea-samaria-desk': { b: [[31.2, 34.2], [32.58, 35.6]], fit: { padding: [6, 6] } },
 };
 const deskPath = (href) => { try { return new URL(href, location.href).pathname.replace(/\/+$/, '') || '/'; } catch (e) { return ''; } };
 let deskGoing = false;
@@ -7334,7 +7338,7 @@ function installSectionNav() {
   if (document.getElementById('sec-nav')) return;
   // The Iran desk calls its Fronts "Arenas" (user, 8 Oct).
   const items = SECTIONS.filter(([id]) => document.getElementById(id))
-    .map(([id, name]) => [id, id === 'fronts-wrap' && deskOf().id === 'iran' ? 'Arenas' : name]);
+    .map(([id, name]) => [id, id === 'fronts-wrap' && deskOf().id !== 'yemen' ? 'Arenas' : name]);
   if (!items.length) return;
   const nav = document.createElement('nav');
   nav.id = 'sec-nav';
@@ -7725,7 +7729,9 @@ async function bootYemenDesk() {
 function bootOtherDesk(el) {
   try { installDeskPicker(); wireDeskGo(() => map); } catch (e) { console.error(e); }
   try { installMast(); } catch (e) { console.error(e); }
-  try { installIranMethPops(); } catch (e) { console.error(e); }
+  const gaza = deskOf().id === 'gaza';
+  try { useDeskSettings(); } catch (e) { console.error(e); }
+  if (!gaza) try { installIranMethPops(); } catch (e) { console.error(e); }
   try { installLangSwitch(); } catch (e) { console.error(e); }
   try { installSectionNav(); } catch (e) { console.error(e); }
   try { startYemenClock(); } catch (e) { console.error(e); }
@@ -7735,8 +7741,8 @@ function bootOtherDesk(el) {
   try { startIranFeed(); } catch (e) { console.error(e); }
   if (!window.L) return;
   map = L.map('map', { zoomControl: true, attributionControl: true, zoomSnap: 0.25 });
-  // Iran, the Gulf, Iraq, Syria, Lebanon, Israel and Jordan, and the seas around them.
-  const START = [[12.0, 31.5], [40.5, 63.5]];
+  // Iran, the Gulf, Iraq, Syria, Lebanon, Israel and Jordan, and the seas around them; or Gaza and Judea and Samaria.
+  const START = gaza ? DESK_GO['/gaza-judea-samaria-desk'].b : [[12.0, 31.5], [40.5, 63.5]];
   const FIT = { padding: [6, 6], animate: false };
   map.fitBounds(START, FIT);
   oneEarth(map);
@@ -7755,8 +7761,8 @@ function bootOtherDesk(el) {
   iranPins.day = iranToday(); // the map opens on today (user, 10 Oct), not the whole war
   renderIranLegend();
   wireIranMapTools();
-  drawIranCountries();
-  drawIranAdmin();
+  // The Gaza desk's own areas are its stage 2; Iran's countries are not its map.
+  if (!gaza) { drawIranCountries(); drawIranAdmin(); }
   loadIranPins();
 }
 
@@ -7766,8 +7772,8 @@ function bootOtherDesk(el) {
  * own scan's box (/api/scan?desk=iran). The six buttons filter by the
  * source's group, which the API gives each card ("lean").
  */
-const IRAN_GROUPS = { iran: 'axis', opp: 'opposition', il: 'israel', us: 'us', gulf: 'gulf', intl: 'intl' };
-const IRAN_GROUP_NAMES = { axis: 'Iran and Axis-aligned', opposition: 'Iranian opposition', israel: 'Israeli', us: 'US', gulf: 'Gulf and Arab', intl: 'International' };
+let IRAN_GROUPS = { iran: 'axis', opp: 'opposition', il: 'israel', us: 'us', gulf: 'gulf', intl: 'intl' };
+let IRAN_GROUP_NAMES = { axis: 'Iran and Axis-aligned', opposition: 'Iranian opposition', israel: 'Israeli', us: 'US', gulf: 'Gulf and Arab', intl: 'International' };
 // As many cards at first as the Yemen desk shows, and as many more a click (user, 9 Oct).
 const iranDesk = { reports: [], lean: '', scan: null, timer: 0, shown: INITIAL_REPORTS };
 function startIranFeed() {
@@ -7790,7 +7796,8 @@ function startIranFeed() {
   wireLeanMenu();
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
-  const pull = () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
+  // The Gaza desk's brief, Trump column and numbers come in its later stages.
+  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadIranPins(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
@@ -7804,7 +7811,7 @@ function startIranFeed() {
  * this is not the Yemen desk), Iran red, the legend ticked on and off as the
  * Yemen desk's, the note only the report, one pin per event.
  */
-const IRAN_PIN_SIDES = [
+let IRAN_PIN_SIDES = [
   ['iran', '#e5484d', 'Iran'],
   ['hezbollah', '#eab308', 'Hezbollah'],
   ['iraqi_militias', '#ec4899', 'Iraqi and Syrian militias'],
@@ -7815,8 +7822,31 @@ const IRAN_PIN_SIDES = [
   ['gulf', '#a855f7', 'Gulf states'],
   ['other', '#94a3b8', 'Others or not stated'],
 ];
-const IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));
-const IRAN_MAP_FROM = '2026-02-28';
+let IRAN_PIN_INK = Object.fromEntries(IRAN_PIN_SIDES.map(([k, c]) => [k, c]));
+let IRAN_MAP_FROM = '2026-02-28';
+/*
+ * The Gaza – Judea & Samaria desk (user, 23 Oct): drawn by the Iran desk's code with its own sides, source
+ * groups, first day and map. It counts from the day it began reading.
+ */
+const GAZA_PIN_SIDES = [
+  ['israel', '#38bdf8', 'Israel (IDF, police, Shin Bet)'],
+  ['israeli_citizens', '#6366f1', 'Israeli citizens'],
+  ['hamas', '#22c55e', 'Hamas'],
+  ['factions', '#ef4444', 'Islamic Jihad and the factions'],
+  ['pa', '#eab308', 'Palestinian Authority'],
+  ['clans', '#f97316', 'Clans and militias'],
+  ['other', '#94a3b8', 'Others or not stated'],
+];
+const GAZA_GROUP_NAMES = { israel: 'Israeli', pa: 'Palestinian Authority', factions: 'Hamas and the factions', palestinian: 'Palestinian', arab: 'Arab', intl: 'International' };
+function useDeskSettings() {
+  if (deskOf().id !== 'gaza') return;
+  IRAN_PIN_SIDES = GAZA_PIN_SIDES;
+  IRAN_PIN_INK = Object.fromEntries(GAZA_PIN_SIDES.map(([k, c]) => [k, c]));
+  IRAN_MAP_FROM = '2026-10-23';
+  IRAN_GROUPS = Object.fromEntries(Object.keys(GAZA_GROUP_NAMES).map((k) => [k, k]));
+  IRAN_GROUP_NAMES = GAZA_GROUP_NAMES;
+  iranPins.on = Object.fromEntries(GAZA_PIN_SIDES.map(([k]) => [k, true]));
+}
 const iranPins = { layer: null, byFp: new Map(), drawn: '', events: [], on: Object.fromEntries(IRAN_PIN_SIDES.map(([k]) => [k, true])), kinds: {}, where: { land: true, sea: true }, collapsed: true, day: null, range: null, countries: null, focus: false };
 /** The day an attack belongs to, in Israel and Iran's part of the world: the researched ones carry only their day. */
 // One formatter, and each pin's day kept once worked out: the whole war's 22,000 pins are filtered by day on every redraw.
@@ -8107,9 +8137,10 @@ async function loadIranPins() {
   if (!map) return;
   // The war's researched pins are read alongside, never before, the desk's own (user, 11 Oct:
   // the map comes up at once): today is drawn from the live pins, the whole war when they come.
+  if (deskOf().id !== 'iran') iranPins.past = iranPins.past || [];
   const pastP = iranPins.past ? Promise.resolve(iranPins.past) : (iranPins.pastP = iranPins.pastP || loadIranPast());
   try {
-    const res = await fetch(`/api/desk?desk=iran&since=${IRAN_MAP_FROM}`);
+    const res = await fetch(`/api/desk?desk=${deskOf().id}&since=${IRAN_MAP_FROM}`);
     if (!res.ok) return;
     const d = await res.json();
     // The desk's own pins from the day it began reading; the researched ones before it.
@@ -8358,7 +8389,7 @@ function showIranPin(fp) {
 
 async function loadIranFeed() {
   try {
-    const res = await fetch('/api/desk?desk=iran&limit=300', { cache: 'no-cache' });
+    const res = await fetch(`/api/desk?desk=${deskOf().id}&limit=300`, { cache: 'no-cache' });
     if (!res.ok) return;
     const d = await res.json();
     // The older pages the reader has scrolled to stay under the newest (20 Oct: every report since 28 Feb, a page at a time).
@@ -8375,7 +8406,7 @@ async function pullOlderIran() {
   const t = iranDesk.reports.reduce((m, r) => Math.min(m, Date.parse(reportTime(r)) || Infinity), Infinity);
   if (!Number.isFinite(t)) return false;
   try {
-    const res = await fetch('/api/desk?desk=iran&limit=200&before=' + encodeURIComponent(new Date(t).toISOString()));
+    const res = await fetch(`/api/desk?desk=${deskOf().id}&limit=200&before=` + encodeURIComponent(new Date(t).toISOString()));
     if (!res.ok) return false;
     const rows = ((await res.json()).reports || []);
     if (rows.length < 200) iranDesk.olderDone = true;
@@ -8444,7 +8475,7 @@ function irCardMap(card, r) {
 }
 async function loadIranScan() {
   try {
-    const res = await fetch('/api/scan?desk=iran', { cache: 'no-cache' });
+    const res = await fetch(`/api/scan?desk=${deskOf().id}`, { cache: 'no-cache' });
     if (!res.ok) return;
     iranDesk.scan = await res.json();
     renderIranScan();
@@ -8621,7 +8652,7 @@ function refCardHtml(ref) {
   const r = reportByFp.get(String(ref.fp));
   if (r) {
     const html = feedCardHtml(r, 0);
-    return deskOf().id === 'iran' ? html.replace(/\blean-\S+(?=[ "])/, `ir-${r.lean || 'intl'}`) : html;
+    return deskOf().id !== 'yemen' ? html.replace(/\blean-\S+(?=[ "])/, `ir-${r.lean || 'intl'}`) : html;
   }
   return `<article class="card" data-fp="${escapeHtml(ref.fp)}">
       <div class="meta"><time datetime="${escapeHtml(ref.at)}">${escapeHtml(fmtStamp(ref.at))}</time><span class="src-wrap">${sourceAnchors(ref.source, ref.url)}</span></div>
@@ -8860,7 +8891,7 @@ async function loadIranNumbers() {
 }
 async function loadIranBrief() {
   try {
-    const res = await fetch('/api/brief?desk=iran', { cache: 'no-cache' });
+    const res = await fetch(`/api/brief?desk=${deskOf().id}`, { cache: 'no-cache' });
     if (!res.ok) return;
     const b = await res.json();
     if (!b || !b.ok || b.pending) return;

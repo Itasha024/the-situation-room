@@ -69,7 +69,7 @@ const STATE_KEY = "iran:scan-state";
 const FETCH_STATE_KEY = "iran:fetch-state";
 export const IRAN_TICK_USAGE_KEY = "iran:tick-usage";
 
-type IranState = {
+export type IranState = {
   lastScanAt: Record<string, number>;
   lastTgPost: Record<string, number>;
   lastXPost: Record<string, string>;
@@ -79,7 +79,7 @@ type IranState = {
   pending?: RawHit[];
 };
 
-type Feed = { id: string; url: string; name: string; lean: IranLean; every: number };
+export type Feed = { id: string; url: string; name: string; lean: string; every: number };
 
 type FetchState = Pick<IranState, "lastScanAt" | "lastTgPost" | "lastXPost">;
 
@@ -179,7 +179,7 @@ export function papersFirst<T extends Pick<RawHit, "url" | "site" | "source" | "
  * licensed copy on MSN; then the reading service (never for a paywalled site,
  * whose page there is its teaser too).
  */
-async function openArticle(url: string, title: string, source: string, ownFirst = true): Promise<string> {
+export async function openArticle(url: string, title: string, source: string, ownFirst = true): Promise<string> {
   let best = "";
   if (ownFirst) {
     const html = await fetchText(url, 8000);
@@ -220,7 +220,7 @@ const REWIND = [{ id: "s_a_araghchi", from: 13083, to: 13097, until: Date.parse(
  *  and the reading does not lose it; a reading already cached under the new rules costs nothing). */
 const rewound = (url: string, now: number) => REWIND.some((x) => now < x.until && url.includes(`t.me/${x.id}/`) && tgPostNo(url) > x.from && tgPostNo(url) <= x.to);
 
-async function readTg(src:{ id: string; name: string; lean: IranLean }, state: IranState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
+export async function readTg(src: { id: string; name: string; lean: string }, state: IranState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
   const html = await fetchText(`https://t.me/s/${src.id}`);
   const ok = !!(html && html.includes("tgme_widget_message"));
   if (!ok) return { rows: [], ok };
@@ -255,7 +255,7 @@ async function readTg(src:{ id: string; name: string; lean: IranLean }, state: I
   return { rows, ok };
 }
 
-async function readX(src: { id: string; name: string; lean: IranLean }, state: IranState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
+export async function readX(src: { id: string; name: string; lean: string }, state: IranState, now: number): Promise<{ rows: RawHit[]; ok: boolean }> {
   // FxTwitter answers some requests 404 and the next one right (8 Oct): one retry.
   const page = (await fxPage(src.id)) ?? (await fxPage(src.id));
   if (!page) return { rows: [], ok: false };
@@ -300,7 +300,7 @@ async function readNna(state: IranState, now: number): Promise<{ rows: RawHit[];
 }
 const NNA_MARK = "nna-leb";
 
-async function readFeed(f: Feed): Promise<{ rows: RawHit[]; ok: boolean }> {
+export async function readFeed(f: Feed): Promise<{ rows: RawHit[]; ok: boolean }> {
   const body = await fetchText(f.url, 10_000);
   // A feed with nothing new still answered (Google's listing of a slow site).
   const ok = !!(body && /<(?:item|channel)[\s>]/i.test(body));
@@ -338,7 +338,7 @@ export const IRAN_PIPE: DeskPipe = {
  * about the war or its economy (the desk's own gate). The site scan calls it
  * with the scan's store of how far each source was read.
  */
-export async function fetchIranSources(state: FetchState, now: number): Promise<{ hits: RawHit[]; status: SourceStatus[]; yemen: RawHit[] }> {
+export async function fetchIranSources(state: FetchState, now: number): Promise<{ hits: RawHit[]; status: SourceStatus[]; yemen: RawHit[]; all: RawHit[] }> {
   const iState = state as IranState;
   const status: SourceStatus[] = [];
   const own: RawHit[] = [];
@@ -372,7 +372,7 @@ export async function fetchIranSources(state: FetchState, now: number): Promise<
   );
   remember(own);
 
-  return { hits: own.filter((h) => passesOwnSourceGate(h)), status, yemen: toYemen(own) };
+  return { hits: own.filter((h) => passesOwnSourceGate(h)), status, yemen: toYemen(own), all: own };
 }
 
 /** The Yemen desk's filter group for a source of this desk's: Iran's side is the Houthis' side there. */
@@ -409,18 +409,18 @@ export function passesOwnSourceGate(h: Pick<RawHit, "source" | "title" | "text">
 }
 
 /** The site scan's part for the Iran desk: its own sources read, into its inbox. */
-export async function scanIranSources(store: Awaited<ReturnType<typeof getStore>>, now: number): Promise<{ n: number; yemen: RawHit[] }> {
+export async function scanIranSources(store: Awaited<ReturnType<typeof getStore>>, now: number): Promise<{ n: number; yemen: RawHit[]; all: RawHit[] }> {
   const state: FetchState = { lastScanAt: {}, lastTgPost: {}, lastXPost: {}, ...((await store.getJson<FetchState>(FETCH_STATE_KEY)) ?? {}) };
   // First run: how far the Iran cycle had read each source itself.
   if (!Object.keys(state.lastScanAt).length) {
     const old = await store.getJson<IranState>(STATE_KEY);
     if (old) Object.assign(state, { lastScanAt: { ...old.lastScanAt }, lastTgPost: { ...old.lastTgPost }, lastXPost: { ...old.lastXPost } });
   }
-  const { hits, status, yemen } = await fetchIranSources(state, now);
+  const { hits, status, yemen, all } = await fetchIranSources(state, now);
   const row: IranInboxRow = { hits, status, own: true };
   await store.putMany(IRAN_INBOX, { [`own-${now}`]: row });
   await store.putJson(FETCH_STATE_KEY, { lastScanAt: state.lastScanAt, lastTgPost: state.lastTgPost, lastXPost: state.lastXPost });
-  return { n: hits.length, yemen };
+  return { n: hits.length, yemen, all };
 }
 
 export type IranTickResult = { ok: boolean; scannedAt: string; sourcesTried: number; sourcesOk: number; fromInbox: number; candidates: number; reportsAdded: number; note: string; tookMs: number; error?: string };

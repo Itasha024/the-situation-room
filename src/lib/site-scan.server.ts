@@ -31,6 +31,7 @@ import { remember } from "./desk/recent-reads.ts";
 import { getStore } from "./desk/store.ts";
 import type { ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { scanIranSources } from "./iran-scan.server.ts";
+import { scanGazaSources, toGaza } from "./gaza-scan.server.ts";
 import { type RawHit, type TickResult, type YemenFetch, fetchYemenSources, readYemen, runScanCycle, yemenCandidates } from "./yemen-scan.server.ts";
 
 export type SiteMode = "off" | "shadow" | "on";
@@ -84,13 +85,20 @@ async function scanThenReadYemen(state: ScanState, prev: ScanPayload | null): Pr
   // The Iran desk's own sources are read beside Yemen's; Yemen's reader never waits for them.
   // What of theirs is on Yemen's war joins the Yemen inbox, read by the next cycle's Yemen reader.
   const iran = scanIranSources(store, Date.now())
-    .then(async ({ n, yemen }) => {
+    .then(async ({ n, yemen, all }) => {
       if (yemen.length) await store.putMany(YEMEN_INBOX, { [`iran-${Date.now()}`]: { at: Date.now(), hits: yemen, status: [], sourcesOk: 0, learnedIds: [], iranShared: [], extra: true } satisfies YemenFetch });
-      console.log(`[site] Iran sources: ${n} item(s) to the Iran inbox, ${yemen.length} to the Yemen inbox`);
+      // The Israeli outlets, the IDF and Israel's leaders on Gaza and Judea and Samaria: that desk's too.
+      const gaza = await toGaza(store, all, "iran");
+      console.log(`[site] Iran sources: ${n} item(s) to the Iran inbox, ${yemen.length} to the Yemen inbox, ${gaza} to the Gaza inbox`);
     })
     .catch((err) => console.error("[site] Iran sources:", err instanceof Error ? err.message : err));
+  // The Gaza – Judea & Samaria desk's own sources (user, 23 Oct), beside the others'.
+  const gazaOwn = scanGazaSources(store, Date.now())
+    .then((n) => console.log(`[site] Gaza sources: ${n} item(s) to the Gaza inbox`))
+    .catch((err) => console.error("[site] Gaza sources:", err instanceof Error ? err.message : err));
   const got = await fetchYemenSources(state, prev);
   remember(got.hits);
+  void toGaza(store, got.gazaShared ?? [], "yemen").catch((err) => console.error("[site] Gaza inbox:", err instanceof Error ? err.message : err));
   let mine: YemenFetch = got;
   try {
     await store.putMany(YEMEN_INBOX, { [String(got.at)]: got });
@@ -103,6 +111,7 @@ async function scanThenReadYemen(state: ScanState, prev: ScanPayload | null): Pr
     return await readYemen(state, prev, mine);
   } finally {
     await iran;
+    await gazaOwn;
   }
 }
 

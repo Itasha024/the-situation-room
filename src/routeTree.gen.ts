@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GazaJudeaSamariaDeskRouteImport } from './routes/gaza-judea-samaria-desk'
 import { Route as IranConflictDeskRouteImport } from './routes/iran-conflict-desk'
 import { Route as YemenRouteImport } from './routes/yemen'
 import { Route as YemenConflictDeskRouteImport } from './routes/yemen-conflict-desk'
@@ -29,6 +30,11 @@ import { Route as YemenConflictDeskSourcesRouteImport } from './routes/yemen-con
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GazaJudeaSamariaDeskRoute = GazaJudeaSamariaDeskRouteImport.update({
+  id: '/gaza-judea-samaria-desk',
+  path: '/gaza-judea-samaria-desk',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IranConflictDeskRoute = IranConflictDeskRouteImport.update({
@@ -110,6 +116,7 @@ const YemenConflictDeskSourcesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/gaza-judea-samaria-desk': typeof GazaJudeaSamariaDeskRoute
   '/iran-conflict-desk': typeof IranConflictDeskRoute
   '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/gaza-judea-samaria-desk': typeof GazaJudeaSamariaDeskRoute
   '/iran-conflict-desk': typeof IranConflictDeskRoute
   '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
@@ -147,6 +155,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/gaza-judea-samaria-desk': typeof GazaJudeaSamariaDeskRoute
   '/iran-conflict-desk': typeof IranConflictDeskRoute
   '/yemen': typeof YemenRoute
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/gaza-judea-samaria-desk'
     | '/iran-conflict-desk'
     | '/yemen'
     | '/yemen-conflict-desk'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/gaza-judea-samaria-desk'
     | '/iran-conflict-desk'
     | '/yemen'
     | '/yemen-conflict-desk'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/gaza-judea-samaria-desk'
     | '/iran-conflict-desk'
     | '/yemen'
     | '/yemen-conflict-desk'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GazaJudeaSamariaDeskRoute: typeof GazaJudeaSamariaDeskRoute
   IranConflictDeskRoute: typeof IranConflictDeskRoute
   YemenRoute: typeof YemenRoute
   YemenConflictDeskRoute: typeof YemenConflictDeskRoute
@@ -246,6 +259,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gaza-judea-samaria-desk': {
+      id: '/gaza-judea-samaria-desk'
+      path: '/gaza-judea-samaria-desk'
+      fullPath: '/gaza-judea-samaria-desk'
+      preLoaderRoute: typeof GazaJudeaSamariaDeskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/iran-conflict-desk': {
@@ -358,6 +378,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GazaJudeaSamariaDeskRoute: GazaJudeaSamariaDeskRoute,
   IranConflictDeskRoute: IranConflictDeskRoute,
   YemenRoute: YemenRoute,
   YemenConflictDeskRoute: YemenConflictDeskRoute,

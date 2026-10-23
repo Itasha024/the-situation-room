@@ -135,3 +135,8 @@ Al-Mihwar posted "a video published for the first time" of an Iranian missile fa
 - "Tal al-Zaatar, northern Gaza" was pinned near Jerusalem, "al-Nasr … west of Gaza City" near Rafah: a place must be in the part the copy is about (Gaza or Judea and Samaria) and, of the places of its name, the one nearest the town the copy names (within 25 km). Gaza City's neighbourhoods, its hospitals and the corridors are placed by hand.
 - No pin for a past day ("wounds from air strikes yesterday") or a trend told by sources ("infighting, defections and drone killings").
 - Arab outlets passing on Channel 14 and Yedioth Ahronoth were taken off the desk (relay rule). Tests: gaza-desk.test.ts.
+
+## Whose account tells the card (Gaza desk, 23 Oct)
+- The user's cards: Al Jazeera's "…, Channel 12 reports", NBC's "Netanyahu orders…", Al Mayadeen's Islamic Jihad line, IRNA's Hamas official. Each side is told from its own sources: Israel's leaders, army and media from the Israeli sources; Hamas, the factions and the PA from the Palestinian channels, never Iranian media (`gaza-sourcing.ts`, a reader-check reject). Field acts are told by anyone on the spot.
+- When copies fold, the side's own source leads (`DeskPipe.leadBonus`).
+- A rule only works if that side's items reach the reader: check the gate on the side's own channels too (the Hebrew misses of 23 Oct).

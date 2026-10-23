@@ -22,7 +22,6 @@ export const WRITER_MODELS: ChainModel[] = [
   { provider: "gemini", id: "gemini-3.5-flash" },
   // Google's Flash models were busy (503) or spent through the 12:00 update
   // (2 Oct); Nemotron wrote a 90-card window in 42 s, as well as the lite model.
-  { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
   { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
   { provider: "groq", id: "openai/gpt-oss-120b" },
   { provider: "gemini", id: "gemini-flash-latest" },
@@ -55,7 +54,6 @@ export const COMBINE_MODELS: ChainModel[] = [
   { provider: "gemini", id: "gemini-flash-lite-latest" },
   { provider: "groq", id: "openai/gpt-oss-20b" },
   { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
-  { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
   { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   { provider: "gemini", id: "gemini-flash-latest" },
 ];

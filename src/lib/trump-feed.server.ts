@@ -62,7 +62,6 @@ export async function readClips(): Promise<TrumpStatement[] | null> {
 
 /** NVIDIA and Groq first: a few calls a day, kept off the Gemini quota the readers need. */
 const TRUMP_MODELS: ChainModel[] = [
-  { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
   { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
   { provider: "groq", id: "openai/gpt-oss-120b" },
   { provider: "openrouter", id: "openai/gpt-oss-120b:free" },

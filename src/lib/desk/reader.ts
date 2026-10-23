@@ -1668,7 +1668,7 @@ export type Fallback = { name: string; url: string; key: () => string; models: s
 const list = (name: string, dflt: string) => (env(name) || dflt).split(",").map((s) => s.trim()).filter(Boolean);
 export const FALLBACKS: Fallback[] = [
   { name: "cerebras", url: "https://api.cerebras.ai/v1/chat/completions", key: () => env("CEREBRAS_API_KEY"), models: list("CEREBRAS_MODELS", "gpt-oss-120b"), batch: 15 },
-  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "nvidia/nemotron-3-ultra-550b-a55b,nvidia/nemotron-3-super-120b-a12b"), batch: 5, ms: 90_000 },
+  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "nvidia/nemotron-3-ultra-550b-a55b"), batch: 5, ms: 90_000 },
   { name: "openrouter", url: "https://openrouter.ai/api/v1/chat/completions", key: () => env("OPENROUTER_API_KEY"), models: list("OPENROUTER_MODELS", "openai/gpt-oss-120b:free"), batch: 10 },
   { name: "groq", url: "https://api.groq.com/openai/v1/chat/completions", key: () => groqKey(), models: GROQ_MODELS, batch: 4 },
   { name: "mistral", url: "https://api.mistral.ai/v1/chat/completions", key: () => env("MISTRAL_API_KEY"), models: list("MISTRAL_MODELS", ""), batch: 15 },

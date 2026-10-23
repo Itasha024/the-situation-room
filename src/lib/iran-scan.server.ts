@@ -322,12 +322,11 @@ export const IRAN_PIPE: DeskPipe = {
   // The Yemen desk's combining and link models are Gemini's lite ones and
   // Groq's: this desk asks NVIDIA and OpenRouter first, so their quotas last.
   combineModels: [
-    { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
     { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
     { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   ],
   linkModels: [
-    { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
+    { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
     { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   ],
   traceShare: 0.4,

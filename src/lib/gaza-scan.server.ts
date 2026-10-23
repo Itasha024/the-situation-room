@@ -64,11 +64,11 @@ export const GAZA_PIPE: DeskPipe = {
   war: "Gaza and Judea and Samaria",
   visionKey: "gaza:media-vision",
   combineModels: [
-    { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
+    { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
     { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   ],
   linkModels: [
-    { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
+    { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
     { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   ],
   traceShare: 0.2,

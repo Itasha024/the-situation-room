@@ -21,7 +21,7 @@ const BATCH = 25;
 /** After this hour (UTC) the day's reads are mostly in: the check runs once a day from then. */
 const FROM_HOUR = 19;
 const MODELS: ChainModel[] = [
-  { provider: "nvidia", id: "nvidia/nemotron-3-super-120b-a12b" },
+  { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
   { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   ...NUMBERS_MODELS,
 ];

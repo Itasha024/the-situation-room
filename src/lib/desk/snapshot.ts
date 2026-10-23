@@ -123,7 +123,8 @@ export function deriveEvents(r: LiveReport): { events: DeskEventRow[]; unplaced:
     if (events.length) return { events, unplaced: false };
   }
 
-  if (!mapsAsPin(r.type)) return { events: [], unplaced: false };
+  // A Gaza desk funeral is pinned too (pin:funeral, editor.ts).
+  if (!mapsAsPin(r.type) && !r.flags?.includes("pin:funeral")) return { events: [], unplaced: false };
 
   if (r.lat == null || r.lng == null) return { events: [], unplaced: true };
 

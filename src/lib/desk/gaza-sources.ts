@@ -53,6 +53,8 @@ export const GAZA_TG: Src[] = [
   { id: "asramediia", name: "Prisoners Media Office", lean: "factions", every: 30, tier: 1 },
   { id: "mdaisrael", name: "Magen David Adom", lean: "israel", every: 5, tier: 1 },
   { id: "cogatonline", name: "COGAT", lean: "israel", every: 15, tier: 1 },
+  // A geo-analyst on the fronts, Gaza's among them (user, 23 Oct): maps, satellite pictures, the IDF-held share.
+  { id: "BenTzionM", name: "Ben-Zion Macales", lean: "israel", every: 15, tier: 2 },
   // Faction media and the agencies.
   { id: "qudsn", name: "Quds News Network", lean: "factions", every: 5, tier: 2 },
   { id: "Qudsn_Brk", name: "Quds News Network (urgent)", lean: "factions", every: 5, tier: 2 },

@@ -1553,6 +1553,8 @@ export async function readBatch(
   prompt: ReaderPrompt = YEMEN_PROMPT,
   /** The other free services before Gemini (the Iran desk's reader, so Yemen's Gemini quota lasts). */
   fallbacksFirst = false,
+  /** A desk's further NVIDIA models, after the usual one. */
+  moreNvidia: readonly string[] = [],
 ): Promise<{ readings: Map<string, Reading>; model?: string; error?: string; exhausted: string[]; minute: string[]; slow: string[] }> {
   let lastError = "";
   // Out for the day, and out for this minute only.
@@ -1603,7 +1605,7 @@ export async function readBatch(
   for (const p of FALLBACKS) {
     const pk = p.key();
     if (!pk) continue;
-    for (const gm of p.models) {
+    for (const gm of p.name === "nvidia" ? [...p.models, ...moreNvidia] : p.models) {
       // The same model on two services has two allowances: Groq's keep their bare names.
       const tag = serviceModel(p.name, gm);
       if (skip.has(tag) || exhausted.includes(tag) || minute.includes(tag)) continue;

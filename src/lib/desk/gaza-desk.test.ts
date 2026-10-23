@@ -152,3 +152,14 @@ test("one Palestinian group in the Gaza desk's source filter", async () => {
   const names = /const GAZA_GROUP_NAMES = (\{[^}]*\})/.exec(js)?.[1] ?? "";
   assert.ok(/palestinian: 'Palestinian'/.test(names) && !/\bpa:|factions:/.test(names), names);
 });
+
+// User, 23 Oct: funerals are pinned on this desk; Israeli sources wait with the official channels.
+test("funerals pin, Israeli sources read first", async () => {
+  const { FUNERAL_RE } = await import("./gaza-places.ts");
+  const { israeliSource } = await import("./gaza-sourcing.ts");
+  assert.ok(FUNERAL_RE.test("Mourners carry bodies of two men killed in Jenin camp raid"));
+  assert.ok(!FUNERAL_RE.test("Israeli forces raid Jenin camp"));
+  assert.equal(GAZA_READER.rank?.({ source: "N12" } as never), 1);
+  assert.ok(GAZA_READER.newestFirst && GAZA_READER.moreNvidia?.length);
+  assert.ok(israeliSource("Ben-Zion Macales"));
+});

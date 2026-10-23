@@ -1049,7 +1049,10 @@
     if (Date.now() - T0 < 25000) { list.forEach((e) => seen.add(keyOf(e))); return; }
     const fresh = list.filter((e) => !seen.has(keyOf(e)) && Date.now() - Date.parse(e.at) < 6 * 3600e3);
     list.forEach((e) => seen.add(keyOf(e)));
-    if (P.alerts) fresh.sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 3).forEach((e) => { toast(e); ping(e); });
+    // One card with pins at two places is one notice (user, 23 Oct: "why 2 pins same"); each pin still pings.
+    const told = new Set();
+    const once = fresh.sort((a, b) => (a.at < b.at ? 1 : -1)).filter((e) => { const k = `${e.url || ''}|${e.label || ''}`; if (told.has(k)) return false; told.add(k); return true; });
+    if (P.alerts) { once.slice(0, 3).forEach(toast); fresh.slice(0, 6).forEach(ping); }
     if (fresh.length && P.sound && P.alerts) beep();
     if (fresh.length) { drawMatrix(); if (PAGE === 'all') drawAllRail(); }
   }

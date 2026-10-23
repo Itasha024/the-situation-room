@@ -71,9 +71,9 @@ import { mapsAsPin, normaliseArabic } from "./relevance.ts";
 import { iranPinAllowed, iranPins, tallyNotEvent } from "./iran-places.ts";
 import { GAZA_ARENAS, GAZA_PROMPT, gazaContentHash } from "./gaza-reader.ts";
 import { gazaWords } from "./gaza-words.ts";
-import { gazaPins } from "./gaza-places.ts";
+import { FUNERAL_RE, gazaPins } from "./gaza-places.ts";
 import { GAZA_ALIGNMENT, type GazaLean, gazaTierOf } from "./gaza-sources.ts";
-import { gazaSourceRule } from "./gaza-sourcing.ts";
+import { gazaSourceRule, israeliSource } from "./gaza-sourcing.ts";
 import { copyKey } from "./copies.ts";
 import {
   HOUTHI_OUTLET,
@@ -314,6 +314,10 @@ export type DeskReader = {
   rank?: (c: Candidate) => number;
   /** A post reworded by another channel (most of its words, no new figure) is read once too. */
   nearCopies?: boolean;
+  /** More NVIDIA models after the first, each with its own allowance (Gaza, 23 Oct: the queue ran hours late). */
+  moreNvidia?: readonly string[];
+  /** Always newest first within a rank: a desk whose queue never empties reads today before last night. */
+  newestFirst?: boolean;
 };
 
 export const YEMEN_READER: DeskReader = {
@@ -398,7 +402,7 @@ export async function editCandidates(
   // An official's own posts are read first, then the newest (21 Oct: Araghchi's night interview lost to relays).
   // Then whatever has waited past OVERDUE_MS, oldest first: newest-first alone left Al-Akhbar's morning posts
   // two and a half hours in the queue behind each new cycle's items (22 Oct).
-  const overdue = (c: Queued) => now - c.queuedAt > OVERDUE_MS;
+  const overdue = (c: Queued) => !cfg.newestFirst && now - c.queuedAt > OVERDUE_MS;
   const rankOf = cfg.rank ?? ((c: Candidate) => (officialVoice(c.source) ? 0 : 1));
   unread.sort(
     (a, b) =>
@@ -468,7 +472,7 @@ export async function editCandidates(
       text: c.text,
       full: readWhole(c),
     }));
-    const { readings, model, error, exhausted, minute, slow } = await readBatch(items, key, skip, recent, cfg.models, cfg.prompt, cfg.fallbacksFirst);
+    const { readings, model, error, exhausted, minute, slow } = await readBatch(items, key, skip, recent, cfg.models, cfg.prompt, cfg.fallbacksFirst, cfg.moreNvidia);
     count(model);
     for (const m of exhausted) {
       quota[m] = nextPacificMidnight(now);
@@ -536,7 +540,7 @@ export async function editCandidates(
       full: readWhole(c),
       fix: note,
     }));
-    const res = await readBatch(items, key, skip, recent, cfg.models, cfg.prompt, cfg.fallbacksFirst);
+    const res = await readBatch(items, key, skip, recent, cfg.models, cfg.prompt, cfg.fallbacksFirst, cfg.moreNvidia);
     count(res.model);
     const missed = (await store.getJson<Missed[]>(cfg.missedKey)) ?? [];
     batch.forEach(({ c, note }, n) => {
@@ -1368,7 +1372,9 @@ function pinGaza(report: LiveReport, r: Reading, sourceText: string): void {
   delete report.lat;
   delete report.lng;
   delete report.places;
-  if (!mapsAsPin(report.type)) return;
+  const funeral = FUNERAL_RE.test(r.headline);
+  if (!mapsAsPin(report.type) && !funeral) return;
+  if (funeral) report.flags = [...(report.flags ?? []), "pin:funeral"];
   const from = new Set(gazaPins((r.origins ?? []).join(", "), sourceText).map((p) => p.name));
   const pins = gazaPins(`${(r.targets ?? []).join(", ")}. ${r.headline}`, sourceText, r.headline).filter((p) => !from.has(p.name));
   if (!pins.length) return;
@@ -1393,11 +1399,14 @@ export const GAZA_READER: DeskReader = {
   fallbacksFirst: true,
   // Every 5 minutes, ten calls of five items (user, 23 Oct): some 600 items an hour. Official channels first,
   // then the faction media and agencies, then the local channels; reposts read once; the rest wait.
-  maxCalls: 10,
   queueMax: 400,
   recentMax: 60,
-  rank: (c) => gazaTierOf(c.source, (s) => !!officialVoice(s)),
+  // Israel's own sources with the official channels (user, 23 Oct: Israeli news must not come late).
+  rank: (c) => (israeliSource(c.source) ? 1 : gazaTierOf(c.source, (s) => !!officialVoice(s))),
   nearCopies: true,
+  moreNvidia: ["nvidia/nemotron-3.5-lightning-30b-a3b"],
+  newestFirst: true,
+  maxCalls: 16,
   secondLook: false,
   geocode: false,
 };

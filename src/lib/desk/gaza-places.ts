@@ -121,6 +121,9 @@ export function gazaPins(copy: string, sourceText: string, headline = copy): Gaz
   return landmark ? [out[0], ...out.slice(1).filter((p) => !new RegExp(String.raw`\bin\s+(?:the\s+)?${esc(p.name)}\b`, "i").test(copy))] : out;
 }
 
+/** A funeral is an event at its place on this desk (user, 23 Oct: "funerals should be pinned"). */
+export const FUNERAL_RE = /\b(?:funerals?|mourners|burial|buried|laid to rest|funeral procession)\b/i;
+
 /** A place for a card stored with none, from its own headline and body. */
 export function gazaPlaceFromWords(summary: string, _type: string, card?: { body?: string }): { name: string; lat: number; lng: number } | null {
   const p = gazaPins(summary, `${summary}\n${card?.body ?? ""}`)[0];

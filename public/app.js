@@ -99,6 +99,8 @@ const EVENT_SVG = {
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 3h3.2v7.6h8.2V7.4L21 12l-5.6 4.6v-3.2H7.2V21H4zm-1 18.4h18V23H3z"/></svg>',
 };
 
+// A funeral (the Gaza desk): a candle.
+EVENT_SVG.funeral = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><path d="M12 1.5c1.9 2.2 2.6 3.8 2.6 5.1a2.6 2.6 0 0 1-5.2 0c0-1.3.7-2.9 2.6-5.1z"/><rect x="9" y="10" width="6" height="10.5" rx="1"/><rect x="6" y="20.5" width="12" height="2" rx="1"/></g></svg>';
 // A nuclear site hit (the Iran war): the trefoil.
 EVENT_SVG.nuclear = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><circle cx="12" cy="12" r="2.3"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z" transform="rotate(120 12 12)"/><path d="M17 3.34A10 10 0 0 0 7 3.34L10.2 8.88A3.6 3.6 0 0 1 13.8 8.88z" transform="rotate(240 12 12)"/></g></svg>';
 
@@ -231,7 +233,9 @@ const yemenInk = (ev) => YEMEN_PIN_SIDES().find(([k]) => k === yemenSideOf(ev))[
 /* What happened on the Iran map: the researched pins carry it (map-pack.cjs), the live ones are read the same way. */
 const IRAN_KINDS = ['strike', 'combat', 'vessel', 'port', 'nuclear'];
 // The Gaza – Judea & Samaria desk has no energy sites or nuclear file on its map (23 Oct).
-const GAZA_KINDS = ['strike', 'combat', 'vessel'];
+const GAZA_KINDS = ['strike', 'combat', 'funeral', 'vessel'];
+// A funeral: the Gaza desk pins them (user, 23 Oct).
+const FUNERAL_RE = /\b(?:funerals?|mourners|burial|buried|laid to rest)\b/i;
 // A named nuclear site, not the town near it (user, 18 Oct); the same words as scripts/iran-research/pin-rules.cjs NUCLEAR_SITE.
 const IRAN_NUCLEAR_RE = /\bnuclear (?:site|facilit|plant|power|reactor|complex|installation)|\b(?:fordow|natanz|khondab|heavy[- ]water|enrichment|uranium|yellowcake|ardakan|saghand|IR-40|tehran research reactor|(?:bushehr|arak|isfahan|karaj) (?:nuclear|reactor|power plant|npp|uranium|ucf))\b|محطة بوشهر النووية|نطنز|فوردو|نیروگاه اتمی بوشهر/i;
 const IRAN_ENERGY_RE = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel (?:depot|tank|storage)|storage tank|pipeline|power (?:station|plant)|gas (?:field|plant|facilit)|petrochem|\blng\b|desalination|electricity (?:station|grid)|south pars|kharg|ras tanura|abqaiq/i;
@@ -239,6 +243,7 @@ const IRAN_GROUND_RE = /\b(?:artillery|shelling|tanks? fire|sniper|clash|clashes
 function iranKindOf(ev) {
   if (typeof ev.kind === 'number') return IRAN_KINDS[ev.kind] || 'strike';
   const s = `${ev.label || ''} ${ev.place || ''}`;
+  if (ev.desk === 'gaza' || deskOf().id === 'gaza') { if (FUNERAL_RE.test(ev.label || '')) return 'funeral'; }
   if (IRAN_NUCLEAR_RE.test(s)) return 'nuclear';
   if (ev.type === 'port' || (IRAN_ENERGY_RE.test(s) && !/tanker/i.test(s))) return 'port';
   if (ev.type === 'vessel' || ev.sea) return 'vessel';
@@ -7849,6 +7854,9 @@ function useDeskSettings() {
   IRAN_PIN_SIDES = GAZA_PIN_SIDES;
   IRAN_PIN_INK = Object.fromEntries(GAZA_PIN_SIDES.map(([k, c]) => [k, c]));
   IRAN_MAP_FROM = '2026-10-23';
+  // Ground fighting is "Clashes" here (user, 23 Oct); the other kinds keep their names.
+  IRAN_KIND_LABEL.combat = 'Clashes';
+  IRAN_KIND_LABEL.funeral = 'Funerals';
   IRAN_GROUPS = Object.fromEntries(Object.keys(GAZA_GROUP_NAMES).map((k) => [k, k]));
   IRAN_GROUP_NAMES = GAZA_GROUP_NAMES;
   iranPins.on = Object.fromEntries(GAZA_PIN_SIDES.map(([k]) => [k, true]));

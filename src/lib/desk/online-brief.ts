@@ -7,6 +7,7 @@
 import { askChain, type ChainModel } from "./models.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { VOICES, type AreaSummary, type WatchPost } from "./online-watch.ts";
+import { cut } from "./online-classify.ts";
 
 export type Briefs = {
   at: string;
@@ -25,7 +26,7 @@ const PER_VOICE = 14;
 
 type Listed = WatchPost & { n?: number; k?: string[] };
 const line = (p: Listed) =>
-  `- [${p.c ? "comment" : "post"} @${p.ch}${p.n && p.n > 1 ? `, on ${p.n} channels` : ""}${p.k?.length ? `; ${p.k.join(", ")}` : ""}] ${p.x.replace(/\s+/g, " ").slice(0, 260)}`;
+  `- [${p.c ? "comment" : "post"} @${p.ch}${p.n && p.n > 1 ? `, on ${p.n} channels` : ""}${p.k?.length ? `; ${p.k.join(", ")}` : ""}] ${cut(p.x, 260)}`;
 const areaName = (a: string) => (a === "gaza" ? "Gaza" : "Judea and Samaria");
 
 const WORDING = `Never name a private person. Neutral wording: "killed", not "martyred"; "attack", not "heroic operation"; "Judea and Samaria", never "West Bank"; "Israeli citizens", never "settlers"; "the IDF" or "Israeli forces", not "the occupation".`;

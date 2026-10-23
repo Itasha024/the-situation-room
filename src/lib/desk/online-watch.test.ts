@@ -104,3 +104,10 @@ test("the model's sorting first, the words until then", async () => {
   assert.deepEqual(kindsOf({ x: "x", q: 1, kv: ["call"] }), ["call"]);
   assert.equal(talkOf({ x: "عاجل قصف", c: 1 }), true);
 });
+
+test("text cut whole, never half an emoji", async () => {
+  const { cut } = await import("./online-classify.ts");
+  const broken = "🔥🔥".slice(0, 3);
+  assert.equal(JSON.stringify(cut(broken, 10)), JSON.stringify("🔥"));
+  assert.equal(cut("أ🔥ب", 2), "أ🔥");
+});

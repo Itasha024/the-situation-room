@@ -214,7 +214,7 @@ export function parseWatchPage(html: string, ch: { id: string; area: WatchArea }
     const media = /tgme_widget_message_(?:photo|video)/.test(block);
     if (!x && !media) continue;
     const v = viewsOf(/<span class="tgme_widget_message_views">([^<]*)<\/span>/.exec(block)?.[1] ?? "");
-    out.push({ u: `https://t.me/${post}`, at: new Date(at).toISOString(), ch: ch.id, a: areaOf(x, ch.area), t: topicsOf(x), x: x.slice(0, 400), v, ...(media ? { m: 1 as const } : {}) });
+    out.push({ u: `https://t.me/${post}`, at: new Date(at).toISOString(), ch: ch.id, a: areaOf(x, ch.area), t: topicsOf(x), x: Array.from(x).slice(0, 400).join(""), v, ...(media ? { m: 1 as const } : {}) });
   }
   return out;
 }
@@ -232,7 +232,7 @@ export function parseComments(html: string, ch: { id: string; area: WatchArea },
     if (!link || !at) continue;
     const x = decode(/<div class="tgme_widget_message_text js-message_text"[^>]*>([\s\S]*?)<\/div>/.exec(block)?.[1] ?? "").trim();
     if (!x) continue;
-    out.push({ u: link, at: new Date(at).toISOString(), ch: ch.id, a: areaOf(x, ch.area), t: topicsOf(x), x: x.slice(0, 300), v: 0, c: 1, re: post });
+    out.push({ u: link, at: new Date(at).toISOString(), ch: ch.id, a: areaOf(x, ch.area), t: topicsOf(x), x: Array.from(x).slice(0, 300).join(""), v: 0, c: 1, re: post });
   }
   return out;
 }

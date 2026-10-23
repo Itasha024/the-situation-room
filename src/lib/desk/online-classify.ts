@@ -20,10 +20,19 @@ For each numbered item give:
 A faction's own statement with a call, a threat or praise is talk, even when a channel relays it. When unsure between news and talk, choose news.
 Answer JSON only: {"items": [{"i": <number>, "t": "news"|"service"|"talk", "k": [...]}]}.`;
 
+/**
+ * Text cut by characters, not code units, with any half of an emoji left by an earlier cut taken out:
+ * a lone half made the request's JSON invalid and the model service refused it (HTTP 400, 23 Oct).
+ */
+export function cut(s: string, n: number): string {
+  const whole = String(s || "").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "").replace(/\s+/g, " ");
+  return Array.from(whole).slice(0, n).join("");
+}
+
 /** Reads a batch; marks each post it answered for (q), its type (r: 1 news or service) and its kinds (kv). */
 export async function classifyBatch(posts: WatchPost[]): Promise<number> {
   if (!posts.length) return 0;
-  const user = posts.map((p, i) => `${i}. [${p.c ? "comment" : "post"} @${p.ch}] ${p.x.replace(/\s+/g, " ").slice(0, 280)}`).join("\n");
+  const user = posts.map((p, i) => `${i}. [${p.c ? "comment" : "post"} @${p.ch}] ${cut(p.x, 280)}`).join("\n");
   const got = await askChain("online-sort", SYSTEM, user, { models: MODELS, timeoutMs: 75_000, temperature: 0, accept: (j) => (Array.isArray(j.items) ? null : "no items") });
   if (!got) return 0;
   const ids = new Set(KINDS.map((v) => v.id));

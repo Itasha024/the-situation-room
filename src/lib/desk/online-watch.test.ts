@@ -94,3 +94,13 @@ test("the briefs in the desk's words", async () => {
   assert.equal(cleanBrief("Channels reported the martyrdom of the assailants in the West Bank.}"), "Channels reported the killing of the assailants in Judea and Samaria.");
   assert.equal(cleanBrief("threats against Israeli citizens, soldiers, and Israeli citizens"), "threats against Israeli citizens and soldiers");
 });
+
+// User, 23 Oct: "anger at Hamas contains a message about the traffic": the model's sorting wins over the words.
+test("the model's sorting first, the words until then", async () => {
+  const { talkOf, kindsOf } = await import("./online-watch.ts");
+  const traffic = { x: "الامن الداخلي: ازدحام مروري على شارع صلاح الدين", q: 1 as const, r: 1 as const, kv: [] };
+  assert.equal(talkOf(traffic), false);
+  assert.deepEqual(kindsOf({ x: "تعبنا", q: 1, kv: [] }), ["other"]);
+  assert.deepEqual(kindsOf({ x: "x", q: 1, kv: ["call"] }), ["call"]);
+  assert.equal(talkOf({ x: "عاجل قصف", c: 1 }), true);
+});

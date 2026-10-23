@@ -25,6 +25,10 @@ export type WatchPost = {
   /** A comment in the channel's discussion, and the post it answers. */
   c?: 1;
   re?: string;
+  /** Read by the model (online-classify.ts): news or a notice (r = 1), and talk's kinds (kv). */
+  q?: 1;
+  r?: 0 | 1;
+  kv?: string[];
 };
 
 /** Arabic as one spelling: no vowel marks or tatweel, one alef, ta marbuta and alef maqsura as ha and ya. */
@@ -110,6 +114,8 @@ export const VOICES: Voice[] = [
   { id: "grief", name: "Grief and prayers", words: ["رحمه الله", "رحمهم الله", "الله يرحمه", "الله يرحمها", "الله يرحمهم", "انا لله", "تقبله الله", "تقبلهم الله", "اللهم ارحم", "وداعا", "الفراق", "موجوع", "يا وجعي", "حسبنا الله", "حسبي الله", "لا حول ولا قوه"] },
   { id: "rumour", name: "Rumours", words: ["يقال", "انباء غير مؤكده", "غير مؤكد", "غير مؤكده", "اشاعه", "اشاعات", "شائعه", "شائعات", "يتداول", "متداول", "تداول", "فيديو متداول", "انتشر", "ينتشر", "حسب ما وصلني", "مصادر غير رسميه", "مش متاكد", "صحه الخبر", "نفي"] },
 ];
+// Talk that is none of the kinds above: most comments.
+VOICES.push({ id: "other", name: "Other talk and comments", words: [] });
 const VOICE_KEYS = VOICES.map((v) => ({ v, k: v.words.map(keyOf) }));
 
 const tokensOf = (p: string) => {
@@ -145,6 +151,16 @@ export function talkScore(text: string): { talk: number; report: number } {
 }
 
 /** Is it talk, not a report: a comment, a call or a threat, or a post that speaks as people speak. */
+/** Talk or not, the model's word first (a comment is always talk); the word lists until it has read the post. */
+export function talkOf(p: Pick<WatchPost, "x" | "c" | "q" | "r">): boolean {
+  if (p.c) return true;
+  return p.q ? !p.r : isTalk(p);
+}
+/** Talk's kinds, the model's first; "other" when none fits. */
+export function kindsOf(p: Pick<WatchPost, "x" | "q" | "kv">): string[] {
+  const k = p.q ? (p.kv ?? []) : voicesOf(p.x);
+  return k.length ? k : ["other"];
+}
 export function isTalk(p: Pick<WatchPost, "x" | "c">): boolean {
   if (p.c) return true;
   const v = voicesOf(p.x);
@@ -238,9 +254,9 @@ export function countHour(posts: WatchPost[]): HourCounts {
       add(`${a}|*`);
       for (const t of p.t) add(`${a}|${t}`);
       // Talk apart from reports (user, 23 Oct), by what it says and what it is about.
-      if (isTalk(p)) {
+      if (talkOf(p)) {
         add(`${a}|talk`);
-        for (const v of voicesOf(p.x)) add(`${a}|v:${v}`);
+        for (const v of kindsOf(p)) add(`${a}|v:${v}`);
         for (const t of p.t) add(`${a}|tt:${t}`);
       }
     }
@@ -288,7 +304,7 @@ export function summarise(posts: WatchPost[], counts: Record<string, HourCounts>
   const areas: AreaSummary[] = (["gaza", "js"] as const).map((area) => {
     const inArea = posts.filter((p) => (p.a === area || p.a === "both") && Date.parse(p.at) >= start);
     // The talk only: reports are the Reports tab's (user, 23 Oct).
-    const mine = inArea.filter(isTalk).map((p) => ({ ...p, k: voicesOf(p.x) }));
+    const mine = inArea.filter(talkOf).map((p) => ({ ...p, k: kindsOf(p) }));
     const reports = inArea.length - mine.length;
     const all = Math.max(1, mine.length);
     const topics = TOPICS.filter((t) => t.area === area || t.area === "both").map((t) => {
@@ -320,7 +336,7 @@ export function summarise(posts: WatchPost[], counts: Record<string, HourCounts>
     const folded = groups.map((g) => ({ ...g.p, n: g.chs.size, also: [...g.chs].filter((c) => c !== g.p.ch).slice(0, 6) }));
     const calls = folded.filter((p) => p.k.some((k) => alarm.has(k))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 25);
     // Only what says something (a call, a threat, praise, anger, a complaint, grief, a rumour) or a comment.
-    const top = folded.filter((p) => p.k.length || p.c).slice(0, win > 6 ? 150 : 80);
+    const top = folded.slice(0, win > 6 ? 300 : 120);
     const placeN = new Map<string, number>();
     for (const p of mine) for (const n of placesTalked(p.x)) placeN.set(n, (placeN.get(n) ?? 0) + 1);
     const tagsOf = (ps: WatchPost[]) => {

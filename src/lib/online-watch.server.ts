@@ -10,6 +10,7 @@ import { WATCH_TG } from "./desk/online-sources.ts";
 import { type HourCounts, type WatchPost, countHour, parseComments, parseWatchPage, summarise } from "./desk/online-watch.ts";
 import { fetchText } from "./yemen-scan.server.ts";
 import { type Briefs, writeBriefs } from "./desk/online-brief.ts";
+import { CLASSIFY_BATCH, classifyBatch } from "./desk/online-classify.ts";
 
 export const WATCH_HOURS = "gaza:online:h";
 export const WATCH_COUNTS = "gaza:online-counts";
@@ -22,8 +23,12 @@ const EVERY_MS = 10 * 60_000;
 const AT_ONCE = 4;
 const H = 3600_000;
 /** Comment threads read a tick, and how often one post's thread is read again. */
-const THREADS_PER_TICK = 45;
-const THREAD_AGAIN_MS = 90 * 60_000;
+// (23 Oct: 45 a tick left 166 channels untried after a day; the server's load stays low.)
+const THREADS_PER_TICK = 140;
+const TRIES_PER_TICK = 60;
+const THREAD_AGAIN_MS = 60 * 60_000;
+/** Posts and comments the model sorts a tick, newest first. */
+const SORT_PER_TICK = 4 * CLASSIFY_BATCH;
 const hourKey = (t: number) => new Date(Math.floor(t / H) * H).toISOString().slice(0, 13);
 
 type State = {
@@ -87,7 +92,10 @@ export async function runOnlineWatch(store: DeskStore, now = Date.now()): Promis
     .sort((a, b) => +((talk[b.ch]?.yes ?? 0) > 0) - +((talk[a.ch]?.yes ?? 0) > 0) || b.v - a.v);
   // One unknown channel tried once a tick, so a channel without comments costs little.
   const tried = new Set<string>();
-  const picks = cands.filter((p) => (talk[p.ch]?.yes ?? 0) > 0 || (!tried.has(p.ch) && tried.add(p.ch))).slice(0, THREADS_PER_TICK);
+  // Channels known to have comments, and up to TRIES_PER_TICK channels not yet known, one post each.
+  const known = cands.filter((p) => (talk[p.ch]?.yes ?? 0) > 0).slice(0, THREADS_PER_TICK - TRIES_PER_TICK);
+  const trying = cands.filter((p) => !((talk[p.ch]?.yes ?? 0) > 0) && !tried.has(p.ch) && tried.add(p.ch)).slice(0, TRIES_PER_TICK);
+  const picks = [...known, ...trying];
   const comments: WatchPost[] = [];
   await pool(picks, async (p) => {
     const html = await fetchText(`${p.u}?embed=1&discussion=1&comments_limit=50`, 12_000).catch(() => null);
@@ -101,6 +109,17 @@ export async function runOnlineWatch(store: DeskStore, now = Date.now()): Promis
     comments.push(...cs);
   });
   add(comments);
+
+  // The model sorts what it has not read yet: news, a notice or talk, and talk's kinds (user, 23 Oct).
+  const unsorted = Object.values(rows).flat().filter((p) => !p.q && now - Date.parse(p.at) < 12 * H).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, SORT_PER_TICK);
+  let sorted = 0;
+  for (let i = 0; i < unsorted.length; i += CLASSIFY_BATCH) {
+    const batch = unsorted.slice(i, i + CLASSIFY_BATCH);
+    const n = await classifyBatch(batch).catch(() => 0);
+    if (!n) break;
+    sorted += n;
+    for (const p of batch) if (p.q) touched.add(hourKey(Date.parse(p.at)));
+  }
   for (const [u, t] of Object.entries(threadAt)) if (now - t > 30 * H) delete threadAt[u];
 
   if (touched.size) {
@@ -132,6 +151,6 @@ export async function runOnlineWatch(store: DeskStore, now = Date.now()): Promis
   }
   await store.putJson(WATCH_SUMMARY, { ...recent, day, briefs });
   const withTalk = Object.values(talk).filter((t) => t.yes > 0).length;
-  console.log(`[online] ${read} of ${due.length} channels read, ${fresh.length} new posts; ${picks.length} comment threads read, ${comments.length} comments (${withTalk} channels with comments); ${posts.length} in the last day`);
+  console.log(`[online] ${read} of ${due.length} channels read, ${fresh.length} new posts; ${picks.length} comment threads read, ${comments.length} comments (${withTalk} channels with comments); ${sorted} sorted by the model; ${posts.length} in the last day`);
   return { read, posts: fresh.length, comments: comments.length };
 }

@@ -124,7 +124,7 @@ const IRANIAN_OUTLET =
 const UKMTO_TOLD = /\b(?:UKMTO|UKTMO|UK Maritime Trade|United Kingdom Maritime Trade|British maritime security agency)\b/i;
 
 const HEBREW_OUTLET = String.raw`(?:Israel's |Israeli )?(?:Channel 1[1-4]|Kan(?: News| 11)?|N12|Ynet|Yedioth Ahronoth|Yediot Aharonot|Maariv|Haaretz|Israel Hayom|Walla|i24(?: News)?|Army Radio|Galei Tzahal|Times of Israel|Jerusalem Post|Hebrew media|Israeli media|Israeli Broadcasting Authority)`;
-const HEBREW_OUTLET_LEAD = new RegExp(String.raw`^${HEBREW_OUTLET}\s*:`, "i");
+const HEBREW_OUTLET_LEAD = new RegExp(String.raw`^${HEBREW_OUTLET}\s*(?::|reports?\b|reported\b|says\b)`, "i");
 const HEBREW_OUTLET_TELLS = new RegExp(String.raw`(?:,\s*|\bas\s+|\baccording to\s+)${HEBREW_OUTLET}\s+(?:reports?|reported|says|said)?\s*$|\b(?:according to|citing)\s+${HEBREW_OUTLET}\b`, "i");
 
 export type RelayInput = { headline: string; body?: string; source: string; lean?: string; desk: DeskId; own?: boolean };

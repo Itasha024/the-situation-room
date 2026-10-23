@@ -42,7 +42,7 @@ test("the sides as the model names them", () => {
 
 test("pins on the places the copy and the source both name", () => {
   const names = (c: string, s: string) => gazaPins(c, s).map((p) => p.name);
-  assert.deepEqual(names("Israeli forces raid Jenin camp, arrest five", "قوات الاحتلال تقتحم مخيم جنين"), ["Jenin"]);
+  assert.deepEqual(names("Israeli forces raid Jenin camp, arrest five", "قوات الاحتلال تقتحم مخيم جنين"), ["Jenin Camp"]);
   assert.deepEqual(names("Israeli air strike kills three in Khan Younis", "غارة على خان يونس"), ["Khan Younis"]);
   assert.deepEqual(names("Israeli forces demolish home in Yatta, south of Hebron", "هدم منزل في يطا جنوب الخليل"), ["Yatta"]);
   assert.deepEqual(names("Israeli extremists attack Sinjil and Al-Mughayyir", "هجوم على سنجل والمغير"), ["Sinjil", "Al-Mughayyir"]);
@@ -102,4 +102,19 @@ test("the Gaza desk's queue: official channels first, its colonists are Israeli 
   assert.equal(gazaTierOf("Al Jazeera", () => false), 2);
   assert.equal(GAZA_READER.nearCopies, true);
   assert.equal(gazaWords("Colonists burn olive trees in Burqa"), "Israeli extremists burn olive trees in Burqa");
+});
+
+test("the pin audit of 23 Oct: the place itself, not the town it is told by; no pin for a past day or a trend", () => {
+  const names = (c: string) => gazaPins(c, "x").map((p) => p.name);
+  assert.deepEqual(names("Israeli air strike destroys residential block in Nuseirat camp, central Gaza"), ["Nuseirat"]);
+  assert.deepEqual(names("Israeli forces carry out demolition operation in Tal al-Zaatar, northern Gaza"), ["Tal al-Zaatar"]);
+  assert.deepEqual(names("Gaza emergency services: Israeli drone strike on al-Nasr neighborhood west of Gaza City kills two, wounds others"), ["Al-Nasr"]);
+  assert.deepEqual(names("Israeli air strike near Thai restaurant in al-Rimal, western Gaza City, kills two"), ["Remal"]);
+  assert.deepEqual(names("Palestinian wounded by Israeli gunfire in al-Mintaqa al-Iqlimiyya, south of Mawasi, Khan Younis"), ["Al Mawasi"]);
+  assert.deepEqual(names("Israeli forces demolish home in Yatta, south of Hebron"), ["Yatta"]);
+  assert.deepEqual(names("Second Israeli drone strike on western Gaza City"), ["Gaza"]);
+  assert.deepEqual(names("Elderly man unable to walk after severe wounds from Israeli air strikes on Gaza yesterday"), []);
+  assert.deepEqual(names("Palestinian faction sources: infighting, defections and drone killings hit Israeli-backed armed gangs east of the Yellow Line"), []);
+  const nasr = gazaPins("Gaza emergency services: Israeli drone strike on al-Nasr neighborhood west of Gaza City kills two", "x")[0];
+  assert.ok(nasr.lat > 31.5, "Gaza City's al-Nasr, not the An Nasr near Rafah");
 });

@@ -37,8 +37,9 @@ for (const g of GAZ) {
   }
 }
 
-/** The places the copy names that the source names too, in the copy's order; a longer name over a shorter inside it. */
-export function gazaPlacesIn(copy: string, sourceText: string): GazaPlace[] {
+
+/** The places the copy names that the source names too, in the copy's order, each with every entry its name fits. */
+function placesIn(copy: string, sourceText: string): { cands: Entry[]; at: number; n: number }[] {
   const named = new Set<Entry>();
   const inNative = new Set<Entry>();
   windows(latinWords(`${sourceText}\n${copy}`), (k) => BY_LATIN.get(k)?.forEach((g) => named.add(g)));
@@ -46,32 +47,76 @@ export function gazaPlacesIn(copy: string, sourceText: string): GazaPlace[] {
     for (const key of [k, k.replace(/^(?:[وبلف]?ال|[ובלמהש]|[وبلف])/, "")]) BY_NATIVE.get(key)?.forEach((g) => (named.add(g), inNative.add(g)));
   });
   if (!named.size) return [];
-  const hits: { p: GazaPlace; at: number; n: number }[] = [];
+  const hits: { cands: Entry[]; at: number; n: number }[] = [];
+  // "al-Nasr neighborhood", "Shati camp": a name and the word for what it is.
+  const kindWord = /^(?:neighbou?rhood|camp|street|village|town|area|district|quarter)$/;
   windows(latinWords(copy), (_k, at, run) => {
-    if (!isName(copy, run)) return;
+    if (!isName(copy, run) && !(run.length >= 2 && kindWord.test(run[run.length - 1]) && isName(copy, run.slice(0, -1)))) return;
     const s = skeleton(run);
     const sound = latinSound(run);
-    // One place per name: a spelling the lists know as it is ("Jenin", too short for a skeleton), else the
-    // biggest the name fits by its consonants or its sound (the list is biggest first).
-    const exact = BY_LATIN.get(run.join(" "))?.find((x) => named.has(x));
-    const g = exact ?? [...named].find((x) => x.skeletons.has(s) || (inNative.has(x) && sound.length >= 3 && x.sounds.has(sound)));
-    if (g && !hits.some((h) => h.p === g.place)) hits.push({ p: g.place, at, n: run.length });
+    // A spelling the lists know as it is ("Jenin", too short for a skeleton), else those the name fits by its
+    // consonants or its sound; the list is biggest first.
+    const exact = (BY_LATIN.get(run.join(" ")) ?? []).filter((x) => named.has(x));
+    const cands = exact.length ? exact : [...named].filter((x) => x.skeletons.has(s) || (inNative.has(x) && sound.length >= 3 && x.sounds.has(sound)));
+    if (cands.length && !hits.some((h) => h.cands[0] === cands[0])) hits.push({ cands, at, n: run.length });
   });
   const inside = (h: (typeof hits)[number]) => hits.some((o) => o !== h && o.n > h.n && o.at <= h.at && h.at + h.n <= o.at + o.n);
-  return hits.filter((h) => !inside(h)).sort((a, b) => a.at - b.at).map((h) => h.p);
+  return hits.filter((h) => !inside(h)).sort((a, b) => a.at - b.at);
 }
 
-/** A card's pins: the places its targets and headline name, never a tally of days or weeks. */
+export function gazaPlacesIn(copy: string, sourceText: string): GazaPlace[] {
+  return placesIn(copy, sourceText).map((h) => h.cands[0].place);
+}
+
+/** The cities and towns other places are told by ("south of Nablus", "western Gaza City"). */
+const CITY = new Set(["Gaza", "Khan Younis", "Rafah", "Deir al-Balah", "Jabalia", "Beit Lahia", "Beit Hanoun", "Hebron", "Nablus", "Jenin", "Ramallah", "Al-Bireh", "Tulkarm", "Qalqilya", "Bethlehem", "East Jerusalem", "Jerusalem", "Jericho", "Tubas"]);
+const GAZA_WORDS = /\b(?:Gaza|Khan Y[ou]nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|yellow line)\b/i;
+const JS_WORDS = /\b(?:Judea|Samaria|Hebron|Nablus|Jenin|Ramallah|Tulkarm|Qalqilya|Bethlehem|Jericho|Tubas|Jerusalem|Jordan Valley)\b/i;
+/** "…wounds from air strikes yesterday": not today's event. */
+const PAST = /\b(?:yesterday|last night|last week|days ago|weeks ago|earlier this (?:week|month))\b/i;
+/** A trend told by sources, not one event (23 Oct: "infighting, defections and drone killings hit … gangs"). */
+const TREND = /\b(?:infighting|defections|wave of|series of|campaign of|rising|surge in|increase in|growing)\b/i;
+const km = (a: GazaPlace, b: GazaPlace) => Math.hypot((a.lat - b.lat) * 111, (a.lng - b.lng) * 111 * Math.cos((a.lat * Math.PI) / 180));
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A card's pins: the places its targets and headline name, never a tally, a past day or a trend; each place
+ * in the part (Gaza or Judea and Samaria) the copy is about, near the town it is told by; the town itself
+ * and the region only when nothing nearer is named (pin audit of 23 Oct).
+ */
 export function gazaPins(copy: string, sourceText: string, headline = copy): GazaPlace[] {
-  if (tallyNotEvent(headline)) return [];
-  const all = gazaPlacesIn(copy, sourceText);
-  // "Yatta, south of Hebron": the second place only says where the first is.
-  // "…Kamal Adwan Hospital in northern Gaza": the region is a locator too.
-  const locator = (p: GazaPlace) => new RegExp(String.raw`\b(?:north|south|east|west|north-?east|north-?west|south-?east|south-?west|near|outside|close to|northern|southern|central|eastern|western)\s+(?:of\s+)?(?:the\s+)?${p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\b`, "i").test(copy);
-  // "Nasser Medical Complex in Khan Younis": after a landmark, the town it is in says where it is.
-  const landmark = /\b(?:Hospital|Medical Complex|corridor|crossing|Camp)\b/i.test(all[0]?.name ?? "");
-  const inTown = (p: GazaPlace) => landmark && new RegExp(String.raw`\bin\s+(?:the\s+)?${p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\b`, "i").test(copy);
-  return all.length > 1 ? [all[0], ...all.slice(1).filter((p) => !locator(p) && !inTown(p))] : all;
+  if (tallyNotEvent(headline) || PAST.test(headline) || TREND.test(headline)) return [];
+  const hits = placesIn(copy, sourceText);
+  if (!hits.length) return [];
+  const inGaza = GAZA_WORDS.test(copy), inJs = JS_WORDS.test(copy);
+  const areaOk = (g: Entry) => g.place.area === "Israel" || (inGaza && !inJs ? g.place.area === "Gaza" : inJs && !inGaza ? g.place.area !== "Gaza" : true);
+  // The towns named, as the anchors the other places are told by.
+  const anchors = hits.map((h) => h.cands.find((g) => CITY.has(g.place.name) && areaOk(g))).filter((g): g is Entry => !!g).map((g) => g.place);
+  const chosen: { p: GazaPlace; city: boolean }[] = [];
+  for (const h of hits) {
+    const ok = h.cands.filter(areaOk);
+    if (!ok.length) continue;
+    const city = CITY.has(ok[0].place.name);
+    if (city || !anchors.length) {
+      chosen.push({ p: ok[0].place, city });
+      continue;
+    }
+    // Of the places of that name, the one nearest a town the copy names; none more than 25 km from all of them (Turmus Ayya is 17 km north of Ramallah).
+    const best = ok.map((g) => ({ g, d: Math.min(...anchors.map((a) => km(g.place, a))) })).sort((a, b) => a.d - b.d)[0];
+    if (best.d <= 25) chosen.push({ p: best.g.place, city: false });
+  }
+  if (!chosen.length) return [];
+  const smaller = chosen.some((c) => !c.city);
+  // "Yatta, south of Hebron", "western Gaza City", "south of Mawasi, Khan Younis", "Nasser Medical Complex in Khan Younis":
+  // a town after a nearer place only says where it is.
+  const told = (p: GazaPlace) => {
+    const n = esc(p.name);
+    return new RegExp(String.raw`\b(?:north|south|east|west|north-?east|north-?west|south-?east|south-?west|near|outside|close to|northern|southern|central|eastern|western)\s+(?:of\s+)?(?:the\s+)?${n}\b|,\s*${n}\b|\b(?:in|of)\s+(?:the\s+)?${n}\b|\b${n} City\b`, "i").test(copy);
+  };
+  const out = chosen.filter((c) => !(smaller && c.city && (c.p.name === "Gaza" || told(c.p)))).map((c) => c.p);
+  // A landmark's town is only its address.
+  const landmark = /\b(?:Hospital|Medical Complex|corridor|crossing|Camp)\b/i.test(out[0]?.name ?? "");
+  return landmark ? [out[0], ...out.slice(1).filter((p) => !new RegExp(String.raw`\bin\s+(?:the\s+)?${esc(p.name)}\b`, "i").test(copy))] : out;
 }
 
 /** A place for a card stored with none, from its own headline and body. */

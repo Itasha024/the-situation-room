@@ -26,7 +26,7 @@ export const GAZA_GAZ: [string, number, number, string, string[], string[]][] = 
 ["Old City",31.77667,35.23417,"Judea and Samaria",["Old City","Altstadt","Citta Vecchia","Stari grad","Starij Gorod","Staryj Gorod","Vieille Ville","al-Madina al-Qadima","alqds alqdymt"],["העיר העתיקה","القدس القديمة"]],
 ["Shu'fat",31.81651,35.22745,"Judea and Samaria",["Shu'fat","Shu`fat"],[]],
 ["Jenin",32.45943,35.30086,"Judea and Samaria",["Jenin","Janin","Djenin","Dschenin","Dzhenin","Engannim","Jenine","Jinin","`Ein Gannim","gnyn","jnyn"],["גנין","جنين"]],
-["Beach",31.53491,34.44662,"Gaza",["Ash Shati Camp","Mukhayyam ash Shati'","mkhym alshaty"],["مخيم الشاطئ"]],
+["Al-Shati camp",31.53491,34.44662,"Gaza",["Al-Shati camp","Ash Shati Camp","Mukhayyam ash Shati'","mkhym alshaty"],["مخيم الشاطئ"]],
 ["Rafah",31.28537,34.25186,"Gaza",["Rafah","Mukhayyam Rafah","mkhym rfh"],["مخيم رفح"]],
 ["Bani Suheila",31.34337,34.32337,"Gaza",["Bani Suheila","Bani Suhayla","Bani Sueheyla","Bani Suhajla","Bani Suhayl","Bani Suhaylah","Bani-Sukhajla","bny shyla","bny swhylh"],["בני סוהילה","بني سهيلا","بنی سهیلا","بنی سہیلہ"]],
 ["Bethlehem",31.70487,35.20376,"Judea and Samaria",["Bethlehem","Bait Lahm","Bayt Lahm","Beit Lahm","Beit Lehem","Beitheal","Belem","Belen","Belen de Juda","Bet-Lehem","Bethleem","Bethleem Efrata","Betlehem","Betlehim","Betlejem","Betlem","Betlemme","Betleyem","Vifleem","bayt lahm","bedeullehem","beit-lahmi","betsurehemu","bo li heng","byt allhm","byt lhm"],["bېtlېkhېm","bەyt lەhm","בית לחם","بيت لحم"]],
@@ -1323,5 +1323,12 @@ export const GAZA_GAZ: [string, number, number, string, string[], string[]][] = 
 ["Netzarim corridor",31.47,34.4,"Gaza",["Netzarim corridor","Netzarim Corridor"],["محور نتساريم","ציר נצרים"]],
 ["Philadelphi corridor",31.25,34.255,"Gaza",["Philadelphi corridor","Philadelphi Corridor"],["محور فيلادلفيا","ציר פילדלפי"]],
 ["Homesh",32.3196,35.195,"Judea and Samaria",["Homesh"],["حومش","חומש"]],
+["Al-Nasr",31.529,34.456,"Gaza",["Al-Nasr","Suwidi al-Nasr","Al-Nasr neighbourhood","Al-Nasr neighborhood","Nasr neighbourhood","Nasr neighborhood"],["حي النصر","النصر"]],
+["Tal al-Zaatar",31.539,34.494,"Gaza",["Tal al-Zaatar","Tel al-Zaatar","Tal al-Zaatar"],["تل الزعتر"]],
+["Sheikh Radwan",31.533,34.463,"Gaza",["Sheikh Radwan","Al-Sheikh Radwan"],["الشيخ رضوان"]],
+["Tel al-Hawa",31.505,34.44,"Gaza",["Tel al-Hawa","Tal al-Hawa"],["تل الهوا"]],
+["Al-Shati camp",31.532,34.447,"Gaza",["Al-Shati camp","Shati camp","Beach camp","Al-Shati"],["مخيم الشاطئ"]],
+["Sabra",31.504,34.453,"Gaza",["Sabra"],["حي الصبرة"]],
+["Thawra Street",31.522,34.455,"Gaza",["Thawra Street","al-Thawra Street"],["شارع الثورة"]],
 ["Temple Mount",31.7781,35.2354,"Jerusalem",["Temple Mount","Al-Aqsa","Al-Aqsa Mosque","Haram al-Sharif"],["المسجد الأقصى","الأقصى","הר הבית"]]
 ];

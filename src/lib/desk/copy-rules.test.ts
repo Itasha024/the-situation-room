@@ -534,3 +534,12 @@ test("an official's own posts are each a card: Araghchi's 7-part interview (21 O
   // Another outlet's line is no own part.
   assert.ok(!ownParts(p(0, 0), { ...p(1, 10), source: "Al Mayadeen", url: "https://t.me/almayadeen/1" }));
 });
+
+test("a headline that only names the talk is not a report (user, 24 Oct)", async () => {
+  const { saysNothing } = await import("./copy-rules.ts");
+  assert.equal(saysNothing("Pakistan Foreign Office spokesperson: Weekly briefing on tensions at the Pakistan–Iran border and current status"), true);
+  assert.equal(saysNothing("Baghaei: press conference on the talks"), true);
+  assert.equal(saysNothing("Pakistan Foreign Office spokesperson: the Taftan crossing will reopen on Monday"), false);
+  assert.equal(saysNothing("Araghchi: talks with the US to resume next week"), false);
+  assert.equal(saysNothing("Baghaei: statement on talks says Iran rejects the US offer"), false);
+});

@@ -181,3 +181,15 @@ test("the side a headline names is not its place", async () => {
   assert.deepEqual([...countriesNamed("Israeli artillery shells al-Hamidiyah, Quneitra countryside, southern Syria")], ["Syria"]);
   assert.deepEqual([...countriesNamed("Drone strike on a base in Iraq")], ["Iraq"]);
 });
+
+test("the brief: Gaza and Judea and Samaria apart, the desk's words, every point referenced (user, 24 Oct)", async () => {
+  const { fromGazaAnswer, gazaUnusable } = await import("./gaza-brief.ts");
+  const ref = (fp: string, source: string, headline: string) => ({ fp, source, at: "2026-10-24T09:00:00Z", url: `https://x/${fp}`, headline });
+  const refOf = { r1: ref("a", "IDF", "IDF: two gunmen who crossed the yellow line were killed"), r2: ref("b", "WAFA", "Settlers attack olive pickers near Turmus Ayya") };
+  const got = fromGazaAnswer({ gaza: ["IDF: two gunmen who crossed the yellow line in Beit Lahia were killed [r1]."], js: ["Settlers attacked olive pickers near Turmus Ayya in the West Bank [r2]."] }, refOf);
+  assert.equal(got.gaza.points.length, 1);
+  assert.match(got.gaza.points[0], /\[\[1\]\]/);
+  assert.doesNotMatch(got.js.points[0], /West Bank|[Ss]ettlers/);
+  assert.match(got.js.points[0], /Judea and Samaria/);
+  assert.equal(gazaUnusable({ gaza: ["X happened [snn]."], js: [] }, refOf, 2), "ids not given: snn");
+});

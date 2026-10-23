@@ -126,3 +126,20 @@ test("a writer's answer with made-up ids, or one point for many reports, goes to
   assert.match(String(unusable({ points: ["Baghaei: Hormuz was a response to attacks [r1]."] }, refOf, 10)), /1 point/);
   assert.equal(unusable({ points: ["Israeli jets struck a weapons depot near Isfahan, Iranian state media said [r1].", "The IRGC Navy seized a tanker off Fujairah, accusing it of smuggling fuel [r2].", "Qatar said messages between Washington and Tehran were again passing through it [r3]."] }, refOf, 10), null);
 });
+
+test("a brief point keeps its speaker and gives every verb a subject (user, 23 Oct)", async () => {
+  const { speakerActs } = await import("./prose.ts");
+  const { keepSpeaker } = await import("./iran-brief.ts");
+  assert.equal(
+    speakerActs("IRGC Navy: seven oil tankers were damaged in the Strait of Hormuz overnight, and threatened to strike US military bases if the US continues guiding commercial ships [r6]."),
+    "IRGC Navy: seven oil tankers were damaged in the Strait of Hormuz overnight; it threatened to strike US military bases if the US continues guiding commercial ships [r6].",
+  );
+  assert.equal(speakerActs("IRGC Navy: it struck two LPG carriers and blames US forces [r1]."), "IRGC Navy: it struck two LPG carriers and blames US forces [r1].");
+  const ref = (headline: string, source = "Reuters") => ({ fp: "x", source, at: "", url: "", headline });
+  assert.equal(
+    keepSpeaker("France, Britain, and Germany are ready to negotiate with Iran [r3].", { r3: ref("German Foreign Minister: France, Britain and Germany ready to negotiate with Iran") }),
+    "German Foreign Minister: France, Britain, and Germany are ready to negotiate with Iran [r3].",
+  );
+  assert.equal(keepSpeaker("The IRGC Navy seized a tanker [r1].", { r1: ref("IRGC Navy: we seized a tanker") }), "The IRGC Navy seized a tanker [r1].");
+  assert.equal(keepSpeaker("Brent passed $116 [r2].", { r2: ref("Reuters: Brent passes $116", "Reuters") }), "Brent passed $116 [r2].");
+});

@@ -71,7 +71,7 @@ ${ARENAS.map((a) => `- ${a.id} = ${a.name}: ${a.about}`).join("\n")}
 In every point, after the words each report supports, put that report's id in square brackets, before the full stop: "The IRGC Navy seized a tanker off Fujairah [r4]." Every point carries at least one id, and only ids from the lines given. When several reports tell the same fact, give the id of ONE: the speaker's or the country's own account first (Trump's own post for his words, the US Treasury for its sanctions, the IDF for Israel's army, Iran's own agencies for Iran's officials), then a wire agency, then the fullest report. Two ids in a point only when it joins two different facts.
 Rules:
 - Only facts in the reports. Never invent a place, number, name or claim.
-- Name no outlet and never open a point with "X reported": the reference shows the source. Write the point in your own words, never a headline and body glued together. Every point ends with a full stop. At most 40 words. Anyone's words or claim open with the speaker and a colon, never "X says": "IRGC Navy: it struck two LPG carriers south of Hormuz and blames US forces.", "US official: …"; a well-known person by name alone ("Vance: …", "Araghchi: …"), never "US official Vance"; a side's claim is never plain fact. A fact reported by both sides, a wire agency or an official body is plain fact.
+- Name no outlet and never open a point with "X reported": the reference shows the source. Write the point in your own words, never a headline and body glued together. Every point ends with a full stop. At most 40 words. Anyone's words or claim open with the speaker and a colon, never "X says": "IRGC Navy: it struck two LPG carriers south of Hormuz and blames US forces.", "US official: …"; never drop the speaker, or a statement reads as fact, and keep its reason or condition ("German FM Wadephul: Germany, France and Britain are ready to negotiate with Iran to keep it from nuclear weapons.", never "France, Britain and Germany are ready to negotiate with Iran."); after the colon write whole sentences, every verb with its subject ("IRGC Navy: seven oil tankers were damaged in Hormuz overnight; it will strike US bases if the US keeps escorting ships.", never "…were damaged overnight, and threatened to strike…"); a well-known person by name alone ("Vance: …", "Araghchi: …"), never "US official Vance"; a side's claim is never plain fact. A fact reported by both sides, a wire agency or an official body is plain fact.
 - ONE point per event and per speaker: an attack with its claims, blame and threats is one point; everything one person or body said in these hours on one subject is one point (two remarks by the Treasury Secretary on the blockade are one). Never two points that tell the same thing, in a list or across the arenas.
 - Each country's words and acts are cited from its own sources or a wire: the IDF, Israeli officials and Israeli media for Israel; Lebanese sources for Israel's strikes in Lebanon; Trump's own post and US officials for the US; Iran's officials and agencies for Iran. Another country's outlet retelling them is never cited, unless it is that outlet's own exclusive. A point with no such report is left out.
 - The Houthis' war with Saudi Arabia and Yemen's own fronts go nowhere: they are the Yemen desk's.
@@ -101,18 +101,41 @@ export function writerInput(reports: LiveReport[], trump: TrumpStatement[]): { l
   return { lines, refOf };
 }
 
+/** Words that say who a speaker is without naming them: not enough to show the point keeps the speaker. */
+const ROLE_WORD = /^(?:Foreign|Minister|Ministry|Defence|Defense|Prime|President|Spokesman|Spokesperson|Official|Officials|Senior|Deputy|Chief|Head|Envoy|Ambassador|Secretary|State|General|Commander|Office|The)$/;
+
+/**
+ * A point keeps who said it (user, 23 Oct: "France, Britain, and Germany are
+ * ready to negotiate with Iran" lost the German FM, so it read as fact). When
+ * the report it cites opens with a speaker and the point names none of them,
+ * the speaker opens the point.
+ */
+export function keepSpeaker(point: string, refOf: Record<string, Ref>): string {
+  if (/^[^:]{2,60}:\s/.test(stripRefs(point))) return point;
+  const id = /\[([rt]\d+)\]/i.exec(point)?.[1]?.toLowerCase();
+  const ref = id ? refOf[id] : undefined;
+  if (!ref || ref.trump) return point;
+  const lead = /^([^:]{2,60}):\s/.exec(ref.headline ?? "")?.[1]?.trim();
+  if (!lead || lead.toLowerCase() === String(ref.source).toLowerCase() || /\b(?:reports?|breaking|urgent|exclusive|watch|video)\b/i.test(lead)) return point;
+  const names = (lead.match(/[A-Z][\w'’.-]*/g) ?? []).filter((w) => !ROLE_WORD.test(w));
+  const text = stripRefs(point);
+  if (names.some((w) => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(text))) return point;
+  if (!names.length && text.toLowerCase().includes(lead.toLowerCase())) return point;
+  return `${lead}: ${point}`;
+}
+
 /** The writer's answer as the brief's lists; null parts mean the writer gave nothing usable. */
 export function fromAnswer(j: Record<string, unknown>, refOf: Record<string, Ref>): { situation: { points: string[]; refs: Ref[] } | null; arenas: Record<string, { points: string[]; refs: Ref[] }> } {
   // Each country's words and acts from its own sources (user, 9 Oct): never Iran's outlets retelling America or Israel.
   const look = (id: string, point = "") => ownRef(point, refOf[id]);
   const outlets = Object.values(refOf).map((r) => r.source);
-  const pts = marked(numberRefs(rankPoints(onePointEach(cleanPoints(j.points, 10).filter((p) => !yemenOnly(stripRefs(p))), outlets)), look));
+  const pts = marked(numberRefs(rankPoints(onePointEach(cleanPoints(j.points, 10).filter((p) => !yemenOnly(stripRefs(p))).map((p) => keepSpeaker(p, refOf)), outlets)), look));
   const aj = (j.arenas && typeof j.arenas === "object" ? j.arenas : {}) as Record<string, unknown>;
   const arenas: Record<string, { points: string[]; refs: Ref[] }> = {};
   // A report serves two arenas at most: Trump's one post was in five (9 Oct).
   const uses = new Map<string, number>();
   for (const a of ARENAS) {
-    const own = dropEmpty(onePointEach(cleanPoints(aj[a.id], 8), outlets).filter((p) => fits(a.id, stripRefs(p)))).filter((p) => {
+    const own = dropEmpty(onePointEach(cleanPoints(aj[a.id], 8).map((p) => keepSpeaker(p, refOf)), outlets).filter((p) => fits(a.id, stripRefs(p)))).filter((p) => {
       const ids = [...p.matchAll(/[rt]\d+/gi)].map((m) => m[0].toLowerCase());
       if (ids.length && ids.every((id) => (uses.get(id) ?? 0) >= 2)) return false;
       for (const id of ids) uses.set(id, (uses.get(id) ?? 0) + 1);

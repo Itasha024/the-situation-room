@@ -369,7 +369,32 @@ export function tidyPoint(p: string): string {
     const marks = (t.slice(dash).match(/\[[^\]]*\]/g) || []).join("");
     t = t.slice(0, dash).replace(/[.\s]+$/, "") + marks + ".";
   }
+  t = speakerActs(t);
   return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+const SPEAKER_ACT = "threatened|threatens|warned|warns|vowed|vows|said|says|claimed|claims|added|adds|called|calls|accused|accuses|denied|denies|demanded|demands|urged|urges|pledged|pledges|blamed|blames|announced|announces|confirmed|confirms|stated|states|threatening|warning|vowing";
+/** A body, not a person: its second act is "it". */
+const BODY_WORD = /\b(?:Navy|Army|Forces?|Ministry|Office|IDF|IRGC|CENTCOM|Command|Government|Council|Guards?|Authority|Agency|Corps|Committee|Hamas|Hezbollah|Houthis?|Jihad|Brigades?|Police|Service|Department|Treasury|Pentagon|UN|EU|White House|Kremlin|Cabinet|Movement|Front|Party|Group|Spokes\w+)\b/i;
+
+/**
+ * "IRGC Navy: seven oil tankers were damaged in Hormuz overnight, and
+ * threatened to strike US bases" (user, 23 Oct: "written bad, it happens a
+ * lot"): after a clause with its own subject the speaker's next act had none.
+ * It gets one: "…overnight; it threatened to strike…" ("it" for a body, the
+ * name for a person).
+ */
+export function speakerActs(p: string): string {
+  const m = /^([^:]{2,60}):\s+/.exec(p);
+  if (!m) return p;
+  const rest = p.slice(m[0].length);
+  const hit = new RegExp(`,?\\s+and\\s+(?:it\\s+)?(${SPEAKER_ACT})\\b`, "i").exec(rest);
+  if (!hit) return p;
+  const before = rest.slice(0, hit.index);
+  if (!/\b(?:was|were|is|are|has been|have been|had been|will be)\b/i.test(before)) return p;
+  const act = hit[1].replace(/ing$/i, "ed");
+  const who = BODY_WORD.test(m[1]) ? "it" : m[1].trim().split(/\s+/).slice(-1)[0];
+  return `${m[0]}${before}; ${who} ${act}${rest.slice(hit.index + hit[0].length)}`;
 }
 
 /**

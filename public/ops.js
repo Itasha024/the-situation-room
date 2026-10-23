@@ -202,7 +202,7 @@
   const LEFT_TABS = {
     yemen: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Fronts', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
     iran: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
-    gaza: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers']],
+    gaza: [['situation', 'Brief', 'brief'], ['cas-wrap', 'Numbers', 'numbers']],
     all: [['ops-theatres', 'Brief', 'brief']],
   };
   const PAGE_NAME = { all: 'All theatres', iran: 'Iran', yemen: 'Yemen', gaza: 'Gaza – Judea & Samaria' };
@@ -641,7 +641,7 @@
     el.innerHTML = `<article class="ops-th ops-th-one">
         ${latest ? `<p class="ops-th-sub">From the Iran and Yemen desks · updated ${esc(when(latest))}</p>` : ''}
         ${pts.length ? `<ol class="ops-th-pts">${pts.map(([desk, p]) => `<li><a class="ops-th-flag" href="${DESK_INFO[desk][2]}" data-desk-go title="${esc(DESK_INFO[desk][0])} desk" aria-label="${esc(DESK_INFO[desk][0])} desk">${flag(desk)}</a>${esc(p)}</li>`).join('')}</ol>` : `<p class="ops-empty">${briefs.iran || briefs.yemen ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
-        <p class="ops-th-links">${Object.entries(DESK_INFO).map(([desk, [name, , href]]) => `<a class="ops-th-more" href="${href}" data-desk-go>${esc(name)} desk: the full brief, ${desk === 'iran' ? 'arenas' : 'fronts'}, numbers ${ICON.right}</a>`).join('')}</p>
+        <p class="ops-th-links">${Object.entries(DESK_INFO).map(([desk, [name, , href]]) => `<a class="ops-th-more" href="${href}" data-desk-go>${esc(name)} desk: the full brief, ${desk === 'gaza' ? '' : desk === 'iran' ? 'arenas, ' : 'fronts, '}numbers ${ICON.right}</a>`).join('')}</p>
       </article>`;
   }
 
@@ -2059,7 +2059,12 @@
     setTimeout(() => root && root.classList.add('ops-ready'), 5000);
     try {
       applyPrefs();
-      if (OPEN_REPORT) { S.right = true; S.rtab = 'rep'; S.ptab = 'rail'; }
+      if (OPEN_REPORT) { S.right = true; S.rtab = 'rep'; S.ptab = 'rail'; lastOpen = 'right'; }
+      // app.js found the report of a "#r=" link (user, 24 Oct): the reports panel opens on it, whenever that is.
+      addEventListener('desk:open-report', () => {
+        S.right = true; S.rtab = 'rep'; S.ptab = 'rail'; lastOpen = 'right';
+        paintFrame();
+      });
       build(); tick(); counts(); startHud();
       if (PAGE !== 'all') loadCities();
       const leg = $('.ops-who', root);

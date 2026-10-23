@@ -3935,7 +3935,8 @@ function revealHashCard() {
   const card = document.querySelector(`#feed .card[data-fp="${CSS.escape(fp)}"]`);
   if (!card) return;
   if (card.classList.contains('expandable') && !card.classList.contains('open')) card.click();
-  setTimeout(() => { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); flashCard(card); }, 150);
+  dispatchEvent(new Event('desk:open-report'));
+  setTimeout(() => { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); flashCard(card); }, 400);
 }
 
 /**
@@ -8475,6 +8476,34 @@ function renderIranFeed() {
   wireMediaClicks(el);
   const up = document.getElementById('updated');
   if (up && iranDesk.scan && iranDesk.scan.scannedAt) up.textContent = 'UPDATED ' + fmtClock(iranDesk.scan.scannedAt);
+  revealIranHashCard(all);
+}
+/**
+ * "#r=<fp>" on the Iran and Gaza desks (the All page's "Full report on the … desk", user 24 Oct: it
+ * opened the desk but not the report): that card is shown, opened, scrolled to and flashed, once.
+ * A card older than the loaded ones is looked for in up to three earlier pages.
+ */
+let irHashTries = 0;
+function revealIranHashCard(all) {
+  const m = /^#r=(.+)$/.exec(location.hash || '');
+  if (!m) return;
+  if (!revealIranHashCard.on) { revealIranHashCard.on = true; addEventListener('hashchange', () => { irHashTries = 0; renderIranFeed(); }); }
+  const fp = decodeURIComponent(m[1]);
+  const at = all.findIndex((r) => String(r.fp) === fp);
+  if (at < 0) {
+    if (iranDesk.lean) { iranDesk.lean = ''; renderIranFeed(); return; }
+    if (!iranDesk.olderDone && irHashTries++ < 3) pullOlderIran().then(() => renderIranFeed()).catch(() => {});
+    else history.replaceState(null, '', location.pathname + location.search);
+    return;
+  }
+  if (at >= iranDesk.shown) { iranDesk.shown = at + 1; renderIranFeed(); return; }
+  history.replaceState(null, '', location.pathname + location.search);
+  const card = document.querySelector(`#feed .card[data-fp="${CSS.escape(fp)}"]`);
+  if (!card) return;
+  if (card.classList.contains('expandable') && !card.classList.contains('open')) card.click();
+  // The ops view opens its reports panel for it (ops.js); the panel may still be sliding in.
+  dispatchEvent(new Event('desk:open-report'));
+  setTimeout(() => { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); flashCard(card); }, 400);
 }
 /** An Iran card in its source group's colour, its map button opening the Iran pop-up map. */
 function irCardDress(card, r) {
@@ -8942,6 +8971,20 @@ function renderIranBrief() {
   if (!b) return;
   const el = document.getElementById('situation');
   const s = b.situation || {};
+  // The Gaza desk: Gaza and Judea and Samaria, each its own list (user, 24 Oct), and no arenas.
+  const areas = Array.isArray(b.areas) ? b.areas.filter((a) => Array.isArray(a.points) && a.points.length) : [];
+  if (el && areas.length) {
+    const open = el.classList.contains('sit-open');
+    const more = areas.some((a) => a.points.length > 3);
+    el.innerHTML = `<div class="sit-head"><h2>Brief</h2></div>${cadenceStamp(true, b)}
+      <div class="sit-body">${areas.map((a, i) => {
+        const old = a.lastNewsAt && a.lastNewsAt !== b.updatedAt;
+        return `<div class="sit-area" data-i="${i}"><h3 class="sit-area-h">${escapeHtml(a.name)}</h3>${pointsHtml(a.points, a.refs, { show: 3 })}${old ? `<p class="front-asof">${escapeHtml(T('As of {t}, {d}', { t: fmtClock(a.lastNewsAt), d: new Date(a.lastNewsAt).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ }) }))}</p>` : ''}</div>`;
+      }).join('')}${more ? sitBtn(open) : ''}</div>`;
+    wireBoxToggle(el, el.querySelector('.toggle-sit'), 'sit-open');
+    el.querySelectorAll('.sit-area').forEach((box) => wireRefs(box, areas[Number(box.dataset.i)].refs));
+    return;
+  }
   if (el && Array.isArray(s.points) && s.points.length) {
     const open = el.classList.contains('sit-open');
     el.innerHTML = `<div class="sit-head"><h2>Brief</h2></div>${cadenceStamp(true, b)}

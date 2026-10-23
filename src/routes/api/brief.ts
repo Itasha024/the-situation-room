@@ -3,6 +3,7 @@ import type { Brief } from "@/lib/desk/brief";
 import { briefWindow } from "@/lib/desk/brief";
 import { refreshBrief } from "@/lib/desk/brief-store";
 import { IRAN_BRIEF_KEY, type IranBrief } from "@/lib/desk/iran-brief";
+import { GAZA_BRIEF_KEY, type GazaBrief } from "@/lib/desk/gaza-brief";
 import { IRAN_NOW_KEY, type IranTimelineNow } from "@/lib/desk/iran-timeline-now";
 import { liveSanctionBoxes, OFAC_KEY, type OfacStore } from "@/lib/desk/ofac";
 import { type Box, IRAN_LIVE_KEY, type IranLive, liveNumbers } from "@/lib/desk/iran-live";
@@ -47,6 +48,12 @@ export const Route = createFileRoute("/api/brief")({
 async function briefAnswer(desk: ReturnType<typeof deskParam>): Promise<Response> {
         try {
           // The Iran desk's brief is built from stage 4 of Round 30; until then it has none.
+          // The Gaza desk: Gaza and Judea and Samaria, two lists (gaza-brief.ts), no arenas.
+          if (desk === "gaza") {
+            const gb = await (await getStore()).getJson<GazaBrief>(GAZA_BRIEF_KEY);
+            if (gb) return json({ ...gb, situation: banded(gb.situation), areas: servedLists(gb.areas), arenas: [] }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=86400");
+            return json({ ok: true, desk, pending: true, ...briefWindow(new Date(), 3) }, 200, "public, max-age=60", "public, s-maxage=300");
+          }
           if (desk !== "yemen") {
             const st = desk === "iran" ? await getStore() : null;
             const ib = st ? await st.getJson<IranBrief>(IRAN_BRIEF_KEY) : null;

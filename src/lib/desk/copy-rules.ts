@@ -514,8 +514,18 @@ export function cleanBody(text: string, source: string): string {
  * carries the words.
  */
 const SAYS_NOTHING = /^[^:]{0,70}?\b(?:details|detailed|outlines|outlined|explains|explained|elaborates on|speaks (?:about|on)|talks about|comments on|commented on|sheds light on|briefs (?:the )?[\w-]+(?: \w+)? on|briefed (?:the )?[\w-]+(?: \w+)? on|gives (?:an? |his |her )?(?:interview|speech|details|account)|in (?:an? )?(?:long |lengthy |televised )?interview)\b(?![^:]{0,40}:)/i;
+/**
+ * After the colon only the name of the talk, not what was said (user, 24 Oct: "Pakistan Foreign Office
+ * spokesperson: Weekly briefing on tensions at the Pakistan–Iran border and current status" — "the fact he
+ * talks isn't a report").
+ */
+const TALK_LABEL = /^[^:]{2,60}:\s+(?:(?:the|a|an|his|her|its|their)\s+)?(?:(?:weekly|daily|regular|monthly|special|live|full|latest|first|televised|joint)\s+)*(?:(?:press|news|media)\s+)?(?:briefings?|conferences?|speech(?:es)?|address(?:es)?|interviews?|remarks|statements?|session|appearance|comments)\b(?:\s+(?:on|about|regarding|over|to|at|in|for)\b([^.;]*))?\s*$/i;
+/** A topic with a verb in it is news ("…briefing: border to reopen"); a bare topic is not. */
+const HAS_VERB = /\b(?:will|would|is|are|was|were|has|have|had|be|been|says?|said|warns?|warned|calls?|called|to [a-z]{3,}|[a-z]{3,}(?:ed|es))\b/i;
 export function saysNothing(headline: string): boolean {
-  const h = String(headline || "");
+  const h = String(headline || "").trim().replace(/[.\s]+$/, "");
+  const label = TALK_LABEL.exec(h);
+  if (label && !HAS_VERB.test(label[1] ?? "")) return true;
   return !/^[^:]{2,60}:\s/.test(h) && SAYS_NOTHING.test(h);
 }
 /** Words with no speaker: "We have no trust at all in …", "Ready for diplomacy and self-defence" (21 Oct). */

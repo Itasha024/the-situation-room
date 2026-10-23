@@ -9,6 +9,7 @@
  * and lock, and reads with the free services the other desks use least.
  */
 import { gazaLeadBonus } from "./desk/gaza-sourcing.ts";
+import { refreshGazaBrief } from "./desk/gaza-brief.ts";
 import { GAZA_SEARCHES, GAZA_TG, GAZA_X, WAFA_SITE } from "./desk/gaza-sources.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
 import { runGateAudit, setYemenGate } from "./desk/gate-audit.ts";
@@ -320,6 +321,8 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
     /* the meter must never cost the tick */
   }
   console.log(`[gaza] ${note} ${Math.round(tookMs / 1000)}s`);
+  // The 3-hour brief, Gaza and Judea and Samaria apart (gaza-brief.ts); it must never cost the cycle.
+  void refreshGazaBrief(store).catch((err) => console.error("[gaza-brief]", err instanceof Error ? err.message : err));
   // The gates' daily check, all three desks (gate-audit.ts): once a day, or now when asked (json:gate-audit-now).
   setYemenGate(WAR_ONLY);
   void (async () => {

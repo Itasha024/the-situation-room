@@ -18,17 +18,6 @@ const LEANS: [string, string, string][] = [
   ["intl", "#94a3b8", "International"],
 ];
 
-const ARENAS: [string, string][] = [
-  ["Gaza", "The IDF's operations and strikes, attacks on its forces, the yellow line, and inside Gaza: Hamas and the clans and militias."],
-  ["Judea and Samaria", "Raids, arrests and demolitions, attacks on Israelis, extremists' violence, clashes, the olive harvest."],
-  ["Jerusalem", "The Temple Mount, attacks and arrests in the city."],
-  ["Aid and crossings", "Trucks into Gaza, the crossings, UNRWA, fuel, food and medicine."],
-  ["The day after", "The Board of Peace, the stabilisation force, the Gaza committee, disarmament, reconstruction."],
-  ["The Palestinian Authority", "Its money and the clearance revenues, salaries, reforms, its forces."],
-  ["Diplomacy", "What the Arab and Muslim states, the US, the UN and the EU say and decide."],
-  ["Sanctions", "On Israelis and Israeli officials, on Hamas and the factions, on the Palestinian Authority."],
-];
-
 const GAZA_HTML = `
 <div class="mast">
   <span class="mast-date"></span>
@@ -86,12 +75,7 @@ const GAZA_HTML = `
 </main>
 <section class="situation" id="situation" tabindex="-1">
   <h2>Latest developments</h2>
-  ${SOON("the main developments, most important first, every 3 hours.")}
-</section>
-<section class="fronts-wrap" id="fronts-wrap">
-  <h2>Arenas</h2>
-  ${SOON("a short overview of each arena, every 3 hours.")}
-  <dl class="soon-list">${ARENAS.map(([n, d]) => `<dt>${n}</dt><dd>${d}</dd>`).join("")}</dl>
+  ${SOON("the main developments in Gaza and in Judea and Samaria, each its own list, most important first, every 3 hours.")}
 </section>
 <section class="cas-wrap" id="cas-wrap">
   <h2>In numbers</h2>

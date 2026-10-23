@@ -1244,3 +1244,7 @@ html .leg-ico.kind,html[data-set] .leg-ico.kind{background:#475569;color:#fff;bo
 .mast{view-transition-name:mast}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.3s}
 @media (prefers-reduced-motion: reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}
+
+/* The Gaza desk's brief: Gaza, then Judea and Samaria, each its own list (user, 24 Oct). */
+.sit-area + .sit-area { margin-top: 14px; }
+.sit-area-h { margin: 0 0 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #8a94a6); }

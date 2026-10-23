@@ -88,3 +88,9 @@ test("a statement reposted by many channels is one item", () => {
   assert.equal(g.top.length, 1);
   assert.equal((g.top[0] as WatchPost & { n: number }).n, 3);
 });
+
+test("the briefs in the desk's words", async () => {
+  const { cleanBrief } = await import("./online-brief.ts");
+  assert.equal(cleanBrief("Channels reported the martyrdom of the assailants in the West Bank.}"), "Channels reported the killing of the assailants in Judea and Samaria.");
+  assert.equal(cleanBrief("threats against Israeli citizens, soldiers, and Israeli citizens"), "threats against Israeli citizens and soldiers");
+});

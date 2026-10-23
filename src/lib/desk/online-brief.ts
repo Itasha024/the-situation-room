@@ -32,11 +32,23 @@ const WORDING = `Never name a private person. Neutral wording: "killed", not "ma
 
 const KINDS_SYSTEM = `You brief an Israeli news desk on what Palestinians are saying online, in one area (Gaza, or Judea and Samaria), over the last hours. You get the posts and comments of Palestinian Telegram channels, sorted by kind of talk.
 For each kind given, write 1 to 3 short, plain English sentences: what is being said, who says it (a faction, local channels, commenters), the main lines and how widespread it is (one channel, many channels, many comments). Quote a striking phrase in English when it helps. ${WORDING}
+When the messages under a kind do not really show that kind of talk (a road closure under "anger_hamas", a prayer under "anger_pa"), give that kind an empty string.
 Answer JSON only: {"<kind id>": "<brief>"}, for the kinds given.`;
 
 const DAY_SYSTEM = `You brief an Israeli news desk on the last 24 hours of talk among Palestinians online in one area (Gaza, or Judea and Samaria), from the posts and comments of Palestinian Telegram channels, each tagged with its kind (call, threat, praise, anger_hamas, anger_pa, complaint, grief, rumour).
 Write 3 to 5 short, plain English sentences: the main things people talked about, the calls and threats if any, the mood, and what changed over the day. ${WORDING}
 Answer JSON only: {"day": "<brief>"}.`;
+
+/** A model's brief made clean: the desk's words, no "martyr", no stray JSON marks. */
+export function cleanBrief(s: string): string {
+  return gazaWords(String(s || "").trim().replace(/[}"'\s]+$/u, "").replace(/^["'{\s]+/u, ""))
+    .replace(/\bthe martyrdom of\b/gi, "the killing of")
+    .replace(/\bmartyrdom\b/gi, "death")
+    .replace(/\bmartyred\b/gi, "killed")
+    .replace(/\bmartyrs\b/gi, "those killed")
+    .replace(/\bmartyr\b/gi, "person killed")
+    .replace(/\b(Israeli citizens), soldiers,? and Israeli citizens\b/gi, "$1 and soldiers");
+}
 
 /** The briefs for both areas: the kinds from the last hours' summary, the day from the day's; the earlier ones where a model gave none. */
 export async function writeBriefs(recent: AreaSummary[], day: AreaSummary[], prev: Briefs | null, now = Date.now()): Promise<Briefs> {
@@ -49,7 +61,7 @@ export async function writeBriefs(recent: AreaSummary[], day: AreaSummary[], pre
       timeoutMs: 60_000,
       accept: (j) => (typeof j.day === "string" ? null : "no day"),
     });
-    if (got) out.day![a.area] = gazaWords(String(got.json.day).trim()).slice(0, 900);
+    if (got) out.day![a.area] = cleanBrief(String(got.json.day)).slice(0, 900);
   }
   for (const a of recent) {
     const top = a.top as Listed[];
@@ -63,7 +75,7 @@ export async function writeBriefs(recent: AreaSummary[], day: AreaSummary[], pre
     });
     if (!got) continue;
     const briefs: Record<string, string> = {};
-    for (const v of kinds) if (typeof got.json[v.id] === "string") briefs[v.id] = gazaWords(String(got.json[v.id]).trim()).slice(0, 600);
+    for (const v of kinds) if (typeof got.json[v.id] === "string" && String(got.json[v.id]).trim()) briefs[v.id] = cleanBrief(String(got.json[v.id])).slice(0, 600);
     out.areas[a.area] = briefs;
   }
   return out;

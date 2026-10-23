@@ -55,6 +55,13 @@ export const GAZA_TG: Src[] = [
   { id: "cogatonline", name: "COGAT", lean: "israel", every: 15, tier: 1 },
   // A geo-analyst on the fronts, Gaza's among them (user, 23 Oct): maps, satellite pictures, the IDF-held share.
   { id: "BenTzionM", name: "Ben-Zion Macales", lean: "israel", every: 15, tier: 2 },
+  // More OSINT on Gaza's fronts (user, 23 Oct: many, not only Israeli): geolocations, positions, raw incident feeds.
+  { id: "geo_lego", name: "Geo Lego (geolocation)", lean: "intl", every: 30, tier: 2 },
+  { id: "EyeOnPalestine2", name: "Eye on Palestine (2)", lean: "palestinian", every: 15, tier: 3 },
+  { id: "PalestineResist", name: "Resistance News Network", lean: "factions", every: 15, tier: 2 },
+  { id: "warfareanalysis", name: "Warfare Analysis", lean: "intl", every: 30, tier: 3 },
+  { id: "manniefabian", name: "Emanuel Fabian (Telegram)", lean: "israel", every: 15, tier: 2 },
+  { id: "AbuAliExpress", name: "Abu Ali Express", lean: "israel", every: 15, tier: 3 },
   // Faction media and the agencies.
   { id: "qudsn", name: "Quds News Network", lean: "factions", every: 5, tier: 2 },
   { id: "Qudsn_Brk", name: "Quds News Network (urgent)", lean: "factions", every: 5, tier: 2 },
@@ -113,6 +120,19 @@ export const GAZA_X: Src[] = [
   { id: "pmofa", name: "Palestinian Foreign Ministry", lean: "pa", every: 30, tier: 1 },
   { id: "MFAEgypt", name: "Egypt Foreign Ministry", lean: "arab", every: 30, tier: 1 },
   { id: "MofaQatar_AR", name: "Qatar Foreign Ministry", lean: "arab", every: 30, tier: 1 },
+  // OSINT on the IDF and Hamas in Gaza, mostly not Israeli (user, 23 Oct): geolocators, satellite, trackers.
+  { id: "fdov21", name: "fdov (geolocation)", lean: "intl", every: 60, tier: 2 },
+  { id: "geo_lego_2", name: "Geo Lego (geolocation)", lean: "intl", every: 60, tier: 2 },
+  { id: "Stinky915846091", name: "Stinky (geolocation)", lean: "intl", every: 60, tier: 2 },
+  { id: "AbuLocation", name: "Abu Location (geolocation)", lean: "intl", every: 120, tier: 2 },
+  { id: "MarioLeb79", name: "MarioLeb (geolocation)", lean: "intl", every: 60, tier: 3 },
+  { id: "manniefabian", name: "Emanuel Fabian", lean: "israel", every: 15, tier: 2 },
+  { id: "JoeTruzman", name: "Joe Truzman (FDD)", lean: "intl", every: 30, tier: 2 },
+  { id: "QudsNen", name: "Quds News Network (X)", lean: "factions", every: 15, tier: 2 },
+  { id: "EuroMedHR", name: "Euro-Med Monitor", lean: "intl", every: 30, tier: 2 },
+  { id: "MosabAbuToha", name: "Mosab Abu Toha", lean: "palestinian", every: 60, tier: 3 },
+  { id: "Timesofgaza", name: "Times of Gaza (X)", lean: "palestinian", every: 30, tier: 3 },
+  { id: "UNOSAT", name: "UNOSAT", lean: "intl", every: 120, tier: 1 },
 ];
 
 /**
@@ -120,6 +140,10 @@ export const GAZA_X: Src[] = [
  * the exclusives of outlets the desk does not read itself.
  */
 export const GAZA_SEARCHES: Feed[] = [
+  // Investigations and the UN's reports (user, 23 Oct: OSINT on Gaza from every side).
+  { id: "bellingcat", name: "Bellingcat", lean: "intl", every: 120, url: "https://www.bellingcat.com/feed/" },
+  { id: "reliefweb-gaza", name: "ReliefWeb", lean: "intl", every: 60, url: "https://reliefweb.int/updates/rss.xml?search=gaza" },
+  { id: "euromed", name: "Euro-Med Monitor", lean: "intl", every: 60, url: "https://euromedmonitor.org/en/rss" },
   { id: "gz-en", name: "Google News", lean: "intl", every: 60, url: gnews('(Gaza OR "West Bank" OR "Judea and Samaria" OR Hamas OR UNRWA OR "Board of Peace" OR Hebron OR Jenin OR Nablus OR "Palestinian Authority") when:1h') },
   { id: "gz-ar", name: "Google News", lean: "arab", every: 60, url: gnews('(غزة OR "الضفة الغربية" OR حماس OR الأونروا OR "مجلس السلام" OR الخليل OR جنين OR نابلس OR "السلطة الفلسطينية") when:1h', "ar", "SA", "SA:ar") },
   { id: "gz-he", name: "Google News", lean: "israel", every: 60, url: gnews("(עזה OR \"יהודה ושומרון\" OR חמאס OR פיגוע OR מחבלים OR הרשות הפלסטינית) when:1h", "he", "IL", "IL:he") },

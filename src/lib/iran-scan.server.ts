@@ -126,7 +126,7 @@ const BLOCKED_PER_TICK = 4;
  * learned" is in the article, never the headline: their links are resolved
  * first and their articles get their own openings through the reading service.
  */
-const LEBANESE_PAPER_HOST = /(?:^|\.)(?:nidaalwatan\.com|addiyar\.com|elnashra\.com|aljoumhouria\.com|al-akhbar\.com)$/i;
+const LEBANESE_PAPER_HOST = /(?:^|\.)(?:nidaalwatan\.com|addiyar\.com|elnashra\.com|aljoumhouria\.com|al-akhbar\.com|almodon\.com|al-binaa\.com)$/i;
 export const lebanesePaper = (h: Pick<RawHit, "url" | "site">) => {
   const host = (u: string) => {
     try {
@@ -138,6 +138,41 @@ export const lebanesePaper = (h: Pick<RawHit, "url" | "site">) => {
   return LEBANESE_PAPER_HOST.test(h.site ?? "") || LEBANESE_PAPER_HOST.test(host(h.url));
 };
 const LEBANESE_OPENS_PER_TICK = 4;
+/** The papers' morning order (user, 23 Oct): Al-Akhbar, Nidaa al-Watan, Al-Joumhouria, Al-Modon, then the rest. */
+const PAPER_ORDER = ["Al-Akhbar", "Nidaa al-Watan", "Al-Joumhouria", "Al-Modon"];
+/** Links waiting on Google's redirect, carried to the next tick. */
+const PENDING_MAX = 150;
+
+/**
+ * The Lebanese papers' items first, one paper at a time in turn, in the papers' order, each newest
+ * first; then the rest as they came. On 23 Oct the 60 waiting links were all Ad-Diyar's, Elnashra's and
+ * Al-Joumhouria's newest, and Al-Akhbar's whole morning paper (some 50 articles, dated the night
+ * before) and Nidaa al-Watan's fell off the end unread.
+ */
+export function papersFirst<T extends Pick<RawHit, "url" | "site" | "source" | "at">>(hits: T[]): T[] {
+  const queues = new Map<string, T[]>();
+  for (const h of hits.filter(lebanesePaper)) {
+    const q = queues.get(h.source) ?? [];
+    q.push(h);
+    queues.set(h.source, q);
+  }
+  const rank = (s: string) => (PAPER_ORDER.includes(s) ? PAPER_ORDER.indexOf(s) : PAPER_ORDER.length);
+  const order = [...queues.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  for (const q of queues.values()) q.sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
+  const out: T[] = [];
+  for (let i = 0; out.length < hits.length; i++) {
+    let took = false;
+    for (const s of order) {
+      const h = queues.get(s)![i];
+      if (h) {
+        out.push(h);
+        took = true;
+      }
+    }
+    if (!took) break;
+  }
+  return [...out, ...hits.filter((h) => !lebanesePaper(h))];
+}
 
 /**
  * An article's text: its own page; if that refuses the server, the outlet's
@@ -453,7 +488,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   const gnBudget = Math.min(GNEWS_PER_TICK, canResolve("lead") ? resolvesLeft() : bingLeft());
   await Promise.allSettled(
     // The Lebanese papers' links first: the newest of everything else took every turn.
-    [...hits.filter(lebanesePaper), ...hits.filter((h) => !lebanesePaper(h))]
+    papersFirst(hits)
       .filter((h) => !h.fromTg && h.text.length < 600 && (!isGnews(h.url) || !!knownResolve(h.url) || resolved++ < gnBudget))
       .slice(0, LEADS_PER_TICK)
       .map(async (h) => {
@@ -476,7 +511,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   let blocked = BLOCKED_PER_TICK;
   let lebanese = LEBANESE_OPENS_PER_TICK;
   await Promise.allSettled(
-    [...hits.filter(lebanesePaper), ...hits.filter((h) => !lebanesePaper(h))]
+    papersFirst(hits)
       .filter((h) => !isGnews(h.url) && h.text.length < 1500 && (passesIranOwnGate(h.text) || (lebanesePaper(h) && passesLebaneseMediaGate(h.text))))
       .map(async (h) => {
         if (isPostUrl(h.url)) {
@@ -506,7 +541,9 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   // A Google item still on Google's redirect waits for the next tick.
   const readable = hits.filter((h) => !isGnews(h.url));
   for (const h of readable) if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
-  state.pending = [...hits.filter((h) => isGnews(h.url) && lebanesePaper(h)), ...hits.filter((h) => isGnews(h.url) && !lebanesePaper(h))].slice(0, 60);
+  const waiting = papersFirst(hits.filter((h) => isGnews(h.url)));
+  if (waiting.length > PENDING_MAX) console.log(`[iran] ${waiting.length - PENDING_MAX} Google links dropped unread: ${[...new Set(waiting.slice(PENDING_MAX).map((h) => h.source))].join(", ")}`);
+  state.pending = waiting.slice(0, PENDING_MAX);
 
   // 5. A video's spoken words join its post before the reader sees it, as on
   //    the Yemen desk; the Iran desk keeps its own half of the day's listening.

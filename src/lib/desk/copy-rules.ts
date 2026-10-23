@@ -227,7 +227,7 @@ export function houthiClaim(headline: string, type: string, source: string): str
 }
 
 /** Lebanon in a card: a Lebanese outlet or a Lebanese place. */
-const LEBANESE_OUTLET = /^(?:NBN|LBCI|Al-Manar|Al Manar|NNA|National News Agency|MTV Lebanon|Al Mayadeen|Al-Akhbar|Ali Shoaib|Unews|Lebanon 24|L'Orient|Al-Modon|Nidaa al-Watan|Ad-Diyar|Lebanon Debate|Elnashra|Al-Joumhouria)/i;
+const LEBANESE_OUTLET = /^(?:NBN|LBCI|Al-Manar|Al Manar|NNA|National News Agency|MTV Lebanon|Al Mayadeen|Al-Akhbar|Ali Shoaib|Unews|Lebanon 24|L'Orient|Al-Modon|Nidaa al-Watan|Ad-Diyar|Lebanon Debate|Elnashra|Al-Joumhouria|Al-Binaa)/i;
 const LEBANON_PLACE = /\b(?:Lebanon|Lebanese|Beirut|Dahiyeh|Bint Jbeil|Tyre|Sidon|Nabatieh|Nabatiyeh|Marjayoun|Bekaa|Baalbek|Khiam|Naqoura|Litani|Kfar \w+|Zoutar|Zawtar|Kfar Shuba|Kfar Shouba|Kfar Tibnit|Tolain|Wadi al-Hujeir)\b/i;
 export const lebanonContext = (copy: string, source: string): boolean => LEBANESE_OUTLET.test(String(source || "").trim()) || LEBANON_PLACE.test(String(copy || ""));
 

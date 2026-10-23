@@ -239,6 +239,7 @@ const HOST_NAMES: Record<string, string> = {
   "lebanondebate.com": "Lebanon Debate",
   "elnashra.com": "Elnashra",
   "aljoumhouria.com": "Al-Joumhouria",
+  "al-binaa.com": "Al-Binaa",
 };
 
 /**

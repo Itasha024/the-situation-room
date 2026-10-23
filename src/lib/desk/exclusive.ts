@@ -38,6 +38,8 @@ const OWN_NAMES: Record<string, { en: string[]; ar: string[] }> = {
   "Lebanon Debate": { en: ["Lebanon Debate", "LebanonDebate"], ar: ["ليبانون ديبايت"] },
   Elnashra: { en: ["Elnashra", "El Nashra", "Al-Nashra"], ar: ["النشرة"] },
   "Al-Joumhouria": { en: ["Al-Joumhouria", "Al Joumhouria", "Aljoumhouria", "Al-Jumhuriya"], ar: ["الجمهورية"] },
+  // And Al-Binaa (user, 23 Oct).
+  "Al-Binaa": { en: ["Al-Binaa", "Al Binaa", "Albinaa"], ar: ["البناء"] },
   Alhurra: { en: ["Alhurra", "Al-Hurra", "Al Hurra"], ar: ["الحرة"] },
   "Arab News": { en: ["Arab News"], ar: ["عرب نيوز"] },
   // Their websites (18 Oct); their channels are posts, not sites, and pass as before.
@@ -79,6 +81,28 @@ export function ownInformation(text: string, source: string): boolean {
     // Its own correspondent or its own sources.
     if (new RegExp(String.raw`(?:مراسل|مراسلة|موفد|موفدة|فريق|مصادر)${nm}`).test(t)) return true;
     if (new RegExp(String.raw`(?:مراسلنا|مراسلتنا|موفدنا|مصادرنا|علمنا|حصلنا)`).test(t)) return true;
+  }
+  return false;
+}
+
+/**
+ * A paper's own article never names itself: its own reporting there is "diplomatic information",
+ * "security sources", "a report that reached a foreign embassy", with no other outlet credited
+ * (user, 23 Oct: Nidaa al-Watan's seven Hezbollah explosives trucks, from a report reaching a foreign
+ * embassy, went under a cabinet card's "Also" as a minister's words). For its site article only:
+ * its posts name it ("لـ«نداء الوطن»") and ownInformation reads those.
+ */
+const UNNAMED_SOURCING =
+  /\b(?:diplomatic|security|judicial|ministerial|political|government|official|informed|well-informed|western|american|european|arab|gulf|military|intelligence)\s+(?:sources?|information|circles)\b|\b(?:sources?|circles)\s+(?:close to|familiar with|following)\b|\ba report (?:reaching|that reached|seen by|obtained by|received by)\b|(?:معلومات|مصادر|مصدر|أوساط|اوساط)\s+(?:ديبلوماسية|دبلوماسية|ديبلوماسي|دبلوماسي|أمنية|امنية|أمني|قضائية|قضائي|وزارية|وزاري|سياسية|سياسي|حكومية|رسمية|مطلعة|مطلع|متابعة|غربية|أميركية|أمريكية|عربية|خليجية|عسكرية|عسكري|مقربة|قريبة)|تقرير\s+(?:وصل|وصلت|اطلعت|حصلت)/gi;
+const OTHER_OUTLET_AR = /رويترز|أكسيوس|الجزيرة|العربية|الحدث|سكاي نيوز|الشرق الأوسط|وول ستريت|نيويورك تايمز|واشنطن بوست|فايننشال تايمز|هآرتس|يديعوت|معاريف|القناة|وكالة|صحيفة|موقع/;
+
+export function ownArticleSourcing(text: string): boolean {
+  const t = String(text || "").slice(0, 6000);
+  for (const m of t.matchAll(UNNAMED_SOURCING)) {
+    // "diplomatic sources told Reuters", "مصادر أمنية لوكالة …": another outlet's.
+    const near = t.slice(Math.max(0, m.index - 60), m.index + m[0].length + 60);
+    if (new RegExp(OTHERS.source, "i").test(near) || OTHER_OUTLET_AR.test(near)) continue;
+    return true;
   }
   return false;
 }
@@ -144,11 +168,16 @@ export function isExclusive(text: string, source: string): boolean {
     .split(/\s+/)
     .map((w) => w.replace(/^al-?/i, ""))
     .filter((w) => w.length >= 4);
-  const ar: Record<string, string> = { akhbar: "الأخبار", suhail: "سهيل", sheba: "شبا", araby: "العربي", arabiya: "العربية", hadath: "الحدث", almashhad: "المشهد", erem: "إرم", jazeera: "الجزيرة", mayadeen: "الميادين", masirah: "المسيرة" };
+  const ar: Record<string, string> = { akhbar: "الأخبار", suhail: "سهيل", sheba: "شبا", araby: "العربي", arabiya: "العربية", hadath: "الحدث", almashhad: "المشهد", erem: "إرم", jazeera: "الجزيرة", mayadeen: "الميادين", masirah: "المسيرة", jadeed: "الجديد" };
+  // The Lebanese channels' evening scoops (user, 23 Oct: Al Jadeed around 20:00, MTV and LBCI too):
+  // "معلومات الجديد:", "مصادر دبلوماسية للجديد:", "جعجع لـMTV:", "معلومات LBCI".
+  const TV: Record<string, string[]> = { "MTV Lebanon": ["MTV", "ام تي في"], LBCI: ["LBCI", "ال بي سي"], "Al Jadeed": ["الجديد"] };
   // The own-news sites' Arabic names too: "مصادر أميركية لـ«المدن»" (user, 18 Oct).
-  const names = [...new Set([...words, ...words.map((w) => ar[w.toLowerCase()]).filter(Boolean), ...(OWN_NAMES[String(source || "").trim()]?.ar ?? [])])];
+  const names = [...new Set([...words, ...words.map((w) => ar[w.toLowerCase()]).filter(Boolean), ...(OWN_NAMES[String(source || "").trim()]?.ar ?? []), ...(TV[String(source || "").trim()] ?? [])])];
   for (const n of names) {
     const name = esc(n);
+    // "معلومات الجديد: …", "خاص الجديد": what the outlet itself learned, at the head of the post.
+    if (new RegExp(String.raw`^[\s‎‏|🔴⭕️]*(?:معلومات|خاص)\s*(?:لـ?\s*)?[«"“]?\s*${name}\s*[»"”]?\s*[:|\-–—]`, "u").test(t)) return true;
     if (new RegExp(String.raw`\b(?:told|tells)\s+(?:the\s+)?(?:al-?\s?)?${name}`, "i").test(t)) return true;
     if (new RegExp(String.raw`(?:al-?\s?)?${name}\b[^.\n]{0,30}\b(?:has|have)\s+learned`, "i").test(t)) return true;
     // The English majors' own reporting: "documents seen by Reuters", "Axios
@@ -164,6 +193,8 @@ export function isExclusive(text: string, source: string): boolean {
     const stem = n.replace(/^ال/, "");
     const head = t.replace(/^[\s‎‏|]*(?:عاجل|خاص|🔴|⭕️)?\s*\|?\s*/u, "").slice(0, 120);
     if (/^ال/.test(n) && new RegExp(String.raw`^[^:\n]{2,80}\s(?:لل|لـ\s*[«"“]?\s*ال|ل\s*[«"“]?\s*ال)${esc(stem)}\s*[»"”]?\s*:`).test(head)) return true;
+    // A Latin name: "جعجع لـMTV:", "مصدر وزاري لـLBCI:".
+    if (/^[A-Z]/.test(n) && new RegExp(String.raw`^[^:\n]{2,80}\sلـ\s*[«"“]?\s*${name}\s*[»"”]?\s*:`).test(head)) return true;
   }
   return false;
 }

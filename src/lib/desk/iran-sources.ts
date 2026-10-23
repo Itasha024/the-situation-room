@@ -358,6 +358,8 @@ export const SHARED_RSS: Record<string, IranLean> = {
   "Lebanon Debate": "gulf",
   Elnashra: "gulf",
   "Al-Joumhouria": "gulf",
+  // Al-Binaa (user, 23 Oct: NNA's morning review carried it, so it is read itself): the SSNP's paper, close to the axis.
+  "Al-Binaa": "axis",
   "Erem News": "gulf",
   Alhurra: "us",
   SPA: "gulf",
@@ -475,7 +477,7 @@ export const ISRAELI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG, ...IRAN_R
 // cabinet's talks over Hezbollah's arms (22 Oct) was held to the Iran-war words and never reached the desk.
 export const LEBANESE_MEDIA: ReadonlySet<string> = new Set([
   ...IRAN_TG.filter((s) => s.lebaneseMedia).map((s) => s.name),
-  ...["NNA", "Al-Akhbar", "Al Mayadeen", "Ad-Diyar", "Al-Modon", "Nidaa al-Watan", "Elnashra", "Al-Joumhouria"],
+  ...["NNA", "Al-Akhbar", "Al Mayadeen", "Ad-Diyar", "Al-Modon", "Nidaa al-Watan", "Elnashra", "Al-Joumhouria", "Al-Binaa"],
 ]);
 export const IRAQI_MEDIA: ReadonlySet<string> = new Set([...IRAN_TG.filter((s) => s.iraqiMedia).map((s) => s.name), ...["Naya", "Sabereen News", "Shajab News"]]);
 

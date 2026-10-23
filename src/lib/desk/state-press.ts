@@ -39,7 +39,7 @@ export const STATE_PRESS: Record<string, string[]> = {
     // Every regime outlet the site reads is above (user, 22 Oct: "why not the rest"); its relay channels
     // (Khabar Fori, Akhbar-e Fori, Tehran Fori) never are: they tell others' news.
   ],
-  LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "Hezbollah War Media", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon", "Lebanon Debate", "Elnashra", "Al-Joumhouria"],
+  LB: ["Lebanese presidency", "Lebanon's prime minister's office", "Lebanon Foreign Ministry", "Lebanese Army", "Hezbollah War Media", "NNA", "National News Agency", "Al-Manar", "LBCI", "MTV Lebanon", "Al Jadeed", "NBN", "Al-Akhbar", "Al Mayadeen", "Nidaa al-Watan", "Ad-Diyar", "Al-Modon", "Lebanon Debate", "Elnashra", "Al-Joumhouria", "Al-Binaa"],
   // The prime minister's own office and the government, the state agency, then Iraq's outlets (user, 22 Oct).
   IQ: ["Iraq's prime minister's office", "Iraqi government", "Iraq Foreign Ministry", "INA", "Iraqi News Agency", "Shafaq News", "Iraqinews", "Rudaw", "Kurdistan24", "Al-Sumaria", "Baghdad Today"],
   QA: ["Emir of Qatar", "Qatar's Amiri Diwan", "Qatar's prime minister", "Majed al-Ansari", "QNA", "Qatar Foreign Ministry", "Al Jazeera"],

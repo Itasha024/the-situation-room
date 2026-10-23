@@ -98,7 +98,7 @@ const OUTLET_NATION: [Nation, RegExp][] = [
   ["saudi", /^(?:Al Arabiya|Al Hadath|Asharq Al-Awsat|Asharq News|Arab News|Okaz|Saudi Gazette)$/i],
   ["uae", /^(?:Sky News Arabia|The National|Erem News)$/i],
   ["qatar", /^(?:Al Jazeera|Al Jazeera Mubasher|Al-Araby TV|Al-Araby Al-Jadeed|The New Arab)$/i],
-  ["lebanon", /^(?:Al Mayadeen|Al-Akhbar|Al-Manar|L'Orient|Unews|NNA|National News Agency|LBCI|MTV Lebanon|Lebanon 24|Al-Modon|Nidaa al-Watan|Ad-Diyar|Lebanon Debate|Elnashra|Al-Joumhouria)/i],
+  ["lebanon", /^(?:Al Mayadeen|Al-Akhbar|Al-Manar|L'Orient|Unews|NNA|National News Agency|LBCI|MTV Lebanon|Lebanon 24|Al-Modon|Nidaa al-Watan|Ad-Diyar|Lebanon Debate|Elnashra|Al-Joumhouria|Al-Binaa)/i],
   ["uk", /^(?:BBC|The Telegraph|The Guardian|Financial Times|Sky News)$/i],
 ];
 /** Wires every desk trusts for any country's story. */

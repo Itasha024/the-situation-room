@@ -37,7 +37,7 @@ import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { nearerSource, officialVoice } from "./desk/speaker-press.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, IRAN_RATINGS_KEY, IRAN_RATINGS_V, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, iranSide, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
-import { leadFromSite, mergeAlso, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead } from "./desk/site-articles.ts";
+import { leadFromSite, mergeAlso, ownNewsApart, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead } from "./desk/site-articles.ts";
 import { relinkStoredCards } from "./desk/relink.ts";
 import { fixStoredPosts } from "./desk/post-fit.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
@@ -453,10 +453,11 @@ const RSS: RssFeed[] = [
   { id: "aljazeera-en", url: "https://www.aljazeera.com/xml/rss/all.xml", name: "Al Jazeera", cadence: C10, whole: true, site: "aljazeera.com" },
   { id: "alarabiya-ar", lang: "ar", url: gnews("site:alarabiya.net when:2h", "ar", "SA", "SA:ar"), name: "Al Arabiya", cadence: C10, whole: true, site: "alarabiya.net" },
   { id: "alarabiya-en", url: gnews("site:english.alarabiya.net when:2h"), name: "Al Arabiya", cadence: C15, whole: true, site: "english.alarabiya.net" },
-  // Once a day, when the morning paper is out, a day wide: the site is behind
-  // Cloudflare, and its channel (every 15 minutes) carries each story's
+  // Hourly, a day wide: the site is behind Cloudflare, and Google lists the
+  // morning paper's articles over hours, not all by 07:00 (user, 23 Oct: the
+  // paper is the morning's first read). Its channel carries each story's
   // headline as it is published.
-  { id: "akhbar", lang: "ar", url: gnews("site:al-akhbar.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: AKHBAR_DAILY, whole: true, site: "al-akhbar.com" },
+  { id: "akhbar", lang: "ar", url: gnews("site:al-akhbar.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Akhbar", cadence: C1H, whole: true, site: "al-akhbar.com" },
   // Lebanese papers (user, 18 Oct). Like Al-Akhbar, only what they have on
   // their own goes on (exclusive.ts), on the Iran desk by its gate. Al-Modon's
   // feed and articles open to the server. Nidaa al-Watan and Ad-Diyar answer
@@ -468,6 +469,8 @@ const RSS: RssFeed[] = [
   // Elnashra and Al-Joumhouria (user, 22 Oct) answer the server with Cloudflare's check too: Google News lists them.
   { id: "elnashra", lang: "ar", url: gnews("site:elnashra.com when:2h", "ar", "LB", "LB:ar"), name: "Elnashra", cadence: C10, whole: true, site: "elnashra.com" },
   { id: "aljoumhouria", lang: "ar", url: gnews("site:aljoumhouria.com when:2h", "ar", "LB", "LB:ar"), name: "Al-Joumhouria", cadence: C10, whole: true, site: "aljoumhouria.com" },
+  // Al-Binaa (user, 23 Oct: NNA's press review carried it), behind Cloudflare too; a morning paper read as Al-Akhbar is.
+  { id: "albinaa", lang: "ar", url: gnews("site:al-binaa.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Binaa", cadence: C1H, whole: true, site: "al-binaa.com" },
   { id: "erem", lang: "ar", url: gnews("site:eremnews.com when:2h", "ar", "AE", "AE:ar"), name: "Erem News", cadence: C10, whole: true, site: "eremnews.com" },
   { id: "alhurra", lang: "ar", url: "https://www.alhurra.com/rss", name: "Alhurra", cadence: C5, whole: true, site: "alhurra.com" },
   { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C5, whole: true, site: "arabnews.com" },
@@ -1920,6 +1923,12 @@ export function foldIntoPublished(
     if (home && lateOtherStory(home, r)) home = undefined;
     // An official's own posts are each a card (21 Oct: Araghchi's interview in parts).
     if (home && ownParts(home as unknown as SameCard, r as unknown as SameCard)) home = undefined;
+    // A paper's own news on the story is a card of its own, not a line under another's (site-articles.ts).
+    const apart = (o: LiveReport) => !!siteOutlet(r) && ownNewsApart(o, r);
+    if (home && apart(home)) {
+      console.log(`[fold] site article ${r.url} kept apart from ${home.fp}: its own news`);
+      home = undefined;
+    }
     // One event, one card (fold-same.ts, 18 Oct review): one official's
     // remarks that day, one ship incident in 24 hours, one district's toll,
     // one blast abroad, one article on a mirror host, one channel's same
@@ -1930,6 +1939,7 @@ export function foldIntoPublished(
       let hit: [LiveReport, FoldRule] | null = null;
       for (const pass of [eventRule, talkRule]) {
         for (const o of near) {
+          if (apart(o)) continue;
           const rule = pass(asCard(o), asCard(r));
           if (rule) {
             hit = [o, rule];

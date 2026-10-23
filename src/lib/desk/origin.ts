@@ -163,6 +163,8 @@ const CITABLE: [RegExp, Cited][] = [
   [/ليبانون ديبايت|Lebanon ?Debate/i, O("Lebanon Debate", "lebanondebate.com", "LB", { lang: "ar" })],
   [/موقع\s+[«"]?النشرة|[«"]النشرة[»"]|El-?Nashra|Al-Nashra/i, O("Elnashra", "elnashra.com", "LB", { lang: "ar" })],
   [/(?:صحيفة|جريدة)\s+[«"]?الجمهورية(?! الإسلامية)|[«"]الجمهورية[»"]|Al-?Joumhouria|Al-Jumhuriya/i, O("Al-Joumhouria", "aljoumhouria.com", "LB", { lang: "ar" })],
+  // Al-Binaa (user, 23 Oct, from NNA's press review). Bare "البناء" is "building": only the paper.
+  [/(?:صحيفة|جريدة)\s+[«"]?البناء|[«"]البناء[»"]|Al-?Binaa/i, O("Al-Binaa", "al-binaa.com", "LB", { lang: "ar" })],
   [/وزارة الدفاع السعودية|الدفاع السعودية|Saudi (?:Defen[cs]e|defen[cs]e) Ministry|Saudi Ministry of Defen[cs]e/i, B("Saudi Defense Ministry", "spa.gov.sa", "SA")],
   [/المتحدث (?:الرسمي )?باسم (?:قوات )?التحالف|تحالف دعم الشرعية|coalition spokesman/i, B("Coalition (SPA)", "spa.gov.sa", "SA")],
   [/الخارجية السعودية|Saudi (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Saudi Foreign Ministry", "spa.gov.sa", "SA")],

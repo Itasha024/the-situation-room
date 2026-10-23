@@ -16,7 +16,7 @@ import { subjectNation } from "./speaker-press.ts";
 import { leadSpeaker } from "./speakers.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
-export const IRAN_PROMPT_VERSION = 10;
+export const IRAN_PROMPT_VERSION = 11;
 
 export function iranContentHash(text: string): string {
   const t = String(text || "").replace(/\s+/g, " ").trim();
@@ -133,6 +133,7 @@ HOW TO WRITE
 - One person's words are that person's, never the state's: an MP, a commander, a deputy or any one official who spoke is the headline's speaker by role ("Iranian MP: Iran asked Qatar to send a high-level delegation over the pilots"), never "Iran says", "Iran demands" or "Tehran:". Only the government itself (its spokesman, foreign ministry or president) is "Iran".
 - A longer item, as a wire story: the headline carries the most important facts; the body adds the next ones (detail, figures, names, places, a quote), never a rephrasing of the headline. A body earns its place with at least two new facts; otherwise body is "".
 - A long item is a full article: read ALL of it. The headline carries its most important new development wherever in the text it appears (a decision, a commitment, a reversal, casualties), not only the opening paragraph.
+- A paper's article that mixes what someone said in public with what the paper itself learned (diplomatic, security or political information or sources, a report it saw or that reached an embassy, "we have learned") leads with what the paper learned, wherever it sits: that is its news, and the public words go in the body. Nidaa al-Watan's piece opening with a minister's remarks on the explosives case, then giving a diplomatic report that seven such trucks crossed from the Beqaa to Beirut, is "Diplomatic report: seven Hezbollah explosives trucks crossed from the Beqaa to Beirut, not one", never the minister's words.
 - NEVER shorten an interesting item to fit. A statement, interview or report that makes several newsworthy points keeps EVERY one of them: the strongest in the headline, all the others in the body, one sentence each, as long as the body needs. Write it as a wire story, not a list: vary the attribution ("warned", "accused", "urged", "he added", or none where the sentence is plainly the speaker's) and join related points. Never open sentence after sentence with "He said". An outlet's exclusive (its own scoop) is always one extended card: the headline, then a body with every fact the piece gives (terms, figures, who carried it, each side's answer).
 - Keep the text's own WHY: when the item says why the event matters, that clause goes in. One clause of the text's context, never one you add.
 - Do not compress: keep who, what, where, casualties (killed and wounded, with their figures), weapon and unit.

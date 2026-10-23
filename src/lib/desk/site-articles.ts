@@ -12,7 +12,7 @@
  *   (the outlet's channel already being there, or leading, does not hide its
  *   article), on an exclusive's or an original's card too, and past the cap.
  */
-import { isExclusive, ownInformation } from "./exclusive.ts";
+import { OWN_ONLY, isExclusive, ownArticleSourcing, ownInformation } from "./exclusive.ts";
 import { isOfficialBody } from "./numbers.ts";
 
 /** Spokesmen whose own channel is the original of their words (yemen-scan OWN_CHANNELS). */
@@ -40,6 +40,7 @@ export const SITE_HOSTS: Record<string, string> = {
   "lebanondebate.com": "Lebanon Debate",
   "elnashra.com": "Elnashra",
   "aljoumhouria.com": "Al-Joumhouria",
+  "al-binaa.com": "Al-Binaa",
   "reuters.com": "Reuters",
   "reut.rs": "Reuters",
   "apnews.com": "AP",
@@ -119,7 +120,7 @@ export function siteTakesLead(home: Row, r: Row): boolean {
   if (home.tags?.includes("original") && !excl) return false;
   if (excl) return true;
   if (WIRES.has(outlet)) return !r.citing && saysMore(home, r);
-  return ownInformation(text, outlet);
+  return ownInformation(text, outlet) || (OWN_ONLY.has(outlet) && ownArticleSourcing(text));
 }
 
 /** A site article carrying its outlet's own information, whatever it is grouped with: it outranks posts for the lead. */
@@ -128,7 +129,25 @@ export function siteOwnNews(r: Row): boolean {
   if (!outlet) return false;
   const text = `${r.summary}\n${r.text ?? ""}`;
   if (exclusiveRow(r) || isExclusive(text, r.source)) return true;
-  return !WIRES.has(outlet) && ownInformation(text, outlet);
+  return !WIRES.has(outlet) && (ownInformation(text, outlet) || (OWN_ONLY.has(outlet) && ownArticleSourcing(text)));
+}
+
+/** Words of four letters or more in `s`. */
+const contentWords = (s: string) => [...words(s)];
+
+/**
+ * A site article with its own information that is mostly news the card does not carry stays a card of
+ * its own, never a line under another outlet's card (user, 23 Oct: Nidaa al-Watan's seven explosives
+ * trucks went under LBCI's cabinet card, and no one saw them). A retelling with its own correspondent
+ * still joins the card, and takes its lead as before.
+ */
+export function ownNewsApart(home: Row & { alsoReportedBy?: Also[] }, r: Row): boolean {
+  if (!siteOwnNews(r) || siteOutlet(home) === siteOutlet(r)) return false;
+  // Its headline, the news it leads with, against all the card says.
+  const have = words([home.summary, home.text ?? "", ...(home.alsoReportedBy ?? []).map((a) => a.summary ?? "")].join(" "));
+  const mine = contentWords(r.summary);
+  if (mine.length < 5) return false;
+  return mine.filter((w) => !have.has(w)).length / mine.length >= 0.6;
 }
 
 type Also = { source: string; url: string; summary?: string };

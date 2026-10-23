@@ -2064,31 +2064,47 @@
   const TREND = { rising: ['up', '▲'], new: ['up', 'new'], falling: ['down', '▼'], steady: ['', ''] };
   function onPost(p, call) {
     const t = Date.parse(p.at);
-    return `<li class="ops-on-post${call ? ' call' : ''}"><div class="ops-on-meta"><a href="${esc(p.u)}" target="_blank" rel="noopener">@${esc(p.ch)}</a><span>${esc(hm(t, VIEW_TZ()))}</span>${p.v ? `<span>${p.v >= 1000 ? `${(p.v / 1000).toFixed(1)}K` : p.v} views</span>` : ''}${p.m ? '<span>media</span>' : ''}</div><p dir="auto">${esc(p.x.length > 280 ? `${p.x.slice(0, 280)}…` : p.x)}</p></li>`;
+    const who = p.c ? `comment on @${esc(p.ch)}` : `@${esc(p.ch)}`;
+    return `<li class="ops-on-post${call ? ' call' : ''}${p.c ? ' cmt-own' : ''}"><div class="ops-on-meta"><a href="${esc(p.u)}" target="_blank" rel="noopener">${who}</a><span>${esc(hm(t, VIEW_TZ()))}</span>${p.v ? `<span>${p.v >= 1000 ? `${(p.v / 1000).toFixed(1)}K` : p.v} views</span>` : ''}${p.m ? '<span>media</span>' : ''}</div><p dir="auto">${esc(p.x.length > 280 ? `${p.x.slice(0, 280)}…` : p.x)}</p></li>`;
+  }
+  /** Bars for what the talk says or is about; a click shows only those posts. */
+  function onBars(list, prefix) {
+    const rows = list.filter((t) => t.now || t.usual);
+    const top = Math.max(1, ...rows.map((t) => t.now));
+    return rows.map((t) => {
+      const [cls, mark] = TREND[t.trend] || TREND.steady;
+      const id = `${prefix}${t.id}`;
+      return `<li><button type="button" data-on-topic="${id}" aria-pressed="${id === ON.topic}" class="${t.call ? 'call' : ''}"><span class="ot-n">${esc(t.name)}</span><span class="ot-bar"><i style="width:${Math.round((t.now / top) * 100)}%"></i></span><span class="ot-c">${t.now}</span><span class="ot-tr ${cls}">${mark}${t.trend === 'rising' || t.trend === 'falling' ? ` ${t.ratio >= 99 ? '' : `${t.ratio}×`}` : ''}</span></button></li>`;
+    }).join('');
   }
   function paintOnline() {
     const pane = $('.ops-rp-on', rightEl);
     if (!pane) return;
     const d = ON.data;
     const a = d && (d.areas || []).find((x) => x.area === ON.area);
-    if (!a) { pane.innerHTML = '<p class="ops-on-empty">The watch writes its first summary after its first read of the channels.</p>'; return; }
+    if (!a || !a.voices) { pane.innerHTML = '<p class="ops-on-empty">The watch writes its first summary after its first read of the channels.</p>'; return; }
     const names = { gaza: 'Gaza', js: 'Judea and Samaria' };
     const max = Math.max(1, ...a.hourly);
     const spark = a.hourly.map((n, i) => `${i ? 'L' : 'M'}${(i * 100) / 23} ${30 - (n / max) * 28}`).join(' ');
-    const topics = a.topics.filter((t) => t.now || t.usual);
-    const tmax = Math.max(1, ...topics.map((t) => t.now));
-    const pick = ON.topic && topics.find((t) => t.id === ON.topic);
-    const posts = (ON.topic ? a.top.filter((p) => p.t.includes(ON.topic)) : a.top).slice(0, 20);
+    const voice = ON.topic && ON.topic.startsWith('v:') ? ON.topic.slice(2) : null;
+    const topic = ON.topic && !voice ? ON.topic : null;
+    const pick = voice ? a.voices.find((v) => v.id === voice) : topic ? a.topics.find((t) => t.id === topic) : null;
+    const posts = a.top.filter((p) => (voice ? (p.k || []).includes(voice) : topic ? p.t.includes(topic) : true)).slice(0, 25);
+    const alarm = new Set(a.voices.filter((v) => v.call).map((v) => v.id));
+    const loud = (p) => (p.k || []).some((k) => alarm.has(k));
     pane.innerHTML = `<div class="ops-onw">
       <div class="ops-on-areas" role="group" aria-label="Area">${['gaza', 'js'].map((k) => `<button type="button" data-on-area="${k}" aria-pressed="${k === ON.area}">${names[k]}</button>`).join('')}</div>
-      <div class="ops-on-head"><b>${a.posts}</b> posts in the last ${d.windowHours} hours · ${d.channels} channels<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><path d="${spark}"/></svg><small>Posts an hour, last 24 hours · updated ${esc(hm(Date.parse(d.at), VIEW_TZ()))}</small></div>
-      <h4>Topics <small>now vs. the usual for these hours</small></h4>
-      <ul class="ops-on-topics">${topics.map((t) => { const [cls, mark] = TREND[t.trend] || TREND.steady; return `<li><button type="button" data-on-topic="${t.id}" aria-pressed="${t.id === ON.topic}" class="${t.call ? 'call' : ''}"><span class="ot-n">${esc(t.name)}</span><span class="ot-bar"><i style="width:${Math.round((t.now / tmax) * 100)}%"></i></span><span class="ot-c">${t.now}</span><span class="ot-tr ${cls}">${mark}${t.trend === 'rising' || t.trend === 'falling' ? ` ${t.ratio >= 99 ? '' : `${t.ratio}×`}` : ''}</span></button></li>`; }).join('') || '<li class="ops-on-empty">Nothing tagged yet.</li>'}</ul>
-      ${a.calls.length ? `<h4>Calls <small>to protest, to strike, threats: calls, not events</small></h4><ol class="ops-on-list">${a.calls.slice(0, 8).map((p) => onPost(p, true)).join('')}</ol>` : ''}
+      <div class="ops-on-head"><b>${a.posts}</b> posts and comments of talk in the last ${d.windowHours} hours${a.comments ? `, ${a.comments} of them comments` : ''}<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><path d="${spark}"/></svg><small>Talk an hour, last 24 hours · ${a.reports} news reports left out (they are in Reports) · ${d.channels} channels · updated ${esc(hm(Date.parse(d.at), VIEW_TZ()))}</small></div>
+      <h4>What people say <small>now vs. the usual for these hours</small></h4>
+      <ul class="ops-on-topics">${onBars(a.voices, 'v:') || '<li class="ops-on-empty">Nothing yet.</li>'}</ul>
+      ${a.calls.length && !pick ? `<h4>Calls and threats <small>calls, not events</small></h4><ol class="ops-on-list">${a.calls.slice(0, 8).map((p) => onPost(p, true)).join('')}</ol>` : ''}
+      <h4>${pick ? esc(pick.name) : 'What they are saying'} <small>${pick ? '<button type="button" data-on-topic="">show all</button>' : 'calls and threats first, then the most read'}</small></h4>
+      <ol class="ops-on-list">${posts.map((p) => onPost(p, loud(p))).join('') || '<li class="ops-on-empty">Nothing on this in the last hours.</li>'}</ol>
+      ${(a.talked || []).length && !pick ? `<h4>Most commented <small>the talk in the channels' discussion groups</small></h4><ol class="ops-on-list">${a.talked.slice(0, 5).map((g) => `${onPost(g.post, false).replace('</div><p', `<span class="ops-on-n">${g.n} comments</span></div><p`)}${g.comments.map((c) => `<li class="ops-on-post cmt"><p dir="auto">${esc(c.x.length > 200 ? `${c.x.slice(0, 200)}…` : c.x)}</p></li>`).join('')}`).join('')}</ol>` : ''}
+      <h4>What the talk is about</h4>
+      <ul class="ops-on-topics">${onBars(a.topics, '') || '<li class="ops-on-empty">Nothing yet.</li>'}</ul>
       ${a.places.length ? `<h4>Places in the talk</h4><p class="ops-on-chips">${a.places.map((p) => `<span>${esc(p.name)} <b>${p.n}</b></span>`).join('')}</p>` : ''}
       ${a.tags.length ? `<h4>Hashtags</h4><p class="ops-on-chips">${a.tags.map((t) => `<span dir="auto">${esc(t.tag)} <b>${t.n}</b>${t.isNew ? ' <em>new</em>' : ''}</span>`).join('')}</p>` : ''}
-      <h4>${pick ? esc(pick.name) : 'Most read'} <small>${pick ? '<button type="button" data-on-topic="">all topics</button>' : 'views, rising topics first'}</small></h4>
-      <ol class="ops-on-list">${posts.map((p) => onPost(p, false)).join('') || '<li class="ops-on-empty">No posts on this in the last hours.</li>'}</ol>
     </div>`;
   }
   function wireOnline() {

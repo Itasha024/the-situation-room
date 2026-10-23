@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { areaOf, countHour, parseWatchPage, summarise, topicsOf, viewsOf, type WatchPost } from "./online-watch.ts";
+import { areaOf, countHour, isTalk, voicesOf, parseWatchPage, summarise, topicsOf, viewsOf, type WatchPost } from "./online-watch.ts";
 import { WATCH_TG } from "./online-sources.ts";
 
 // User, 23 Oct: the Gaza desk's Online watch.
@@ -33,8 +33,8 @@ test("a channel's page as posts", () => {
 test("the summary: rising against the usual hours, calls apart, each area apart", () => {
   const now = Date.parse("2026-10-23T12:30:00Z");
   const post = (h: number, x: string, a: WatchPost["a"] = "gaza", t = topicsOf(x)): WatchPost => ({ u: `https://t.me/c/${h}${x.length}${Math.random()}`, at: new Date(now - h * 3600_000).toISOString(), ch: "c", a, t, x, v: 100 });
-  const today = [post(1, "ربطة خبز"), post(1, "ربطة خبز"), post(2, "ربطة خبز"), post(1, "دعوة للتظاهر غدا", "js")];
-  const yesterday = [post(25, "ربطة خبز")];
+  const today = [post(1, "تعبنا والله من طابور ربطة خبز"), post(1, "تعبنا والله من طابور ربطة خبز"), post(2, "تعبنا والله من طابور ربطة خبز"), post(1, "دعوة للتظاهر غدا", "js")];
+  const yesterday = [post(25, "تعبنا والله من طابور ربطة خبز")];
   const counts: Record<string, ReturnType<typeof countHour>> = {};
   for (const p of [...today, ...yesterday]) {
     const k = p.at.slice(0, 13);
@@ -52,4 +52,27 @@ test("the summary: rising against the usual hours, calls apart, each area apart"
 test("the watch's channels: well over a hundred, each once", () => {
   assert.ok(WATCH_TG.length > 150);
   assert.equal(new Set(WATCH_TG.map((c) => c.id.toLowerCase())).size, WATCH_TG.length);
+});
+
+// User, 23 Oct: the discussion groups without an account, through Telegram's public comments widget.
+test("a post's comments, without who wrote them", async () => {
+  const { parseComments } = await import("./online-watch.ts");
+  const html = `<div class="tgme_widget_message_wrap js-widget_message_wrap"><div class="tgme_widget_message" data-post-id="14044186"><a class="tgme_widget_message_author_name" href="https://t.me/someone">..</a><div class="tgme_widget_message_text js-message_reply_text" dir="auto">quoted</div><div class="tgme_widget_message_text js-message_text" dir="auto">بدنا نعيش، طوابير الخبز من الفجر</div><a class="tgme_widget_message_date" href="https://t.me/gazaalannet/84369?comment=14044186"><time datetime="2026-10-23T13:39:09+00:00">13:39</time></a></div></div>`;
+  const [c] = parseComments(html, { id: "gazaalannet", area: "gaza" }, "https://t.me/gazaalannet/84369");
+  assert.equal(c.u, "https://t.me/gazaalannet/84369?comment=14044186");
+  assert.equal(c.re, "https://t.me/gazaalannet/84369");
+  assert.equal(c.c, 1);
+  assert.ok(c.t.includes("bread"));
+  assert.ok(!JSON.stringify(c).includes("someone"));
+});
+
+// User, 23 Oct: "we don't want reports": the tab is the talk.
+test("talk, not reports", () => {
+  assert.ok(!isTalk({ x: "عاجل | قوات الاحتلال تقتحم مخيم جنين وتعتقل 3 شبان" }));
+  assert.ok(isTalk({ x: "حماس: نوجه النداء لكل من يحمل السلاح لتوجيه الرصاص إلى صدور المحتلين" }));
+  assert.ok(isTalk({ x: "تعبنا والله، وين المساعدات؟" }));
+  assert.ok(isTalk({ x: "عادي", c: 1 }));
+  // Netanyahu's threat is news; Syria's protests are not this desk's talk.
+  assert.ok(!voicesOf("نتنياهو يتوعد بعملية واسعة في الخليل").includes("threat"));
+  assert.deepEqual(voicesOf("خروج مظاهرات في درعا احتجاجا على الوجود الاسرائيلي في سوريا"), []);
 });

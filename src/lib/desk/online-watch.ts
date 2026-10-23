@@ -22,6 +22,9 @@ export type WatchPost = {
   v: number;
   /** Has a video or photo. */
   m?: 1;
+  /** A comment in the channel's discussion, and the post it answers. */
+  c?: 1;
+  re?: string;
 };
 
 /** Arabic as one spelling: no vowel marks or tatweel, one alef, ta marbuta and alef maqsura as ha and ya. */
@@ -90,6 +93,65 @@ export function topicsOf(text: string): string[] {
   return TOPIC_KEYS.filter(({ k }) => k.some((x) => ("word" in x ? words.has(x.word) : p.includes(x.phrase)))).map(({ t }) => t.id);
 }
 
+/* ------------------------------------------------------------------ *
+ * Talk, not reports (user, 23 Oct: "we don't want reports": a call to protest, a radical saying, anger,
+ * a complaint; the news itself is the Reports tab's).
+ * ------------------------------------------------------------------ */
+
+export type Voice = { id: string; name: string; alarm?: true; words: string[] };
+/** What a post says, as people say it. `alarm`: shown first and counted as calls. */
+export const VOICES: Voice[] = [
+  { id: "call", name: "Calls to protest, strike or mobilise", alarm: true, words: ["ندعو", "ادعو", "دعوه للتظاهر", "دعوات للتظاهر", "تدعو للتظاهر", "تدعو الى التظاهر", "انفروا", "اخرجوا", "هبوا", "النفير", "النفير العام", "شد الرحال", "وقفه احتجاجيه", "وقفه تضامنيه", "مسيره غاضبه", "مسيرات غاضبه", "مظاهره", "مظاهرات", "تظاهره", "تظاهرات", "التظاهر", "اعتصام", "اضراب", "الاضراب", "اضراب شامل", "يوم غضب", "جمعه غضب", "حداد عام", "الحداد العام", "اعلان الحداد", "عصيان", "حراك", "الحراك", "انتفضوا", "مشاركه واسعه", "مشاركه شعبيه", "#يوم_غضب"] },
+  { id: "threat", name: "Threats and calls to attack", alarm: true, words: ["الرد قادم", "الرد سيكون", "سنثار", "سننتقم", "الثار", "ثار", "انتقام", "الانتقام", "لن يمر", "لن تمر", "ستدفعون", "ستدفع الثمن", "سيدفع الثمن", "الموت لاسرائيل", "الموت للمحتل", "الموت للصهاينه", "اقتلوا", "اضربوا", "اطعنوا", "ادهسوا", "استهدفوا", "الجحيم", "انتظروا", "قادمون", "توعد", "يتوعد", "تتوعد", "يتوعدون", "انتظروا الرد", "لبيك", "حي على الجهاد", "يا احرار الضفه", "يا شباب الضفه", "على العهد", "ماضون", "توجيه الرصاص", "نوجه النداء", "يحمل السلاح", "صدور المحتلين", "تصعيد المواجهه", "تصعيد المقاومه", "اشعال", "اشعلوا", "الاشتباك مع", "كل الساحات", "لتصعيد"] },
+  { id: "praise", name: "Praise of attacks and fighters", words: ["سلمت يمينك", "سلمت الايادي", "سلمت ايديكم", "سلمت يداك", "البطل", "الابطال", "ابطال", "بطلين", "المجد للشهداء", "المجد للمقاومه", "المجد", "العز", "العزه", "فخر", "فخرنا", "زغاريد", "عرس الشهيد", "زفاف الشهيد", "نبارك", "تبارك", "يبارك", "باركت", "بطوليه", "البطوليه", "الاستشهادي", "الفدائي", "فدائي", "شهيد حي", "ارض الرباط", "الشهيدان البطلان", "الله اكبر", "عمليه نوعيه", "اسود", "الاسود"] },
+  { id: "anger_hamas", name: "Anger at Hamas", words: ["حكم حماس", "يسقط حكم", "ارحلوا", "حماس دمرت", "حماس خربت", "فساد حماس", "تجار الدم", "تجار الحرب", "قيادات الفنادق", "الفنادق", "سرقوا المساعدات", "حراميه", "ظلمتونا", "دمرتونا", "خربتوها", "بدنا نعيش", "كفى", "طفح الكيل", "عصابه حماس", "ميليشيا حماس", "حكومه الامر الواقع", "الامن الداخلي", "اعدامات ميدانيه", "الاعدامات الميدانيه", "خارج اطار القانون", "تحت التعذيب"] },
+  { id: "anger_pa", name: "Anger at the PA", words: ["السلطه العميله", "سلطه اوسلو", "التنسيق الامني", "عباس العميل", "ارحل يا عباس", "يسقط عباس", "دايتون", "اجهزه دايتون", "خونه", "الخونه", "المنسقين", "سلطه التنسيق", "الاعتقال السياسي", "اعتقال سياسي", "اجهزه السلطه تعتقل", "عار على السلطه"] },
+  { id: "complaint", name: "Complaints about life", words: ["تعبنا", "حرام", "ظلم", "ما في", "مافي", "لا يوجد", "وين المساعدات", "وين الضمير", "الله يعين", "ارحمونا", "جوعانين", "جعانين", "مش لاقيين", "الناس بتموت", "مش قادرين", "طفح الكيل", "لحد امتى", "الى متى", "يا عالم", "يا ناس", "ساعدونا", "انقذونا", "اغيثونا", "جشع", "غلاء", "استغلال", "مين المسؤول", "وين الحكومه", "قهر", "ذل", "الذل", "اهانه"] },
+  { id: "grief", name: "Grief and prayers", words: ["رحمه الله", "رحمهم الله", "الله يرحمه", "الله يرحمها", "الله يرحمهم", "انا لله", "تقبله الله", "تقبلهم الله", "اللهم ارحم", "وداعا", "الفراق", "موجوع", "يا وجعي", "حسبنا الله", "حسبي الله", "لا حول ولا قوه"] },
+  { id: "rumour", name: "Rumours", words: ["يقال", "انباء غير مؤكده", "غير مؤكد", "غير مؤكده", "اشاعه", "اشاعات", "شائعه", "شائعات", "يتداول", "متداول", "تداول", "فيديو متداول", "انتشر", "ينتشر", "حسب ما وصلني", "مصادر غير رسميه", "مش متاكد", "صحه الخبر", "نفي"] },
+];
+const VOICE_KEYS = VOICES.map((v) => ({ v, k: v.words.map(keyOf) }));
+
+const tokensOf = (p: string) => {
+  const words = new Set<string>();
+  for (const tk of p.split(/[^\p{L}\p{N}]+/u)) if (tk) for (const f of forms(tk)) words.add(f);
+  return words;
+};
+const has = (p: string, words: Set<string>, k: Key) => ("word" in k ? words.has(k.word) : p.includes(k.phrase));
+/** Israel's leaders and army: their threats are the Reports tab's news, not Palestinian talk. */
+const ISRAELI_SPEAKER = ["نتنياهو", "سموتريتش", "بن غفير", "كاتس", "زامير", "الجيش الاسرائيلي", "جيش الاحتلال", "حكومه الاحتلال", "الكابينت", "وزير الدفاع الاسرائيلي", "الشاباك"].map(keyOf);
+/** Other countries' streets (Syria's protests, Jordan's shooting): not this desk's talk, unless Palestine is in it. */
+const ELSEWHERE = ["سوريا", "السوريه", "سوري", "درعا", "دمشق", "الاردن", "الاردنيه", "الكرك", "لبنان", "اللبناني", "اليمن", "ايران", "العراق"].map(keyOf);
+const HOME = ["فلسطين", "الفلسطيني", "الفلسطينيه", "شعبنا", "غزه", "الضفه", "القدس", "الاقصى", "الخليل", "جنين", "نابلس", "طولكرم", "رام الله", "خانيونس", "رفح", "المخيم", "مخيم"].map(keyOf);
+export function voicesOf(text: string): string[] {
+  const p = plainArabic(text);
+  const words = tokensOf(p);
+  if (ELSEWHERE.some((k) => has(p, words, k)) && !HOME.some((k) => has(p, words, k))) return [];
+  const israeli = ISRAELI_SPEAKER.some((k) => has(p, words, k));
+  return VOICE_KEYS.filter(({ v, k }) => !(israeli && v.alarm) && k.some((x) => has(p, words, x))).map(({ v }) => v.id);
+}
+
+/** How a newsroom writes: "urgent", sources, agencies, "the army said". */
+const REPORT_KEYS = ["عاجل", "#عاجل", "مصادر", "مصادر محليه", "مراسل", "مراسلنا", "وكاله", "القناه", "الاعلام العبري", "اعلام عبري", "العبري", "العبريه", "افاد", "افادت", "اعلن", "اعلنت", "بيان", "الناطق", "المتحدث", "بحسب", "نقلا عن", "وفق", "ذكرت", "صرح", "حصيله", "الجيش الاسرائيلي", "جيش الاحتلال", "قوات الاحتلال", "اصابه", "اصابات", "استشهاد", "برصاص", "تقتحم", "تعتقل", "تداهم", "قصف", "غاره", "نسف", "مواطن", "مواطنين", "شاب", "الدفاع المدني", "وزاره"].map(keyOf);
+/** How people talk: I and we, you, God, outrage, questions. */
+const TALK_KEYS = ["انا", "احنا", "نحن", "بدنا", "بدي", "بدك", "والله", "يا", "اللهم", "يارب", "يا رب", "ربي", "حسبنا", "حسبي", "الله ينتقم", "لعنه الله", "لعنة", "ليش", "كيف", "وين", "شو", "مش", "هيك", "اخوتي", "اهلنا", "شعبنا", "يا جماعه", "صدقوني", "بصراحه", "رايي", "برايي"].map(keyOf);
+export function talkScore(text: string): { talk: number; report: number } {
+  const p = plainArabic(text);
+  const words = tokensOf(p);
+  const talk = TALK_KEYS.filter((k) => has(p, words, k)).length + (/[!؟?]/.test(text) ? 1 : 0) + (/[😡🤬💔😢😭🔥✌]/u.test(text) ? 1 : 0);
+  const report = REPORT_KEYS.filter((k) => has(p, words, k)).length + (/\d/.test(text) ? 1 : 0);
+  return { talk, report };
+}
+
+/** Is it talk, not a report: a comment, a call or a threat, or a post that speaks as people speak. */
+export function isTalk(p: Pick<WatchPost, "x" | "c">): boolean {
+  if (p.c) return true;
+  const v = voicesOf(p.x);
+  if (v.includes("call") || v.includes("threat") || v.includes("anger_hamas") || v.includes("anger_pa")) return true;
+  const { talk, report } = talkScore(p.x);
+  return (v.length > 0 && talk >= report) || (talk >= 2 && report === 0);
+}
+
 const GAZA_WORDS = ["غزه", "خانيونس", "خان يونس", "رفح", "دير البلح", "النصيرات", "البريج", "المغازي", "الزوايده", "جباليا", "بيت لاهيا", "بيت حانون", "المواصي", "الشجاعيه", "الزيتون", "تل الهوى", "الشاطئ", "الرمال", "القطاع"].map(plainArabic);
 const JS_WORDS = ["الضفه", "جنين", "نابلس", "طولكرم", "نور شمس", "طوباس", "الفارعه", "قلقيليه", "سلفيت", "رام الله", "البيره", "بيت لحم", "الخليل", "اريحا", "يطا", "قباطيه", "بلاطه", "القدس", "الاغوار", "مسافر يطا"].map(plainArabic);
 /** The area a post is about: its words, else its channel's. */
@@ -140,6 +202,24 @@ export function parseWatchPage(html: string, ch: { id: string; area: WatchArea }
   return out;
 }
 
+/**
+ * A post's comments, from Telegram's public comments widget (the one websites embed; no sign-in): the talk
+ * in a channel's linked discussion group under that post (user, 23 Oct: the groups, without an account).
+ * Who wrote each comment is not kept.
+ */
+export function parseComments(html: string, ch: { id: string; area: WatchArea }, post: string): WatchPost[] {
+  const out: WatchPost[] = [];
+  for (const block of String(html || "").split(/(?=<div class="tgme_widget_message_wrap)/)) {
+    const link = /<a class="tgme_widget_message_date" href="([^"]+\?comment=\d+)"/.exec(block)?.[1];
+    const at = /<time datetime="([^"]+)"/.exec(block)?.[1];
+    if (!link || !at) continue;
+    const x = decode(/<div class="tgme_widget_message_text js-message_text"[^>]*>([\s\S]*?)<\/div>/.exec(block)?.[1] ?? "").trim();
+    if (!x) continue;
+    out.push({ u: link, at: new Date(at).toISOString(), ch: ch.id, a: areaOf(x, ch.area), t: topicsOf(x), x: x.slice(0, 300), v: 0, c: 1, re: post });
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------------ *
  * The summary the tab shows.
  * ------------------------------------------------------------------ */
@@ -156,6 +236,12 @@ export function countHour(posts: WatchPost[]): HourCounts {
     for (const a of areas) {
       add(`${a}|*`);
       for (const t of p.t) add(`${a}|${t}`);
+      // Talk apart from reports (user, 23 Oct), by what it says and what it is about.
+      if (isTalk(p)) {
+        add(`${a}|talk`);
+        for (const v of voicesOf(p.x)) add(`${a}|v:${v}`);
+        for (const t of p.t) add(`${a}|tt:${t}`);
+      }
     }
   }
   return c;
@@ -171,6 +257,12 @@ export type AreaSummary = {
   places: { name: string; n: number }[];
   tags: { tag: string; n: number; isNew: boolean }[];
   hourly: number[];
+  /** Talk only: what it says (voices), and the reports left out. */
+  voices: TopicTrend[];
+  reports: number;
+  /** The posts people answered most in their comments, with a few of the comments. */
+  talked: { post: WatchPost; n: number; comments: WatchPost[] }[];
+  comments: number;
 };
 export type WatchSummary = { at: string; windowHours: number; channels: number; areas: AreaSummary[] };
 
@@ -191,27 +283,38 @@ export function summarise(posts: WatchPost[], counts: Record<string, HourCounts>
   const days = [1, 2, 3, 4, 5, 6, 7].filter((d) => Array.from({ length: win + 1 }, (_, i) => counts[hourKey(start - d * 24 * H + i * H)]).some(Boolean));
   const usualOf = (k: string) =>
     days.length ? days.reduce((s, d) => s + sumHours(start - d * 24 * H, win, k), 0) / days.length : sumHours(start - win * H, win, k);
+  const trendOf = (n: number, usual: number): TopicTrend["trend"] => (usual === 0 && n >= 3 ? "new" : n >= 3 && usual > 0 && n / usual >= 1.5 ? "rising" : usual >= 3 && n / usual <= 0.6 ? "falling" : "steady");
   const areas: AreaSummary[] = (["gaza", "js"] as const).map((area) => {
-    const mine = posts.filter((p) => (p.a === area || p.a === "both") && Date.parse(p.at) >= start);
+    const inArea = posts.filter((p) => (p.a === area || p.a === "both") && Date.parse(p.at) >= start);
+    // The talk only: reports are the Reports tab's (user, 23 Oct).
+    const mine = inArea.filter(isTalk).map((p) => ({ ...p, k: voicesOf(p.x) }));
+    const reports = inArea.length - mine.length;
     const all = Math.max(1, mine.length);
     const topics = TOPICS.filter((t) => t.area === area || t.area === "both").map((t) => {
       const n = mine.filter((p) => p.t.includes(t.id)).length;
-      const usual = usualOf(`${area}|${t.id}`);
+      const usual = usualOf(`${area}|tt:${t.id}`);
       const ratio = usual > 0 ? n / usual : n > 0 ? Infinity : 1;
       const trend: TopicTrend["trend"] = usual === 0 && n >= 3 ? "new" : n >= 3 && ratio >= 1.5 ? "rising" : usual >= 3 && ratio <= 0.6 ? "falling" : "steady";
       return { id: t.id, name: t.name, call: !!t.call, now: n, usual: Math.round(usual * 10) / 10, ratio: Number.isFinite(ratio) ? Math.round(ratio * 100) / 100 : 99, trend, share: Math.round((n / all) * 1000) / 10 };
     }).sort((a, b) => b.now - a.now);
-    const callIds = new Set(TOPICS.filter((t) => t.call).map((t) => t.id));
-    const rising = new Set(topics.filter((t) => t.trend === "rising" || t.trend === "new").map((t) => t.id));
-    const score = (p: WatchPost) => Math.log10(1 + p.v) + (p.t.some((t) => rising.has(t)) ? 1 : 0) + (p.t.length ? 0.5 : -1);
-    const calls = mine.filter((p) => p.t.some((t) => callIds.has(t))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 25);
+    const voices = VOICES.map((v) => {
+      const n = mine.filter((p) => p.k.includes(v.id)).length;
+      const usual = usualOf(`${area}|v:${v.id}`);
+      const ratio = usual > 0 ? n / usual : n > 0 ? Infinity : 1;
+      return { id: v.id, name: v.name, call: !!v.alarm, now: n, usual: Math.round(usual * 10) / 10, ratio: Number.isFinite(ratio) ? Math.round(ratio * 100) / 100 : 99, trend: trendOf(n, usual), share: Math.round((n / all) * 1000) / 10 };
+    });
+    const alarm = new Set(VOICES.filter((v) => v.alarm).map((v) => v.id));
+    const loud = new Set(["praise", "anger_hamas", "anger_pa", "rumour"]);
+    const hours = (p: WatchPost) => (now - Date.parse(p.at)) / H;
+    const score = (p: WatchPost & { k: string[] }) => (p.k.some((k) => alarm.has(k)) ? 3 : 0) + (p.k.some((k) => loud.has(k)) ? 1.5 : 0) + (p.k.length ? 0.5 : 0) + (p.c ? 1.5 : Math.log10(1 + p.v)) - hours(p) * 0.3;
+    const calls = mine.filter((p) => p.k.some((k) => alarm.has(k))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 25);
     const seen = new Set<string>();
     const top = [...mine].sort((a, b) => score(b) - score(a)).filter((p) => {
       const k = plainArabic(p.x).slice(0, 60);
       if (seen.has(k)) return false;
       seen.add(k);
       return true;
-    }).slice(0, 30);
+    }).slice(0, 60);
     const placeN = new Map<string, number>();
     for (const p of mine) for (const n of placesTalked(p.x)) placeN.set(n, (placeN.get(n) ?? 0) + 1);
     const tagsOf = (ps: WatchPost[]) => {
@@ -221,8 +324,13 @@ export function summarise(posts: WatchPost[], counts: Record<string, HourCounts>
     };
     const before = tagsOf(posts.filter((p) => (p.a === area || p.a === "both") && Date.parse(p.at) < start));
     const tags = [...tagsOf(mine)].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([tag, n]) => ({ tag, n, isNew: !before.has(tag) }));
-    const hourly = Array.from({ length: 24 }, (_, i) => counts[hourKey(now - (23 - i) * H)]?.[`${area}|*`] ?? 0);
-    return { area, posts: mine.length, topics, calls, top, places: [...placeN].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([name, n]) => ({ name, n })), tags, hourly };
+    const hourly = Array.from({ length: 24 }, (_, i) => counts[hourKey(now - (23 - i) * H)]?.[`${area}|talk`] ?? 0);
+    const byPost = new Map<string, WatchPost[]>();
+    for (const p of mine) if (p.c && p.re) (byPost.get(p.re) ?? byPost.set(p.re, []).get(p.re)!).push(p);
+    const postOf = new Map(posts.filter((p) => !p.c).map((p) => [p.u, p]));
+    const talked = [...byPost].filter(([u]) => postOf.has(u)).sort((a, b) => b[1].length - a[1].length).slice(0, 8)
+      .map(([u, cs]) => ({ post: postOf.get(u)!, n: cs.length, comments: [...cs].sort((a, b) => b.x.length - a.x.length).slice(0, 4) }));
+    return { area, posts: mine.length, reports, voices, comments: mine.filter((p) => p.c).length, topics, calls, top, places: [...placeN].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([name, n]) => ({ name, n })), tags, hourly, talked };
   });
   return { at: new Date(now).toISOString(), windowHours: win, channels, areas };
 }

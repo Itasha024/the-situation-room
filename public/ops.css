@@ -149,7 +149,14 @@ html[data-view="ops"] .ops-bar header.top { display: flex; align-items: center; 
 html[data-view="ops"] .ops-bar header.top .brand { min-width: 0; height: 100% }
 html[data-view="ops"] .ops-bar header.top h1 { margin: 0; height: 100%; display: flex; align-items: stretch; font-size: inherit }
 html[data-view="ops"] .ops-bar .dt-label { display: none }
-html[data-view="ops"] .ops-bar .dt-row { display: flex; align-items: stretch; gap: 0; height: 100%; overflow: visible }
+html[data-view="ops"] .ops-bar .dt-row { display: flex; align-items: stretch; gap: 0; height: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none }
+html[data-view="ops"] .ops-bar header.top h1 { min-width: 0 }
+/* The desks' tabs never run under the bar's buttons, at any width (user, 23 Oct): ops.js takes the other desks'
+   names off when they do not fit, then the names of all. */
+html[data-view="ops"] .ops-bar .dt-row.dt-tight .dt-btn:not([aria-current="page"]) .dt-name { display: none }
+html[data-view="ops"] .ops-bar .dt-row.dt-tight .dt-btn:not([aria-current="page"]) { padding: 0 10px }
+html[data-view="ops"] .ops-bar .dt-row.dt-tighter .dt-name { display: none }
+html[data-view="ops"] .ops-bar .dt-row.dt-tighter .dt-btn { padding: 0 9px }
 html[data-view="ops"] .ops-bar .dt-btn {
   height: 100%; padding: 0 16px; gap: 8px; border: 0; border-radius: 0; border-left: 1px solid var(--o-line); background: none; box-shadow: none; transform: none !important;
   color: var(--o-dim); font: 600 13px var(--ops-cond) !important; letter-spacing: .14em; text-transform: uppercase; position: relative;

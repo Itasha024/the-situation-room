@@ -7842,7 +7842,8 @@ const GAZA_PIN_SIDES = [
   ['clans', '#f97316', 'Clans and militias'],
   ['other', '#94a3b8', 'Others or not stated'],
 ];
-const GAZA_GROUP_NAMES = { israel: 'Israeli', pa: 'Palestinian Authority', factions: 'Hamas and the factions', palestinian: 'Palestinian', arab: 'Arab', intl: 'International' };
+// One Palestinian group (user, 23 Oct): the PA's and the factions' media are Palestinian too.
+const GAZA_GROUP_NAMES = { israel: 'Israeli', palestinian: 'Palestinian', arab: 'Arab', intl: 'International' };
 function useDeskSettings() {
   if (deskOf().id !== 'gaza') return;
   IRAN_PIN_SIDES = GAZA_PIN_SIDES;

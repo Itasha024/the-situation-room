@@ -171,7 +171,7 @@
   S.names = false;
   // Every map shows the sides' colours again (user, 22 Oct: "return the colors on the map according to each side"); an Off kept from before goes.
   if (!(S.fillsV >= 3)) { S.fills = true; S.fillsV = 3; }
-  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, fillsV, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, fillsV, trafficSeen })); } catch (e) { /* private */ } };
+  const keep = () => { try { const { left, right, dock, tab, rtab, air, airMil, airGround, sea, base, names, grid, fills, fillsV, trafficSeen } = S; localStorage.setItem('ops-state2', JSON.stringify({ left, right, dock, tab, rtab, air: TRAFFIC ? air : kept.air, airMil, airGround, sea: TRAFFIC ? sea : kept.sea, base, names, grid, fills, fillsV, trafficSeen })); } catch (e) { /* private */ } };
   /* The reader's settings (20 Oct: "make a settings page too to make the site very customizable"). */
   const PREF_DEF = { v: 3, tz: 'desk', range: 'today', pin: 'm', alerts: true, sound: false, units: 'both', coords: 'mgrs', text: 100, still: false, airStart: false };
   const P = { ...PREF_DEF };
@@ -186,6 +186,9 @@
   // The left panel opens narrower (user, 22 Oct: "too wide right now"); a width dragged before then goes.
   if (!(SZ.v >= 2)) { delete SZ.lw; SZ.v = 2; }
   if (P.airStart) S.air = true;
+  // Live traffic is the All desks page's alone (user, 23 Oct); a desk page leaves the choice made there as it was.
+  let TRAFFIC = true;
+  const kept = { air: S.air, sea: S.sea };
 
   let shell, strip, bar, nav, leftEl, rightEl, dock, stage, mapWrap;
   const NAV_ICON = {
@@ -238,13 +241,24 @@
     const acts = document.createElement('div');
     acts.className = 'ops-acts';
     acts.innerHTML = `
-      <span class="ops-trfw"><button type="button" class="ops-btn" data-op="traffic" aria-pressed="false" title="Live aircraft and ships, on or off (T)"><i class="ops-trfi">${ICON.plane}${ICON.ship}</i><span>Traffic</span></button><button type="button" class="ops-btn ops-ico ops-trfm" data-op="trafmenu" aria-expanded="false" title="Traffic options">${ICON.down}<span class="sr">Traffic options</span></button></span>
+      ${TRAFFIC ? `<span class="ops-trfw"><button type="button" class="ops-btn" data-op="traffic" aria-pressed="false" title="Live aircraft and ships, on or off (T)"><i class="ops-trfi">${ICON.plane}${ICON.ship}</i><span>Traffic</span></button><button type="button" class="ops-btn ops-ico ops-trfm" data-op="trafmenu" aria-expanded="false" title="Traffic options">${ICON.down}<span class="sr">Traffic options</span></button></span>` : ''}
       <button type="button" class="ops-btn ops-ico" data-op="theme" title="Day or night">${ICON.theme}<span class="sr">Day or night</span></button>
       <button type="button" class="ops-btn ops-ico ops-keysbtn" data-op="keys" title="Keys (?)">${ICON.keys}<span class="sr">Keys</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="settings" title="Settings (,)">${ICON.gear}<span class="sr">Settings</span></button>
       ${document.fullscreenEnabled ? `<button type="button" class="ops-btn ops-ico" data-op="full" title="Full screen (F)">${ICON.full}<span class="sr">Full screen</span></button>` : ''}`;
     bar.appendChild(acts);
     root.insertBefore(bar, root.firstChild);
+    // The desks' tabs give up their names, the other desks' first, rather than run under the buttons (user, 23 Oct).
+    const fitTabs = () => {
+      const row = $('.dt-row', bar);
+      if (!row) return;
+      row.classList.remove('dt-tight', 'dt-tighter');
+      if (row.scrollWidth > row.clientWidth + 1) row.classList.add('dt-tight');
+      if (row.scrollWidth > row.clientWidth + 1) row.classList.add('dt-tighter');
+    };
+    try { new ResizeObserver(() => requestAnimationFrame(fitTabs)).observe(bar); } catch (e) { addEventListener('resize', fitTabs); }
+    fitTabs();
+    try { document.fonts.ready.then(fitTabs); } catch (e) { /* the first fit stands */ }
     root.insertBefore(strip, bar);
 
     // The tool rail and the left panel: the brief's parts.
@@ -1239,8 +1253,7 @@
     T.timer = null;
     if (S.air || S.sea) { airTick(); T.timer = setInterval(airTick, AIR_MS); }
     const tb = $('[data-op="traffic"]', bar);
-    tb.classList.toggle('on', S.air || S.sea);
-    tb.setAttribute('aria-pressed', String(S.air || S.sea));
+    if (tb) { tb.classList.toggle('on', S.air || S.sea); tb.setAttribute('aria-pressed', String(S.air || S.sea)); }
     clearInterval(T.anim); T.anim = 0;
     if (S.air || S.sea) T.anim = setInterval(moveTraffic, isPhone() ? 2000 : 1000);
   }
@@ -1629,7 +1642,7 @@
         return;
       }
       const act = {
-        ' ': () => nextLatest(), t: () => trafficOnOff(), y: () => toggleLayers(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
+        ' ': () => nextLatest(), t: () => { if (TRAFFIC) trafficOnOff(); }, y: () => toggleLayers(), g: () => { S.grid = !S.grid; keep(); drawGrid(); paintLayers(); }, s: () => { const i = BASES.findIndex((b) => b[0] === S.base); S.base = BASES[(i + 1) % BASES.length][0]; keep(); drawBase(); drawTraffic(); paintLayers(); }, m: () => setTool(S.tool === 'ruler' ? null : 'ruler'), r: () => setTool(S.tool === 'rings' ? null : 'rings'),
         l: () => copyLink($('[data-do="link"]', hud)), f: fullScreen, ',': () => openSettings(),
         '[': () => { S.left = !S.left; keep(); paintFrame(); }, ']': () => { S.right = !S.right; keep(); paintFrame(); }, '\\': () => { S.dock = !S.dock; keep(); paintFrame(); }, '?': () => toggleKeys(),
       }[k.length === 1 ? k.toLowerCase() : k];
@@ -1703,7 +1716,7 @@
         else {
           P[row[0]] = v; keepPrefs(); applyPrefs();
           if (row[0] === 'range') openRange(v);
-          if (row[0] === 'airStart' && v && !S.air) { S.air = true; keep(); runTraffic(); }
+          if (row[0] === 'airStart' && v && !S.air && TRAFFIC) { S.air = true; keep(); runTraffic(); }
           if (row[0] === 'tz') { drawMatrix(); tick(); }
         }
         paintSettings();
@@ -2035,6 +2048,8 @@
     if (started) return;
     if (!findRoot()) return;
     started = true;
+    TRAFFIC = PAGE === 'all';
+    if (!TRAFFIC) { S.air = false; S.sea = false; }
     // Shown in any case after a few seconds, whatever kept the map from being placed.
     setTimeout(() => root && root.classList.add('ops-ready'), 5000);
     try {

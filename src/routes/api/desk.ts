@@ -66,7 +66,11 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     if (r.text) r.text = rightOffice(respell(String(r.text)));
     // The Iran desk's filter buttons go by the source's group.
     if (desk === "iran") (r as Record<string, unknown>).lean = iranLeanOfSource(String(r.source ?? ""));
-    if (desk === "gaza") (r as Record<string, unknown>).lean = gazaLeanOf(String(r.source ?? ""));
+    // One Palestinian group in the filter (user, 23 Oct): the PA's and the factions' media with the rest.
+    if (desk === "gaza") {
+      const l = gazaLeanOf(String(r.source ?? ""));
+      (r as Record<string, unknown>).lean = l === "pa" || l === "factions" ? "palestinian" : l;
+    }
     // Who acted, for its map pin's colour (user, 17 Oct): the Yemen map draws its pins from the cards.
     if (desk === "yemen") {
       const x = { type: String(r.type ?? ""), label: String(r.summary ?? ""), text: String(r.text ?? ""), source: String(r.source ?? ""), place: String(r.place ?? "") };

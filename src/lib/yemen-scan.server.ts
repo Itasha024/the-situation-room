@@ -3083,6 +3083,8 @@ export type DeskPipe = {
   linkModels?: ChainModel[];
   /** The desk's share of the trace's Google searches (Yemen: all of it). */
   traceShare?: number;
+  /** The desk's own say in which account leads a card (Gaza: the side's own sources). */
+  leadBonus?: (r: LiveReport) => number;
 };
 export const YEMEN_PIPE: DeskPipe = { desk: "yemen" };
 
@@ -3098,6 +3100,7 @@ export async function shapeCards(
   // a card, joins one, or waits for its original. One that did none of these
   // is named in the log (the Riyadh schools report vanished with no trace).
   const approved = reports.map((r) => ({ fp: r.fp, url: r.url, source: r.source, summary: r.summary }));
+  const rank = pipe.leadBonus ? (r: LiveReport) => leadRank(r) + pipe.leadBonus!(r) : leadRank;
   const approvedCard = new Map(reports.map((r) => [r.fp, r]));
   const heldFps = new Set<string>();
   foldTrail.clear();
@@ -3212,11 +3215,11 @@ export async function shapeCards(
   const isNew = (r: LiveReport) => !earlier.has(r.fp);
   const { groups, written: combined, tried: combineTried } = await combineGroups(
     planWaves(
-      [...byStory.values()].map((g) => pickLead(members(g), leadRank)),
+      [...byStory.values()].map((g) => pickLead(members(g), rank)),
       isNew,
     ),
     async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000, models: pipe.combineModels ?? COMBINE_MODELS }))?.json ?? null,
-    leadRank,
+    rank,
     await getStore(),
     isNew,
     pipe.combineSystem,

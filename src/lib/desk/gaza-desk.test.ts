@@ -123,3 +123,32 @@ test("the whole Gaza Strip is no place for a pin", () => {
   assert.deepEqual(gazaPins("Israeli air strikes on Gaza Strip kill one, wound 13", "x"), []);
   assert.deepEqual(gazaPins("Second Israeli drone strike on western Gaza City", "x").map((p) => p.name), ["Gaza"]);
 });
+
+// User, 23 Oct: Israel from the Israeli sources, the Palestinians from their own channels, never Hamas from Iran's media.
+test("whose account tells a Gaza card", async () => {
+  const { gazaSourceRule, gazaLeadBonus } = await import("./gaza-sourcing.ts");
+  const rule = (headline: string, source: string, type = "statement") => gazaSourceRule({ headline, type, source });
+  assert.ok(rule("Netanyahu orders full lockdown of Judea and Samaria after Hebron shooting", "NBC News"));
+  assert.equal(rule("Netanyahu orders full lockdown of Judea and Samaria after Hebron shooting", "N12"), null);
+  assert.ok(rule("Smotrich orders demolition of many Palestinian buildings around Hebron attack site", "Al Jazeera"));
+  assert.ok(rule("Israeli army says two gunmen killed in Hebron", "Al Jazeera", "combat"));
+  assert.ok(rule("Islamic Jihad: the operation is a message sealed with pure blood", "Al Mayadeen"));
+  assert.equal(rule("Islamic Jihad: the operation is a message sealed with pure blood", "Islamic Jihad"), null);
+  assert.ok(rule("Hamas official: Hebron operation shows occupiers' crimes bring them no security", "IRNA"));
+  // A field event is told by anyone on the spot; an outlet's own interview is its own.
+  assert.equal(rule("Israeli forces demolish three homes in Jenin camp", "WAFA", "combat"), null);
+  assert.equal(rule("Israeli air strike kills three in Khan Younis", "Al Jazeera", "strike"), null);
+  assert.equal(gazaSourceRule({ headline: "Hamas official: talks stalled", type: "statement", source: "Al Jazeera", own: true }), null);
+  assert.ok(gazaLeadBonus({ source: "IRNA", summary: "x" }) < gazaLeadBonus({ source: "Al Jazeera", summary: "x" }));
+  assert.ok(gazaLeadBonus({ source: "Islamic Jihad", summary: "x", flags: ["actor:factions"] }) > gazaLeadBonus({ source: "Al Mayadeen", summary: "x", flags: ["actor:factions"] }));
+  // The relays of Israeli outlets, at the head or the tail.
+  const { relayOf } = await import("./copy-rules.ts");
+  assert.ok(relayOf({ headline: "Smotrich orders demolition of many Palestinian buildings around Hebron attack site, Channel 12 reports", source: "Al Jazeera", desk: "gaza" }));
+  assert.ok(relayOf({ headline: "Channel 14 reports Israeli soldier from rescue unit killed in Hebron operation", source: "Al-Alam", desk: "gaza" }));
+});
+
+test("one Palestinian group in the Gaza desk's source filter", async () => {
+  const js = (await import("node:fs")).readFileSync(new URL("../../../public/app.js", import.meta.url), "utf8");
+  const names = /const GAZA_GROUP_NAMES = (\{[^}]*\})/.exec(js)?.[1] ?? "";
+  assert.ok(/palestinian: 'Palestinian'/.test(names) && !/\bpa:|factions:/.test(names), names);
+});

@@ -8,6 +8,7 @@
  * (gaza-reader.ts); its cards are this desk's alone ("gz-…", desks ["gaza"]). It runs on its own clock
  * and lock, and reads with the free services the other desks use least.
  */
+import { gazaLeadBonus } from "./desk/gaza-sourcing.ts";
 import { GAZA_SEARCHES, GAZA_TG, GAZA_X, WAFA_SITE } from "./desk/gaza-sources.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
 import { runGateAudit, setYemenGate } from "./desk/gate-audit.ts";
@@ -63,6 +64,7 @@ export const GAZA_PIPE: DeskPipe = {
   combineSystem: combineSystem("Gaza and Judea and Samaria", '("the IDF said", "Hamas said")'),
   war: "Gaza and Judea and Samaria",
   visionKey: "gaza:media-vision",
+  leadBonus: gazaLeadBonus,
   combineModels: [
     { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
     { provider: "openrouter", id: "openai/gpt-oss-120b:free" },

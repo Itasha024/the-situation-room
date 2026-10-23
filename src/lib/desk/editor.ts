@@ -73,6 +73,7 @@ import { GAZA_ARENAS, GAZA_PROMPT, gazaContentHash } from "./gaza-reader.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { gazaPins } from "./gaza-places.ts";
 import { GAZA_ALIGNMENT, type GazaLean, gazaTierOf } from "./gaza-sources.ts";
+import { gazaSourceRule } from "./gaza-sourcing.ts";
 import { copyKey } from "./copies.ts";
 import {
   HOUTHI_OUTLET,
@@ -969,6 +970,9 @@ function reviewReject(r: Reading, c: Candidate, desk: DeskId, strict: boolean): 
   if (desk === "iran" && yemenOnIran(r.headline, r.body)) return { kind: "reject", reason: "reader", note: "Yemen desk: the Houthis' war is the Iran desk's only when Iran or an Iranian actor is in the headline or first sentence." };
   const relay = relayOf({ headline: r.headline, body: r.body, source: c.source, lean: c.lean, desk, own: isExclusive(c.text, c.source) || c.tags.includes("original") });
   if (relay) return { kind: "reject", reason: "reader", note: sentence(relay) };
+  const own = isExclusive(c.text, c.source) || c.tags.includes("original");
+  const told = desk === "gaza" ? gazaSourceRule({ headline: r.headline, type: TYPE_OF[r.event_type] ?? String(r.event_type), source: c.source, own }) : null;
+  if (told) return { kind: "reject", reason: "reader", note: sentence(`relay: ${told}`) };
   const wrong = wrongSource(r.headline, c.source, c.text);
   if (wrong) return { kind: "reject", reason: "reader", note: sentence(wrong) };
   const g = garbled(r.headline, c.text);

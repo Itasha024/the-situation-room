@@ -114,6 +114,8 @@ export function gazaPins(copy: string, sourceText: string, headline = copy): Gaz
     return new RegExp(String.raw`\b(?:north|south|east|west|north-?east|north-?west|south-?east|south-?west|near|outside|close to|northern|southern|central|eastern|western)\s+(?:of\s+)?(?:the\s+)?${n}\b|,\s*${n}\b|\b(?:in|of)\s+(?:the\s+)?${n}\b|\b${n} City\b`, "i").test(copy);
   };
   const out = chosen.filter((c) => !(smaller && c.city && (c.p.name === "Gaza" || told(c.p)))).map((c) => c.p);
+  // "Air strikes on the Gaza Strip kill one": the whole Strip is no place for a pin (pin audit, 23 Oct).
+  if (out.length === 1 && out[0].name === "Gaza" && /\bGaza Strip\b|\bthe Strip\b/i.test(copy) && !/\bGaza City\b/i.test(copy)) return [];
   // A landmark's town is only its address.
   const landmark = /\b(?:Hospital|Medical Complex|corridor|crossing|Camp)\b/i.test(out[0]?.name ?? "");
   return landmark ? [out[0], ...out.slice(1).filter((p) => !new RegExp(String.raw`\bin\s+(?:the\s+)?${esc(p.name)}\b`, "i").test(copy))] : out;

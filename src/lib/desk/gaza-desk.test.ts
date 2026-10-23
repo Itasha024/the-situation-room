@@ -118,3 +118,8 @@ test("the pin audit of 23 Oct: the place itself, not the town it is told by; no 
   const nasr = gazaPins("Gaza emergency services: Israeli drone strike on al-Nasr neighborhood west of Gaza City kills two", "x")[0];
   assert.ok(nasr.lat > 31.5, "Gaza City's al-Nasr, not the An Nasr near Rafah");
 });
+
+test("the whole Gaza Strip is no place for a pin", () => {
+  assert.deepEqual(gazaPins("Israeli air strikes on Gaza Strip kill one, wound 13", "x"), []);
+  assert.deepEqual(gazaPins("Second Israeli drone strike on western Gaza City", "x").map((p) => p.name), ["Gaza"]);
+});

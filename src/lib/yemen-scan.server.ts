@@ -27,7 +27,7 @@ import { type ReRead, findCitation, keywords, readOriginal, stripAttribution, tr
 import { isOfficialBody } from "./desk/numbers.ts";
 import { leadSpeaker } from "./desk/speakers.ts";
 import { ABROAD_WINDOW_MS, alertCities, citiesOverlap, countedOrNamed, differentSpeakers, keepFirstTimes, numbersClash, otherPartners, OWN_AFTERMATH_MS, ownAftermath, retellsSpeaker, SAME_TARGET_MS, SITE_ATTACK_MS, sameSiteAttack, sameCount, sameDecision, wordsInCommon, sameCountAt, sameEventAbroad, speakerIs, sameFootage, sameGround, sameHeadline, sameStory, sameTarget, sameWave, SPEECH_COPY_MS, speechFrom, speechOwner, sameWords, WAVE_WINDOW_MS, STRIKE_ABROAD_MS, sameStrikeAbroad, OWN_RETELL_MS, ownRetelling, ONE_EVENT_MS, oneEventTwoTypes, RARE_FIGURE_MS, sameRareFigure } from "./desk/copies.ts";
-import { type Card as SameCard, eventRule, joinInto, ownParts, type Rule as FoldRule, talkRule } from "./desk/fold-same.ts";
+import { type Card as SameCard, eventRule, joinInto, nearSame, ownParts, type Rule as FoldRule, talkRule } from "./desk/fold-same.ts";
 import { exclusiveUrl } from "./desk/copy-rules.ts";
 import { type OutletSide, homeOutlet, isAggregator, outletSide } from "./desk/credibility.ts";
 import type { LiveReport, Media, RawScanHit, ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
@@ -1923,8 +1923,11 @@ export function foldIntoPublished(
     if (home && lateOtherStory(home, r)) home = undefined;
     // An official's own posts are each a card (21 Oct: Araghchi's interview in parts).
     if (home && ownParts(home as unknown as SameCard, r as unknown as SameCard)) home = undefined;
-    // A paper's own news on the story is a card of its own, not a line under another's (site-articles.ts).
-    const apart = (o: LiveReport) => !!siteOutlet(r) && ownNewsApart(o, r);
+    // A paper's own news on the story is a card of its own, not a line under another's (site-articles.ts);
+    // so is an outlet's own scoop or interview line, unless the card already says it (user, 23 Oct:
+    // Geagea's words to MTV went under Al-Modon's card of that morning).
+    const apart = (o: LiveReport) =>
+      (!!siteOutlet(r) && ownNewsApart(o, r)) || (isExclusiveCard(r) && o.source !== r.source && !nearSame(o.summary, r.summary));
     if (home && apart(home)) {
       console.log(`[fold] site article ${r.url} kept apart from ${home.fp}: its own news`);
       home = undefined;

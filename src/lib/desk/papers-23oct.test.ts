@@ -5,6 +5,7 @@ import { ownNewsApart, siteOwnNews } from "./site-articles.ts";
 import { papersFirst } from "../iran-scan.server.ts";
 import { LEBANESE_MEDIA } from "./iran-sources.ts";
 import { pressOf } from "./state-press.ts";
+import { nearSame, ownParts, talkRule } from "./fold-same.ts";
 
 // User, 23 Oct: Nidaa al-Watan's report of seven Hezbollah explosives trucks never reached the desk;
 // Al-Akhbar's morning paper mostly went unread; the papers' morning order; Al Jadeed's evening scoops;
@@ -66,6 +67,17 @@ test("the Lebanese channels' own scoops are exclusives", () => {
   assert.ok(isExclusive("‏جعجع لـMTV: نحتاج إلى نية سياسية واضحة بتفكيك حزب الله", "MTV Lebanon"));
   assert.ok(!isExclusive("الجيش الإسرائيلي: فرضنا طوقاً أمنياً شاملاً على مدينة الخليل", "Al Jadeed"));
   assert.ok(!isExclusive("وزير العدل: شحنة المتفجرات المضبوطة كان يمكن استخدامها", "MTV Lebanon"));
+});
+
+test("an interview's lines on the outlet's channel are each a card", () => {
+  const line = (n: number, summary: string) => ({ fp: `mtv${n}`, at: "2026-10-22T18:56:00Z", source: "MTV Lebanon", url: `https://t.me/MTVLebanoNews/${n}`, summary, flags: ["exclusive"] });
+  const a = line(89602, "Geagea: Hezbollah's deployment in Beirut streets is a message to the state");
+  const b = line(89603, "Geagea: army commander differs politically but will act if given orders");
+  assert.ok(ownParts(a, b));
+  assert.equal(talkRule(a, b), null);
+  // Not the outlet's own: its posts of others' words still fold as before.
+  assert.ok(!ownParts({ ...a, flags: [] }, { ...b, flags: [] }));
+  assert.ok(nearSame("Geagea: no clear political will to disarm Hezbollah", "Geagea: there is no clear political will to disarm Hezbollah"));
 });
 
 test("Al-Binaa is read as a Lebanese paper", () => {

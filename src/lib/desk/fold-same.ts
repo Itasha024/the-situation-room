@@ -749,7 +749,7 @@ export function eventRule(a: Card, b: Card): Rule | null {
 
 const OWN_POST = /^https:\/\/(?:t\.me|x\.com|twitter\.com)\//;
 /** Most of two headlines' words shared: one line posted twice (a text, then its clip). */
-function nearSame(a: string, b: string): boolean {
+export function nearSame(a: string, b: string): boolean {
   const x = headWords(a), y = headWords(b);
   if (!x.size || !y.size) return false;
   let both = 0;
@@ -757,9 +757,16 @@ function nearSame(a: string, b: string): boolean {
   return both / (x.size + y.size - both) >= 0.6;
 }
 
-/** Two posts of one official's own channel (two links of it), saying two different things. */
+/**
+ * Two posts of one official's own channel (two links of it), saying two different things; or two parts
+ * of an interview given to one outlet, posted on its channel (user, 23 Oct: Geagea's lines to MTV on
+ * the army commander and a security agency reporting to Hezbollah were folded away and shown nowhere).
+ */
 export function ownParts(a: Card, b: Card): boolean {
-  return a.source === b.source && a.url !== b.url && OWN_POST.test(String(a.url)) && OWN_POST.test(String(b.url)) && !!officialVoice(a.source) && !nearSame(a.summary, b.summary);
+  return (
+    a.source === b.source && a.url !== b.url && OWN_POST.test(String(a.url)) && OWN_POST.test(String(b.url)) &&
+    (!!officialVoice(a.source) || (isScoop(a) && isScoop(b))) && !nearSame(a.summary, b.summary)
+  );
 }
 
 /** One speaker's words: their remarks that day, or one channel's burst of their lines. */

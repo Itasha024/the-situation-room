@@ -72,6 +72,7 @@ import { countriesNamed, iranPinAllowed, iranPins, tallyNotEvent } from "./iran-
 import { GAZA_ARENAS, GAZA_PROMPT, gazaContentHash } from "./gaza-reader.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { FUNERAL_RE, gazaPins } from "./gaza-places.ts";
+import { lineMoveOf } from "./gaza-line.ts";
 import { GAZA_ALIGNMENT, type GazaLean, gazaTierOf } from "./gaza-sources.ts";
 import { gazaSourceRule, israeliSource } from "./gaza-sourcing.ts";
 import { copyKey } from "./copies.ts";
@@ -1378,6 +1379,10 @@ function pinGaza(report: LiveReport, r: Reading, sourceText: string): void {
   const funeral = FUNERAL_RE.test(r.headline);
   if (!mapsAsPin(report.type) && !funeral) return;
   if (funeral) report.flags = [...(report.flags ?? []), "pin:funeral"];
+  // The IDF line moved (user, 24 Oct: the IDF-held area pulled from reports, the mappers' first): the map's
+  // IDF-held layer shows it as a reported move until the mapped line catches up (gaza-line.ts).
+  const move = lineMoveOf(r.event_type, r.headline);
+  if (move) report.flags = [...(report.flags ?? []), `line:${move}`];
   const from = new Set(gazaPins((r.origins ?? []).join(", "), sourceText).map((p) => p.name));
   const pins = gazaPins(`${(r.targets ?? []).join(", ")}. ${r.headline}`, sourceText, r.headline).filter((p) => !from.has(p.name));
   if (!pins.length) return;

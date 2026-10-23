@@ -1,0 +1,25 @@
+{
+  "note": "Researched 24 Oct 2026 (OSINT, open sources). moves: the line's reported moves after the newest mapped area (the UN's coordination area of 23 June 2026); shares: the share of Gaza behind the line over time, as each source measured it.",
+  "moves": [
+    { "at": "2026-07-21", "move": "advance", "place": "Rafah", "lat": 31.29722, "lng": 34.24357, "headline": "The IDF's berm in Rafah grew from 0.5 km to 2.4 km in three weeks; more than 23 km of berms in all, satellite pictures show", "source": "AP (Planet Labs imagery)", "url": "https://apnews.com/article/israel-gaza-yellow-line-barrier-ceasefire-941ed80f6d4398ce88916f6b08753dd8" },
+    { "at": "2026-07-18", "move": "advance", "place": "Deir al-Balah (east)", "lat": 31.415, "lng": 34.372, "headline": "Geolocated: a yellow block in eastern Deir al-Balah about 330 m west of the official line", "source": "GeoConfirmed", "url": "https://x.com/GeoConfirmed/status/2079880527230775767" },
+    { "at": "2026-07-28", "move": "advance", "place": "Bani Suheila (Khan Younis)", "lat": 31.34337, "lng": 34.32337, "headline": "Yellow blocks moved forward in the past 10 days in Deir al-Balah, Khan Younis, Gaza City and northern Rafah", "source": "Reuters", "url": "https://www.reuters.com/world/middle-east/israels-yellow-line-shifting-edge-war-pushing-gazans-home-2026-07-28/" },
+    { "at": "2026-10-12", "move": "advance", "place": "Shujaiyya", "lat": 31.49889, "lng": 34.46771, "headline": "Yellow blocks moved west in Shujaiyya", "source": "Al Jazeera (maps)", "url": "https://www.aljazeera.com/news/2026/10/12/maps-show-how-israels-yellow-line-keeps-squeezing-palestinians-in-gaza" },
+    { "at": "2026-10-12", "move": "advance", "place": "Zeitoun", "lat": 31.49642, "lng": 34.45215, "headline": "The line moved some 150 m toward Salah al-Din Road in Zeitoun", "source": "Al Jazeera", "url": "https://www.aljazeera.com/news/2026/10/13/gazas-yellow-line-advances-leaving-displaced-families-with-nowhere-to-go" },
+    { "at": "2026-10-12", "move": "advance", "place": "Deir al-Balah (east)", "lat": 31.412, "lng": 34.37, "headline": "The line reported moved in eastern Deir al-Balah", "source": "Ahram Online", "url": "https://english.ahram.org.eg/News/578753.aspx" },
+    { "at": "2026-10-23", "move": "advance", "place": "al-Masdar", "lat": 31.428, "lng": 34.392, "headline": "The line reported moved several hundred metres west near al-Masdar (one source)", "source": "Palestine Chronicle", "url": "" }
+  ],
+  "shares": [
+    { "at": "2025-10-10", "share": 53, "what": "The ceasefire: the IDF pulls back to the yellow line", "source": "Theti Mapping", "url": "https://x.com/ThetiMapping/status/1976366575369535765" },
+    { "at": "2025-10-14", "share": 53.3, "what": "The IDF's map of the line, measured", "source": "Gaza Maps", "url": "https://x.com/AvichayAdraee/status/1978134175904317709" },
+    { "at": "2025-11-04", "share": 57.8, "what": "Measured another way (T-Politography)", "source": "Gisha", "url": "https://gisha.org/en/the-yellow-line/" },
+    { "at": "2025-12-25", "share": 53.4, "what": "The IDF's map of 25 Dec, georeferenced", "source": "obretix / Gaza Maps", "url": "" },
+    { "at": "2026-03-08", "share": 64, "what": "The orange line added: about 11% more", "source": "Gisha", "url": "https://gisha.org/en/between-the-yellow-and-orange-lines/" },
+    { "at": "2026-04-30", "share": 64, "what": "At least 64%, the aid groups' maps show", "source": "Reuters, via Times of Israel", "url": "https://www.timesofisrael.com/new-maps-provided-to-aid-groups-show-expanded-zone-of-idf-control-in-gaza/" },
+    { "at": "2026-05-12", "share": 55.7, "what": "Behind the yellow line alone (orange zone apart)", "source": "UNRWA map", "url": "https://services.arcgis.com/635TEs8sPmgDjkwb/arcgis/rest/services/Yellow_line_updateMay2026/FeatureServer/0" },
+    { "at": "2026-05-29", "share": 60, "what": "Netanyahu: 60%, and orders the IDF to reach 70%", "source": "Algemeiner", "url": "https://www.algemeiner.com/2026/05/29/netanyahu-directs-israeli-forces-expand-gaza-control-70-percent/" },
+    { "at": "2026-06-23", "share": 65.2, "what": "The UN's coordination area (yellow and orange lines)", "source": "UN DSS map", "url": "https://services3.arcgis.com/7J7WB6yJX0pYke9q/arcgis/rest/services/UNICEF_Gaza_Strip_Sites_Within_and_Near_Orange_Line/FeatureServer/12" },
+    { "at": "2026-07-06", "share": 60, "what": "The IDF: about 60%", "source": "ABC News (Australia)", "url": "https://www.abc.net.au/news/2026-07-06/idf-controls-more-gaza-territory-as-israel-yellow-line-moves/106836640" },
+    { "at": "2026-10-12", "share": 65, "what": "About 65%, the UN says", "source": "Al Jazeera, citing OCHA", "url": "https://www.aljazeera.com/news/2026/10/12/maps-show-how-israels-yellow-line-keeps-squeezing-palestinians-in-gaza" }
+  ]
+}

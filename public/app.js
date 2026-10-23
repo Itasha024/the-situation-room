@@ -7757,6 +7757,7 @@ function bootOtherDesk(el) {
   const FIT = { padding: [6, 6], animate: false };
   map.fitBounds(START, FIT);
   oneEarth(map);
+  if (gaza) drawGazaLine();
   baseAttr = '© OpenStreetMap';
   baseTiles = L.tileLayer(TILE_URL, { maxZoom: 18, noWrap: true, attribution: TILE_ATTR || baseAttr }).addTo(map);
   let touched = false;
@@ -7807,8 +7808,8 @@ function startIranFeed() {
   wireLeanMenu();
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
-  // The Gaza desk's brief, Trump column and numbers come in its later stages.
-  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadIranPins(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
+  // The Gaza desk's brief and its IDF-held area (24 Oct); its Trump column and numbers come in its later stages.
+  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadIranBrief(); loadIranPins(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
@@ -8932,11 +8933,85 @@ async function loadIranNumbers() {
     }
   } catch (e) { console.warn('iran numbers', e); }
 }
+/*
+ * The Gaza map's IDF-held area (user, 24 Oct): the area the mapping projects last published (the UN's
+ * coordination area behind the yellow and orange lines; UNRWA's behind the yellow line alone), and the
+ * line's reported moves since: the desk's own cards (filled) and the researched ones (hollow,
+ * /gaza-line-history.json). A box on the map tells the dates and shares and turns it all off.
+ */
+const gazaLine = { sig: '', layer: null, box: null, hist: null, on: true };
+try { gazaLine.on = localStorage.getItem('gaza-line') !== 'off'; } catch (e) { /* private */ }
+async function drawGazaLine(a) {
+  if (a) gazaLine.a = a;
+  a = gazaLine.a;
+  if (!map || deskOf().id !== 'gaza' || !a) return;
+  // A new map (the page came back to this desk): everything drawn again on it.
+  if (gazaLine.map !== map) { gazaLine.map = map; gazaLine.sig = ''; gazaLine.layer = null; gazaLine.box = null; }
+  if (!gazaLine.hist) {
+    try { gazaLine.hist = await (await fetch('/gaza-line-history.json', { cache: 'no-cache' })).json(); } catch (e) { gazaLine.hist = { moves: [], shares: [] }; }
+  }
+  const sig = `${a.checkedAt}|${(a.moves || []).length}`;
+  if (sig === gazaLine.sig && gazaLine.layer) return;
+  gazaLine.sig = sig;
+  for (const [name, z, pe] of [['gzArea', 340, 'none'], ['gzMoves', 615, 'auto']]) {
+    if (!map.getPane(name)) { map.createPane(name); map.getPane(name).style.zIndex = z; map.getPane(name).style.pointerEvents = pe; }
+  }
+  if (gazaLine.layer) { try { map.removeLayer(gazaLine.layer); } catch (e) {} }
+  const g = L.layerGroup();
+  const since = [a.zone && a.zone.asOf, a.held && a.held.asOf].filter(Boolean).sort().pop() || '';
+  if (a.zone) L.geoJSON(a.zone.geometry, { pane: 'gzArea', interactive: false, style: { color: '#f59e0b', weight: 1.2, dashArray: '4 3', fillColor: '#f59e0b', fillOpacity: 0.16 } }).addTo(g);
+  if (a.held) L.geoJSON(a.held.geometry, { pane: 'gzArea', interactive: false, style: { color: '#facc15', weight: 1.6, fillColor: '#eab308', fillOpacity: 0.28 } }).addTo(g);
+  const hist = ((gazaLine.hist && gazaLine.hist.moves) || []).filter((m) => !since || m.at >= since);
+  const moves = [...hist.map((m) => ({ ...m, past: true })), ...(a.moves || [])];
+  for (const m of moves) {
+    const back = m.move === 'withdraw';
+    const icon = L.divIcon({ className: `gz-move${back ? ' gz-back' : ''}${m.past ? ' gz-past' : ''}`, html: `<span>${back ? '▶' : '◀'}</span>`, iconSize: [18, 18], iconAnchor: [9, 9] });
+    const day = new Date(m.at).toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric', timeZone: VIEW_TZ });
+    const src = m.url ? `<a href="${escapeHtml(m.url)}" target="_blank" rel="noopener">${escapeHtml(m.source)}</a>` : escapeHtml(m.source);
+    L.marker([m.lat, m.lng], { pane: 'gzMoves', icon, keyboard: false, title: `${back ? 'Pulled back' : 'Moved forward'}: ${m.place || ''}` })
+      .bindPopup(`<div class="gz-move-pop"><b>${back ? 'The IDF line pulled back' : 'The IDF line moved forward'}</b> · ${escapeHtml(day)}<br>${escapeHtml(m.headline)}<br><small>${src}</small></div>`)
+      .addTo(g);
+  }
+  gazaLine.layer = g;
+  if (gazaLine.on) g.addTo(map);
+  // The box: what the shading is, how old, and the moves told since.
+  const ago = (d) => new Date(d).toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric', timeZone: VIEW_TZ });
+  const shares = ((gazaLine.hist && gazaLine.hist.shares) || []).slice().sort((x, y) => (x.at < y.at ? 1 : -1));
+  const latest = shares[0];
+  const top = a.zone || a.held;
+  // Folded to one line until opened (24 Oct: on a small screen the box hid the Strip).
+  const html = `<div class="gz-head"><label class="gz-line-on"><input type="checkbox"${gazaLine.on ? ' checked' : ''}> <b>IDF-held area</b>${top ? ` ${top.share}%` : ''}</label><button type="button" class="gz-more" aria-expanded="${!!gazaLine.open}" title="About this area">${gazaLine.open ? '−' : 'i'}</button></div>
+    <div class="gz-rows"${gazaLine.open ? '' : ' hidden'}>
+    ${a.held ? `<div class="gz-row"><i class="gz-sw gz-sw-held"></i>Behind the yellow line: ${a.held.share}% (${escapeHtml(a.held.by)} map, ${ago(a.held.asOf)})</div>` : ''}
+    ${a.zone ? `<div class="gz-row"><i class="gz-sw gz-sw-zone"></i>With the orange zone: ${a.zone.share}% (${escapeHtml(a.zone.by)} map, ${ago(a.zone.asOf)})</div>` : ''}
+    ${latest && (!since || latest.at > since) ? `<div class="gz-row gz-latest">Latest figure: about ${latest.share}%, ${escapeHtml(latest.source)}, ${ago(latest.at)}</div>` : ''}
+    <div class="gz-row"><span class="gz-move gz-inline"><span>◀</span></span>${moves.length} reported move${moves.length === 1 ? '' : 's'} of the line since ${since ? ago(since) : 'the last map'}</div></div>`;
+  if (!gazaLine.box) {
+    const Box = L.Control.extend({ options: { position: 'bottomleft' }, onAdd() { const d = L.DomUtil.create('div', 'gz-line-box'); L.DomEvent.disableClickPropagation(d); return d; } });
+    gazaLine.box = new Box().addTo(map);
+    gazaLine.box.getContainer().addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.gz-more');
+      if (!btn) return;
+      gazaLine.open = !gazaLine.open;
+      btn.setAttribute('aria-expanded', String(gazaLine.open));
+      btn.textContent = gazaLine.open ? '−' : 'i';
+      gazaLine.box.getContainer().querySelector('.gz-rows').hidden = !gazaLine.open;
+    });
+    gazaLine.box.getContainer().addEventListener('change', (ev) => {
+      if (!ev.target.matches('input')) return;
+      gazaLine.on = ev.target.checked;
+      try { localStorage.setItem('gaza-line', gazaLine.on ? 'on' : 'off'); } catch (e) { /* private */ }
+      if (gazaLine.layer) { if (gazaLine.on) gazaLine.layer.addTo(map); else map.removeLayer(gazaLine.layer); }
+    });
+  }
+  gazaLine.box.getContainer().innerHTML = html;
+}
 async function loadIranBrief() {
   try {
     const res = await fetch(`/api/brief?desk=${deskOf().id}`, { cache: 'no-cache' });
     if (!res.ok) return;
     const b = await res.json();
+    if (b && b.idfArea) drawGazaLine(b.idfArea);
     if (!b || !b.ok || b.pending) return;
     const sig = `${b.updatedAt}|${b.proseTriedAt || ''}|${(b.sanctions && b.sanctions.through) || ''}|${(b.numbers && b.numbers.through) || ''}`;
     if (sig === iranBrief.sig) return;

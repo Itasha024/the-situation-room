@@ -1248,3 +1248,24 @@ html .leg-ico.kind,html[data-set] .leg-ico.kind{background:#475569;color:#fff;bo
 /* The Gaza desk's brief: Gaza, then Judea and Samaria, each its own list (user, 24 Oct). */
 .sit-area + .sit-area { margin-top: 14px; }
 .sit-area-h { margin: 0 0 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #8a94a6); }
+
+/* The Gaza map's IDF-held area (user, 24 Oct): its box and the line's reported moves. */
+.gz-line-box { background: rgba(15, 20, 30, 0.86); color: #e5e7eb; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; padding: 7px 9px; font-size: 11.5px; line-height: 1.45; max-width: 290px; }
+.gz-line-box b { font-weight: 700; }
+.gz-line-on { display: flex; gap: 6px; align-items: center; cursor: pointer; margin-bottom: 2px; }
+.gz-row { display: flex; gap: 6px; align-items: flex-start; }
+.gz-latest { color: #fcd34d; }
+.gz-sw { flex: none; width: 11px; height: 11px; margin-top: 3px; border-radius: 2px; }
+.gz-sw-held { background: rgba(234, 179, 8, 0.45); border: 1.5px solid #facc15; }
+.gz-sw-zone { background: rgba(245, 158, 11, 0.2); border: 1.5px dashed #f59e0b; }
+.gz-move span { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #f59e0b; color: #111; font-size: 10px; box-shadow: 0 0 0 1.5px #111; }
+.gz-move.gz-back span { background: #22c55e; }
+.gz-move.gz-past span { background: rgba(17, 17, 17, 0.75); color: #f59e0b; box-shadow: 0 0 0 1.5px #f59e0b; }
+.gz-move.gz-inline span { width: 14px; height: 14px; font-size: 8px; flex: none; margin-top: 1px; }
+.gz-move-pop { font-size: 12.5px; line-height: 1.45; max-width: 260px; }
+@media (max-width: 560px) { .gz-line-box { max-width: 210px; font-size: 10.5px; } }
+.gz-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.gz-line-on { margin-bottom: 0; }
+.gz-more { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.35); background: transparent; color: inherit; font: 700 11px/1 Georgia, serif; padding: 0; }
+.gz-rows { margin-top: 4px; }
+.gz-rows[hidden] { display: none; }

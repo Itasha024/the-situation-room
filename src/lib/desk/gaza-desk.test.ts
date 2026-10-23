@@ -193,3 +193,17 @@ test("the brief: Gaza and Judea and Samaria apart, the desk's words, every point
   assert.match(got.js.points[0], /Judea and Samaria/);
   assert.equal(gazaUnusable({ gaza: ["X happened [snn]."], js: [] }, refOf, 2), "ids not given: snn");
 });
+
+test("the IDF line: a move's way, a map's date, an area's share (user, 24 Oct)", async () => {
+  const { lineMoveOf, areaKm2 } = await import("./gaza-line.ts");
+  const { dateInName } = await import("../gaza-line.server.ts");
+  assert.equal(lineMoveOf("advance_or_capture", "Geolocated footage shows IDF blocks moved 300 m west in Shujaiyya"), "advance");
+  assert.equal(lineMoveOf("advance_or_capture", "IDF pulls back from positions east of Khan Younis"), "withdraw");
+  assert.equal(lineMoveOf("air_strike", "IDF strike in Shujaiyya"), null);
+  assert.equal(dateInName('"Coordination Area" 23 June 2026'), "2026-06-23");
+  assert.equal(dateInName("Zone 1- 2026_06_23"), "2026-06-23");
+  // A 10 km by 10 km square at Gaza's latitude is about 100 km².
+  const dLng = 10 / (111.32 * Math.cos((31.4 * Math.PI) / 180)), dLat = 10 / 110.57;
+  const km2 = areaKm2({ type: "Polygon", coordinates: [[[34.3, 31.4], [34.3 + dLng, 31.4], [34.3 + dLng, 31.4 + dLat], [34.3, 31.4 + dLat], [34.3, 31.4]]] });
+  assert.ok(Math.abs(km2 - 100) < 2, String(km2));
+});

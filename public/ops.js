@@ -295,9 +295,9 @@
     // The right panel: the reports, and the events placed on the map.
     rightEl = document.createElement('aside');
     rightEl.className = 'ops-right';
-    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events</button>${PAGE === 'gaza' ? '<button type="button" role="tab" data-rtab="on">Online</button>' : ''}</nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
+    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events</button></nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
       <div class="ops-rpane ops-rp-rep"></div>
-      <div class="ops-rpane ops-rp-ev"><div class="ops-evf"><input class="ops-q ops-evq" type="search" placeholder="Filter events: a place, a side, a weapon" aria-label="Filter the events"><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>${PAGE === 'gaza' ? '<div class="ops-rpane ops-rp-on"><p class="ops-on-empty">Reading the channels…</p></div>' : ''}`;
+      <div class="ops-rpane ops-rp-ev"><div class="ops-evf"><input class="ops-q ops-evq" type="search" placeholder="Filter events: a place, a side, a weapon" aria-label="Filter the events"><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>`;
     root.insertBefore(rightEl, item.nextSibling);
     const rail = $('#rail', root);
     if (rail) $('.ops-rp-rep', rightEl).appendChild(rail);
@@ -329,7 +329,7 @@
     pt.className = 'ops-ptabs';
     // Map, Brief, Reports, the fronts or arenas, Numbers, Events, Timeline (user, 21 Oct).
     const tab = (id) => tabs.find((x) => x[0] === id);
-    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], PAGE === 'gaza' ? ['online', 'Online'] : null, tab('timeline-wrap')].filter(Boolean);
+    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], tab('timeline-wrap')].filter(Boolean);
     pt.innerHTML = phone.map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
     root.insertBefore(pt, bar.nextSibling);
     pt.addEventListener('scroll', notch, { passive: true });
@@ -518,14 +518,13 @@
         if (S.left && S.tab === t.dataset.tab && !isPhone()) S.left = false; else { S.tab = t.dataset.tab; S.left = true; lastOpen = 'left'; }
         keep(); paintFrame(); return;
       }
-      if (t.dataset.rtab) { S.rtab = t.dataset.rtab; keep(); paintFrame(); if (S.rtab === 'on') loadOnline(); return; }
+      if (t.dataset.rtab) { S.rtab = t.dataset.rtab; keep(); paintFrame(); return; }
       if (t.dataset.ptab) {
         const p = t.dataset.ptab;
         S.ptab = p;
         if (LEFT_TABS[PAGE].some(([id]) => id === p)) S.tab = p;
         if (p === 'rail') S.rtab = 'rep';
         if (p === 'events') S.rtab = 'ev';
-        if (p === 'online') { S.rtab = 'on'; loadOnline(); }
         paintFrame(); if (p !== 'map') window.scrollTo({ top: 0 }); return;
       }
       const op = t.dataset.op;
@@ -2048,98 +2047,13 @@
     // The 48 hours roll on every minute.
     setInterval(drawMatrix, 60000);
   }
-  /* ---------- The Online tab (the Gaza desk, user, 23 Oct): the talk in Gaza and in Judea and Samaria ---------- */
-  const ON = { data: null, area: 'gaza', topic: null, timer: 0, at: 0, win: 'day', more: false };
-  async function loadOnline() {
-    if (PAGE !== 'gaza') return;
-    clearTimeout(ON.timer);
-    ON.timer = setTimeout(() => { if (S.rtab === 'on') loadOnline(); }, 60000);
-    if (Date.now() - ON.at < 30000 && ON.data) return paintOnline();
-    try {
-      const r = await fetch('/api/online', { cache: 'no-store' });
-      if (r.ok) { ON.data = await r.json(); ON.at = Date.now(); }
-    } catch (e) { /* the last one stays */ }
-    paintOnline();
-  }
-  const TREND = { rising: ['up', '▲'], new: ['up', 'new'], falling: ['down', '▼'], steady: ['', ''] };
-  function onPost(p, call) {
-    const t = Date.parse(p.at);
-    const PL = { bsky: 'Bluesky', yt: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram', facebook: 'Facebook', x: 'X', web: 'Web' };
-    const who = p.pl ? `${PL[p.pl] || p.pl}${p.c ? ' comment' : ''} · ${esc(p.ch)}` : p.c ? `comment on @${esc(p.ch)}` : `Telegram · @${esc(p.ch)}`;
-    return `<li class="ops-on-post${call ? ' call' : ''}${p.c ? ' cmt-own' : ''}"><div class="ops-on-meta"><a href="${esc(p.u)}" target="_blank" rel="noopener">${who}</a><span>${esc(hm(t, VIEW_TZ()))}</span>${p.v ? `<span>${p.v >= 1000 ? `${(p.v / 1000).toFixed(1)}K` : p.v} views</span>` : ''}${p.m ? '<span>media</span>' : ''}${p.n > 1 ? `<span class="ops-on-n" title="${esc((p.also || []).map((c) => `@${c}`).join(' '))}">also on ${p.n - 1} channel${p.n > 2 ? 's' : ''}</span>` : ''}</div><p dir="auto">${esc(p.x.length > 280 ? `${p.x.slice(0, 280)}…` : p.x)}</p></li>`;
-  }
-  /** Bars for what the talk says or is about; a click shows only those posts. */
-  function onBars(list, prefix) {
-    const rows = list.filter((t) => t.now || t.usual);
-    const top = Math.max(1, ...rows.map((t) => t.now));
-    return rows.map((t) => {
-      const [cls, mark] = TREND[t.trend] || TREND.steady;
-      const id = `${prefix}${t.id}`;
-      return `<li><button type="button" data-on-topic="${id}" aria-pressed="${id === ON.topic}" class="${t.call ? 'call' : ''}"><span class="ot-n">${esc(t.name)}</span><span class="ot-bar"><i style="width:${Math.round((t.now / top) * 100)}%"></i></span><span class="ot-c">${t.now}</span><span class="ot-tr ${cls}">${mark}${t.trend === 'rising' || t.trend === 'falling' ? ` ${t.ratio >= 99 ? '' : `${t.ratio}×`}` : ''}</span></button></li>`;
-    }).join('');
-  }
-  function paintOnline() {
-    const pane = $('.ops-rp-on', rightEl);
-    if (!pane) return;
-    const d = ON.data;
-    const a = d && ((ON.win === 'day' && d.day) || d.areas || []).find((x) => x.area === ON.area);
-    if (!a || !a.voices) { pane.innerHTML = '<p class="ops-on-empty">The watch writes its first summary after its first read of the channels.</p>'; return; }
-    const winH = ON.win === 'day' && d.day ? 24 : d.windowHours;
-    const names = { gaza: 'Gaza', js: 'Judea and Samaria' };
-    const max = Math.max(1, ...a.hourly);
-    const spark = a.hourly.map((n, i) => `${i ? 'L' : 'M'}${(i * 100) / 23} ${30 - (n / max) * 28}`).join(' ');
-    const briefs = (d.briefs && d.briefs.areas && d.briefs.areas[ON.area]) || {};
-    const alarm = new Set(a.voices.filter((v) => v.call).map((v) => v.id));
-    const loud = (p) => (p.k || []).some((k) => alarm.has(k));
-    // Each kind of talk as a brief; its messages one click away (user, 23 Oct).
-    const kinds = a.voices.filter((v) => v.now).sort((x, y) => (+y.call - +x.call) || y.now - x.now);
-    const card = (v) => {
-      const [cls, mark] = TREND[v.trend] || TREND.steady;
-      const msgs = a.top.filter((p) => (p.k || []).includes(v.id));
-      const open = ON.open === v.id;
-      return `<li class="ops-on-kind${v.call ? ' call' : ''}"><div class="ops-on-kh"><b>${esc(v.name)}</b><span class="ot-c">${v.now}</span><span class="ot-tr ${cls}">${mark}${v.trend === 'rising' || v.trend === 'falling' ? ` ${v.ratio >= 99 ? '' : `${v.ratio}×`}` : ''}</span></div>
-        <p class="ops-on-brief">${briefs[v.id] ? esc(briefs[v.id]) : '<em>The brief is being written.</em>'}</p>
-        <button type="button" class="ops-on-more" data-on-open="${v.id}" aria-expanded="${open}">${open ? 'Hide the messages' : msgs.length === 1 ? 'See the message' : `See all ${msgs.length} messages`}</button>
-        ${open ? `<ol class="ops-on-list">${msgs.map((p) => onPost(p, loud(p))).join('')}</ol>` : ''}</li>`;
-    };
-    const topic = ON.topic && !ON.topic.startsWith('v:') ? a.topics.find((t) => t.id === ON.topic) : null;
-    pane.innerHTML = `<div class="ops-onw">
-      <div class="ops-on-areas" role="group" aria-label="Area">${['gaza', 'js'].map((k) => `<button type="button" data-on-area="${k}" aria-pressed="${k === ON.area}">${names[k]}</button>`).join('')}</div>
-      <div class="ops-on-areas ops-on-win" role="group" aria-label="Look back">${[['day', 'Last 24 hours'], ['now', 'Last 3 hours']].map(([k, n]) => `<button type="button" data-on-win="${k}" aria-pressed="${k === ON.win}">${n}</button>`).join('')}</div>
-      <div class="ops-on-head"><span class="ops-on-live">Live · updated ${esc(hm(Date.parse(d.at), VIEW_TZ()))}, every 5 minutes</span><b>${a.posts}</b> posts and comments of talk in the last ${winH} hours${a.comments ? `, ${a.comments} of them comments` : ''}<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><path d="${spark}"/></svg><small>Talk an hour, last 24 hours · ${a.reports} news reports left out (they are in Reports) · ${d.channels} channels</small></div>
-      ${d.briefs && d.briefs.day && d.briefs.day[ON.area] ? `<div class="ops-on-day"><h4>The last 24 hours <small>brief of ${esc(hm(Date.parse(d.briefs.at), VIEW_TZ()))}, every 3 hours</small></h4><p>${esc(d.briefs.day[ON.area])}</p></div>` : ''}
-      <h4>What people say <small>${d.briefs ? `briefs of the 3 hours to ${esc(hm(Date.parse(d.briefs.at), VIEW_TZ()))}; the counts and messages are live` : 'the counts and messages are live'}</small></h4>
-      <ul class="ops-on-kinds">${kinds.map(card).join('') || '<li class="ops-on-empty">Nothing yet.</li>'}</ul>
-      ${(a.talked || []).length ? `<h4>Most commented <small>the talk in the channels' discussion groups</small></h4><ol class="ops-on-list">${a.talked.slice(0, 5).map((g) => `${onPost(g.post, false).replace('</div><p', `<span class="ops-on-n">${g.n} comments</span></div><p`)}${g.comments.map((c) => `<li class="ops-on-post cmt"><p dir="auto">${esc(c.x.length > 200 ? `${c.x.slice(0, 200)}…` : c.x)}</p></li>`).join('')}`).join('')}</ol>` : ''}
-      <h4>What the talk is about <small>click one for its messages</small></h4>
-      <ul class="ops-on-topics">${onBars(a.topics, '') || '<li class="ops-on-empty">Nothing yet.</li>'}</ul>
-      ${topic ? `<h4>${esc(topic.name)} <small><button type="button" data-on-topic="">close</button></small></h4><ol class="ops-on-list">${a.top.filter((p) => p.t.includes(topic.id)).map((p) => onPost(p, loud(p))).join('') || '<li class="ops-on-empty">Nothing on this.</li>'}</ol>` : ''}
-      ${a.places.length ? `<h4>Places in the talk</h4><p class="ops-on-chips">${a.places.map((p) => `<span>${esc(p.name)} <b>${p.n}</b></span>`).join('')}</p>` : ''}
-      ${a.tags.length ? `<h4>Hashtags</h4><p class="ops-on-chips">${a.tags.map((t) => `<span dir="auto">${esc(t.tag)} <b>${t.n}</b>${t.isNew ? ' <em>new</em>' : ''}</span>`).join('')}</p>` : ''}
-    </div>`;
-  }
-  function wireOnline() {
-    const pane = rightEl && $('.ops-rp-on', rightEl);
-    if (!pane) return;
-    pane.addEventListener('click', (ev) => {
-      const ar = ev.target.closest('[data-on-area]');
-      if (ar) { ON.area = ar.dataset.onArea; ON.topic = null; ON.more = false; paintOnline(); return; }
-      const wn = ev.target.closest('[data-on-win]');
-      if (wn) { ON.win = wn.dataset.onWin; ON.more = false; paintOnline(); return; }
-      const op = ev.target.closest('[data-on-open]');
-      if (op) { ON.open = ON.open === op.dataset.onOpen ? null : op.dataset.onOpen; paintOnline(); return; }
-      const tp = ev.target.closest('[data-on-topic]');
-      if (tp) { ON.topic = tp.dataset.onTopic && tp.dataset.onTopic !== ON.topic ? tp.dataset.onTopic : null; paintOnline(); }
-    });
-  }
-
   function start() {
     if (started) return;
     if (!findRoot()) return;
     started = true;
     TRAFFIC = PAGE === 'all';
-    // The Online tab is the Gaza desk's only.
-    if (S.rtab === 'on' && PAGE !== 'gaza') S.rtab = 'rep';
+    // The Online tab is gone (user, 23 Oct): a tab kept from it is Reports.
+    if (S.rtab === 'on') S.rtab = 'rep';
     if (!TRAFFIC) { S.air = false; S.sea = false; }
     // Shown in any case after a few seconds, whatever kept the map from being placed.
     setTimeout(() => root && root.classList.add('ops-ready'), 5000);
@@ -2147,7 +2061,6 @@
       applyPrefs();
       if (OPEN_REPORT) { S.right = true; S.rtab = 'rep'; S.ptab = 'rail'; }
       build(); tick(); counts(); startHud();
-      wireOnline(); if (S.rtab === 'on') loadOnline();
       if (PAGE !== 'all') loadCities();
       const leg = $('.ops-who', root);
       if (leg) { splitLegend(); new MutationObserver(splitLegend).observe(leg, { childList: true, subtree: true }); }

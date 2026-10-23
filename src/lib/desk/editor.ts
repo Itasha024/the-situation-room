@@ -68,7 +68,7 @@ import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
 import { datelineOf } from "./wire-style.ts";
 import { mapsAsPin, normaliseArabic } from "./relevance.ts";
-import { iranPinAllowed, iranPins, tallyNotEvent } from "./iran-places.ts";
+import { countriesNamed, iranPinAllowed, iranPins, tallyNotEvent } from "./iran-places.ts";
 import { GAZA_ARENAS, GAZA_PROMPT, gazaContentHash } from "./gaza-reader.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { FUNERAL_RE, gazaPins } from "./gaza-places.ts";
@@ -1289,7 +1289,10 @@ function pinIran(report: LiveReport, r: Reading, sourceText: string): void {
   if (!mapsAsPin(report.type) || tallyNotEvent(report.summary)) return;
   // Where it was fired from is not where it landed.
   const from = new Set(iranPins((r.origins ?? []).join(", "), sourceText, false).map((p) => p.name));
-  const pins = iranPins(`${(r.targets ?? []).join(", ")}. ${r.headline}`, sourceText, report.type === "vessel").filter((p) => !from.has(p.name) && iranPinAllowed(r.actor_side, p, report.summary));
+  // A headline that names its country keeps its pins there (23 Oct: "…al-Hamidiyah, Quneitra countryside, southern Syria"
+  // pinned on Iran's Hamidiyeh and Lebanon's Qnaitra).
+  const said = countriesNamed(r.headline);
+  const pins = iranPins(`${(r.targets ?? []).join(", ")}. ${r.headline}`, sourceText, report.type === "vessel").filter((p) => !from.has(p.name) && iranPinAllowed(r.actor_side, p, report.summary) && (!said.size || p.kind === "sea" || said.has(p.country)));
   if (!pins.length) return;
   const [first, ...more] = pins;
   report.place = first.name;

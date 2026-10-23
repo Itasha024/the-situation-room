@@ -163,3 +163,21 @@ test("funerals pin, Israeli sources read first", async () => {
   assert.ok(GAZA_READER.newestFirst && GAZA_READER.moreNvidia?.length);
   assert.ok(israeliSource("Ben-Zion Macales"));
 });
+
+// User, 23 Oct: "17:53 syria pin landed in iran": a headline that names its country keeps its pins there.
+test("a Syrian village is not Iran's namesake", async () => {
+  const { iranPins, countriesNamed } = await import("./iran-places.ts");
+  const h = "Israeli artillery shells northern outskirts of al-Hamidiyah, Quneitra countryside, southern Syria";
+  const said = countriesNamed(h);
+  const pins = iranPins(`al-Hamidiyah. ${h}`, "قصف مدفعي يستهدف أطراف بلدة الحميدية في ريف القنيطرة جنوب سوريا", false).filter((p) => said.has(p.country));
+  assert.equal(pins[0]?.country, "Syria");
+  assert.ok(!pins.some((p) => p.country === "Iran" || p.country === "Lebanon"));
+});
+
+test("the side a headline names is not its place", async () => {
+  const { countriesNamed } = await import("./iran-places.ts");
+  assert.equal(countriesNamed("Israeli artillery shells outskirts of Kfar Tebnit in Nabatieh district").size, 0);
+  assert.equal(countriesNamed("Israel strikes Nabatieh").size, 0);
+  assert.deepEqual([...countriesNamed("Israeli artillery shells al-Hamidiyah, Quneitra countryside, southern Syria")], ["Syria"]);
+  assert.deepEqual([...countriesNamed("Drone strike on a base in Iraq")], ["Iraq"]);
+});

@@ -129,6 +129,12 @@ export const IRAN_PLACES: IranPlace[] = [
   P("Al-Qaim", 34.37, 41.09, "Iraq", "city", ["Qaim", "مدينة القائم", "قضاء القائم", "منفذ القائم"]),
   // Syria and Jordan.
   P("Damascus", 33.5138, 36.2765, "Syria", "city", ["دمشق"]),
+  // Quneitra's villages (23 Oct: "al-Hamidiyah, Quneitra countryside" went to Iran's Hamidiyeh, and Quneitra to Lebanon's Qnaitra).
+  P("Quneitra", 33.1257, 35.8241, "Syria", "city", ["Qunaitra", "Al-Quneitra", "القنيطرة"]),
+  P("Al-Hamidiyah (Quneitra)", 33.0942, 35.8211, "Syria", "city", ["al-Hamidiyah", "Hamidiyah", "Hamidiya", "الحميدية"]),
+  P("Khan Arnabah", 33.1847, 35.8833, "Syria", "city", ["Khan Arnaba", "خان أرنبة"]),
+  P("Jubata al-Khashab", 33.2347, 35.8019, "Syria", "city", ["Jabata al-Khashab", "Jubata", "جباتا الخشب"]),
+  P("Rafid", 32.9500, 35.8833, "Syria", "city", ["al-Rafid", "الرفيد"]),
   P("Deir ez-Zor", 35.3359, 40.1408, "Syria", "city", ["Deir ez-Zur", "Deir al-Zour", "دير الزور"]),
   P("Al-Bukamal", 34.4536, 40.9362, "Syria", "city", ["Abu Kamal", "Albukamal", "البوكمال"]),
   P("Al-Tanf", 33.49, 38.66, "Syria", "base", ["Tanf", "التنف"]),
@@ -475,6 +481,38 @@ export function seaPlace(e: { lat: number; lng: number; place?: string | null; l
 
 /** In Lebanon, by the pin's spot. */
 export const inLebanon = (lat: number, lng: number) => lat > 33.03 && lat < 34.7 && lng > 35.1 && lng < 36.65;
+
+/**
+ * The countries a headline names as where it happened, as the places' country fields spell them (23 Oct:
+ * "…Quneitra countryside, southern Syria" pinned on Iran's Hamidiyeh). Only a country named as the place
+ * counts ("in Syria", "southern Lebanon", "…, Iraq"): "Israeli artillery shells Kfar Tebnit" and "Israel
+ * strikes Nabatieh" name the side, not the place.
+ */
+const COUNTRY_WORDS: [string, string[]][] = [
+  ["Syria", ["Syria"]],
+  ["Lebanon", ["Lebanon"]],
+  ["Iraq", ["Iraq"]],
+  ["Iran", ["Iran"]],
+  ["Israel", ["Israel"]],
+  ["Jordan", ["Jordan"]],
+  ["Kuwait", ["Kuwait"]],
+  ["Qatar", ["Qatar"]],
+  ["Bahrain", ["Bahrain"]],
+  ["Oman", ["Oman"]],
+  ["Saudi Arabia", ["Saudi Arabia"]],
+  ["(?:the )?UAE|(?:the )?United Arab Emirates", ["UAE", "United Arab Emirates"]],
+  ["Turkey|Türkiye", ["Turkey"]],
+  ["Cyprus", ["Cyprus", "N. Cyprus"]],
+  ["Azerbaijan", ["Azerbaijan"]],
+  ["Egypt", ["Egypt"]],
+];
+const AS_PLACE = String.raw`(?:\b(?:in|inside|into|across|of|near|to|over|southern|northern|eastern|western|central|south|north|east|west|south-?east|south-?west|north-?east|north-?west)\s+(?:the\s+)?|,\s*)`;
+const COUNTRY_RES = COUNTRY_WORDS.map(([w, names]) => [new RegExp(String.raw`${AS_PLACE}(?:${w})\b`, "i"), names] as const);
+export function countriesNamed(headline: string): Set<string> {
+  const out = new Set<string>();
+  for (const [re, names] of COUNTRY_RES) if (re.test(String(headline || ""))) names.forEach((n) => out.add(n));
+  return out;
+}
 
 /**
  * Syria's Quneitra, set down on the Lebanese village of Qnaitra by the place search (17 Oct: "Israeli

@@ -29,6 +29,8 @@ export type WatchPost = {
   q?: 1;
   r?: 0 | 1;
   kv?: string[];
+  /** Found by a search on another platform (online-search.server.ts), not read from a watched channel. */
+  pl?: "bsky" | "yt";
 };
 
 /** Arabic as one spelling: no vowel marks or tatweel, one alef, ta marbuta and alef maqsura as ha and ya. */
@@ -172,6 +174,12 @@ export function isTalk(p: Pick<WatchPost, "x" | "c">): boolean {
 const GAZA_WORDS = ["غزه", "خانيونس", "خان يونس", "رفح", "دير البلح", "النصيرات", "البريج", "المغازي", "الزوايده", "جباليا", "بيت لاهيا", "بيت حانون", "المواصي", "الشجاعيه", "الزيتون", "تل الهوى", "الشاطئ", "الرمال", "القطاع"].map(plainArabic);
 const JS_WORDS = ["الضفه", "جنين", "نابلس", "طولكرم", "نور شمس", "طوباس", "الفارعه", "قلقيليه", "سلفيت", "رام الله", "البيره", "بيت لحم", "الخليل", "اريحا", "يطا", "قباطيه", "بلاطه", "القدس", "الاغوار", "مسافر يطا"].map(plainArabic);
 /** The area a post is about: its words, else its channel's. */
+/** Is it about Gaza or Judea and Samaria at all (a search's results come from anywhere). */
+export function aboutHome(text: string): boolean {
+  const p = plainArabic(text);
+  return GAZA_WORDS.some((w) => p.includes(w)) || JS_WORDS.some((w) => p.includes(w)) || /فلسطين|الفلسطيني|الاحتلال|المقاومه|حماس|السلطه الفلسطينيه/.test(p);
+}
+
 export function areaOf(text: string, channel: WatchArea): WatchArea {
   const p = plainArabic(text);
   const g = GAZA_WORDS.some((w) => p.includes(w));

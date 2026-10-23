@@ -24,7 +24,13 @@ const OWN_AREA: Record<string, WatchArea> = {
 const list = (s: string, area: WatchArea) => s.split(/\s+/).filter(Boolean).map((id) => ({ id, area }));
 const own = GAZA_TG.filter((s) => s.lean === "pa" || s.lean === "factions" || s.lean === "palestinian").map((s) => ({ id: s.id, area: OWN_AREA[s.id] ?? ("both" as WatchArea) }));
 
+/**
+ * Left out of the watch (user, 23 Oct: "drop the silent and news-only channels"): no post in the day to 23 Oct
+ * 18:00, or no comment group and under two posts of talk in that day. The factions' and Gaza's own bodies stay.
+ */
+const DROPPED = new Set("EyeOnPalestine2 AwdehTV maannews SamaNewsAgency Sadanews12 msdrnews ultrapalestine ajyalfm radioalam alam24press JusorNews today1213news gazanow timesofgaza eye_on_palestine jeninnews jenencamb nablus_news osama1984osama anas1020304050 hpress muthanapress84 hanialshaer nailkhn mostamron mohnadQ rafahaonlain Derbalh burijofficial shamal_online1 RasadAlmedan alhodhud mostfidon Gaza_shaheed mawagaza Gazarecruiters Gaza_families Et3alimm yousefhassan11 ghfhf11 shaabvoice News_now1 sa7atPl mejhar alkhamisapal gazala7zapal1 qag_2 ahyaasq nashit_jenin nabuls_news rassd Balata12 samsalmohaiam A7rartoubas Faracamp ahrar_qalqilia qalqilya_alhadath bawabatqalqilia radioalzaytona ramallahmix1 ramallahnew birzeitpress1 sawtalmughayyir koformalik12 amen24fm anajahuni bethlahem_alhadath ahrarsurif DuraCity jerichocm Palsawacom paltimenet fatehpress sardps1 newpress1 alersalps asranews1 ppsmo AlQastalps RayaNewsPS salamtv1 hawanatv shms_news paldf_net AJPalestine Warlife3 gazaalanpa Gaza24Live elhadath GAZA_NEW_0 GAza_Chanel WattanAgency AHWALRafah rsjlb AliSalemps moathalhams abedalati saedelswerki vic22pal deefatheer Nidal_homed GazaAid24 q100dd mosadat2024 mosdrafah unrwaps sanabil_elkhair one_heart_team mutqdmon shareunit aqmartofan toofandays alaqsauniversty AqsaUniversity muhandalshafei Nablusgheer plesposts ShababFMPalestine hshshdhgsye tulkrmeoon kafrqaddwm tuqualhadath FajjarBeit morabitatalaqssa fajernews qudsfeed QudsPressAgency SABQ24NEWS Shfa_News alkofiyatv hadafps kutla_nnu AnNajahNews1 mohe_ps alqudsJobs jobsalquds palrawateb".toLowerCase().split(" "));
+
 /** Every channel once (Telegram ignores case). */
 export const WATCH_TG: WatchChannel[] = [...own, ...list(GAZA, "gaza"), ...list(JS, "js"), ...list(BOTH, "both"), ...MORE_TG].filter(
-  (c, i, all) => all.findIndex((o) => o.id.toLowerCase() === c.id.toLowerCase()) === i,
+  (c, i, all) => all.findIndex((o) => o.id.toLowerCase() === c.id.toLowerCase()) === i && !DROPPED.has(c.id.toLowerCase()),
 );

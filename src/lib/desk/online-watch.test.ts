@@ -50,7 +50,7 @@ test("the summary: rising against the usual hours, calls apart, each area apart"
 });
 
 test("the watch's channels: well over a hundred, each once", () => {
-  assert.ok(WATCH_TG.length > 150);
+  assert.ok(WATCH_TG.length > 100);
   assert.equal(new Set(WATCH_TG.map((c) => c.id.toLowerCase())).size, WATCH_TG.length);
 });
 

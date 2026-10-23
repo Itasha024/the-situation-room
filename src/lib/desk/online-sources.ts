@@ -5,6 +5,7 @@
  * (no public page) need a signed-in Telegram account and are not here yet.
  */
 import { GAZA_TG } from "./gaza-sources.ts";
+import { MORE_TG } from "./online-more.ts";
 
 export type WatchArea = "gaza" | "js" | "both";
 export type WatchChannel = { id: string; area: WatchArea };
@@ -24,6 +25,6 @@ const list = (s: string, area: WatchArea) => s.split(/\s+/).filter(Boolean).map(
 const own = GAZA_TG.filter((s) => s.lean === "pa" || s.lean === "factions" || s.lean === "palestinian").map((s) => ({ id: s.id, area: OWN_AREA[s.id] ?? ("both" as WatchArea) }));
 
 /** Every channel once (Telegram ignores case). */
-export const WATCH_TG: WatchChannel[] = [...own, ...list(GAZA, "gaza"), ...list(JS, "js"), ...list(BOTH, "both")].filter(
+export const WATCH_TG: WatchChannel[] = [...own, ...list(GAZA, "gaza"), ...list(JS, "js"), ...list(BOTH, "both"), ...MORE_TG].filter(
   (c, i, all) => all.findIndex((o) => o.id.toLowerCase() === c.id.toLowerCase()) === i,
 );

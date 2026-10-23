@@ -295,9 +295,9 @@
     // The right panel: the reports, and the events placed on the map.
     rightEl = document.createElement('aside');
     rightEl.className = 'ops-right';
-    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events</button></nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
+    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events</button>${PAGE === 'gaza' ? '<button type="button" role="tab" data-rtab="on">Online</button>' : ''}</nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
       <div class="ops-rpane ops-rp-rep"></div>
-      <div class="ops-rpane ops-rp-ev"><div class="ops-evf"><input class="ops-q ops-evq" type="search" placeholder="Filter events: a place, a side, a weapon" aria-label="Filter the events"><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>`;
+      <div class="ops-rpane ops-rp-ev"><div class="ops-evf"><input class="ops-q ops-evq" type="search" placeholder="Filter events: a place, a side, a weapon" aria-label="Filter the events"><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>${PAGE === 'gaza' ? '<div class="ops-rpane ops-rp-on"><p class="ops-on-empty">Reading the channels…</p></div>' : ''}`;
     root.insertBefore(rightEl, item.nextSibling);
     const rail = $('#rail', root);
     if (rail) $('.ops-rp-rep', rightEl).appendChild(rail);
@@ -329,7 +329,7 @@
     pt.className = 'ops-ptabs';
     // Map, Brief, Reports, the fronts or arenas, Numbers, Events, Timeline (user, 21 Oct).
     const tab = (id) => tabs.find((x) => x[0] === id);
-    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], tab('timeline-wrap')].filter(Boolean);
+    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], PAGE === 'gaza' ? ['online', 'Online'] : null, tab('timeline-wrap')].filter(Boolean);
     pt.innerHTML = phone.map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
     root.insertBefore(pt, bar.nextSibling);
     pt.addEventListener('scroll', notch, { passive: true });
@@ -518,13 +518,14 @@
         if (S.left && S.tab === t.dataset.tab && !isPhone()) S.left = false; else { S.tab = t.dataset.tab; S.left = true; lastOpen = 'left'; }
         keep(); paintFrame(); return;
       }
-      if (t.dataset.rtab) { S.rtab = t.dataset.rtab; keep(); paintFrame(); return; }
+      if (t.dataset.rtab) { S.rtab = t.dataset.rtab; keep(); paintFrame(); if (S.rtab === 'on') loadOnline(); return; }
       if (t.dataset.ptab) {
         const p = t.dataset.ptab;
         S.ptab = p;
         if (LEFT_TABS[PAGE].some(([id]) => id === p)) S.tab = p;
         if (p === 'rail') S.rtab = 'rep';
         if (p === 'events') S.rtab = 'ev';
+        if (p === 'online') { S.rtab = 'on'; loadOnline(); }
         paintFrame(); if (p !== 'map') window.scrollTo({ top: 0 }); return;
       }
       const op = t.dataset.op;
@@ -2047,11 +2048,67 @@
     // The 48 hours roll on every minute.
     setInterval(drawMatrix, 60000);
   }
+  /* ---------- The Online tab (the Gaza desk, user, 23 Oct): the talk in Gaza and in Judea and Samaria ---------- */
+  const ON = { data: null, area: 'gaza', topic: null, timer: 0, at: 0 };
+  async function loadOnline() {
+    if (PAGE !== 'gaza') return;
+    clearTimeout(ON.timer);
+    ON.timer = setTimeout(() => { if (S.rtab === 'on') loadOnline(); }, 60000);
+    if (Date.now() - ON.at < 30000 && ON.data) return paintOnline();
+    try {
+      const r = await fetch('/api/online', { cache: 'no-store' });
+      if (r.ok) { ON.data = await r.json(); ON.at = Date.now(); }
+    } catch (e) { /* the last one stays */ }
+    paintOnline();
+  }
+  const TREND = { rising: ['up', '▲'], new: ['up', 'new'], falling: ['down', '▼'], steady: ['', ''] };
+  function onPost(p, call) {
+    const t = Date.parse(p.at);
+    return `<li class="ops-on-post${call ? ' call' : ''}"><div class="ops-on-meta"><a href="${esc(p.u)}" target="_blank" rel="noopener">@${esc(p.ch)}</a><span>${esc(hm(t, VIEW_TZ()))}</span>${p.v ? `<span>${p.v >= 1000 ? `${(p.v / 1000).toFixed(1)}K` : p.v} views</span>` : ''}${p.m ? '<span>media</span>' : ''}</div><p dir="auto">${esc(p.x.length > 280 ? `${p.x.slice(0, 280)}…` : p.x)}</p></li>`;
+  }
+  function paintOnline() {
+    const pane = $('.ops-rp-on', rightEl);
+    if (!pane) return;
+    const d = ON.data;
+    const a = d && (d.areas || []).find((x) => x.area === ON.area);
+    if (!a) { pane.innerHTML = '<p class="ops-on-empty">The watch writes its first summary after its first read of the channels.</p>'; return; }
+    const names = { gaza: 'Gaza', js: 'Judea and Samaria' };
+    const max = Math.max(1, ...a.hourly);
+    const spark = a.hourly.map((n, i) => `${i ? 'L' : 'M'}${(i * 100) / 23} ${30 - (n / max) * 28}`).join(' ');
+    const topics = a.topics.filter((t) => t.now || t.usual);
+    const tmax = Math.max(1, ...topics.map((t) => t.now));
+    const pick = ON.topic && topics.find((t) => t.id === ON.topic);
+    const posts = (ON.topic ? a.top.filter((p) => p.t.includes(ON.topic)) : a.top).slice(0, 20);
+    pane.innerHTML = `<div class="ops-onw">
+      <div class="ops-on-areas" role="group" aria-label="Area">${['gaza', 'js'].map((k) => `<button type="button" data-on-area="${k}" aria-pressed="${k === ON.area}">${names[k]}</button>`).join('')}</div>
+      <div class="ops-on-head"><b>${a.posts}</b> posts in the last ${d.windowHours} hours · ${d.channels} channels<svg viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"><path d="${spark}"/></svg><small>Posts an hour, last 24 hours · updated ${esc(hm(Date.parse(d.at), VIEW_TZ()))}</small></div>
+      <h4>Topics <small>now vs. the usual for these hours</small></h4>
+      <ul class="ops-on-topics">${topics.map((t) => { const [cls, mark] = TREND[t.trend] || TREND.steady; return `<li><button type="button" data-on-topic="${t.id}" aria-pressed="${t.id === ON.topic}" class="${t.call ? 'call' : ''}"><span class="ot-n">${esc(t.name)}</span><span class="ot-bar"><i style="width:${Math.round((t.now / tmax) * 100)}%"></i></span><span class="ot-c">${t.now}</span><span class="ot-tr ${cls}">${mark}${t.trend === 'rising' || t.trend === 'falling' ? ` ${t.ratio >= 99 ? '' : `${t.ratio}×`}` : ''}</span></button></li>`; }).join('') || '<li class="ops-on-empty">Nothing tagged yet.</li>'}</ul>
+      ${a.calls.length ? `<h4>Calls <small>to protest, to strike, threats: calls, not events</small></h4><ol class="ops-on-list">${a.calls.slice(0, 8).map((p) => onPost(p, true)).join('')}</ol>` : ''}
+      ${a.places.length ? `<h4>Places in the talk</h4><p class="ops-on-chips">${a.places.map((p) => `<span>${esc(p.name)} <b>${p.n}</b></span>`).join('')}</p>` : ''}
+      ${a.tags.length ? `<h4>Hashtags</h4><p class="ops-on-chips">${a.tags.map((t) => `<span dir="auto">${esc(t.tag)} <b>${t.n}</b>${t.isNew ? ' <em>new</em>' : ''}</span>`).join('')}</p>` : ''}
+      <h4>${pick ? esc(pick.name) : 'Most read'} <small>${pick ? '<button type="button" data-on-topic="">all topics</button>' : 'views, rising topics first'}</small></h4>
+      <ol class="ops-on-list">${posts.map((p) => onPost(p, false)).join('') || '<li class="ops-on-empty">No posts on this in the last hours.</li>'}</ol>
+    </div>`;
+  }
+  function wireOnline() {
+    const pane = rightEl && $('.ops-rp-on', rightEl);
+    if (!pane) return;
+    pane.addEventListener('click', (ev) => {
+      const ar = ev.target.closest('[data-on-area]');
+      if (ar) { ON.area = ar.dataset.onArea; ON.topic = null; paintOnline(); return; }
+      const tp = ev.target.closest('[data-on-topic]');
+      if (tp) { ON.topic = tp.dataset.onTopic && tp.dataset.onTopic !== ON.topic ? tp.dataset.onTopic : null; paintOnline(); }
+    });
+  }
+
   function start() {
     if (started) return;
     if (!findRoot()) return;
     started = true;
     TRAFFIC = PAGE === 'all';
+    // The Online tab is the Gaza desk's only.
+    if (S.rtab === 'on' && PAGE !== 'gaza') S.rtab = 'rep';
     if (!TRAFFIC) { S.air = false; S.sea = false; }
     // Shown in any case after a few seconds, whatever kept the map from being placed.
     setTimeout(() => root && root.classList.add('ops-ready'), 5000);
@@ -2059,6 +2116,7 @@
       applyPrefs();
       if (OPEN_REPORT) { S.right = true; S.rtab = 'rep'; S.ptab = 'rail'; }
       build(); tick(); counts(); startHud();
+      wireOnline(); if (S.rtab === 'on') loadOnline();
       if (PAGE !== 'all') loadCities();
       const leg = $('.ops-who', root);
       if (leg) { splitLegend(); new MutationObserver(splitLegend).observe(leg, { childList: true, subtree: true }); }

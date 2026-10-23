@@ -32,6 +32,7 @@ import { getStore } from "./desk/store.ts";
 import type { ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { scanIranSources } from "./iran-scan.server.ts";
 import { scanGazaSources, toGaza } from "./gaza-scan.server.ts";
+import { runOnlineWatch } from "./online-watch.server.ts";
 import { IRAN_INBOX, type RawHit, type TickResult, WAR_ONLY, type YemenFetch, fetchYemenSources, readYemen, runScanCycle, yemenCandidates } from "./yemen-scan.server.ts";
 import { isIranDeskItem } from "./desk/iran-reader.ts";
 
@@ -104,7 +105,9 @@ async function scanThenReadYemen(state: ScanState, prev: ScanPayload | null): Pr
       console.log(`[site] Gaza sources: ${n} item(s) to the Gaza inbox, ${iranItems.length} to the Iran inbox, ${yemenItems.length} to the Yemen inbox`);
     })
     .catch((err) => console.error("[site] Gaza sources:", err instanceof Error ? err.message : err));
-  const got = await fetchYemenSources(state, prev);
+  // The Gaza desk's Online watch: the talk in Gaza and in Judea and Samaria (user, 23 Oct).
+  const watch = runOnlineWatch(store, Date.now()).catch((err) => console.error("[online]", err instanceof Error ? err.message : err));
+  const got =await fetchYemenSources(state, prev);
   remember(got.hits);
   void toGaza(store, got.gazaShared ?? [], "yemen").catch((err) => console.error("[site] Gaza inbox:", err instanceof Error ? err.message : err));
   let mine: YemenFetch = got;
@@ -120,6 +123,7 @@ async function scanThenReadYemen(state: ScanState, prev: ScanPayload | null): Pr
   } finally {
     await iran;
     await gazaOwn;
+    await watch;
   }
 }
 

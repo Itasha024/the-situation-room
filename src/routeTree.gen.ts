@@ -17,6 +17,7 @@ import { Route as YemenConflictDeskRouteImport } from './routes/yemen-conflict-d
 import { Route as ApiBriefRouteImport } from './routes/api/brief'
 import { Route as ApiDeskRouteImport } from './routes/api/desk'
 import { Route as ApiOilRouteImport } from './routes/api/oil'
+import { Route as ApiOnlineRouteImport } from './routes/api/online'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiStatusRouteImport } from './routes/api/status'
@@ -65,6 +66,11 @@ const ApiDeskRoute = ApiDeskRouteImport.update({
 const ApiOilRoute = ApiOilRouteImport.update({
   id: '/api/oil',
   path: '/api/oil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOnlineRoute = ApiOnlineRouteImport.update({
+  id: '/api/online',
+  path: '/api/online',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiScanRoute = ApiScanRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/oil': typeof ApiOilRoute
+  '/api/online': typeof ApiOnlineRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/oil': typeof ApiOilRoute
+  '/api/online': typeof ApiOnlineRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
   '/api/oil': typeof ApiOilRoute
+  '/api/online': typeof ApiOnlineRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
   '/api/status': typeof ApiStatusRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/api/brief'
     | '/api/desk'
     | '/api/oil'
+    | '/api/online'
     | '/api/scan'
     | '/api/search'
     | '/api/status'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/api/brief'
     | '/api/desk'
     | '/api/oil'
+    | '/api/online'
     | '/api/scan'
     | '/api/search'
     | '/api/status'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/api/brief'
     | '/api/desk'
     | '/api/oil'
+    | '/api/online'
     | '/api/scan'
     | '/api/search'
     | '/api/status'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   ApiBriefRoute: typeof ApiBriefRoute
   ApiDeskRoute: typeof ApiDeskRoute
   ApiOilRoute: typeof ApiOilRoute
+  ApiOnlineRoute: typeof ApiOnlineRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiSearchRoute: typeof ApiSearchRoute
   ApiStatusRoute: typeof ApiStatusRoute
@@ -308,6 +321,13 @@ declare module '@tanstack/react-router' {
       path: '/api/oil'
       fullPath: '/api/oil'
       preLoaderRoute: typeof ApiOilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/online': {
+      id: '/api/online'
+      path: '/api/online'
+      fullPath: '/api/online'
+      preLoaderRoute: typeof ApiOnlineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/scan': {
@@ -385,6 +405,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBriefRoute: ApiBriefRoute,
   ApiDeskRoute: ApiDeskRoute,
   ApiOilRoute: ApiOilRoute,
+  ApiOnlineRoute: ApiOnlineRoute,
   ApiScanRoute: ApiScanRoute,
   ApiSearchRoute: ApiSearchRoute,
   ApiStatusRoute: ApiStatusRoute,

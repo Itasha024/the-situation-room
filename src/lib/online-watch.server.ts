@@ -11,6 +11,7 @@ import { type HourCounts, type WatchPost, countHour, parseComments, parseWatchPa
 import { fetchText } from "./yemen-scan.server.ts";
 import { type Briefs, writeBriefs } from "./desk/online-brief.ts";
 import { CLASSIFY_BATCH, classifyBatch } from "./desk/online-classify.ts";
+import { type SweepState, sweep } from "./online-search.server.ts";
 
 export const WATCH_HOURS = "gaza:online:h";
 export const WATCH_COUNTS = "gaza:online-counts";
@@ -38,6 +39,8 @@ type State = {
   talk?: Record<string, { yes: number; tries: number; at: number }>;
   /** When each post's thread was last read. */
   threadAt?: Record<string, number>;
+  /** The keyword sweep's turn: when each search last ran. */
+  sweep?: SweepState;
 };
 
 async function pool<T>(items: T[], run: (x: T) => Promise<void>): Promise<void> {
@@ -110,6 +113,16 @@ export async function runOnlineWatch(store: DeskStore, now = Date.now()): Promis
   });
   add(comments);
 
+  // The keyword sweep on the other platforms (user, 23 Oct): a few of its hundreds of searches each tick.
+  let swept = 0;
+  try {
+    const { found } = await sweep((state.sweep ??= {}), now);
+    add(found);
+    swept = found.length;
+  } catch (err) {
+    console.error("[online] sweep:", err instanceof Error ? err.message : err);
+  }
+
   // The model sorts what it has not read yet: news, a notice or talk, and talk's kinds (user, 23 Oct).
   const unsorted = Object.values(rows).flat().filter((p) => !p.q && now - Date.parse(p.at) < 12 * H).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, SORT_PER_TICK);
   let sorted = 0;
@@ -151,6 +164,6 @@ export async function runOnlineWatch(store: DeskStore, now = Date.now()): Promis
   }
   await store.putJson(WATCH_SUMMARY, { ...recent, day, briefs });
   const withTalk = Object.values(talk).filter((t) => t.yes > 0).length;
-  console.log(`[online] ${read} of ${due.length} channels read, ${fresh.length} new posts; ${picks.length} comment threads read, ${comments.length} comments (${withTalk} channels with comments); ${sorted} sorted by the model; ${posts.length} in the last day`);
+  console.log(`[online] ${read} of ${due.length} channels read, ${fresh.length} new posts; ${picks.length} comment threads read, ${comments.length} comments (${withTalk} channels with comments); ${sorted} sorted by the model; ${swept} found by the keyword sweep; ${posts.length} in the last day`);
   return { read, posts: fresh.length, comments: comments.length };
 }

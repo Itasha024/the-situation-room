@@ -30,7 +30,7 @@ export type WatchPost = {
   r?: 0 | 1;
   kv?: string[];
   /** Found by a search on another platform (online-search.server.ts), not read from a watched channel. */
-  pl?: "bsky" | "yt";
+  pl?: "bsky" | "yt" | "tiktok" | "instagram" | "facebook" | "x" | "web";
 };
 
 /** Arabic as one spelling: no vowel marks or tatweel, one alef, ta marbuta and alef maqsura as ha and ya. */

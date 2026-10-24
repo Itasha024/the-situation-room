@@ -9,6 +9,7 @@ import { anglicise } from "./anglicise.ts";
 import type { DeskType } from "./digest.ts";
 import type { DeskId } from "../desks.ts";
 import { gazaWords } from "./gaza-words.ts";
+import { arenaSourceRule } from "./gaza-sourcing.ts";
 import { aboutFootage } from "./media.ts";
 import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
@@ -859,8 +860,8 @@ export function serveCard(r: Row, desk: DeskId): boolean {
   const fix = (s: string) => {
     let out = officeTitles(partisanWords(respell(s), lebanon, desk === "iran"));
     if (desk === "yemen") out = houthiWords(out, houthi);
-    // The Gaza desk's own words on every stored card too (gaza-words.ts).
-    if (desk === "gaza") out = gazaWords(out);
+    // The Gaza desk's own words on every stored card of every desk (gaza-words.ts; 24 Oct: "West Bank" on an Iran card).
+    out = gazaWords(out);
     return out;
   };
   // A link to another story: the first other account leads, or the card is not shown (Round 4 of 20 Oct).
@@ -871,6 +872,17 @@ export function serveCard(r: Row, desk: DeskId): boolean {
     r.source = next.source;
     r.url = next.url;
     r.alsoReportedBy = also.filter((a) => a !== next);
+  }
+  // Gaza and Judea and Samaria from the Israeli and Palestinian sources (user, 24 Oct): another outlet's
+  // account gives the lead to one of theirs under it, or is not shown, unless it is its own exclusive.
+  const flags = Array.isArray(r.flags) ? (r.flags as string[]) : [];
+  if (desk !== "yemen" && !flags.includes("exclusive") && !exclusiveUrl(String(r.url ?? "")) && arenaSourceRule({ headline: summary, type, source })) {
+    const also = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []) as { source: string; url: string }[];
+    const next = also.find((a) => a?.url && !arenaSourceRule({ headline: summary, type, source: a.source }));
+    if (!next) return false;
+    r.alsoReportedBy = [{ source, url: String(r.url ?? "") }, ...also.filter((a) => a !== next)];
+    r.source = next.source;
+    r.url = next.url;
   }
   // A card about its footage is shown with that footage or not at all (user, 18 Oct: "Houthi media publishes new footage …" with no video).
   if (aboutFootage({ summary }) && !r.media) return false;

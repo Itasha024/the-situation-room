@@ -15,6 +15,7 @@ import { cleanPoints, onePointEach } from "./prose.ts";
 import { headlinePoints, NUM_MARK, numberRefs, type Ref, stripRefs } from "./refs.ts";
 import { keepSpeaker, writerInput } from "./iran-brief.ts";
 import { gazaWords, GAZA_WORD_RULES } from "./gaza-words.ts";
+import { serveCard } from "./copy-rules.ts";
 import type { DeskStore } from "./store.ts";
 import { TRUMP_KEY, type TrumpFeed } from "./trump.ts";
 import type { LiveReport } from "./types.ts";
@@ -123,7 +124,8 @@ async function build(store: DeskStore, now: Date): Promise<GazaBrief | null> {
     return Number.isFinite(t) && t >= start && t < end;
   };
   const { reports } = await store.recentDesk(1500, undefined, { events: false, desk: "gaza" });
-  const cards = (reports as unknown as LiveReport[]).filter((r) => inWin(String(r.at || "")));
+  // The cards as served (audit of 24 Oct): a card the serve rules hide never feeds the brief, and a lead swapped by them is cited.
+  const cards = (reports as unknown as LiveReport[]).filter((r) => inWin(String(r.at || "")) && serveCard(r as unknown as Record<string, unknown>, "gaza"));
   const feed = (await store.getJson<TrumpFeed>(TRUMP_KEY)) ?? { statements: [] };
   const trump = feed.statements.filter((s) => !s.off && !s.in && inWin(s.at) && ABOUT_GAZA.test(`${s.headline ?? ""} ${s.text ?? ""}`));
 

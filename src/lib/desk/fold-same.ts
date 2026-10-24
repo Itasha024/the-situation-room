@@ -83,6 +83,20 @@ const SPEAKERS: { key: string; who: RegExp; own?: RegExp }[] = [
   { key: "oic", who: /^(?:the )?(?:OIC|Organi[sz]ation of Islamic Cooperation)(?: (?:chief|secretary[- ]general))?$/i },
   // Round 4 of 20 Oct: the Saudi ambassador's interview went out as twelve cards in an hour (Al Hadath, Al Arabiya, Crater Sky, South24 ...).
   { key: "saudi ambassador to yemen", who: /\b(?:Mohammed )?Al[- ]Jaber\b|\bSaudi ambassador(?: to Yemen)?\b/i, own: /Al[- ]?Jaber/i },
+  // Israel's and the Palestinians' speakers, and the Gaza plan's (audit of 24 Oct: one occasion was several cards).
+  { key: "netanyahu", who: /\bNetanyahu\b|\bIsrael(?:i|'s)? (?:prime minister|PM)\b/i, own: /Netanyahu|Prime Minister of Israel|PMO/i },
+  { key: "katz", who: /\b(?:Israel )?Katz\b|\bIsrael(?:i|'s)? defen[cs]e minister\b/i, own: /Katz/i },
+  { key: "saar", who: /\bSa['’]?ar\b|\bIsrael(?:i|'s)? foreign minister\b/i, own: /Sa['’]?ar/i },
+  { key: "idf spokesman", who: /\bIDF(?: Arabic)? spokes(?:man|person)\b|\bDefrin\b|\bAdraee\b|\bAdraei\b|\bIsraeli army spokes(?:man|person)\b/i, own: /^IDF|Adraee|Defrin/i },
+  { key: "basem naim", who: /\bBasem Naim\b/i, own: /Basem Naim|Naim/i },
+  { key: "hazem qassem", who: /\bHazem Qass?em\b|\bHamas spokes(?:man|person)\b/i, own: /Hazem Qass?em/i },
+  { key: "khalil al-hayya", who: /\b(?:Khalil )?al-Hayya\b/i },
+  { key: "abu obeida", who: /\bAbu Obeida\b|\bQassam Brigades spokes(?:man|person)\b/i, own: /Qassam|almoqawma/i },
+  { key: "islamic jihad", who: /^(?:the )?(?:Palestinian )?Islamic Jihad(?: spokes(?:man|person))?$|\bAbu Hamza\b|\bSaraya al-Quds spokes(?:man|person)\b/i, own: /Islamic Jihad|Saraya/i },
+  { key: "abbas", who: /\bMahmoud Abbas\b|\bPalestinian president\b|^(?:President )?Abbas$/i },
+  { key: "board of peace", who: /^(?:the )?Board of Peace(?: (?:chief|envoy|spokes(?:man|person)))?$|\bMladenov\b/i, own: /Board of Peace|Mladenov/i },
+  { key: "kushner", who: /\bKushner\b/i },
+  { key: "witkoff", who: /\bWitkoff\b/i },
 ];
 /** Talk only, unless a spokesman speaks: his count of the day's operations is typed combat as often as statement. */
 const SPOKES = /\bspokes(?:man|person|woman)\b/i;
@@ -956,10 +970,17 @@ export function foldServed<T extends Card>(reports: T[]): { reports: T[]; folded
   const into = new Map<string, string>();
   // The accounts in each card an event rule joined, for the rules that may join any of them.
   const members = new Map<T, T[]>();
+  // A later account written as its own card on an earlier one (flag "update", yemen-scan foldIntoPublished)
+  // is not folded back into that card here.
+  const updateOf = (k: T, r: T) => {
+    const to = (r as { replyTo?: string }).replyTo;
+    return !!to && (r.flags ?? []).includes("update") && (k.fp === to || (members.get(k) ?? []).some((m) => m.fp === to));
+  };
   const find = (r: T): [T, Rule] | null => {
     // An event first: a ministry's toll of the dead belongs with the dead, not
     // with the ministry's other words that day.
     for (const k of kept) {
+      if (updateOf(k, r)) continue;
       const rule = eventRule(k, r);
       if (rule) return [k, rule];
       for (const m of members.get(k) ?? []) {
@@ -968,6 +989,7 @@ export function foldServed<T extends Card>(reports: T[]): { reports: T[]; folded
       }
     }
     for (const k of kept) {
+      if (updateOf(k, r)) continue;
       const rule = talkRule(k, r);
       if (rule) return [k, rule];
     }

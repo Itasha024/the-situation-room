@@ -11,6 +11,7 @@ import { getStore } from "@/lib/desk/store";
 import { gzipped, respond } from "@/lib/desk/microcache";
 import { iranLeanOfSource } from "@/lib/yemen-scan.server";
 import { gazaLeanOf } from "@/lib/desk/gaza-sources";
+import { gazaWords } from "@/lib/desk/gaza-words";
 import { houthiAttack, pinSideOf } from "@/lib/desk/dev-marks";
 import { cardsOnTheirPins, serveIranPins, serveYemenPins } from "@/lib/desk/serve-map-pins";
 import { exclusivesOut, idOrderTimes, postTimes, serveCard } from "@/lib/desk/copy-rules";
@@ -59,6 +60,11 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
   // The review of 18 Oct's rules on stored cards (copy-rules.ts): not news, Iran's home affairs and
   // the other desk's cards are not shown here; Houthi and partisan words, offices and types are fixed.
   if (!since) slice.reports = (slice.reports as Record<string, unknown>[]).filter((r) => serveCard(r, desk)) as typeof slice.reports;
+  // The map's pins in the site's words too (audit of 24 Oct: "West Bank" on a pin's label).
+  for (const e of ((slice as { events?: Record<string, unknown>[] }).events ?? [])) {
+    if (typeof e.label === "string") e.label = gazaWords(e.label);
+    if (typeof e.text === "string") e.text = gazaWords(e.text);
+  }
   // A word a model glued to a name is shown split, and a name in the
   // desk's one spelling; the row is left as it is.
   for (const r of slice.reports) {

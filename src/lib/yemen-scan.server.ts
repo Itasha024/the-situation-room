@@ -19,7 +19,7 @@ import { deskDay } from "./desk/brief.ts";
 import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
 import { dbMeter, getStore, migrateBlob, resetDbMeter } from "./desk/store.ts";
-import { desksOf } from "./desk/desk-route.ts";
+import { deskKey, desksOf } from "./desk/desk-route.ts";
 import { type ResolveNeed, canResolve, cleanUrl, isGnews, knownResolve, outletFromHost, resolveGoogleNews, resolvesLeft } from "./desk/gnews.ts";
 import { bingLeft, bingResolve } from "./desk/bing.ts";
 import { placeFromWords } from "./desk/yemen-pins.ts";
@@ -37,14 +37,14 @@ import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { nearerSource, officialVoice } from "./desk/speaker-press.ts";
 import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, IRAN_RATINGS_KEY, IRAN_RATINGS_V, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, iranSide, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
-import { leadFromSite, mergeAlso, ownNewsApart, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead } from "./desk/site-articles.ts";
+import { leadFromSite, mergeAlso, ownNewsApart, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead, sideRefusesLead } from "./desk/site-articles.ts";
 import { relinkStoredCards } from "./desk/relink.ts";
 import { fixStoredPosts } from "./desk/post-fit.ts";
 import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/media.ts";
 import { listenToVideos } from "./desk/listen.ts";
 import { triage } from "./desk/triage.ts";
 import { askChain, type ChainModel, COMBINE_MODELS } from "./desk/models.ts";
-import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves } from "./desk/combine.ts";
+import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves, splitEnrich } from "./desk/combine.ts";
 import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
 import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
@@ -1607,6 +1607,16 @@ const CLAIM_WINDOW_MS = 30 * 60_000;
 const DUPLICATE_WINDOW_MS = 6 * 3600_000;
 /** How far back the one-event rules of fold-same.ts look for a card: a ship incident holds for a day. */
 const SAME_FOLD_MS = 24 * 3600_000;
+/**
+ * A later account with something new on a card this much older is a card of its own, following that one up,
+ * not a line folded out of sight under it (user, 24 Oct: "if too much time passed … make a new report").
+ */
+export const FOLLOW_UP_MS = 3 * 3600_000;
+/** Later accounts waiting for a tick with calls left to be written into their cards (combine.ts splitEnrich). */
+const ENRICH_QUEUE = "enrich-queue";
+const ENRICH_QUEUE_MAX = 40;
+const ENRICH_KEEP_MS = 24 * 3600_000;
+type EnrichWaiting = { home: string; add: LiveReport; queuedAt: number };
 /** A relay and the card of the outlet it cites: one story within the day. */
 const RELAY_HOME_MS = 24 * 3600_000;
 /** Two relays of one body's statement: the same story within two hours, or any of its words within twenty minutes. */
@@ -1732,6 +1742,20 @@ export function foldIntoPublished(
     // the card it copies, and went out as a second card.
     const known = (o: LiveReport) => published.has(o.fp) || !inPayload.has(o.fp);
     const before = (o: LiveReport, ms: number) => (Date.parse(o.at) <= t || known(o)) && Math.abs(t - Date.parse(o.at)) <= ms;
+    // A card hours older that this account adds to: the account is a card of its own that follows it up,
+    // flagged "update" so the served fold leaves it apart (fold-same.ts). A copy with nothing new still folds.
+    // Not a relay retelling its original, an exclusive's or an original's retellings (user, 8 Oct: they only
+    // retell it), nor another outlet's line of one speaker's words (one occasion, one card).
+    const followsUp = (o: LiveReport): boolean => {
+      if (t - Date.parse(o.at) <= FOLLOW_UP_MS || r.citing || isExclusiveCard(o) || isOriginal(o)) return false;
+      const who = speechOwner(r.summary)?.key;
+      if (who && who === speechOwner(o.summary)?.key) return false;
+      if (!addsFacts(o, r)) return false;
+      r.replyTo ||= o.fp;
+      r.flags = [...new Set([...(r.flags ?? []), "update"])];
+      console.log(`[fold] ${r.url} kept as its own card, an update of ${o.fp} from ${Math.round((t - Date.parse(o.at)) / 3600_000)} h before`);
+      return true;
+    };
     // The reader said it: this is another outlet on an event already published.
     // Held to the code's own test: within hours, and no casualty figures that
     // disagree (UNICEF's 15 children killed was folded into a card on 693
@@ -1958,19 +1982,29 @@ export function foldIntoPublished(
         }
         if (hit) break;
       }
+      if (hit && followsUp(hit[0])) continue;
       if (hit) {
         const [into, rule] = hit;
         gone.add(r);
         foldTrail.set(r.url, `${into.source}: ${into.summary.slice(0, 90)}`);
         foldTrail.set(r.fp, `${into.source}: ${into.summary.slice(0, 90)}`);
+        // What the later account adds is written into the card, not only listed under it (user, 24 Oct).
+        const adds = enrich && addsFacts(into, r);
         joinInto(asCard(into), asCard(r), rule);
+        if (adds) enrich!.push([into, r]);
         if (!inPayload.has(into.fp)) touched.add(into);
         if (siteOutlet(r)) console.log(`[fold] site article ${r.url} joined ${into.fp} by ${rule}${inPayload.has(into.fp) ? " (in payload)" : ""}`);
         continue;
       }
     }
     if (!home) continue;
+    if (followsUp(home)) continue;
     gone.add(r);
+    // A card changing hands keeps what its old lead told: the old account is written into it (user, 24 Oct).
+    const prior = { ...home, alsoReportedBy: undefined } as LiveReport;
+    const keepPrior = () => {
+      if (enrich && addsFacts(home!, prior)) enrich.push([home!, prior]);
+    };
     // By id too: a relay traced to its original carries the original's link.
     foldTrail.set(r.url, `${home.source}: ${home.summary.slice(0, 90)}`);
     foldTrail.set(r.fp, `${home.source}: ${home.summary.slice(0, 90)}`);
@@ -1981,6 +2015,7 @@ export function foldIntoPublished(
     // minister vanished into a Fars Telegram card).
     if (siteTakesLead(home, r)) {
       leadFromSite(home, r);
+      keepPrior();
       if (home.side) home.confidence = confidenceOf(home, (home.alsoReportedBy ?? []).map((a) => sideOfSource(a.source)));
       touched.add(home);
       continue;
@@ -2011,6 +2046,7 @@ export function foldIntoPublished(
       home.alsoReportedBy = siteAlsoOnly(mergeAlso(undefined, [was, ...(home.alsoReportedBy ?? [])], home));
       home.flags = [...new Set([...(home.flags ?? []), "exclusive"])];
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap"])];
+      keepPrior();
       touched.add(home);
       continue;
     }
@@ -2038,6 +2074,7 @@ export function foldIntoPublished(
       // A big site's article stays listed, the card's old lead among them.
       home.alsoReportedBy = mergeAlso(undefined, [was, ...(home.alsoReportedBy ?? [])].filter((a) => siteOutlet(a) || (a !== was && !quotesOwnChannel(a.summary ?? "", r.source))), home) ?? [];
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap", "original"])];
+      keepPrior();
       touched.add(home);
       continue;
     }
@@ -2055,20 +2092,23 @@ export function foldIntoPublished(
       // Only a big site's article stays under it.
       home.alsoReportedBy = siteAlsoOnly(mergeAlso(undefined, [was, ...(home.alsoReportedBy ?? [])], home));
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap", "original"])];
+      keepPrior();
       touched.add(home);
       continue;
     }
     // An aggregator's card gives way to the first source of its own (user, 3 Oct).
     const overAggregator = isAggregator(home.source) && !isAggregator(r.source);
     if (
-      ownWords ||
+      // The side rules first (user, 24 Oct): an outlet that could not lead this card never takes it.
+      (ownWords || !sideRefusesLead(home, r)) &&
+      (ownWords ||
       overAggregator ||
       // The report's own country's sources, the most official first (user, 8 Oct).
       nearerSource(home.summary, accountOf(r.source), accountOf(home.source)) ||
       (homeOutlet(r.source) &&
         !homeOutlet(home.source) &&
         sideOfSource(r.source) === sideOfSource(home.source) &&
-        scoreReport(r) >= scoreReport(home))
+        scoreReport(r) >= scoreReport(home)))
     ) {
       const relayed = { source: home.source, url: home.url, summary: home.summary };
       home.summary = r.summary;
@@ -2079,6 +2119,7 @@ export function foldIntoPublished(
       home.alsoReportedBy = mergeAlso(undefined, [relayed, ...(home.alsoReportedBy ?? []), ...(r.alsoReportedBy ?? [])], home) ?? [];
       home.tags = [...new Set([...(home.tags ?? []), "lead-swap"])];
       if (home.side) home.confidence = confidenceOf(home, home.alsoReportedBy.map((a) => sideOfSource(a.source)));
+      keepPrior();
       touched.add(home);
       continue;
     }
@@ -3345,12 +3386,33 @@ export async function shapeCards(
   linkFollowUps(newCards, [...stored, ...uniqReports]);
   const enrich: [LiveReport, LiveReport][] = [];
   const touched = [...foldIntoPublished(uniqReports, published, stored, enrich), ...threadSpeeches(uniqReports, published, stored)];
+  // The accounts a tick had no calls left for wait for the next (they were dropped before, 24 Oct audit).
+  const queueKey = deskKey(pipe.desk, ENRICH_QUEUE);
+  try {
+    const waiting = (await (await getStore()).getJson<EnrichWaiting[]>(queueKey)) ?? [];
+    const cards = new Map([...stored, ...uniqReports].map((c) => [c.fp, c]));
+    for (const w of waiting) {
+      const home = cards.get(w.home);
+      if (home && Date.now() - w.queuedAt < ENRICH_KEEP_MS && !enrich.some(([h, r]) => h === home && r.url === w.add.url)) enrich.push([home, w.add]);
+    }
+  } catch (err) {
+    console.error("[fold] enrich queue:", err instanceof Error ? err.message : err);
+  }
+  const { now: enrichNow, later } = splitEnrich(enrich);
+  try {
+    const old = new Map(((await (await getStore()).getJson<EnrichWaiting[]>(queueKey)) ?? []).map((w) => [`${w.home} ${w.add.url}`, w.queuedAt]));
+    const rows = later.slice(0, ENRICH_QUEUE_MAX).map(([h, r]) => ({ home: h.fp, add: { ...r, alsoReportedBy: undefined }, queuedAt: old.get(`${h.fp} ${r.url}`) ?? Date.now() }));
+    await (await getStore()).putJson(queueKey, rows);
+    if (rows.length) console.log(`[fold] ${rows.length} later account(s) wait for the next tick to be written into their cards`);
+  } catch (err) {
+    console.error("[fold] enrich queue:", err instanceof Error ? err.message : err);
+  }
   // A later outlet on a published event added a figure or a place: the card
   // is written again with it, rather than the new fact sitting under "Also".
-  if (enrich.length) {
+  if (enrichNow.length) {
     try {
       const rewritten = await enrichCards(
-        enrich,
+        enrichNow,
         async (system, user) => (await askChain("combine", system, user, { temperature: 0.1, timeoutMs: 15_000, models: pipe.combineModels ?? COMBINE_MODELS }))?.json ?? null,
         await getStore(),
         pipe.combineSystem,

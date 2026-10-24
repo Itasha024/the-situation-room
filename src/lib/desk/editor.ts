@@ -74,7 +74,7 @@ import { gazaWords } from "./gaza-words.ts";
 import { FUNERAL_RE, gazaPins } from "./gaza-places.ts";
 import { lineMoveOf } from "./gaza-line.ts";
 import { GAZA_ALIGNMENT, type GazaLean, gazaTierOf } from "./gaza-sources.ts";
-import { gazaSourceRule, israeliSource } from "./gaza-sourcing.ts";
+import { arenaSourceRule, gazaSourceRule, israeliSource } from "./gaza-sourcing.ts";
 import { copyKey } from "./copies.ts";
 import {
   HOUTHI_OUTLET,
@@ -976,7 +976,9 @@ function reviewReject(r: Reading, c: Candidate, desk: DeskId, strict: boolean): 
   const relay = relayOf({ headline: r.headline, body: r.body, source: c.source, lean: c.lean, desk, own: isExclusive(c.text, c.source) || c.tags.includes("original") });
   if (relay) return { kind: "reject", reason: "reader", note: sentence(relay) };
   const own = isExclusive(c.text, c.source) || c.tags.includes("original");
-  const told = desk === "gaza" ? gazaSourceRule({ headline: r.headline, type: TYPE_OF[r.event_type] ?? String(r.event_type), source: c.source, own }) : null;
+  const sourcing = { headline: r.headline, type: TYPE_OF[r.event_type] ?? String(r.event_type), source: c.source, own };
+  // Israel's and the Palestinians' words from their own sources on every desk (audit of 24 Oct: "Hamas: …" from Al-Alam passed on Iran).
+  const told = gazaSourceRule(sourcing) ?? (desk !== "yemen" ? arenaSourceRule(sourcing) : null);
   if (told) return { kind: "reject", reason: "reader", note: sentence(`relay: ${told}`) };
   const wrong = wrongSource(r.headline, c.source, c.text);
   if (wrong) return { kind: "reject", reason: "reader", note: sentence(wrong) };
@@ -1221,7 +1223,8 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   // role the text did not give.
   // The review of 18 Oct: Lebanon's "hostile" fire is Israel's, "the enemy" is the speaker's word, offices.
   const lebanon = lebanonContext(`${raw.headline} ${raw.body}`, c.source);
-  const fix = (s: string) => officeTitles(partisanWords(rightOffice(westernDates(iranReword(reword(respell(anglicise(s)))))), lebanon, true));
+  // The Gaza desk's words on this desk too (user, 24 Oct: "occupied West Bank" on an Iran card).
+  const fix = (s: string) => gazaWords(officeTitles(partisanWords(rightOffice(westernDates(iranReword(reword(respell(anglicise(s)))))), lebanon, true)));
   const r: Reading = { ...raw, headline: firstEvent(fixHeadline(fix(raw.headline))), body: fix(raw.body) };
   r.headline = dropInventedRole(fixHeadline(stripOwnOutlet(r.headline, c.source)), c.text);
   r.body = stripOwnOutlet(r.body, c.source);
@@ -1317,7 +1320,8 @@ export const IRAN_READER: DeskReader = {
   fallbacksFirst: true,
   // NVIDIA reads five items a call in a few seconds (8 Oct): ten calls a cycle, as 20–30 items come in
   // each cycle and the new sources of 22 Oct (NNA, INA, TASS, RT, RIA) add to them.
-  maxCalls: 10,
+  // 24 Oct: Kilo and OVH added, free with no account: the queue (45 min at worst on Iran, 94 on Gaza) drains each cycle.
+  maxCalls: 16,
   queueMax: 200,
   // A busy hour is 30 cards: the reader sees the day's last few hours, so a
   // story retold all afternoon is one card (audit of 8 Oct: ten for Araghchi's reply).
@@ -1414,7 +1418,7 @@ export const GAZA_READER: DeskReader = {
   nearCopies: true,
   moreNvidia: ["nvidia/nemotron-3.5-lightning-30b-a3b"],
   newestFirst: true,
-  maxCalls: 16,
+  maxCalls: 24,
   secondLook: false,
   geocode: false,
 };

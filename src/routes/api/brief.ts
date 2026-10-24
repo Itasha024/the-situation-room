@@ -107,7 +107,8 @@ function banded<T>(s: T): T {
  * is named by role. The stored brief is left as it is.
  */
 function servedPoints(points: string[]): string[] {
-  return dropEmpty(points).map((p) => officeTitles(p));
+  // The site's words on every desk's brief (audit of 24 Oct: Iran's points could say "West Bank").
+  return dropEmpty(points).map((p) => gazaWords(officeTitles(p)));
 }
 
 /** Every list of points in a brief (the arenas', the fronts'), served the same way. */

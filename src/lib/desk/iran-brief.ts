@@ -11,6 +11,7 @@
  * models lead, so Google's small daily share stays the Yemen desk's.
  */
 
+import { serveCard } from "./copy-rules.ts";
 import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
 import { refreshIranTimelineNow } from "./iran-timeline-now.ts";
 import { briefWindow } from "./brief.ts";
@@ -237,7 +238,8 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
     return Number.isFinite(t) && t >= start && t < end;
   };
   const { reports } = await store.recentDesk(1500, undefined, { events: false, desk: "iran" });
-  const cards = (reports as unknown as LiveReport[]).filter((r) => inWin(String(r.at || "")));
+  // The cards as served (audit of 24 Oct): a card the serve rules hide never feeds the brief, and a lead swapped by them is cited.
+  const cards = (reports as unknown as LiveReport[]).filter((r) => inWin(String(r.at || "")) && serveCard(r as unknown as Record<string, unknown>, "iran"));
   const feed = (await store.getJson<TrumpFeed>(TRUMP_KEY)) ?? { statements: [] };
   const trump = feed.statements.filter((s) => !s.off && !s.in && inWin(s.at));
 

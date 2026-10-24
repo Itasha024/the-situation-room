@@ -1670,11 +1670,25 @@ export type Fallback = { name: string; url: string; key: () => string; models: s
 const list = (name: string, dflt: string) => (env(name) || dflt).split(",").map((s) => s.trim()).filter(Boolean);
 export const FALLBACKS: Fallback[] = [
   { name: "cerebras", url: "https://api.cerebras.ai/v1/chat/completions", key: () => env("CEREBRAS_API_KEY"), models: list("CEREBRAS_MODELS", "gpt-oss-120b"), batch: 15 },
-  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "nvidia/nemotron-3-ultra-550b-a55b"), batch: 5, ms: 90_000 },
-  { name: "openrouter", url: "https://openrouter.ai/api/v1/chat/completions", key: () => env("OPENROUTER_API_KEY"), models: list("OPENROUTER_MODELS", "openai/gpt-oss-120b:free"), batch: 10 },
+  { name: "nvidia", url: "https://integrate.api.nvidia.com/v1/chat/completions", key: () => env("NVIDIA_API_KEY"), models: list("NVIDIA_MODELS", "nvidia/nemotron-3-ultra-550b-a55b,minimaxai/minimax-m3.1-flash"), batch: 5, ms: 90_000 },
+  // Free with no account (24 Oct, user: "make sure we have enough AI quota"): Kilo's gateway serves NVIDIA's
+  // Nemotron 3 Ultra free, about 200 calls an hour from one address (it agreed with Gemini on 23 of 24 posts). OVH's open
+  // endpoints (two calls a minute a model) read badly in the trial (sides 3 of 6, Qwen timed out): no model by default.
+  { name: "kilo", url: "https://api.kilo.ai/api/gateway/chat/completions", key: () => openKey("KILO_OFF"), models: list("KILO_MODELS", "nvidia/nemotron-3-ultra-550b-a55b:free"), batch: 5, ms: 90_000 },
+  { name: "ovh", url: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions", key: () => openKey("OVH_OFF"), models: list("OVH_MODELS", ""), batch: 5, ms: 90_000 },
+  { name: "openrouter", url: "https://openrouter.ai/api/v1/chat/completions", key: () => env("OPENROUTER_API_KEY"), models: list("OPENROUTER_MODELS", "openai/gpt-oss-120b:free,nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-31b-it:free"), batch: 10 },
+  // Free with an account and its key (add-keys.sh): Ollama's cloud models, Cloudflare's 10,000 units a day.
+  { name: "ollama", url: "https://ollama.com/v1/chat/completions", key: () => env("OLLAMA_API_KEY"), models: list("OLLAMA_MODELS", "gpt-oss:120b,deepseek-v4-flash,qwen3.5:397b"), batch: 8, ms: 90_000 },
+  { name: "cloudflare", url: `https://api.cloudflare.com/client/v4/accounts/${env("CLOUDFLARE_ACCOUNT_ID")}/ai/v1/chat/completions`, key: () => (env("CLOUDFLARE_ACCOUNT_ID") ? env("CLOUDFLARE_API_TOKEN") : ""), models: list("CLOUDFLARE_MODELS", "@cf/openai/gpt-oss-120b"), batch: 5 },
   { name: "groq", url: "https://api.groq.com/openai/v1/chat/completions", key: () => groqKey(), models: GROQ_MODELS, batch: 4 },
   { name: "mistral", url: "https://api.mistral.ai/v1/chat/completions", key: () => env("MISTRAL_API_KEY"), models: list("MISTRAL_MODELS", ""), batch: 15 },
 ];
+
+/** The key of a service that needs none: no Authorization header is sent. */
+export const OPEN_KEY = "open";
+/** A service that needs no key is on unless switched off, and never under the tests (they must not reach it). */
+const openKey = (off: string) => (env(off) || env("NODE_TEST_CONTEXT") ? "" : OPEN_KEY);
+export const authHeader = (key: string): Record<string, string> => (key === OPEN_KEY ? {} : { authorization: `Bearer ${key}` });
 
 /** Nemotron thinks at length unless told not to: five times slower, and no better on the reader's job. */
 export const noThinking = (model: string) => (/nemotron/.test(model) ? { chat_template_kwargs: { enable_thinking: false } } : {});
@@ -1726,7 +1740,7 @@ async function callOpenAI(
     const res = await fetch(provider.url, {
       method: "POST",
       signal: ctrl.signal,
-      headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+      headers: { "content-type": "application/json", ...authHeader(apiKey) },
       body: JSON.stringify({
         model,
         temperature: 0,

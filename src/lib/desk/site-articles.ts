@@ -14,6 +14,7 @@
  */
 import { OWN_ONLY, isExclusive, ownArticleSourcing, ownInformation } from "./exclusive.ts";
 import { isOfficialBody } from "./numbers.ts";
+import { arenaSourceRule, gazaLeadBonus, gazaSourceRule } from "./gaza-sourcing.ts";
 
 /** Spokesmen whose own channel is the original of their words (yemen-scan OWN_CHANNELS). */
 const SPOKESMEN = new Set(["Yahya Saree", "Mohammed Abdulsalam"]);
@@ -88,6 +89,8 @@ type Row = {
   citing?: string | null;
   flags?: string[];
   tags?: string[];
+  type?: string | null;
+  desks?: string[];
 };
 
 const exclusiveRow = (r: Row) => !!r.flags?.includes("exclusive") || !!r.tags?.includes("exclusive");
@@ -110,6 +113,7 @@ function saysMore(home: Row, r: Row): boolean {
 export function siteTakesLead(home: Row, r: Row): boolean {
   const outlet = siteOutlet(r);
   if (!outlet || siteOutlet(home)) return false;
+  if (sideRefusesLead(home, r)) return false;
   if (!isPost(home.url) && !home.citing) return false;
   // An official body's or a spokesman's own post is the original of its words.
   if (isOfficialBody(home.source) || SPOKESMEN.has(home.source)) return false;
@@ -124,6 +128,22 @@ export function siteTakesLead(home: Row, r: Row): boolean {
   if (excl) return true;
   if (WIRES.has(outlet)) return !r.citing && saysMore(home, r);
   return ownInformation(text, outlet) || (OWN_ONLY.has(outlet) && ownArticleSourcing(text));
+}
+
+/**
+ * The side rules on a card changing hands (user, 24 Oct): a later account that could not lead the card by
+ * them never takes it over, and on the Gaza desk the side's own source keeps the lead over another outlet's
+ * (gaza-sourcing.ts). An exclusive leads whoever tells it.
+ */
+export function sideRefusesLead(home: Row, r: Row): boolean {
+  if (exclusiveRow(r) || isExclusive(`${r.summary}\n${r.text ?? ""}`, r.source)) return false;
+  const desks = r.desks ?? home.desks ?? [];
+  const gaza = desks.includes("gaza");
+  const told = { headline: String(r.summary || home.summary || ""), type: String(r.type ?? home.type ?? ""), source: String(r.source || "") };
+  if (!desks.includes("yemen") && arenaSourceRule(told)) return true;
+  if (!gaza) return false;
+  if (gazaSourceRule(told)) return true;
+  return gazaLeadBonus({ ...r, type: told.type }) < gazaLeadBonus({ ...home, type: String(home.type ?? "") });
 }
 
 /** A site article carrying its outlet's own information, whatever it is grouped with: it outranks posts for the lead. */

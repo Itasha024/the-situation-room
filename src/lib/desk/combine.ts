@@ -175,8 +175,12 @@ export function accountsSource(all: LiveReport[]): string {
 }
 
 /** The figures an account states: tolls, counts, calibres. Times and dates are not facts to carry. */
+const MONTH = String.raw`(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\.?`;
+const DATES = new RegExp(String.raw`\b\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}|\b${MONTH}\s+\d{1,2}(?:st|nd|rd|th)?\b`, "gi");
+
 function figures(s: string): string[] {
-  return (String(s).replace(/\b\d{1,2}:\d{2}\b/g, "").match(/\b\d[\d,.]*\b/g) ?? [])
+  // A date is no figure: "24 October" in a later account is nothing new.
+  return (String(s).replace(DATES, "").replace(/\b\d{1,2}:\d{2}\b/g, "").match(/\b\d[\d,.]*\b/g) ?? [])
     .map((n) => n.replace(/[,.]$/, "").replace(/,/g, ""))
     .filter((n) => n.length && !/^(?:19|20)\d\d$/.test(n));
 }
@@ -360,9 +364,40 @@ export function addsFacts(home: LiveReport, r: LiveReport): boolean {
     if (new Set(fresh).size >= 3) return true;
   }
   const homePlaces = new Set([home.place, ...(home.places ?? []).map((p) => p.name)].filter(Boolean));
-  return [r.place, ...(r.places ?? []).map((p) => p.name)].some(
-    (n) => !!n && !homePlaces.has(n) && !lower.includes(n.replace(/^the /i, "").toLowerCase()) && !!PLACE_BY_NAME[n],
-  );
+  // The Iran and Gaza desks' pins come from their own gazetteers (iran-places, gaza-places), the Yemen one's from this.
+  const yemen = !(r.desks ?? home.desks ?? []).some((d) => d !== "yemen");
+  if (
+    [r.place, ...(r.places ?? []).map((p) => p.name)].some(
+      (n) => !!n && !homePlaces.has(n) && !lower.includes(n.replace(/^the /i, "").toLowerCase()) && (!yemen || !!PLACE_BY_NAME[n]),
+    )
+  )
+    return true;
+  // A name the card never gives: a person, a place or a body (24 Oct: Al-Akhbar's "US pressed Lebanon's army" under Al Hadath's card).
+  return newNames(r.summary, lower).length >= 2;
+}
+
+/** The card's own words, by their first five letters: "Akhlaqi" is the card's "Akhlaghi". */
+const stems = (lower: string) => new Set(lower.match(/\p{L}{5,}/gu)?.map((w) => w.slice(0, 5)) ?? []);
+
+const NAME_FILLER = new Set(["Israeli", "Israel", "Palestinian", "Palestinians", "Iran", "Iranian", "Gaza", "Lebanon", "Lebanese", "Yemen", "Yemeni", "Houthi", "Houthis", "Hamas", "Hezbollah", "Saudi", "Arabia", "Judea", "Samaria", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]);
+
+/** The capitalised words of a headline (its first word aside) that the card's own copy never uses. */
+function newNames(headline: string, cardLower: string): string[] {
+  const ws = String(headline || "").replace(/^[^:]{2,70}:\s+/, "").split(/\s+/).slice(1);
+  const out = new Set<string>();
+  const known = stems(cardLower);
+  for (const w of ws) {
+    const n = w.replace(/^[^\p{L}]+|[^\p{L}'-]+$/gu, "").replace(/['’]s$/, "");
+    if (n.length < 4 || !/^\p{Lu}\p{Ll}/u.test(n) || NAME_FILLER.has(n)) continue;
+    if (!cardLower.includes(n.toLowerCase()) && !known.has(n.toLowerCase().slice(0, 5))) out.add(n);
+  }
+  return [...out];
+}
+
+/** The pairs a tick writes (at most `ENRICH_CALLS` cards) and the ones left for the next tick. */
+export function splitEnrich(pairs: [LiveReport, LiveReport][]): { now: [LiveReport, LiveReport][]; later: [LiveReport, LiveReport][] } {
+  const homes = [...new Set(pairs.map(([h]) => h))].slice(0, ENRICH_CALLS);
+  return { now: pairs.filter(([h]) => homes.includes(h)), later: pairs.filter(([h]) => !homes.includes(h)) };
 }
 
 /**

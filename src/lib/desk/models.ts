@@ -11,7 +11,7 @@
  * Groq's free tier refuses as too large.
  */
 
-import { FALLBACKS, nextPacificMidnight, noThinking, readerKey, serviceModel } from "./reader.ts";
+import { FALLBACKS, authHeader, nextPacificMidnight, noThinking, readerKey, serviceModel } from "./reader.ts";
 
 /** `provider`: "gemini", or a free service of the reader's list (groq, mistral, nvidia...). A service without its key is passed over. */
 export type ChainModel = { provider: string; id: string };
@@ -99,7 +99,7 @@ async function callOne(m: ChainModel, system: string, user: string, temperature:
     if (!svc || !key) throw new Error("no key");
     const res = await fetch(svc.url, {
       method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      headers: { ...authHeader(key), "content-type": "application/json" },
       signal: AbortSignal.timeout(ms),
       body: JSON.stringify({
         model: m.id,

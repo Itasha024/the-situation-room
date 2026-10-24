@@ -137,6 +137,6 @@ Al-Mihwar posted "a video published for the first time" of an Iranian missile fa
 - Arab outlets passing on Channel 14 and Yedioth Ahronoth were taken off the desk (relay rule). Tests: gaza-desk.test.ts.
 
 ## Whose account tells the card (Gaza desk, 23 Oct)
-- The user's cards: Al Jazeera's "…, Channel 12 reports", NBC's "Netanyahu orders…", Al Mayadeen's Islamic Jihad line, IRNA's Hamas official. Each side is told from its own sources: Israel's leaders, army and media from the Israeli sources; Hamas, the factions and the PA from the Palestinian channels, never Iranian media (`gaza-sourcing.ts`, a reader-check reject). Field acts are told by anyone on the spot.
+- The user's cards: Al Jazeera's "…, Channel 12 reports", NBC's "Netanyahu orders…", Al Mayadeen's Islamic Jihad line, IRNA's Hamas official. Each side is told from its own sources: Israel's leaders, army and media from the Israeli sources; Hamas, the factions and the PA from the Palestinian channels, never Iranian media (`gaza-sourcing.ts`, a reader-check reject). Field acts in Gaza and Judea and Samaria come from Israeli or Palestinian sources only, on every desk, unless the outlet has its own exclusive (24 Oct, `arenaSourceRule`: Al-Modon's "major operation in the West Bank" led an Iran card).
 - When copies fold, the side's own source leads (`DeskPipe.leadBonus`).
 - A rule only works if that side's items reach the reader: check the gate on the side's own channels too (the Hebrew misses of 23 Oct).

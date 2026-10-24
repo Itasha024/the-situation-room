@@ -207,3 +207,35 @@ test("the IDF line: a move's way, a map's date, an area's share (user, 24 Oct)",
   const km2 = areaKm2({ type: "Polygon", coordinates: [[[34.3, 31.4], [34.3 + dLng, 31.4], [34.3 + dLng, 31.4 + dLat], [34.3, 31.4 + dLat], [34.3, 31.4]]] });
   assert.ok(Math.abs(km2 - 100) < 2, String(km2));
 });
+
+// User, 24 Oct: "no taking such things from sources that aren't Israeli or Palestinian unless it's exclusive" (Al-Modon's
+// "major military operation in the occupied West Bank" led an Iran card); diplomacy may come from anyone.
+test("Gaza and Judea and Samaria events from Israeli or Palestinian sources only", async () => {
+  const { arenaSourceRule, palestineArena } = await import("./gaza-sourcing.ts");
+  const rule = (headline: string, source: string, type = "combat", own = false) => arenaSourceRule({ headline, type, source, own });
+  assert.ok(rule("Israeli army launches major military operation in Judea and Samaria", "Al-Modon"));
+  assert.ok(rule("Israeli air strike kills three in Khan Younis", "Al Jazeera", "strike"));
+  assert.ok(rule("Israeli extremists attack Palestinian olive pickers across Judea and Samaria", "Independent"));
+  assert.equal(rule("Israeli air strike kills three in Khan Younis", "Al Jazeera", "strike", true), null);
+  assert.equal(rule("Israeli forces raid Jenin camp, arrest five", "WAFA"), null);
+  assert.equal(rule("Israeli forces raid Jenin camp, arrest five", "N12"), null);
+  assert.equal(rule("Israeli strike on Barachit, southern Lebanon", "Al-Modon", "strike"), null);
+  assert.equal(rule("Kushner and Board of Peace reset Gaza disarmament talks", "Al-Akhbar", "diplomacy"), null);
+  assert.ok(palestineArena("Two Palestinians killed in clash"));
+  assert.ok(!palestineArena("Israeli strike hits Palestinians in Ain al-Hilweh camp, Lebanon"));
+  // A stored card: the lead goes to an Israeli or Palestinian account under it, or the card is not shown.
+  const card: Record<string, unknown> = { summary: "Israeli army launches major military operation in Judea and Samaria", type: "combat", source: "Al-Modon", url: "https://www.almodon.com/a", alsoReportedBy: [{ source: "Safa", url: "https://t.me/safaps/1" }] };
+  assert.ok(serveCard(card, "iran"));
+  assert.equal(card.source, "Safa");
+  assert.equal(serveCard({ summary: "Israeli army launches major military operation in Judea and Samaria", type: "combat", source: "Al-Modon", url: "https://www.almodon.com/a" }, "iran"), false);
+  assert.ok(serveCard({ summary: "Israeli army launches major military operation in Judea and Samaria", type: "combat", source: "Al-Modon", url: "https://www.almodon.com/a", flags: ["exclusive"] }, "gaza"));
+});
+
+test("the site's words on every desk, the Gaza gate's diplomacy", () => {
+  const card: Record<string, unknown> = { summary: "Israeli army raids towns across the occupied West Bank", type: "statement", source: "N12", url: "https://x" };
+  serveCard(card, "iran");
+  assert.equal(card.summary, "Israeli army raids towns across Judea and Samaria");
+  assert.ok(isGazaDeskItem("Kushner meets Egyptian intelligence chief on next phase of Trump plan"));
+  assert.ok(isGazaDeskItem("Witkoff: stabilisation force troops to deploy next month"));
+  assert.ok(isGazaDeskItem("كوشنر يلتقي رئيس المخابرات المصرية"));
+});

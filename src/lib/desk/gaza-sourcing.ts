@@ -54,6 +54,30 @@ export function gazaSourceRule(x: GazaSourcing): string | null {
   return null;
 }
 
+/** Gaza and Judea and Samaria named: their places, camps and Jerusalem. */
+const ARENA_PLACE =
+  /\b(?:Gaza|Khan Y(?:ou|u|o)nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|Zeitoun|Shujaiya|Netzarim|Philadelphi|Judea|Samaria|West Bank|Jenin|Nablus|Tulkarm|Nur Shams|Balata|Jalazone|Askar|Hebron|Ramallah|al-Bireh|Qalqilya|Tubas|Tammun|Jericho|Bethlehem|Salfit|Jordan Valley|Jerusalem|al-Aqsa|Kerem Shalom|Zikim|Allenby|Ofer)\b|غزة|الضفة|القدس|جنين|نابلس|الخليل|طولكرم/i;
+const PALESTINIANS = /\bPalestinians?\b|فلسطيني/i;
+const ABROAD = /\b(?:Lebanon|Lebanese|Syria|Jordan(?! Valley)|Egypt|Ain al-Hilweh|Rashidieh|Beddawi|Yarmouk)\b/i;
+
+/** A card on Gaza or Judea and Samaria: a place of theirs named, or Palestinians with no other country. */
+export function palestineArena(headline: string): boolean {
+  const h = String(headline || "");
+  return ARENA_PLACE.test(h) || (PALESTINIANS.test(h) && !ABROAD.test(h));
+}
+
+/**
+ * What happens in Gaza and Judea and Samaria is told from the Israeli and Palestinian sources only, on every
+ * desk, unless the outlet has it as its own exclusive (user, 24 Oct: Al-Modon's "major army operation in the
+ * West Bank" led an Iran-desk card). Their own sources carry every raid, strike and clash first-hand.
+ */
+export function arenaSourceRule(x: GazaSourcing): string | null {
+  if (x.own || (x.type !== "strike" && x.type !== "combat")) return null;
+  const s = String(x.source || "").trim();
+  if (!palestineArena(x.headline) || israeliSource(s) || palestinianSource(s)) return null;
+  return `Gaza and Judea and Samaria are told from the Israeli and Palestinian sources, not ${s}`;
+}
+
 /**
  * Which account of a story leads its card on this desk: Israel's own sources for Israel's words, the
  * Palestinians' own channels for theirs, Iranian outlets last (user, 23 Oct: "definitely not Hamas from Iran's media").

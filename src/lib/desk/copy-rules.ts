@@ -387,6 +387,35 @@ export function roleInCopy(name: string, copy: string): string | null {
   return role && (subjectNation(role) || /^(?:IRGC|Hezbollah|Houthi)\b/.test(role)) ? role : null;
 }
 
+/**
+ * A speaker few readers know, led by name alone (user, 24 Oct: "Haghighatpour:", "Salehi:", "Dawoud:" — "should
+ * say his role"): the name, so the card is written again with the role; null when the lead is famous, an office
+ * the table titles, a body or a country, or already carries a role.
+ */
+export function bareSpeaker(headline: string): string | null {
+  const m = /^([A-Z][\p{L}'’-]+(?: [A-Z][\p{L}'’-]+)?):\s/u.exec(String(headline || ""));
+  if (!m || FAMOUS.test(m[1])) return null;
+  if (IRAN_OFFICES.some((o) => o.name === m[1].split(" ").pop())) return null;
+  if (subjectNation(m[1]) || /^(?:IRGC|IDF|CENTCOM|Hezbollah|Hamas|UN|UNIFIL|IAEA|EU|NATO|OPEC|UKMTO|Houthis?|Kataib|Nujaba|Treasury|Pentagon|Kremlin|Ansarallah|Reuters|Axios|Sources?|Officials?)$/i.test(m[1])) return null;
+  // A role word in the lead already ("Spokesman Baghaei:" is two words with its role).
+  if (/^(?:Spokes\w+|Minister|Commander|General|President|Envoy|Ambassador|MP|Speaker|Senator|Governor|Mayor|Sheikh|Imam|Judge)\b/i.test(m[1])) return null;
+  return m[1];
+}
+
+/**
+ * Words with their speaker dropped (user, 24 Oct: "Bahrain belongs to Iran and will be taken back…" over Iran
+ * International's "…, Hossein Shariatmadari, editor-in-chief of the hardline Kayhan newspaper, said"): the
+ * speaker the source names, when the headline names none.
+ */
+export function droppedSpeaker(headline: string, type: string, sourceText: string): string | null {
+  const h = String(headline || "");
+  if (type !== "statement" || /^[^:]{2,80}:\s/.test(h)) return null;
+  const m = /,\s((?:[A-Z][\p{L}'’-]+ ){0,2}[A-Z][\p{L}'’-]+),\s[^.]{3,140}?,\s(?:said|says|told|wrote|warned|declared)\b/u.exec(String(sourceText || ""));
+  if (!m) return null;
+  const surname = m[1].split(" ").pop()!;
+  return h.includes(surname) ? null : m[1];
+}
+
 /** A bare-surname lead with no role: its role from the table, or from the card's copy. */
 export function speakerByRole(headline: string, copy = ""): string {
   const h = String(headline || "");

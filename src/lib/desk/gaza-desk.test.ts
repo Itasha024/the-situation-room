@@ -245,3 +245,16 @@ test("stored cards: Israel's words and Judea and Samaria events from their own s
   assert.equal(serveCard({ summary: "300 Palestinian families threatened with displacement from Jalda area in Hebron", type: "economy", source: "Al-Alam", url: "https://t.me/x/2" }, "iran"), false);
   assert.ok(serveCard({ summary: "UN rapporteur: Hebron evictions breach international law", type: "statement", source: "Al Jazeera", url: "https://t.me/x/3" }, "gaza"));
 });
+
+// User, 24 Oct: "should say his role" (Haghighatpour, Salehi, Dawoud), and a quote never loses its speaker.
+test("a little-known speaker by role; words keep their speaker", async () => {
+  const { bareSpeaker, droppedSpeaker } = await import("./copy-rules.ts");
+  assert.equal(bareSpeaker("Haghighatpour: if national interests are not met through talks we will fight"), "Haghighatpour");
+  assert.equal(bareSpeaker("Salehi: US can neither break up Iran nor change its regime"), "Salehi");
+  assert.equal(bareSpeaker("Former Iranian foreign minister Salehi: US can neither break up Iran"), null);
+  assert.equal(bareSpeaker("Araghchi: talks continue"), null);
+  assert.equal(bareSpeaker("Hezbollah: we will respond"), null);
+  const src = "Bahrain belongs to Iran and will be taken back when the time comes, Hossein Shariatmadari, editor-in-chief of the hardline Kayhan newspaper, said, according to Eslahat News.";
+  assert.equal(droppedSpeaker("Bahrain belongs to Iran and will be taken back when the time comes", "statement", src), "Hossein Shariatmadari");
+  assert.equal(droppedSpeaker("Kayhan editor Shariatmadari: Bahrain belongs to Iran", "statement", src), null);
+});

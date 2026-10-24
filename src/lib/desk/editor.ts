@@ -93,6 +93,8 @@ import {
   rightType,
   ungarble,
   speakerByRole,
+  bareSpeaker,
+  droppedSpeaker,
   wrongSource,
   xPostTime,
   yemenOnIran,
@@ -150,6 +152,8 @@ const BACKLOG_CALLS_PER_CYCLE = 9;
 const BACKLOG_ITEMS = 150;
 /** Reader calls in flight at once: a cycle waits on the slowest of three, not on the sum. */
 const PARALLEL_CALLS = 3;
+/** The items one call of the services after Gemini reads (FALLBACKS: NVIDIA, Kilo). */
+const FALLBACK_BATCH = 5;
 /** An item queued this long is read before the newer ones. */
 const OVERDUE_MS = 40 * 60_000;
 
@@ -463,7 +467,11 @@ export async function editCandidates(
   // A backlog (a replay, an outage caught up) gets a few more calls a cycle.
   const maxCalls = cfg.maxCalls ?? (toRead.length > BACKLOG_ITEMS ? BACKLOG_CALLS_PER_CYCLE : MAX_CALLS_PER_CYCLE);
   const batches: Queued[][] = [];
-  for (let i = 0; i < toRead.length; i += READER_BATCH) batches.push(toRead.slice(i, i + READER_BATCH));
+  // A desk read by the other services first gets batches their size: NVIDIA and Kilo read five items a call, and the
+  // other 25 of a 30-item batch went back to the queue, so a cycle read some 20 items whatever its calls (24 Oct:
+  // 92 waiting on Gaza, an hour and a half behind).
+  const size = cfg.fallbacksFirst ? FALLBACK_BATCH : READER_BATCH;
+  for (let i = 0; i < toRead.length; i += size) batches.push(toRead.slice(i, i + size));
   const readOne = async (batch: Queued[]) => {
     const items: ReaderItem[] = batch.map((c, n) => ({
       id: String(n),
@@ -957,6 +965,8 @@ ${raw.body}`, c.text) : null;
   if (review) return review;
   // A channel's own labels off; a headline over the limit gives its tail to the body (22 Oct).
   Object.assign(r, fitHeadline({ headline: dropChannelLabels(r.headline), body: r.body }));
+  const who = strict ? speakerFault(r, c.text) : null;
+  if (who) return who;
   const problem = checkReading(r, c.text, strict);
   if (problem) {
     return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
@@ -984,6 +994,16 @@ function reviewReject(r: Reading, c: Candidate, desk: DeskId, strict: boolean): 
   if (wrong) return { kind: "reject", reason: "reader", note: sentence(wrong) };
   const g = garbled(r.headline, c.text);
   if (g && (strict || !/written twice/.test(g))) return { kind: "reject", reason: "reader-check", note: sentence(g) };
+  return null;
+}
+
+/** Who spoke, as the user wants it (24 Oct): a little-known speaker by role, never words with their speaker dropped. */
+function speakerFault(r: Reading, sourceText: string): EditorVerdict | null {
+  if (!r.publish) return null;
+  const bare = bareSpeaker(r.headline);
+  if (bare) return { kind: "reject", reason: "reader-check", note: `Unfamiliar name in headline: "${bare}" — write their role or affiliation before the name ("Former Iranian foreign minister Salehi:", "Conservative politician Haghighatpour:").` };
+  const dropped = droppedSpeaker(r.headline, TYPE_OF[r.event_type] ?? String(r.event_type), sourceText);
+  if (dropped) return { kind: "reject", reason: "reader-check", note: `Does not lead with its speaker: the text says ${dropped} said it; the headline leads with their role and name and a colon.` };
   return null;
 }
 
@@ -1263,6 +1283,8 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   if (rival) return { kind: "reject", reason: "reader", note: sentence(rival) };
   // A channel's own labels off; a headline over the limit gives its tail to the body (22 Oct).
   Object.assign(r, fitHeadline({ headline: dropChannelLabels(r.headline), body: r.body }));
+  const who = strict ? speakerFault(r, c.text) : null;
+  if (who) return who;
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);
@@ -1364,6 +1386,8 @@ function decideGaza(raw: Reading, c: Candidate, strict = true): EditorVerdict {
   r.headline = gazaWords(byRole(r, ungarble(r.headline), c.text));
   r.body = gazaWords(cleanBody(r.body, c.source));
   Object.assign(r, fitHeadline({ headline: dropChannelLabels(r.headline), body: r.body }));
+  const who = strict ? speakerFault(r, c.text) : null;
+  if (who) return who;
   const problem = checkReading(r, c.text, strict);
   if (problem) return { kind: "reject", reason: r.publish ? "reader-check" : "reader", note: sentence(problem) };
   const report = toReport(r, c);

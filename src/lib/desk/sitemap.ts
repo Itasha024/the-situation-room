@@ -183,6 +183,8 @@ export function pageDate(html: string): number {
     /(?:property|name|itemprop)=["'](?:article:published_time|datePublished|pubdate|publish-date|date)["'][^>]*content=["']([^"']+)["']/i,
     /content=["']([^"']+)["'][^>]*(?:property|name|itemprop)=["'](?:article:published_time|datePublished)["']/i,
     /"datePublished"\s*:\s*"([^"]+)"/i,
+    // A Next.js page's data, escaped or not (Al-Akhbar English, 24 Oct: its front page links articles of March).
+    /\\?"publishedTime\\?"\s*:\s*\\?"([^"\\]+)/i,
     /<time[^>]*datetime=["']([^"']+)["']/i,
   ];
   for (const re of tries) {

@@ -12,10 +12,10 @@
 import { isIranDeskItem, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
 import { isGazaDeskItem } from "./desk/gaza-reader.ts";
 import { LEBANESE_MEDIA, SHARED_RSS } from "./desk/iran-sources.ts";
-import { fetchListing, parseHtmlListing, parseListing, urlKey } from "./desk/sitemap.ts";
+import { fetchListing, pageDate, parseHtmlListing, parseListing, urlKey } from "./desk/sitemap.ts";
 import { cleanUrl, isGnews } from "./desk/gnews.ts";
 import type { getStore } from "./desk/store.ts";
-import { IRAN_INBOX, type RawHit, articleOf, feedById, listedHit } from "./yemen-scan.server.ts";
+import { IRAN_INBOX, type RawHit, articleOf, feedById, fetchText, listedHit } from "./yemen-scan.server.ts";
 import { openArticle } from "./iran-scan.server.ts";
 import { toGaza } from "./gaza-scan.server.ts";
 
@@ -58,7 +58,7 @@ export async function runSiteSweep(store: Store, now = Date.now(), force = false
   for (const [k, t] of Object.entries(st.swept)) if (now - t > SWEPT_KEEP_MS) delete st.swept[k];
 
   const sites: SweepSite[] = [];
-  const todo: { hit: RawHit; desks: string[]; site: SweepSite; cf: boolean; key: string }[] = [];
+  const todo: { hit: RawHit; desks: string[]; site: SweepSite; cf: boolean; key: string; old?: boolean }[] = [];
   await Promise.allSettled(
     SWEEP_FEEDS.map(async (id) => {
       const feed = feedById(id);
@@ -98,6 +98,16 @@ export async function runSiteSweep(store: Store, now = Date.now(), force = false
           h.url = cleanUrl(real);
         }
         const title = h.title || h.text.split("\n")[0];
+        // A front page lists old pieces beside new ones with no date (Al-Akhbar English, 24 Oct: the Kushner
+        // piece of 9 Sep and the Katz convoy of 31 Mar were taken as new): the page's own date decides.
+        if (h.undated && !w.cf) {
+          const pub = pageDate((await fetchText(h.url, 8000)) ?? "");
+          if (Number.isFinite(pub) && now - pub > BACK_MS) {
+            w.old = true;
+            return;
+          }
+          if (Number.isFinite(pub)) h.at = new Date(pub).toISOString();
+        }
         const text = await openArticle(h.url, title, h.source, !w.cf);
         if (text.length >= 300) {
           h.text = `${title}\n${text}`.slice(0, 8600);
@@ -109,7 +119,7 @@ export async function runSiteSweep(store: Store, now = Date.now(), force = false
   // An article whose address Google did not give this time (its look-ups spent), or past this sweep's share, is
   // swept again next time while it is in the window.
   for (const w of todo) if (isGnews(w.hit.url) || !work.includes(w)) delete st.swept[w.key];
-  const ready = work.filter((w) => !isGnews(w.hit.url));
+  const ready = work.filter((w) => !isGnews(w.hit.url) && !w.old);
   const iran = ready.filter((w) => w.desks.includes("iran")).map((w) => w.hit);
   if (iran.length) await store.putMany(IRAN_INBOX, { [`sweep-${now}`]: { hits: iran } });
   const gaza = ready.filter((w) => w.desks.includes("gaza")).map((w) => w.hit);

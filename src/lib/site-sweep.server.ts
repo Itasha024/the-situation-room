@@ -58,7 +58,7 @@ export async function runSiteSweep(store: Store, now = Date.now(), force = false
   for (const [k, t] of Object.entries(st.swept)) if (now - t > SWEPT_KEEP_MS) delete st.swept[k];
 
   const sites: SweepSite[] = [];
-  const todo: { hit: RawHit; desks: string[]; site: SweepSite; cf: boolean }[] = [];
+  const todo: { hit: RawHit; desks: string[]; site: SweepSite; cf: boolean; key: string }[] = [];
   await Promise.allSettled(
     SWEEP_FEEDS.map(async (id) => {
       const feed = feedById(id);
@@ -80,7 +80,7 @@ export async function runSiteSweep(store: Store, now = Date.now(), force = false
         const desks = desksFor(hit);
         if (!desks.length) continue;
         site.relevant += 1;
-        todo.push({ hit: { ...hit, lean: SHARED_RSS[feed.name] ?? "intl" }, desks, site, cf: isGnews(hit.url) || /news\.google\.com/.test(feed.url) });
+        todo.push({ hit: { ...hit, lean: SHARED_RSS[feed.name] ?? "intl" }, desks, site, cf: isGnews(hit.url) || /news\.google\.com/.test(feed.url), key });
       }
     }),
   );
@@ -106,6 +106,9 @@ export async function runSiteSweep(store: Store, now = Date.now(), force = false
       }),
     );
   }
+  // An article whose address Google did not give this time (its look-ups spent), or past this sweep's share, is
+  // swept again next time while it is in the window.
+  for (const w of todo) if (isGnews(w.hit.url) || !work.includes(w)) delete st.swept[w.key];
   const ready = work.filter((w) => !isGnews(w.hit.url));
   const iran = ready.filter((w) => w.desks.includes("iran")).map((w) => w.hit);
   if (iran.length) await store.putMany(IRAN_INBOX, { [`sweep-${now}`]: { hits: iran } });

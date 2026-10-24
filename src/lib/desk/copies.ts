@@ -31,7 +31,9 @@ const STORY_STOP = new Set(
   (
     "the and for with from that this into over after amid near its his her their has have had was were are will been " +
     "says said say stated state also sunday monday tuesday wednesday thursday friday saturday today yemen yemeni houthi " +
-    "houthis saudi arabia leader president head according officials official sources source reuters"
+    "houthis saudi arabia leader president head according officials official sources source reuters " +
+    // The Iran and Gaza desks' every-card words (24 Oct: Al-Akhbar's Kushner talks folded into Safa's Hamas card on "Gaza" and "Israel").
+    "iran iranian israel israeli gaza strip palestinian palestinians hamas"
   ).split(" "),
 );
 function storyWords(s: string): Set<string> {

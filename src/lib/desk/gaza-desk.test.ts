@@ -258,3 +258,8 @@ test("a little-known speaker by role; words keep their speaker", async () => {
   assert.equal(droppedSpeaker("Bahrain belongs to Iran and will be taken back when the time comes", "statement", src), "Hossein Shariatmadari");
   assert.equal(droppedSpeaker("Kayhan editor Shariatmadari: Bahrain belongs to Iran", "statement", src), null);
 });
+
+test("two Gaza stories share more than Gaza and Israel before the reader's 'duplicate' folds them", async () => {
+  const { wordsInCommon } = await import("./copies.ts");
+  assert.ok(wordsInCommon("Hamas spokesman Hazem Qassem accuses Israel of returning to starvation policy in Gaza", "Kushner and Mladenov reset Gaza disarmament talks, reiterate Israeli conditions contradicting earlier understandings with factions") < 2);
+});

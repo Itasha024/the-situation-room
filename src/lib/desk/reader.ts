@@ -1391,7 +1391,9 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   const h = String(r.headline || "").trim();
   const b = String(r.body || "").trim();
   if (protocolOnly(h, b)) return "protocol: an opening, visit or ceremony with no news of the war";
-  if (h.length < 12 || h.length > 140) return "headline length";
+  // After a repair that still ran long, a long headline goes out rather than the story be lost (24 Oct: Al-Akhbar's
+  // "Kushner and Board of Peace reset Gaza disarmament talks" was dropped for its length).
+  if (h.length < 12 || h.length > (strict ? 140 : 220)) return "headline length";
   if (b && b.length < 20) return "empty body";
   if (/[؀-ۿ֐-׿]/.test(h + b)) return "source-language text in copy";
   if (transliterated(h)) return "headline written as transliterated Arabic";

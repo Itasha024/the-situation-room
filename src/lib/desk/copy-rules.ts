@@ -9,7 +9,7 @@ import { anglicise } from "./anglicise.ts";
 import type { DeskType } from "./digest.ts";
 import type { DeskId } from "../desks.ts";
 import { gazaWords } from "./gaza-words.ts";
-import { arenaSourceRule } from "./gaza-sourcing.ts";
+import { arenaSourceRule, gazaSourceRule } from "./gaza-sourcing.ts";
 import { aboutFootage } from "./media.ts";
 import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
@@ -876,9 +876,11 @@ export function serveCard(r: Row, desk: DeskId): boolean {
   // Gaza and Judea and Samaria from the Israeli and Palestinian sources (user, 24 Oct): another outlet's
   // account gives the lead to one of theirs under it, or is not shown, unless it is its own exclusive.
   const flags = Array.isArray(r.flags) ? (r.flags as string[]) : [];
-  if (desk !== "yemen" && !flags.includes("exclusive") && !exclusiveUrl(String(r.url ?? "")) && arenaSourceRule({ headline: summary, type, source })) {
+  // Israel's and the Palestinians' own words likewise, from their own sources (a stored "Israeli Defence Minister proposes …" from an axis relay).
+  const sideRule = (src: string) => gazaSourceRule({ headline: summary, type, source: src }) ?? arenaSourceRule({ headline: summary, type, source: src });
+  if (desk !== "yemen" && !flags.includes("exclusive") && !exclusiveUrl(String(r.url ?? "")) && sideRule(source)) {
     const also = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []) as { source: string; url: string }[];
-    const next = also.find((a) => a?.url && !arenaSourceRule({ headline: summary, type, source: a.source }));
+    const next = also.find((a) => a?.url && !sideRule(a.source));
     if (!next) return false;
     r.alsoReportedBy = [{ source, url: String(r.url ?? "") }, ...also.filter((a) => a !== next)];
     r.source = next.source;

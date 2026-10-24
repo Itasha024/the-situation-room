@@ -72,7 +72,8 @@ export function palestineArena(headline: string): boolean {
  * West Bank" led an Iran-desk card). Their own sources carry every raid, strike and clash first-hand.
  */
 export function arenaSourceRule(x: GazaSourcing): string | null {
-  if (x.own || (x.type !== "strike" && x.type !== "combat")) return null;
+  // Any event there (a raid, a demolition, families told to leave), not diplomacy nor a third party's own words.
+  if (x.own || x.type === "diplomacy" || (x.type === "statement" && leadOf(x.headline))) return null;
   const s = String(x.source || "").trim();
   if (!palestineArena(x.headline) || israeliSource(s) || palestinianSource(s)) return null;
   return `Gaza and Judea and Samaria are told from the Israeli and Palestinian sources, not ${s}`;

@@ -239,3 +239,9 @@ test("the site's words on every desk, the Gaza gate's diplomacy", () => {
   assert.ok(isGazaDeskItem("Witkoff: stabilisation force troops to deploy next month"));
   assert.ok(isGazaDeskItem("كوشنر يلتقي رئيس المخابرات المصرية"));
 });
+
+test("stored cards: Israel's words and Judea and Samaria events from their own sources", () => {
+  assert.equal(serveCard({ summary: "Israeli Defence Minister proposes evacuating Hebron neighborhood following shooting attack", type: "statement", source: "Axis military relay", url: "https://t.me/x/1" }, "iran"), false);
+  assert.equal(serveCard({ summary: "300 Palestinian families threatened with displacement from Jalda area in Hebron", type: "economy", source: "Al-Alam", url: "https://t.me/x/2" }, "iran"), false);
+  assert.ok(serveCard({ summary: "UN rapporteur: Hebron evictions breach international law", type: "statement", source: "Al Jazeera", url: "https://t.me/x/3" }, "gaza"));
+});

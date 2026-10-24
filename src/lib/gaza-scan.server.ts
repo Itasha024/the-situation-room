@@ -48,6 +48,8 @@ const MAX_AGE_MS = 24 * 3600_000;
 const SEEN_KEEP_MS = 3 * 24 * 3600_000;
 const LEADS_PER_TICK = 24;
 const POST_LINKS_PER_TICK = 6;
+/** Articles a tick whose page refused the server, read from MSN's copy or the reading service. */
+const BLOCKED_PER_TICK = 6;
 const GNEWS_PER_TICK = 2;
 const PENDING_MAX = 80;
 const PAYLOAD_REPORTS = 300;
@@ -194,11 +196,19 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
 
   // 3. A teaser is not enough to read: articles opened, Google's links resolved within the shared budget.
   let opened = 0;
-  let resolved = 0;
   const gnBudget = Math.min(GNEWS_PER_TICK, canResolve("lead") ? resolvesLeft() : bingLeft());
+  // The few look-ups go to the links whose headline is this desk's first (user, 24 Oct: the Arab sites' stories
+  // waited behind everything else Google listed and aged out unread).
+  const toResolve = new Set(
+    hits
+      .filter((h) => isGnews(h.url) && !knownResolve(h.url))
+      .sort((a, b) => Number(!passesGazaOwnGate(a.text)) - Number(!passesGazaOwnGate(b.text)))
+      .slice(0, gnBudget),
+  );
+  let blocked = BLOCKED_PER_TICK;
   await Promise.allSettled(
     hits
-      .filter((h) => !h.fromTg && h.text.length < 600 && (!isGnews(h.url) || !!knownResolve(h.url) || resolved++ < gnBudget))
+      .filter((h) => !h.fromTg && h.text.length < 600 && (!isGnews(h.url) || !!knownResolve(h.url) || toResolve.has(h)))
       .slice(0, LEADS_PER_TICK)
       .map(async (h) => {
         if (isGnews(h.url)) {
@@ -208,7 +218,13 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
           if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
         }
         const html = await fetchText(h.url, 6000);
-        const lead = html ? extractLead(html) : "";
+        let lead = html ? extractLead(html) : "";
+        // A page that refused the server (Al Arabiya, Erem, the Lebanese papers: Cloudflare) is read from MSN's
+        // copy or the reading service, when it is this desk's.
+        if (lead.length < 300 && passesGazaOwnGate(h.text) && blocked-- > 0) {
+          const text = await openArticle(h.url, h.title || h.text.split("\n")[0], h.source, false);
+          if (text.length > lead.length) lead = text;
+        }
         if (lead.length > 80) h.text = `${h.text}\n${lead}`.slice(0, 8600);
         opened += 1;
       }),

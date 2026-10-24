@@ -539,7 +539,10 @@ const RSS: RssFeed[] = [
   { id: "almonitor", url: "https://www.al-monitor.com/rss", name: "Al-Monitor", cadence: C15, whole: true, site: "al-monitor.com" },
   { id: "mee", url: "https://www.middleeasteye.net/rss", name: "Middle East Eye", cadence: C15, whole: true, site: "middleeasteye.net" },
   { id: "skyar", lang: "ar", url: "https://www.skynewsarabia.com/rss.xml", name: "Sky News Arabia", cadence: C10, whole: true, site: "skynewsarabia.com" },
-  { id: "indyar", lang: "ar", url: "https://www.independentarabia.com/rss.xml", name: "Independent Arabia", cadence: C10, whole: true, site: "independentarabia.com" },
+  { id: "indyar", lang: "ar", url: "https://www.independentarabia.com/rss/all", name: "Independent Arabia", cadence: C10, whole: true, site: "independentarabia.com" },
+  // Independent Arabia's /rss.xml lists The Independent's English stories (24 Oct); /rss/all is its own.
+  // Al-Quds Al-Arabi (user, 24 Oct): its feed and articles open to the server.
+  { id: "alquds-arabi", lang: "ar", url: "https://www.alquds.co.uk/feed/", name: "Al-Quds Al-Arabi", cadence: C10, whole: true, site: "alquds.co.uk" },
   { id: "newarab", url: "https://www.newarab.com/rss", ua: "curl/8.5.0", name: "The New Arab", cadence: C15, whole: true, site: "newarab.com" },
   { id: "aawsat-en", url: "https://english.aawsat.com/feed", name: "Asharq Al-Awsat", cadence: C10, whole: true, site: "english.aawsat.com" },
   { id: "alhurra-en", url: "https://www.alhurra.com/en/rss", name: "Alhurra", cadence: C15, whole: true },

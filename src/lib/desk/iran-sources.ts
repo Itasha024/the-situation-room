@@ -333,6 +333,13 @@ export const IRAN_X: IranSource[] = [
   // Lebanese papers whose sites turn the server away (user, 18 Oct): their posts carry each story's headline.
   { id: "NidaaWatan", name: "Nidaa al-Watan", lean: "gulf", every: 15 },
   { id: "AddiyarNews", name: "Ad-Diyar", lean: "axis", every: 15 },
+  // Outlets whose channels post each article with its link (user, 24 Oct: their exclusives were skipped). Al Arabiya's
+  // site and feeds turn the server away; its main channel (not the breaking one) links every story (ara.tv).
+  { id: "AlArabiya", name: "Al Arabiya", lean: "gulf", every: 10 },
+  { id: "almanarnews", name: "Al-Manar", lean: "axis", every: 10, lebaneseMedia: true },
+  // Kuwait's Al-Jarida: Iran and Gulf scoops (jrd.ai links).
+  { id: "aljarida", name: "Al-Jarida", lean: "gulf", every: 10 },
+  { id: "Asharqnews", name: "Asharq News", lean: "gulf", every: 10 },
   // The IAEA's chief (22 Oct): iaea.org turns the server away, and the agency's own X handle is gone.
   { id: "rafaelmgrossi", name: "Rafael Grossi (IAEA)", lean: "intl", every: 15 },
 ];
@@ -361,6 +368,8 @@ export const SHARED_RSS: Record<string, IranLean> = {
   // Al-Binaa (user, 23 Oct: NNA's morning review carried it, so it is read itself): the SSNP's paper, close to the axis.
   "Al-Binaa": "axis",
   "Erem News": "gulf",
+  // Al-Quds Al-Arabi (user, 24 Oct): London's Arab daily, its own sources on Gaza, Hamas and the talks.
+  "Al-Quds Al-Arabi": "gulf",
   Alhurra: "us",
   SPA: "gulf",
   "Sky News Arabia": "gulf",

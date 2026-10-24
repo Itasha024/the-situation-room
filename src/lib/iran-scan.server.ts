@@ -119,7 +119,7 @@ const LEADS_PER_TICK = 40;
 /** Posts a tick whose linked article is opened and read with them. */
 const POST_LINKS_PER_TICK = 8;
 /** Articles a tick whose page refused the server, read from MSN's copy or the reading service. */
-const BLOCKED_PER_TICK = 4;
+const BLOCKED_PER_TICK = 8;
 /**
  * Lebanese papers behind Cloudflare, known by Google's headline alone (user,
  * 22 Oct: "they have a lot of exclusive stuff in the mornings"). Their "we have
@@ -137,7 +137,7 @@ export const lebanesePaper = (h: Pick<RawHit, "url" | "site">) => {
   };
   return LEBANESE_PAPER_HOST.test(h.site ?? "") || LEBANESE_PAPER_HOST.test(host(h.url));
 };
-const LEBANESE_OPENS_PER_TICK = 4;
+const LEBANESE_OPENS_PER_TICK = 6;
 /** The papers' morning order (user, 23 Oct): Al-Akhbar, Nidaa al-Watan, Al-Joumhouria, Al-Modon, then the rest. */
 const PAPER_ORDER = ["Al-Akhbar", "Nidaa al-Watan", "Al-Joumhouria", "Al-Modon"];
 /** Links waiting on Google's redirect, carried to the next tick. */
@@ -483,12 +483,20 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   // fifteen were mostly Google links during Google's rest, and the desk opened
   // 159 articles in a day of 21,500 shared items.
   let opened = 0;
-  let resolved = 0;
   const gnBudget = Math.min(GNEWS_PER_TICK, canResolve("lead") ? resolvesLeft() : bingLeft());
+  // The few look-ups go to the links whose headline is this war's first (user, 24 Oct: 59 of Ad-Diyar's and 59 of
+  // Elnashra's links waited, the papers' local news taking every turn, and their war stories aged out unread).
+  const worth = (h: RawHit) => (passesIranOwnGate(h.text) ? 0 : lebanesePaper(h) && passesLebaneseMediaGate(h.text) ? 1 : 2);
+  const toResolve = new Set(
+    papersFirst(hits)
+      .filter((h) => isGnews(h.url) && !knownResolve(h.url))
+      .sort((a, b) => worth(a) - worth(b))
+      .slice(0, gnBudget),
+  );
   await Promise.allSettled(
     // The Lebanese papers' links first: the newest of everything else took every turn.
     papersFirst(hits)
-      .filter((h) => !h.fromTg && h.text.length < 600 && (!isGnews(h.url) || !!knownResolve(h.url) || resolved++ < gnBudget))
+      .filter((h) => !h.fromTg && h.text.length < 600 && (!isGnews(h.url) || !!knownResolve(h.url) || toResolve.has(h)))
       .slice(0, LEADS_PER_TICK)
       .map(async (h) => {
         if (isGnews(h.url)) {

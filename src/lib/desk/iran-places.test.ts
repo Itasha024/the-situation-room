@@ -5,7 +5,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { heardInside, iranPins, iranPlacesIn, seaPlace } from "./iran-places.ts";
+import { heardInside, iranPinAllowed, iranPins, iranPlacesIn, seaPlace } from "./iran-places.ts";
 
 test("a place is pinned only when the source names it too, in any of its languages", () => {
   assert.deepEqual(iranPins("Israeli strikes hit Isfahan and Natanz", "حملات اسرائیل به اصفهان و نطنز", false).map((p) => p.name), ["Isfahan", "Natanz"]);
@@ -141,4 +141,10 @@ test("a sea pin sits in the sea it names and off the land; land pins stay on lan
 test("Jubail is Saudi Arabia's port, not Lebanon's Jbeil (17 Oct)", () => {
   const p = iranPins("Oil tanker hit by projectile near Jubail, Saudi Arabia", "استهداف ناقلة نفط بمقذوف قرب الجبيل في السعودية", true);
   assert.equal(p[0]?.name, "Jubail");
+});
+
+test("Gaza's Beit Lahia is not Lebanon's (24 Oct)", () => {
+  const lb = { country: "Lebanon", lat: 33.484, lng: 35.8025 };
+  assert.ok(!iranPinAllowed("israel", lb, "Israeli artillery shells western and eastern Beit Lahia in northern Gaza Strip"));
+  assert.ok(iranPinAllowed("israel", { country: "Lebanon", lat: 33.56, lng: 35.37 }, "Israeli strike in Lebanon kills Hamas official from Gaza in Sidon"));
 });

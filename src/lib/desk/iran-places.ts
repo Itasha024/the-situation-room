@@ -367,6 +367,7 @@ const INTERNAL =
 const NOT_NEW_OR_NOT_A_STRIKE =
   /\b(?:releases? (?:new )?footage|footage (?:shows?|of)|video (?:shows?|of)|still (?:ablaze|burning|on fire)|(?<!since )yesterday|over (?:the )?past (?:\d+|two|three|few|several) (?:days|hours)|thermal anomal\w*|sound bombs?|sonic boom|(?:break|breaks|broke) the sound barrier|break sound barrier|breaks sound barrier|(?:at|on) (?:its )?(?:highest|high|full|maximum) alert|alert (?:was |is )?declared|declared? (?:a )?(?:red |state of )?alert|state of alert|(?:tanks?|troops|forces|bulldozers?) (?:move|moves|moved|advance|advances|advanced)|machine-?gun (?:cover|sweeps?))\b/i;
 const AIR_DEFENCE = /\b(?:intercept\w*|air defen[cs]es?|shot down|shoots down|downed|downs)\b/i;
+const PALESTINE_WORDS = /\b(?:Gaza|Khan Y[ou]nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|Judea|Samaria|West Bank|Jenin|Nablus|Tulkarm|Hebron|Ramallah|Qalqilya|Tubas)\b|غزة|الضفة/i;
 const AXIS = new Set(["iran", "hezbollah", "iraqi_militias"]);
 const PURSUERS: Record<string, Set<string>> = {
   us: new Set(["Iran", "Iraq", "sea"]),
@@ -379,6 +380,9 @@ export function iranPinAllowed(actor: string | null | undefined, place: Pick<Ira
   if ((a === "houthi" && place.country !== "Israel") || NOT_AN_ATTACK.test(headline) || NOT_NEW_OR_NOT_A_STRIKE.test(headline) || FIRST_FOOTAGE_RE.test(headline) || ROUNDUP.test(headline) || tallyNotEvent(headline)) return false;
   if (/\bsirens?\b/i.test(headline) && place.country === "Israel") return false;
   if (place.country === "Yemen" || place.country === "Gaza" || place.country === "Palestine") return false;
+  // Gaza's and Judea and Samaria's names on a village abroad (24 Oct: "Israeli artillery shells western and
+  // eastern Beit Lahia in northern Gaza Strip" pinned on Lebanon's Beit Lahia): never there unless it names the country.
+  if (PALESTINE_WORDS.test(headline) && place.country !== "Israel" && !countriesNamed(headline).has(place.country)) return false;
   if (AXIS.has(a)) return place.country !== "Iran" || (a === "iran" && AIR_DEFENCE.test(headline) && !INTERNAL.test(headline));
   if (PURSUERS[a]) return PURSUERS[a].has(place.country);
   return place.country !== "Syria" && !INTERNAL.test(headline);

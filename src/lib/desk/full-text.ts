@@ -109,7 +109,7 @@ export async function msnCopy(url: string, title: string, source = "", get: (u: 
 }
 
 /** Reading-service calls in the last ten minutes: its free tier takes 20 a minute, the desk asks far fewer. */
-const READS_MAX = 12;
+const READS_MAX = 40;
 const READS_WINDOW_MS = 10 * 60_000;
 const readAt: number[] = [];
 export function readerLeft(now = Date.now()): number {
@@ -155,7 +155,7 @@ async function page(url: string): Promise<string> {
 }
 
 /** Hosts that only forward to the article: nyti.ms, on.wsj.com, trib.al, t.co … */
-const SHORT_HOST = /^(?:t\.co|nyti\.ms|on\.wsj\.com|reut\.rs|bloom\.bg|trib\.al|bit\.ly|ow\.ly|buff\.ly|dlvr\.it|cnn\.it|wapo\.st|politi\.co|apne\.ws|nbcnews\.to|cbsn\.ws|abcn\.ws|on\.ft\.com|econ\.st|ti\.me|fxn\.ws|tinyurl\.com|is\.gd|lnkd\.in|aje\.io|aje\.news|bbc\.in|trt\.global|shorturl\.at|goo\.gl|rb\.gy|j\.mp|amp\.gs|ift\.tt|share\.google|g\.co)$/i;
+const SHORT_HOST = /^(?:t\.co|nyti\.ms|on\.wsj\.com|reut\.rs|bloom\.bg|trib\.al|bit\.ly|ow\.ly|buff\.ly|dlvr\.it|cnn\.it|wapo\.st|politi\.co|apne\.ws|nbcnews\.to|cbsn\.ws|abcn\.ws|on\.ft\.com|econ\.st|ti\.me|fxn\.ws|tinyurl\.com|is\.gd|lnkd\.in|aje\.io|aje\.news|bbc\.in|trt\.global|shorturl\.at|goo\.gl|rb\.gy|j\.mp|amp\.gs|ift\.tt|share\.google|g\.co|ara\.tv|jrd\.ai|qr\.asharq\.com)$/i;
 export const isShortLink = (url: string) => SHORT_HOST.test(hostOf(url));
 
 /**

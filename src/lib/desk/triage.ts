@@ -34,6 +34,9 @@ export const TRIAGE_MODELS: ChainModel[] = [
   { provider: "groq", id: "qwen/qwen3.8-27b" },
   { provider: "groq", id: "openai/gpt-oss-safeguard-20b" },
   { provider: "gemini", id: "gemma-4-31b-it" },
+  // Groq's small models were out of their minute's tokens most of 23–24 Oct (400 refusals a day): the free extras after them.
+  { provider: "nvidia", id: "minimaxai/minimax-m3.1-flash" },
+  { provider: "kilo", id: "nvidia/nemotron-3-ultra-550b-a55b:free" },
 ];
 
 const SYSTEM = `You sort headlines for a news desk that covers ONE war: the war in Yemen —

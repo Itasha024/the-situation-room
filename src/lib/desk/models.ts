@@ -32,6 +32,8 @@ export const WRITER_MODELS: ChainModel[] = [
   { provider: "groq", id: "qwen/qwen3.8-27b" },
   { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   { provider: "groq", id: "openai/gpt-oss-20b" },
+  { provider: "nvidia", id: "minimaxai/minimax-m3.1-flash" },
+  { provider: "kilo", id: "nvidia/nemotron-3-ultra-550b-a55b:free" },
 ];
 
 /**
@@ -56,6 +58,9 @@ export const COMBINE_MODELS: ChainModel[] = [
   { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
   { provider: "openrouter", id: "openai/gpt-oss-120b:free" },
   { provider: "gemini", id: "gemini-flash-latest" },
+  // 24 Oct: NVIDIA's MiniMax (its own allowance) and Kilo's free Nemotron, when the rest are spent.
+  { provider: "nvidia", id: "minimaxai/minimax-m3.1-flash" },
+  { provider: "kilo", id: "nvidia/nemotron-3-ultra-550b-a55b:free" },
 ];
 
 /**

@@ -32,6 +32,7 @@ import { getStore } from "./desk/store.ts";
 import type { ScanPayload, ScanState, SourceStatus } from "./desk/types.ts";
 import { scanIranSources } from "./iran-scan.server.ts";
 import { scanGazaSources, toGaza } from "./gaza-scan.server.ts";
+import { runSiteSweep } from "./site-sweep.server.ts";
 import { type RawHit, type TickResult, type YemenFetch, fetchYemenSources, readYemen, runScanCycle, yemenCandidates } from "./yemen-scan.server.ts";
 
 export type SiteMode = "off" | "shadow" | "on";
@@ -99,7 +100,9 @@ async function scanThenReadYemen(state: ScanState, prev: ScanPayload | null): Pr
   const gazaOwn = scanGazaSources(store, Date.now())
     .then(({ n }) => console.log(`[site] Gaza sources: ${n} item(s) to the Gaza inbox`))
     .catch((err) => console.error("[site] Gaza sources:", err instanceof Error ? err.message : err));
-  const got =await fetchYemenSources(state, prev);
+  // The Arab sites swept every half hour, their articles read whole (site-sweep.server.ts); it runs on beside the cycle.
+  void runSiteSweep(store).catch((err) => console.error("[sweep]", err instanceof Error ? err.message : err));
+  const got = await fetchYemenSources(state, prev);
   remember(got.hits);
   void toGaza(store, got.gazaShared ?? [], "yemen").catch((err) => console.error("[site] Gaza inbox:", err instanceof Error ? err.message : err));
   let mine: YemenFetch = got;

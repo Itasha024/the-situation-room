@@ -197,12 +197,13 @@
     numbers: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20h16"/><path d="M7 20v-6M12 20V6M17 20v-9"/></g></svg>',
     timeline: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 4v16"/><circle cx="6" cy="7" r="1.6" fill="currentColor"/><circle cx="6" cy="13" r="1.6" fill="currentColor"/><path d="M10 7h9M10 13h7M10 18.5h5"/></g></svg>',
     theatres: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.5 5.2 3.5 8.5s-1.1 6.1-3.5 8.5c-2.4-2.4-3.5-5.2-3.5-8.5S9.6 5.9 12 3.5z"/></g></svg>',
+    explain: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 5.5c2.7-1 5.3-1 8 .8v13c-2.7-1.8-5.3-1.8-8-.8z"/><path d="M20 5.5c-2.7-1-5.3-1-8 .8v13c2.7-1.8 5.3-1.8 8-.8z"/></g></svg>',
     layers: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="M3 12l9 4.5 9-4.5M3 16l9 4.5 9-4.5"/></g></svg>',
   };
   const LEFT_TABS = {
     yemen: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Fronts', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
     iran: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
-    gaza: [['situation', 'Brief', 'brief'], ['cas-wrap', 'Numbers', 'numbers']],
+    gaza: [['situation', 'Brief', 'brief'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline'], ['explain-wrap', 'Explainers', 'explain']],
     all: [['ops-theatres', 'Brief', 'brief']],
   };
   const PAGE_NAME = { all: 'All theatres', iran: 'Iran', yemen: 'Yemen', gaza: 'Gaza – Judea & Samaria' };
@@ -329,7 +330,7 @@
     pt.className = 'ops-ptabs';
     // Map, Brief, Reports, the fronts or arenas, Numbers, Events, Timeline (user, 21 Oct).
     const tab = (id) => tabs.find((x) => x[0] === id);
-    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], tab('timeline-wrap')].filter(Boolean);
+    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], tab('timeline-wrap'), tab('explain-wrap')].filter(Boolean);
     pt.innerHTML = phone.map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
     root.insertBefore(pt, bar.nextSibling);
     pt.addEventListener('scroll', notch, { passive: true });
@@ -924,7 +925,7 @@
   /* Every event since the desk's start (20 Oct: Yemen from 13 Jul, Iran and the All page from 28 Feb), newest first; the
      hours picked under the map, when picked. Drawn a page at a time as the reader scrolls; the older ones are read
      from the server only when the reader reaches them. */
-  const LOG_FROM = { yemen: Date.parse('2026-07-13T00:00:00+03:00'), iran: Date.parse('2026-02-28T00:00:00+03:00'), gaza: Date.parse('2026-10-23T00:00:00+03:00'), all: Date.parse('2026-02-28T00:00:00+03:00') };
+  const LOG_FROM = { yemen: Date.parse('2026-07-13T00:00:00+03:00'), iran: Date.parse('2026-02-28T00:00:00+03:00'), gaza: Date.parse('2025-10-10T00:00:00+03:00'), all: Date.parse('2026-02-28T00:00:00+03:00') };
   const LOG_STEP = 100;
   let logList = [], evQ = '', logN = LOG_STEP, logOld = 'no';
   const tOf = (e) => { if (e._t == null) e._t = Date.parse(e.at) || 0; return e._t; };

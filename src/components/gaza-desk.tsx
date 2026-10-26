@@ -60,7 +60,6 @@ const GAZA_HTML = `
   <aside class="rail" id="rail">
     <div class="rail-head"><h2>Latest reports</h2><button type="button" class="feed-search-btn" id="btn-feed-search" aria-label="Search all reports" aria-expanded="false" aria-controls="feed-search" title="Search all reports"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.6"/><path d="M12.8 12.8l4.6 4.6"/></svg></button></div>
     <form class="feed-search" id="feed-search" role="search" hidden><input type="search" id="feed-q" placeholder="Search all reports: a place, a person, a weapon" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="Search all reports" maxlength="120"/><button type="submit" class="fs-go">Search</button></form>
-    <div class="trump-pin" id="trump-pin"><div class="tp-head"><b>Trump's latest</b></div></div>
     <div class="feed-sub" id="feed-sub" aria-hidden="true"><span>All reports</span><small>Newest first</small></div>
     <div class="feed-legend lf" id="feed-legend">
       <button type="button" class="lf-btn" aria-expanded="false" aria-haspopup="true" aria-controls="lf-menu"><span class="lf-sws" aria-hidden="true"></span><span class="lf-label">All sources</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5l3.5 3.5 3.5-3.5"/></svg></button>
@@ -80,7 +79,15 @@ const GAZA_HTML = `
 </section>
 <section class="cas-wrap" id="cas-wrap">
   <h2>In numbers</h2>
-  <div id="gaza-numbers">${SOON("casualties, territory, aid, attacks and incidents, sanctions and the Palestinian Authority's money, counted from 23 October 2026.")}</div>
+  <div id="gaza-numbers">${SOON("casualties, territory, aid, security, Judea and Samaria, the PA and its money, sanctions, hostages and the day after, from the ceasefire of 10 October 2025.")}</div>
+</section>
+<section class="timeline-wrap" id="timeline-wrap">
+  <h2>Timeline</h2>
+  <div id="iran-timeline">${SOON("from 7 October 2023 to today.")}</div>
+</section>
+<section class="timeline-wrap explain-wrap" id="explain-wrap">
+  <h2>Explainers</h2>
+  <div id="gaza-explain">${SOON("who's who in the PA and the factions, and the background from Oslo to 2023.")}</div>
 </section>
 <footer>
   <span id="attrib"></span>

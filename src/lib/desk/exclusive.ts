@@ -158,7 +158,12 @@ export function isExclusive(text: string, source: string): boolean {
   // "عدن الغد /خاص", "كريتر سكاي/خاص:" is the site's byline (its own staff),
   // not a label: Aden al-Ghad's Sanaa explosions and Crater Sky's camp blasts
   // went out as exclusives (8 Oct).
-  const v = u.replace(/\/\s*خاص(?:ة)?(?=[\s:.\-–—|]|$)\s*:?/g, " ");
+  // A linked page's own notice is not a label: FromIran's footer "Scheduled public posts for exclusive Iran reports
+  // follow two minutes later" marked every Shin Persian post an exclusive (26 Oct).
+  const v = u
+    .replace(/\/\s*خاص(?:ة)?(?=[\s:.\-–—|]|$)\s*:?/g, " ")
+    .replace(/[^.\n]*\b(?:posts?|alerts?|updates?|access|content|subscribers?|members?|premium)\s+(?:for|to|with)\s+exclusive\b[^.\n]*/gi, " ")
+    .replace(/[^.\n]*\bexclusive\s+(?:content|access|perks?|benefits?|offers?|deals?)\b[^.\n]*/gi, " ");
   // A public statement is everyone's, whatever label the site puts on it,
   // unless it was given to this outlet alone (user, 9 Oct).
   if (GENERIC.some((re) => re.test(v))) return !PUBLIC.test(v) || TO_OUTLET.test(v);

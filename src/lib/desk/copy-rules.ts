@@ -10,6 +10,7 @@ import type { DeskType } from "./digest.ts";
 import type { DeskId } from "../desks.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { arenaSourceRule, gazaSourceRule, palestineArena } from "./gaza-sourcing.ts";
+import { gazaLeanOf } from "./gaza-sources.ts";
 import { aboutFootage } from "./media.ts";
 import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
@@ -235,6 +236,21 @@ export function houthiClaim(headline: string, type: string, source: string): str
   const who = /Saree/i.test(source) ? "Houthi military spokesman" : /Masirah|^Saba|Thawrah|Ansarollah|Yemen Press Agency|^YPA$/i.test(source) ? "Houthi media" : "Houthi-aligned media";
   return `${who}: ${h}`;
 }
+
+/**
+ * A Palestinian source's account of an event is its claim, not the desk's fact (user, 26 Oct: "every palestinian
+ * report dont present it as fact"): "Gaza Health Ministry (Hamas-run): three killed …", "Palestinian media: Israeli
+ * forces raid Nablus". A headline that already names its teller ("X: …", "says", "according to") is left as it is.
+ */
+const PAL_EVENT = /\b(?:kill\w*|dead|wound\w*|injur\w*|strikes?|struck|shell\w*|fire[sd]?|firing|shot|shoots?|raid\w*|storm\w*|arrest\w*|detain\w*|abduct\w*|demolish\w*|bulldoz\w*|attack\w*|advance\w*|incursion|bomb\w*|drones?|quadcopter|torch\w*|burn\w*|assault\w*|beat(?:s|en)?|displac\w*|seiz\w*|uproot\w*|clash\w*)\b/i;
+export function palestinianClaim(headline: string, type: string, source: string): string {
+  const h = String(headline || "");
+  if (!["pa", "factions", "palestinian"].includes(gazaLeanOf(source))) return h;
+  if (TALK_TYPES.has(type) || !PAL_EVENT.test(h) || /^[^:]{2,60}:\s/.test(h) || /\b(?:says?|said|claims?|claimed|according to|reports?|reported|alleges?|accus\w+)\b/i.test(h)) return h;
+  const who = /Health Ministry/i.test(source) ? `${source}${/Ramallah/i.test(source) ? "" : " (Hamas-run)"}` : /Civil Defen[cs]e|Media Office|Interior Ministry/i.test(source) ? `${source} (Hamas-run)` : /^(?:Hamas|Islamic Jihad|Saraya|Al-Qassam|WAFA)/i.test(source) ? source : "Palestinian media";
+  return `${who}: ${h}`;
+}
+const TALK_TYPES = new Set(["statement", "diplomacy", "politics", "analysis", "economy", "humanitarian"]);
 
 /** Lebanon in a card: a Lebanese outlet or a Lebanese place. */
 const LEBANESE_OUTLET = /^(?:NBN|LBCI|Al-Manar|Al Manar|NNA|National News Agency|MTV Lebanon|Al Mayadeen|Al-Akhbar|Ali Shoaib|Unews|Lebanon 24|L'Orient|Al-Modon|Nidaa al-Watan|Ad-Diyar|Lebanon Debate|Elnashra|Al-Joumhouria|Al-Binaa)/i;
@@ -943,6 +959,7 @@ export function serveCard(r: Row, desk: DeskId): boolean {
   if (sayWhat(r) === false) return false;
   let h = speakerByRole(ungarble(fix(String(r.summary ?? ""))), text);
   if (desk === "yemen" && houthi) h = houthiClaim(h, type, source);
+  if (desk === "gaza") h = palestinianClaim(h, type, String(r.source ?? source));
   r.summary = h;
   // The other outlets' lines under the card get the same offices and titles.
   if (Array.isArray(r.alsoReportedBy)) {

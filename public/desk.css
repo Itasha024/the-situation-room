@@ -1271,3 +1271,5 @@ html .leg-ico.kind,html[data-set] .leg-ico.kind{background:#475569;color:#fff;bo
 .gz-rows[hidden] { display: none; }
 /* Yemen's district lines only zoomed in, as the other countries' (user, 26 Oct). */
 .ye-dist-off path.ye-dist{stroke-opacity:0!important}
+/* The IDF-held area is only a tick box now (26 Oct): it sits above the pointer's coordinates, not over them. */
+.gz-line-box { margin-bottom: 36px !important; padding: 5px 8px; }

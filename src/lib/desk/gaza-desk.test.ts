@@ -19,7 +19,8 @@ test("the desk's own words", () => {
   // A stored card is served in the desk's words.
   const card = { summary: "Settlers torch cars near Nablus in the West Bank", text: "", source: "WAFA", type: "combat", url: "https://t.me/WAFAgency/1" };
   assert.ok(serveCard(card, "gaza"));
-  assert.equal(card.summary, "Israeli extremists torch cars near Nablus in Judea and Samaria");
+  // A Palestinian source tells it as its claim (user, 26 Oct).
+  assert.equal(card.summary, "WAFA: Israeli extremists torch cars near Nablus in Judea and Samaria");
 });
 
 test("the gate: the desk's words, not Iran's Abbas or an opened crossing elsewhere", () => {

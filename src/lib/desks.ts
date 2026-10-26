@@ -54,7 +54,8 @@ export const DESKS: Desk[] = [
       "Live open-source reporting on the war with Iran: strikes on every side, the Strait of Hormuz, the talks, the nuclear file and the numbers, from every side's sources.",
   },
   {
-    // User, 23 Oct: the third desk; live from 26 Oct. It counts from the day it began reading, not from a war's first day.
+    // User, 23 Oct: the third desk; live from 26 Oct. Its map and numbers count from the ceasefire of 10 Oct 2025 (user, 26 Oct:
+    // researched before the desk began reading on 23 Oct 2026, scripts/gaza-research).
     id: "gaza",
     name: "Gaza – Judea & Samaria Desk",
     path: "/gaza-judea-samaria-desk",
@@ -62,7 +63,7 @@ export const DESKS: Desk[] = [
     tz: "Asia/Jerusalem",
     clockLabel: "Jerusalem",
     cadenceHours: 3,
-    mapFrom: "2026-10-23",
+    mapFrom: "2025-10-10",
     feedFrom: "2026-10-23T00:00:00+03:00",
     description:
       "Live open-source reporting on Gaza and Judea and Samaria: the IDF's operations, attacks and clashes, aid and the crossings, the Board of Peace, Palestinian politics, statements and sanctions, from every side's sources.",

@@ -25,11 +25,11 @@ export type GazaCard = {
   alsoReportedBy?: { source: string; url?: string }[];
 };
 export type Cell = { v: string | number | null; url?: string; src?: string; date?: string; k?: "off" | "unoff"; note?: string };
-export type Box =
+export type Box = { set?: string; setName?: string } & (
   | { type: "claims"; title: string; unit?: string; note?: string; rows: { label: string; sub?: string; off: Cell | null; unoff: Cell | null }[] }
   | { type: "table"; title: string; unit?: string; note?: string; cols: string[]; rows: { label: string; sub?: string; cells: (Cell | null)[] }[] }
   | { type: "stat"; title: string; unit?: string; note?: string; value: Cell; caption?: string }
-  | { type: "list"; title: string; note?: string; cols: [string, string?][]; rows: (string | Cell)[][]; stats?: [Cell, string][] };
+  | { type: "list"; title: string; note?: string; cols: [string, string?][]; rows: (string | Cell)[][]; stats?: [Cell, string][] });
 
 export const GAZA_NUMBERS_FROM = "2026-10-23";
 
@@ -132,86 +132,19 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
   const floor = Date.parse(`${from}T00:00:00+03:00`);
   const all = cards.filter((c) => Date.parse(c.at) >= floor).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 
-  // Killed and wounded.
-  type Sum = { n: number; last?: GazaCard };
-  const z = (): Sum => ({ n: 0 });
-  const sums: Record<string, { off: Sum; unoff: Sum }> = {};
-  const add = (key: string, off: boolean, n: number, c: GazaCard) => {
-    if (!n) return;
-    const s = (sums[key] ??= { off: z(), unoff: z() })[off ? "off" : "unoff"];
-    s.n += n;
-    s.last ??= c;
-  };
-  // One toll told again is counted once (26 Oct: the two soldiers killed near Hebron, in five reports over three
-  // days): the same side, area and count within three days, sharing a spot or a name (Israelis: rare enough that
-  // the count alone holds), or a retelling ("after the attack that killed…", "names the soldiers killed").
-  const counted: { where: string; dead: number; hurt: number; t: number; keys: string[] }[] = [];
-  const keysOf = (s: string) => [...(s.match(/\b[A-Z][a-z'-]{2,}(?:[ -](?:al-|el-|Abu |bin )?[A-Z][a-z'-]{2,})*\b/g) ?? [])].map((k) => k.toLowerCase()).filter((k) => !/^(?:israeli|palestinian|palestinians|gaza|israel|idf|hamas|the)$/.test(k));
-  // Oldest first, so the first account of an event is the one counted.
-  for (const c of [...all].reverse()) {
-    if (TALLY.test(c.summary) || RETOLD.test(c.summary)) continue;
-    const side = hurtSide(c);
-    const cardArea = areaOf(c);
-    if (!side) continue;
-    const off = officialCard(c);
-    const t = Date.parse(c.at);
-    // Clause by clause: "Israeli extremists raid Awarta near Nablus; three Palestinians killed south of Khan Younis".
-    for (const part of c.summary.split(/;|\.\s/)) {
-      const { dead, hurt } = hurtIn(part);
-      if (!dead && !hurt) continue;
-      const area = GAZA_PLACES.test(part) ? "gaza" : JS_PLACES.test(part) ? "js" : cardArea;
-      const where = side === "israeli" ? "israeli" : area;
-      if (!where) continue;
-      const keys = keysOf(part);
-      const again = counted.some((x) => x.where === where && Math.abs(x.t - t) < 3 * 864e5 && (dead ? x.dead === dead : x.hurt === hurt) && (where === "israeli" || x.keys.some((k) => keys.includes(k))));
-      if (again) continue;
-      counted.push({ where, dead, hurt, t, keys });
-      add(`${where}:dead`, off, dead, c);
-      add(`${where}:hurt`, off, hurt, c);
-    }
-  }
-  const cell = (key: string, which: "off" | "unoff"): Cell | null => {
-    const s = sums[key]?.[which];
-    return s && s.n && s.last ? { ...cellOf(s.last, s.n, which), note: "the latest report counted" } : null;
-  };
-  const row = (label: string, key: string, sub?: string) => ({ label, ...(sub ? { sub } : {}), off: cell(key, "off"), unoff: cell(key, "unoff") });
-  const boxes: Box[] = [
-    {
-      type: "claims",
-      title: "Killed and wounded",
-      unit: `since ${fmt(from)}`,
-      note: "Counted by the desk from single events in its reports, each event once; a day's toll or a running total is not added. Official: the health ministries, the Red Crescent, Magen David Adom, the IDF and the police.",
-      rows: [
-        row("Palestinians killed", "gaza:dead", "Gaza"),
-        row("Palestinians wounded", "gaza:hurt", "Gaza"),
-        row("Palestinians killed", "js:dead", "Judea and Samaria"),
-        row("Palestinians wounded", "js:hurt", "Judea and Samaria"),
-        row("Israelis killed", "israeli:dead"),
-        row("Israelis wounded", "israeli:hurt"),
-      ],
-    },
-  ];
+  // The live figures only (user, 26 Oct: everything counts from the ceasefire of 10 Oct 2025, so the researched
+  // sets carry the rest, public/gaza-numbers.json); each box says the category it joins.
+  const boxes: Box[] = [];
 
   // The Gaza Health Ministry's own running count since the ceasefire of October 2025, as last reported.
   const RUNNING = /\b(\d[\d,]{2,})\s+(?:Palestinians\s+)?killed\s+since\s+(?:the\s+)?(?:ceasefire|truce)/i;
   const running = all.find((c) => RUNNING.test(c.summary));
   if (running) {
     const n = RUNNING.exec(running.summary)![1];
-    boxes.push({ type: "stat", title: "Killed in Gaza since the ceasefire", unit: "October 2025", value: { ...cellOf(running, n), k: officialCard(running) ? "off" : "unoff" }, caption: `the Gaza Health Ministry's running count, as reported ${fmt(day(running.at))}` });
+    boxes.push({ set: "cas", type: "stat", title: "Killed in Gaza since the ceasefire", unit: "since 10 Oct 2025", value: { ...cellOf(running, n), k: "unoff" }, caption: `Gaza's Hamas-run Health Ministry says, as reported ${fmt(day(running.at))}` });
   }
 
-  // Incidents by kind and area.
-  const kindRows = KINDS.map((k) => {
-    const cells = (["gaza", "js"] as const).map((area) => {
-      if (k.area && k.area !== area) return null;
-      const hits = all.filter((c) => areaOf(c) === area && k.re.test(c.summary) && (!k.actor || k.actor.includes(actorOf(c)) || (k.label === "Israeli extremists' violence" && /\bextremists?\b/i.test(c.summary))));
-      return hits.length ? cellOf(hits[0], hits.length, "off", "reports; the newest linked") : null;
-    });
-    return { label: k.label, cells };
-  }).filter((r) => r.cells.some(Boolean));
-  if (kindRows.length) boxes.push({ type: "table", title: "Incidents", unit: `reports since ${fmt(from)}`, cols: ["", "Gaza", "Judea and Samaria"], rows: kindRows, note: "Each figure is the number of the desk's reports of that kind; it opens the newest." });
-
-  // The crossings and the aid.
+  // The crossings.
   // The clause that names the crossing tells its state: "Kerem Shalom crossing opens; Rafah, Zikim and Kissufim
   // remain closed". Rafah alone is the city: it counts as the crossing beside a crossing word or another crossing.
   const crossState = (name: string, re: RegExp, s: string): string | null => {
@@ -231,20 +164,25 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
     }
     return null;
   }).filter((r): r is { label: string; cells: Cell[] } => !!r);
-  if (crossRows.length) boxes.push({ type: "table", title: "The crossings", cols: ["", "Now"], rows: crossRows, note: "As the latest report on each has it." });
-  const trucks = all.find((c) => /\b\d[\d,]*\s+(?:aid\s+)?trucks\b/i.test(c.summary));
-  if (trucks) {
-    const n = /\b(\d[\d,]*)\s+(?:aid\s+)?trucks\b/i.exec(trucks.summary)![1];
-    boxes.push({ type: "stat", title: "Aid trucks", value: cellOf(trucks, n), caption: `the latest count reported, ${fmt(day(trucks.at))}` });
-  }
+  if (crossRows.length) boxes.push({ set: "aid", type: "table", title: "The crossings", cols: ["", "Now"], rows: crossRows, note: "As the latest report on each has it." });
 
-  // The reports themselves.
-  for (const l of LISTS) {
-    const rows = all.filter((c) => (l.arena && (c.flags ?? []).includes(`arena:${l.arena}`)) || l.re.test(c.summary)).slice(0, 40);
-    if (!rows.length) continue;
-    boxes.push({ type: "list", title: l.title, cols: [["Date", "l"], ["Report", "l"]], rows: rows.map((c) => [fmt(day(c.at)), cellOf(c, c.summary)]), stats: [[{ v: rows.length }, `report${rows.length === 1 ? "" : "s"} since ${fmt(from)}`]] });
+  // The latest count of aid trucks, with the time it covers as the report tells it (user, 26 Oct: the figure did
+  // not say its span): the clause itself is the caption.
+  const TRUCKS = /\b(\d[\d,]*)\s+(?:aid\s+|humanitarian\s+|commercial\s+)?trucks\b/i;
+  const trucks = all.find((c) => TRUCKS.test(c.summary));
+  if (trucks) {
+    const clause = trucks.summary.split(/;|\.\s/).find((p) => TRUCKS.test(p)) ?? trucks.summary;
+    const n = TRUCKS.exec(clause)![1];
+    boxes.push({ set: "aid", type: "stat", title: "Aid trucks, latest report", unit: spanOf(clause, trucks.at), value: cellOf(trucks, n, officialCard(trucks) ? "off" : "unoff"), caption: `${clause.trim()} (${trucks.source}, ${fmt(day(trucks.at))})` });
   }
   return { boxes, from, reports: all.length };
+}
+
+/** The time a count covers, from its words: "today", "this week", "since Sunday", else the day it was told. */
+export function spanOf(s: string, at: string): string {
+  const t = String(s || "");
+  const m = /\b(?:in the past|over the past|in the last|during the past)\s+(?:24|48|72)\s+hours\b|\b(?:today|yesterday|this week|last week|this month|last month|daily|a day|per day|each day|since [A-Z]?\w+(?: \d{1,2})?)\b/i.exec(t);
+  return m ? m[0].toLowerCase() : `told ${fmt(day(at))}`;
 }
 
 function fmt(ymd: string): string {

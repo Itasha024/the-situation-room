@@ -7815,7 +7815,7 @@ function startIranFeed() {
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
   // The Gaza desk's brief and its IDF-held area (24 Oct); its Trump column and numbers come in its later stages.
-  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadGazaNumbers(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
+  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadIranBrief(); loadIranPins(); loadGazaNumbers(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
@@ -7861,7 +7861,8 @@ function useDeskSettings() {
   if (deskOf().id !== 'gaza') return;
   IRAN_PIN_SIDES = GAZA_PIN_SIDES;
   IRAN_PIN_INK = Object.fromEntries(GAZA_PIN_SIDES.map(([k, c]) => [k, c]));
-  IRAN_MAP_FROM = '2026-10-23';
+  // Everything from the ceasefire of 10 Oct 2025 (user, 26 Oct): the researched pins before the desk's first day.
+  IRAN_MAP_FROM = '2025-10-10';
   // Ground fighting is "Clashes" here (user, 23 Oct); the other kinds keep their names.
   IRAN_KIND_LABEL.combat = 'Clashes';
   IRAN_KIND_LABEL.funeral = 'Funerals';
@@ -8159,8 +8160,8 @@ async function loadIranPins() {
   if (!map) return;
   // The war's researched pins are read alongside, never before, the desk's own (user, 11 Oct:
   // the map comes up at once): today is drawn from the live pins, the whole war when they come.
-  if (deskOf().id !== 'iran') iranPins.past = iranPins.past || [];
-  const pastP = iranPins.past ? Promise.resolve(iranPins.past) : (iranPins.pastP = iranPins.pastP || loadIranPast());
+  if (deskOf().id === 'yemen') iranPins.past = iranPins.past || [];
+  const pastP = iranPins.past ? Promise.resolve(iranPins.past) : (iranPins.pastP = iranPins.pastP || (deskOf().id === 'gaza' ? loadGazaPast() : loadIranPast()));
   try {
     const res = await fetch(`/api/desk?desk=${deskOf().id}&since=${IRAN_MAP_FROM}`);
     if (!res.ok) return;
@@ -8171,6 +8172,7 @@ async function loadIranPins() {
     const merge = () => {
       iranPins.events = [...(iranPins.past || []).filter((e) => Date.parse(e.at) < first), ...live];
       drawIranPins();
+      if (deskOf().id === 'gaza' && iranPins.past) renderGazaNumbers();
       // The arenas' "Show on map" buttons need the pins.
       if (iranBrief.b && !iranBrief.pinned) { iranBrief.pinned = true; renderIranBrief(); }
       // Once the war's pins are in too: drawing them again closed a note opened before.
@@ -8198,6 +8200,21 @@ async function loadIranPast() {
     }));
     if (!iranPins.notesP) iranPins.notesP = loadIranNotes();
     return out;
+  } catch (e) { return []; }
+}
+/**
+ * The Gaza desk's events from the ceasefire of 10 Oct 2025 to its first day (user, 26 Oct), researched from its
+ * sources' history (scratchpad gzr/, scripts/gaza-research): each on its source's post, its day only, the note inline.
+ */
+async function loadGazaPast() {
+  try {
+    const res = await fetch(`/gaza-map-pins.json?v=${IRAN_ASSET_V}`);
+    if (!res.ok) return [];
+    const d = await res.json();
+    return (d.pins || []).map(([ymd, actor, lat, lng, kind, place, label, source, url, also], i) => ({
+      fp: `gr#${i}`, kind: typeof kind === 'number' ? kind : undefined, at: `${ymd}T12:00:00+03:00`, dayOnly: true, researched: true, noted: true, actor, type: 'strike', mapOnly: true,
+      place: place || '', lat, lng, label: label || '', text: '', source: source || '', url: url || '', also: (also || []).map(([s, u]) => ({ source: s, url: u })), desk: 'gaza',
+    }));
   } catch (e) { return []; }
 }
 /** This release's version (the page's app.js address): a new release reads the pin files anew. */
@@ -8886,12 +8903,24 @@ function renderIranNumbers() {
   el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { iranNums.cat = b.dataset.cat; renderIranNumbers(); }));
 }
 /*
- * The Gaza – Judea & Samaria desk's numbers (user, 26 Oct): counted on the server from the desk's own reports
- * since 23 Oct (/api/gaza-numbers, gaza-numbers.ts), in the Iran desk's boxes; the IDF-held share from the map's layer.
+ * The Gaza – Judea & Samaria desk's numbers (user, 26 Oct: "many numbers categories … like the other desks", all from the
+ * ceasefire of 10 Oct 2025): the researched sets (/gaza-numbers.json, scripts/gaza-research) in categories, each box
+ * replaced by the server's live one of the same title when there is one (/api/gaza-numbers: the crossings, the aid
+ * trucks, the Health Ministry's running count), the events on the map counted here, the IDF-held share from the map.
  */
-const gazaNums = { d: null, at: 0 };
+const gazaNums = { d: null, r: null, at: 0, cat: '', ex: null, exIdx: 0 };
 async function loadGazaNumbers() {
-  if (deskOf().id !== 'gaza' || Date.now() - gazaNums.at < 5 * 60_000) return;
+  if (deskOf().id !== 'gaza') return;
+  if (!gazaNums.r) {
+    gazaNums.r = {};
+    const get = (u) => fetch(`${u}?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const [n, t, x] = await Promise.all([get('/gaza-numbers.json'), get('/gaza-timeline.json'), get('/gaza-explain.json')]);
+    gazaNums.r = n || {};
+    if (t) { iranNums.tl = t; renderIranTimeline(); }
+    gazaNums.ex = x || { items: [] };
+    renderGazaExplain();
+  }
+  if (Date.now() - gazaNums.at < 5 * 60_000) { renderGazaNumbers(); return; }
   gazaNums.at = Date.now();
   try {
     const r = await fetch('/api/gaza-numbers');
@@ -8899,16 +8928,48 @@ async function loadGazaNumbers() {
   } catch (e) { console.warn('gaza numbers', e); }
   renderGazaNumbers();
 }
-function renderGazaNumbers() {
-  const el = document.getElementById('gaza-numbers');
-  const d = gazaNums.d;
-  if (!el || !d || !Array.isArray(d.boxes)) return;
-  const boxes = [...d.boxes];
+/** Where a pin is: Gaza or Judea and Samaria (with Jerusalem), by its point. */
+const gazaAreaOf = (ev) => (ev.lng < 34.58 && ev.lat < 31.62 && ev.lat > 31.2 ? 'gaza' : ev.lng > 34.85 && ev.lng < 35.6 && ev.lat > 31.3 && ev.lat < 32.6 ? 'js' : '');
+/** The map's events since the ceasefire, by who acted and where: counted from the pins as drawn. */
+function gazaMapBox() {
+  const evs = (iranPins.events || []).filter((e) => Date.parse(e.at) >= Date.parse('2025-10-10T00:00:00+03:00'));
+  if (!evs.length) return null;
+  const n = {};
+  for (const e of evs) { const a = gazaAreaOf(e); if (a) { const k = `${iranSideOf(e)}:${a}`; n[k] = (n[k] || 0) + 1; } }
+  const rows = GAZA_PIN_SIDES.map(([k, , name]) => ({ label: name, cells: ['gaza', 'js'].map((a) => (n[`${k}:${a}`] ? { v: n[`${k}:${a}`].toLocaleString('en-US'), k: 'off' } : null)) })).filter((r) => r.cells.some(Boolean));
+  return { type: 'table', title: 'Events on the map', unit: 'since 10 Oct 2025', cols: ['', 'Gaza', 'Judea and Samaria'], rows, note: "Each event once, by who acted, as the map has it: the desk's reports from 23 Oct 2026, the researched events before." };
+}
+function gazaSets() {
+  const sets = ((gazaNums.r && gazaNums.r.sets) || []).map((s) => ({ ...s, boxes: [...(s.boxes || [])] }));
+  const setOf = (key, name) => sets.find((s) => s.key === key) || (sets.push({ key, name, boxes: [] }), sets[sets.length - 1]);
+  // A live box takes the place of the researched one of its title, else joins its set.
+  for (const b of (gazaNums.d && gazaNums.d.boxes) || []) {
+    const s = setOf(b.set || 'aid', b.setName || 'Aid');
+    const i = s.boxes.findIndex((x) => x.title === b.title);
+    if (i >= 0) s.boxes[i] = b; else s.boxes.unshift(b);
+  }
   const zone = iranBrief.b && iranBrief.b.idfArea && iranBrief.b.idfArea.zone;
   if (zone && Number.isFinite(+zone.share)) {
-    boxes.splice(1, 0, { type: 'stat', title: 'Gaza held by the IDF', unit: 'share of the Strip', value: { v: `${(+zone.share).toFixed(1)}%`, url: zone.url, src: zone.by, date: zone.asOf }, caption: `${zone.name || 'the area behind the line'}, as mapped ${fmtDay(zone.asOf)}; the line's reported moves since are on the map`, note: '' });
+    const s = setOf('dayafter', 'Day after');
+    const box = { type: 'stat', title: 'Gaza held by the IDF', unit: 'share of the Strip', value: { v: `${(+zone.share).toFixed(1)}%`, url: zone.url, src: zone.by, date: zone.asOf, k: 'off' }, caption: `${zone.name || 'the area behind the line'}, as last mapped (${fmtDay(zone.asOf)})` };
+    const i = s.boxes.findIndex((x) => x.title === box.title);
+    if (i >= 0) s.boxes[i] = box; else s.boxes.unshift(box);
   }
-  el.innerHTML = `<p class="cadence at-head">Counted from the desk's reports since 23 Oct 2026 · updated ${escapeHtml(fmtStamp(d.at))}</p><div class="tally one">${pagerHtml('numbers', boxes.map((b, i) => irBox(b, i)), 0, boxes.map((b) => b.title))}</div>`;
+  const m = gazaMapBox();
+  if (m) setOf('security', 'Security').boxes.unshift(m);
+  return sets.filter((s) => s.boxes.length);
+}
+function renderGazaNumbers() {
+  const el = document.getElementById('gaza-numbers');
+  if (!el || !gazaNums.r) return;
+  const sets = gazaSets();
+  if (!sets.length) return;
+  const set = sets.find((s) => s.key === gazaNums.cat) || sets[0];
+  gazaNums.cat = set.key;
+  const asOf = gazaNums.r.asOf ? `researched to ${fmtDay(gazaNums.r.asOf)}` : '';
+  const live = gazaNums.d && gazaNums.d.at ? `live figures updated ${fmtStamp(gazaNums.d.at)}` : '';
+  const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${sets.map((s) => `<button type="button" data-cat="${s.key}" aria-pressed="${s.key === set.key}"${s.key === set.key ? ' class="on"' : ''}>${escapeHtml(s.name)}</button>`).join('')}</div>`;
+  el.innerHTML = `<p class="cadence at-head">Since the ceasefire of 10 Oct 2025${asOf || live ? ` · ${escapeHtml([asOf, live].filter(Boolean).join(' · '))}` : ''}</p>${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
   wirePager(el, 0, () => { hideSpot(); irClamp(el); });
   wireSpots(el);
   irClamp(el);
@@ -8919,6 +8980,27 @@ function renderGazaNumbers() {
     box.onclick = (ev) => { if (!ev.target.closest('a, button, .led-more') && !String(window.getSelection() || '')) b.click(); };
   });
   el.querySelectorAll('.rows-tog').forEach((b) => wireBoxToggle(b.closest('.rows-more'), b, 'open'));
+  el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { gazaNums.cat = b.dataset.cat; renderGazaNumbers(); }));
+}
+/**
+ * The explainers (user, 26 Oct): the guide to the PA and the factions first, then the background before 7 Oct 2023
+ * (/gaza-explain.json), each a card with Read more and its sources, as the timeline's.
+ */
+function renderGazaExplain() {
+  const el = document.getElementById('gaza-explain');
+  if (!el || !gazaNums.ex) return;
+  const guide = `<article class="phase-card now ex-guide"><div class="phase-head"><strong>Who's who: the PA and the factions</strong><span class="muted">as of today</span></div><p class="phase-sum">How the PLO, the Palestinian Authority and its security services, Fatah and the Tanzim, Hamas, Islamic Jihad and the other factions are built and work, with diagrams; elections, the split, the money, Areas A, B and C.</p><p><a class="x-desk" href="/gaza-judea-samaria-desk/guide">Open the guide →</a></p></article>`;
+  const card = (p) => {
+    const paras = String(p.detail || p.sum).split(/\n\n+/).map((x) => `<p>${escapeHtml(x).replace(/^([^:.]{3,40}):/, '<strong>$1:</strong>')}</p>`).join('');
+    const n = (p.sources || []).length;
+    const links = (p.sources || []).map((s) => `<li><a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a></li>`).join('');
+    return `<article class="phase-card expandable"><div class="phase-head"><strong>${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates || '')}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${n ? `<details class="src-list"><summary>Sources (${n})</summary><ul>${links}</ul></details>` : ''}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
+  };
+  const items = gazaNums.ex.items || [];
+  const all = [guide, ...items.map(card)];
+  el.innerHTML = pagerHtml('explain', all, 0, ["Who's who", ...items.map((p) => p.title)]);
+  wirePager(el, 0, () => closeReadMore(el, '.phase-card', '.toggle-phase'), { wrap: false });
+  el.querySelectorAll('.phase-card.expandable').forEach((c) => wireBoxToggle(c, c.querySelector('.toggle-phase'), 'open'));
 }
 /*
  * A long box shows its first part and "Read more", on a PC and a phone (user, 11 Oct): measured
@@ -8988,10 +9070,7 @@ async function drawGazaLine(a) {
   if (!map || deskOf().id !== 'gaza' || !a) return;
   // A new map (the page came back to this desk): everything drawn again on it.
   if (gazaLine.map !== map) { gazaLine.map = map; gazaLine.sig = ''; gazaLine.layer = null; gazaLine.box = null; }
-  if (!gazaLine.hist) {
-    try { gazaLine.hist = await (await fetch('/gaza-line-history.json', { cache: 'no-cache' })).json(); } catch (e) { gazaLine.hist = { moves: [], shares: [] }; }
-  }
-  const sig = `${a.checkedAt}|${(a.moves || []).length}`;
+  const sig = `${a.checkedAt}|${(a.zone || a.held || {}).asOf || ''}`;
   if (sig === gazaLine.sig && gazaLine.layer) return;
   gazaLine.sig = sig;
   for (const [name, z, pe] of [['gzArea', 340, 'none'], ['gzMoves', 615, 'auto']]) {
@@ -8999,45 +9078,16 @@ async function drawGazaLine(a) {
   }
   if (gazaLine.layer) { try { map.removeLayer(gazaLine.layer); } catch (e) {} }
   const g = L.layerGroup();
-  const since = [a.zone && a.zone.asOf, a.held && a.held.asOf].filter(Boolean).sort().pop() || '';
   if (a.zone) L.geoJSON(a.zone.geometry, { pane: 'gzArea', interactive: false, style: { color: '#f59e0b', weight: 1.2, dashArray: '4 3', fillColor: '#f59e0b', fillOpacity: 0.16 } }).addTo(g);
   if (a.held) L.geoJSON(a.held.geometry, { pane: 'gzArea', interactive: false, style: { color: '#facc15', weight: 1.6, fillColor: '#eab308', fillOpacity: 0.28 } }).addTo(g);
-  const hist = ((gazaLine.hist && gazaLine.hist.moves) || []).filter((m) => !since || m.at >= since);
-  const moves = [...hist.map((m) => ({ ...m, past: true })), ...(a.moves || [])];
-  for (const m of moves) {
-    const back = m.move === 'withdraw';
-    const icon = L.divIcon({ className: `gz-move${back ? ' gz-back' : ''}${m.past ? ' gz-past' : ''}`, html: `<span>${back ? '▶' : '◀'}</span>`, iconSize: [18, 18], iconAnchor: [9, 9] });
-    const day = new Date(m.at).toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric', timeZone: VIEW_TZ });
-    const src = m.url ? `<a href="${escapeHtml(m.url)}" target="_blank" rel="noopener">${escapeHtml(m.source)}</a>` : escapeHtml(m.source);
-    L.marker([m.lat, m.lng], { pane: 'gzMoves', icon, keyboard: false, title: `${back ? 'Pulled back' : 'Moved forward'}: ${m.place || ''}` })
-      .bindPopup(`<div class="gz-move-pop"><b>${back ? 'The IDF line pulled back' : 'The IDF line moved forward'}</b> · ${escapeHtml(day)}<br>${escapeHtml(m.headline)}<br><small>${src}</small></div>`)
-      .addTo(g);
-  }
   gazaLine.layer = g;
   if (gazaLine.on) g.addTo(map);
-  // The box: what the shading is, how old, and the moves told since.
-  const ago = (d) => new Date(d).toLocaleDateString(LOC, { day: 'numeric', month: 'short', year: 'numeric', timeZone: VIEW_TZ });
-  const shares = ((gazaLine.hist && gazaLine.hist.shares) || []).slice().sort((x, y) => (x.at < y.at ? 1 : -1));
-  const latest = shares[0];
-  const top = a.zone || a.held;
-  // Folded to one line until opened (24 Oct: on a small screen the box hid the Strip).
-  const html = `<div class="gz-head"><label class="gz-line-on"><input type="checkbox"${gazaLine.on ? ' checked' : ''}> <b>IDF-held area</b>${top ? ` ${top.share}%` : ''}</label><button type="button" class="gz-more" aria-expanded="${!!gazaLine.open}" title="About this area">${gazaLine.open ? '−' : 'i'}</button></div>
-    <div class="gz-rows"${gazaLine.open ? '' : ' hidden'}>
-    ${a.held ? `<div class="gz-row"><i class="gz-sw gz-sw-held"></i>Behind the yellow line: ${a.held.share}% (${escapeHtml(a.held.by)} map, ${ago(a.held.asOf)})</div>` : ''}
-    ${a.zone ? `<div class="gz-row"><i class="gz-sw gz-sw-zone"></i>With the orange zone: ${a.zone.share}% (${escapeHtml(a.zone.by)} map, ${ago(a.zone.asOf)})</div>` : ''}
-    ${latest && (!since || latest.at > since) ? `<div class="gz-row gz-latest">Latest figure: about ${latest.share}%, ${escapeHtml(latest.source)}, ${ago(latest.at)}</div>` : ''}
-    <div class="gz-row"><span class="gz-move gz-inline"><span>◀</span></span>${moves.length} reported move${moves.length === 1 ? '' : 's'} of the line since ${since ? ago(since) : 'the last map'}</div></div>`;
+  // Only a tick box, ticked at first (user, 26 Oct: no legend of dates and shares, no arrows of the line's moves);
+  // the area itself is the latest the mapping sources published (gaza-line.server.ts, every 6 hours).
+  const html = `<label class="gz-line-on"><input type="checkbox"${gazaLine.on ? ' checked' : ''}> <b>IDF-held area</b></label>`;
   if (!gazaLine.box) {
     const Box = L.Control.extend({ options: { position: 'bottomleft' }, onAdd() { const d = L.DomUtil.create('div', 'gz-line-box'); L.DomEvent.disableClickPropagation(d); return d; } });
     gazaLine.box = new Box().addTo(map);
-    gazaLine.box.getContainer().addEventListener('click', (ev) => {
-      const btn = ev.target.closest('.gz-more');
-      if (!btn) return;
-      gazaLine.open = !gazaLine.open;
-      btn.setAttribute('aria-expanded', String(gazaLine.open));
-      btn.textContent = gazaLine.open ? '−' : 'i';
-      gazaLine.box.getContainer().querySelector('.gz-rows').hidden = !gazaLine.open;
-    });
     gazaLine.box.getContainer().addEventListener('change', (ev) => {
       if (!ev.target.matches('input')) return;
       gazaLine.on = ev.target.checked;
@@ -9061,6 +9111,7 @@ async function loadIranBrief() {
     renderIranBrief();
     renderIranTimeline();
     renderIranNumbers();
+    if (deskOf().id === 'gaza') renderGazaNumbers();
   } catch (e) { console.warn('iran brief', e); }
 }
 /** Read more on a box: the button, or a click anywhere in it that is not a link or a button. */
@@ -9090,15 +9141,17 @@ function renderIranBrief() {
   // The Gaza desk: Gaza and Judea and Samaria, each its own list (user, 24 Oct), and no arenas.
   const areas = Array.isArray(b.areas) ? b.areas.filter((a) => Array.isArray(a.points) && a.points.length) : [];
   if (el && areas.length) {
+    // One tab each, Gaza and Judea and Samaria (user, 26 Oct: "split like it does in all desks"), on a PC and a phone.
     const open = el.classList.contains('sit-open');
-    const more = areas.some((a) => a.points.length > 3);
-    el.innerHTML = `<div class="sit-head"><h2>Brief</h2></div>${cadenceStamp(true, b)}
-      <div class="sit-body">${areas.map((a, i) => {
-        const old = a.lastNewsAt && a.lastNewsAt !== b.updatedAt;
-        return `<div class="sit-area" data-i="${i}"><h3 class="sit-area-h">${escapeHtml(a.name)}</h3>${pointsHtml(a.points, a.refs, { show: 3 })}${old ? `<p class="front-asof">${escapeHtml(T('As of {t}, {d}', { t: fmtClock(a.lastNewsAt), d: new Date(a.lastNewsAt).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ }) }))}</p>` : ''}</div>`;
-      }).join('')}${more ? sitBtn(open) : ''}</div>`;
+    if (!(iranBrief.area >= 0 && iranBrief.area < areas.length)) iranBrief.area = 0;
+    const a = areas[iranBrief.area];
+    const old = a.lastNewsAt && a.lastNewsAt !== b.updatedAt;
+    const tabs = `<div class="num-cat sit-tabs" role="tablist" aria-label="Brief for">${areas.map((x, i) => `<button type="button" role="tab" data-i="${i}" aria-selected="${i === iranBrief.area}"${i === iranBrief.area ? ' class="on"' : ''}>${escapeHtml(x.name)}</button>`).join('')}</div>`;
+    el.innerHTML = `<div class="sit-head"><h2>Brief</h2></div>${cadenceStamp(true, b)}${tabs}
+      <div class="sit-body"><div class="sit-area">${pointsHtml(a.points, a.refs, { show: 3 })}${old ? `<p class="front-asof">${escapeHtml(T('As of {t}, {d}', { t: fmtClock(a.lastNewsAt), d: new Date(a.lastNewsAt).toLocaleDateString(LOC, { day: 'numeric', month: 'short', timeZone: VIEW_TZ }) }))}</p>` : ''}</div>${a.points.length > 3 ? sitBtn(open) : ''}</div>`;
     wireBoxToggle(el, el.querySelector('.toggle-sit'), 'sit-open');
-    el.querySelectorAll('.sit-area').forEach((box) => wireRefs(box, areas[Number(box.dataset.i)].refs));
+    wireRefs(el.querySelector('.sit-area'), a.refs);
+    el.querySelectorAll('.sit-tabs button').forEach((t) => (t.onclick = (ev) => { ev.stopPropagation(); iranBrief.area = Number(t.dataset.i); renderIranBrief(); }));
     return;
   }
   if (el && Array.isArray(s.points) && s.points.length) {

@@ -90,8 +90,13 @@ if [ -f /srv/desk/live-port ] && [ -f /etc/systemd/system/desk-web@.service ]; t
     exit 1
   fi
   warm $NEXT
+  # A page already open, or kept by nginx, asks for the old release's script files: they stay (26 Oct: the
+  # front page failed on "Failed to fetch dynamically imported module" after a deploy).
+  cp -rn $PREV/public/assets/. $R/public/assets/ 2>/dev/null || true
   echo "server 127.0.0.1:$NEXT;" | sudo tee /etc/nginx/desk-upstream.conf >/dev/null
   sudo nginx -t -q && sudo systemctl reload nginx
+  # The pages nginx kept were the old release's (scripts/nginx/desk.conf).
+  sudo find /var/cache/nginx/desk -type f -delete 2>/dev/null || true
   echo $NEXT > /srv/desk/live-port
   sudo systemctl set-property --runtime desk-web@$NEXT CPUWeight=100
   ln -sfn $R /srv/desk/current

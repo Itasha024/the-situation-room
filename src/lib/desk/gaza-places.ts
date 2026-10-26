@@ -70,7 +70,7 @@ export function gazaPlacesIn(copy: string, sourceText: string): GazaPlace[] {
 
 /** The cities and towns other places are told by ("south of Nablus", "western Gaza City"). */
 const CITY = new Set(["Gaza", "Khan Younis", "Rafah", "Deir al-Balah", "Jabalia", "Beit Lahia", "Beit Hanoun", "Hebron", "Nablus", "Jenin", "Ramallah", "Al-Bireh", "Tulkarm", "Qalqilya", "Bethlehem", "East Jerusalem", "Jerusalem", "Jericho", "Tubas"]);
-const GAZA_WORDS = /\b(?:Gaza|Khan Y[ou]nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|yellow line)\b/i;
+const GAZA_WORDS = /\b(?:Gaza|Khan Y(?:ou|u|o)nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|yellow line)\b/i;
 const JS_WORDS = /\b(?:Judea|Samaria|Hebron|Nablus|Jenin|Ramallah|Tulkarm|Qalqilya|Bethlehem|Jericho|Tubas|Jerusalem|Jordan Valley)\b/i;
 /** "…wounds from air strikes yesterday": not today's event. */
 const PAST = /\b(?:yesterday|last night|last week|days ago|weeks ago|earlier this (?:week|month))\b/i;

@@ -45,3 +45,26 @@ test("one death in Gaza told by several local reporters is one card", () => {
   ]);
   assert.equal(f.reports.length, 3);
 });
+
+test("the Gaza desk's numbers count single events by area and side, never a tally", async () => {
+  const { gazaNumbers, hurtIn } = await import("./gaza-numbers.ts");
+  assert.deepEqual(hurtIn("Israeli fire kills three, including a girl, wounds over 10 in Al-Mawasi"), { dead: 3, hurt: 10 });
+  const c = (fp: string, at: string, source: string, summary: string, flags: string[] = []) => ({ fp, at, source, url: `https://t.me/x/${fp}`, summary, flags });
+  const g = gazaNumbers([
+    c("a", "2026-10-26T04:00:00Z", "Safa", "Israeli fire kills three, wounds 10 in Al-Mawasi, Khan Younis", ["arena:gaza", "actor:israel"]),
+    c("b", "2026-10-26T05:00:00Z", "WAFA", "Israeli extremists raid Awarta near Nablus; two Palestinians killed south of Khan Younis", ["arena:judea_samaria", "actor:israeli_citizens"]),
+    c("c", "2026-10-26T06:00:00Z", "Gaza Health Ministry", "4 killed, 14 wounded in Israeli attacks on Gaza in past 24 hours; 1,551 killed since ceasefire", ["arena:gaza"]),
+    c("d", "2026-10-26T07:00:00Z", "Sama", "Kerem Shalom crossing opens; Rafah, Zikim and Kissufim remain closed", ["arena:aid"]),
+  ]);
+  const cas = g.boxes.find((b) => b.title === "Killed and wounded")!;
+  assert.equal(cas.type, "claims");
+  if (cas.type === "claims") {
+    assert.equal(cas.rows[0].unoff?.v, 5);
+    assert.equal(cas.rows[2].unoff, null);
+  }
+  const running = g.boxes.find((b) => b.title === "Killed in Gaza since the ceasefire");
+  assert.ok(running && running.type === "stat" && running.value.v === "1,551");
+  const cross = g.boxes.find((b) => b.title === "The crossings");
+  assert.ok(cross && cross.type === "table");
+  if (cross && cross.type === "table") assert.deepEqual(cross.rows.map((r) => `${r.label}:${r.cells[0]?.v}`), ["Kerem Shalom:Open", "Zikim:Closed", "Kissufim:Closed", "Rafah:Closed"]);
+});

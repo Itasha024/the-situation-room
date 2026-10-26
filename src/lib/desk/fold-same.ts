@@ -784,7 +784,7 @@ export function eventRule(a: Card, b: Card): Rule | null {
 type ArenaToll = { victims: string[]; dead: number[]; places: string[] };
 export const ARENA_DEAD_MS = 12 * H;
 const HURT = /\b(?:kill\w*|dead|death|wound\w*|injur\w*|shot)\b/i;
-const ARENA_HINT = /\b(?:Gaza|Khan Y[ou]nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|Judea|Samaria|Hebron|Nablus|Jenin|Ramallah|Tulkarm|Qalqilya|Bethlehem|Jericho|Tubas|Jerusalem|Palestinians?)\b/i;
+const ARENA_HINT = /\b(?:Gaza|Khan Y(?:ou|u|o)nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|Judea|Samaria|Hebron|Nablus|Jenin|Ramallah|Tulkarm|Qalqilya|Bethlehem|Jericho|Tubas|Jerusalem|Palestinians?)\b/i;
 const DAY_TALLY = /\b(?:today|past (?:24|48) hours|since|so far|toll|total|this week|across Gaza|across the Strip)\b/i;
 const BROAD = new Set(["Gaza", "Gaza City", "Gaza Strip", "Khan Younis", "Rafah", "Deir al-Balah", "Jabalia", "Beit Lahia", "Beit Hanoun", "Hebron", "Nablus", "Jenin", "Ramallah", "Tulkarm", "Qalqilya", "Bethlehem", "Jerusalem", "East Jerusalem", "Jericho", "Tubas", "Judea and Samaria"]);
 const PERSON = /\b[A-Z][a-z']+(?:[ -](?:(?:al|el|Al|El|Abu|abu|bin|ibn)[ -])?[A-Z][a-z']+){2,}\b/g;

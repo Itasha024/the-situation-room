@@ -367,7 +367,7 @@ const INTERNAL =
 const NOT_NEW_OR_NOT_A_STRIKE =
   /\b(?:releases? (?:new )?footage|footage (?:shows?|of)|video (?:shows?|of)|still (?:ablaze|burning|on fire)|(?<!since )yesterday|over (?:the )?past (?:\d+|two|three|few|several) (?:days|hours)|thermal anomal\w*|sound bombs?|sonic boom|(?:break|breaks|broke) the sound barrier|break sound barrier|breaks sound barrier|(?:at|on) (?:its )?(?:highest|high|full|maximum) alert|alert (?:was |is )?declared|declared? (?:a )?(?:red |state of )?alert|state of alert|(?:tanks?|troops|forces|bulldozers?) (?:move|moves|moved|advance|advances|advanced)|machine-?gun (?:cover|sweeps?))\b/i;
 const AIR_DEFENCE = /\b(?:intercept\w*|air defen[cs]es?|shot down|shoots down|downed|downs)\b/i;
-const PALESTINE_WORDS = /\b(?:Gaza|Khan Y[ou]nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|Judea|Samaria|West Bank|Jenin|Nablus|Tulkarm|Hebron|Ramallah|Qalqilya|Tubas)\b|غزة|الضفة/i;
+const PALESTINE_WORDS = /\b(?:Gaza|Khan Y(?:ou|u|o)nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|Judea|Samaria|West Bank|Jenin|Nablus|Tulkarm|Hebron|Ramallah|Qalqilya|Tubas)\b|غزة|الضفة/i;
 const AXIS = new Set(["iran", "hezbollah", "iraqi_militias"]);
 const PURSUERS: Record<string, Set<string>> = {
   us: new Set(["Iran", "Iraq", "sea"]),

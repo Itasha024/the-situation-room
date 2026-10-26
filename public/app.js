@@ -7815,7 +7815,7 @@ function startIranFeed() {
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
   // The Gaza desk's brief and its IDF-held area (24 Oct); its Trump column and numbers come in its later stages.
-  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
+  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadGazaNumbers(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
@@ -8884,6 +8884,41 @@ function renderIranNumbers() {
   });
   el.querySelectorAll('.rows-tog').forEach((b) => wireBoxToggle(b.closest('.rows-more'), b, 'open'));
   el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { iranNums.cat = b.dataset.cat; renderIranNumbers(); }));
+}
+/*
+ * The Gaza – Judea & Samaria desk's numbers (user, 26 Oct): counted on the server from the desk's own reports
+ * since 23 Oct (/api/gaza-numbers, gaza-numbers.ts), in the Iran desk's boxes; the IDF-held share from the map's layer.
+ */
+const gazaNums = { d: null, at: 0 };
+async function loadGazaNumbers() {
+  if (deskOf().id !== 'gaza' || Date.now() - gazaNums.at < 5 * 60_000) return;
+  gazaNums.at = Date.now();
+  try {
+    const r = await fetch('/api/gaza-numbers');
+    if (r.ok) gazaNums.d = await r.json();
+  } catch (e) { console.warn('gaza numbers', e); }
+  renderGazaNumbers();
+}
+function renderGazaNumbers() {
+  const el = document.getElementById('gaza-numbers');
+  const d = gazaNums.d;
+  if (!el || !d || !Array.isArray(d.boxes)) return;
+  const boxes = [...d.boxes];
+  const zone = iranBrief.b && iranBrief.b.idfArea && iranBrief.b.idfArea.zone;
+  if (zone && Number.isFinite(+zone.share)) {
+    boxes.splice(1, 0, { type: 'stat', title: 'Gaza held by the IDF', unit: 'share of the Strip', value: { v: `${(+zone.share).toFixed(1)}%`, url: zone.url, src: zone.by, date: zone.asOf }, caption: `${zone.name || 'the area behind the line'}, as mapped ${fmtDay(zone.asOf)}; the line's reported moves since are on the map`, note: '' });
+  }
+  el.innerHTML = `<p class="cadence at-head">Counted from the desk's reports since 23 Oct 2026 · updated ${escapeHtml(fmtStamp(d.at))}</p><div class="tally one">${pagerHtml('numbers', boxes.map((b, i) => irBox(b, i)), 0, boxes.map((b) => b.title))}</div>`;
+  wirePager(el, 0, () => { hideSpot(); irClamp(el); });
+  wireSpots(el);
+  irClamp(el);
+  el.querySelectorAll('.led-tog').forEach((b) => {
+    wireBoxToggle(b.closest('.led-more'), b, 'open');
+    const box = b.closest('.tally-box');
+    box.classList.add('expandable');
+    box.onclick = (ev) => { if (!ev.target.closest('a, button, .led-more') && !String(window.getSelection() || '')) b.click(); };
+  });
+  el.querySelectorAll('.rows-tog').forEach((b) => wireBoxToggle(b.closest('.rows-more'), b, 'open'));
 }
 /*
  * A long box shows its first part and "Read more", on a PC and a phone (user, 11 Oct): measured

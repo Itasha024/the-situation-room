@@ -16,6 +16,7 @@ import { Route as YemenRouteImport } from './routes/yemen'
 import { Route as YemenConflictDeskRouteImport } from './routes/yemen-conflict-desk'
 import { Route as ApiBriefRouteImport } from './routes/api/brief'
 import { Route as ApiDeskRouteImport } from './routes/api/desk'
+import { Route as ApiGazaNumbersRouteImport } from './routes/api/gaza-numbers'
 import { Route as ApiOilRouteImport } from './routes/api/oil'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
@@ -61,6 +62,11 @@ const ApiBriefRoute = ApiBriefRouteImport.update({
 const ApiDeskRoute = ApiDeskRouteImport.update({
   id: '/api/desk',
   path: '/api/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGazaNumbersRoute = ApiGazaNumbersRouteImport.update({
+  id: '/api/gaza-numbers',
+  path: '/api/gaza-numbers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOilRoute = ApiOilRouteImport.update({
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/gaza-numbers': typeof ApiGazaNumbersRoute
   '/api/oil': typeof ApiOilRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/gaza-numbers': typeof ApiGazaNumbersRoute
   '/api/oil': typeof ApiOilRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/gaza-numbers': typeof ApiGazaNumbersRoute
   '/api/oil': typeof ApiOilRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/gaza-numbers'
     | '/api/oil'
     | '/api/scan'
     | '/api/search'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/gaza-numbers'
     | '/api/oil'
     | '/api/scan'
     | '/api/search'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/gaza-numbers'
     | '/api/oil'
     | '/api/scan'
     | '/api/search'
@@ -253,6 +265,7 @@ export interface RootRouteChildren {
   YemenConflictDeskRoute: typeof YemenConflictDeskRoute
   ApiBriefRoute: typeof ApiBriefRoute
   ApiDeskRoute: typeof ApiDeskRoute
+  ApiGazaNumbersRoute: typeof ApiGazaNumbersRoute
   ApiOilRoute: typeof ApiOilRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiSearchRoute: typeof ApiSearchRoute
@@ -315,6 +328,13 @@ declare module '@tanstack/react-router' {
       path: '/api/desk'
       fullPath: '/api/desk'
       preLoaderRoute: typeof ApiDeskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/gaza-numbers': {
+      id: '/api/gaza-numbers'
+      path: '/api/gaza-numbers'
+      fullPath: '/api/gaza-numbers'
+      preLoaderRoute: typeof ApiGazaNumbersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/oil': {
@@ -405,6 +425,7 @@ const rootRouteChildren: RootRouteChildren = {
   YemenConflictDeskRoute: YemenConflictDeskRoute,
   ApiBriefRoute: ApiBriefRoute,
   ApiDeskRoute: ApiDeskRoute,
+  ApiGazaNumbersRoute: ApiGazaNumbersRoute,
   ApiOilRoute: ApiOilRoute,
   ApiScanRoute: ApiScanRoute,
   ApiSearchRoute: ApiSearchRoute,

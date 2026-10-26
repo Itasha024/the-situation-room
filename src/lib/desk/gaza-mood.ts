@@ -385,6 +385,12 @@ export function findPrompt(posts: MoodPost[], followed: string[]): string {
   return ["FOLLOWED:", ...(followed.length ? followed.map((h) => `- ${h}`) : ["- none"]), "", "POSTS:", ...posts.map((p, i) => `${i}. [@${p.ch}, ${p.at.slice(11, 16)} UTC, ${p.v} views${rx(p)}] ${cut(p.x, 240)}`)].join("\n");
 }
 
+/** A found event comes from Palestinian channels only: Israel's acts in it are their claim (the desk's rule). */
+export function claimLine(h: string): string {
+  if (/^Palestinian (?:media|sources|channels)\b/i.test(h) || /\b(?:says?|said|claims?|reports?)\b/i.test(h.split(/[:;,]/)[0])) return h;
+  return /\b(?:Israel|IDF)/.test(h) ? `Palestinian media: ${h}` : h;
+}
+
 const AR = /[؀-ۿ]/;
 const hash = (s: string) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
 
@@ -401,7 +407,7 @@ export function readFound(json: Record<string, unknown>, posts: MoodPost[], word
     const at = seed.map((p) => p.at).sort()[0];
     const pt = placeAt(place);
     const score = Math.round(seed.reduce((a, p) => a + stirOf(p), 0));
-    out.push({ fp: `mood-${hash(`${o.area}|${place.toLowerCase()}|${at.slice(0, 13)}`)}`, at, headline: words(h), ...(place ? { place } : {}), ...(pt ?? {}), area: o.area, score, found: 1, terms, seed });
+    out.push({ fp: `mood-${hash(`${o.area}|${place.toLowerCase()}|${at.slice(0, 13)}`)}`, at, headline: claimLine(words(h)), ...(place ? { place } : {}), ...(pt ?? {}), area: o.area, score, found: 1, terms, seed });
   }
   return out;
 }

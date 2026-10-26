@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
 import { cachedResponse } from "@/lib/desk/microcache";
 import { getStore } from "@/lib/desk/store";
+import { claimLine } from "@/lib/desk/gaza-mood";
 import { MOOD_KEY, type MoodStore } from "@/lib/gaza-mood.server";
 
 /**
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/api/mood")({
           return await cachedResponse("mood", 60_000, 3600_000, async () => {
             const store = await getStore();
             const m = (await store.getJson<MoodStore>(MOOD_KEY)) ?? { at: "", events: [] };
-            const events = m.events.filter((e) => e.read?.about).map(({ terms, seed, ...e }) => e);
+            const events = m.events.filter((e) => e.read?.about).map(({ terms, seed, ...e }) => (e.found ? { ...e, headline: claimLine(e.headline) } : e));
             const body = JSON.stringify({ ok: true, at: m.at, events, following: m.events.length });
             return { status: 200, body, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60" } };
           }, request.headers.get("accept-encoding"));

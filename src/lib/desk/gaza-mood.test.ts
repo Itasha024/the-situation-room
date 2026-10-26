@@ -64,3 +64,10 @@ test("both ways: every Palestinian channel is searched, and events are found fro
   assert.equal(ev.seed?.length, 1);
   assert.ok(ev.fp.startsWith("mood-") && ev.lat != null);
 });
+
+test("a found event's Israeli act is the Palestinian channels' claim", async () => {
+  const { claimLine } = await import("./gaza-mood.ts");
+  assert.equal(claimLine("Israeli forces raid Qalandiya camp"), "Palestinian media: Israeli forces raid Qalandiya camp");
+  assert.equal(claimLine("Palestinian Interior Ministry: two security officers killed"), "Palestinian Interior Ministry: two security officers killed");
+  assert.equal(claimLine("Palestinian media: Israeli forces raid Jericho"), "Palestinian media: Israeli forces raid Jericho");
+});

@@ -932,10 +932,10 @@
       const d = new Date(t + D_OFF), X = x(t);
       if (d.getUTCDate() === 1) {
         out += `<line class="g d" x1="${X}" x2="${X}" y1="${top - 2}" y2="${H2 - 15}"/>`;
-        if (X - lastX >= 8 && X < W - 40) { out += `<text class="tk day" x="${X + 2}" y="${ty}">${MON.format(t + 3600e3)}${d.getUTCMonth() === 0 ? ' ' + d.getUTCFullYear() : ''}</text>`; lastX = X + GAP; }
+        if (X - lastX >= 8 && X < W - 72) { out += `<text class="tk day" x="${X + 2}" y="${ty}">${MON.format(t + 3600e3)}${d.getUTCMonth() === 0 ? ' ' + d.getUTCFullYear() : ''}</text>`; lastX = X + GAP; }
       } else {
         if (dayW > 5 && d.getUTCDay() === 1) out += `<line class="g" x1="${X}" x2="${X}" y1="${top - 2}" y2="${H2 - 15}"/>`;
-        if (step && (d.getUTCDate() - 1) % step === 0 && d.getUTCDate() <= 26 && X - lastX >= 6 && X < W - 40) { out += `<text class="tk dn" x="${X + dayW / 2}" y="${ty}" text-anchor="middle">${d.getUTCDate()}</text>`; lastX = X + 14; }
+        if (step && (d.getUTCDate() - 1) % step === 0 && d.getUTCDate() <= 26 && X - lastX >= 6 && X < W - 52) { out += `<text class="tk dn" x="${X + dayW / 2}" y="${ty}" text-anchor="middle">${d.getUTCDate()}</text>`; lastX = X + 14; }
       }
     }
     out += `<text class="tk" x="${LW}" y="${ty}">${esc(dm(t0 + 3600e3 * 4, 'Asia/Riyadh'))}</text>`;

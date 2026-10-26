@@ -279,9 +279,9 @@ Answer JSON only:
 {"about": true|false (false when nothing found is a reaction to THIS event),
  "mood": [{"k": one of ${MOOD_KINDS.map((k) => `"${k}"`).join(", ")}, "w": share 0-100}] (the shares of the reactions, largest first, summing to about 100; "praise_attack" only for praise of an attack on Israelis; "blame_pa"/"blame_hamas" only when the item blames them),
  "intensity": 1-5 (1 quiet, 5 very heated: many reactions, strong words, calls to act),
- "summary": "2-3 short sentences in plain English: what the reactions say and how widely, and who says it (local channels, faction media, commenters). Never retell the event.",
- "calls": [{"i": item number, "kind": "protest"|"strike"|"confront"|"attack"|"mobilise"|"other", "en": "the call in English, short"}] (calls on the public to act; a faction's threat counts as "attack"),
- "quotes": [{"i": item number, "en": "a short English rendering"}] (up to 4 reactions that show the mood best, not reports),
+ "summary": "2-3 short sentences in plain English: what the reactions say and how widely, and who says it (local channels, faction media, commenters). Never retell the event, never discuss which words outlets use. When the reactions are few, say so plainly. Spell places as the EVENT does.",
+ "calls": [{"i": item number, "kind": "protest"|"strike"|"confront"|"attack"|"mobilise"|"other", "en": "the call in English, short"}] (ONLY explicit calls on the public to DO something: go out, protest, strike, confront, mobilise, attack; a faction's threat counts as "attack". A prayer, a curse, a wish or an official's vow to investigate is NOT a call; none found: []),
+ "quotes": [{"i": item number, "en": "a short English rendering"}] (up to 4 items in someone's OWN voice that show the mood best: a feeling, an opinion, a prayer, a curse, a joke, a call. NEVER an item that tells what happened or what someone announced; none found: []),
  "reports": number,
  "rel": [the item numbers of every item about THIS event, reports and reactions alike]}
 Words: write "Judea and Samaria" (never "West Bank"), "Israeli citizens" (never "settlers"), "Israeli forces" or "the IDF" (never "occupation forces"), "killed" (never "martyred"), "attacks" (never "ceasefire violations"). Quote people's words as theirs; do not adopt them.`;

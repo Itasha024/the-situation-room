@@ -831,7 +831,9 @@ export function visitOf(summary: string): string {
   const after = /\b(?:to|in|at|into)\s+(?:the\s+)?([A-Z][a-z]+(?: [A-Z][a-z]+)?)/g;
   let host: (typeof HOSTS)[number] | undefined;
   for (const m of h.matchAll(after)) {
-    host = HOSTS.find(([re]) => re.test(m[1]));
+    // The country stands for its capital: "travel to Iran" is the Tehran visit (26 Oct: NY Post's
+    // "Saudi Arabia and allies travel to Iran for talks…" named no capital, and went out as its own card).
+    host = HOSTS.find(([re, , country]) => re.test(m[1]) || country.test(m[1]));
     if (host) break;
   }
   host ??= HOSTS.map((x) => [x, h.search(x[0])] as const).filter(([, i]) => i >= 0).sort((x, y) => x[1] - y[1])[0]?.[0];

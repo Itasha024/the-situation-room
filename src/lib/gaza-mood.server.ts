@@ -11,6 +11,7 @@ import { type DeskCard, type MoodEvent, type MoodPost, type MoodRead, MOOD_SYSTE
 import { fetchText } from "./yemen-scan.server.ts";
 
 export const MOOD_KEY = "gaza:mood";
+const MOOD_LOCK = "gaza:mood-lock";
 const H = 3600_000;
 const EVERY_MS = 15 * 60_000;
 const PER_RUN = 2;
@@ -53,7 +54,8 @@ async function termsOf(ev: MoodEvent): Promise<string[]> {
 }
 
 async function readEvent(ev: MoodEvent, had: MoodEntry | undefined, now: number): Promise<MoodEntry> {
-  const terms = had?.terms?.length ? had.terms : await termsOf(ev);
+  // Words that found little are asked for again.
+  const terms = had?.terms?.length && had.posts >= 3 ? had.terms : await termsOf(ev);
   const channels = channelsFor(ev);
   const from = Date.parse(ev.at) - H, to = Date.parse(ev.at) + 24 * H;
   const found = new Map<string, MoodPost>();
@@ -104,6 +106,18 @@ const due = (e: MoodEntry | undefined, now: number) => !e || now - Date.parse(e.
 export async function runMood(store: DeskStore, now = Date.now()): Promise<number> {
   const prev = (await store.getJson<MoodStore>(MOOD_KEY)) ?? { at: "", events: [] };
   if (prev.at && now - Date.parse(prev.at) < EVERY_MS) return 0;
+  // One reader at a time (27 Oct: two processes read the same event at once and the worse read was kept).
+  const held = await store.getJson<{ at: number }>(MOOD_LOCK);
+  if (held && now - held.at < 10 * 60_000) return 0;
+  await store.putJson(MOOD_LOCK, { at: now });
+  try {
+    return await runMoodNow(store, prev, now);
+  } finally {
+    await store.putJson(MOOD_LOCK, { at: 0 }).catch(() => {});
+  }
+}
+
+async function runMoodNow(store: DeskStore, prev: MoodStore, now: number): Promise<number> {
   const { reports } = await store.recentDesk(800, undefined, { events: false, desk: "gaza", floor: new Date(now - 26 * H).toISOString() });
   const events = pickEvents(reports as unknown as DeskCard[], now);
   const byFp = new Map(prev.events.map((e) => [e.fp, e]));

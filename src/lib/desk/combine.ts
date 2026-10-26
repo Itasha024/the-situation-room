@@ -28,6 +28,7 @@ import { alertCities } from "./copies.ts";
 import { governorateAt } from "./adm1.ts";
 import { PLACE_BY_NAME, datelineFor, type Place } from "./gazetteer.ts";
 import { stripAttribution } from "./origin.ts";
+import { sameOutlet } from "./originals.ts";
 import { MASHUP, redundantBody, roleNamesInProse, stripSpellingNotes, unstutter } from "./reader.ts";
 import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "./types.ts";
@@ -373,6 +374,32 @@ export function addsFacts(home: LiveReport, r: LiveReport): boolean {
   )
     return true;
   // A name the card never gives: a person, a place or a body (24 Oct: Al-Akhbar's "US pressed Lebanon's army" under Al Hadath's card).
+  return newNames(r.summary, lower).length >= 2;
+}
+
+/**
+ * Does `r` tell anything the desk's cards of its story have not told yet (user, 26 Oct: NY Post's
+ * "Saudi Arabia and allies travel to Iran for talks on ending Houthi attacks, wider war", 24 hours into
+ * the Tehran talks told by some 40 cards, "doesnt add anything new")? A figure, a named speaker or a
+ * quote the cards never carry, a place or two names they never give. Other words for the same thing
+ * ("allies", "wider war") are no news: such an account is a copy and folds, never an update card.
+ */
+export function bringsNews(told: Pick<LiveReport, "summary" | "text" | "place" | "places" | "alsoReportedBy">[], r: LiveReport): boolean {
+  const all = told.map((c) => `${c.summary} ${c.text ?? ""} ${(c.alsoReportedBy ?? []).map((a) => (a as { summary?: string }).summary ?? "").join(" ")}`).join("\n");
+  const lower = all.toLowerCase();
+  const mine = `${r.summary} ${r.text ?? ""}`;
+  const have = new Set(figures(all));
+  if (figures(mine).some((n) => !have.has(n))) return true;
+  // A speaker the story never had; an outlet naming itself ("NY Post: …") is no speaker.
+  const who = /^([^:"“]{2,70}):\s/.exec(String(r.summary || "").trim())?.[1].trim() ?? "";
+  if (who && !sameOutlet(who, r.source) && !lower.includes(who.toLowerCase())) {
+    const known = stems(lower);
+    if ((who.match(/\p{L}{4,}/gu) ?? []).some((w) => !NAME_FILLER.has(w) && !known.has(w.toLowerCase().slice(0, 5)))) return true;
+  }
+  // Words quoted that no card carries.
+  for (const m of mine.matchAll(/[“"]([^”"]{20,})[”"]/g)) if (!lower.includes(m[1].toLowerCase().slice(0, 40))) return true;
+  const places = new Set(told.flatMap((c) => [c.place, ...(c.places ?? []).map((p) => p.name)]).filter(Boolean));
+  if ([r.place, ...(r.places ?? []).map((p) => p.name)].some((n) => !!n && !places.has(n) && !lower.includes(n.replace(/^the /i, "").toLowerCase()))) return true;
   return newNames(r.summary, lower).length >= 2;
 }
 

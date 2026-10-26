@@ -241,6 +241,56 @@
   const deskTag = (desk) => (desk === 'both'
     ? `<span class="h-tags">${deskTag('iran')}${deskTag('yemen')}</span>`
     : `<a class="h-tag h-tag-${desk}" href="${HD[desk].href}" data-desk-go title="${esc(HD[desk].desk)}">${roundFlag(desk)}<span>${esc(HD[desk].short)}</span></a>`);
+  /* The country a report is about (user, 27 Oct: "fit the flag to the country in the report, if several the main
+     one"): the first named in it. Gaza and Judea and Samaria take the Gaza desk's flag; none named, the desk's. */
+  const COUNTRY = [
+    ['iran', 'Iran', /\b(?:Iran(?:ian)?s?|Tehran|IRGC|Khamenei|Araghchi|Pezeshkian|Baghaei)\b/i],
+    ['israel', 'Israel', /\b(?:Israel(?:i)?s?|IDF|Netanyahu|Katz|Gaza(?:n)?|Judea|Samaria|Jerusalem|Hamas|Palestinians?|Jenin|Nablus|Hebron|Ramallah|Tulkarm|Qalqilya|Khan Y[ou]+nis|Rafah|Bethlehem|Jericho|COGAT)\b/i],
+    ['yemen', 'Yemen', /\b(?:Yemen(?:i)?s?|Houthis?|Sanaa|Aden|Hodeidah|Marib|Taiz|Ansar Allah|Mocha|Saada)\b/i],
+    ['saudi', 'Saudi Arabia', /\b(?:Saudi(?:s| Arabia)?|Riyadh|Jeddah|MBS)\b/i],
+    ['lebanon', 'Lebanon', /\b(?:Leban(?:on|ese)|Hezbollah|Beirut)\b/i],
+    ['syria', 'Syria', /\b(?:Syri(?:a|an)s?|Damascus)\b/i],
+    ['iraq', 'Iraq', /\b(?:Iraq(?:i)?s?|Baghdad|Erbil)\b/i],
+    ['jordan', 'Jordan', /\b(?:Jordan(?:ian)?s?|Amman)\b(?! Valley)/i],
+    ['egypt', 'Egypt', /\b(?:Egypt(?:ian)?s?|Cairo|Sisi)\b/i],
+    ['qatar', 'Qatar', /\b(?:Qatar(?:i)?s?|Doha)\b/i],
+    ['uae', 'UAE', /\b(?:UAE|Emirat(?:i|es)|Abu Dhabi|Dubai)\b/i],
+    ['kuwait', 'Kuwait', /\bKuwait(?:i)?s?\b/i],
+    ['bahrain', 'Bahrain', /\bBahrain(?:i)?s?\b/i],
+    ['oman', 'Oman', /\b(?:Oman(?:i)?s?|Muscat)\b/i],
+    ['turkey', 'Turkey', /\b(?:Turk(?:ey|ish)|Türkiye|Ankara|Erdogan)\b/i],
+    ['us', 'United States', /\b(?:US|U\.S\.|United States|Americans?|Trump|Washington|Pentagon|CENTCOM|Rubio|Vance|Witkoff)\b/],
+    ['russia', 'Russia', /\b(?:Russia(?:n)?s?|Moscow|Putin|Kremlin)\b/i],
+  ];
+  /** Simple flags, 18 by 12, cut to a circle like the desks'. */
+  const C_ART = {
+    saudi: '<rect width="18" height="12" fill="#006c35"/><rect x="4" y="7.6" width="10" height=".9" fill="#fff"/><rect x="4.5" y="4" width="9" height="2" rx=".6" fill="#fff" opacity=".85"/>',
+    lebanon: '<rect width="18" height="12" fill="#fff"/><rect width="18" height="3" fill="#ed1c24"/><rect y="9" width="18" height="3" fill="#ed1c24"/><path d="M9 3.6 6.4 8.2h5.2z" fill="#00a651"/>',
+    syria: '<rect width="18" height="4" fill="#007a3d"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#000"/><circle cx="5.5" cy="6" r=".9" fill="#ce1126"/><circle cx="9" cy="6" r=".9" fill="#ce1126"/><circle cx="12.5" cy="6" r=".9" fill="#ce1126"/>',
+    iraq: '<rect width="18" height="4" fill="#ce1126"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#000"/><rect x="5" y="5.3" width="8" height="1.4" rx=".5" fill="#007a3d"/>',
+    jordan: '<rect width="18" height="4" fill="#000"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#007a3d"/><path d="M0 0 8 6 0 12z" fill="#ce1126"/>',
+    egypt: '<rect width="18" height="4" fill="#ce1126"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#000"/><circle cx="9" cy="6" r="1.2" fill="#c09300"/>',
+    qatar: '<rect width="18" height="12" fill="#8d1b3d"/><path d="M0 0h6l-1.4 1 1.4 1-1.4 1 1.4 1-1.4 1 1.4 1-1.4 1 1.4 1-1.4 1 1.4 1-1.4 1 1.4 1H0z" fill="#fff"/>',
+    uae: '<rect width="18" height="4" fill="#00732f"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#000"/><rect width="5" height="12" fill="#ff0000"/>',
+    kuwait: '<rect width="18" height="4" fill="#007a3d"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#ce1126"/><path d="M0 0 5 4v4L0 12z" fill="#000"/>',
+    bahrain: '<rect width="18" height="12" fill="#ce1126"/><path d="M0 0h5l2 1.2-2 1.2 2 1.2-2 1.2 2 1.2-2 1.2 2 1.2-2 1.2 2 1.2-2 1.2H0z" fill="#fff"/>',
+    oman: '<rect width="18" height="12" fill="#db161b"/><rect x="5" width="13" height="4" fill="#fff"/><rect x="5" y="8" width="13" height="4" fill="#008000"/>',
+    turkey: '<rect width="18" height="12" fill="#e30a17"/><circle cx="7.4" cy="6" r="3" fill="#fff"/><circle cx="8.2" cy="6" r="2.4" fill="#e30a17"/><circle cx="11" cy="6" r=".9" fill="#fff"/>',
+    us: '<rect width="18" height="12" fill="#fff"/>' + [0, 2, 4, 6, 8, 10].map((y) => '<rect y="' + y + '" width="18" height="1" fill="#b22234"/>').join('') + '<rect width="8" height="6" fill="#3c3b6e"/>',
+    russia: '<rect width="18" height="4" fill="#fff"/><rect y="4" width="18" height="4" fill="#0039a6"/><rect y="8" width="18" height="4" fill="#d52b1e"/>',
+  };
+  const countryFlag = (code) => (code === 'israel' ? roundFlag('gaza') : code === 'iran' || code === 'yemen' ? roundFlag(code) : C_ART[code] ? `<svg class="dt-flag" viewBox="0 0 18 12" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${C_ART[code]}</svg>` : '');
+  /** The main country of a text: the one named first (a speaker before a colon counts: "Iran's FM: …"). */
+  function countryOf(text, desk) {
+    const t = String(text || '');
+    let best = null;
+    for (const [code, name, re] of COUNTRY) { const m = re.exec(t); if (m && (!best || m.index < best.i)) best = { code, name, i: m.index }; }
+    if (best) return best;
+    return desk === 'iran' ? { code: 'iran', name: 'Iran' } : desk === 'yemen' ? { code: 'yemen', name: 'Yemen' } : { code: 'israel', name: 'Israel' };
+  }
+  const countryTag = (text, desk) => { const c = countryOf(text, desk); return `<span class="h-cflag" title="${esc(c.name)}">${countryFlag(c.code)}</span>`; };
+  /** Under a report: its desk, and whether the desk has the whole report or only the headline (user, 27 Oct). */
+  const deskRef = (desk, fp, more) => (HD[desk] ? `<a class="x-desk" href="${HD[desk].href}#r=${encodeURIComponent(fp)}">${more ? `Full report on the ${esc(HD[desk].short)} desk →` : `On the ${esc(HD[desk].short)} desk →`}</a>` : '');
   const deskOfReport = (r) => (r.desks.includes('iran') && r.desks.includes('yemen') ? 'both' : r.desks[0]);
 
   /** A report's pins on the map (one report can be pinned on several places). */
@@ -267,12 +317,12 @@
         <time datetime="${esc(r.at)}">${esc(fmt(r.at))}</time>
         <span class="src-wrap"><a class="src-link" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.src)}</a><a class="src-go" href="${esc(r.url)}" target="_blank" rel="noopener" aria-label="Open source">${ICON_EXT}</a></span>
         ${pinsOf(r.fp).length ? `<button type="button" class="card-map" data-pin-of="${esc(r.fp)}">Show on map</button>` : ''}
-        ${deskTag(deskOfReport(r))}
+        ${countryTag(r.h, r.desks[0])}
       </div>
       ${reply}
       <p class="headline">${esc(r.h)}</p>
+      ${deskRef(r.desks[0], r.fp, r.more)}
       ${also.length ? `<p class="also">Also: ${also.slice(0, 4).map((a) => `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(srcName(a.source))}</a>`).join(' · ')}</p>` : ''}
-      ${r.more && r.desks[0] && HD[r.desks[0]] ? `<a class="x-desk" href="${HD[r.desks[0]].href}#r=${encodeURIComponent(r.fp)}">Full report on the ${esc(HD[r.desks[0]].short)} desk →</a>` : ''}
     </article>`;
   }
   function trumpCard(s) {
@@ -1088,6 +1138,7 @@
     if (phone()) legendCollapsed = true;
     map = L.map($('h-map'), { zoomControl: true, attributionControl: true, worldCopyJump: false, minZoom: 3, zoomSnap: 0.25, closePopupOnClick: false });
     // The map view (public/ops.js) works with the same map, data and cards.
+    window.__homeFlags = { countryTag, deskRef };
     window.__home = { map, D, card, trumpCard, older, loadWar };
     tiles = L.tileLayer(tileUrl(), { maxZoom: 18, noWrap: true, attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ' }).addTo(map);
     map.fitBounds(REGION);

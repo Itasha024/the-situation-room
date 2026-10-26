@@ -299,9 +299,9 @@
     // The right panel: the reports, and the events placed on the map.
     rightEl = document.createElement('aside');
     rightEl.className = 'ops-right';
-    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events</button></nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
+    rightEl.innerHTML = `<div class="ops-phead ops-rtabs"><nav class="ops-tabs" role="tablist"><button type="button" role="tab" data-rtab="rep">Reports</button><button type="button" role="tab" data-rtab="ev">Events</button>${PAGE === 'gaza' ? '<button type="button" role="tab" data-rtab="mood">Mood</button>' : ''}</nav><button type="button" class="ops-fold" data-op="right" title="Close the panel (])">${ICON.right}</button></div>
       <div class="ops-rpane ops-rp-rep"></div>
-      <div class="ops-rpane ops-rp-ev"><div class="ops-evf"><input class="ops-q ops-evq" type="search" placeholder="Filter events: a place, a side, a weapon" aria-label="Filter the events"><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>`;
+      <div class="ops-rpane ops-rp-ev"><div class="ops-evf"><input class="ops-q ops-evq" type="search" placeholder="Filter events: a place, a side, a weapon" aria-label="Filter the events"><small class="ops-log-n"></small></div><ol class="ops-log-l"></ol></div>${PAGE === 'gaza' ? '<div class="ops-rpane ops-rp-mood"><p class="ops-md-empty">Reading the channels…</p></div>' : ''}`;
     root.insertBefore(rightEl, item.nextSibling);
     const rail = $('#rail', root);
     if (rail) $('.ops-rp-rep', rightEl).appendChild(rail);
@@ -333,7 +333,7 @@
     pt.className = 'ops-ptabs';
     // Map, Brief, Reports, the fronts or arenas, Numbers, Events, Timeline (user, 21 Oct).
     const tab = (id) => tabs.find((x) => x[0] === id);
-    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], tab('timeline-wrap'), tab('explain-wrap')].filter(Boolean);
+    const phone = [['map', 'Map'], tab('situation') || tab('ops-theatres'), ['rail', 'Reports'], tab('fronts-wrap'), tab('cas-wrap'), ['events', 'Events'], PAGE === 'gaza' ? ['mood', 'Mood'] : null, tab('timeline-wrap'), tab('explain-wrap')].filter(Boolean);
     pt.innerHTML = phone.map(([id, n]) => `<button type="button" data-ptab="${id}">${n}</button>`).join('');
     root.insertBefore(pt, bar.nextSibling);
     pt.addEventListener('scroll', notch, { passive: true });
@@ -533,13 +533,14 @@
         if (S.left && S.tab === t.dataset.tab && !isPhone()) S.left = false; else { S.tab = t.dataset.tab; S.left = true; lastOpen = 'left'; }
         keep(); paintFrame(); return;
       }
-      if (t.dataset.rtab) { S.rtab = t.dataset.rtab; keep(); paintFrame(); return; }
+      if (t.dataset.rtab) { S.rtab = t.dataset.rtab; keep(); paintFrame(); if (S.rtab === 'mood') loadMood(); return; }
       if (t.dataset.ptab) {
         const p = t.dataset.ptab;
         S.ptab = p;
         if (LEFT_TABS[PAGE].some(([id]) => id === p)) S.tab = p;
         if (p === 'rail') S.rtab = 'rep';
         if (p === 'events') S.rtab = 'ev';
+        if (p === 'mood') { S.rtab = 'mood'; loadMood(); }
         paintFrame(); if (p !== 'map') window.scrollTo({ top: 0 }); return;
       }
       const op = t.dataset.op;
@@ -643,20 +644,21 @@
     const when = (t) => (t ? `${hm(t, 'Asia/Jerusalem')}, ${dm(t, 'Asia/Jerusalem')}` : '');
     // One brief made from every desk's (user, 23 Oct: "only one brief, from all desks"): each desk's points in its own
     // order of importance, taken in turn, each marked with its desk's flag.
+    // Each point with the report it was written from (its first [[n]]), for the desk line under it (user, 27 Oct).
     const lists = Object.keys(DESK_INFO).map((desk) => {
       const s = briefs[desk] && briefs[desk].situation;
-      return (s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 6) : []).map((p) => [desk, p]);
+      if (s && Array.isArray(s.points) && s.points.length) return s.points.slice(0, 6).map((p) => { const n = /\[\[(\d+)\]\]/.exec(p); const ref = n && (s.refs || [])[+n[1] - 1]; return [desk, String(p).replace(/\s*\[\[\d+\]\]/g, '').trim(), ref && ref.fp]; });
+      return (s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 6) : []).map((p) => [desk, p, null]);
     });
     const pts = [];
     for (let i = 0; pts.length < 12 && lists.some((l) => l[i]); i++) lists.forEach((l) => { if (l[i] && pts.length < 12) pts.push(l[i]); });
     const latest = Object.values(briefs).map((b) => b && b.updatedAt).filter(Boolean).sort().pop();
-    const ff = app('flagFill'), desks = app('DESKS') || [];
-    const flag = (desk) => { const d = desks.find && desks.find((x) => x.id === desk); return d && ff ? ff(d) : ''; };
+    const HF = window.__homeFlags || {};
+    const more = (fp) => { const r = fp && h.D.reports.find((x) => x.fp === fp); return !!(r && r.more); };
     el.classList.remove('ops-subwrap');
     el.innerHTML = `<article class="ops-th ops-th-one">
         ${latest ? `<p class="ops-th-sub">From the Iran, Yemen and Gaza desks · updated ${esc(when(latest))}</p>` : ''}
-        ${pts.length ? `<ol class="ops-th-pts">${pts.map(([desk, p]) => `<li><a class="ops-th-flag" href="${DESK_INFO[desk][2]}" data-desk-go title="${esc(DESK_INFO[desk][0])} desk" aria-label="${esc(DESK_INFO[desk][0])} desk">${flag(desk)}</a>${esc(p)}</li>`).join('')}</ol>` : `<p class="ops-empty">${briefs.iran || briefs.yemen || briefs.gaza ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
-        <p class="ops-th-links">${Object.entries(DESK_INFO).map(([desk, [name, , href]]) => `<a class="ops-th-more" href="${href}" data-desk-go>${esc(name)} desk: the full brief, ${desk === 'gaza' ? '' : desk === 'iran' ? 'arenas, ' : 'fronts, '}numbers ${ICON.right}</a>`).join('')}</p>
+        ${pts.length ? `<ol class="ops-th-pts">${pts.map(([desk, p, fp]) => `<li><span class="ops-th-flag">${HF.countryTag ? HF.countryTag(p, desk) : ''}</span><span class="ops-th-p">${esc(p)}${HF.deskRef ? (fp ? HF.deskRef(desk, fp, more(fp)) : `<a class="x-desk" href="${DESK_INFO[desk][2]}" data-desk-go>On the ${esc(DESK_INFO[desk][0])} desk →</a>`) : ''}</span></li>`).join('')}</ol>` : `<p class="ops-empty">${briefs.iran || briefs.yemen || briefs.gaza ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
       </article>`;
   }
 
@@ -803,6 +805,87 @@
   }
 
 
+
+  /* ---------- The mood monitor (the Gaza desk, user, 27 Oct): how the public reacts to each of the day's big events,
+     read from the public Telegram channels of its town and the main Palestinian ones (gaza-mood.server.ts) ---------- */
+  const MD = { data: null, at: 0, timer: 0, mt: 0, area: 'all' };
+  const MOOD = {
+    anger: ['Anger', '#ef4444'], grief: ['Grief and mourning', '#8b5cf6'], defiance: ['Defiance', '#f59e0b'], praise_attack: ['Praise of attacks', '#b91c1c'],
+    fear: ['Fear and alarm', '#eab308'], despair: ['Despair, fatigue', '#64748b'], blame_israel: ['Blame on Israel', '#f97316'], blame_pa: ['Blame on the PA', '#22c55e'],
+    blame_hamas: ['Blame on Hamas', '#14b8a6'], solidarity: ['Solidarity', '#3b82f6'], mockery: ['Mockery', '#ec4899'], calm: ['Calls for calm', '#94a3b8'],
+  };
+  const moodOf = (k) => MOOD[k] || [k, '#94a3b8'];
+  const CALL = { protest: 'Call to protest', strike: 'Call to strike', confront: 'Call to confront', attack: 'Call to attack / threat', mobilise: 'Call to mobilise', other: 'Call' };
+  async function loadMood(force) {
+    if (PAGE !== 'gaza') return;
+    clearTimeout(MD.timer);
+    MD.timer = setTimeout(() => loadMood(true), 5 * 60000);
+    if (!force && MD.data && Date.now() - MD.at < 60000) { paintMood(); return; }
+    try { const r = await fetch('/api/mood', { cache: 'no-store' }); if (r.ok) { MD.data = await r.json(); MD.at = Date.now(); } } catch (e) { /* the last one stays */ }
+    paintMood(); markMoodCards();
+  }
+  const moodBar = (mood) => `<div class="ops-md-bar">${mood.map((m) => `<i style="width:${m.w}%;background:${moodOf(m.k)[1]}" title="${esc(moodOf(m.k)[0])} ${m.w}%"></i>`).join('')}</div>`;
+  const moodTop = (mood, n) => mood.slice(0, n).map((m) => `<span><i style="background:${moodOf(m.k)[1]}"></i>${esc(moodOf(m.k)[0])} <b>${m.w}%</b></span>`).join('');
+  const chLink = (x) => `<a href="${esc(x.u)}" target="_blank" rel="noopener">@${esc(x.ch)}${x.c ? ' · comment' : ''}</a>`;
+  const kNum = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+  function moodEvent(e) {
+    const r = e.read;
+    const heat = Array.from({ length: 5 }, (_, i) => `<i class="${i < r.intensity ? 'on' : ''}"></i>`).join('');
+    const where = `${e.area === 'gaza' ? 'Gaza' : 'Judea and Samaria'}${e.place && !/^gaza$/i.test(e.place) ? ` · ${esc(e.place)}` : ''}`;
+    const rx = e.reactions && e.reactions.total ? `<p class="ops-md-rx" title="The emoji people pressed under the posts about it">${e.reactions.top.map(([k, n]) => `<span>${esc(k)} ${kNum(n)}</span>`).join('')}</p>` : '';
+    return `<article class="ops-md-ev" data-md="${esc(e.fp)}">
+      <div class="ops-md-h"><time>${esc(hm(Date.parse(e.at), VIEW_TZ()))}</time><span>${where}</span><span class="ops-md-heat" title="How heated: ${r.intensity} of 5">${heat}</span></div>
+      <a class="ops-md-t" href="#r=${encodeURIComponent(e.fp)}" data-md-card="${esc(e.fp)}">${esc(e.headline)}</a>
+      ${moodBar(r.mood)}<p class="ops-md-top">${moodTop(r.mood, 4)}</p>
+      ${r.summary ? `<p class="ops-md-sum">${esc(r.summary)}</p>` : ''}
+      ${r.calls.length ? `<ul class="ops-md-calls">${r.calls.map((c) => `<li><b>${esc(CALL[c.kind] || 'Call')}</b> “${esc(c.en)}” ${chLink(c)}</li>`).join('')}</ul>` : ''}
+      ${r.quotes.length ? `<ul class="ops-md-q">${r.quotes.map((q) => `<li>“${esc(q.en)}” ${chLink(q)}</li>`).join('')}</ul>` : ''}
+      ${rx}
+      <p class="ops-md-foot">${e.posts} post${e.posts === 1 ? '' : 's'}${e.comments ? `, ${e.comments} comments` : ''} in ${e.channels.length} channel${e.channels.length === 1 ? '' : 's'}${r.reports ? ` · ${r.reports} reports of it left out` : ''} · read ${esc(hm(Date.parse(e.readAt), VIEW_TZ()))}</p>
+    </article>`;
+  }
+  function paintMood() {
+    const pane = rightEl && $('.ops-rp-mood', rightEl);
+    if (!pane) return;
+    const d = MD.data;
+    const list = ((d && d.events) || []).filter((e) => MD.area === 'all' || e.area === MD.area);
+    const head = `<div class="ops-md-head"><b>Mood after the day's big events</b><small>What people and channels say about each event, not the reports of it: posts about it in its town's and the main Palestinian Telegram channels, the comments under them and the emoji people pressed. Their words are theirs, in short English. Updated every 15 minutes${d && d.at ? `, last at ${esc(hm(Date.parse(d.at), VIEW_TZ()))}` : ''}.</small></div>
+      <div class="ops-on-areas" role="group" aria-label="Area">${[['all', 'All'], ['gaza', 'Gaza'], ['js', 'Judea and Samaria']].map(([k, n]) => `<button type="button" data-md-area="${k}" aria-pressed="${k === MD.area}">${n}</button>`).join('')}</div>`;
+    const empty = !d ? 'Reading the channels…' : d.following ? `Following ${d.following} event${d.following === 1 ? '' : 's'}; no reactions found yet.` : 'No big event in the last day.';
+    pane.innerHTML = `<div class="ops-md">${head}${list.length ? list.map(moodEvent).join('') : `<p class="ops-md-empty">${empty}</p>`}</div>`;
+  }
+  /* Each report card with a mood read gets a line under it (user, 27 Oct: "reflect it when needed"). */
+  function markMoodCards() {
+    const evs = (MD.data && MD.data.events) || [];
+    const by = new Map(evs.map((e) => [e.fp, e]));
+    document.querySelectorAll('#feed .card[data-fp]').forEach((c) => {
+      const e = by.get(c.dataset.fp);
+      const had = c.querySelector(':scope > .ops-md-chip');
+      if (!e) { if (had) had.remove(); return; }
+      const html = `<button type="button" class="ops-md-chip" data-md-go="${esc(e.fp)}" title="How the public reacts, from the Palestinian channels">Mood: ${moodTop(e.read.mood, 2)}</button>`;
+      if (had) had.outerHTML = html; else c.insertAdjacentHTML('beforeend', html);
+    });
+  }
+  function wireMood() {
+    if (PAGE !== 'gaza') return;
+    loadMood(true);
+    const feed = document.getElementById('feed');
+    if (feed) new MutationObserver(() => { clearTimeout(MD.mt); MD.mt = setTimeout(markMoodCards, 200); }).observe(feed, { childList: true });
+    root.addEventListener('click', (ev) => {
+      const a = ev.target.closest('[data-md-area]');
+      if (a) { MD.area = a.dataset.mdArea; paintMood(); return; }
+      const go = ev.target.closest('[data-md-go]');
+      if (go) {
+        ev.preventDefault(); ev.stopPropagation();
+        S.right = true; S.rtab = 'mood'; if (isPhone()) S.ptab = 'mood';
+        keep(); paintFrame(); paintMood();
+        const el = rightEl.querySelector(`[data-md="${CSS.escape(go.dataset.mdGo)}"]`);
+        if (el) { el.scrollIntoView({ block: 'start' }); el.classList.add('ops-md-hl'); setTimeout(() => el.classList.remove('ops-md-hl'), 1600); }
+        return;
+      }
+      if (ev.target.closest('[data-md-card]')) { S.rtab = 'rep'; if (isPhone()) S.ptab = 'rail'; keep(); paintFrame(); }
+    }, true);
+  }
 
   /* ---------- The whole war, side by side: a column a day since the desk's start (20 Oct: "since 13 Jul on the
      Yemen desk, since 28 Feb on the Iran desk and the All page") ---------- */
@@ -1128,6 +1211,8 @@
     b.onclick = () => { focusEvent(e); b.remove(); };
     box.prepend(b);
     while (box.children.length > 3) box.lastChild.remove();
+    // Only whole notes: an older one that no longer fits above the newest goes (user, 27 Oct: they were cut).
+    while (box.children.length > 1 && box.scrollHeight > box.clientHeight + 1) box.lastChild.remove();
     setTimeout(() => b.classList.add('out'), 12000);
     setTimeout(() => b.remove(), 12600);
   }
@@ -2054,7 +2139,7 @@
     // The page's map, made and with a size (a map read before then has no place yet).
     if (!m || !m.getContainer || !window.L || !m._loaded || !(m.getSize().y > 0)) { setTimeout(startHud, 200); return; }
     buildHud(m);
-    wireMatrix(); wireLog(); wireTraffic(); wireKeys(); wireTrafficClicks(m); wirePinHover();
+    wireMatrix(); wireMood(); wireLog(); wireTraffic(); wireKeys(); wireTrafficClicks(m); wirePinHover();
     $('.ops-card', hud).addEventListener('click', (ev) => { if (ev.target.closest('[data-sel="x"]')) closeSel(); else if (ev.target.closest('[data-route]')) toggleRoute(); });
     sizeDock();
     oneWorld(m);
@@ -2116,7 +2201,7 @@
     started = true;
     TRAFFIC = PAGE === 'all';
     // The Online tab is gone (user, 23 Oct): a tab kept from it is Reports.
-    if (S.rtab === 'on') S.rtab = 'rep';
+    if (S.rtab === 'on' || (S.rtab === 'mood' && PAGE !== 'gaza')) S.rtab = 'rep';
     if (!TRAFFIC) { S.air = false; S.sea = false; }
     // Shown in any case after a few seconds, whatever kept the map from being placed.
     setTimeout(() => root && root.classList.add('ops-ready'), 5000);

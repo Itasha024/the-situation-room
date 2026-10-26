@@ -44,7 +44,7 @@ import { aboutFootage, attachMedia, readNotice, tgMedia, xMedia } from "./desk/m
 import { listenToVideos } from "./desk/listen.ts";
 import { triage } from "./desk/triage.ts";
 import { askChain, type ChainModel, COMBINE_MODELS } from "./desk/models.ts";
-import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves, splitEnrich } from "./desk/combine.ts";
+import { addsFacts, bringsNews, combineGroups, enrichCards, members, pickLead, planWaves, splitEnrich } from "./desk/combine.ts";
 import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
 import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
@@ -55,6 +55,7 @@ import { isGazaDeskItem } from "./desk/gaza-reader.ts";
 import { remember } from "./desk/recent-reads.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
 import { attributeVerdict, colonSpeaker, tidySpeaker } from "./desk/reader.ts";
+import { articleLink, isPostUrl, ownStory, unshorten } from "./desk/full-text.ts";
 
 export { checkLinks, namedSpeaker, speakerKey };
 
@@ -337,7 +338,7 @@ type FxStatus = {
   url?: string;
   id?: string;
   text?: string;
-  raw_text?: { text?: string };
+  raw_text?: { text?: string; facets?: { type?: string; replacement?: string }[] };
   created_timestamp?: number;
   replying_to?: { screen_name?: string } | null;
   reposted_by?: unknown;
@@ -346,6 +347,17 @@ type FxStatus = {
   article?: { title?: string; preview_text?: string };
   card?: { url?: string; title?: string; description?: string; domain?: string } | null;
 };
+
+/** A post's words without its links: the line it was posted with. */
+export function withoutLinks(text: string): string {
+  return String(text || "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+}
+
+/** The article a post links in its words (the link X shows, else the one in its text), or "". */
+export function postArticleLink(s: { text?: string; raw_text?: { text?: string; facets?: { type?: string; replacement?: string }[] } }): string {
+  const shown = (s.raw_text?.facets ?? []).filter((f) => f.type === "url" && f.replacement).map((f) => f.replacement as string).join(" ");
+  return articleLink(shown) || articleLink(String(s.text ?? "")) || articleLink(String(s.raw_text?.text ?? ""));
+}
 
 /** One account's own posts as raw items: reposts and replies to others left out. */
 export function parseFxStatuses(json: unknown, acct: XAccount): RawHit[] {
@@ -364,7 +376,11 @@ ${s.article.preview_text ?? ""}` : "";
     const text = decodeEntities(art || String(s.raw_text?.text ?? s.text ?? "")).trim();
     const url = s.url || (s.id ? `https://x.com/${acct.handle}/status/${s.id}` : "");
     if (!url || text.length < 12) continue;
-    const card = acct.article && s.card?.url && !/(?:^|\.)(?:x|twitter)\.com$/i.test(s.card.domain ?? "") ? s.card : null;
+    // A newspaper's post with a picture has no link card, only the link in its words (NY Post, 26 Oct:
+    // "Saudi Arabia and allies travel to Iran…" went out as a headline-only card off the post's line,
+    // the article never opened): that link stands for the card's.
+    const linked = acct.article && !s.article?.title && !(s.card?.url && !/(?:^|\.)(?:x|twitter)\.com$/i.test(s.card.domain ?? "")) ? postArticleLink(s) : "";
+    const card = acct.article && s.card?.url && !/(?:^|\.)(?:x|twitter)\.com$/i.test(s.card.domain ?? "") ? s.card : linked ? { url: linked, title: withoutLinks(text) } : null;
     const cardText = card ? `${card.title ?? ""} ${card.description ?? ""}`.trim() : "";
     if (acct.only && !acct.picture && !acct.only.test(`${text} ${cardText}`)) continue;
     const ms = Number(s.created_timestamp) * 1000;
@@ -1128,6 +1144,8 @@ async function fxPageNow(handle: string, cursor?: string): Promise<{ results?: u
 const MAX_ITEM_AGE_MS = 72 * 3600 * 1000;
 /** Article pages fetched per cycle to fill thin teasers. Cached by URL. */
 const BODY_FETCHES = 90;
+/** Posts a scan whose linked article is opened and read with them (the Iran desk opens 8 a tick). */
+const POST_LINKS_PER_TICK = 8;
 /**
  * How much of one article the desk keeps. Only web articles reach this — a
  * Telegram post is already its whole text — so the reader's token bill grows
@@ -1752,6 +1770,18 @@ export function foldIntoPublished(
       const who = speechOwner(r.summary)?.key;
       if (who && who === speechOwner(o.summary)?.key) return false;
       if (!addsFacts(o, r)) return false;
+      // New beside this card is not new beside the story: the desk's other cards of it within the day
+      // (its updates, and every card a fold rule ties to this account) may have told it already (user,
+      // 26 Oct: NY Post's "Saudi Arabia and allies travel to Iran…" went out 24 hours into the Tehran
+      // talks with nothing new). Then it is a copy, and folds.
+      const asFold = (x: LiveReport) => x as unknown as SameCard;
+      const story = homes.filter(
+        (x) =>
+          x === o ||
+          (same(x) && Math.abs(t - Date.parse(x.at)) <= SAME_FOLD_MS &&
+            (x.replyTo === o.fp || x.fp === o.replyTo || !!eventRule(asFold(x), asFold(r)) || !!talkRule(asFold(x), asFold(r)))),
+      );
+      if (!bringsNews(story, r)) return false;
       r.replyTo ||= o.fp;
       r.flags = [...new Set([...(r.flags ?? []), "update"])];
       console.log(`[fold] ${r.url} kept as its own card, an update of ${o.fp} from ${Math.round((t - Date.parse(o.at)) / 3600_000)} h before`);
@@ -2893,6 +2923,36 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
     const stale = hits.filter((h) => !h.fromTg && !h.undated && leadCache[h.url]?.pub && now - (leadCache[h.url].pub as number) > SEEN_WINDOW_MS && Math.abs(Date.parse(h.at) - (leadCache[h.url].pub as number)) < 1000);
     for (const h of stale) hits.splice(hits.indexOf(h), 1);
     if (stale.length) console.log(`[scan] ${stale.length} listed article(s) dated by their page as old, left out`);
+  }
+  // The article behind a post, as the Iran and Gaza desks read it (user, 22 Oct: "if you see a link on x
+  // dont just take the 2 sentences in the x post but go to the link"; 26 Oct: NY Post's post of its
+  // Saudi-delegation story went out as a headline-only card off the post's line). An outlet's post of
+  // its own story is that story: the card links the article.
+  {
+    const linked = hits
+      .filter((h) => h.fromTg && h.text.length < 1500 && (THIS_WAR.test(h.text) || IRAN_WAR_WORDS.test(h.text)) && !!articleLink(h.text))
+      .slice(0, POST_LINKS_PER_TICK);
+    if (linked.length) {
+      const { openArticle } = await import("./iran-scan.server.ts");
+      let read = 0;
+      await Promise.allSettled(
+        linked.map(async (h) => {
+          const url = cleanUrl(await unshorten(articleLink(h.text)));
+          if (isPostUrl(url) || !/^https?:\/\/[^/]+\/./.test(url)) return;
+          const outlet = outletFromHost(url);
+          const text = await openArticle(url, h.title || withoutLinks(h.text).slice(0, 200), outlet);
+          if (text.length < 300) return;
+          h.text = `${h.text}\n\n[The linked article${outlet ? `, ${outlet}` : ""}]\n${text}`.slice(0, ITEM_CHARS);
+          if (ownStory(url, outlet, h.source)) {
+            h.xPost = h.url;
+            h.url = url;
+            h.fromTg = false;
+          }
+          read += 1;
+        }),
+      );
+      if (read) console.log(`[scan] ${read} post(s) read with their linked article`);
+    }
   }
   lap("article leads");
   // One article under two addresses — Google's redirect and the outlet's own

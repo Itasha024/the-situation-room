@@ -7117,8 +7117,8 @@ try { setFavicon(THEME); } catch (e) {}
 const DESKS = [
   { id: 'yemen', name: 'Yemen Conflict Desk', short: 'Yemen conflict', href: '/yemen-conflict-desk', sub: 'Live', flag: ['#ce1126', '#ffffff', '#000000'], tz: 'Asia/Aden' },
   { id: 'iran', name: 'Iran Conflict Desk', short: 'Iran conflict', href: '/iran-conflict-desk', sub: 'Live', flag: ['#239f40', '#ffffff', '#da0000'], tz: 'Asia/Tehran' },
-  // Being built (user, 23 Oct): in the menus only on its own page or with ?desks=1.
-  { id: 'gaza', name: 'Gaza – Judea & Samaria Desk', short: 'Gaza – Judea & Samaria', href: '/gaza-judea-samaria-desk', sub: 'Being built', soon: true, flag: ['#0038b8', '#ffffff', '#0038b8'], tz: 'Asia/Jerusalem' },
+  // Live from 26 Oct (user: "deploy the desk live").
+  { id: 'gaza', name: 'Gaza – Judea & Samaria Desk', short: 'Gaza – Judea & Samaria', href: '/gaza-judea-samaria-desk', sub: 'Live', flag: ['#0038b8', '#ffffff', '#0038b8'], tz: 'Asia/Jerusalem' },
 ];
 function deskOf() {
   const el = document.querySelector('[data-desk]');
@@ -7815,7 +7815,7 @@ function startIranFeed() {
   const details = document.getElementById('live-scan-details');
   if (details) details.addEventListener('toggle', renderIranScan);
   // The Gaza desk's brief and its IDF-held area (24 Oct); its Trump column and numbers come in its later stages.
-  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadIranBrief(); loadIranPins(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
+  const pull = deskOf().id === 'gaza' ? () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); } : () => { loadIranFeed(); loadIranScan(); loadTrump(); loadIranBrief(); loadIranPins(); loadIranNumbers(); };
   pull();
   iranDesk.timer = setInterval(pull, 60_000);
 }
@@ -8557,7 +8557,7 @@ const trumpFeed = { list: [], shown: 30, drawn: false };
 async function loadTrump() {
   try {
     // The Yemen desk shows his words on Yemen and the Houthis (17 Oct).
-    const res = await fetch(deskOf().id === 'yemen' ? '/api/trump?desk=yemen' : '/api/trump', { cache: 'no-cache' });
+    const res = await fetch(deskOf().id === 'iran' ? '/api/trump' : `/api/trump?desk=${deskOf().id}`, { cache: 'no-cache' });
     if (!res.ok) return;
     const d = await res.json();
     const list = Array.isArray(d.statements) ? d.statements : [];
@@ -8588,7 +8588,7 @@ function renderTrumpPin() {
   const list = trumpFeed.list;
   const n = list.length;
   el.innerHTML = `<div class="tp-head"><b>Trump's latest</b>${PIN_ICON}</div>
-    ${n ? trumpCardHtml(list[0]) : `<p class="soon">Nothing yet: what he posts or says on ${deskOf().id === 'yemen' ? 'Yemen and the Houthis' : 'Iran'} appears here within five minutes.</p>`}
+    ${n ? trumpCardHtml(list[0]) : `<p class="soon">Nothing yet: what he posts or says on ${deskOf().id === 'yemen' ? 'Yemen and the Houthis' : deskOf().id === 'gaza' ? 'Gaza and the Palestinians' : 'Iran'} appears here within five minutes.</p>`}
     ${n ? `<button type="button" class="tp-all" aria-haspopup="dialog">All his statements <span aria-hidden="true">→</span></button>` : ''}`;
   el.querySelectorAll('.card').forEach(wireFeedCard);
   const all = el.querySelector('.tp-all');

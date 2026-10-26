@@ -34,3 +34,14 @@ test("a lead the line says again is dropped", () => {
   );
   assert.equal(doubledLead("Araghchi: Iran presented a seven-day plan"), "Araghchi: Iran presented a seven-day plan");
 });
+
+test("one death in Gaza told by several local reporters is one card", () => {
+  const f = foldServed([
+    card("a", "2026-10-26T04:00:00Z", "Alam 24", "Israeli fire kills three, including 7-year-old girl Jouri Islam Al-Soufi, in Al-Mawasi, Khan Younis", "combat"),
+    card("b", "2026-10-26T05:10:00Z", "Hamza al-Masri", "Israeli gunfire kills Palestinian child Jouri Islam Al-Soufi and a 24-year-old man", "combat"),
+    card("c", "2026-10-26T05:30:00Z", "Safa", "Israeli strike on Islamic University in Gaza City kills three security guards", "strike"),
+    card("d", "2026-10-26T05:40:00Z", "WAFA", "Israeli strikes on Islamic University in Gaza kill three security guards", "strike"),
+    card("e", "2026-10-26T06:00:00Z", "Saraya al-Quds", "Eight Palestinians killed in Gaza today", "statement"),
+  ]);
+  assert.equal(f.reports.length, 3);
+});

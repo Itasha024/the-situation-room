@@ -21,6 +21,7 @@
  *   en.khabaragency1.net), and one channel's same headline is one card.
  */
 import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
+import { gazaPlacesIn } from "./gaza-places.ts";
 import { differentSpeakers, headWords, sameDecision, speechOwner, wordsInCommon } from "./copies.ts";
 import { isAggregator } from "./credibility.ts";
 import { sameOutlet } from "./originals.ts";
@@ -684,6 +685,7 @@ type Sig = {
   intercept: string;
   kit: string;
   visit: string;
+  arena: ArenaToll | null;
 };
 function sharedTargets(x: Set<string>, y: Set<string>): number {
   let n = 0;
@@ -726,6 +728,7 @@ function sig(r: Card): Sig {
       intercept: interceptAt(r),
       kit: kitDecision(r),
       visit: FIELD.has(String(r.type)) ? "" : visitOf(r.summary),
+      arena: arenaToll(r.summary),
     };
     sigs.set(r, s);
     if (SIG_SEEN.size > 6000) SIG_SEEN.clear();
@@ -764,10 +767,40 @@ export function eventRule(a: Card, b: Card): Rule | null {
   // Iraqi PM's order on the Maysan council head as 4).
   if (a.source !== b.source && !sa.field && !sb.field) {
     if (sa.visit && sa.visit === sb.visit && gap <= VISIT_MS) return "visit";
+  }
+  if (sa.arena && sb.arena && gap <= ARENA_DEAD_MS && sameArenaToll(sa.arena, sb.arena)) return "dead";
+  if (a.source !== b.source && !sa.field && !sb.field) {
     // A speaker's words are the remarks rule's (one occasion, one card), not this one's.
     if (gap <= DECISION_MS && !sa.remarks && !sb.remarks && !differentSpeakers(a, b) && sameDecision(a, b)) return "decision";
   }
   return looseRule(a, b);
+}
+
+/**
+ * The dead and wounded of one event in Gaza or Judea and Samaria (26 Oct: the girl killed in Al-Mawasi went
+ * out as four cards; the Yemen toll rule goes by Yemen's districts): a named victim in both, or the same
+ * count of dead at the same place.
+ */
+type ArenaToll = { victims: string[]; dead: number[]; places: string[] };
+export const ARENA_DEAD_MS = 12 * H;
+const HURT = /\b(?:kill\w*|dead|death|wound\w*|injur\w*|shot)\b/i;
+const ARENA_HINT = /\b(?:Gaza|Khan Y[ou]nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|Judea|Samaria|Hebron|Nablus|Jenin|Ramallah|Tulkarm|Qalqilya|Bethlehem|Jericho|Tubas|Jerusalem|Palestinians?)\b/i;
+const DAY_TALLY = /\b(?:today|past (?:24|48) hours|since|so far|toll|total|this week|across Gaza|across the Strip)\b/i;
+const BROAD = new Set(["Gaza", "Gaza City", "Gaza Strip", "Khan Younis", "Rafah", "Deir al-Balah", "Jabalia", "Beit Lahia", "Beit Hanoun", "Hebron", "Nablus", "Jenin", "Ramallah", "Tulkarm", "Qalqilya", "Bethlehem", "Jerusalem", "East Jerusalem", "Jericho", "Tubas", "Judea and Samaria"]);
+const PERSON = /\b[A-Z][a-z']+(?:[ -](?:(?:al|el|Al|El|Abu|abu|bin|ibn)[ -])?[A-Z][a-z']+){2,}\b/g;
+export function arenaToll(summary: string): ArenaToll | null {
+  const s = String(summary || "");
+  // A day's or a war's tally is no one event.
+  if (!HURT.test(s) || !ARENA_HINT.test(s) || DAY_TALLY.test(s)) return null;
+  // The spot, not the city or the Strip it is told by.
+  const sites = [...s.matchAll(/\b(?:[A-Z][\w'-]+ )+(?:Hospital|University|School|Mosque|camp|Camp|roundabout|Roundabout|Junction|junction)\b/g)].map((m) => m[0].toLowerCase());
+  const places = [...new Set([...gazaPlacesIn(s, "").map((p) => p.name), ...sites])].filter((p) => !BROAD.has(p));
+  const victims = [...s.matchAll(PERSON)].map((m) => m[0]).filter((n) => !gazaPlacesIn(n, "").length && !/^(?:Israeli|Palestinian|Gaza|Health|Education|Civil|Red)\b/.test(n));
+  return { victims, dead: deadCounts(s), places };
+}
+export function sameArenaToll(x: ArenaToll, y: ArenaToll): boolean {
+  if (x.victims.some((v) => y.victims.includes(v))) return true;
+  return x.dead.some((n) => n > 0 && y.dead.includes(n)) && x.places.some((p) => y.places.includes(p));
 }
 
 /** A visit or round of talks told by many outlets: one card for this long from the first. */

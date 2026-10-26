@@ -9,7 +9,7 @@ import { anglicise } from "./anglicise.ts";
 import type { DeskType } from "./digest.ts";
 import type { DeskId } from "../desks.ts";
 import { gazaWords } from "./gaza-words.ts";
-import { arenaSourceRule, gazaSourceRule } from "./gaza-sourcing.ts";
+import { arenaSourceRule, gazaSourceRule, palestineArena } from "./gaza-sourcing.ts";
 import { aboutFootage } from "./media.ts";
 import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
@@ -317,6 +317,15 @@ const YEMEN_WAR = /\b(?:Houthis?|Ansar ?Allah|Yemen\w*|Saudi-led coalition|Taiz|
 export function iranInLead(summary: string, text = ""): boolean {
   const first = String(text || "").replace(/^[A-Z][A-Z '’`-]+ — /, "").split(/(?<=[.!?])\s/)[0] ?? "";
   return IRAN_ACTOR_WORD.test(`${summary}\n${first}`.replace(IRAN_LABEL_WORDS, " "));
+}
+
+/**
+ * Gaza and Judea and Samaria have their own desk (user, 26 Oct: the Gaza desk live): a card on them leaves the
+ * Iran desk unless Iran or its allies are in its headline.
+ */
+const AXIS_IN = /\b(?:Iran\w*|Tehran|IRGC|Khamenei|Araghchi|Pezeshkian|Hezbollah|Lebanon|Lebanese|Houthis?|Yemen\w*|Iraq\w*|Syria\w*|axis)\b/i;
+export function gazaOnIran(summary: string): boolean {
+  return palestineArena(summary) && !AXIS_IN.test(summary);
 }
 
 /** A card of the Houthis' war with no Iran in its headline or first sentence: not the Iran desk's (117, 216, 333, 372, 373, 382). */
@@ -894,6 +903,7 @@ export function serveCard(r: Row, desk: DeskId): boolean {
   if (desk === "iran") {
     if (homeAffairs(summary)) return false;
     if (yemenOnIran(summary, text)) return false;
+    if (gazaOnIran(summary)) return false;
   }
   if (desk === "yemen" && gulfCoastShip(type, `${summary}\n${text}`)) return false;
   const lebanon = lebanonContext(`${summary} ${text}`, source);

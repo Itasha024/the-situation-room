@@ -614,15 +614,15 @@
   }
 
   /* The All page's left panel: each theatre at a glance, from the events and reports the page has. */
-  const DESK_INFO = { iran: ['Iran', 'Israel, the US, Iran and its allies', '/iran-conflict-desk'], yemen: ['Yemen', 'The Houthis, the government, the coalition, the Red Sea', '/yemen-conflict-desk'] };
+  const DESK_INFO = { iran: ['Iran', 'Israel, the US, Iran and its allies', '/iran-conflict-desk'], yemen: ['Yemen', 'The Houthis, the government, the coalition, the Red Sea', '/yemen-conflict-desk'], gaza: ['Gaza – Judea & Samaria', 'Israel, Hamas, the factions and the PA', '/gaza-judea-samaria-desk'] };
   /* Each desk's own brief, its latest developments in short (20 Oct: "make like a brief off of the desk's brief";
      the counts and the bars of sides went). */
   function drawTheatres() {
     const el = document.getElementById('ops-theatres');
     const h = window.__home;
     if (!el || !h || !h.D) return;
-    const briefs = { iran: h.D.ibrief, yemen: h.D.ybrief };
-    const key = JSON.stringify([briefs.iran && briefs.iran.updatedAt, briefs.yemen && briefs.yemen.updatedAt, !!briefs.iran, !!briefs.yemen]);
+    const briefs = { iran: h.D.ibrief, yemen: h.D.ybrief, gaza: h.D.gbrief };
+    const key = JSON.stringify(Object.values(briefs).map((b) => (b ? b.updatedAt || 1 : 0)));
     if (el._k === key) return;
     el._k = key;
     const when = (t) => (t ? `${hm(t, 'Asia/Jerusalem')}, ${dm(t, 'Asia/Jerusalem')}` : '');
@@ -633,14 +633,14 @@
       return (s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 6) : []).map((p) => [desk, p]);
     });
     const pts = [];
-    for (let i = 0; pts.length < 10 && lists.some((l) => l[i]); i++) lists.forEach((l) => { if (l[i] && pts.length < 10) pts.push(l[i]); });
+    for (let i = 0; pts.length < 12 && lists.some((l) => l[i]); i++) lists.forEach((l) => { if (l[i] && pts.length < 12) pts.push(l[i]); });
     const latest = Object.values(briefs).map((b) => b && b.updatedAt).filter(Boolean).sort().pop();
     const ff = app('flagFill'), desks = app('DESKS') || [];
     const flag = (desk) => { const d = desks.find && desks.find((x) => x.id === desk); return d && ff ? ff(d) : ''; };
     el.classList.remove('ops-subwrap');
     el.innerHTML = `<article class="ops-th ops-th-one">
-        ${latest ? `<p class="ops-th-sub">From the Iran and Yemen desks · updated ${esc(when(latest))}</p>` : ''}
-        ${pts.length ? `<ol class="ops-th-pts">${pts.map(([desk, p]) => `<li><a class="ops-th-flag" href="${DESK_INFO[desk][2]}" data-desk-go title="${esc(DESK_INFO[desk][0])} desk" aria-label="${esc(DESK_INFO[desk][0])} desk">${flag(desk)}</a>${esc(p)}</li>`).join('')}</ol>` : `<p class="ops-empty">${briefs.iran || briefs.yemen ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
+        ${latest ? `<p class="ops-th-sub">From the Iran, Yemen and Gaza desks · updated ${esc(when(latest))}</p>` : ''}
+        ${pts.length ? `<ol class="ops-th-pts">${pts.map(([desk, p]) => `<li><a class="ops-th-flag" href="${DESK_INFO[desk][2]}" data-desk-go title="${esc(DESK_INFO[desk][0])} desk" aria-label="${esc(DESK_INFO[desk][0])} desk">${flag(desk)}</a>${esc(p)}</li>`).join('')}</ol>` : `<p class="ops-empty">${briefs.iran || briefs.yemen || briefs.gaza ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
         <p class="ops-th-links">${Object.entries(DESK_INFO).map(([desk, [name, , href]]) => `<a class="ops-th-more" href="${href}" data-desk-go>${esc(name)} desk: the full brief, ${desk === 'gaza' ? '' : desk === 'iran' ? 'arenas, ' : 'fronts, '}numbers ${ICON.right}</a>`).join('')}</p>
       </article>`;
   }

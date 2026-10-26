@@ -28,7 +28,7 @@ export type TrumpStatement = {
   /** Times the writer was asked and gave nothing usable. */
   tries?: number;
   /** The desks it is shown on: Iran, Yemen or both (17 Oct); none means worked out from its words. */
-  desks?: ("iran" | "yemen")[];
+  desks?: ("iran" | "yemen" | "gaza")[];
   /** A clip whose words are in this transcript entry: shown once, there (18 Oct). */
   in?: string;
 };
@@ -89,13 +89,17 @@ export const aboutIran = (text: string) => IRAN_GATE.test(text) || WAR_WORDS.tes
 /** About Yemen and the Houthis' war (17 Oct: his words on the Houthis belong on the Yemen desk). */
 const YEMEN_WORDS = /\b(?:Houthis?|Yemen\w*|Sanaa|Sana'a|Hodeidah|Ansar Allah|Bab el-Mandeb|Bab al-Mandab|Red Sea)\b/i;
 export const aboutYemen = (text: string) => YEMEN_WORDS.test(text);
-/** On either desk's war. */
-export const onTopic = (text: string) => aboutIran(text) || aboutYemen(text);
+/** About Gaza, Judea and Samaria and the Palestinians (26 Oct: the Gaza desk live, his words on it there). */
+const GAZA_WORDS = /\b(?:Gaza\w*|Hamas|Judea|Samaria|West Bank|Palestin\w*|Mahmoud Abbas|Board of Peace|hostages?)\b/i;
+export const aboutGaza = (text: string) => GAZA_WORDS.test(text);
+/** On any desk's war. */
+export const onTopic = (text: string) => aboutIran(text) || aboutYemen(text) || aboutGaza(text);
 /** The desks his words belong on. */
-export function desksOf(text: string): ("iran" | "yemen")[] {
-  const out: ("iran" | "yemen")[] = [];
+export function desksOf(text: string): ("iran" | "yemen" | "gaza")[] {
+  const out: ("iran" | "yemen" | "gaza")[] = [];
   if (aboutIran(text)) out.push("iran");
   if (aboutYemen(text)) out.push("yemen");
+  if (aboutGaza(text)) out.push("gaza");
   return out;
 }
 

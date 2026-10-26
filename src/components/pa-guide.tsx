@@ -89,12 +89,12 @@ export function PaGuide() {
             ["words", "Words"],
           ].map(([id, t]) => (
             <li key={id}>
-              <a href={`#${id}`}>{t}</a>
+              <a href={`#pg-${id}`}>{t}</a>
             </li>
           ))}
         </ul>
 
-        <h3 id="short">In short</h3>
+        <h3 id="pg-short">In short</h3>
         <ul>
           <li><b>Three layers, one man at the top.</b> Mahmoud Abbas (Abu Mazen) heads the PLO, the Palestinian Authority and Fatah at once.</li>
           <li><b>The PLO</b> speaks for all Palestinians abroad and signed the Oslo Accords. <b>The PA</b> is the body Oslo set up to run the cities of Judea and Samaria (and, until 2007, Gaza). <b>Fatah</b> is the largest party in both.</li>
@@ -102,7 +102,7 @@ export function PaGuide() {
           <li><b>Nobody has been elected nationally since 2006.</b> Presidential and legislative elections are now set for 11 September 2027.</li>
         </ul>
 
-        <h3 id="map">Who sits where</h3>
+        <h3 id="pg-map">Who sits where</h3>
         <div className="pg-chart" role="img" aria-label="The PLO and its factions, the PA, and the factions outside the PLO">
           <Row>
             <Box tone="plo wide" name="Mahmoud Abbas" sub="Chairman of the PLO · President of the PA (State of Palestine) · Head of Fatah" />
@@ -125,7 +125,7 @@ export function PaGuide() {
           </Row>
         </div>
 
-        <h3 id="plo">The PLO (Palestine Liberation Organization)</h3>
+        <h3 id="pg-plo">The PLO (Palestine Liberation Organization)</h3>
         <p>Founded in 1964; recognised by Israel in 1993 as the Palestinians' representative. Its bodies, from the widest to the one that decides:</p>
         <div className="pg-chart" role="img" aria-label="The PLO's bodies">
           <Row><Box tone="plo wide" name="Palestinian National Council (PNC)" sub={<>The PLO's parliament, some 700+ members, appointed by faction quotas. {ar("المجلس الوطني الفلسطيني")}</>} /></Row>
@@ -134,7 +134,7 @@ export function PaGuide() {
         </div>
         <p>The PNC has never been elected directly. Abbas set its first direct vote, for Palestinians abroad, for 1 November 2026; members of the Legislative Council are to sit in it for those at home.</p>
 
-        <h3 id="pa">The Palestinian Authority (the “State of Palestine”)</h3>
+        <h3 id="pg-pa">The Palestinian Authority (the “State of Palestine”)</h3>
         <p>Set up under the Oslo Accords in 1994 as a five-year interim body. It now calls itself the State of Palestine, which some 150 countries recognise.</p>
         <div className="pg-chart" role="img" aria-label="The Palestinian Authority">
           <Row><Box tone="pa wide" name="President: Mahmoud Abbas" sub="Elected January 2005 for four years; no election since. Rules by decree." /></Row>
@@ -151,7 +151,7 @@ export function PaGuide() {
         </div>
         <p>The PA governs the cities and towns of Judea and Samaria (Areas A and B). It has not governed Gaza since 2007; the Trump plan of October 2025 gives Gaza to a Palestinian committee of technocrats under the Board of Peace, with a reformed PA to take over later.</p>
 
-        <h3 id="security">The security services ({he("המנגנונים")} · {ar("الأجهزة الأمنية")})</h3>
+        <h3 id="pg-security">The security services ({he("המנגנונים")} · {ar("الأجهزة الأمنية")})</h3>
         <p>Tens of thousands of men in Judea and Samaria, the PA's largest payroll. The president is their supreme commander. They work only in Area A (and with Israel's consent beyond it), and coordinate with the IDF through liaison offices (“security coordination”, {ar("التنسيق الأمني")}).</p>
         <div className="pg-chart" role="img" aria-label="The PA security services and whom they answer to">
           <Row><Box tone="sec wide" name="The president, supreme commander" /></Row>
@@ -173,7 +173,7 @@ export function PaGuide() {
         </div>
         <p className="pg-note">In Gaza, Hamas has its own: the Interior Ministry's police and Internal Security, and the Qassam Brigades.</p>
 
-        <h3 id="fatah">Fatah and the Tanzim</h3>
+        <h3 id="pg-fatah">Fatah and the Tanzim</h3>
         <p>Founded by Yasser Arafat in 1959; the backbone of the PLO and the PA. Its 8th General Conference (May 2026) kept Abbas as leader and elected its bodies.</p>
         <div className="pg-chart" role="img" aria-label="Fatah's bodies">
           <Row><Box tone="fatah wide" name="General Conference" sub={<>Elects the leadership every few years; 8th held 14–18 May 2026, about 2,600 members. {ar("المؤتمر العام")}</>} /></Row>
@@ -192,7 +192,7 @@ export function PaGuide() {
           <li><b>Marwan Barghouti</b>: serving five life terms in Israel since 2002; the most popular Fatah figure in polls.</li>
         </ul>
 
-        <h3 id="hamas">Hamas</h3>
+        <h3 id="pg-hamas">Hamas</h3>
         <p>The Islamic Resistance Movement, founded in Gaza in 1987 from the Muslim Brotherhood. Listed as a terrorist organisation by Israel, the US, the EU and others.</p>
         <div className="pg-chart" role="img" aria-label="Hamas's bodies">
           <Row><Box tone="hamas wide" name="Shura Council" sub={<>Elected internally by members in four regions; chooses the leadership. {ar("مجلس الشورى")}</>} /></Row>
@@ -206,10 +206,10 @@ export function PaGuide() {
           </Row>
         </div>
 
-        <h3 id="pij">Palestinian Islamic Jihad</h3>
+        <h3 id="pg-pij">Palestinian Islamic Jihad</h3>
         <p>Founded 1981; smaller than Hamas, armed and funded mostly by Iran. Secretary-general: Ziad al-Nakhalah. Armed wing: Saraya al-Quds (the al-Quds Brigades), strong in Gaza and in the Jenin and Tulkarm camps. Rejects Oslo, the PA and elections.</p>
 
-        <h3 id="others">Other factions and armed groups</h3>
+        <h3 id="pg-others">Other factions and armed groups</h3>
         <div className="pg-wrap">
           <table className="pg-table">
             <thead><tr><th>Group</th><th>What it is</th><th>Armed wing</th></tr></thead>
@@ -225,7 +225,7 @@ export function PaGuide() {
           </table>
         </div>
 
-        <h3 id="elections">Elections</h3>
+        <h3 id="pg-elections">Elections</h3>
         <div className="pg-wrap">
           <table className="pg-table">
             <thead><tr><th>Vote</th><th>Last held</th><th>Next</th></tr></thead>
@@ -241,7 +241,7 @@ export function PaGuide() {
         </div>
         <p>Elections called in 2021 were cancelled by Abbas, who cited Israel not allowing a vote in Jerusalem; the 2026 legislative vote was moved for the same kind of reason. Lists must accept the PLO's commitments, which Hamas and Islamic Jihad have refused in the past.</p>
 
-        <h3 id="split">The split, and the attempts to end it</h3>
+        <h3 id="pg-split">The split, and the attempts to end it</h3>
         <ul className="pg-time">
           <li><b>2006</b> Hamas wins the legislative election; a Hamas government is formed.</li>
           <li><b>June 2007</b> Hamas takes Gaza by force; Abbas dismisses its government. Two governments since.</li>
@@ -254,14 +254,14 @@ export function PaGuide() {
           <li className="now"><b>Now</b> Follow it on the desk's reports, in the “Palestinian politics” section.</li>
         </ul>
 
-        <h3 id="money">Money</h3>
+        <h3 id="pg-money">Money</h3>
         <ul>
           <li><b>Clearance revenues</b> ({ar("المقاصة")} · {he("כספי הסליקה")}): under the 1994 Paris Protocol Israel collects customs and VAT on goods bound for the PA and passes them on each month. They are about two thirds of the PA's income.</li>
           <li><b>Deductions:</b> Israel deducts sums matching the PA's payments to prisoners and attackers' families, its share for Gaza, and debts for electricity and water. Part of the money is held in Norway.</li>
           <li><b>Salaries:</b> with the money held back, the PA has paid its employees and security men only part of their wages for long stretches.</li>
         </ul>
 
-        <h3 id="areas">Areas A, B and C (Oslo II, 1995)</h3>
+        <h3 id="pg-areas">Areas A, B and C (Oslo II, 1995)</h3>
         <div className="pg-bar" role="img" aria-label="Area A about 18 percent, Area B about 22 percent, Area C about 60 percent of Judea and Samaria">
           <span style={{ width: "18%", background: "#f59e0b" }}>A</span>
           <span style={{ width: "22%", background: "#fcd34d" }}>B</span>
@@ -274,7 +274,7 @@ export function PaGuide() {
           <li><b>Jerusalem</b>: Israel's; the PA is barred from acting there. <b>Gaza</b>: Hamas since 2007; the IDF holds the part behind the “yellow line” since October 2025.</li>
         </ul>
 
-        <h3 id="words">Words you will meet</h3>
+        <h3 id="pg-words">Words you will meet</h3>
         <div className="pg-wrap">
           <table className="pg-table">
             <thead><tr><th>English</th><th>Arabic</th><th>Hebrew</th></tr></thead>

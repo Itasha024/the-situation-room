@@ -50,13 +50,13 @@ test("pins on the places the copy and the source both name", () => {
   assert.deepEqual(names("Hamas says talks in Cairo continue", "x"), []);
 });
 
-test("the desk is listed, hidden, and has its own reader", () => {
+test("the desk is listed, live (26 Oct), and has its own reader", () => {
   assert.ok(DESK_IDS.includes("gaza"));
   assert.equal(deskParam("gaza"), "gaza");
   const d = deskById("gaza");
   assert.equal(d.path, "/gaza-judea-samaria-desk");
-  assert.ok(d.hidden);
-  assert.equal(DESKS.filter((x) => !x.hidden).length, 2);
+  assert.ok(!d.hidden);
+  assert.equal(DESKS.filter((x) => !x.hidden).length, 3);
   assert.equal(GAZA_READER.queueKey, "gaza:reader-queue");
   assert.equal(GAZA_READER.desk, "gaza");
 });
@@ -225,15 +225,19 @@ test("Gaza and Judea and Samaria events from Israeli or Palestinian sources only
   assert.ok(!palestineArena("Israeli strike hits Palestinians in Ain al-Hilweh camp, Lebanon"));
   // A stored card: the lead goes to an Israeli or Palestinian account under it, or the card is not shown.
   const card: Record<string, unknown> = { summary: "Israeli army launches major military operation in Judea and Samaria", type: "combat", source: "Al-Modon", url: "https://www.almodon.com/a", alsoReportedBy: [{ source: "Safa", url: "https://t.me/safaps/1" }] };
-  assert.ok(serveCard(card, "iran"));
+  assert.ok(serveCard(card, "gaza"));
   assert.equal(card.source, "Safa");
-  assert.equal(serveCard({ summary: "Israeli army launches major military operation in Judea and Samaria", type: "combat", source: "Al-Modon", url: "https://www.almodon.com/a" }, "iran"), false);
+  assert.equal(serveCard({ summary: "Israeli army launches major military operation in Judea and Samaria", type: "combat", source: "Al-Modon", url: "https://www.almodon.com/a" }, "gaza"), false);
+  // And off the Iran desk, Gaza having its own (26 Oct), unless Iran or its allies are in it.
+  assert.equal(serveCard({ summary: "Israeli forces raid Jenin camp, arrest five", type: "combat", source: "WAFA", url: "https://t.me/WAFAgency/1" }, "iran"), false);
+  const { gazaOnIran } = await import("./copy-rules.ts");
+  assert.ok(!gazaOnIran("Iran condemns Israeli raid on Jenin camp"));
   assert.ok(serveCard({ summary: "Israeli army launches major military operation in Judea and Samaria", type: "combat", source: "Al-Modon", url: "https://www.almodon.com/a", flags: ["exclusive"] }, "gaza"));
 });
 
 test("the site's words on every desk, the Gaza gate's diplomacy", () => {
   const card: Record<string, unknown> = { summary: "Israeli army raids towns across the occupied West Bank", type: "statement", source: "N12", url: "https://x" };
-  serveCard(card, "iran");
+  serveCard(card, "yemen");
   assert.equal(card.summary, "Israeli army raids towns across Judea and Samaria");
   assert.ok(isGazaDeskItem("Kushner meets Egyptian intelligence chief on next phase of Trump plan"));
   assert.ok(isGazaDeskItem("Witkoff: stabilisation force troops to deploy next month"));

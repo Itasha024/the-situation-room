@@ -31,6 +31,8 @@
   const HD = {
     iran: { name: 'Iran conflict', short: 'Iran', desk: 'Iran conflict desk', href: '/iran-conflict-desk', from: '2026-02-28' },
     yemen: { name: 'Yemen conflict', short: 'Yemen', desk: 'Yemen conflict desk', href: '/yemen-conflict-desk', from: '2026-07-13' },
+    // The third desk, live from 26 Oct.
+    gaza: { name: 'Gaza – Judea & Samaria', short: 'Gaza', desk: 'Gaza – Judea & Samaria desk', href: '/gaza-judea-samaria-desk', from: '2026-10-23' },
   };
   const WAR_FROM = '2026-02-28';
   const appDesks = app('DESKS') || [];
@@ -38,10 +40,10 @@
     const d = appDesks.find && appDesks.find((x) => x.id === id);
     const fs = app('flagSvg');
     if (d && fs) return fs(d);
-    const c = id === 'iran' ? ['#239f40', '#ffffff', '#da0000'] : ['#ce1126', '#ffffff', '#000000'];
+    const c = id === 'iran' ? ['#239f40', '#ffffff', '#da0000'] : id === 'gaza' ? ['#0038b8', '#ffffff', '#0038b8'] : ['#ce1126', '#ffffff', '#000000'];
     return `<svg class="flag" viewBox="0 0 18 12" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${c.map((x, i) => `<rect y="${i * 4}" width="18" height="4" fill="${x}"/>`).join('')}</svg>`;
   };
-  const FLAG = { iran: flagOf('iran'), yemen: flagOf('yemen') };
+  const FLAG = { iran: flagOf('iran'), yemen: flagOf('yemen'), gaza: flagOf('gaza') };
   // A card's desk: its flag cut to a circle, as in the bar (user, 22 Oct).
   const roundFlag = (id) => { const d = appDesks.find && appDesks.find((x) => x.id === id), ff = app('flagFill'); return d && ff ? ff(d) : FLAG[id]; };
   const ICON_EXT = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>';
@@ -65,7 +67,7 @@
   const REGION = [[11.5, 32.5], [38.5, 61]];
 
   /* ---------- The data ---------- */
-  const D = { asOf: null, reports: [], events: [], trump: [], arenas: [], fronts: [], oil: null, ydata: null, ybrief: null, ibrief: null };
+  const D = { asOf: null, reports: [], events: [], trump: [], arenas: [], fronts: [], oil: null, ydata: null, ybrief: null, ibrief: null, gbrief: null };
   let byFp = new Map();
   // No request holds the page up for long: one that has not answered in 40 seconds counts as none (it is asked again with the next refresh).
   const getJson = (u, o) => fetch(u, { ...(o || {}), signal: AbortSignal.timeout ? AbortSignal.timeout(40_000) : undefined }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -94,9 +96,11 @@
     return { ...e, desk: 'yemen', fp: String(e.fp), mapCat: cat, cat };
   }
   const iranPin = (e) => ({ ...e, desk: 'iran', fp: String(e.fp), mapCat: ['strike', 'combat', 'vessel', 'port'].includes(e.type) ? e.type : 'strike', cat: A('iranKindOf')(e) || 'strike' });
+  // The Gaza desk's pins are drawn as the Iran desk's are, in its own sides' colours.
+  const gazaPin = (e) => ({ ...e, desk: 'gaza', fp: String(e.fp), mapCat: ['strike', 'combat', 'vessel', 'port'].includes(e.type) ? e.type : 'strike', cat: A('iranKindOf')(e) || 'strike' });
   const eventsOf = (desk, rows) => (rows || []).filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number')
     .filter((e) => desk !== 'iran' || A('iranPinShown')(e) !== false)
-    .map((e) => (desk === 'iran' ? iranPin(e) : yemenPin(e))).filter(Boolean);
+    .map((e) => (desk === 'iran' ? iranPin(e) : desk === 'gaza' ? gazaPin(e) : yemenPin(e))).filter(Boolean);
   /* "…[[2]]." as the text and the report it rests on. */
   const plain = (p) => String(p || '').replace(/\s*\[\[\d+\]\]/g, '').trim();
   const firstRef = (p, refs) => { const m = /\[\[(\d+)\]\]/.exec(p); return m && refs ? refs[Number(m[1]) - 1] || null : null; };
@@ -129,23 +133,24 @@
     });
     // The pins are drawn as soon as the two desks are in, not after the briefs, Trump and the scan times
     // (user, 18 Oct: a first visit waited seconds for the pins).
-    const desks = Promise.all([getJson('/api/desk?desk=iran'), getJson('/api/desk?desk=yemen')]);
-    if (onDesks) desks.then(([di, dy]) => {
-      if (!(di || dy)) return;
-      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), OLD]);
+    const desks = Promise.all([getJson('/api/desk?desk=iran'), getJson('/api/desk?desk=yemen'), getJson('/api/desk?desk=gaza')]);
+    if (onDesks) desks.then(([di, dy, dg]) => {
+      if (!(di || dy || dg)) return;
+      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), reportsOf('gaza', dg && dg.reports), OLD]);
       byFp = new Map(D.reports.map((r) => [r.fp, r]));
-      addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events)], true);
+      addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events), ...eventsOf('gaza', dg && dg.events)], true);
       try { onDesks(); } catch (e) { console.warn(e); }
     });
-    const [[di, dy], bi, by, ti, ty, sy, si] = await Promise.all([
+    const [[di, dy, dg], bi, by, ti, ty, sy, si, bg] = await Promise.all([
       desks, getJson('/api/brief?desk=iran'), getJson('/api/brief?desk=yemen'),
       getJson('/api/trump'), getJson('/api/trump?desk=yemen'),
-      getJson('/api/scan?only=time', { cache: 'no-cache' }), getJson('/api/scan?desk=iran&only=time', { cache: 'no-cache' }),
+      getJson('/api/scan?only=time', { cache: 'no-cache' }), getJson('/api/scan?desk=iran&only=time', { cache: 'no-cache' }), getJson('/api/brief?desk=gaza'),
     ]);
-    if (di || dy) {
-      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), OLD]);
+    if (bg && bg.ok !== false && !bg.pending) D.gbrief = bg;
+    if (di || dy || dg) {
+      D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), reportsOf('gaza', dg && dg.reports), OLD]);
       byFp = new Map(D.reports.map((r) => [r.fp, r]));
-      addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events)], true);
+      addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events), ...eventsOf('gaza', dg && dg.events)], true);
       // When the desks last looked, as each desk shows it, not the newest report's time.
       const t = Math.max(...[di && di.updatedAt, dy && dy.updatedAt, sy && sy.scannedAt, si && si.scannedAt].map((x) => Date.parse(x || '') || 0));
       if (t) D.asOf = new Date(t).toISOString();
@@ -171,11 +176,11 @@
 
   /* Older reports, a page of each desk at a time, when the reader scrolls past the ones the page has (20 Oct:
      every report since 28 Feb, none read before it is asked for). False once both desks reach their start. */
-  const olderDone = { iran: false, yemen: false };
+  const olderDone = { iran: false, yemen: false, gaza: false };
   // Kept apart, so each new read of the latest keeps the pages scrolled to.
   var OLD = [];
   async function older() {
-    const add = await Promise.all(['iran', 'yemen'].map(async (desk) => {
+    const add = await Promise.all(['iran', 'yemen', 'gaza'].map(async (desk) => {
       if (olderDone[desk]) return [];
       const own = D.reports.filter((r) => r.desks[0] === desk);
       const t = own.reduce((m, r) => Math.min(m, Date.parse(r.at) || Infinity), Infinity);
@@ -189,7 +194,7 @@
     add.forEach((l) => OLD.push(...l));
     D.reports = mergeReports([D.reports, ...add]);
     byFp = new Map(D.reports.map((r) => [r.fp, r]));
-    return D.reports.length > n || !(olderDone.iran && olderDone.yemen);
+    return D.reports.length > n || !(olderDone.iran && olderDone.yemen && olderDone.gaza);
   }
 
   /* The whole war's pins, read once, soon after the page is up, so a longer view comes at once. */
@@ -200,9 +205,10 @@
       getJson(`/api/desk?desk=yemen&since=${HD.yemen.from}`),
       getJson(`/api/desk?desk=iran&since=${HD.iran.from}`),
       getJson(`/iran-map-pins.json?v=${assetV()}`),
-    ]).then(([y, i, past]) => {
+      getJson(`/api/desk?desk=gaza&since=${HD.gaza.from}`),
+    ]).then(([y, i, past, g]) => {
       const ir = eventsOf('iran', i && i.events);
-      addEvents([...eventsOf('yemen', y && y.events), ...ir]);
+      addEvents([...eventsOf('yemen', y && y.events), ...ir, ...eventsOf('gaza', g && g.events)]);
       // The war's researched attacks, before the Iran desk began reading (the desk's own file, map-pack.cjs).
       const first = ir.reduce((m, e) => Math.min(m, Date.parse(e.at) || Infinity), Infinity);
       if (past && Array.isArray(past.pins)) {
@@ -414,13 +420,19 @@
   const yeSides = () => app('yemenSidesOn') || {};
   const irPins = () => app('iranPins') || { on: {}, kinds: {}, where: { land: true, sea: true } };
   const yeInk = (e) => A('yemenInk')(e) || '#94a3b8';
+  const gzSides = () => app('GAZA_PIN_SIDES') || [];
+  const gzSideOf = (e) => (gzSides().some(([k]) => k === e.actor) ? e.actor : 'other');
+  const gzInk = (e) => (gzSides().find(([k]) => k === gzSideOf(e)) || [])[1] || '#94a3b8';
+  // The Gaza pins' sides ticked on and off here; their kinds go with the Iran desk's.
+  const gzOn = {};
   const irInk = (e) => { const ink = app('IRAN_PIN_INK') || {}; const side = A('iranSideOf')(e) || 'other'; return ink[side] || '#94a3b8'; };
   // One colour per side, worked out once (and again when the theme changes).
   const INK = new Map();
-  const inkOf = (e) => { const k = e.desk + '|' + e.actor; let c = INK.get(k); if (!c) { c = e.desk === 'iran' ? irInk(e) : yeInk(e); INK.set(k, c); } return c; };
+  const inkOf = (e) => { const k = e.desk + '|' + e.actor; let c = INK.get(k); if (!c) { c = e.desk === 'iran' ? irInk(e) : e.desk === 'gaza' ? gzInk(e) : yeInk(e); INK.set(k, c); } return c; };
   function ticked(e) {
     if (e.desk === 'yemen') return yeLayers()[e.cat] !== false && yeSides()[A('yemenSideOf')(e) || 'unclear'] !== false && A('yemenSideShown')(e) !== false;
     const p = irPins();
+    if (e.desk === 'gaza') return gzOn[gzSideOf(e)] !== false && (p.kinds || {})[e.cat] !== false;
     const w = p.where || { land: true, sea: true };
     const sea = !!e.sea || e.cat === 'vessel';
     return p.on[A('iranSideOf')(e) || 'other'] !== false && (p.kinds || {})[e.cat] !== false && ((w.land && w.sea) || (sea ? w.sea : w.land));
@@ -436,7 +448,7 @@
   /* ---------- The pins: each its own, as on the desks ---------- */
   function noteHtml(e) {
     let body;
-    if (e.desk === 'iran') {
+    if (e.desk === 'iran' || e.desk === 'gaza') {
       const f = app('iranPopupHtml');
       body = f ? f(e) : esc(e.label);
     } else {
@@ -537,6 +549,8 @@
     { desk: 'yemen', at: [15.6, 48.6], out: 92, drop: 34 },
     // The middle of Iran (Dasht-e Kavir); the leader runs east over Afghanistan, then down.
     { desk: 'iran', at: [33.9, 55.6], out: 118, drop: 30 },
+    // Judea and Samaria; the leader runs west over the Mediterranean, then down.
+    { desk: 'gaza', at: [31.7, 35.1], out: 110, drop: 26 },
   ];
   let bannerLayer = null;
   const todayCount = (desk) => { const t = today(); return D.events.filter((e) => e.desk === desk && evDay(e) === t).length; };
@@ -618,6 +632,12 @@
       try { if (full) localStorage.setItem('h-leg-yemen', html); else { const kept = localStorage.getItem('h-leg-yemen'); if (kept) return kept; } } catch (e) { /* private */ }
       return full ? html : '<div class="leg-sec">Who</div><span class="leg-hint">Loading…</span>';
     }
+    if (desk === 'gaza') {
+      const row = app('sideLegendRow');
+      const seen = new Set(D.events.filter((e) => e.desk === 'gaza').map(gzSideOf));
+      return `<p class="leg-sub leg-who">Who</p>${gzSides().filter(([k]) => k !== 'other' || seen.has(k)).map(([k, c, n]) => row(c, n, gzOn[k] !== false, `data-side="${k}"`)).join('')}
+      ${A('iranKindRows')() || ''}`;
+    }
     const p = irPins();
     const sides = (app('IRAN_PIN_SIDES') || []).filter(([k]) => k !== 'other' || D.events.some((e) => e.desk === 'iran' && A('iranSideOf')(e) === 'other'));
     const row = app('sideLegendRow');
@@ -631,7 +651,7 @@
   const legKey = (t) => (/not stated/i.test(t) ? 'not stated' : t).toLowerCase().replace(/forces/g, '').replace(/[^a-z]+/g, ' ').trim().replace(/s$/, '');
   function mergedBody() {
     const groups = { who: new Map(), what: new Map() };
-    [['y', legendBody('yemen')], ['i', legendBody('iran')]].forEach(([d, html]) => {
+    [['y', legendBody('yemen')], ['i', legendBody('iran')], ['g', legendBody('gaza')]].forEach(([d, html]) => {
       const box = document.createElement('div');
       box.innerHTML = html;
       let sec = 'who';
@@ -640,26 +660,27 @@
         const name = el.textContent.replace('✓', '').trim();
         const k = legKey(name);
         const ref = el.dataset.side ? 'side:' + el.dataset.side : el.dataset.layer ? 'layer:' + el.dataset.layer : el.dataset.kind ? 'kind:' + el.dataset.kind : '';
-        const g = groups[sec].get(k) || { el, on: false, y: [], i: [] };
+        const g = groups[sec].get(k) || { el, on: false, y: [], i: [], g: [] };
         g[d].push(ref);
         g.on = g.on || el.classList.contains('on');
         groups[sec].set(k, g);
       });
     });
-    const out = (m) => [...m.values()].map((g) => { const b = g.el.cloneNode(true); ['side', 'layer', 'kind'].forEach((a) => b.removeAttribute('data-' + a)); b.dataset.y = g.y.join(' '); b.dataset.i = g.i.join(' '); b.classList.toggle('on', g.on); b.setAttribute('aria-pressed', String(g.on)); return b.outerHTML; }).join('');
+    const out = (m) => [...m.values()].map((g) => { const b = g.el.cloneNode(true); ['side', 'layer', 'kind'].forEach((a) => b.removeAttribute('data-' + a)); b.dataset.y = g.y.join(' '); b.dataset.i = g.i.join(' '); b.dataset.g = g.g.join(' '); b.classList.toggle('on', g.on); b.setAttribute('aria-pressed', String(g.on)); return b.outerHTML; }).join('');
     return `<div class="leg-sec">Who</div>${out(groups.who)}<div class="leg-sec">What</div>${out(groups.what)}`;
   }
   function setMerged(b) {
     const on = !b.classList.contains('on');
     (b.dataset.y || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); if (t === 'side') yeSides()[k] = on; else if (t === 'layer') yeLayers()[k] = on; });
     (b.dataset.i || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); const p = irPins(); if (t === 'side') p.on[k] = on; else if (t === 'kind') p.kinds[k] = on; });
+    (b.dataset.g || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); if (t === 'side') gzOn[k] = on; else if (t === 'kind') irPins().kinds[k] = on; });
   }
   let legendCollapsed = true; // Closed at first, as on the desks (user, 17 Oct).
   function drawLegend() {
     const d = S.legend;
     legendBox.classList.toggle('collapsed', legendCollapsed);
     legendBox.innerHTML = `<div class="leg-head"><span class="leg-title">Legend</span><button type="button" class="leg-collapse" aria-label="${legendCollapsed ? 'Expand legend' : 'Collapse legend'}" aria-expanded="${legendCollapsed ? 'false' : 'true'}">${legendCollapsed ? '▸' : '▾'}</button></div>
-      ${OPS() ? '' : `<div class="h-leg-pick" role="tablist" aria-label="Whose legend">${['yemen', 'iran'].map((k) => `<button type="button" role="tab" data-leg="${k}" aria-selected="${k === d}">${FLAG[k]}<span>${HD[k].short}</span></button>`).join('')}</div>`}
+      ${OPS() ? '' : `<div class="h-leg-pick" role="tablist" aria-label="Whose legend">${['yemen', 'iran', 'gaza'].map((k) => `<button type="button" role="tab" data-leg="${k}" aria-selected="${k === d}">${FLAG[k]}<span>${HD[k].short}</span></button>`).join('')}</div>`}
       <div class="leg-body"><p class="leg-hint">Tick to show, untick to hide.</p>${OPS() ? mergedBody() : legendBody(d)}</div>`;
   }
   function wireLegend() {
@@ -674,7 +695,10 @@
       const b = t.closest('.leg-item');
       if (!b) return;
       if (b.dataset.y != null || b.dataset.i != null) setMerged(b);
-      else if (S.legend === 'yemen') {
+      else if (S.legend === 'gaza') {
+        if (b.dataset.kind) { const p = irPins(); p.kinds[b.dataset.kind] = p.kinds[b.dataset.kind] === false; }
+        else if (b.dataset.side) gzOn[b.dataset.side] = gzOn[b.dataset.side] === false;
+      } else if (S.legend === 'yemen') {
         if (b.dataset.side) { const s = yeSides(); s[b.dataset.side] = s[b.dataset.side] === false; }
         else if (b.dataset.layer) { const lo = yeLayers(); lo[b.dataset.layer] = !lo[b.dataset.layer]; }
       } else {

@@ -207,6 +207,11 @@ test("the IDF line: a move's way, a map's date, an area's share (user, 24 Oct)",
   const dLng = 10 / (111.32 * Math.cos((31.4 * Math.PI) / 180)), dLat = 10 / 110.57;
   const km2 = areaKm2({ type: "Polygon", coordinates: [[[34.3, 31.4], [34.3 + dLng, 31.4], [34.3 + dLng, 31.4 + dLat], [34.3, 31.4 + dLat], [34.3, 31.4]]] });
   assert.ok(Math.abs(km2 - 100) < 2, String(km2));
+  const { heldShareIn } = await import("./gaza-line.ts");
+  assert.equal(heldShareIn("IDF: troops now control about 58% of the Gaza Strip after moving the yellow line"), 58);
+  assert.equal(heldShareIn("Israel holds some 53 percent of Gaza under the ceasefire map"), 53);
+  assert.equal(heldShareIn("Gaza markets: luxury goods make up 95% of entries"), null);
+  assert.equal(heldShareIn("Palestinian economy shrank 77% in Gaza"), null);
 });
 
 // User, 24 Oct: "no taking such things from sources that aren't Israeli or Palestinian unless it's exclusive" (Al-Modon's

@@ -118,7 +118,7 @@ export function PaGuide() {
             <div className="pg-group">
               <span className="pg-label">Outside the PLO</span>
               <Box tone="hamas" name="Hamas" sub="Runs Gaza since 2007; Qassam Brigades" />
-              <Box tone="pij" name="Islamic Jihad" sub="Closest to Iran; Saraya al-Quds; does not run in elections" />
+              <Box tone="pij" name="Islamic Jihad" sub="Closest to Iran; Saraya al-Quds; boycotts PA elections, as it rejects the Oslo accords" />
               <Box tone="arm" name="Armed groups" sub="Popular Resistance Committees, Mujahideen Brigades, local battalions in Judea and Samaria" />
               <Box tone="clan" name="Gaza clans and militias" sub="Armed families and anti-Hamas groups such as the Popular Forces" />
             </div>

@@ -1049,6 +1049,12 @@ html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ 
   display: flex !important; flex-direction: column; flex-wrap: nowrap; gap: 0; width: auto; max-width: none;
   margin: 0 !important; padding: 6px 0 !important; border: 0 !important; border-radius: 0 !important; background: none !important
 }
+/* 26 Oct (user: "in timeline … you cant scroll in the side sub menu down to the last one"): the rail is as tall as the
+   panel it sits in, not the window less a guess, so its last item scrolls into view. */
+@media (min-width: 761px) {
+  html[data-view="ops"] .ops-left .ops-panes { container-type: size }
+  html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) { max-height: 100cqh }
+}
 /* No head on the rail: the main rail beside it names it (user, 21 Oct). */
 html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) button {
   appearance: none; position: relative; display: block; width: 100%; min-width: 0; height: auto; flex: none; margin: 0 !important;

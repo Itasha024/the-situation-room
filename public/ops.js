@@ -201,8 +201,8 @@
     layers: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="M3 12l9 4.5 9-4.5M3 16l9 4.5 9-4.5"/></g></svg>',
   };
   const LEFT_TABS = {
-    yemen: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Fronts', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
-    iran: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline']],
+    yemen: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Fronts', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline'], ['explain-wrap', 'Explainers', 'explain']],
+    iran: [['situation', 'Brief', 'brief'], ['fronts-wrap', 'Arenas', 'fronts'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline'], ['explain-wrap', 'Explainers', 'explain']],
     gaza: [['situation', 'Brief', 'brief'], ['cas-wrap', 'Numbers', 'numbers'], ['timeline-wrap', 'Timeline', 'timeline'], ['explain-wrap', 'Explainers', 'explain']],
     all: [['ops-theatres', 'Brief', 'brief']],
   };

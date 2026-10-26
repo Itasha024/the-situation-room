@@ -22,6 +22,20 @@ export function lineMoveOf(eventType: string | undefined, headline: string): Lin
 /** The Gaza Strip's land area, km², for the share the IDF holds. */
 export const GAZA_KM2 = 365;
 
+/**
+ * The share of Gaza a report says the IDF holds (user, 26 Oct: the share by the IDF-held area, "update it … acc to
+ * reports automatically"): "the IDF controls 58% of Gaza", "Israel holds some 53 percent of the Strip", "expanded the
+ * area under its control to 60% of the Strip". Not a share of something else ("95% of entries", "unemployment 85%").
+ */
+export function heldShareIn(text: string): number | null {
+  const t = String(text || "");
+  const m = /\b(?:about |some |around |nearly |roughly |over |more than |almost |approximately )?(\d{2}(?:\.\d)?) ?(?:%|percent|per cent) of (?:the )?(?:Gaza(?: Strip)?|Strip|the enclave|enclave|Gaza's (?:territory|land|area))\b/i.exec(t);
+  if (!m) return null;
+  if (!/\b(?:IDF|Israel(?:i)?|army|military|troops|forces)\b/i.test(t) || !/\b(?:control\w*|hold\w*|held|occup\w*|behind the (?:yellow|orange) line|under (?:its|Israeli) (?:control|hold)|positions?|deployed)\b/i.test(t)) return null;
+  const v = +m[1];
+  return v >= 20 && v <= 90 ? v : null;
+}
+
 type Ring = [number, number][];
 /** A ring's area in km² on the sphere (lng/lat degrees). */
 function ringKm2(r: Ring): number {

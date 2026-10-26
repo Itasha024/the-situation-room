@@ -81,6 +81,10 @@ const DESK_HTML = `
   <h2>Timeline</h2>
   <div id="timeline"></div>
 </section>
+<section class="timeline-wrap explain-wrap" id="explain-wrap">
+  <h2>Explainers</h2>
+  <div id="desk-explain"></div>
+</section>
 <footer>
   <span id="attrib"></span>
 </footer>

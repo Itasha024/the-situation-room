@@ -1273,3 +1273,10 @@ html .leg-ico.kind,html[data-set] .leg-ico.kind{background:#475569;color:#fff;bo
 .ye-dist-off path.ye-dist{stroke-opacity:0!important}
 /* The IDF-held area is only a tick box now (26 Oct): it sits above the pointer's coordinates, not over them. */
 .gz-line-box { margin-bottom: 36px !important; padding: 5px 8px; }
+/* 26 Oct (user: "the idf held area covers some of the coordinates box"): above the coordinates box (bottom 34px, two
+   lines), with room between; its share's source and date under the tick. */
+html[data-view="ops"] .gz-line-box { margin-bottom: 92px !important; }
+.gz-line-box .gz-line-src { display: block; margin: 1px 0 0 20px; color: #94a3b8; font-size: 10.5px; text-decoration: none; }
+.gz-line-box .gz-line-src:hover { text-decoration: underline; }
+.gz-line-box .gz-oslo-on { display: block; margin-top: 4px; }
+.gz-oslo-sw { display: inline-block; width: 10px; height: 10px; margin: 0 2px 0 4px; border: 1px solid; border-radius: 2px; vertical-align: -1px; }

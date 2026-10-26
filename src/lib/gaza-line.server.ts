@@ -9,7 +9,7 @@
  *    newer layers are found by its account's newest item with "yellow" in the title.
  */
 
-import { areaKm2, GAZA_KM2 } from "./desk/gaza-line.ts";
+import { areaKm2, GAZA_KM2, heldShareIn } from "./desk/gaza-line.ts";
 import type { getStore } from "./desk/store.ts";
 
 export const GAZA_AREA_KEY = "gaza:idf-area";
@@ -17,7 +17,9 @@ const EVERY_MS = 6 * 3600_000;
 
 type Geometry = { type: "Polygon" | "MultiPolygon"; coordinates: unknown };
 export type MappedArea = { name: string; by: string; url: string; asOf: string; km2: number; share: number; geometry: Geometry };
-export type IdfArea = { held: MappedArea | null; zone: MappedArea | null; checkedAt: string };
+/** The newest share a report on the desk gave (heldShareIn): the box shows it when it is newer than the maps. */
+export type ReportedShare = { share: number; by: string; url: string; asOf: string; text: string };
+export type IdfArea = { held: MappedArea | null; zone: MappedArea | null; reported?: ReportedShare | null; checkedAt: string };
 
 const ZONE_LAYERS = [
   "https://services3.arcgis.com/7J7WB6yJX0pYke9q/arcgis/rest/services/UNICEF_Gaza_Warehouse_Map_2026_WFL1/FeatureServer/5",
@@ -100,13 +102,26 @@ async function readHeld(): Promise<MappedArea | null> {
   return best;
 }
 
+/** The desk's newest report of the last 60 days that gives the share the IDF holds. */
+async function readReported(store: Awaited<ReturnType<typeof getStore>>, now: number): Promise<ReportedShare | null> {
+  const since = new Date(now - 60 * 86400_000).toISOString();
+  const { reports } = await store.recentDesk(400, undefined, { desk: "gaza", reports: true, events: false, since });
+  for (const r of reports) {
+    const text = `${r.summary ?? ""} ${r.body ?? ""}`;
+    const share = heldShareIn(text);
+    if (share != null) return { share, by: String(r.source ?? ""), url: String(r.url ?? ""), asOf: String(r.at ?? "").slice(0, 10), text: String(r.summary ?? "") };
+  }
+  return null;
+}
+
 /** The stored maps, read again when 6 hours old. A map that cannot be read keeps the one stored. */
 export async function refreshIdfArea(store: Awaited<ReturnType<typeof getStore>>, now = Date.now()): Promise<IdfArea | null> {
   const saved = await store.getJson<IdfArea>(GAZA_AREA_KEY);
   if (saved && now - Date.parse(saved.checkedAt) < EVERY_MS) return saved;
-  const [zone, held] = await Promise.all([readZone().catch(() => null), readHeld().catch(() => null)]);
+  const [zone, held, reported] = await Promise.all([readZone().catch(() => null), readHeld().catch(() => null), readReported(store, now).catch(() => null)]);
   const keep = (fresh: MappedArea | null, old: MappedArea | null | undefined) => (fresh && (!old || fresh.asOf >= old.asOf) ? fresh : old ?? null);
-  const out: IdfArea = { zone: keep(zone, saved?.zone), held: keep(held, saved?.held), checkedAt: new Date(now).toISOString() };
+  const rep = reported && (!saved?.reported || reported.asOf >= saved.reported.asOf) ? reported : saved?.reported ?? null;
+  const out: IdfArea = { zone: keep(zone, saved?.zone), held: keep(held, saved?.held), reported: rep, checkedAt: new Date(now).toISOString() };
   await store.putJson(GAZA_AREA_KEY, out);
   console.log(`[gaza-line] zone ${out.zone ? `${out.zone.asOf} ${out.zone.share}%` : "none"}, held ${out.held ? `${out.held.asOf} ${out.held.share}%` : "none"}`);
   return out;

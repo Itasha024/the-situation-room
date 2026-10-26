@@ -241,7 +241,7 @@ const IRAN_NUCLEAR_RE = /\bnuclear (?:site|facilit|plant|power|reactor|complex|i
 const IRAN_ENERGY_RE = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel (?:depot|tank|storage)|storage tank|pipeline|power (?:station|plant)|gas (?:field|plant|facilit)|petrochem|\blng\b|desalination|electricity (?:station|grid)|south pars|kharg|ras tanura|abqaiq/i;
 const IRAN_GROUND_RE = /\b(?:artillery|shelling|tanks? fire|sniper|clash|clashes|ground (?:assault|incursion|raid)|gunfight|firefight)\b/i;
 function iranKindOf(ev) {
-  if (typeof ev.kind === 'number') return IRAN_KINDS[ev.kind] || 'strike';
+  if (typeof ev.kind === 'number') return (ev.desk === 'gaza' ? GAZA_KINDS : IRAN_KINDS)[ev.kind] || 'strike';
   const s = `${ev.label || ''} ${ev.place || ''}`;
   if (ev.desk === 'gaza' || deskOf().id === 'gaza') { if (FUNERAL_RE.test(ev.label || '')) return 'funeral'; }
   if (IRAN_NUCLEAR_RE.test(s)) return 'nuclear';
@@ -7655,6 +7655,7 @@ function startYemenDesk() {
 async function bootYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
+  try { loadDeskExplain(); } catch (e) { console.error(e); }
   if (deskOf().id !== 'yemen') return bootOtherDesk(el);
   try { installDeskPicker(); wireDeskGo(() => map); } catch (e) { console.error(e); }
   try { installMast(); } catch (e) { console.error(e); }
@@ -8908,17 +8909,15 @@ function renderIranNumbers() {
  * replaced by the server's live one of the same title when there is one (/api/gaza-numbers: the crossings, the aid
  * trucks, the Health Ministry's running count), the events on the map counted here, the IDF-held share from the map.
  */
-const gazaNums = { d: null, r: null, at: 0, cat: '', ex: null, exIdx: 0 };
+const gazaNums = { d: null, r: null, at: 0, cat: '' };
 async function loadGazaNumbers() {
   if (deskOf().id !== 'gaza') return;
   if (!gazaNums.r) {
     gazaNums.r = {};
     const get = (u) => fetch(`${u}?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    const [n, t, x] = await Promise.all([get('/gaza-numbers.json'), get('/gaza-timeline.json'), get('/gaza-explain.json')]);
+    const [n, t] = await Promise.all([get('/gaza-numbers.json'), get('/gaza-timeline.json')]);
     gazaNums.r = n || {};
     if (t) { iranNums.tl = t; renderIranTimeline(); }
-    gazaNums.ex = x || { items: [] };
-    renderGazaExplain();
   }
   if (Date.now() - gazaNums.at < 5 * 60_000) { renderGazaNumbers(); return; }
   gazaNums.at = Date.now();
@@ -8983,22 +8982,32 @@ function renderGazaNumbers() {
   el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { gazaNums.cat = b.dataset.cat; renderGazaNumbers(); }));
 }
 /**
- * The explainers (user, 26 Oct): the guide to the PA and the factions first, then the background before 7 Oct 2023
- * (/gaza-explain.json), each a card with Read more and its sources, as the timeline's.
+ * The explainers (user, 26 Oct; Iran and Yemen the same day): the background and how things work
+ * (/<desk>-explain.json), each a card with Read more and its sources, as the timeline's; on the Gaza desk the guide
+ * to the PA and the factions first.
  */
-function renderGazaExplain() {
-  const el = document.getElementById('gaza-explain');
-  if (!el || !gazaNums.ex) return;
-  const guide = `<article class="phase-card now ex-guide"><div class="phase-head"><strong>Who's who: the PA and the factions</strong><span class="muted">as of today</span></div><p class="phase-sum">How the PLO, the Palestinian Authority and its security services, Fatah and the Tanzim, Hamas, Islamic Jihad and the other factions are built and work, with diagrams; elections, the split, the money, Areas A, B and C.</p><p><a class="x-desk" href="/gaza-judea-samaria-desk/guide">Open the guide →</a></p></article>`;
+const deskExplain = {};
+async function loadDeskExplain() {
+  const id = deskOf().id;
+  if (!document.getElementById('desk-explain')) return;
+  if (!deskExplain[id]) deskExplain[id] = fetch(`/${id}-explain.json?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const ex = await deskExplain[id];
+  if (ex && deskOf().id === id) renderDeskExplain(ex, id);
+}
+function renderDeskExplain(ex, id) {
+  const el = document.getElementById('desk-explain');
+  if (!el) return;
+  const guide = id !== 'gaza' ? '' : `<article class="phase-card now ex-guide"><div class="phase-head"><strong>Who's who: the PA and the factions</strong><span class="muted">as of today</span></div><p class="phase-sum">How the PLO, the Palestinian Authority and its security services, Fatah and the Tanzim, Hamas, Islamic Jihad and the other factions are built and work, with diagrams; elections, the split, the money, Areas A, B and C.</p><p><a class="x-desk" href="/gaza-judea-samaria-desk/guide">Open the guide →</a></p></article>`;
   const card = (p) => {
     const paras = String(p.detail || p.sum).split(/\n\n+/).map((x) => `<p>${escapeHtml(x).replace(/^([^:.]{3,40}):/, '<strong>$1:</strong>')}</p>`).join('');
     const n = (p.sources || []).length;
     const links = (p.sources || []).map((s) => `<li><a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a></li>`).join('');
     return `<article class="phase-card expandable"><div class="phase-head"><strong>${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates || '')}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${n ? `<details class="src-list"><summary>Sources (${n})</summary><ul>${links}</ul></details>` : ''}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
   };
-  const items = gazaNums.ex.items || [];
-  const all = [guide, ...items.map(card)];
-  el.innerHTML = pagerHtml('explain', all, 0, ["Who's who", ...items.map((p) => p.title)]);
+  const items = ex.items || [];
+  const all = [...(guide ? [guide] : []), ...items.map(card)];
+  // The timeline's pager, so the side menu and the cards look and work as the timeline's do.
+  el.innerHTML = pagerHtml('timeline', all, 0, [...(guide ? ["Who's who"] : []), ...items.map((p) => p.title)]);
   wirePager(el, 0, () => closeReadMore(el, '.phase-card', '.toggle-phase'), { wrap: false });
   el.querySelectorAll('.phase-card.expandable').forEach((c) => wireBoxToggle(c, c.querySelector('.toggle-phase'), 'open'));
 }
@@ -9062,15 +9071,15 @@ async function loadIranNumbers() {
  * line's reported moves since: the desk's own cards (filled) and the researched ones (hollow,
  * /gaza-line-history.json). A box on the map tells the dates and shares and turns it all off.
  */
-const gazaLine = { sig: '', layer: null, box: null, hist: null, on: true };
-try { gazaLine.on = localStorage.getItem('gaza-line') !== 'off'; } catch (e) { /* private */ }
+const gazaLine = { sig: '', layer: null, box: null, hist: null, on: true, osloOn: true, oslo: null, osloMap: null, osloData: null };
+try { gazaLine.on = localStorage.getItem('gaza-line') !== 'off'; gazaLine.osloOn = localStorage.getItem('gaza-oslo') !== 'off'; } catch (e) { /* private */ }
 async function drawGazaLine(a) {
   if (a) gazaLine.a = a;
   a = gazaLine.a;
   if (!map || deskOf().id !== 'gaza' || !a) return;
   // A new map (the page came back to this desk): everything drawn again on it.
   if (gazaLine.map !== map) { gazaLine.map = map; gazaLine.sig = ''; gazaLine.layer = null; gazaLine.box = null; }
-  const sig = `${a.checkedAt}|${(a.zone || a.held || {}).asOf || ''}`;
+  const sig = `${a.checkedAt}|${(a.zone || a.held || {}).asOf || ''}|${(a.reported || {}).asOf || ''}`;
   if (sig === gazaLine.sig && gazaLine.layer) return;
   gazaLine.sig = sig;
   for (const [name, z, pe] of [['gzArea', 340, 'none'], ['gzMoves', 615, 'auto']]) {
@@ -9084,18 +9093,53 @@ async function drawGazaLine(a) {
   if (gazaLine.on) g.addTo(map);
   // Only a tick box, ticked at first (user, 26 Oct: no legend of dates and shares, no arrows of the line's moves);
   // the area itself is the latest the mapping sources published (gaza-line.server.ts, every 6 hours).
-  const html = `<label class="gz-line-on"><input type="checkbox"${gazaLine.on ? ' checked' : ''}> <b>IDF-held area</b></label>`;
+  // Its share in brackets (user, 26 Oct): the newest of the area behind the yellow line as mapped and a report's figure
+  // (gaza-line.server.ts readReported), with whose and when.
+  const figs = [a.held && { v: a.held.share, by: `${a.held.by} map`, at: a.held.asOf, url: a.held.url }, a.reported && { v: a.reported.share, by: a.reported.by, at: a.reported.asOf, url: a.reported.url }, !a.held && a.zone && { v: a.zone.share, by: `${a.zone.by} map`, at: a.zone.asOf, url: a.zone.url }]
+    .filter((f) => f && Number.isFinite(+f.v)).sort((x, y) => String(y.at).localeCompare(String(x.at)));
+  const f = figs[0];
+  const pct = f ? ` (${(+f.v).toFixed(+f.v % 1 ? 1 : 0)}%)` : '';
+  const whose = f ? `<a class="gz-line-src" href="${escapeHtml(f.url || '')}" target="_blank" rel="noopener">${escapeHtml(f.by)}, ${escapeHtml(fmtDay(String(f.at).slice(0, 10)))}</a>` : '';
+  const sw = (k) => `<i class="gz-oslo-sw" style="background:${OSLO_STYLE[k].fillColor};border-color:${OSLO_STYLE[k].color}"></i>`;
+  const html = `<label class="gz-line-on"><input type="checkbox" data-layer="line"${gazaLine.on ? ' checked' : ''}> <b>IDF-held area${pct}</b></label>${whose}`
+    + `<label class="gz-line-on gz-oslo-on"><input type="checkbox" data-layer="oslo"${gazaLine.osloOn ? ' checked' : ''}> <b>Areas</b> ${sw('A')}A ${sw('B')}B ${sw('C')}C</label>`;
   if (!gazaLine.box) {
     const Box = L.Control.extend({ options: { position: 'bottomleft' }, onAdd() { const d = L.DomUtil.create('div', 'gz-line-box'); L.DomEvent.disableClickPropagation(d); return d; } });
     gazaLine.box = new Box().addTo(map);
     gazaLine.box.getContainer().addEventListener('change', (ev) => {
       if (!ev.target.matches('input')) return;
-      gazaLine.on = ev.target.checked;
-      try { localStorage.setItem('gaza-line', gazaLine.on ? 'on' : 'off'); } catch (e) { /* private */ }
-      if (gazaLine.layer) { if (gazaLine.on) gazaLine.layer.addTo(map); else map.removeLayer(gazaLine.layer); }
+      const oslo = ev.target.dataset.layer === 'oslo';
+      const on = ev.target.checked;
+      if (oslo) gazaLine.osloOn = on; else gazaLine.on = on;
+      try { localStorage.setItem(oslo ? 'gaza-oslo' : 'gaza-line', on ? 'on' : 'off'); } catch (e) { /* private */ }
+      const layer = oslo ? gazaLine.oslo : gazaLine.layer;
+      if (layer) { if (on) layer.addTo(map); else map.removeLayer(layer); }
     });
   }
   gazaLine.box.getContainer().innerHTML = html;
+  drawOsloAreas();
+}
+/*
+ * Areas A, B and C of Judea and Samaria under the Oslo II accord (user, 26 Oct: "mark on the map areas a b and c"),
+ * from the Washington Institute's map data (/gaza-oslo-areas.json): A and B shaded, C outlined only, as it is most of
+ * the land; a tick box beside the IDF-held area's, ticked at first.
+ */
+const OSLO_STYLE = {
+  A: { color: '#c084fc', weight: 1, fillColor: '#a855f7', fillOpacity: 0.22 },
+  B: { color: '#2dd4bf', weight: 1, fillColor: '#14b8a6', fillOpacity: 0.18 },
+  C: { color: '#94a3b8', weight: 0.8, dashArray: '3 3', fillColor: '#64748b', fillOpacity: 0.06 },
+};
+async function drawOsloAreas() {
+  if (!map || gazaLine.osloMap === map) return;
+  gazaLine.osloMap = map;
+  try {
+    if (!gazaLine.osloData) gazaLine.osloData = fetch(`/gaza-oslo-areas.json?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const d = await gazaLine.osloData;
+    if (!d || !map || deskOf().id !== 'gaza') return;
+    if (!map.getPane('gzOslo')) { map.createPane('gzOslo'); map.getPane('gzOslo').style.zIndex = 330; map.getPane('gzOslo').style.pointerEvents = 'none'; }
+    gazaLine.oslo = L.geoJSON(d, { pane: 'gzOslo', interactive: false, style: (ft) => OSLO_STYLE[ft.properties.area] || OSLO_STYLE.C });
+    if (gazaLine.osloOn) gazaLine.oslo.addTo(map);
+  } catch (e) { console.error(e); }
 }
 async function loadIranBrief() {
   try {

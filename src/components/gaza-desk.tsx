@@ -87,7 +87,7 @@ const GAZA_HTML = `
 </section>
 <section class="timeline-wrap explain-wrap" id="explain-wrap">
   <h2>Explainers</h2>
-  <div id="gaza-explain">${SOON("who's who in the PA and the factions, and the background from Oslo to 2023.")}</div>
+  <div id="desk-explain">${SOON("who's who in the PA and the factions, and the background from Oslo to 2023.")}</div>
 </section>
 <footer>
   <span id="attrib"></span>

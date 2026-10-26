@@ -7162,13 +7162,15 @@ function deskTabsHtml(hereId) {
   // "All" first: every desk on one map (user, 17 Oct).
   const home = deskPath(location.href) === '/';
   const all = `<a class="dt-btn dt-all" href="/" data-desk-go${home ? ' aria-current="page"' : ''} title="${escapeHtml(T('All desks'))}"><svg class="dt-flag dt-globe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/></svg><span class="dt-name">${escapeHtml(T('All'))}</span></a>`;
-  return `<span class="dt-label">${escapeHtml(T('Desks'))}:</span><span class="dt-row">${all}${desks.map((d) => `<a class="dt-btn" href="${d.href}" data-desk-go${d.id === hereId ? ' aria-current="page"' : ''}>${flagFill(d)}<span class="dt-name">${escapeHtml(T(DESK_COUNTRY[d.id] || d.short))}</span></a>`).join('')}</span>`;
+  // On a desk's guide the tabs go to the other desks' guides (user, 26 Oct), and there is no guide of all desks.
+  const guide = /\/guide$/.test(deskPath(location.href));
+  return `<span class="dt-label">${escapeHtml(T('Desks'))}:</span><span class="dt-row">${guide ? '' : all}${desks.map((d) => `<a class="dt-btn" href="${d.href}${guide ? '/guide' : ''}"${guide ? '' : ' data-desk-go'}${d.id === hereId ? ' aria-current="page"' : ''}>${flagFill(d)}<span class="dt-name">${escapeHtml(T(DESK_COUNTRY[d.id] || d.short))}</span></a>`).join('')}</span>`;
 }
 function installDeskPicker() {
   const h = document.querySelector('.top h1.desk-label');
   if (!h || h.dataset.tabs) return;
   // A desk's own page marks its button; other pages mark none.
-  const here = DESKS.find((d) => deskPath(d.href) === deskPath(location.href)) || null;
+  const here = DESKS.find((d) => deskPath(d.href) === deskPath(location.href).replace(/\/guide$/, '')) || null;
   h.dataset.tabs = '1';
   h.classList.add('desk-tabs');
   h.setAttribute('aria-label', here ? T(here.name) : T('Desks'));
@@ -8997,15 +8999,20 @@ async function loadDeskExplain() {
 function renderDeskExplain(ex, id) {
   const el = document.getElementById('desk-explain');
   if (!el) return;
-  const guide = id !== 'gaza' ? '' : `<article class="phase-card now ex-guide"><div class="phase-head"><strong>Who's who: the PA and the factions</strong><span class="muted">as of today</span></div><p class="phase-sum">How the PLO, the Palestinian Authority and its security services, Fatah and the Tanzim, Hamas, Islamic Jihad and the other factions are built and work, with diagrams; elections, the split, the money, Areas A, B and C.</p><p><a class="x-desk" href="/gaza-judea-samaria-desk/guide">Open the guide →</a></p></article>`;
-  const card = (p) => {
-    const paras = String(p.detail || p.sum).split(/\n\n+/).map((x) => `<p>${escapeHtml(x).replace(/^([^:.]{3,40}):/, '<strong>$1:</strong>')}</p>`).join('');
-    const n = (p.sources || []).length;
-    const links = (p.sources || []).map((s) => `<li><a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a></li>`).join('');
-    return `<article class="phase-card expandable"><div class="phase-head"><strong>${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates || '')}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${n ? `<details class="src-list"><summary>Sources (${n})</summary><ul>${links}</ul></details>` : ''}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
+  // Short boxes in categories, each to its part of the desk's full guide (user, 26 Oct: "put them in short in a box
+  // under the explainers category and then link to the full explainer page"); the guide is the one long page, with
+  // the diagrams (src/components/*-guide.tsx; the ids as guide-kit.tsx exId and catId make them).
+  const href = `${(DESKS.find((d) => d.id === id) || {}).href || ''}/guide`;
+  const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const GUIDE = {
+    gaza: ["Who's who: the PA and the factions", 'How the PLO, the Palestinian Authority and its security services, Fatah and the Tanzim, Hamas, Islamic Jihad and the other factions are built and work, with diagrams; elections, the split, the money, Areas A, B and C.'],
+    iran: ['Who rules Iran, in diagrams', "The Supreme Leader, the councils, the elected side, the Revolutionary Guards and the army, and Iran's allies in the region, charted, with who holds each post now."],
+    yemen: ["Who's who in Yemen, in diagrams", "The Houthis and the recognised government side by side, the council's members and the forces behind them, the STC, Islah and the rest, and who holds which part of the country."],
   };
-  // In categories, as the numbers are (user, 26 Oct: "divide categories in explainers not one long thing"): the side
-  // menu names the categories, the chosen one's cards one under another. The full guide stays one long page.
+  const g = GUIDE[id];
+  const guide = g ? `<article class="phase-card now ex-guide"><div class="phase-head"><strong>${escapeHtml(g[0])}</strong><span class="muted">as of today</span></div><p class="phase-sum">${escapeHtml(g[1])}</p><p><a class="x-desk" href="${href}">Open the full guide →</a></p></article>` : '';
+  const card = (p) => `<article class="phase-card ex-short"><div class="phase-head"><strong>${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates || '')}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><p><a class="x-desk" href="${href}#ex-${slug(p.title)}">Read in full →</a></p></article>`;
+  // In categories, as the numbers are (user, 26 Oct: "divide categories in explainers not one long thing").
   const cats = [];
   const catOf = (name) => cats.find((c) => c.name === name) || (cats.push({ name, cards: [] }), cats[cats.length - 1]);
   if (guide) catOf("Who's who").cards.push(guide);
@@ -9013,9 +9020,8 @@ function renderDeskExplain(ex, id) {
   if (!cats.length) return;
   const cat = cats.find((c) => c.name === deskExplain[`${id}:cat`]) || cats[0];
   const sw = `<div class="num-cat" role="group" aria-label="Explainers to show">${cats.map((c) => `<button type="button" data-cat="${escapeHtml(c.name)}" aria-pressed="${c === cat}"${c === cat ? ' class="on"' : ''}>${escapeHtml(c.name)}</button>`).join('')}</div>`;
-  el.innerHTML = `${sw}<div class="pager pager-timeline ex-list">${cat.cards.join('')}</div>`;
+  el.innerHTML = `${sw}<div class="pager pager-timeline ex-list">${cat.cards.join('')}${cat.cards.includes(guide) ? '' : `<p class="ex-all"><a class="x-desk" href="${href}#cat-${slug(cat.name)}">${escapeHtml(cat.name)} in the full guide →</a></p>`}</div>`;
   el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { deskExplain[`${id}:cat`] = b.dataset.cat; renderDeskExplain(ex, id); }));
-  el.querySelectorAll('.phase-card.expandable').forEach((c) => wireBoxToggle(c, c.querySelector('.toggle-phase'), 'open'));
 }
 /*
  * A long box shows its first part and "Read more", on a PC and a phone (user, 11 Oct): measured

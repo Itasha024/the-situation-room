@@ -1,5 +1,9 @@
-import type { ReactNode } from "react";
 import { DeskDoc } from "@/components/desk-doc";
+import { Box, GUIDE_CSS as CSS, Row, ar, he, catId, ExplainerSection, type Explainer } from "@/components/guide-kit";
+import data from "../../public/gaza-explain.json";
+
+const items = (data as { items: Explainer[] }).items;
+const cats = [...new Set(items.map((e) => e.cat || "Background"))];
 
 /**
  * The guide to the Palestinian side (user, 26 Oct: "the pa mechanisms, tanzim etc, literally everything to
@@ -7,60 +11,6 @@ import { DeskDoc } from "@/components/desk-doc";
  * what changes. The desk's words apply here too (Judea and Samaria, Israeli citizens).
  */
 const AS_OF = "26 October 2026";
-
-function Box({ name, sub, tone = "", children }: { name: ReactNode; sub?: ReactNode; tone?: string; children?: ReactNode }) {
-  return (
-    <div className={`pg-box ${tone}`}>
-      <b>{name}</b>
-      {sub ? <small>{sub}</small> : null}
-      {children}
-    </div>
-  );
-}
-
-/** One level of a chart: its boxes side by side, a line down to the next. */
-function Row({ children, down = true }: { children: ReactNode; down?: boolean }) {
-  return <div className={`pg-row${down ? " down" : ""}`}>{children}</div>;
-}
-
-const CSS = `
-.pg{--pg-line:var(--o-line,#334155);--pg-dim:var(--o-dim,#94a3b8);--pg-strong:var(--o-strong,#f1f5f9);--pg-panel:var(--o-hover,rgba(148,163,184,.08));font:400 15px/1.55 var(--ops-ui,system-ui,sans-serif)}
-.pg h3{margin:30px 0 8px;font:700 18px/1.2 var(--ops-cond,inherit);letter-spacing:.1em;text-transform:uppercase;color:var(--pg-strong)}
-.pg h4{margin:18px 0 6px;font-size:15px;color:var(--pg-strong)}
-.pg p,.pg li{margin:0 0 8px}
-.pg ul{padding-left:20px;margin:0 0 10px}
-.pg-toc{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px;padding:0;list-style:none}
-.pg-toc a{display:inline-block;padding:3px 9px;border:1px solid var(--pg-line);border-radius:4px;font-size:13px;color:inherit;text-decoration:none}
-.pg-toc a:hover{background:var(--pg-panel)}
-.pg-chart{margin:12px 0 16px;padding:12px;border:1px solid var(--pg-line);border-radius:6px;overflow-x:auto}
-.pg-row{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;position:relative}
-.pg-row.down{padding-bottom:18px}
-.pg-row.down::after{content:"";position:absolute;left:50%;bottom:3px;height:12px;border-left:1px solid var(--pg-dim)}
-.pg-box{flex:1 1 120px;max-width:230px;padding:7px 9px;border:1px solid var(--pg-line);border-left:3px solid var(--tone,var(--pg-dim));border-radius:4px;background:var(--pg-panel);font-size:13px;line-height:1.35}
-.pg-box b{display:block;color:var(--pg-strong);font-size:13.5px}
-.pg-box small{display:block;color:var(--pg-dim);font-size:12px;margin-top:2px}
-.pg-box.wide{max-width:none;flex-basis:100%}
-.pg-box.plo{--tone:#eab308}.pg-box.pa{--tone:#f59e0b}.pg-box.fatah{--tone:#facc15}.pg-box.hamas{--tone:#16a34a}.pg-box.pij{--tone:#0f766e}.pg-box.left{--tone:#ef4444}.pg-box.sec{--tone:#3b82f6}.pg-box.arm{--tone:#a855f7}.pg-box.clan{--tone:#a16207}
-.pg-group{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:8px;padding:8px;border:1px dashed var(--pg-line);border-radius:6px}
-.pg-group>.pg-label{flex-basis:100%;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--pg-dim)}
-.pg-table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:13.5px}
-.pg-table th,.pg-table td{padding:6px 8px;border-bottom:1px solid var(--pg-line);text-align:left;vertical-align:top}
-.pg-table th{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--pg-dim);font-weight:600}
-.pg-wrap{overflow-x:auto}
-.pg-bar{display:flex;height:30px;margin:8px 0 4px;border-radius:4px;overflow:hidden;font-size:12.5px;font-weight:700;color:#0b1220}
-.pg-bar span{display:flex;align-items:center;justify-content:center}
-.pg-time{list-style:none;padding:0;margin:8px 0;border-left:2px solid var(--pg-line)}
-.pg-time li{position:relative;padding:0 0 10px 14px}
-.pg-time li::before{content:"";position:absolute;left:-6px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--pg-dim)}
-.pg-time li.now::before{background:#eab308}
-.pg-time b{color:var(--pg-strong)}
-.pg-note{font-size:13px;color:var(--pg-dim)}
-.pg [dir=rtl]{unicode-bidi:isolate}
-@media (max-width:520px){.pg-box{flex-basis:100%;max-width:none}.pg-chart{padding:8px}}
-`;
-
-const ar = (t: string) => <span dir="rtl" lang="ar">{t}</span>;
-const he = (t: string) => <span dir="rtl" lang="he">{t}</span>;
 
 export function PaGuide() {
   return (
@@ -86,12 +36,14 @@ export function PaGuide() {
             ["split", "The split"],
             ["money", "Money"],
             ["areas", "Areas A, B, C"],
-            ["words", "Words"],
-          ].map(([id, t]) => (
-            <li key={id}>
-              <a href={`#pg-${id}`}>{t}</a>
-            </li>
-          ))}
+          ]
+            .map(([id, t]) => [`pg-${id}`, t])
+            .concat(cats.map((c) => [catId(c), c]), [["pg-words", "Words"]])
+            .map(([id, t]) => (
+              <li key={id}>
+                <a href={`#${id}`}>{t}</a>
+              </li>
+            ))}
         </ul>
 
         <h3 id="pg-short">In short</h3>
@@ -273,6 +225,14 @@ export function PaGuide() {
           <li><b>Area C</b> (~60%): Israel's full control; the Israeli communities, the Jordan Valley, the roads.</li>
           <li><b>Jerusalem</b>: Israel's; the PA is barred from acting there. <b>Gaza</b>: Hamas since 2007; the IDF holds the part behind the “yellow line” since October 2025.</li>
         </ul>
+
+        {/* The background before 7 October 2023 (the desk's timeline starts there), in the Explainers panel's categories. */}
+        {cats.map((c) => (
+          <div key={c}>
+            <h3 id={catId(c)}>{c}</h3>
+            {items.filter((e) => e.cat === c).map((e) => <ExplainerSection key={e.title} e={e} />)}
+          </div>
+        ))}
 
         <h3 id="pg-words">Words you will meet</h3>
         <div className="pg-wrap">

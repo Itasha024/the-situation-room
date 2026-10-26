@@ -27,7 +27,9 @@
         "./src/*"
       ]
     },
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    // The explainers (public/<desk>-explain.json) are read by the guide pages too.
+    "resolveJsonModule": true
   },
   "include": [
     "src",

@@ -26,7 +26,9 @@ import { Route as ApiTickRouteImport } from './routes/api/tick'
 import { Route as ApiTrafficRouteImport } from './routes/api/traffic'
 import { Route as ApiTrumpRouteImport } from './routes/api/trump'
 import { Route as GazaJudeaSamariaDeskGuideRouteImport } from './routes/gaza-judea-samaria-desk_.guide'
+import { Route as IranConflictDeskGuideRouteImport } from './routes/iran-conflict-desk_.guide'
 import { Route as IranConflictDeskSourcesRouteImport } from './routes/iran-conflict-desk_.sources'
+import { Route as YemenConflictDeskGuideRouteImport } from './routes/yemen-conflict-desk_.guide'
 import { Route as YemenConflictDeskSourcesRouteImport } from './routes/yemen-conflict-desk_.sources'
 
 const IndexRoute = IndexRouteImport.update({
@@ -115,9 +117,19 @@ const GazaJudeaSamariaDeskGuideRoute =
     path: '/gaza-judea-samaria-desk/guide',
     getParentRoute: () => rootRouteImport,
   } as any)
+const IranConflictDeskGuideRoute = IranConflictDeskGuideRouteImport.update({
+  id: '/iran-conflict-desk_/guide',
+  path: '/iran-conflict-desk/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IranConflictDeskSourcesRoute = IranConflictDeskSourcesRouteImport.update({
   id: '/iran-conflict-desk_/sources',
   path: '/iran-conflict-desk/sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YemenConflictDeskGuideRoute = YemenConflictDeskGuideRouteImport.update({
+  id: '/yemen-conflict-desk_/guide',
+  path: '/yemen-conflict-desk/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 const YemenConflictDeskSourcesRoute =
@@ -145,7 +157,9 @@ export interface FileRoutesByFullPath {
   '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
   '/gaza-judea-samaria-desk/guide': typeof GazaJudeaSamariaDeskGuideRoute
+  '/iran-conflict-desk/guide': typeof IranConflictDeskGuideRoute
   '/iran-conflict-desk/sources': typeof IranConflictDeskSourcesRoute
+  '/yemen-conflict-desk/guide': typeof YemenConflictDeskGuideRoute
   '/yemen-conflict-desk/sources': typeof YemenConflictDeskSourcesRoute
 }
 export interface FileRoutesByTo {
@@ -166,7 +180,9 @@ export interface FileRoutesByTo {
   '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
   '/gaza-judea-samaria-desk/guide': typeof GazaJudeaSamariaDeskGuideRoute
+  '/iran-conflict-desk/guide': typeof IranConflictDeskGuideRoute
   '/iran-conflict-desk/sources': typeof IranConflictDeskSourcesRoute
+  '/yemen-conflict-desk/guide': typeof YemenConflictDeskGuideRoute
   '/yemen-conflict-desk/sources': typeof YemenConflictDeskSourcesRoute
 }
 export interface FileRoutesById {
@@ -188,7 +204,9 @@ export interface FileRoutesById {
   '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
   '/gaza-judea-samaria-desk_/guide': typeof GazaJudeaSamariaDeskGuideRoute
+  '/iran-conflict-desk_/guide': typeof IranConflictDeskGuideRoute
   '/iran-conflict-desk_/sources': typeof IranConflictDeskSourcesRoute
+  '/yemen-conflict-desk_/guide': typeof YemenConflictDeskGuideRoute
   '/yemen-conflict-desk_/sources': typeof YemenConflictDeskSourcesRoute
 }
 export interface FileRouteTypes {
@@ -211,7 +229,9 @@ export interface FileRouteTypes {
     | '/api/traffic'
     | '/api/trump'
     | '/gaza-judea-samaria-desk/guide'
+    | '/iran-conflict-desk/guide'
     | '/iran-conflict-desk/sources'
+    | '/yemen-conflict-desk/guide'
     | '/yemen-conflict-desk/sources'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -232,7 +252,9 @@ export interface FileRouteTypes {
     | '/api/traffic'
     | '/api/trump'
     | '/gaza-judea-samaria-desk/guide'
+    | '/iran-conflict-desk/guide'
     | '/iran-conflict-desk/sources'
+    | '/yemen-conflict-desk/guide'
     | '/yemen-conflict-desk/sources'
   id:
     | '__root__'
@@ -253,7 +275,9 @@ export interface FileRouteTypes {
     | '/api/traffic'
     | '/api/trump'
     | '/gaza-judea-samaria-desk_/guide'
+    | '/iran-conflict-desk_/guide'
     | '/iran-conflict-desk_/sources'
+    | '/yemen-conflict-desk_/guide'
     | '/yemen-conflict-desk_/sources'
   fileRoutesById: FileRoutesById
 }
@@ -275,7 +299,9 @@ export interface RootRouteChildren {
   ApiTrafficRoute: typeof ApiTrafficRoute
   ApiTrumpRoute: typeof ApiTrumpRoute
   GazaJudeaSamariaDeskGuideRoute: typeof GazaJudeaSamariaDeskGuideRoute
+  IranConflictDeskGuideRoute: typeof IranConflictDeskGuideRoute
   IranConflictDeskSourcesRoute: typeof IranConflictDeskSourcesRoute
+  YemenConflictDeskGuideRoute: typeof YemenConflictDeskGuideRoute
   YemenConflictDeskSourcesRoute: typeof YemenConflictDeskSourcesRoute
 }
 
@@ -400,11 +426,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GazaJudeaSamariaDeskGuideRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/iran-conflict-desk_/guide': {
+      id: '/iran-conflict-desk_/guide'
+      path: '/iran-conflict-desk/guide'
+      fullPath: '/iran-conflict-desk/guide'
+      preLoaderRoute: typeof IranConflictDeskGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/iran-conflict-desk_/sources': {
       id: '/iran-conflict-desk_/sources'
       path: '/iran-conflict-desk/sources'
       fullPath: '/iran-conflict-desk/sources'
       preLoaderRoute: typeof IranConflictDeskSourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/yemen-conflict-desk_/guide': {
+      id: '/yemen-conflict-desk_/guide'
+      path: '/yemen-conflict-desk/guide'
+      fullPath: '/yemen-conflict-desk/guide'
+      preLoaderRoute: typeof YemenConflictDeskGuideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/yemen-conflict-desk_/sources': {
@@ -435,7 +475,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTrafficRoute: ApiTrafficRoute,
   ApiTrumpRoute: ApiTrumpRoute,
   GazaJudeaSamariaDeskGuideRoute: GazaJudeaSamariaDeskGuideRoute,
+  IranConflictDeskGuideRoute: IranConflictDeskGuideRoute,
   IranConflictDeskSourcesRoute: IranConflictDeskSourcesRoute,
+  YemenConflictDeskGuideRoute: YemenConflictDeskGuideRoute,
   YemenConflictDeskSourcesRoute: YemenConflictDeskSourcesRoute,
 }
 export const routeTree = rootRouteImport

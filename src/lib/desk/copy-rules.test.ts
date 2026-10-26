@@ -7,6 +7,8 @@ import { test } from "node:test";
 
 import {
   cleanBody,
+  ownSubject,
+  ownWord,
   garbled,
   gulfCoastShip,
   homeAffairs,
@@ -542,4 +544,13 @@ test("a headline that only names the talk is not a report (user, 24 Oct)", async
   assert.equal(saysNothing("Pakistan Foreign Office spokesperson: the Taftan crossing will reopen on Monday"), false);
   assert.equal(saysNothing("Araghchi: talks with the US to resume next week"), false);
   assert.equal(saysNothing("Baghaei: statement on talks says Iran rejects the US offer"), false);
+});
+
+test("an official's own word and an exclusive need no Also; a headline opening with It names its source (27 Oct)", () => {
+  assert.equal(ownWord("IDF", []), true);
+  assert.equal(ownWord("Gaza Health Ministry", []), true);
+  assert.equal(ownWord("Al Arabiya", ["exclusive"]), true);
+  assert.equal(ownWord("Al-Resalah", []), false);
+  assert.equal(ownSubject("It eliminated four Hamas and Islamic Jihad operatives in Gaza strikes yesterday and Saturday", "IDF"), "The IDF says it eliminated four Hamas and Islamic Jihad operatives in Gaza strikes yesterday and Saturday");
+  assert.equal(ownSubject("Israel strikes Rafah", "IDF"), "Israel strikes Rafah");
 });

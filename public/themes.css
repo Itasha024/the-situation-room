@@ -796,6 +796,9 @@ html[data-set="broadsheet"] .pts{font-family:"Newsreader","Frank Ruhl Libre","No
   .tp-sheet{width:100%;height:82vh;height:82dvh;max-height:none;border-radius:12px 12px 0 0;border-left:0;border-right:0;border-bottom:0}
   .tp-list{flex:1;min-height:0;overscroll-behavior:contain;padding-bottom:calc(1rem + env(safe-area-inset-bottom,0px))}
   html.tp-open,html.tp-open body{overflow:hidden}
+  /* A brief's reference (user, 27 Oct): only as tall as its report card, no empty sheet under it. */
+  .tp-sheet.ref-sheet{height:auto;max-height:82dvh}
+  .ref-sheet .tp-list{flex:0 1 auto}
 }
 /* Iran map (user, 12 Oct): provinces, districts and towns in the coloured countries, smaller than the Yemen map's governorates. */
 .gov-name.ir-adm1 span{font-size:9.5px;opacity:.85}

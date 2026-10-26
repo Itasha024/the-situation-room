@@ -192,6 +192,9 @@ export function gazaTierOf(source: string, official: (s: string) => boolean): nu
   return TIER.get(source) ?? (official(source) ? 1 : 2);
 }
 
+/** An official channel of this desk (ministries, the IDF, the factions' own): tier 1. */
+export const gazaOfficial = (source: string): boolean => TIER.get(source) === 1;
+
 /** WAFA's own site (user, 23 Oct): its front page lists the day's stories; the server can open it. */
 export const WAFA_SITE = "https://www.wafa.ps/";
 

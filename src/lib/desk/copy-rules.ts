@@ -10,7 +10,8 @@ import type { DeskType } from "./digest.ts";
 import type { DeskId } from "../desks.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { arenaSourceRule, gazaSourceRule, palestineArena } from "./gaza-sourcing.ts";
-import { gazaLeanOf } from "./gaza-sources.ts";
+import { gazaLeanOf, gazaOfficial } from "./gaza-sources.ts";
+import { isOfficial } from "./source-rating.ts";
 import { aboutFootage } from "./media.ts";
 import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
@@ -909,6 +910,24 @@ export function doubledLead(headline: string): string {
   return m[2].charAt(0).toUpperCase() + m[2].slice(1);
 }
 
+/**
+ * A headline that opens with "It" names no one (user, 27 Oct: the IDF's "It eliminated four Hamas and Islamic
+ * Jihad operatives …"): the account it came from says it.
+ */
+export function ownSubject(h: string, source: string): string {
+  const m = /^It\s+(?=[a-z]+ed\s)/.exec(h);
+  const s = String(source || "").trim();
+  if (!m || !s) return h;
+  const who = /^(?:IDF|UN|EU|PA|IRGC|White House|State Department|Pentagon|Lebanese Army)\b/.test(s) ? `The ${s}` : s;
+  return `${who} says it ${h.slice(m[0].length)}`;
+}
+
+/** The source is the one who said or found it: an official body, or the outlet's exclusive. */
+export function ownWord(source: string, flags: unknown): boolean {
+  if (Array.isArray(flags) && flags.includes("exclusive")) return true;
+  return isOfficial(source) || gazaOfficial(source) || officialVoice(source) != null;
+}
+
 export function serveCard(r: Row, desk: DeskId): boolean {
   const summary = String(r.summary ?? "");
   const text = String(r.text ?? "");
@@ -958,6 +977,7 @@ export function serveCard(r: Row, desk: DeskId): boolean {
   // Says only that someone spoke, or names no one (21 Oct): the words and the speaker from a line under it.
   if (sayWhat(r) === false) return false;
   let h = speakerByRole(ungarble(fix(String(r.summary ?? ""))), text);
+  h = ownSubject(h, String(r.source ?? source));
   if (desk === "yemen" && houthi) h = houthiClaim(h, type, source);
   if (desk === "gaza") h = palestinianClaim(h, type, String(r.source ?? source));
   r.summary = h;
@@ -970,6 +990,8 @@ export function serveCard(r: Row, desk: DeskId): boolean {
   if (r.text && bodyOffTopic(h, String(r.text), type)) r.text = "";
   // An outlet's exclusive by its link (The New Arab's /news/exclusive-…), labelled as one.
   if (exclusiveUrl(String(r.url ?? "")) && !(Array.isArray(r.flags) && r.flags.includes("exclusive"))) r.flags = [...((r.flags as string[] | undefined) ?? []), "exclusive"];
+  // An official's own word, or an outlet's own exclusive, needs no "Also" (user, 27 Oct).
+  if (Array.isArray(r.alsoReportedBy) && r.alsoReportedBy.length && ownWord(String(r.source ?? ""), r.flags)) r.alsoReportedBy = [];
   const t = rightType(type, h);
   if (t !== type) r.type = t;
   // An Arabic outlet name ("وردنا") is shown in Latin letters.

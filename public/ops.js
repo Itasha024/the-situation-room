@@ -183,6 +183,8 @@
   // The panels' and the strip's sizes as the reader dragged them (lw, rw, dh in pixels; see paintSizes).
   let SZ = {};
   try { SZ = JSON.parse(localStorage.getItem('ops-sizes') || '{}') || {}; } catch (e) { /* none kept */ }
+  // The left panel's content as wide as the right panel (user, 27 Oct): a width dragged before that is let go once.
+  if (SZ.v !== 2) { delete SZ.lw; SZ.v = 2; }
   // The left panel opens narrower (user, 22 Oct: "too wide right now"); a width dragged before then goes.
   if (!(SZ.v >= 2)) { delete SZ.lw; SZ.v = 2; }
   if (P.airStart) S.air = true;
@@ -398,7 +400,7 @@
     if (isPhone()) { root.style.removeProperty('--ops-lw'); root.style.removeProperty('--ops-rw'); }
     else {
       const mid = W <= 1180;
-      const defL = mid ? 400 : Math.max(420, Math.min(0.28 * W, 520)), defR = mid ? 320 : Math.max(320, Math.min(0.24 * W, 400));
+      const defR = mid ? 320 : Math.max(320, Math.min(0.24 * W, 400)), defL = defR + 120;
       const MINL = 260, MINR = 240;
       let lw = Math.max(MINL, SZ.lw || defL), rw = Math.max(MINR, SZ.rw || defR);
       // The panels give way, the one not being dragged first, so the map keeps its whole area.

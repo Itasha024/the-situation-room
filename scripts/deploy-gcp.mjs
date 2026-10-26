@@ -79,9 +79,13 @@ if [ -f /srv/desk/live-port ] && [ -f /etc/systemd/system/desk-web@.service ]; t
   # The new one starts and warms on what CPU the live one leaves (22 Oct: warming at equal weight, one
   # live request in eleven timed out); it gets its full share once it is the live one.
   sudo systemctl set-property --runtime desk-web@$NEXT CPUWeight=10
+  # Two sites and the scans do not fit in the 1 GB together (26 Oct: memory ran out mid-deploy, both sites
+  # stalled for minutes): the scans pause until the new site is live, and start again either way.
+  sudo systemctl stop desk-worker 2>/dev/null || true
   sudo systemctl restart desk-web@$NEXT
   if ! up $NEXT; then
     sudo systemctl stop desk-web@$NEXT
+    restart_worker
     echo "[deploy] new release did not answer /api/status — the live site was not touched"
     exit 1
   fi

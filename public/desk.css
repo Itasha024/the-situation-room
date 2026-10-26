@@ -1280,3 +1280,5 @@ html[data-view="ops"] .gz-line-box { margin-bottom: 92px !important; }
 .gz-line-box .gz-line-src:hover { text-decoration: underline; }
 .gz-line-box .gz-oslo-on { display: block; margin-top: 4px; }
 .gz-oslo-sw { display: inline-block; width: 10px; height: 10px; margin: 0 2px 0 4px; border: 1px solid; border-radius: 2px; vertical-align: -1px; }
+/* The explainers in categories (26 Oct): the chosen category's cards one under another. */
+.ex-list { display: flex; flex-direction: column; gap: 10px; }

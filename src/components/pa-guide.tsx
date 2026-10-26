@@ -110,15 +110,15 @@ export function PaGuide() {
           <Row down={false}>
             <div className="pg-group">
               <span className="pg-label">Inside the PLO</span>
-              <Box tone="fatah" name="Fatah" sub="The largest; runs the PA" />
+              <Box tone="fatah" name="Fatah" sub="“Conquest”, its initials reversed; the largest; runs the PA" />
               <Box tone="left" name="PFLP" sub="Popular Front; left; often boycotts PLO meetings" />
               <Box tone="left" name="DFLP" sub="Democratic Front; left" />
               <Box tone="left" name="Smaller groups" sub="People's Party, FIDA, the PLF, the Arab Liberation Front, As-Sa'iqa and others" />
             </div>
             <div className="pg-group">
               <span className="pg-label">Outside the PLO</span>
-              <Box tone="hamas" name="Hamas" sub="Runs Gaza since 2007; Qassam Brigades" />
-              <Box tone="pij" name="Islamic Jihad" sub="Closest to Iran; Saraya al-Quds; boycotts PA elections, as it rejects the Oslo accords" />
+              <Box tone="hamas" name="Hamas" sub="“Zeal”, the initials of the Islamic Resistance Movement; runs Gaza since 2007; Qassam Brigades" />
+              <Box tone="pij" name="Islamic Jihad" sub="Closest to Iran; Saraya al-Quds (“the Jerusalem Brigades”); boycotts PA elections, as it rejects the Oslo accords" />
               <Box tone="arm" name="Armed groups" sub="Popular Resistance Committees, Mujahideen Brigades, local battalions in Judea and Samaria" />
               <Box tone="clan" name="Gaza clans and militias" sub="Armed families and anti-Hamas groups such as the Popular Forces" />
             </div>
@@ -180,8 +180,8 @@ export function PaGuide() {
           <Row><Box tone="fatah" name="Central Committee" sub={<>18 elected; the leadership. May 2026 top vote-getters: Marwan Barghouti (from an Israeli prison), Majed Faraj, Jibril Rajoub, Hussein al-Sheikh. {ar("اللجنة المركزية")} · {he("הוועד המרכזי")}</>} />
             <Box tone="fatah" name="Revolutionary Council" sub={<>80 elected; Fatah's parliament. {ar("المجلس الثوري")} · {he("המועצה המהפכנית")}</>} /></Row>
           <Row down={false}>
-            <Box tone="fatah" name="The Tanzim" sub={<>Fatah's field organisation in towns and camps; led by Marwan Barghouti in the second intifada. {ar("التنظيم")} · {he("התנזים")}</>} />
-            <Box tone="fatah" name="Shabiba" sub={<>Students and youth. {ar("الشبيبة")}</>} />
+            <Box tone="fatah" name="The Tanzim" sub={<>“The Organisation”: Fatah's field organisation in towns and camps; led by Marwan Barghouti in the second intifada. {ar("التنظيم")} · {he("התנזים")}</>} />
+            <Box tone="fatah" name="Shabiba" sub={<>“The Youth”: students and youth. {ar("الشبيبة")}</>} />
             <Box tone="arm" name="Al-Aqsa Martyrs' Brigades" sub={<>Armed cells from Fatah's ranks since 2000; disowned by the PA, still active locally. {ar("كتائب شهداء الأقصى")}</>} />
           </Row>
         </div>
@@ -195,7 +195,7 @@ export function PaGuide() {
         <h3 id="pg-hamas">Hamas</h3>
         <p>The Islamic Resistance Movement, founded in Gaza in 1987 from the Muslim Brotherhood. Listed as a terrorist organisation by Israel, the US, the EU and others.</p>
         <div className="pg-chart" role="img" aria-label="Hamas's bodies">
-          <Row><Box tone="hamas wide" name="Shura Council" sub={<>Elected internally by members in four regions; chooses the leadership. {ar("مجلس الشورى")}</>} /></Row>
+          <Row><Box tone="hamas wide" name="Shura Council" sub={<>“Consultation” council. Elected internally by members in four regions; chooses the leadership. {ar("مجلس الشورى")}</>} /></Row>
           <Row><Box tone="hamas wide" name="Political Bureau" sub={<>Head: Khalil al-Hayya, elected July 2026 in a run-off against Khaled Meshaal (a five-man council led it after Yahya Sinwar's death in 2024). {ar("المكتب السياسي")}</>} /></Row>
           <Row down={false}>
             <Box tone="hamas" name="Gaza" />
@@ -280,13 +280,13 @@ export function PaGuide() {
             <thead><tr><th>English</th><th>Arabic</th><th>Hebrew</th></tr></thead>
             <tbody>
               <tr><td>The security services</td><td>{ar("الأجهزة الأمنية")}</td><td>{he("המנגנונים")}</td></tr>
-              <tr><td>The Tanzim</td><td>{ar("التنظيم")}</td><td>{he("התנזים")}</td></tr>
-              <tr><td>The PLO</td><td>{ar("منظمة التحرير")}</td><td>{he("אש\"ף")}</td></tr>
+              <tr><td>The Tanzim (Arabic for “the Organisation”)</td><td>{ar("التنظيم")}</td><td>{he("התנזים")}</td></tr>
+              <tr><td>The PLO (Palestine Liberation Organisation)</td><td>{ar("منظمة التحرير")}</td><td>{he("אש\"ף")}</td></tr>
               <tr><td>Security coordination</td><td>{ar("التنسيق الأمني")}</td><td>{he("תיאום ביטחוני")}</td></tr>
               <tr><td>Clearance revenues</td><td>{ar("أموال المقاصة")}</td><td>{he("כספי הסליקה")}</td></tr>
               <tr><td>Reconciliation</td><td>{ar("المصالحة")}</td><td>{he("הפיוס")}</td></tr>
               <tr><td>The split</td><td>{ar("الانقسام")}</td><td>{he("הפילוג")}</td></tr>
-              <tr><td>Abbas</td><td>{ar("أبو مازن")}</td><td>{he("אבו מאזן")}</td></tr>
+              <tr><td>Abbas (“Abu Mazen”, father of Mazen, his eldest son)</td><td>{ar("أبو مازن")}</td><td>{he("אבו מאזן")}</td></tr>
             </tbody>
           </table>
         </div>

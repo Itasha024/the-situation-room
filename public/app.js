@@ -9004,11 +9004,17 @@ function renderDeskExplain(ex, id) {
     const links = (p.sources || []).map((s) => `<li><a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a></li>`).join('');
     return `<article class="phase-card expandable"><div class="phase-head"><strong>${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates || '')}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${n ? `<details class="src-list"><summary>Sources (${n})</summary><ul>${links}</ul></details>` : ''}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
   };
-  const items = ex.items || [];
-  const all = [...(guide ? [guide] : []), ...items.map(card)];
-  // The timeline's pager, so the side menu and the cards look and work as the timeline's do.
-  el.innerHTML = pagerHtml('timeline', all, 0, [...(guide ? ["Who's who"] : []), ...items.map((p) => p.title)]);
-  wirePager(el, 0, () => closeReadMore(el, '.phase-card', '.toggle-phase'), { wrap: false });
+  // In categories, as the numbers are (user, 26 Oct: "divide categories in explainers not one long thing"): the side
+  // menu names the categories, the chosen one's cards one under another. The full guide stays one long page.
+  const cats = [];
+  const catOf = (name) => cats.find((c) => c.name === name) || (cats.push({ name, cards: [] }), cats[cats.length - 1]);
+  if (guide) catOf("Who's who").cards.push(guide);
+  for (const p of ex.items || []) catOf(p.cat || 'Background').cards.push(card(p));
+  if (!cats.length) return;
+  const cat = cats.find((c) => c.name === deskExplain[`${id}:cat`]) || cats[0];
+  const sw = `<div class="num-cat" role="group" aria-label="Explainers to show">${cats.map((c) => `<button type="button" data-cat="${escapeHtml(c.name)}" aria-pressed="${c === cat}"${c === cat ? ' class="on"' : ''}>${escapeHtml(c.name)}</button>`).join('')}</div>`;
+  el.innerHTML = `${sw}<div class="pager pager-timeline ex-list">${cat.cards.join('')}</div>`;
+  el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { deskExplain[`${id}:cat`] = b.dataset.cat; renderDeskExplain(ex, id); }));
   el.querySelectorAll('.phase-card.expandable').forEach((c) => wireBoxToggle(c, c.querySelector('.toggle-phase'), 'open'));
 }
 /*

@@ -1508,3 +1508,13 @@ html[data-view="ops"] .ops-left .nc-boxes h3.ops-boxhead::before { content: ""; 
 html[data-view="ops"] .ops-left .nc-boxes .spot svg { color: var(--ex-c) }
 html[data-view="ops"] .ops-left .nc-boxes .stat3 b { color: var(--o-strong) }
 html[data-view="ops"] .ops-left .nc-cats button.on { color: var(--o-strong) !important }
+/* 26 Oct (user: the dot sat alone above the title): the title is a button, which wraps whole, so the square goes inside it. */
+html[data-view="ops"] .ops-left .nc-boxes h3.ops-boxhead:has(> .spot)::before { content: none }
+html[data-view="ops"] .ops-left .nc-boxes h3.ops-boxhead > .spot::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 7px 0 1px; border-radius: 2px; background: var(--ex-c); vertical-align: 1px }
+/* 26 Oct (user: "i cant scroll up here"): a centred column that overflows hides its top out of reach; auto margins
+   centre a short list and let a long one scroll from its first item. */
+html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) { justify-content: flex-start !important }
+@media (min-width: 761px) {
+  html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) > :first-child { margin-top: auto !important }
+  html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) > :last-child { margin-bottom: auto !important }
+}

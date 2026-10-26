@@ -79,6 +79,17 @@ test("each statement is a card: 'Trump: …' as the headline, only his relevant 
   assert.deepEqual(checkWritten({ relevant: false }), { headline: "", off: true });
 });
 
+test("a headline never names a war his words did not (26 Oct: a clip on Iran written as one on the Houthis)", () => {
+  const said = '.@POTUS on Iran: "We\'ve knocked the hell out of them — and we may do it a little bit further."';
+  assert.equal(checkWritten({ relevant: true, headline: "Trump: We've knocked the hell out of the Houthis and may do it a little bit further", body: "" }, said), null);
+  assert.equal(checkWritten({ relevant: true, headline: "Trump: We've knocked the hell out of Iran and may do it a little bit further", body: "" }, said)?.headline, "Trump: We've knocked the hell out of Iran and may do it a little bit further");
+  // His words on the Houthis that name Iran too may say both.
+  const both = "The Houthis are behaving very badly, probably at the behest of Iran.";
+  assert.ok(checkWritten({ relevant: true, headline: "Trump: The Houthis are behaving very badly, probably at Iran's behest", body: "" }, both));
+  // A Yemen statement's headline cannot carry it to the Gaza desk.
+  assert.equal(checkWritten({ relevant: true, headline: "Trump: The Houthis and Hamas are behaving badly", body: "" }, both), null);
+});
+
 test("without a writer the card is his first sentence and his words, without his sign-off", () => {
   const s = { id: "ts-1", at: "2026-10-08T16:17:11Z", url: "u", source: "Truth Social", text: "We are having productive discussions with Iran. The blockade will remain in full force and effect, with oil flowing in record numbers. President DONALD J. TRUMP" };
   const c = plainCard(s);

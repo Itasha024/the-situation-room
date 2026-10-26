@@ -814,8 +814,13 @@
     all.forEach((e) => { const s0 = sideOf(e); const s = /not stated/i.test(s0.name) ? { name: 'Not stated', c: '#94a3b8' } : s0; const r = by.get(s.name) || { name: s.name, c: s.c, ev: [] }; r.ev.push(e); by.set(s.name, r); });
     rows = [...by.values()].sort((a, b) => b.ev.length - a.ev.length);
     // On a phone the days can be drawn two, four or eight times as wide, to read and to tap (20 Oct).
-    const sc = svg.parentNode, zoom = isPhone() ? MZ : 1;
-    const W = Math.max(240, (sc.clientWidth || 600) * zoom), LW = isPhone() ? 92 : 132, RH = isPhone() ? 14 : 11, top = 3;
+    // Zoomed in on a PC too, down to a month across the box (user, 27 Oct); the side names as wide as the longest, uncut.
+    const sc = svg.parentNode;
+    mzMax = Math.max(1, Math.min(32, span / (20 * DAY)));
+    const zoom = Math.min(MZ, mzMax);
+    const cw = isPhone() ? 7 : 6.2, longest = Math.max(6, ...rows.map((r) => r.name.length));
+    const LW = Math.round(Math.min(isPhone() ? 200 : 220, longest * cw + 14));
+    const W = Math.max(240, LW + ((sc.clientWidth || 600) - LW) * zoom), RH = isPhone() ? 14 : 11, top = 3;
     svg.style.width = zoom > 1 ? W + 'px' : '';
     const H2 = top + Math.max(1, rows.length) * RH + 18;
     svg.setAttribute('viewBox', `0 0 ${W} ${H2}`);
@@ -823,19 +828,25 @@
     const x = (t) => LW + ((t - t0) / span) * (W - LW - 6);
     let out = '';
     const ty = H2 - 3;
-    // A line at each month's first day, named; a faint one each week when the days are wide enough.
+    // A line at each month's first day, named; a faint one each week when the days are wide enough; zoomed in,
+    // the days' numbers too, never closer than a label's width (user, 27 Oct: they ran into each other).
     const dayW = (W - LW - 6) / (span / DAY);
+    const GAP = isPhone() ? 40 : 36;
+    const step = [1, 2, 7, 14].find((n) => n * dayW >= 20) || 0;
+    let lastX = LW + 34; // the first day's date, written at the left
     for (let t = t0; t < t0 + span; t += DAY) {
-      const d = new Date(t + D_OFF);
+      const d = new Date(t + D_OFF), X = x(t);
       if (d.getUTCDate() === 1) {
-        out += `<line class="g d" x1="${x(t)}" x2="${x(t)}" y1="${top - 2}" y2="${H2 - 15}"/>`;
-        if (x(t) > LW + 12 && x(t) < W - 34) out += `<text class="tk day" x="${x(t) + 2}" y="${ty}">${MON.format(t + 3600e3)}</text>`;
-      } else if (dayW > 5 && d.getUTCDay() === 1) out += `<line class="g" x1="${x(t)}" x2="${x(t)}" y1="${top - 2}" y2="${H2 - 15}"/>`;
+        out += `<line class="g d" x1="${X}" x2="${X}" y1="${top - 2}" y2="${H2 - 15}"/>`;
+        if (X - lastX >= 8 && X < W - 40) { out += `<text class="tk day" x="${X + 2}" y="${ty}">${MON.format(t + 3600e3)}${d.getUTCMonth() === 0 ? ' ' + d.getUTCFullYear() : ''}</text>`; lastX = X + GAP; }
+      } else {
+        if (dayW > 5 && d.getUTCDay() === 1) out += `<line class="g" x1="${X}" x2="${X}" y1="${top - 2}" y2="${H2 - 15}"/>`;
+        if (step && (d.getUTCDate() - 1) % step === 0 && d.getUTCDate() <= 26 && X - lastX >= 6 && X < W - 40) { out += `<text class="tk dn" x="${X + dayW / 2}" y="${ty}" text-anchor="middle">${d.getUTCDate()}</text>`; lastX = X + 14; }
+      }
     }
     out += `<text class="tk" x="${LW}" y="${ty}">${esc(dm(t0 + 3600e3 * 4, 'Asia/Riyadh'))}</text>`;
     rows.forEach((r, i) => {
       const y = top + i * RH;
-      out += `<text class="lab" x="${LW - 8}" y="${y + 8.5}" text-anchor="end">${esc(r.name.length > 20 ? r.name.slice(0, 19) + '…' : r.name)}</text>`;
       out += `<line class="row" x1="${LW}" x2="${W - 6}" y1="${y + 6}" y2="${y + 6}"/>`;
       // A day's events as one block, darker with more.
       const bins = new Map();
@@ -848,9 +859,13 @@
     out += `<text class="tk now" x="${W - 6}" y="${ty}" text-anchor="end">Today</text>`;
     if (rng) out += `<rect class="sel" x="${x(rng[0])}" y="${top - 3}" width="${Math.max(2, x(rng[1]) - x(rng[0]))}" height="${H2 - 14 - top}"/>`;
     out += `<rect class="hit" data-mx x="${LW}" y="0" width="${W - LW - 6}" height="${H2 - 12}"/>`;
+    // The side names stay at the left while a zoomed chart scrolls.
+    out += `<g class="labs"><rect class="labs-bg" x="0" y="0" width="${LW - 2}" height="${H2}"/>${rows.map((r, i) => `<text class="lab" x="${LW - 8}" y="${top + i * RH + 8.5}" text-anchor="end">${esc(r.name)}</text>`).join('')}</g>`;
     svg.innerHTML = out;
     svg._x = { t0, LW, W, span };
-    if (sc._z !== zoom) { sc._z = zoom; sc.scrollLeft = sc.scrollWidth; }
+    // Zooming keeps the middle of what was in view; the first draw shows today.
+    if (sc._z !== zoom) { const mid = sc._z ? (sc.scrollLeft + sc.clientWidth / 2) / (sc.scrollWidth || 1) : 1; sc._z = zoom; sc.scrollLeft = mid * sc.scrollWidth - sc.clientWidth / 2; }
+    stickLabs();
     const head = $('.ops-act-h b', dock);
     if (head) head.textContent = `Since ${dm(t0 + 3600e3 * 4, 'Asia/Riyadh')}`;
     const sel = $('.ops-act-sel', dock);
@@ -862,13 +877,20 @@
     if (PAGE === 'all') drawTheatres();
     dimPins();
   }
-  let MZ = 1;
+  let MZ = 1, mzMax = 8;
+  function stickLabs() {
+    const sc = dock && $('.ops-amx-sc', dock), g = sc && $('.ops-amx .labs', dock);
+    if (g) g.setAttribute('transform', `translate(${sc.scrollLeft} 0)`);
+    const z = dock && $('.ops-mz', dock);
+    if (z) { z.querySelector('[data-mz="1"]').disabled = MZ >= mzMax; z.querySelector('[data-mz="-1"]').disabled = MZ <= 1; }
+  }
   function wireMatrix() {
     const svg = $('.ops-amx', dock);
+    svg.parentNode.addEventListener('scroll', stickLabs, { passive: true });
     $('.ops-mz', dock).addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-mz]');
       if (!b) return;
-      MZ = Math.max(1, Math.min(8, +b.dataset.mz > 0 ? MZ * 2 : MZ / 2));
+      MZ = Math.max(1, Math.min(mzMax, +b.dataset.mz > 0 ? MZ * 2 : MZ / 2));
       drawMatrix();
     });
     let start = null;
@@ -2032,6 +2054,8 @@
     // The page fits its map again as the frame settles: the map shows when it has held still for 400 ms.
     { let at = '', still = 0, n = 0; const t = setInterval(() => { const c = m.getCenter(), k = `${c.lat.toFixed(3)},${c.lng.toFixed(3)},${m.getZoom()}`; still = k === at ? still + 1 : 0; at = k; if (still >= 4 || ++n > 40) { clearInterval(t); root.classList.add('ops-ready'); } }, 100); }
     openAt(m);
+    // A quiet line in the map's credits (user, 27 Oct): the map is not every event, and each is as its source told it.
+    try { const from = LOG_FROM[PAGE]; const line = `Not every event since ${esc(dm(from + 4 * 3600e3, 'Asia/Riyadh'))}${new Date(from).getUTCFullYear() < new Date().getUTCFullYear() ? ' ' + new Date(from + 4 * 3600e3).getUTCFullYear() : ''} is mapped; each is as accurate as its source.`; m.attributionControl.setPrefix(`<span class="ops-discl">${line}</span> · <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>`); const act = dock && $('.ops-act', dock); if (act && !$('.ops-discl-m', act)) act.insertAdjacentHTML('beforeend', `<p class="ops-discl-m">${line}</p>`); } catch (e) { /* no credits box */ }
     // The map opens on the reader's span, as the timeline under it (a link to a pin or a place keeps its own).
     if (!/#(at|pin)=/.test(location.hash)) {
       let tries = 0;

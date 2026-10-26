@@ -33,6 +33,8 @@ export function SourcesList({ sources, groups, back }: { sources: SourceRow[]; g
     <DeskDoc title="Sources list" back={back}>
       <div className="sr-top">
         <p className="sr-stamp">Sources reliability updates every 24h</p>
+        {/* The same quiet line as on the maps (user, 27 Oct). */}
+        <p className="sr-stamp sr-discl">A report is only as accurate as the source that reported it; a rating is its record so far, not a promise.</p>
         {shown.length ? (
           <button
             type="button"

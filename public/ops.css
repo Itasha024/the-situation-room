@@ -939,9 +939,13 @@ html[data-view="ops"] .ops-evf .ops-log-n:empty { display: none }
 
 /* The hours under the map: zoom on a phone. */
 html[data-view="ops"] .ops-amx-sc { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin }
-html[data-view="ops"] .ops-mz { display: none; margin-left: auto; gap: 0; border: 1px solid var(--o-line-2); border-radius: 2px; overflow: hidden }
+html[data-view="ops"] .ops-mz { display: inline-flex; margin-left: auto; flex: none; gap: 0; border: 1px solid var(--o-line-2); border-radius: 2px; overflow: hidden }
 html[data-view="ops"] .ops-mz button { appearance: none; width: 34px; height: 28px; border: 0; background: none; color: var(--o-strong); font: 600 17px var(--ops-mono); cursor: pointer }
 html[data-view="ops"] .ops-mz button + button { border-left: 1px solid var(--o-line-2) }
+html[data-view="ops"] .ops-mz button:disabled { opacity: .35; cursor: default }
+html[data-view="ops"] .ops-amx .labs-bg { fill: var(--o-panel, var(--o-bg)) }
+html[data-view="ops"] .ops-amx .tk.dn { font-size: 9.5px }
+@media (min-width: 761px) { html[data-view="ops"] .ops-mz button { width: 24px; height: 20px; font-size: 14px; line-height: 1 } }
 @media (max-width: 760px) {
   html[data-view="ops"] .ops-mz { display: inline-flex }
   html[data-view="ops"] .ops-act-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap }
@@ -1551,3 +1555,15 @@ html[data-view="ops"] .ops-left .stat3.long { grid-template-columns: 1fr !import
 html[data-view="ops"] .ops-left .stat3.long > div { display: grid !important; grid-template-columns: minmax(64px, auto) minmax(0, 1fr); align-items: center; column-gap: 12px; text-align: left !important; padding: 8px 12px !important }
 html[data-view="ops"] .ops-left .stat3.long > div > b { text-align: right }
 html[data-view="ops"] .ops-left .stat3.long > div > span { text-transform: none !important; letter-spacing: 0 !important; font-size: 12.5px !important; line-height: 1.35 !important; margin: 0 !important }
+/* A folded panel's tab on the map's edge covers nothing (user, 27 Oct): the map's own buttons and boxes on that side move in past it. */
+@media (min-width: 761px) {
+  html[data-view="ops"] .ops-noleft :is(.leaflet-left, .ops-tools, .ops-coords) { translate: 32px 0 }
+  html[data-view="ops"] .ops-noright :is(.leaflet-right, .map-chip, .ops-lyrbtn) { translate: -32px 0 }
+}
+html[data-view="ops"] .ops-on .leaflet-control-attribution .ops-discl { opacity: .8; font-style: italic }
+/* The credits keep to the right, clear of the coordinates and the IDF-held box at the left (27 Oct). */
+@media (min-width: 761px) { html[data-view="ops"] .ops-on .leaflet-bottom.leaflet-right .leaflet-control-attribution { max-width: min(560px, 58%); margin-left: auto; line-height: 1.3; text-align: right; white-space: normal } }
+/* On a phone the credits sit by the map's buttons: the line goes under the days instead. */
+html[data-view="ops"] .ops-discl-m { display: none; margin: 6px 0 0; font-size: 10.5px; font-style: italic; color: var(--o-faint) }
+@media (max-width: 760px) { html[data-view="ops"] .ops-on .leaflet-control-attribution .ops-discl { display: none } html[data-view="ops"] .ops-discl-m { display: block } }
+html[data-view="ops"] .doc-root .sr-stamp.sr-discl { font-family: inherit !important; letter-spacing: 0; text-transform: none; font-size: 11.5px; color: var(--o-faint) }

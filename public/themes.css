@@ -863,3 +863,4 @@ html .map-wrap .legend{top:auto;bottom:calc(12px + var(--leg-lift,0px))}
 .feed-sub::after{content:"";flex:1;height:1px;background:var(--t-line-strong,#334155)}
 .feed-sub small{order:3;font:500 .62rem/1.2 var(--f-body,inherit);letter-spacing:.04em;text-transform:none;color:var(--t-muted,#8fa0b4)}
 body:has(#feed-search:not([hidden])) .feed-sub{display:none}
+.sr-top{flex-wrap:wrap}.sr-stamp.sr-discl{flex-basis:100%;order:9;text-transform:none;letter-spacing:0;font-style:italic;opacity:.85}

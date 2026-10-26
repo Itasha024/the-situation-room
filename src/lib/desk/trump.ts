@@ -246,10 +246,16 @@ You get one thing he said (a Truth Social post or his words on camera), or what 
 - Never add facts, context or comment of your own.`;
 
 /** The writer's answer, checked: a headline in his voice, a body in quotes, or "off" when nothing bears on Iran. */
-export function checkWritten(json: Record<string, unknown>): { headline: string; body?: string; off?: boolean } | null {
+export function checkWritten(json: Record<string, unknown>, said?: string): { headline: string; body?: string; off?: boolean } | null {
   if (json.relevant === false) return { headline: "", off: true };
   const h = typeof json.headline === "string" ? json.headline.replace(/\s+/g, " ").trim() : "";
   if (!/^Trump:\s*\S/.test(h) || h.length > 300) return null;
+  // A war he did not name is never in his headline (26 Oct: '.@POTUS on Iran: "We've knocked the hell out of them"'
+  // came back as "We've knocked the hell out of the Houthis", a Yemen headline on words about Iran): asked again.
+  if (said !== undefined) {
+    const named = desksOf(said);
+    if (desksOf(h).some((d) => !named.includes(d))) return null;
+  }
   const words = h.replace(/^Trump:\s*/, "");
   const raw = typeof json.body === "string" ? json.body.trim() : "";
   // '"One." "Two."' in one paragraph is two of his sentences: a paragraph each.

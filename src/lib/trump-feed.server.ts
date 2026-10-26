@@ -77,7 +77,7 @@ export async function writeStatements(list: TrumpStatement[], most = 4): Promise
     const got = await askChain("trump", TRUMP_SYSTEM, `${what}:
 
 ${words}`, { temperature: 0.2, models: TRUMP_MODELS, timeoutMs: 60_000 }).catch(() => null);
-    const card = got && checkWritten(got.json);
+    const card = got && checkWritten(got.json, s.text);
     if (!card) { s.tries = (s.tries ?? 0) + 1; continue; }
     if (card.off) s.off = true;
     else { s.headline = card.headline; if (card.body) s.body = card.body; else delete s.body; }

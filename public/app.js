@@ -8980,9 +8980,13 @@ function irBox(b, i = 0) {
     // A Latest or Now column's date: once in its head when every row shares it, else under each figure.
     const days = b.cols.map((c, j) => (/^(?:Latest|Now)$/.test(c) && j ? [...new Set(b.rows.map((r) => r.cells[j - 1] && r.cells[j - 1].date).filter(Boolean))] : []));
     const dated = days.map((d) => d.length > 1);
-    const th = `<tr>${b.cols.map((c, i) => `<th scope="col"${i === 0 ? ' class="l"' : ''}>${escapeHtml(c)}${days[i].length === 1 ? `<small class="span">(${escapeHtml(fmtDay(days[i][0]))})</small>` : ''}</th>`).join('')}</tr>`;
-    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><td class="l">${escapeHtml(r.label)}${mark(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</td>${r.cells.map((c, j) => (dated[j + 1] && c && c.v != null && c.date ? `<td>${irLink(c)}${irSmall(fmtDay(c.date).replace(new RegExp(" " + new Date().getFullYear() + "$"), ""))}</td>` : irCell(c))).join('')}</tr>`).join('');
-    body = `<table class="span3"><tbody>${th}${rows}</tbody></table>${more(b.rows)}${IR_KEY}`;
+    // A column of words, not figures (Sanctions' "Latest step"): in a narrow box it gets a whole line under its row (user, 26 Oct: tables cut at the side).
+    const txt = b.cols.map((c, j) => j > 0 && b.rows.filter((r) => { const v = r.cells[j - 1] && r.cells[j - 1].v; return typeof v === 'string' && v.length > 18 && /[a-z]{4}/i.test(v); }).length * 2 > b.rows.length);
+    const nc = b.cols.filter((c, j) => j > 0 && !txt[j]).length || 1;
+    const th = `<tr>${b.cols.map((c, i) => `<th scope="col"${i === 0 ? ' class="l"' : txt[i] ? ' class="txt"' : ''}>${escapeHtml(c)}${days[i].length === 1 ? `<small class="span">(${escapeHtml(fmtDay(days[i][0]))})</small>` : ''}</th>`).join('')}</tr>`;
+    const cell = (c, j) => (txt[j + 1] ? (c && c.v != null ? `<td class="txt" data-h="${escapeHtml(b.cols[j + 1])}">${irLink(c)}</td>` : '<td class="txt none">—</td>') : dated[j + 1] && c && c.v != null && c.date ? `<td>${irLink(c)}${irSmall(fmtDay(c.date).replace(new RegExp(" " + new Date().getFullYear() + "$"), ""))}</td>` : irCell(c));
+    const rows = b.rows.map((r, i) => `<tr${xtra(i)}><td class="l">${escapeHtml(r.label)}${mark(r.label)}${r.sub ? `<small>${escapeHtml(r.sub)}</small>` : ''}</td>${r.cells.map(cell).join('')}</tr>`).join('');
+    body = `<table class="span3 tc${b.cols.length}" style="--nc:${nc}"><tbody>${th}${rows}</tbody></table>${more(b.rows)}${IR_KEY}`;
   } else if (b.type === 'bars') {
     const max = Math.max(...b.bars.map((x) => +x.n || 0), 1e-9);
     body = `<div class="mbars">${b.bars.map((x) => `<div class="mbar${x.pre ? ' pre' : ''}"><span class="k">${escapeHtml(x.label)}${x.sub ? `<small>${escapeHtml(x.sub)}</small>` : ''}</span><span class="mb-track"><i style="width:${Math.max(1, Math.round(((+x.n || 0) / max) * 100))}%"></i></span><b>${irLink(x.c)}</b></div>`).join('')}</div>${IR_KEY}`;
@@ -8992,7 +8996,7 @@ function irBox(b, i = 0) {
     const th = `<tr>${b.cols.map(([h, cls]) => `<th scope="col" class="${cls || 'l'}">${escapeHtml(h)}</th>`).join('')}</tr>`;
     // The first rows show; the rest open under them with Read more (user, 18 Oct: the Sanctions lists never closed, as no row was marked to hide).
     const rows = b.rows.map((r, i) => `<tr${i >= SHOW && folds(b.rows.length) ? ' class="led-rest"' : ''}>${r.map((c, j) => `<td class="${(b.cols[j] && b.cols[j][1]) || 'l'}">${c && typeof c === 'object' ? irLink(c) : escapeHtml(c == null ? '' : String(c))}</td>`).join('')}</tr>`);
-    const stats = b.stats ? `<div class="stat3">${b.stats.map(([v, l]) => `<div><b>${irLink(v)}</b><span>${escapeHtml(l)}</span></div>`).join('')}</div>` : '';
+    const stats = b.stats ? `<div class="stat3${b.stats.some(([, l]) => String(l || "").length > 28) ? " long" : ""}">${b.stats.map(([v, l]) => `<div><b>${irLink(v)}</b><span>${escapeHtml(l)}</span></div>`).join('')}</div>` : '';
     const tog = folds(rows.length) ? `<button type="button" class="toggle-sit led-tog" aria-expanded="false">Full list (${rows.length})</button>` : '';
     body = `<div class="led-more${tog ? ' expandable' : ''}"><div class="led-head">${stats}</div><div class="led-detail">${IR_KEY}<table class="list ${escapeHtml(b.cls || '')}"><tbody>${th}${rows.join('')}</tbody></table></div>${tog}</div>`;
   }

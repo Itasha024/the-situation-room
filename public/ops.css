@@ -9,7 +9,7 @@
  * operations room, Day a newsroom page; the reader's device picks unless they do.
  */
 html[data-view="ops"] {
-  --ops-lw: clamp(360px, 24vw, 440px);
+  --ops-lw: clamp(420px, 28vw, 520px);
   --ops-rw: clamp(320px, 24vw, 400px);
   --ops-nav-w: 56px;
   --ops-strip-h: 26px;
@@ -92,7 +92,7 @@ html[data-view="ops"] .ops-on .rail-splitter { display: none !important }
   html[data-view="ops"] .ops-on.ops-nodock .ops-fold-d { border-color: var(--o-sel); color: var(--o-sel); background: color-mix(in srgb, var(--o-sel) 14%, transparent) }
 }
 @media (min-width: 761px) and (max-width: 1180px) {
-  html[data-view="ops"] { --ops-lw: 340px; --ops-rw: 320px; --ops-nav-w: 50px }
+  html[data-view="ops"] { --ops-lw: 400px; --ops-rw: 320px; --ops-nav-w: 50px }
 }
 /* Handles to widen the side panels and raise the strip under the map (21 Oct). */
 html[data-view="ops"] .ops-grip { display: none }
@@ -1518,3 +1518,36 @@ html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ 
   html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) > :first-child { margin-top: auto !important }
   html[data-view="ops"] .ops-left :is(.pager-fronts ~ .pg-dots, .pager-timeline ~ .pg-dots, .num-cat, .ops-subnav) > :last-child { margin-bottom: auto !important }
 }
+/* 26 Oct (user: "many places in the left column … cut in the side"): a table of four columns or more stacks in a narrow
+   box: the row's name on its own line, its figures in a row under it, a column of words on a whole line below. */
+/* The panel's scroll area is the container (its rail and gaps take ~125px); a phone has no rail. */
+@container (max-width: 505px) {
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7), html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) > tbody { display: block !important; width: 100% !important }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) tr { display: grid !important; grid-template-columns: repeat(var(--nc, 3), minmax(0, 1fr)); column-gap: 8px; align-items: end }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) tr + tr { border-top: 1px solid var(--o-line) }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) :is(td, th) { border: 0 !important; min-width: 0; overflow-wrap: anywhere }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) :is(td, th):is(.l, .txt) { grid-column: 1 / -1; text-align: left !important }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) td.l { padding-bottom: 0 !important }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) th:is(.l:empty, .txt), html[data-view="ops"] .ops-left table.span3 td.txt.none { display: none !important }
+  html[data-view="ops"] .ops-left table.span3 td.txt { padding-top: 0 !important; font-size: 12.5px }
+  html[data-view="ops"] .ops-left table.span3 td.txt::before { content: attr(data-h) ": "; color: var(--o-faint) }
+}
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7), html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) > tbody { display: block !important; width: 100% !important }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) tr { display: grid !important; grid-template-columns: repeat(var(--nc, 3), minmax(0, 1fr)); column-gap: 8px; align-items: end }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) tr + tr { border-top: 1px solid var(--o-line) }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) :is(td, th) { border: 0 !important; min-width: 0; overflow-wrap: anywhere }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) :is(td, th):is(.l, .txt) { grid-column: 1 / -1; text-align: left !important }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) td.l { padding-bottom: 0 !important }
+  html[data-view="ops"] .ops-left table.span3:is(.tc4, .tc5, .tc6, .tc7) th:is(.l:empty, .txt), html[data-view="ops"] .ops-left table.span3 td.txt.none { display: none !important }
+  html[data-view="ops"] .ops-left table.span3 td.txt { padding-top: 0 !important; font-size: 12.5px }
+  html[data-view="ops"] .ops-left table.span3 td.txt::before { content: attr(data-h) ": "; color: var(--o-faint) }
+}
+/* A list's lines take the whole width beside the date: the table's 40% cap squeezed "Who" (Iran's Sanctions, 26 Oct). */
+html[data-view="ops"] .ops-left table.list[data-ops-l] td:not(:first-child) { max-width: none !important }
+/* Figures with long captions (Gaza's Judea and Samaria, Sanctions, 26 Oct): one to a line in the side panel, the
+   figure beside its words, not three tall columns of capitals. */
+html[data-view="ops"] .ops-left .stat3.long { grid-template-columns: 1fr !important; gap: 4px !important }
+html[data-view="ops"] .ops-left .stat3.long > div { display: grid !important; grid-template-columns: minmax(64px, auto) minmax(0, 1fr); align-items: center; column-gap: 12px; text-align: left !important; padding: 8px 12px !important }
+html[data-view="ops"] .ops-left .stat3.long > div > b { text-align: right }
+html[data-view="ops"] .ops-left .stat3.long > div > span { text-transform: none !important; letter-spacing: 0 !important; font-size: 12.5px !important; line-height: 1.35 !important; margin: 0 !important }

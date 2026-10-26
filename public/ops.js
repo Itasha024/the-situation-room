@@ -398,7 +398,7 @@
     if (isPhone()) { root.style.removeProperty('--ops-lw'); root.style.removeProperty('--ops-rw'); }
     else {
       const mid = W <= 1180;
-      const defL = mid ? 340 : Math.max(360, Math.min(0.24 * W, 440)), defR = mid ? 320 : Math.max(320, Math.min(0.24 * W, 400));
+      const defL = mid ? 400 : Math.max(420, Math.min(0.28 * W, 520)), defR = mid ? 320 : Math.max(320, Math.min(0.24 * W, 400));
       const MINL = 260, MINR = 240;
       let lw = Math.max(MINL, SZ.lw || defL), rw = Math.max(MINR, SZ.rw || defR);
       // The panels give way, the one not being dragged first, so the map keeps its whole area.

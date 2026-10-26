@@ -1588,6 +1588,9 @@ html[data-view="ops"] .ops-md-heat i { width: 6px; height: 10px; border-radius: 
 html[data-view="ops"] .ops-md-heat i.on { background: #ef4444 }
 html[data-view="ops"] .ops-md-t { color: var(--o-strong); font-weight: 600; font-size: 13.5px; line-height: 1.4; text-decoration: none }
 html[data-view="ops"] .ops-md-t:hover { text-decoration: underline }
+html[data-view="ops"] p.ops-md-t { margin: 0 }
+html[data-view="ops"] p.ops-md-t:hover { text-decoration: none }
+html[data-view="ops"] .ops-md-found { font-weight: 500; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--o-dim); border: 1px solid var(--o-line-2); border-radius: 3px; padding: 0 4px; white-space: nowrap }
 html[data-view="ops"] .ops-md-bar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: var(--o-line) }
 html[data-view="ops"] .ops-md-bar i { display: block; height: 100% }
 html[data-view="ops"] .ops-md-top, html[data-view="ops"] .ops-md-chip { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; font-size: 11.5px; color: var(--o-text) }
@@ -1611,3 +1614,11 @@ html[data-view="ops"] .h-cflag .dt-flag { width: 18px; height: 18px; border-radi
 html[data-view="ops"] .ops-th-p { display: inline }
 html[data-view="ops"] .ops-th-flag .h-cflag .dt-flag { width: 16px; height: 16px; box-shadow: none }
 html[data-view="ops"] .ops-th-p .x-desk { display: table; margin-top: 5px; font-size: 11.5px }
+/* Timeline eras on a phone (user, 27 Oct): short names, so the next ones show beside the chosen one; the full name in its tooltip and on the card. */
+html[data-view="ops"] .pg-dots .pg-short { display: none }
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots .tl-dot:has(.pg-short) .pg-name { display: none !important }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots .pg-short { display: inline }
+  html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-timeline) ~ .pg-dots button { max-width: 62vw }
+  html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-timeline) ~ .pg-dots .pg-name { overflow: hidden; text-overflow: ellipsis }
+}

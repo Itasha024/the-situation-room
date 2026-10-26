@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { arabicNames, channelsFor, moodScore, parsePosts, pickEvents, reactionsOf, readMood, sumReactions } from "./gaza-mood.ts";
+import { arabicNames, channelsFor, moodScore, parsePosts, pickEvents, reactionsOf, readFound, readMood, stirring, sumReactions, watchChannels } from "./gaza-mood.ts";
 
 const PAGE = `<div class="tgme_widget_message_wrap js-widget_message_wrap"><div class="tgme_widget_message" data-post="QudsN/1"><div class="tgme_widget_message_text js-message_text" dir="auto">غضب في جنين</div><div class="tgme_widget_message_reactions js-message_reactions"><span class="tgme_reaction"><i class="emoji" style="x"><b>🤬</b></i>4</span><span class="tgme_reaction"><i class="emoji" style="x"><b>💔</b></i>1.2K</span></div><div class="tgme_widget_message_footer"><span class="tgme_widget_message_views">3.4K</span><time datetime="2026-10-26T18:00:00+00:00">x</time></div></div></div>`;
 
@@ -42,4 +42,25 @@ test("the model's read: known kinds, named items, shares that add up, the desk's
   assert.equal(r.calls[0].c, 1);
   assert.deepEqual(r.rel, [0, 1]);
   assert.equal(readMood({}, items), null);
+});
+
+test("both ways: every Palestinian channel is searched, and events are found from the most-reacted posts (27 Oct)", () => {
+  const ch = channelsFor({ lat: 32.46, lng: 35.3, area: "js" });
+  assert.equal(ch[0], "jeninnews1");
+  assert.ok(ch.length > 50 && ch.includes("WAFAgency") && ch.includes("Palinfo"));
+  assert.equal(new Set(ch.map((c) => c.toLowerCase())).size, ch.length);
+  assert.ok(watchChannels().length > ch.length);
+  const now = Date.parse("2026-10-26T20:00:00Z");
+  const posts = [
+    { u: "https://t.me/a/1", at: "2026-10-26T18:00:00.000Z", ch: "a", x: "اقتحام بلدة قباطية", v: 9000, rx: { "🤬": 300 } },
+    { u: "https://t.me/a/2", at: "2026-10-26T18:30:00.000Z", ch: "a", x: "خبر", v: 100 },
+    { u: "https://t.me/b/1", at: "2026-10-25T01:00:00.000Z", ch: "b", x: "قديم", v: 99999 },
+  ];
+  const top = stirring(posts, now);
+  assert.deepEqual(top.map((p) => p.u), ["https://t.me/a/1", "https://t.me/a/2"]);
+  const [ev] = readFound({ events: [{ h: "Israeli forces raid Qabatiya", place: "Qabatiya", area: "js", items: [0], terms: ["قباطية", "Gaza"] }, { h: "No posts", area: "js", items: [9] }] }, top);
+  assert.equal(ev.found, 1);
+  assert.deepEqual(ev.terms, ["قباطية"]);
+  assert.equal(ev.seed?.length, 1);
+  assert.ok(ev.fp.startsWith("mood-") && ev.lat != null);
 });

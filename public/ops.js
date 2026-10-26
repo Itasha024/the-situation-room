@@ -835,7 +835,7 @@
     const rx = e.reactions && e.reactions.total ? `<p class="ops-md-rx" title="The emoji people pressed under the posts about it">${e.reactions.top.map(([k, n]) => `<span>${esc(k)} ${kNum(n)}</span>`).join('')}</p>` : '';
     return `<article class="ops-md-ev" data-md="${esc(e.fp)}">
       <div class="ops-md-h"><time>${esc(hm(Date.parse(e.at), VIEW_TZ()))}</time><span>${where}</span><span class="ops-md-heat" title="How heated: ${r.intensity} of 5">${heat}</span></div>
-      <a class="ops-md-t" href="#r=${encodeURIComponent(e.fp)}" data-md-card="${esc(e.fp)}">${esc(e.headline)}</a>
+      ${e.found ? `<p class="ops-md-t">${esc(e.headline)} <small class="ops-md-found" title="Found from the channels' reactions, not from a report on the desk">From reactions</small></p>` : `<a class="ops-md-t" href="#r=${encodeURIComponent(e.fp)}" data-md-card="${esc(e.fp)}">${esc(e.headline)}</a>`}
       ${moodBar(r.mood)}<p class="ops-md-top">${moodTop(r.mood, 4)}</p>
       ${r.summary ? `<p class="ops-md-sum">${esc(r.summary)}</p>` : ''}
       ${r.calls.length ? `<ul class="ops-md-calls">${r.calls.map((c) => `<li><b>${esc(CALL[c.kind] || 'Call')}</b> “${esc(c.en)}” ${chLink(c)}</li>`).join('')}</ul>` : ''}
@@ -849,7 +849,7 @@
     if (!pane) return;
     const d = MD.data;
     const list = ((d && d.events) || []).filter((e) => MD.area === 'all' || e.area === MD.area);
-    const head = `<div class="ops-md-head"><b>Mood after the day's big events</b><small>What people and channels say about each event, not the reports of it: posts about it in its town's and the main Palestinian Telegram channels, the comments under them and the emoji people pressed. Their words are theirs, in short English. Updated every 15 minutes${d && d.at ? `, last at ${esc(hm(Date.parse(d.at), VIEW_TZ()))}` : ''}.</small></div>
+    const head = `<div class="ops-md-head"><b>Mood after the day's big events</b><small>Palestinian channels' and people's reactions${d && d.at ? `, last at ${esc(hm(Date.parse(d.at), VIEW_TZ()))}` : ''}.</small></div>
       <div class="ops-on-areas" role="group" aria-label="Area">${[['all', 'All'], ['gaza', 'Gaza'], ['js', 'Judea and Samaria']].map(([k, n]) => `<button type="button" data-md-area="${k}" aria-pressed="${k === MD.area}">${n}</button>`).join('')}</div>`;
     const empty = !d ? 'Reading the channels…' : d.following ? `Following ${d.following} event${d.following === 1 ? '' : 's'}; no reactions found yet.` : 'No big event in the last day.';
     pane.innerHTML = `<div class="ops-md">${head}${list.length ? list.map(moodEvent).join('') : `<p class="ops-md-empty">${empty}</p>`}</div>`;

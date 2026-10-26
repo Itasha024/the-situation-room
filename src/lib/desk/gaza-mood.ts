@@ -6,6 +6,7 @@
  * into a mood. Pure functions here; the reading is in gaza-mood.server.ts.
  */
 import { GAZA_GAZ } from "./gaza-gazetteer.ts";
+import { GAZA_TG } from "./gaza-sources.ts";
 
 export type MoodArea = "gaza" | "js";
 
@@ -65,10 +66,32 @@ export function townOf(lat: number | undefined, lng: number | undefined, area: M
   return TOWNS.filter((t) => t.area === area).sort((a, b) => km(a.at, [lat, lng]) - km(b.at, [lat, lng]))[0] ?? null;
 }
 
-/** The channels searched for an event: its town's own first, then the main ones. */
+/** Every Palestinian channel the desk reads (agencies, factions, local news and journalists). */
+export const PAL_CHANNELS = GAZA_TG.filter((s) => s.lean === "pa" || s.lean === "factions" || s.lean === "palestinian").map((s) => s.id);
+
+/** One spelling of a handle each (Telegram ignores case). */
+const uniqCh = (list: string[]) => list.filter((c, i) => list.findIndex((d) => d.toLowerCase() === c.toLowerCase()) === i);
+
+/**
+ * The channels searched for an event (user, 27 Oct: "as many Palestinian sources as possible"): its town's and the
+ * next town's own first, then the main ones, then every Palestinian channel the desk reads.
+ */
 export function channelsFor(ev: Pick<MoodEvent, "lat" | "lng" | "area">): string[] {
-  const town = townOf(ev.lat, ev.lng, ev.area);
-  return [...new Set([...(town?.ch ?? []), ...MAIN_CHANNELS])];
+  const near = ev.lat != null && ev.lng != null ? TOWNS.filter((t) => t.area === ev.area).sort((a, b) => km(a.at, [ev.lat!, ev.lng!]) - km(b.at, [ev.lat!, ev.lng!])).slice(0, 2) : [];
+  return uniqCh([...near.flatMap((t) => t.ch), ...MAIN_CHANNELS, ...PAL_CHANNELS]);
+}
+
+/** The channels whose latest posts are read for events the desk has not picked: the main ones, every town's, every Palestinian one. */
+export function watchChannels(): string[] {
+  return uniqCh([...MAIN_CHANNELS, ...TOWNS.flatMap((t) => t.ch), ...PAL_CHANNELS]);
+}
+
+/** A place's point, by the gazetteer. */
+export function placeAt(place: string | undefined): { lat: number; lng: number } | null {
+  const p = String(place || "").trim().toLowerCase();
+  if (!p) return null;
+  const g = GAZA_GAZ.find((x) => x[0].toLowerCase() === p || x[4].some((n) => n.toLowerCase() === p) || x[5].includes(place!.trim()));
+  return g ? { lat: g[1], lng: g[2] } : null;
 }
 
 /** The Arabic names of a place, as the gazetteer has them ("مخيم جنين" and "جنين" both). */
@@ -101,6 +124,11 @@ export type MoodEvent = {
   area: MoodArea;
   /** Why it was picked, and how big. */
   score: number;
+  /** Found from the reactions themselves, not from a desk card (user, 27 Oct: "it works both ways"). */
+  found?: 1;
+  /** The search words the finder gave, and the posts it found the event by. */
+  terms?: string[];
+  seed?: MoodPost[];
 };
 
 const DEATH = /\b(?:kill(?:ed|s|ing)?|dead|death|bod(?:y|ies)|funeral|martyr)/i;
@@ -275,13 +303,14 @@ export type MoodRead = {
 export const MOOD_SYSTEM = `You read Palestinian Telegram channels and the comments under their posts for a desk that follows the PUBLIC MOOD after events in Gaza and in Judea and Samaria.
 You get one event (as the desk reported it) and numbered posts and comments found about it, each with its channel, views and the emoji people pressed.
 Leave out every item that only REPORTS the event or other news (what happened, casualties, the army's moves, statements relayed as news): count them in "reports". Read only the REACTIONS: what people, channels, factions and comments SAY about it — anger, grief, mourning notices, calls, threats, praise, blame, fear, despair, jokes, prayers, opinions.
+A channel's OWN words about the event are reactions too: its comment, framing, slogan, eulogy, praise or condemnation in its own voice (a news post that adds "glory to the martyrs" or "the occupation's crimes go on" carries the channel's reaction in that part). Read them, and say in the summary what the channels themselves say as well as the commenters.
 Answer JSON only:
 {"about": true|false (false when nothing found is a reaction to THIS event),
  "mood": [{"k": one of ${MOOD_KINDS.map((k) => `"${k}"`).join(", ")}, "w": share 0-100}] (the shares of the reactions, largest first, summing to about 100; "praise_attack" only for praise of an attack on Israelis; "blame_pa"/"blame_hamas" only when the item blames them),
  "intensity": 1-5 (1 quiet, 5 very heated: many reactions, strong words, calls to act),
  "summary": "2-3 short sentences in plain English: what the reactions say and how widely, and who says it (local channels, faction media, commenters). Never retell the event, never discuss which words outlets use. When the reactions are few, say so plainly. Spell places as the EVENT does.",
  "calls": [{"i": item number, "kind": "protest"|"strike"|"confront"|"attack"|"mobilise"|"other", "en": "the call in English, short"}] (ONLY explicit calls on the public to DO something: go out, protest, strike, confront, mobilise, attack; a faction's threat counts as "attack". A prayer, a curse, a wish or an official's vow to investigate is NOT a call; none found: []),
- "quotes": [{"i": item number, "en": "a short English rendering"}] (up to 4 items in someone's OWN voice that show the mood best: a feeling, an opinion, a prayer, a curse, a joke, a call. NEVER an item that tells what happened or what someone announced, never an official, faction or family statement, never obscene words; none found: []),
+ "quotes": [{"i": item number, "en": "a short English rendering"}] (up to 5 items in someone's OWN voice that show the mood best: a person's or a channel's own feeling, opinion, prayer, curse, joke or call; for a channel's post render only its own words, not the news in it. NEVER an item that only tells what happened or what someone announced, never an official, faction or family statement, never obscene words; none found: []),
  "reports": number,
  "rel": [the item numbers of every item about THIS event, reports and reactions alike]}
 Words: write "Judea and Samaria" (never "West Bank"), "Israeli citizens" (never "settlers"), "Israeli forces" or "the IDF" (never "occupation forces"), "killed" (never "martyred"), "attacks" (never "ceasefire violations"). Quote people's words as theirs; do not adopt them.`;
@@ -322,8 +351,57 @@ export function readMood(json: Record<string, unknown>, items: MoodPost[], words
     const p = item(o.i);
     if (!p || typeof o.en !== "string" || !o.en.trim()) return [];
     return [{ en: words(o.en.trim()), u: p.u, ch: p.ch, ...(p.c ? { c: 1 as const } : {}) }];
-  }).slice(0, 4);
+  }).slice(0, 5);
   const intensity = Math.max(1, Math.min(5, Math.round(Number(json.intensity) || 1)));
   const rel = (Array.isArray(json.rel) ? json.rel : []).map(Number).filter((i) => Number.isInteger(i) && i >= 0 && i < items.length);
   return { about: json.about && mood.length > 0, rel, mood, intensity, summary: words(String(json.summary ?? "").trim()), calls, quotes, reports: Math.max(0, Number(json.reports) || 0) };
+}
+
+/* ------------------------------------------------------------------ *
+ * The other way round (user, 27 Oct: "you find reactions and find events this way"): the channels' latest posts
+ * with the most emoji and views are grouped into events, and the ones the desk does not follow yet are followed.
+ * ------------------------------------------------------------------ */
+
+/** How much a post stirred: its emoji, and its views a little. */
+export const stirOf = (p: MoodPost) => Object.values(p.rx ?? {}).reduce((a, b) => a + b, 0) + p.v / 400;
+
+/** The most stirring posts of the last `hours`, a channel's few best each, so one busy channel does not fill it. */
+export function stirring(posts: MoodPost[], now: number, max = 60, hours = 12): MoodPost[] {
+  const fresh = posts.filter((p) => !p.c && now - Date.parse(p.at) < hours * 3600_000 && Date.parse(p.at) <= now);
+  const byCh = new Map<string, MoodPost[]>();
+  for (const p of fresh) byCh.set(p.ch.toLowerCase(), [...(byCh.get(p.ch.toLowerCase()) ?? []), p]);
+  const best = [...byCh.values()].flatMap((l) => l.sort((a, b) => stirOf(b) - stirOf(a)).slice(0, 4));
+  return best.sort((a, b) => stirOf(b) - stirOf(a)).slice(0, max);
+}
+
+export const FIND_SYSTEM = `You read the most-reacted posts of Palestinian Telegram channels from the last hours, for a desk that follows the PUBLIC MOOD after events in Gaza and in Judea and Samaria.
+Group the posts into EVENTS that stirred people: a killing, a raid or entry by Israeli forces, a strike, a demolition, an arrest campaign, an attack, a funeral, an Israeli government decision, a clash with Israeli citizens, a dispute inside Palestinian society. Leave out posts that are not about an event on the ground or a decision (prayers alone, adverts, general news from abroad, aid prices).
+Give at most 6 events, the most reacted first, and NEVER one already in the FOLLOWED list (the same happening told again counts as followed).
+Answer JSON only: {"events": [{"h": "the event in one short English line, as a news headline", "place": "the village, camp, neighbourhood or town in English, or empty", "area": "gaza"|"js", "items": [the post numbers about it], "terms": ["1 or 2 short Arabic search words that posts about THIS event surely use and few others do: the exact place, a family or person named"]}]}
+Words: write "Judea and Samaria" (never "West Bank"), "Israeli citizens" (never "settlers"), "Israeli forces" or "the IDF" (never "occupation forces"), "killed" (never "martyred"). Palestinian reports of Israeli acts are claims: "Palestinian media: …".`;
+
+export function findPrompt(posts: MoodPost[], followed: string[]): string {
+  const rx = (p: MoodPost) => (p.rx ? ` [${Object.entries(p.rx).map(([e, n]) => `${e}${n}`).join(" ")}]` : "");
+  return ["FOLLOWED:", ...(followed.length ? followed.map((h) => `- ${h}`) : ["- none"]), "", "POSTS:", ...posts.map((p, i) => `${i}. [@${p.ch}, ${p.at.slice(11, 16)} UTC, ${p.v} views${rx(p)}] ${cut(p.x, 240)}`)].join("\n");
+}
+
+const AR = /[؀-ۿ]/;
+const hash = (s: string) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return (h >>> 0).toString(36); };
+
+/** The finder's events, made safe: real posts behind each, Arabic words to search by, the place's point when known. */
+export function readFound(json: Record<string, unknown>, posts: MoodPost[], words: (s: string) => string = (s) => s): MoodEvent[] {
+  const out: MoodEvent[] = [];
+  for (const raw of Array.isArray(json.events) ? json.events.slice(0, 6) : []) {
+    const o = raw as { h?: unknown; place?: unknown; area?: unknown; items?: unknown; terms?: unknown };
+    const seed = (Array.isArray(o.items) ? o.items : []).map((i) => posts[Number(i)]).filter((p): p is MoodPost => !!p);
+    const h = typeof o.h === "string" ? o.h.trim() : "";
+    if (!h || !seed.length || (o.area !== "gaza" && o.area !== "js")) continue;
+    const place = typeof o.place === "string" ? o.place.trim() : "";
+    const terms = (Array.isArray(o.terms) ? o.terms : []).map(String).map((t) => t.trim()).filter((t) => AR.test(t) && t.length <= 30 && !/^(?:غزة|قطاع غزة|الضفة|الضفة الغربية)$/.test(t)).slice(0, 2);
+    const at = seed.map((p) => p.at).sort()[0];
+    const pt = placeAt(place);
+    const score = Math.round(seed.reduce((a, p) => a + stirOf(p), 0));
+    out.push({ fp: `mood-${hash(`${o.area}|${place.toLowerCase()}|${at.slice(0, 13)}`)}`, at, headline: words(h), ...(place ? { place } : {}), ...(pt ?? {}), area: o.area, score, found: 1, terms, seed });
+  }
+  return out;
 }

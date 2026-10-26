@@ -9355,9 +9355,23 @@ function tlDecorate(el, items) {
     b.classList.add('tl-dot');
     if (it.now) b.classList.add('tl-isnow');
     if (it.when) b.insertAdjacentHTML('afterbegin', `<small class="tl-yr">${escapeHtml(it.when)}</small>`);
+    // A short name for the phone's row, so the next eras show beside it (user, 27 Oct).
+    const nm = b.querySelector('.pg-name');
+    const short = tlShort(it.title);
+    if (nm && short !== it.title) nm.insertAdjacentHTML('afterend', `<span class="pg-short">${escapeHtml(short)}</span>`);
   });
   // An era asked for in the address: the panel opens once the page has settled (readTlHash).
   if (tlJump.slug && !tlJump.wait) { tlJump.wait = true; setTimeout(() => { tlJump.wait = false; openTimelinePanel(); }, 400); }
+}
+/** An era's name cut for a phone: before its colon, or its first words ("The ground operation in northern…"). */
+function tlShort(t) {
+  const s = String(t || '').trim();
+  const head = s.split(/:\s/)[0];
+  if (head.length <= 26) return head;
+  let out = '';
+  for (const w of head.split(/\s+/)) { if ((out + ' ' + w).trim().length > 24) break; out = (out + ' ' + w).trim(); }
+  while (/\s(?:and|of|in|the|a|on|to|at|for)$/i.test(out)) out = out.replace(/\s+\S+$/, '');
+  return `${out.replace(/,$/, '')}…`;
 }
 /** The first year in an era's dates ("July 2015 – May 2018" → 2015). */
 const tlYear = (s) => { const m = /\b(1[89]|20)\d{2}\b/.exec(String(s || '')); return m ? m[0] : ''; };

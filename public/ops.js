@@ -377,7 +377,18 @@
     const h = isPhone() ? 0 : !S.dock ? dock.offsetHeight : Math.min(dock.offsetHeight, Math.round(mapWrap.clientHeight * (SZ.dh ? 0.75 : 0.4)));
     mapWrap.style.setProperty('--dock-h', h + 'px');
     const m = getMap();
-    if (m) try { m.invalidateSize({ pan: false }); } catch (e) { /* not yet */ }
+    if (m) try {
+      // A panel opened or closed keeps the map on what it showed (user, 27 Oct: the area slid under the opened
+      // panel): the whole area stays whole, else the same middle stays in the middle.
+      const was = m.getSize(), c = m.getCenter(), b = areaB();
+      const whole = !!b && m.getBounds().contains(L.latLngBounds(b));
+      m.invalidateSize({ pan: false });
+      const now = m.getSize();
+      if (was.x && was.y && (was.x !== now.x || was.y !== now.y)) {
+        if (whole && !m.getBounds().contains(L.latLngBounds(b))) m.fitBounds(b, { padding: [8, 8], animate: false });
+        else m.setView(c, m.getZoom(), { animate: false });
+      }
+    } catch (e) { /* not yet */ }
   }
   /* On a wide screen the side panels and the strip under the map are as wide or as tall as the reader drags them
      (user, 21 Oct); a double-click on a handle puts it back. Kept per browser (SZ). */

@@ -11,6 +11,7 @@
 import { gazaLeadBonus } from "./desk/gaza-sourcing.ts";
 import { refreshGazaBrief } from "./desk/gaza-brief.ts";
 import { refreshIdfArea } from "./gaza-line.server.ts";
+import { runMood } from "./gaza-mood.server.ts";
 import { GAZA_SEARCHES, GAZA_TG, GAZA_X, WAFA_SITE } from "./desk/gaza-sources.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
 import { runGateAudit, setYemenGate } from "./desk/gate-audit.ts";
@@ -342,6 +343,8 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
   void refreshGazaBrief(store).catch((err) => console.error("[gaza-brief]", err instanceof Error ? err.message : err));
   // The IDF-held area as the mapping projects publish it, every 6 hours (gaza-line.server.ts).
   void refreshIdfArea(store).catch((err) => console.error("[gaza-line]", err instanceof Error ? err.message : err));
+  // The mood after the big events (gaza-mood.server.ts), every 15 minutes; it must never cost the cycle.
+  void runMood(store).catch((err) => console.error("[mood]", err instanceof Error ? err.message : err));
   // The gates' daily check, all three desks (gate-audit.ts): once a day, or now when asked (json:gate-audit-now).
   setYemenGate(WAR_ONLY);
   void (async () => {

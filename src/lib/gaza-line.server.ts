@@ -10,6 +10,7 @@
  */
 
 import { areaKm2, GAZA_KM2, heldShareIn } from "./desk/gaza-line.ts";
+import { gazaLeanOf } from "./desk/gaza-sources.ts";
 import type { getStore } from "./desk/store.ts";
 
 export const GAZA_AREA_KEY = "gaza:idf-area";
@@ -107,6 +108,8 @@ async function readReported(store: Awaited<ReturnType<typeof getStore>>, now: nu
   const since = new Date(now - 60 * 86400_000).toISOString();
   const { reports } = await store.recentDesk(400, undefined, { desk: "gaza", reports: true, events: false, since });
   for (const r of reports) {
+    // Israel's own figure, from Israeli sources (user, 26 Oct: "look up statements of israelis"), not the UN's or Hamas's.
+    if (gazaLeanOf(String(r.source ?? "")) !== "israel") continue;
     const text = `${r.summary ?? ""} ${r.body ?? ""}`;
     const share = heldShareIn(text);
     if (share != null) return { share, by: String(r.source ?? ""), url: String(r.url ?? ""), asOf: String(r.at ?? "").slice(0, 10), text: String(r.summary ?? "") };

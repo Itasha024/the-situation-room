@@ -99,6 +99,14 @@ const EVENT_SVG = {
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 3h3.2v7.6h8.2V7.4L21 12l-5.6 4.6v-3.2H7.2V21H4zm-1 18.4h18V23H3z"/></svg>',
 };
 
+// The Gaza desk's other kinds (26 Oct): a crosshair for gunfire, handcuffs for a raid or arrest, a cracked house for a
+// demolition, a flame for arson and damage, an impact burst for an assault, a blade for an attack.
+EVENT_SVG.gunfire = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 1.8v5M12 17.2v5M1.8 12h5M17.2 12h5"/></g><circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg>';
+EVENT_SVG.raid = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="7" cy="15" r="4.6"/><circle cx="17" cy="15" r="4.6"/><path d="M7 10.4V7.5a2.5 2.5 0 0 1 2.5-2.5h5A2.5 2.5 0 0 1 17 7.5v2.9" stroke-linecap="round"/></g></svg>';
+EVENT_SVG.demolition = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5 2 11h2.6v10.5h6.2l-1.3-3.6 2.4-2.6-1.6-3.3 2.6-2.5L11.6 21.5h7.8V11H22z"/></svg>';
+EVENT_SVG.property = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.6 1.5c.6 3.3-1.2 5-2.8 6.8C8.1 10.2 6 12.3 6 15.5A6 6 0 0 0 18 15.5c0-2.4-1-4.2-2.1-5.6.1 1.6-.5 2.9-1.6 3.6.4-3.8-.6-8.8-1.7-12zM12 21a3 3 0 0 1-3-3c0-1.8 1.4-2.8 2.4-4 .2 1.3 1 2 1.8 2.6.9.6 1.8 1.2 1.8 2.4a3 3 0 0 1-3 2z"/></svg>';
+EVENT_SVG.assault = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 1.5 2.2 5.6 5.5-2.6-2.6 5.5 5.4 2-5.4 2 2.6 5.5-5.5-2.6L12 22.5l-2.2-5.6-5.5 2.6 2.6-5.5-5.4-2 5.4-2-2.6-5.5 5.5 2.6z"/></svg>';
+EVENT_SVG.attack = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 2.4 10.4 10.3l3.3 3.3 7.9-11.2zM9.3 11.4l-1.6 1.6 1.2 1.2-5.6 5.6 1.8 1.8 5.6-5.6 1.2 1.2 1.6-1.6z"/></svg>';
 // A funeral (the Gaza desk): a candle.
 EVENT_SVG.funeral = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><path d="M12 1.5c1.9 2.2 2.6 3.8 2.6 5.1a2.6 2.6 0 0 1-5.2 0c0-1.3.7-2.9 2.6-5.1z"/><rect x="9" y="10" width="6" height="10.5" rx="1"/><rect x="6" y="20.5" width="12" height="2" rx="1"/></g></svg>';
 // A nuclear site hit (the Iran war): the trefoil.
@@ -233,17 +241,41 @@ const yemenInk = (ev) => YEMEN_PIN_SIDES().find(([k]) => k === yemenSideOf(ev))[
 /* What happened on the Iran map: the researched pins carry it (map-pack.cjs), the live ones are read the same way. */
 const IRAN_KINDS = ['strike', 'combat', 'vessel', 'port', 'nuclear'];
 // The Gaza – Judea & Samaria desk has no energy sites or nuclear file on its map (23 Oct).
-const GAZA_KINDS = ['strike', 'combat', 'funeral', 'vessel'];
+/*
+ * The Gaza desk's kinds of event (user, 26 Oct: "the clash type … doesn't represent the wide variety of pins under it"):
+ * what was done, told apart; who did it is the pin's colour. The same words as scripts/gaza-research/pins-build.mts gazaKindOf.
+ */
+const GAZA_KINDS = ['strike', 'gunfire', 'raid', 'demolition', 'property', 'assault', 'attack', 'combat', 'funeral', 'vessel'];
 // A funeral: the Gaza desk pins them (user, 23 Oct).
 const FUNERAL_RE = /\b(?:funerals?|mourners|burial|buried|laid to rest)\b/i;
+const GAZA_KIND_RES = [
+  ['funeral', FUNERAL_RE],
+  ['vessel', /\b(?:fishing boats?|fishermen|fisherman|gunboats?|navy|naval|at sea|off the coast)\b/i],
+  ['attack', /\b(?:stab(?:s|bed|bing|bings)?|rams|ramm(?:ed|ing|ings)|car-ramming|shooting attack|terror attack|explosive devices?|IEDs?|roadside bomb|car bomb|bombs? (?:was|were)? ?(?:planted|thrown|hurled|detonated)|rockets? (?:was |were )?(?:fired|launched)|rocket fire|mortars? (?:was |were )?(?:fired|launched)|mortar fire|firebombs?|molotov\w*|hand grenades?|grenade attack|(?:threw|hurled|throws|hurls) (?:an? )?(?:grenade|explosive)|(?:opened|open|opens) fire (?:on|at|toward) (?:troops|soldiers|forces|an? Israeli|Israelis|a checkpoint|a bus|cars|vehicles|a car)|attack(?:ed|s)? (?:on )?(?:troops|soldiers|Israeli (?:forces|vehicles|soldiers|troops|citizens|civilians)|an army post|a checkpoint)|ambush\w*)\b/i],
+  ['strike', /\b(?:air ?strikes?|airstrikes?|drones?|quadcopters?|shell(?:s|ed|ing)?|artillery|tank (?:fire|shells?|rounds?)|missiles?|warplanes?|aircraft|helicopters?|strikes?|struck|bombard\w*|bombing)\b/i],
+  ['demolition', /\b(?:demolish\w*|bl(?:ow|ows|ew|own) up|blow(?:s|n)? up (?:\w+ )?(?:homes?|houses?|buildings?)|demolition\w*|bulldoz\w*|raz(?:e|ed|es|ing)|blew up (?:a |the |two |several )?(?:homes?|houses?|buildings?)|blow up (?:a |the )?(?:homes?|houses?|buildings?)|levell?(?:ed|ing))\b/i],
+  ['property', /\b(?:torch\w*|damag\w*|wreck\w*|slogans|spray\w* (?:slogans|graffiti)|set up (?:an? |the )?(?:new )?(?:house|structure|tent|caravan|outpost|road|gate)|put up|gates?|set (?:fire|alight)|set (?:\w+ ){1,3}(?:on fire|ablaze|alight)|attack\w* (?:farmland|land|crops|fields|olive groves)|cattle|cows|crops|graz\w*|sets fire|arson|burn(?:s|ed|t|ing)?|vandali[sz]\w*|uproot\w*|cut down|chop\w* down|stole|steal\w*|theft|loot\w*|livestock|sheep|goats|olive trees|graffiti|outposts?|smash\w*|seiz(?:e|ed|es|ing) (?:land|a |the |their )|take over|took over|fence|caravans?)\b/i],
+  ['assault', /\b(?:beat(?:s|en|ing)?|assault\w*|extremists? attack\w*|attacks? by (?:Israeli )?extremists|attack(?:s|ed|ing)? (?:shepherds|farmers|residents|olive pickers|pickers|a family|families|homes?|a home|houses?|villagers|a (?:man|woman|boy|girl|shepherd|farmer|youth|journalist)|journalists|activists|people|worshippers|a school)|ston(?:e|es|ed|ing)|pepper[- ]spray\w*|ran over|run over|runs over|abduct\w*|kidnap\w*|chas(?:e|ed|es|ing)|harass\w*|(?:drive|drives|drove|driving) \w+ off|attack\w* (?:\w+ )?(?:vehicles|cars|workers))\b/i],
+  ['gunfire', /\b(?:shot|shots|vehicles fire|shoot\w*|gunfire|machine[- ]?guns?|heavy fire|fire heavily|Israeli fire|(?:fire|fires|fired|firing) (?:machine guns?|heavily|shots|flares|toward|towards)|killed (?:an?|two|three|four|five|\d+) (?:armed )?(?:operatives?|gunm[ae]n|Palestinians?|suspects?) who|live (?:fire|rounds|ammunition)|sniper\w*|bullets?|opened fire|open fire|opens fire|fire[sd]? (?:at|on|toward|towards)|by (?:Israeli )?fire|(?:IDF|army|vehicle|tank|naval) fire|(?:troops'?|tanks?|forces'?) fire|killed by (?:Israeli )?(?:troops|forces)|grenades?|gunshot)\b/i],
+  ['raid', /\b(?:raid\w*|storm\w*|seal\w*|surround\w*|operations?|block\w*|disrupt\w*|prevent\w*|expel\w*|arrest\w*|detain\w*|detention|incursions?|search\w*|clos(?:e|ed|es|ing|ure)|checkpoints?|siege|besieg\w*|curfew|summon\w*|enter(?:s|ed|ing)?|interrogat\w*|abduction|shut\w*|tear gas|gas|suffocat\w*|advanc\w*|dismantl\w*|(?:force|forces|forced|order|orders|ordered) (?:\w+ ){1,4}out)\b/i],
+  // Any other attack (on people, vehicles, workers): an assault, not a clash.
+  ['assault', /\battack\w*\b/i],
+  ['combat', /\b(?:clash\w*|confront\w*|exchange of fire|gunfights?|firefights?|fighting|militias?|clan)\b/i],
+];
+function gazaKindOf(text) {
+  for (const [k, re] of GAZA_KIND_RES) if (re.test(text)) return k;
+  return 'combat';
+}
 // A named nuclear site, not the town near it (user, 18 Oct); the same words as scripts/iran-research/pin-rules.cjs NUCLEAR_SITE.
 const IRAN_NUCLEAR_RE = /\bnuclear (?:site|facilit|plant|power|reactor|complex|installation)|\b(?:fordow|natanz|khondab|heavy[- ]water|enrichment|uranium|yellowcake|ardakan|saghand|IR-40|tehran research reactor|(?:bushehr|arak|isfahan|karaj) (?:nuclear|reactor|power plant|npp|uranium|ucf))\b|محطة بوشهر النووية|نطنز|فوردو|نیروگاه اتمی بوشهر/i;
 const IRAN_ENERGY_RE = /aramco|refiner|oil (?:field|facilit|terminal|depot|install)|fuel (?:depot|tank|storage)|storage tank|pipeline|power (?:station|plant)|gas (?:field|plant|facilit)|petrochem|\blng\b|desalination|electricity (?:station|grid)|south pars|kharg|ras tanura|abqaiq/i;
 const IRAN_GROUND_RE = /\b(?:artillery|shelling|tanks? fire|sniper|clash|clashes|ground (?:assault|incursion|raid)|gunfight|firefight)\b/i;
 function iranKindOf(ev) {
-  if (typeof ev.kind === 'number') return (ev.desk === 'gaza' ? GAZA_KINDS : IRAN_KINDS)[ev.kind] || 'strike';
+  // The researched Gaza pins carry their kind by name (pins-build.mts).
+  if (typeof ev.kind === 'string' && GAZA_KINDS.includes(ev.kind)) return ev.kind;
+  if (typeof ev.kind === 'number') return (ev.desk === 'gaza' ? ['strike', 'combat', 'funeral', 'vessel'] : IRAN_KINDS)[ev.kind] || 'strike';
   const s = `${ev.label || ''} ${ev.place || ''}`;
-  if (ev.desk === 'gaza' || deskOf().id === 'gaza') { if (FUNERAL_RE.test(ev.label || '')) return 'funeral'; }
+  if (ev.desk === 'gaza' || deskOf().id === 'gaza') return ev.type === 'vessel' || ev.sea ? 'vessel' : gazaKindOf(ev.label || '');
   if (IRAN_NUCLEAR_RE.test(s)) return 'nuclear';
   if (ev.type === 'port' || (IRAN_ENERGY_RE.test(s) && !/tanker/i.test(s))) return 'port';
   if (ev.type === 'vessel' || ev.sea) return 'vessel';
@@ -6448,24 +6480,27 @@ function renderTimeline(d) {
     const summary = (isNow && live ? live.summary : p.summary || p.mapNote || '').trim();
     const detail = (isNow && live ? live.detail : p.detail || (p.bullets || []).join(' ')).trim();
     const asOf = isNow && live && live.asOf ? new Date(live.asOf).toLocaleDateString(LOC, { day: 'numeric', month: 'short' }) : '';
-    return `<article class="phase-card${isNow ? ' now' : ''}">
-      <div class="phase-head">
+    // The era's dates first and large, its place in the run of eras, Now marked (user, 26 Oct: "the timeline too").
+    return `<article class="phase-card tl-card${isNow ? ' now' : ''}">
+      <div class="phase-head tl-head">
         <strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong>
-        <span class="muted">${escapeHtml(phaseDates(p, isNow))}</span>
+        <span class="tl-when">${isNow ? '<span class="now-tag tl-now2">Now</span>' : ''}<span class="tl-dates">${escapeHtml(phaseDates(p, isNow))}</span><span class="tl-n">${i + 1} / ${phases.length}</span></span>
       </div>
       <p class="phase-sum">${escapeHtml(summary)}</p>
       ${detail ? `<div class="full">
         <p>${escapeHtml(detail)}</p>
-        ${p.mapNote && !isNow ? `<p class="muted">${T('On the map: {t}', { t: escapeHtml(p.mapNote) })}</p>` : ''}
-        <div class="srcs">${asOf ? `${T('Updated {t}', { t: escapeHtml(asOf) })}` : ''}${(p.sources || []).length ? `<details class="src-list"><summary>${T('Sources')} (${(p.sources || []).length})</summary><p>${sourceCreditsHtml(p.sources || [], '')}</p></details>` : ''}</div>
+        ${p.mapNote && !isNow ? `<p class="muted tl-map">${T('On the map: {t}', { t: escapeHtml(p.mapNote) })}</p>` : ''}
+        ${tlExplainers(p)}
+        <div class="srcs">${asOf ? `<span class="tl-upd">${T('Updated {t}', { t: escapeHtml(asOf) })}</span>` : ''}${(p.sources || []).length ? `<details class="src-list"><summary>${T('Sources')} (${(p.sources || []).length})</summary><p>${sourceCreditsHtml(p.sources || [], '')}</p></details>` : ''}</div>
       </div>
-      <button type="button" class="toggle-phase">Read more</button>` : ''}
+      <button type="button" class="toggle-phase">Read more</button>` : tlExplainers(p)}
     </article>`;
   });
   const idx = timelineIdx == null ? last : Math.min(timelineIdx, last);
   el.innerHTML = pagerHtml('timeline', slides, idx, phases.map((p, i) => (i === last ? T('Now: {t}', { t: T(p.title) }) : p.title)));
   // An open box left behind would keep the pager at its height: it closes.
   wirePager(el, idx, (i) => { timelineIdx = i; closeReadMore(el, '.phase-card', '.toggle-phase'); }, { wrap: false });
+  tlDecorate(el, phases.map((p, i) => ({ title: p.title, when: String(p.from || '').slice(0, 4) || tlYear(p.dates), now: i === last })));
   // The whole box opens and closes it, as a report card does; links keep their own click.
   el.querySelectorAll('.toggle-phase').forEach((btn) => {
     const card = btn.closest('.phase-card');
@@ -7658,6 +7693,7 @@ async function bootYemenDesk() {
   const el = document.getElementById('map');
   if (!el) return;
   try { loadDeskExplain(); } catch (e) { console.error(e); }
+  try { installTlHash(); } catch (e) { console.error(e); }
   if (deskOf().id !== 'yemen') return bootOtherDesk(el);
   try { installDeskPicker(); wireDeskGo(() => map); } catch (e) { console.error(e); }
   try { installMast(); } catch (e) { console.error(e); }
@@ -7869,6 +7905,8 @@ function useDeskSettings() {
   // Ground fighting is "Clashes" here (user, 23 Oct); the other kinds keep their names.
   IRAN_KIND_LABEL.combat = 'Clashes';
   IRAN_KIND_LABEL.funeral = 'Funerals';
+  // What was done, told apart (user, 26 Oct).
+  Object.assign(IRAN_KIND_LABEL, { strike: 'Strike / shelling', gunfire: 'Gunfire', raid: 'Raid / arrest', demolition: 'Demolition', property: 'Arson / vandalism / theft', assault: 'Assault', attack: 'Attack (stabbing, ramming, shooting, bomb)' });
   IRAN_GROUPS = Object.fromEntries(Object.keys(GAZA_GROUP_NAMES).map((k) => [k, k]));
   IRAN_GROUP_NAMES = GAZA_GROUP_NAMES;
   iranPins.on = Object.fromEntries(GAZA_PIN_SIDES.map(([k]) => [k, true]));
@@ -8215,7 +8253,7 @@ async function loadGazaPast() {
     if (!res.ok) return [];
     const d = await res.json();
     return (d.pins || []).map(([ymd, actor, lat, lng, kind, place, label, source, url, also], i) => ({
-      fp: `gr#${i}`, kind: typeof kind === 'number' ? kind : undefined, at: `${ymd}T12:00:00+03:00`, dayOnly: true, researched: true, noted: true, actor, type: 'strike', mapOnly: true,
+      fp: `gr#${i}`, kind: typeof kind === 'number' || typeof kind === 'string' ? kind : undefined, at: `${ymd}T12:00:00+03:00`, dayOnly: true, researched: true, noted: true, actor, type: 'strike', mapOnly: true,
       place: place || '', lat, lng, label: label || '', text: '', source: source || '', url: url || '', also: (also || []).map(([s, u]) => ({ source: s, url: u })), desk: 'gaza',
     }));
   } catch (e) { return []; }
@@ -8302,6 +8340,35 @@ function iranPopupHtml(ev) {
     ${anchors ? `<p class="pop-src">Source: ${anchors}${(ev.also || []).slice(0, 3).map((x) => ` · <a class="src-link" href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${escapeHtml(x.source)}</a>`).join('')}</p>` : ''}
     ${mediaBlock(ev.media, true)}`;
 }
+/*
+ * The Gaza map's crowded spots (user, 26 Oct: since 10 Oct "it shows pins from gaza outside gaza and … outside j&s …
+ * find a solution that still shows all pins, dont group them"): the spiral is ten times tighter than the Iran map's, a
+ * town's thousand pins a few km across, and a spot that falls outside the part its pin belongs to (Gaza, or Judea and
+ * Samaria) is skipped for the next one in, so every pin is drawn on its own inside its part.
+ */
+const gazaRegions = { asked: false, geoms: null };
+async function loadGazaRegions() {
+  gazaRegions.asked = true;
+  try {
+    const r = await fetch('/iran-adm1.geojson');
+    const j = r.ok ? await r.json() : null;
+    gazaRegions.geoms = ((j && j.features) || []).filter((f) => /^(?:Gaza|Judea and Samaria)$/.test(f.properties && f.properties.n)).map((f) => f.geometry);
+    if (gazaRegions.geoms.length) { iranPins.drawn = ''; drawIranPins(); }
+  } catch (e) { /* the plain spiral stays */ }
+}
+function gazaSpot(ev, n, atSpot, k) {
+  const geoms = gazaRegions.geoms;
+  const home = geoms && geoms.find((g) => pointInGeometry(ev.lng, ev.lat, g));
+  // The spiral's next free turn for this spot (kept per spot, so skipped turns are not used twice).
+  let j = atSpot.get(`${k}#j`) || n;
+  for (let tries = 0; tries < 400; tries++, j++) {
+    const a = j * 2.39996, r = 0.0011 * Math.sqrt(j);
+    const p = [ev.lat + Math.sin(a) * r, ev.lng + Math.cos(a) * r * 1.17];
+    if (!home || pointInGeometry(p[1], p[0], home)) { atSpot.set(`${k}#j`, j + 1); return p; }
+  }
+  atSpot.set(`${k}#j`, j);
+  return [ev.lat, ev.lng];
+}
 function drawIranPins() {
   renderIranLegend();
   if (iranPins.countries) { try { iranPins.countries.setStyle(iranCountryStyle); } catch (e) {} }
@@ -8327,11 +8394,13 @@ function drawIranPins() {
   if (many && !iranPins.canvas) iranPins.canvas = L.canvas({ padding: 0.3 });
   // Pins on one spot are set round it, every pin on its own (user, 17 Oct), as on the Yemen map.
   const atSpot = new Map();
+  const gaza = deskOf().id === 'gaza';
+  if (gaza && !gazaRegions.asked) loadGazaRegions();
   for (const ev0 of kept) {
     const k = `${Math.round(ev0.lat * 100)},${Math.round(ev0.lng * 100)}`;
     const n = atSpot.get(k) || 0;
     atSpot.set(k, n + 1);
-    const [lat, lng] = n ? jitter(ev0.lat, ev0.lng, n) : [ev0.lat, ev0.lng];
+    const [lat, lng] = !n ? [ev0.lat, ev0.lng] : gaza ? gazaSpot(ev0, n, atSpot, k) : jitter(ev0.lat, ev0.lng, n);
     const ev = n ? { ...ev0, lat, lng } : ev0;
     const ageH = (Date.now() - new Date(ev.at).getTime()) / 3600000;
     if (many) {
@@ -8360,16 +8429,19 @@ function drawIranPins() {
   }
   const chip = document.getElementById('map-chip');
   if (chip) {
-    const n = `${kept.length} attack${kept.length === 1 ? '' : 's'}`;
+    // The Gaza desk's pins are arrests, demolitions and the rest too: events, counted from its own start.
+    const word = deskOf().id === 'gaza' ? 'event' : 'attack';
+    const n = `${kept.length} ${word}${kept.length === 1 ? '' : 's'}`;
     const where = w.land && w.sea ? '' : w.sea ? ' at sea' : w.land ? ' on land' : '';
+    const start = fmtDay(IRAN_MAP_FROM);
     // The whole war's count only once its researched pins are in too (user, 17 Oct: a count that jumped).
     chip.textContent = !iranPins.past && !iranPins.day
-      ? (r ? `Loading the attacks of ${fmtDay(r.from)} to ${fmtDay(r.to)}…` : 'Loading the attacks since 28 Feb 2026…')
+      ? (r ? `Loading the ${word}s of ${fmtDay(r.from)} to ${fmtDay(r.to)}…` : `Loading the ${word}s since ${start}…`)
       : r
-      ? (kept.length ? `${n}${where} on the map, ${fmtDay(r.from)} to ${fmtDay(r.to)}` : `No attack${where} on the map, ${fmtDay(r.from)} to ${fmtDay(r.to)}`)
+      ? (kept.length ? `${n}${where} on the map, ${fmtDay(r.from)} to ${fmtDay(r.to)}` : `No ${word}${where} on the map, ${fmtDay(r.from)} to ${fmtDay(r.to)}`)
       : iranPins.day
-        ? (kept.length ? `${n}${where} on the map on ${fmtDay(iranPins.day)}` : `No attack${where} on the map on ${fmtDay(iranPins.day)}`)
-        : `${n}${where} on the map since 28 Feb 2026`;
+        ? (kept.length ? `${n}${where} on the map on ${fmtDay(iranPins.day)}` : `No ${word}${where} on the map on ${fmtDay(iranPins.day)}`)
+        : `${n}${where} on the map since ${start}`;
   }
   renderIranFeed();
 }
@@ -8949,10 +9021,13 @@ function gazaSets() {
     const i = s.boxes.findIndex((x) => x.title === b.title);
     if (i >= 0) s.boxes[i] = b; else s.boxes.unshift(b);
   }
-  const zone = iranBrief.b && iranBrief.b.idfArea && iranBrief.b.idfArea.zone;
+  // The newest figure: an Israeli source's report when newer than the last map (as the map's box shows it).
+  const ia = (iranBrief.b && iranBrief.b.idfArea) || {};
+  const rep = ia.reported, map0 = ia.held || ia.zone;
+  const zone = rep && (!map0 || String(rep.asOf) > String(map0.asOf)) ? { share: rep.share, url: rep.url, by: rep.by, asOf: rep.asOf, name: `"${rep.text}"`, said: true } : map0;
   if (zone && Number.isFinite(+zone.share)) {
     const s = setOf('dayafter', 'Day after');
-    const box = { type: 'stat', title: 'Gaza held by the IDF', unit: 'share of the Strip', value: { v: `${(+zone.share).toFixed(1)}%`, url: zone.url, src: zone.by, date: zone.asOf, k: 'off' }, caption: `${zone.name || 'the area behind the line'}, as last mapped (${fmtDay(zone.asOf)})` };
+    const box = { type: 'stat', title: 'Gaza held by the IDF', unit: 'share of the Strip', value: { v: `${+zone.share % 1 ? (+zone.share).toFixed(1) : +zone.share}%`, url: zone.url, src: zone.by, date: zone.asOf, k: zone.said ? 'unoff' : 'off' }, caption: zone.said ? `${zone.name} (${zone.by}, ${fmtDay(zone.asOf)})` : `${zone.name || 'the area behind the line'}, as last mapped (${fmtDay(zone.asOf)})` };
     const i = s.boxes.findIndex((x) => x.title === box.title);
     if (i >= 0) s.boxes[i] = box; else s.boxes.unshift(box);
   }
@@ -9010,8 +9085,35 @@ function renderDeskExplain(ex, id) {
     yemen: ["Who's who in Yemen, in diagrams", "The Houthis and the recognised government side by side, the council's members and the forces behind them, the STC, Islah and the rest, and who holds which part of the country."],
   };
   const g = GUIDE[id];
-  const guide = g ? `<article class="phase-card now ex-guide"><div class="phase-head"><strong>${escapeHtml(g[0])}</strong><span class="muted">as of today</span></div><p class="phase-sum">${escapeHtml(g[1])}</p><p><a class="x-desk" href="${href}">Open the full guide →</a></p></article>` : '';
-  const card = (p) => `<article class="phase-card ex-short"><div class="phase-head"><strong>${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates || '')}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><p><a class="x-desk" href="${href}#ex-${slug(p.title)}">Read in full →</a></p></article>`;
+  // The guide's card stands out (user, 26 Oct: "much more nice to look at"): a small chart of the guide's diagrams, and
+  // links to its main parts (the ids on the guide pages).
+  const PARTS = {
+    gaza: [['pg-plo', 'The PLO'], ['pg-pa', 'The PA'], ['pg-security', 'Security services'], ['pg-fatah', 'Fatah'], ['pg-hamas', 'Hamas'], ['pg-elections', 'Elections']],
+    iran: [['pg-power', 'Who holds power'], ['pg-axis', 'The axis'], ['pg-words', 'Words']],
+    yemen: [['pg-camps', 'The two camps'], ['pg-hold', 'Who holds what'], ['pg-words', 'Words']],
+  };
+  const [gc] = exCat("Who's who");
+  const guide = g ? `<article class="phase-card ex-card ex-guide" style="--ex-c:${gc}">
+    <a class="ex-g-fig" href="${href}" tabindex="-1" aria-hidden="true">${exOrgSvg(id)}</a>
+    <div class="ex-top"><span class="ex-ic">${exIcon('people')}</span><span class="ex-catname">The full guide</span><span class="ex-date">as of today</span></div>
+    <h4 class="ex-title">${escapeHtml(g[0])}</h4>
+    <p class="phase-sum">${escapeHtml(g[1])}</p>
+    ${(PARTS[id] || []).length ? `<div class="ex-xref">${PARTS[id].map(([a, l]) => `<a class="ex-chip" href="${href}#${a}">${escapeHtml(l)}</a>`).join('')}</div>` : ''}
+    <a class="ex-read ex-open" href="${href}">Open the full guide <span aria-hidden="true">→</span></a>
+  </article>` : '';
+  // A card: its category's colour and icon, the dates as a chip, the summary, the Timeline's eras it leads to (the
+  // desk opens its Timeline there, installTlHash), and the way to the full text.
+  const card = (p) => {
+    const [c, ic] = exCat(p.cat || 'Background');
+    const tl = Array.isArray(p.timeline) ? p.timeline.filter((t) => typeof t === 'string' && t) : [];
+    return `<article class="phase-card ex-short ex-card" style="--ex-c:${c}">
+      <div class="ex-top"><span class="ex-ic">${exIcon(ic)}</span><span class="ex-catname">${escapeHtml(p.cat || 'Background')}</span>${p.dates ? `<span class="ex-date">${escapeHtml(p.dates)}</span>` : ''}</div>
+      <h4 class="ex-title">${escapeHtml(p.title)}</h4>
+      <p class="phase-sum">${escapeHtml(p.sum)}</p>
+      ${tl.length ? `<div class="ex-xref"><span class="ex-xh">On the timeline</span>${tl.map((t) => `<a class="ex-chip ex-chip-tl" href="#tl=${xSlug(t)}">${exIcon('clock')}<span>${escapeHtml(t)}</span></a>`).join('')}</div>` : ''}
+      <a class="ex-read" href="${href}#ex-${slug(p.title)}">Read in full <span aria-hidden="true">→</span></a>
+    </article>`;
+  };
   // In categories, as the numbers are (user, 26 Oct: "divide categories in explainers not one long thing").
   const cats = [];
   const catOf = (name) => cats.find((c) => c.name === name) || (cats.push({ name, cards: [] }), cats[cats.length - 1]);
@@ -9019,10 +9121,135 @@ function renderDeskExplain(ex, id) {
   for (const p of ex.items || []) catOf(p.cat || 'Background').cards.push(card(p));
   if (!cats.length) return;
   const cat = cats.find((c) => c.name === deskExplain[`${id}:cat`]) || cats[0];
-  const sw = `<div class="num-cat" role="group" aria-label="Explainers to show">${cats.map((c) => `<button type="button" data-cat="${escapeHtml(c.name)}" aria-pressed="${c === cat}"${c === cat ? ' class="on"' : ''}>${escapeHtml(c.name)}</button>`).join('')}</div>`;
-  el.innerHTML = `${sw}<div class="pager pager-timeline ex-list">${cat.cards.join('')}${cat.cards.includes(guide) ? '' : `<p class="ex-all"><a class="x-desk" href="${href}#cat-${slug(cat.name)}">${escapeHtml(cat.name)} in the full guide →</a></p>`}</div>`;
+  const sw = `<div class="num-cat ex-cats" role="group" aria-label="Explainers to show">${cats.map((c) => { const [cc, ic] = exCat(c.name); return `<button type="button" data-cat="${escapeHtml(c.name)}" style="--ex-c:${cc}" aria-pressed="${c === cat}"${c === cat ? ' class="on"' : ''}>${exIcon(ic)}<span>${escapeHtml(c.name)}</span></button>`; }).join('')}</div>`;
+  el.innerHTML = `${sw}<div class="pager pager-timeline ex-list">${cat.cards.join('')}${cat.cards.includes(guide) ? '' : `<p class="ex-all"><a class="ex-read ex-all-a" href="${href}#cat-${slug(cat.name)}">${escapeHtml(cat.name)} in the full guide <span aria-hidden="true">→</span></a></p>`}</div>`;
   el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { deskExplain[`${id}:cat`] = b.dataset.cat; renderDeskExplain(ex, id); }));
 }
+/*
+ * The explainers' categories, each a colour and an icon (user, 26 Oct: "clear colours … professional"); the guide pages
+ * use the same (src/components/guide-kit.tsx CAT_STYLE).
+ */
+const EX_CAT = {
+  "Who's who": ['#e0a43c', 'people'],
+  History: ['#9b7ff0', 'hourglass'],
+  Military: ['#e0564b', 'shield'],
+  Economy: ['#3fae7a', 'coins'],
+  'Economy and society': ['#3fae7a', 'coins'],
+  'The war at sea': ['#3b9edd', 'anchor'],
+  'Land and people': ['#2bb3a3', 'map'],
+  Politics: ['#d06aa0', 'ballot'],
+  Background: ['#8a939d', 'book'],
+};
+const exCat = (c) => EX_CAT[c] || EX_CAT.Background;
+const EX_ICON = {
+  people: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><circle cx="16.5" cy="7.5" r="2.5"/><path d="M15.6 12.6c2.6-.2 4.5 1.4 4.9 4.4"/>',
+  hourglass: '<path d="M6.5 3.5h11M6.5 20.5h11"/><path d="M7.5 3.5c0 5 9 5 9 8.5s-9 3.5-9 8.5M16.5 3.5c0 5-9 5-9 8.5s9 3.5 9 8.5"/>',
+  shield: '<path d="M12 3.5 19 6v5.5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/>',
+  coins: '<ellipse cx="9" cy="7" rx="5.5" ry="2.5"/><path d="M3.5 7v4c0 1.4 2.5 2.5 5.5 2.5M3.5 11v4c0 1.4 2.5 2.5 5.5 2.5"/><ellipse cx="15" cy="13" rx="5.5" ry="2.5"/><path d="M9.5 13v4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5v-4"/>',
+  anchor: '<circle cx="12" cy="5.5" r="2"/><path d="M12 7.5v13M8 11h8M4.5 13.5c0 4 3.4 7 7.5 7s7.5-3 7.5-7"/>',
+  map: '<path d="M3.5 6.5 9 4l6 2.5 5.5-2.5v13.5L15 20l-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/>',
+  ballot: '<rect x="4.5" y="10.5" width="15" height="9.5" rx="1"/><path d="M8.5 10.5 10.5 4h5l-1.5 6.5M8 15.5h8"/>',
+  book: '<path d="M4 5.5c2.7-1 5.3-1 8 .8v13c-2.7-1.8-5.3-1.8-8-.8z"/><path d="M20 5.5c-2.7-1-5.3-1-8 .8v13c2.7-1.8 5.3-1.8 8-.8z"/>',
+  clock: '<path d="M6 4v16"/><circle cx="6" cy="7.5" r="1.6" fill="currentColor"/><circle cx="6" cy="14" r="1.6" fill="currentColor"/><path d="M10 7.5h9M10 14h7M10 19h5"/>',
+};
+function exIcon(n) {
+  return `<svg class="ex-svg" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${EX_ICON[n] || EX_ICON.book}</g></svg>`;
+}
+/** A title as the ids are made: lower case, words joined by dashes (guide-kit.tsx exId without its "ex-"). */
+const xSlug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+/** The guide's card's small chart: the desk's main bodies in the guide's colours, top to bottom. */
+function exOrgSvg(id) {
+  const ORG = {
+    gaza: [['Abbas: PLO · PA · Fatah', '#eab308'], [['PLO', '#eab308'], ['PA', '#f59e0b'], ['Security', '#3b82f6']], [['Fatah', '#facc15'], ['Hamas', '#16a34a'], ['Isl. Jihad', '#0f9488'], ['The left', '#ef4444']]],
+    iran: [['Supreme Leader', '#eab308'], [['Councils', '#b7791f'], ['IRGC · Army', '#16a34a'], ['Elected', '#3b82f6']], [['Hezbollah', '#facc15'], ['Houthis', '#f97316'], ['Iraq', '#0ea5e9'], ['Hamas · PIJ', '#22c55e']]],
+    yemen: [['Two camps', '#94a3b8'], [['Houthis', '#e8761f'], ['Government', '#22c55e'], ['STC · south', '#38bdf8']], [['Iran', '#eab308'], ['Saudi', '#15803d'], ['UAE', '#ef4444'], ['Oman', '#94a3b8']]],
+  };
+  const o = ORG[id];
+  if (!o) return '';
+  // Boxes in HTML, not a drawing scaled down, so the names stay readable in a narrow panel; the rows wrap.
+  const box = ([t, c]) => `<span style="--eo:${c}">${escapeHtml(t)}</span>`;
+  return `<span class="ex-org"><span class="eo-row eo-top">${box(o[0])}</span><i class="eo-ln"></i><span class="eo-row">${o[1].map(box).join('')}</span><i class="eo-ln"></i><span class="eo-row eo-sm">${o[2].map(box).join('')}</span></span>`;
+}
+/*
+ * "#tl=<era>" (an explainer's link to the Timeline's era, on this page or from the guide): the Timeline tab opens at
+ * that era; "#tl" or "#tl=now" at the latest. The era is the slug of its title (xSlug).
+ */
+const tlJump = { slug: null, tries: 0 };
+function installTlHash() {
+  if (installTlHash.on) return;
+  installTlHash.on = true;
+  addEventListener('hashchange', readTlHash);
+  readTlHash();
+}
+function readTlHash() {
+  const m = /^#tl(?:=([^&]*))?$/.exec(location.hash || '');
+  if (!m) return;
+  tlJump.slug = decodeURIComponent(m[1] || 'now') || 'now';
+  tlJump.tries = 0;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* the hash stays */ }
+  // Opening the panel before the page has drawn its map would hide the map while it is made (on a phone a hidden map
+  // has no size): the Timeline's own drawing opens it then (tlDecorate).
+  const el = document.getElementById('iran-timeline') || document.getElementById('timeline');
+  if (el && el._tlSlugs) openTimelinePanel();
+}
+/** The Timeline in view: its tab in the map view (the rail's button, or the phone's tab), else its section scrolled to. */
+function openTimelinePanel() {
+  const wrap = document.getElementById('timeline-wrap');
+  if (!wrap) return;
+  const ops = document.documentElement.dataset.view === 'ops';
+  const phone = document.querySelector('.ops-ptabs [data-ptab="timeline-wrap"]');
+  const nav = document.querySelector('.ops-nav [data-tab="timeline-wrap"]');
+  // The map view builds its panels after the page: try again for a few seconds.
+  if (ops && !phone && !nav) { if (tlJump.tries++ < 25) setTimeout(openTimelinePanel, 200); return; }
+  if (phone && phone.offsetParent) { if (phone.getAttribute('aria-selected') !== 'true') phone.click(); }
+  else if (nav) { if (nav.getAttribute('aria-pressed') !== 'true') nav.click(); }
+  else wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  applyTlJump();
+}
+/** The era asked for, once the Timeline is drawn (the renderers call this again after drawing it). */
+function applyTlJump() {
+  if (!tlJump.slug) return;
+  const el = document.getElementById('iran-timeline') || document.getElementById('timeline');
+  const slugs = el && el._tlSlugs;
+  if (!slugs || !slugs.length) return;
+  const s = tlJump.slug;
+  let i = s === 'now' ? slugs.length - 1 : slugs.indexOf(s);
+  if (i < 0) i = slugs.findIndex((x) => x.startsWith(s) || s.startsWith(x));
+  tlJump.slug = null;
+  if (i < 0) return;
+  const dot = el.querySelectorAll('.pg-dots button')[i];
+  if (dot && !dot.classList.contains('on')) dot.click();
+  if (dot) try { dot.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) { /* old browser */ }
+  const card = el.querySelectorAll('.pg-slide')[i];
+  if (card) { card.classList.remove('tl-flash'); void card.offsetWidth; card.classList.add('tl-flash'); }
+}
+/**
+ * A Timeline drawn: each era's start in the side rail under its name, the latest marked, the eras' slugs kept for
+ * "#tl=" (items: { title, when, now }).
+ */
+function tlDecorate(el, items) {
+  el._tlSlugs = items.map((x) => xSlug(x.title));
+  el.querySelectorAll('.pg-dots button').forEach((b, i) => {
+    const it = items[i];
+    if (!it) return;
+    b.classList.add('tl-dot');
+    if (it.now) b.classList.add('tl-isnow');
+    if (it.when) b.insertAdjacentHTML('afterbegin', `<small class="tl-yr">${escapeHtml(it.when)}</small>`);
+  });
+  // An era asked for in the address: the panel opens once the page has settled (readTlHash).
+  if (tlJump.slug && !tlJump.wait) { tlJump.wait = true; setTimeout(() => { tlJump.wait = false; openTimelinePanel(); }, 400); }
+}
+/** The first year in an era's dates ("July 2015 – May 2018" → 2015). */
+const tlYear = (s) => { const m = /\b(1[89]|20)\d{2}\b/.exec(String(s || '')); return m ? m[0] : ''; };
+/** An era's links to the explainers it leads to, on the desk's guide page. */
+function tlExplainers(p) {
+  const list = Array.isArray(p && p.explainers) ? p.explainers.filter((t) => typeof t === 'string' && t) : [];
+  if (!list.length) return '';
+  const href = `${deskOf().href}/guide`;
+  return `<div class="ex-xref tl-xref"><span class="ex-xh">Explainers</span>${list.map((t) => `<a class="ex-chip ex-chip-ex" href="${href}#ex-${xSlug(t)}">${exIcon('book')}<span>${escapeHtml(t)}</span></a>`).join('')}</div>`;
+}
+/** The domain a source is on, beside its name. */
+const srcHost = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
 /*
  * A long box shows its first part and "Read more", on a PC and a phone (user, 11 Oct): measured
  * when it is the one shown, as hidden slides have no height. Boxes with their own toggle keep it.
@@ -9053,18 +9280,21 @@ function renderIranTimeline() {
   // The live rewrite of the Now box (every 36 hours) when there is one.
   const live = iranBrief.b && iranBrief.b.timelineNow;
   const now = live && live.summary ? { ...t.now, sum: live.summary, detail: live.detail, asOf: live.asOf } : t.now;
-  const card = (p, isNow) => {
+  const total = t.phases.length + 1;
+  const card = (p, isNow, i) => {
     const paras = String(p.detail || p.sum).split(/\n\n+/).map((x) => `<p>${escapeHtml(x).replace(/^([^:.]{3,40}):/, '<strong>$1:</strong>')}</p>`).join('');
     // The sources in a list that opens on a click (user, 12 Oct: all of them at once was too much).
     const n = (p.sources || []).length;
-    const links = (p.sources || []).map((s) => `<li><a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a></li>`).join('');
-    return `<article class="phase-card${isNow ? ' now' : ''} expandable"><div class="phase-head"><strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong><span class="muted">${escapeHtml(p.dates)}</span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}<div class="srcs">${isNow && p.asOf ? `Updated ${escapeHtml(fmtDay(String(p.asOf).slice(0, 10)))}` : ''}${n ? `<details class="src-list"><summary>Sources (${n})</summary><ul>${links}</ul></details>` : ''}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
+    const links = (p.sources || []).map((s) => `<li><a class="src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.name)}</a>${srcHost(s.url) ? ` <small class="src-host">${escapeHtml(srcHost(s.url))}</small>` : ''}</li>`).join('');
+    // The era's dates first and large, its place in the run of eras, Now marked (user, 26 Oct: "the timeline too").
+    return `<article class="phase-card tl-card${isNow ? ' now' : ''} expandable"><div class="phase-head tl-head"><strong>${isNow ? '<span class="now-tag">Now</span> ' : ''}${escapeHtml(p.title)}</strong><span class="tl-when">${isNow ? '<span class="now-tag tl-now2">Now</span>' : ''}<span class="tl-dates">${escapeHtml(p.dates || '')}</span><span class="tl-n">${i + 1} / ${total}</span></span></div><p class="phase-sum">${escapeHtml(p.sum)}</p><div class="full">${paras}${tlExplainers(p)}<div class="srcs">${isNow && p.asOf ? `<span class="tl-upd">Updated ${escapeHtml(fmtDay(String(p.asOf).slice(0, 10)))}</span>` : ''}${n ? `<details class="src-list"><summary>Sources (${n})</summary><ul>${links}</ul></details>` : ''}</div></div><button type="button" class="toggle-phase">Read more</button></article>`;
   };
-  const all = [...t.phases.map((p) => card(p, false)), card(now, true)];
+  const all = [...t.phases.map((p, i) => card(p, false, i)), card(now, true, total - 1)];
   const labels = [...t.phases.map((p) => p.title), now.title];
   el.innerHTML = pagerHtml('timeline', all, all.length - 1, labels);
   wirePager(el, all.length - 1, () => closeReadMore(el, '.phase-card', '.toggle-phase'), { wrap: false });
   el.querySelectorAll('.phase-card').forEach((c) => wireBoxToggle(c, c.querySelector('.toggle-phase'), 'open'));
+  tlDecorate(el, [...t.phases.map((p) => ({ title: p.title, when: tlYear(p.dates) })), { title: now.title, when: tlYear(now.dates), now: true }]);
 }
 async function loadIranNumbers() {
   try {
@@ -9113,11 +9343,21 @@ async function drawGazaLine(a) {
   const pct = f ? ` (${(+f.v).toFixed(+f.v % 1 ? 1 : 0)}%)` : '';
   const whose = f ? `<a class="gz-line-src" href="${escapeHtml(f.url || '')}" target="_blank" rel="noopener">${escapeHtml(f.by)}, ${escapeHtml(fmtDay(String(f.at).slice(0, 10)))}</a>` : '';
   const sw = (k) => `<i class="gz-oslo-sw" style="background:${OSLO_STYLE[k].fillColor};border-color:${OSLO_STYLE[k].color}"></i>`;
-  const html = `<label class="gz-line-on"><input type="checkbox" data-layer="line"${gazaLine.on ? ' checked' : ''}> <b>IDF-held area${pct}</b></label>${whose}`
-    + `<label class="gz-line-on gz-oslo-on"><input type="checkbox" data-layer="oslo"${gazaLine.osloOn ? ' checked' : ''}> <b>Areas</b> ${sw('A')}A ${sw('B')}B ${sw('C')}C</label>`;
+  // The shape drawn is the mapping projects' latest, older than a reported share may be: said so.
+  const drawn = [a.zone, a.held].filter(Boolean).sort((x, y) => String(y.asOf).localeCompare(String(x.asOf)))[0];
+  const shape = drawn && f && String(drawn.asOf) < String(f.at) ? `<span class="gz-line-src">Shape drawn: ${escapeHtml(drawn.by.replace(/, via .*/, ''))} map, ${escapeHtml(fmtDay(String(drawn.asOf).slice(0, 10)))}</span>` : '';
+  // Closed at first, a one-line header with the share (user, 26 Oct: "minimized in default").
+  if (gazaLine.boxOpen == null) { try { gazaLine.boxOpen = localStorage.getItem('gaza-box') === 'open'; } catch (e) { gazaLine.boxOpen = false; } }
+  const html = `<details class="gz-box"${gazaLine.boxOpen ? ' open' : ''}><summary>IDF-held area${pct} · Areas A, B, C</summary>`
+    + `<label class="gz-line-on"><input type="checkbox" data-layer="line"${gazaLine.on ? ' checked' : ''}> <b>IDF-held area${pct}</b></label>${whose}${shape}`
+    + `<label class="gz-line-on gz-oslo-on"><input type="checkbox" data-layer="oslo"${gazaLine.osloOn ? ' checked' : ''}> <b>Areas</b> ${sw('A')}A ${sw('B')}B ${sw('C')}C</label></details>`;
   if (!gazaLine.box) {
     const Box = L.Control.extend({ options: { position: 'bottomleft' }, onAdd() { const d = L.DomUtil.create('div', 'gz-line-box'); L.DomEvent.disableClickPropagation(d); return d; } });
     gazaLine.box = new Box().addTo(map);
+    gazaLine.box.getContainer().addEventListener('toggle', (ev) => {
+      gazaLine.boxOpen = ev.target.open;
+      try { localStorage.setItem('gaza-box', ev.target.open ? 'open' : 'closed'); } catch (e) { /* private */ }
+    }, true);
     gazaLine.box.getContainer().addEventListener('change', (ev) => {
       if (!ev.target.matches('input')) return;
       const oslo = ev.target.dataset.layer === 'oslo';
@@ -9139,7 +9379,8 @@ async function drawGazaLine(a) {
 const OSLO_STYLE = {
   A: { color: '#c084fc', weight: 1, fillColor: '#a855f7', fillOpacity: 0.22 },
   B: { color: '#2dd4bf', weight: 1, fillColor: '#14b8a6', fillOpacity: 0.18 },
-  C: { color: '#94a3b8', weight: 0.8, dashArray: '3 3', fillColor: '#64748b', fillOpacity: 0.06 },
+  // Its own colour, not the map's grey (user, 26 Oct: "area c give a color of its own").
+  C: { color: '#f472b6', weight: 0.9, dashArray: '3 3', fillColor: '#ec4899', fillOpacity: 0.1 },
 };
 async function drawOsloAreas() {
   if (!map || gazaLine.osloMap === map) return;

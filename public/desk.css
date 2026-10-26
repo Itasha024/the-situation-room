@@ -1275,10 +1275,68 @@ html .leg-ico.kind,html[data-set] .leg-ico.kind{background:#475569;color:#fff;bo
 .gz-line-box { margin-bottom: 36px !important; padding: 5px 8px; }
 /* 26 Oct (user: "the idf held area covers some of the coordinates box"): above the coordinates box (bottom 34px, two
    lines), with room between; its share's source and date under the tick. */
-html[data-view="ops"] .gz-line-box { margin-bottom: 92px !important; }
+html[data-view="ops"] .gz-line-box { margin-bottom: 44px !important; }
 .gz-line-box .gz-line-src { display: block; margin: 1px 0 0 20px; color: #94a3b8; font-size: 10.5px; text-decoration: none; }
 .gz-line-box .gz-line-src:hover { text-decoration: underline; }
 .gz-line-box .gz-oslo-on { display: block; margin-top: 4px; }
 .gz-oslo-sw { display: inline-block; width: 10px; height: 10px; margin: 0 2px 0 4px; border: 1px solid; border-radius: 2px; vertical-align: -1px; }
 /* The explainers in categories (26 Oct): the chosen category's cards one under another. */
 .ex-list { display: flex; flex-direction: column; gap: 10px; }
+/* 26 Oct (user: "minimized in default and right over the coordinates box"): a one-line header that opens the tick boxes. */
+.gz-box > summary { cursor: pointer; list-style: none; font-weight: 700; white-space: nowrap; }
+.gz-box > summary::-webkit-details-marker { display: none; }
+.gz-box > summary::before { content: "▸"; display: inline-block; width: 12px; color: #94a3b8; }
+.gz-box[open] > summary::before { content: "▾"; }
+.gz-box[open] > summary { margin-bottom: 4px; }
+
+/* ---------- The Explainers' cards and the Timeline's eras, designed (user, 26 Oct: "much more nice to look at — clear
+   colours, diagrams … very professional; the timeline too"). Each category a colour and an icon (app.js EX_CAT). ---------- */
+.ex-list { gap: 12px; }
+.ex-card { position: relative; padding: 14px 14px 12px; border: 1px solid var(--t-line, #243042); border-left: 3px solid var(--ex-c, #8a939d); border-radius: 4px; background: var(--t-surface-2, #141b24); }
+.ex-svg { width: 1em; height: 1em; flex: none; display: inline-block; vertical-align: -.15em; }
+.ex-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.ex-ic { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 4px; font-size: 15px; color: var(--ex-c); background: color-mix(in srgb, var(--ex-c) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ex-c) 40%, transparent); }
+.ex-catname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 11px/1.1 var(--ops-cond, var(--f-body, inherit)); letter-spacing: .14em; text-transform: uppercase; color: color-mix(in srgb, var(--ex-c) 72%, var(--t-strong, #fff)); }
+.ex-date { flex: none; margin-left: auto; padding: 2px 7px; border: 1px solid var(--t-line-strong, #334155); border-radius: 999px; font: 500 10.5px/1.3 var(--ops-mono, ui-monospace, monospace); color: var(--t-muted, #94a3b8); white-space: nowrap; max-width: 52%; overflow: hidden; text-overflow: ellipsis; }
+.ex-title { margin: 10px 0 5px; font: 700 15.5px/1.3 var(--ops-ui, var(--f-body, inherit)); color: var(--t-strong, #fff); text-wrap: balance; }
+.ex-card .phase-sum { margin: 0; font-size: 13.5px; line-height: 1.5; }
+.ex-xref { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 10px 0 0; }
+.ex-xh { flex-basis: 100%; font: 700 10.5px/1 var(--ops-cond, var(--f-body, inherit)); letter-spacing: .14em; text-transform: uppercase; color: var(--t-muted, #94a3b8); }
+.ex-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; min-height: 24px; padding: 3px 9px; border: 1px solid var(--t-line-strong, #334155); border-radius: 999px; background: var(--t-surface-1, #0f141b); font-size: 12px; line-height: 1.25; color: var(--t-text, #dbe4ee) !important; text-decoration: none !important; }
+.ex-chip:hover { border-color: var(--accent-ui, #e0a43c); color: var(--t-strong, #fff) !important; }
+.ex-chip .ex-svg { font-size: 13px; color: var(--accent-ui, #e0a43c); }
+.ex-chip-tl, .ex-chip-ex { border-color: color-mix(in srgb, var(--accent-ui, #e0a43c) 45%, var(--t-line-strong, #334155)); background: color-mix(in srgb, var(--accent-ui, #e0a43c) 8%, var(--t-surface-1, #0f141b)); }
+.ex-read { display: inline-flex; align-items: center; gap: 6px; margin-top: 11px; font: 700 11.5px/1 var(--ops-cond, var(--f-body, inherit)); letter-spacing: .14em; text-transform: uppercase; color: color-mix(in srgb, var(--ex-c, var(--accent-ui, #e0a43c)) 75%, var(--t-strong, #fff)) !important; text-decoration: none !important; }
+.ex-read:hover { text-decoration: underline !important; text-underline-offset: 3px; }
+.ex-open { padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--ex-c) 55%, transparent); border-radius: 3px; background: color-mix(in srgb, var(--ex-c) 12%, transparent); }
+.ex-open:hover { background: color-mix(in srgb, var(--ex-c) 22%, transparent); text-decoration: none !important; }
+.ex-guide { background: linear-gradient(180deg, color-mix(in srgb, var(--ex-c) 9%, var(--t-surface-2, #141b24)), var(--t-surface-2, #141b24) 55%); }
+.ex-g-fig { display: block; margin: -2px 0 12px; padding: 8px 6px 6px; border: 1px solid var(--t-line, #243042); border-radius: 3px; color: var(--t-strong, #fff); background-color: var(--t-surface-1, #0f141b); background-image: radial-gradient(color-mix(in srgb, var(--t-line-strong, #334155) 80%, transparent) 1px, transparent 1.2px); background-size: 12px 12px; }
+.ex-org { display: flex; flex-direction: column; align-items: center; }
+.eo-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; width: 100%; }
+.eo-row > span { flex: 1 1 auto; max-width: 100%; padding: 4px 6px 3px; border: 1px solid color-mix(in srgb, var(--eo) 60%, transparent); border-top: 2px solid var(--eo); border-radius: 2px; background: color-mix(in srgb, var(--eo) 14%, transparent); font: 600 10.5px/1.15 var(--ops-ui, system-ui, sans-serif); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eo-top > span { flex: 0 1 auto; padding: 5px 12px 4px; font-size: 11.5px; }
+.eo-sm > span { font-size: 10px; font-weight: 500; }
+.eo-ln { display: block; width: 1px; height: 8px; background: currentColor; opacity: .4; }
+.ex-all { margin: 0; }
+.ex-cats button { display: inline-flex; align-items: center; gap: 6px; }
+.ex-cats button .ex-svg { font-size: 14px; color: var(--ex-c); }
+
+/* The Timeline's eras: the dates first, the era's place in the run, Now in the highlight colour. */
+.tl-card .tl-head { align-items: center; }
+.tl-when { display: inline-flex; align-items: center; gap: 8px; font: 500 .74rem var(--ops-mono, ui-monospace, monospace); color: var(--t-muted, #94a3b8); }
+.tl-now2 { display: none; }
+.tl-n { color: var(--t-faint, #64748b); font-size: .9em; }
+.tl-card .phase-sum { font-weight: 500; color: var(--t-strong, #fff); }
+.tl-card .full > p:first-child { margin-top: .6rem; }
+.tl-card .tl-map { padding: 6px 9px; border-left: 2px solid var(--t-line-strong, #334155); background: var(--t-surface-1, #0f141b); }
+.tl-upd { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; }
+.tl-upd::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #46b37a; }
+.tl-card .src-list ul { list-style: none; padding: 0; columns: 1; }
+.tl-card .src-list li { margin: 0; padding: 5px 0; border-bottom: 1px solid var(--t-line, #243042); }
+.tl-card .src-list li:last-child { border-bottom: 0; }
+.src-host { margin-left: 4px; font: 400 10.5px var(--ops-mono, ui-monospace, monospace); color: var(--t-faint, #64748b); }
+.pg-dots .tl-yr { display: none; }
+@keyframes tl-flash { 0% { box-shadow: 0 0 0 2px var(--accent-ui, #e0a43c); } 100% { box-shadow: 0 0 0 2px transparent; } }
+.pg-slide.tl-flash .phase-card { animation: tl-flash 1.6s ease-out 1; }
+@media (prefers-reduced-motion: reduce) { .pg-slide.tl-flash .phase-card { animation: none; } }

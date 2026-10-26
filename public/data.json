@@ -21739,9 +21739,13 @@
       ],
       "title": "Roots of the Houthi movement",
       "summary": "In northern Yemen, around Saada, a Zaydi religious and social movement grew up around the al-Houthi family — the root of what later became the Houthis.",
-      "detail": "Unified Yemen was created in 1990 from the merger of north and south. In the far northern highlands, and especially in Saada governorate on the Saudi border, Zaydi communities — a Shia tradition particular to Yemen — felt pushed aside by the centre in Sanaa. Hussein Badreddin al-Houthi led study circles and activism known as the Believing Youth: at first a religious and social identity rather than a national army. Poverty in the north, President Ali Abdullah Saleh's suspicion of the movement, and regional tensions after 2003 gradually turned it into an armed political force. This period is the foundation of today's Houthi movement.",
+      "detail": "In the far northern highlands, and especially in Saada governorate on the Saudi border, Zaydi communities felt pushed aside by the centre in Sanaa. Hussein Badreddin al-Houthi led study circles and activism known as the Believing Youth: at first a religious and social identity rather than a national army. Poverty in the north, President Ali Abdullah Saleh's suspicion of the movement, and regional tensions after 2003 gradually turned it into an armed political force. This period is the foundation of today's Houthi movement.",
       "mapNote": "The focus is Saada and the northern highlands — still far from Sanaa and the coast.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "North and South: the two Yemens",
+        "The Houthi movement"
+      ]
     },
     {
       "id": "saada_wars",
@@ -21765,7 +21769,10 @@
       "summary": "Between 2004 and 2010 Yemeni government forces fought the Houthis in Saada through six rounds. Hussein al-Houthi was killed, but the movement survived and grew stronger.",
       "detail": "The first round broke out in 2004 after Saleh's government tried to detain Hussein al-Houthi. He was killed that year — and rather than dissolving the movement, his death consolidated it around his brothers and tribal allies. Six rounds of fighting followed, at times drawing in Saudi forces on the border. Neither side won outright: the Houthis learned to fight, built local networks and accumulated weapons and experience. The political wound in the north never closed, so when the state faltered in 2011 they were no longer merely local rebels.",
       "mapNote": "Fighting concentrated in and around Saada — not yet a war for all of Yemen.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "The Houthi movement"
+      ]
     },
     {
       "id": "arab_spring_2011",
@@ -21781,7 +21788,10 @@
       "summary": "The 2011 protests weakened Saleh's rule. He was replaced by Abd Rabbu Mansour Hadi, and the Houthis used the vacuum to expand south from Saada.",
       "detail": "As in other Arab states, crowds turned out in Yemen against a long-serving ruler. Saleh was pushed into a negotiated exit brokered by the Gulf states, and the interim president, Hadi, tried to run a national dialogue and write a new constitution. In practice the army and the state split, security weakened, and groups such as al-Qaeda in the Arabian Peninsula exploited the chaos. The Houthis, already hardened by the Saada wars, pushed south, took more ground in the north, and at times cooperated with remnants of Saleh's camp. This is the point at which they stopped being a local story and became a national actor.",
       "mapNote": "Gradual expansion south from Saada towards Sanaa.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "Who's who in Yemen"
+      ]
     },
     {
       "id": "phase_2014_sanaa",
@@ -21801,7 +21811,11 @@
       "summary": "In September 2014 the Houthis took Sanaa. The government collapsed, Hadi fled, and Yemen entered full national war.",
       "detail": "After capturing Amran to the north of the capital, Houthi fighters entered Sanaa, partly backed by forces tied to Saleh, who wanted revenge on the system that removed him. They seized ministries, weapons and institutions. UN-brokered agreements did not hold. In February 2015 Hadi fled first to Aden and then to Saudi Arabia. From this point there were in effect two Yemens: a Houthi-held north-west with Sanaa as its de facto capital, and a government and southern camp reliant on outside support. That fracture line runs through to today's map.",
       "mapNote": "The north-west passes to Houthi control, with the capital in their hands.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "The Houthi movement",
+        "Iran's support and Houthi weapons"
+      ]
     },
     {
       "id": "phase_2015_coalition",
@@ -21817,7 +21831,11 @@
       "summary": "In March 2015 a Saudi-led coalition opened an air campaign to restore Hadi's government — the start of the regional war over Yemen.",
       "detail": "Saudi Arabia and its allies feared Houthi control, seen as close to Iran, over their southern border and over sea lanes. The campaign, named Decisive Storm and then Restoring Hope, combined air strikes, a partial naval blockade and support for local forces in the south. Aden was taken back from the Houthis in 2015 and became the seat of the internationally recognised government — but Sanaa and most of the north-west stayed in Houthi hands. Instead of a quick decision, a long war of attrition opened, at very heavy civilian cost.",
       "mapNote": "The south returns to the government; the north-west stays Houthi.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "Who's who in Yemen",
+        "The UN and the peace roadmap"
+      ]
     },
     {
       "id": "phase_2015_2018_fronts",
@@ -21833,7 +21851,10 @@
       "summary": "Years of relative stalemate: Taiz under partial siege, Marib a government energy stronghold, and a widening split in the south between the government and separatist forces.",
       "detail": "The front lines set. Taiz — a large city in south-western Yemen between the highlands and the coast — became a symbol of civilian suffering, with fighting, partial siege and difficult aid access. Marib in the east stayed important for its oil and gas and its government administration. In the south the Southern Transitional Council emerged, a separatist force seeking an independent or autonomous south, which at times fought Hadi's government as well as the Houthis. The anti-Houthi camp was never a single ordered bloc.",
       "mapNote": "Front lines harden; the south is politically split.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "Who's who in Yemen"
+      ]
     },
     {
       "id": "phase_stockholm_2018",
@@ -21855,9 +21876,13 @@
       ],
       "title": "The Stockholm Agreement and Hodeidah",
       "summary": "In late 2018 a UN-brokered agreement covered the port of Hodeidah, to head off a major battle over Yemen's humanitarian import artery.",
-      "detail": "Hodeidah is the main Red Sea port; food, fuel and aid for much of the population come through it. Coalition and government forces were closing on the port and the UN warned of humanitarian catastrophe. In December 2018, at talks in Sweden, the parties agreed a local ceasefire, a redeployment around the port and a monitoring mechanism, along with a prisoner exchange and understandings on Taiz. Implementation was partial and cumbersome — but the big battle for the port was averted. The west coast stayed fragile from then on, even as fighting continued elsewhere.",
+      "detail": "Coalition and government forces were closing on Hodeidah's port and the UN warned of humanitarian catastrophe. In December 2018, at talks in Sweden, the parties agreed a local ceasefire, a redeployment around the port and a monitoring mechanism, along with a prisoner exchange and understandings on Taiz. Implementation was partial and cumbersome — but the big battle for the port was averted. The west coast stayed fragile from then on, even as fighting continued elsewhere.",
       "mapNote": "The west coast is relatively frozen around the port — not a national peace.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "The economy and aid",
+        "The UN and the peace roadmap"
+      ]
     },
     {
       "id": "phase_2022_truce_plc",
@@ -21873,7 +21898,11 @@
       "summary": "A UN-brokered truce in April 2022 slowed the fighting, and a Presidential Leadership Council replaced Hadi.",
       "detail": "The truce cut air strikes and temporarily opened routes to the ports and the airport — real relief for civilians, without ending the war. In parallel Hadi handed his powers to a Presidential Leadership Council under Rashad al-Alimi, an attempt to unify the anti-Houthi camp under a collective leadership recognised internationally as Yemen's legitimate government. The truce eroded and never became a permanent peace, but it changed the tempo: less daily escalation, until broader fighting resumed in the years that followed.",
       "mapNote": "Fighting slows, with no major change of control on the map.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "Who's who in Yemen",
+        "The UN and the peace roadmap"
+      ]
     },
     {
       "id": "phase_red_sea_2023_2025",
@@ -21887,13 +21916,22 @@
         {
           "name": "UK House of Commons Library",
           "url": "https://commonslibrary.parliament.uk/research-briefings/cbp-9930/"
+        },
+        {
+          "name": "EIA: Red Sea oil flows in 2023 and 2024 (Oct 2024)",
+          "url": "https://www.eia.gov/todayinenergy/detail.php?id=63446"
         }
       ],
       "title": "The Red Sea and Bab al-Mandab",
       "summary": "From late 2023 the Houthis attacked shipping in the Red Sea and the Bab al-Mandab strait, and the US, Britain and partners answered with strikes and naval operations.",
-      "detail": "After the war in Gaza began, the Houthis declared attacks on vessels they said were linked to Israel or its allies. In practice global trade routes through the Bab al-Mandab strait — the chokepoint between the Red Sea and the Arabian Sea — were disrupted. Shipping lines rerouted around Africa and freight rates rose. The US and Britain led military responses and maritime protection operations. Yemen's internal conflict connected to a regional and global front. Bab al-Mandab and the west coast are an international corridor, not only a Yemeni border.",
+      "detail": "After the war in Gaza began, the Houthis declared attacks on vessels they said were linked to Israel or its allies. In practice global trade through the Bab al-Mandab strait was disrupted. Shipping lines rerouted around Africa and freight rates rose; in 2024 oil flows through the strait fell by more than half, to about 4 million barrels a day, and Egypt's Suez Canal income fell sharply. The US and Britain led strikes on the Houthis, and naval operations escorted ships. Yemen's internal conflict connected to a regional and global front.",
       "mapNote": "The focus shifts to the sea, at Bab al-Mandab and in the Red Sea.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "Bab el-Mandeb and the sea lanes",
+        "How the Houthis attack shipping",
+        "Iran's support and Houthi weapons"
+      ]
     },
     {
       "id": "phase_2026_01_stc_plc",
@@ -21907,13 +21945,20 @@
         {
           "name": "Al Jazeera",
           "url": "https://www.aljazeera.com/news/2026/1/9/yemens-separatist-southern-transitional-council-announces-its-dissolution"
+        },
+        {
+          "name": "Khaleej Times: UAE confirms its last forces have left Yemen",
+          "url": "https://www.khaleejtimes.com/uae/confirms-last-forces-have-left-yemen"
         }
       ],
       "title": "The south's split before the 2026 round",
       "summary": "In December 2025 the UAE-backed Southern Transitional Council seized Hadramawt and Al-Mahra. Saudi Arabia and the government struck back, and by 9 January 2026 the council's leader had fled and a delegation in Riyadh announced its dissolution.",
-      "detail": "The Southern Transitional Council, a separatist force backed by the UAE, had sat on the Presidential Council since 2022. In early December 2025 it took the oil-rich eastern provinces of Hadramawt and Al-Mahra, on the Saudi border, which Riyadh called a red line. Saudi air strikes on its positions followed, among them a strike on two vessels at Mukalla port that Saudi Arabia and the government said carried UAE weapons for the council. The government declared a state of emergency and ordered UAE forces out, opening a rift between Riyadh and Abu Dhabi. On 7 January 2026 the Presidential Council dismissed the council's leader, Aidarous al-Zubaidi, for treason; he fled to the UAE the next day. On 9 January a council delegation in Riyadh announced its dissolution ahead of a Saudi-hosted southern dialogue, while its spokesman in Abu Dhabi rejected the announcement. The government said all anti-Houthi forces would join the army, a process not yet begun by mid-January. The anti-Houthi camp entered the July 2026 round under the Saudi-backed government, with the southern question still open.",
+      "detail": "The Southern Transitional Council had sat on the Presidential Council since 2022. In early December 2025 it took the oil-rich eastern provinces of Hadramawt and Al-Mahra, on the Saudi border, which Riyadh called a red line. Saudi air strikes on its positions followed, among them a strike on two vessels at Mukalla port that Saudi Arabia and the government said carried UAE weapons for the council. The government declared a state of emergency and ordered UAE forces out, opening a rift between Riyadh and Abu Dhabi. The UAE said its last troops left Yemen on 2 January 2026. On 7 January 2026 the Presidential Council dismissed the council's leader, Aidarous al-Zubaidi, for treason; he fled to the UAE the next day. On 9 January a council delegation in Riyadh announced its dissolution ahead of a Saudi-hosted southern dialogue, while its spokesman in Abu Dhabi rejected the announcement. The government said all anti-Houthi forces would join the army, a process not yet begun by mid-January. The anti-Houthi camp entered the July 2026 round under the Saudi-backed government, with the southern question still open.",
       "mapNote": "The south passes from the separatists back to the government; the southern question stays open.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "Who's who in Yemen"
+      ]
     },
     {
       "id": "phase_2026_09_offensive",
@@ -21941,7 +21986,11 @@
       "summary": "The war resumed in July 2026, when strikes on Sanaa airport ended years of de-escalation and the Houthis answered with missiles on Saudi Arabia and a blockade of Saudi-linked shipping. In September they took Mocha and closed on the Bab al-Mandab strait, while government forces pushed in Al-Jawf, Al-Bayda and western Taiz.",
       "detail": "The round opened on 13 July 2026, when government jets struck the runways at Sanaa and Hodeidah airports to stop an Iranian aircraft landing. The Houthis called it the end of the de-escalation in place since the 2022 truce and fired missiles and drones at Abha, Jeddah, Jazan and Yanbu, hitting Aramco sites; on 20 July they declared a naval blockade of Saudi-linked shipping and attacked Saudi tankers in the Red Sea. Coalition and government air strikes answered in Hodeidah, Saada, Marib and Al-Jawf. Through August the Houthis kept up missile, drone and explosive-boat attacks on the port of Mocha, the government's foothold on the west coast. In early September government forces opened offensives in Al-Jawf, Al-Bayda and west of Taiz, and the Houthis struck back on the coast: they took Hays, Al-Khokha and on 10 September Mocha itself, and pushed towards Bab al-Mandab and the islands off it. Fighting has since spread along the Taiz, Lahj and Al-Dhale lines, and Houthi missiles keep reaching Saudi cities while Saudi air strikes and artillery hit northern Yemen. Hundreds of thousands have been displaced from the west coast.",
       "mapNote": "The west coast and Bab al-Mandab, Taiz, Lahj, Al-Dhale, Marib and Al-Jawf, and the Saudi border.",
-      "bullets": []
+      "bullets": [],
+      "explainers": [
+        "Bab el-Mandeb and the sea lanes",
+        "How the Houthis attack shipping"
+      ]
     }
   ],
   "fronts": [

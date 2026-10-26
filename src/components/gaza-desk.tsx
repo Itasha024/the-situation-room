@@ -55,6 +55,7 @@ const GAZA_HTML = `
     <div id="map"></div>
     <button type="button" class="map-full" id="btn-focus-map" aria-pressed="false" aria-label="Full screen map" title="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="mf-open" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path class="mf-close" d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button>
     <div class="legend" id="legend"><div class="leg-head"><span class="leg-title">Legend</span></div></div>
+    <div class="map-chip" id="map-chip">Every event since 10 Oct 2025</div>
   </section>
   <div class="rail-splitter" id="rail-splitter" role="separator" aria-orientation="vertical" aria-label="Resize the report column" title="Drag to widen the report column"></div>
   <aside class="rail" id="rail">

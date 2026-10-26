@@ -20,6 +20,9 @@
      "name": "Wikipedia: Palestinian Authority",
      "url": "https://en.wikipedia.org/wiki/Palestinian_Authority"
     }
+   ],
+   "timeline": [
+    "The second stage: Board of Peace, ISF and disarmament"
    ]
   },
   {
@@ -41,6 +44,9 @@
      "name": "Wikipedia: Sharm El Sheikh Summit of 2005",
      "url": "https://en.wikipedia.org/wiki/Sharm_El_Sheikh_Summit_of_2005"
     }
+   ],
+   "timeline": [
+    "Judea and Samaria"
    ]
   },
   {
@@ -54,6 +60,10 @@
      "name": "Wikipedia: Israeli disengagement from Gaza",
      "url": "https://en.wikipedia.org/wiki/Israeli_disengagement_from_Gaza"
     }
+   ],
+   "timeline": [
+    "The 7 October attack",
+    "Khan Younis and Rafah"
    ]
   },
   {
@@ -75,6 +85,10 @@
      "name": "Wikipedia: Fatah–Hamas conflict",
      "url": "https://en.wikipedia.org/wiki/Fatah%E2%80%93Hamas_conflict"
     }
+   ],
+   "timeline": [
+    "The 7 October attack",
+    "The second stage: Board of Peace, ISF and disarmament"
    ]
   },
   {
@@ -100,6 +114,9 @@
      "name": "Wikipedia: 2021 Israel–Palestine crisis",
      "url": "https://en.wikipedia.org/wiki/2021_Israel%E2%80%93Palestine_crisis"
     }
+   ],
+   "timeline": [
+    "The 7 October attack"
    ]
   },
   {
@@ -121,14 +138,18 @@
      "name": "Wikipedia: Israeli communities in Judea and Samaria",
      "url": "https://en.wikipedia.org/wiki/Israeli_settlement"
     }
+   ],
+   "timeline": [
+    "Judea and Samaria",
+    "The second stage: Board of Peace, ISF and disarmament"
    ]
   },
   {
    "title": "UNRWA and the refugee question",
    "cat": "Land and people",
    "dates": "1949 – now",
-   "sum": "UNRWA is the UN agency for Palestinian refugees and their descendants, who it says now number about 5.9 million. Israel accuses it of being infiltrated by Hamas and banned it from operating in Israel from 2025.",
-   "detail": "The refugees: About 700,000 Arabs fled or were driven out of what became Israel in the 1947–49 war. Palestinians call it the Nakba and demand a right of return; Israel rejects return to Israel, saying it would end Israel as a Jewish state.\n\nThe agency: The UN General Assembly set up UNRWA in December 1949, and it began work in 1950. Unlike other refugees, the status passes to descendants. UNRWA runs schools, clinics and camps in Gaza, Judea and Samaria, Jordan, Lebanon and Syria. Most people in Gaza are registered refugees.\n\nAfter 7 October: In January 2024 Israel said 12 UNRWA staff took part in the 7 October attack; several donors paused funding, and a UN inquiry later found that nine staff may have been involved and were fired. Israel says Hamas used UNRWA buildings and that hundreds of staff are members of armed groups; UNRWA denies systematic ties.\n\nThe Knesset laws: In October 2024 the Knesset passed two laws banning UNRWA from operating in Israel and cutting contact with it. They took effect on 30 January 2025, and UNRWA's foreign staff left East Jerusalem.",
+   "sum": "UNRWA is the UN agency for Palestinian refugees and their descendants, who it says now number about 5.9 million. Israel accuses it of being infiltrated by Hamas.",
+   "detail": "The refugees: About 700,000 Arabs fled or were driven out of what became Israel in the 1947–49 war. Palestinians call it the Nakba and demand a right of return; Israel rejects return to Israel, saying it would end Israel as a Jewish state.\n\nThe agency: The UN General Assembly set up UNRWA in December 1949, and it began work in 1950. Unlike other refugees, the status passes to descendants. UNRWA runs schools, clinics and camps in Gaza, Judea and Samaria, Jordan, Lebanon and Syria. Most people in Gaza are registered refugees.\n\nThe dispute: Israel says Hamas uses UNRWA buildings and that hundreds of its staff are members of armed groups; UNRWA denies systematic ties.\n\nThe Timeline: The charges over 7 October and the Knesset ban on UNRWA are in Khan Younis and Rafah, and Philadelphi, Netzarim and the killing of Sinwar.",
    "sources": [
     {
      "name": "Wikipedia: UNRWA",
@@ -138,6 +159,10 @@
      "name": "Wikipedia: UNRWA and Israel",
      "url": "https://en.wikipedia.org/wiki/UNRWA_and_Israel"
     }
+   ],
+   "timeline": [
+    "Khan Younis and Rafah",
+    "Philadelphi, Netzarim and the killing of Sinwar"
    ]
   },
   {
@@ -145,7 +170,7 @@
    "cat": "Land and people",
    "dates": "1967 – now",
    "sum": "Israel took East Jerusalem in 1967 and calls the whole city its capital. On the Temple Mount, Muslims pray and Jews may visit but not pray, under a status quo Israel says it keeps.",
-   "detail": "The city: Israel took East Jerusalem and the Old City from Jordan in the Six-Day War of June 1967 and applied its law there. The 1980 Basic Law declared 'Jerusalem, complete and united' the capital of Israel. Palestinians want East Jerusalem as their capital. The US recognised Jerusalem as Israel's capital in December 2017 and moved its embassy there in May 2018.\n\nThe Temple Mount: The site is Judaism's holiest, where the two Temples stood, and holds the al-Aqsa Mosque and the Dome of the Rock, Islam's third-holiest site. After 1967 Defense Minister Moshe Dayan left it under the Jordanian-run Islamic Waqf.\n\nThe status quo: Muslims may pray there; non-Muslims, including Jews, may visit at set times but may not pray. Israel's police control access. Jordan's special role was confirmed in the 1994 peace treaty. In recent years more Jews have visited and some have prayed quietly; Israel's government says the status quo has not changed.\n\nFlashpoints: Clashes on the Mount set off wider violence in 2000, 2017 and 2021. Hamas named its 7 October attack 'al-Aqsa Flood'.",
+   "detail": "The city: Israel took East Jerusalem and the Old City from Jordan in the Six-Day War of June 1967 and applied its law there. The 1980 Basic Law declared 'Jerusalem, complete and united' the capital of Israel. Palestinians want East Jerusalem as their capital. The US recognised Jerusalem as Israel's capital in December 2017 and moved its embassy there in May 2018.\n\nThe Temple Mount: The site is Judaism's holiest, where the two Temples stood, and holds the al-Aqsa Mosque and the Dome of the Rock, Islam's third-holiest site. After 1967 Defense Minister Moshe Dayan left it under the Jordanian-run Islamic Waqf.\n\nThe status quo: Muslims may pray there; non-Muslims, including Jews, may visit at set times but may not pray. Israel's police control access. Jordan's special role was confirmed in the 1994 peace treaty. In recent years more Jews have visited and some have prayed quietly; Israel's government says the status quo has not changed.\n\nFlashpoints: Clashes on the Mount set off wider violence in 2000, 2017 and 2021.",
    "sources": [
     {
      "name": "Wikipedia: Jerusalem Law",
@@ -155,6 +180,9 @@
      "name": "Wikipedia: Temple Mount",
      "url": "https://en.wikipedia.org/wiki/Temple_Mount"
     }
+   ],
+   "timeline": [
+    "The 7 October attack"
    ]
   }
  ]

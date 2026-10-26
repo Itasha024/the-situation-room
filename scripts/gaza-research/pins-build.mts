@@ -14,6 +14,7 @@ import path from "node:path";
 import { GAZA_GAZ } from "../../src/lib/desk/gaza-gazetteer.ts";
 import { gazaPlacesIn } from "../../src/lib/desk/gaza-places.ts";
 import { gazaWords } from "../../src/lib/desk/gaza-words.ts";
+import { gazaKindOf } from "../../src/lib/desk/gaza-kinds.ts";
 import { nativeWords } from "../../src/lib/desk/iran-places.ts";
 
 const [dir, outFile = "public/gaza-map-pins.json", geoFile = "", approxFile = ""] = process.argv.slice(2);
@@ -63,7 +64,7 @@ const deskVoice = (s: string) =>
     .replace(/\bterrorist organi[sz]ations?\b/gi, "groups")
     .replace(/\bterrorists\b/gi, "operatives")
     .replace(/\bterrorist\b/gi, "operative")
-    .replace(/\b([Aa]) (operative)/g, "$1n $2");
+    .replace(/\b([Aa]) (operative|armed)/g, "$1n $2");
 
 /** Every gazetteer entry of a name ("Burqa" east of Ramallah and north-west of Nablus). */
 const ALL_OF = new Map<string, Place[]>();
@@ -95,6 +96,16 @@ function nearTown(p: Place | null, label: string, asked: string): Place | null {
   return { ...town, name: `${town.name}` };
 }
 const townMoves: string[] = [];
+
+/**
+ * The pin's kind by name (gaza-kinds.ts, user, 26 Oct: "clash" covered too much): what the label says was done; the
+ * reader's own "strike" or "funeral" when the label's words say no more than a clash.
+ */
+function kindOf(readerKind: string, label: string): string {
+  if (readerKind === "funeral") return "funeral";
+  const k = gazaKindOf(label);
+  return k === "combat" && readerKind === "strike" ? "strike" : k;
+}
 
 type Ev = { day: string; place: string; side: string; kind: string; label: string; src: string[] };
 const BAD = /West Bank|\bsettlers?\b|\boccupation\b|\boccupied\b|martyr|massacre|Zionist|colonist|genocide|ceasefire violation|aggression/i;
@@ -131,7 +142,7 @@ for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
       merged++;
       continue;
     }
-    pins.push([e.day, e.side, +at.lat.toFixed(5), +at.lng.toFixed(5), kind, at.name, label, NAMES[ch], url, also]);
+    pins.push([e.day, e.side, +at.lat.toFixed(5), +at.lng.toFixed(5), kindOf(e.kind, label), at.name, label, NAMES[ch], url, also]);
     pinFile.push(f);
   }
 }
@@ -142,7 +153,7 @@ if (approxFile && fs.existsSync(approxFile))
   for (const p of JSON.parse(fs.readFileSync(approxFile, "utf8"))) {
     const at = { name: "", area: "", lat: p[2], lng: p[3] };
     if (!/place not given/.test(p[5]) && pins.some((q) => q[0] === p[0] && q[1] === "israel" && km({ name: "", area: "", lat: q[2] as number, lng: q[3] as number }, at) < 3)) continue;
-    pins.push([...p.slice(0, 6), deskVoice(p[6]), ...p.slice(7)]);
+    pins.push([...p.slice(0, 4), kindOf(p[4] === 0 ? "strike" : "clash", p[6]), p[5], deskVoice(p[6]), ...p.slice(7)]);
     approxN++;
   }
 console.log(`approximate pins added ${approxN}`);

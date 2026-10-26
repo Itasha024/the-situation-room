@@ -13,8 +13,11 @@ declare global {
   }
 }
 
-/** `back`: where the foot's link goes, the desk the page belongs to or, for the site's own pages, every desk. */
-export function DeskDoc({ title, lede, children, back = { href: "/yemen-conflict-desk", label: "Back to the live desk" } }: { title: string; lede?: ReactNode; children: ReactNode; back?: { href: string; label: string } }) {
+/**
+ * `back`: where the foot's link goes, the desk the page belongs to or, for the site's own pages, every desk.
+ * `guide`: a desk's guide, wider, its own head (guide-kit.tsx GuideHero) in place of the title and lede.
+ */
+export function DeskDoc({ title, lede, children, guide = false, back = { href: "/yemen-conflict-desk", label: "Back to the live desk" } }: { title?: string; lede?: ReactNode; children: ReactNode; guide?: boolean; back?: { href: string; label: string } }) {
   useEffect(() => {
     let tries = 0;
     const boot = () => {
@@ -43,12 +46,12 @@ export function DeskDoc({ title, lede, children, back = { href: "/yemen-conflict
           <h1 className="desk-label"><span className="dl-pre">Desks:</span></h1>
         </div>
       </header>
-      <main className="doc">
-        <h2 className="doc-title">{title}</h2>
+      <main className={guide ? "doc doc-guide" : "doc"}>
+        {title ? <h2 className="doc-title">{title}</h2> : null}
         {lede ? <p className="doc-lede">{lede}</p> : null}
         {children}
       </main>
-      <footer className="doc-foot">
+      <footer className={guide ? "doc-foot doc-guide" : "doc-foot"}>
         <a href={back.href}>{back.label}</a>
       </footer>
     </div>

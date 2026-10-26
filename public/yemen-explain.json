@@ -6,7 +6,7 @@
    "cat": "Who's who",
    "dates": "As of October 2026",
    "sum": "Yemen has two rival governments. The Houthis rule Sanaa and the north-west, where most Yemenis live; the internationally recognised government, led by an eight-member Presidential Leadership Council and backed by Saudi Arabia, holds the south and east from Aden.",
-   "detail": "The Houthis: The movement calls itself Ansar Allah. Its leader is Abdul-Malik al-Houthi, in charge since 2004; he holds no state post. Mahdi al-Mashat heads its Supreme Political Council in Sanaa. Muhammad Miftah has been acting prime minister there since an Israeli strike killed Ahmed al-Rahawi in August 2025, and Yusuf al-Madani has been chief of staff since October 2025. Yahya Saree is the military spokesman; Mohammed Abdulsalam is the chief negotiator, based in Muscat.\n\nThe government: A Presidential Leadership Council holds the president's powers. Its chairman is Rashad al-Alimi. The other members are Tareq Saleh, Sultan al-Arada, Abdullah al-Alimi Bawazeer, Abu Zaraa al-Mahrami, Othman Mujalli, and, since 15 January 2026, Mahmoud al-Subaihi and Salem al-Khanbashi. Shaya al-Zindani has been prime minister since January 2026. The government sits in Aden; many of its leaders spend much of their time in Riyadh.\n\nThe STC: The Southern Transitional Council, founded in 2017 under Aidarous al-Zubaidi, wants a separate southern state and was backed by the UAE. Its status is disputed: a delegation in Riyadh announced its dissolution on 9 January 2026, but its spokesman in Abu Dhabi rejected that, and al-Zubaidi lives in the UAE. The wish for a southern state is still strong in Aden and the south.\n\nIslah: The Yemeni Congregation for Reform is a Sunni Islamist party founded in 1990, with Muslim Brotherhood roots and tribal backing. It is strong in Marib and Taiz. Al-Arada, the governor of Marib, is close to it.\n\nThe west coast: Tareq Saleh, nephew of the late president Ali Abdullah Saleh, leads the National Resistance, based on the Red Sea coast around Mocha until the Houthis took the town in September 2026. The Giants Brigades are southern, largely Salafi units formed with UAE support in 2015 and led by Abu Zaraa al-Mahrami.\n\nThe outside powers: Saudi Arabia leads the coalition against the Houthis and is the government's main backer and paymaster. The UAE armed the southern forces; it said its last troops left Yemen on 2 January 2026. Iran arms and trains the Houthis. Oman hosts the Houthis' negotiators and passes messages between the sides.\n\nAQAP: Al-Qaeda in the Arabian Peninsula, led by Saad bin Atef al-Awlaki since 2024, fights both sides and is active mainly in Abyan, Shabwa and Al-Bayda.",
+   "detail": "The Houthis: The movement calls itself Ansar Allah. Its leader is Abdul-Malik al-Houthi, in charge since 2004; he holds no state post. Mahdi al-Mashat heads its Supreme Political Council in Sanaa. Muhammad Miftah has been acting prime minister there since an Israeli strike killed Ahmed al-Rahawi in August 2025, and Yusuf al-Madani has been chief of staff since October 2025. Yahya Saree is the military spokesman; Mohammed Abdulsalam is the chief negotiator, based in Muscat.\n\nThe government: A Presidential Leadership Council holds the president's powers. Its chairman is Rashad al-Alimi. The other members are Tareq Saleh, Sultan al-Arada, Abdullah al-Alimi Bawazeer, Abu Zaraa al-Mahrami, Othman Mujalli, and, since 15 January 2026, Mahmoud al-Subaihi and Salem al-Khanbashi. Shaya al-Zindani has been prime minister since January 2026. The government sits in Aden; many of its leaders spend much of their time in Riyadh.\n\nThe STC: The Southern Transitional Council, founded in 2017 under Aidarous al-Zubaidi, wants a separate southern state and was backed by the UAE. Its status has been disputed since January 2026; see the Timeline: The south's split before the 2026 round. The wish for a southern state is still strong in Aden and the south.\n\nIslah: The Yemeni Congregation for Reform is a Sunni Islamist party founded in 1990, with Muslim Brotherhood roots and tribal backing. It is strong in Marib and Taiz. Al-Arada, the governor of Marib, is close to it.\n\nThe west coast: Tareq Saleh, nephew of the late president Ali Abdullah Saleh, leads the National Resistance, based on the Red Sea coast; for the fight over its base at Mocha, see the Timeline: July 2026 to now: the war resumes. The Giants Brigades are southern, largely Salafi units formed with UAE support in 2015 and led by Abu Zaraa al-Mahrami.\n\nThe outside powers: Saudi Arabia leads the coalition against the Houthis and is the government's main backer and paymaster. The UAE armed the southern forces; for its exit, see the Timeline: The south's split before the 2026 round. Iran arms and trains the Houthis. Oman hosts the Houthis' negotiators and passes messages between the sides.\n\nAQAP: Al-Qaeda in the Arabian Peninsula, led by Saad bin Atef al-Awlaki since 2024, fights both sides and is active mainly in Abyan, Shabwa and Al-Bayda.",
    "sources": [
     {
      "name": "Wikipedia: Presidential Leadership Council",
@@ -25,13 +25,13 @@
      "url": "https://en.wikipedia.org/wiki/Al-Islah_(Yemen)"
     },
     {
-     "name": "Khaleej Times: UAE confirms its last forces have left Yemen",
-     "url": "https://www.khaleejtimes.com/uae/confirms-last-forces-have-left-yemen"
-    },
-    {
      "name": "Wikipedia: 2026 in Yemen",
      "url": "https://en.wikipedia.org/wiki/2026_in_Yemen"
     }
+   ],
+   "timeline": [
+    "The south's split before the 2026 round",
+    "July 2026 to now: the war resumes"
    ]
   },
   {
@@ -39,7 +39,7 @@
    "cat": "Who's who",
    "dates": "As of October 2026",
    "sum": "The UN runs the peace effort through a special envoy, and Oman is the main go-between. A UN arms embargo targets the Houthis, and a peace roadmap agreed in principle in December 2023 has never been signed.",
-   "detail": "The envoy: The Office of the UN Special Envoy for Yemen leads the talks between the sides. It works from Amman and visits Riyadh, Muscat, Aden and Sanaa.\n\nOman: Muscat hosts the Houthis' chief negotiator, Mohammed Abdulsalam, and carries messages between the Houthis, Saudi Arabia and the US.\n\nThe embargo: UN Security Council Resolution 2216 of April 2015 bans arms supplies to the Houthis and demands that they leave the areas they seized. It is still the legal base the government and Saudi Arabia cite.\n\nShip checks: A UN inspection mission has checked ships bound for Houthi-held Red Sea ports since 2016, to keep weapons out while food and fuel get in.\n\nThe roadmap: On 23 December 2023 the UN envoy said the sides had committed to a ceasefire and a roadmap: paid state salaries, reopened roads, ports and airport, and then political talks. It was never signed. From 2022 on, see the Timeline for how the talks and the fighting went.",
+   "detail": "The envoy: The Office of the UN Special Envoy for Yemen leads the talks between the sides. It works from Amman and visits Riyadh, Muscat, Aden and Sanaa.\n\nOman: Muscat hosts the Houthis' chief negotiator, Mohammed Abdulsalam, and carries messages between the Houthis, Saudi Arabia and the US.\n\nThe embargo: UN Security Council Resolution 2216 of April 2015 bans arms supplies to the Houthis and demands that they leave the areas they seized. It is still the legal base the government and Saudi Arabia cite.\n\nShip checks: A UN inspection mission has checked ships bound for Houthi-held Red Sea ports since 2016, to keep weapons out while food and fuel get in.\n\nThe roadmap: On 23 December 2023 the UN envoy said the sides had committed to a ceasefire and a roadmap: paid state salaries, reopened roads, ports and airport, and then political talks. It was never signed.\n\nThe Timeline: For how the talks and the fighting went, see The Stockholm Agreement and Hodeidah, and The 2022 truce and the Presidential Council.",
    "sources": [
     {
      "name": "Office of the UN Special Envoy for Yemen",
@@ -53,6 +53,10 @@
      "name": "Wikipedia: Saudi-led intervention in the Yemeni civil war",
      "url": "https://en.wikipedia.org/wiki/Saudi-led_intervention_in_the_Yemeni_civil_war"
     }
+   ],
+   "timeline": [
+    "The Stockholm Agreement and Hodeidah",
+    "The 2022 truce and the Presidential Council"
    ]
   },
   {
@@ -60,7 +64,7 @@
    "cat": "History",
    "dates": "1839 – 1990",
    "sum": "Until 1990 there were two Yemen states: a republic in the north and a Marxist state in the south. They united on 22 May 1990.",
-   "detail": "Two histories: Britain took Aden in 1839 and ruled the south as a colony and protectorates. The north was ruled by Zaydi imams; it became a kingdom on the Ottomans' departure in 1918.\n\nThe north: An army revolt in September 1962 overthrew the imam and declared the Yemen Arab Republic, with its capital in Sanaa. A civil war followed until 1970, with Egypt backing the republicans and Saudi Arabia the royalists. Ali Abdullah Saleh became president in 1978.\n\nThe south: Britain left on 30 November 1967. The new state became the People's Democratic Republic of Yemen in 1970, a one-party Marxist state allied with the Soviet Union, with its capital in Aden. The two Yemens fought border wars in 1972 and 1979, and a short civil war inside the south's ruling party in January 1986 killed thousands.\n\nUnification: As Soviet support ended, the two states merged on 22 May 1990 as the Republic of Yemen. Saleh became president and the south's leader, Ali Salem al-Beidh, vice-president.\n\nFrom 1990 on, see the Timeline.",
+   "detail": "Two histories: Britain took Aden in 1839 and ruled the south as a colony and protectorates. The north was ruled by Zaydi imams; it became a kingdom on the Ottomans' departure in 1918.\n\nThe north: An army revolt in September 1962 overthrew the imam and declared the Yemen Arab Republic, with its capital in Sanaa. A civil war followed until 1970, with Egypt backing the republicans and Saudi Arabia the royalists. Ali Abdullah Saleh became president in 1978.\n\nThe south: Britain left on 30 November 1967. The new state became the People's Democratic Republic of Yemen in 1970, a one-party Marxist state allied with the Soviet Union, with its capital in Aden. The two Yemens fought border wars in 1972 and 1979, and a short civil war inside the south's ruling party in January 1986 killed thousands.\n\nUnification: As Soviet support ended, the two states merged on 22 May 1990 as the Republic of Yemen. Saleh became president and the south's leader, Ali Salem al-Beidh, vice-president.\n\nThe Timeline: What followed from 1990 is in Roots of the Houthi movement.",
    "sources": [
     {
      "name": "Wikipedia: North Yemen",
@@ -74,6 +78,9 @@
      "name": "Wikipedia: Yemeni unification",
      "url": "https://en.wikipedia.org/wiki/Yemeni_unification"
     }
+   ],
+   "timeline": [
+    "Roots of the Houthi movement"
    ]
   },
   {
@@ -81,7 +88,7 @@
    "cat": "History",
    "dates": "Its roots before 1990, and its creed",
    "sum": "The Houthis come from the Zaydis, a branch of Shia Islam whose imams ruled northern Yemen for about a thousand years until 1962. The movement's creed is hostile to the US and Israel and draws on Iran's revolution.",
-   "detail": "Zaydism: The Zaydis are a branch of Shia Islam found almost only in northern Yemen. They make up roughly a third of Yemen's people.\n\nThe imams: The first Zaydi imam set up his rule in Saada in 897. Zaydi imams ruled parts of the north on and off from then until the 1962 revolution. After it, the republic pushed the old Zaydi elite aside, and Saudi-funded Salafi schools spread into Zaydi areas. Both fed the revival that the al-Houthi family, religious scholars from Saada, later led.\n\nThe creed: The movement's motto, known as the Scream, is “God is great, death to America, death to Israel, curse on the Jews, victory to Islam”. It sees the US and Israel as its main enemies and takes inspiration from Iran's revolution and from Hezbollah.\n\nThe structure: The al-Houthi family leads the movement; its leader, Abdul-Malik al-Houthi, speaks in long televised speeches and holds no state post. Loyal supervisors watch over ministries, the army and the tribes. Since 2011 the movement has called itself Ansar Allah, “Supporters of God”.\n\nFrom 1990 on, see the Timeline.",
+   "detail": "Zaydism: The Zaydis are a branch of Shia Islam found almost only in northern Yemen. They make up roughly a third of Yemen's people.\n\nThe imams: The first Zaydi imam set up his rule in Saada in 897. Zaydi imams ruled parts of the north on and off from then until the 1962 revolution. After it, the republic pushed the old Zaydi elite aside, and Saudi-funded Salafi schools spread into Zaydi areas. Both fed the revival that the al-Houthi family, religious scholars from Saada, later led.\n\nThe creed: The movement's motto, known as the Scream, is “God is great, death to America, death to Israel, curse on the Jews, victory to Islam”. It sees the US and Israel as its main enemies and takes inspiration from Iran's revolution and from Hezbollah.\n\nThe structure: The al-Houthi family leads the movement; its leader, Abdul-Malik al-Houthi, speaks in long televised speeches and holds no state post. Loyal supervisors watch over ministries, the army and the tribes. Since 2011 the movement has called itself Ansar Allah, “Supporters of God”.\n\nThe Timeline: The movement's rise from 1990 is in Roots of the Houthi movement and The Saada wars.",
    "sources": [
     {
      "name": "Wikipedia: Houthis",
@@ -99,6 +106,10 @@
      "name": "Carnegie: Yemen's Houthis used multiple identities to advance",
      "url": "https://carnegieendowment.org/research/2019/03/yemens-houthis-used-multiple-identities-to-advance"
     }
+   ],
+   "timeline": [
+    "Roots of the Houthi movement",
+    "The Saada wars"
    ]
   },
   {
@@ -106,7 +117,7 @@
    "cat": "The war at sea",
    "dates": "Background",
    "sum": "The Bab el-Mandeb strait between Yemen and the Horn of Africa is the southern gate of the Red Sea and the route to the Suez Canal. About 12 percent of the world's seaborne oil passed through it before the Houthi attacks.",
-   "detail": "Geography: The strait joins the Red Sea to the Gulf of Aden and the Indian Ocean. It is about 32 km wide, between Yemen on one side and Djibouti and Eritrea on the other. The name means “Gate of Tears” in Arabic.\n\nPerim: The small Yemeni island of Perim, called Mayun in Arabic, splits the strait into a narrow eastern channel of about 3 km and a western channel of about 26 km, which big ships use. The Houthis have held it since September 2026.\n\nThe Red Sea islands: Zuqar and the Hanish islands lie further north, between Yemen and Eritrea. Eritrea seized Greater Hanish in December 1995; an international court awarded most of the islands to Yemen in 1998. The Houthis hold the Hanish islands and Kamaran, off the port of Salif.\n\nSocotra: Yemen's largest island lies in the Arabian Sea off the Horn of Africa. It is a UNESCO World Heritage site for its rare plants. The government holds it.\n\nThe traffic: Ships between Europe and Asia pass the strait on the way to and from the Suez Canal. In 2023 about 8.7 million barrels of oil a day went through it. After the attacks began, many shipping lines sent their ships around Africa instead; in 2024 oil flows through the strait fell to about 4 million barrels a day, and Egypt's canal income fell sharply.",
+   "detail": "Geography: The strait joins the Red Sea to the Gulf of Aden and the Indian Ocean. It is about 32 km wide, between Yemen on one side and Djibouti and Eritrea on the other. The name means “Gate of Tears” in Arabic.\n\nPerim: The small Yemeni island of Perim, called Mayun in Arabic, splits the strait into a narrow eastern channel of about 3 km and a western channel of about 26 km, which big ships use. The Houthis have held it since September 2026.\n\nThe Red Sea islands: Zuqar and the Hanish islands lie further north, between Yemen and Eritrea. Eritrea seized Greater Hanish in December 1995; an international court awarded most of the islands to Yemen in 1998. The Houthis hold the Hanish islands and Kamaran, off the port of Salif.\n\nSocotra: Yemen's largest island lies in the Arabian Sea off the Horn of Africa. It is a UNESCO World Heritage site for its rare plants. The government holds it.\n\nThe traffic: Ships between Europe and Asia pass the strait on the way to and from the Suez Canal. In 2023, before the attacks, about 8.7 million barrels of oil a day went through it. What the attacks did to this traffic is in the Timeline: The Red Sea and Bab al-Mandab.",
    "sources": [
     {
      "name": "Britannica: Bab el-Mandeb Strait",
@@ -132,6 +143,10 @@
      "name": "EIA: Red Sea oil flows in 2023 and 2024 (Oct 2024)",
      "url": "https://www.eia.gov/todayinenergy/detail.php?id=63446"
     }
+   ],
+   "timeline": [
+    "The Red Sea and Bab al-Mandab",
+    "July 2026 to now: the war resumes"
    ]
   },
   {
@@ -139,7 +154,7 @@
    "cat": "The war at sea",
    "dates": "As of October 2026",
    "sum": "The Houthis strike ships with anti-ship missiles, drones and explosive boats, and say whose ships they target. Foreign navies escort ships through the Red Sea; a US–Houthi deal of May 2025 covers US ships only.",
-   "detail": "The method: The Houthis use anti-ship ballistic and cruise missiles, drones, explosive boats and, at times, boarding teams flown in by helicopter. Four merchant ships have been sunk since 2023.\n\nThe declared targets: The Houthis announce which ships they will hit. They have named ships linked to Israel, the US or Britain at different times, and since July 2026 they have declared a blockade of Saudi-linked shipping. Many ships hit had no clear link to any of them.\n\nThe navies: The US-led Operation Prosperity Guardian, set up in December 2023, and the EU's defensive Operation Aspides, set up in February 2024, escort and protect ships.\n\nThe US deal: Under a deal mediated by Oman on 6 May 2025, the US stopped its strikes and the Houthis agreed to stop attacking US ships. It does not cover Israel or Saudi Arabia.\n\nFrom November 2023 on, see the Timeline for the course of the attacks and the strikes on Yemen.",
+   "detail": "The method: The Houthis use anti-ship ballistic and cruise missiles, drones, explosive boats and, at times, boarding teams flown in by helicopter. Four merchant ships have been sunk since 2023.\n\nThe declared targets: The Houthis announce which ships they will hit. They have named ships linked to Israel, the US or Britain at different times, and Saudi-linked ships in the 2026 round (see the Timeline: July 2026 to now: the war resumes). Many ships hit had no clear link to any of them.\n\nThe navies: The US-led Operation Prosperity Guardian, set up in December 2023, and the EU's defensive Operation Aspides, set up in February 2024, escort and protect ships.\n\nThe US deal: Under a deal mediated by Oman on 6 May 2025, the US stopped its strikes and the Houthis agreed to stop attacking US ships. It does not cover Israel or Saudi Arabia.\n\nThe Timeline: For the course of the attacks and the strikes on Yemen, see The Red Sea and Bab al-Mandab, and July 2026 to now: the war resumes.",
    "sources": [
     {
      "name": "Wikipedia: Red Sea crisis",
@@ -153,6 +168,10 @@
      "name": "Wikipedia: Operation Aspides",
      "url": "https://en.wikipedia.org/wiki/Operation_Aspides"
     }
+   ],
+   "timeline": [
+    "The Red Sea and Bab al-Mandab",
+    "July 2026 to now: the war resumes"
    ]
   },
   {
@@ -182,6 +201,10 @@
      "name": "USIP Iran Primer: UN report, Houthi arms resemble Iran's",
      "url": "https://iranprimer.usip.org/node/7156"
     }
+   ],
+   "timeline": [
+    "The fall of Sanaa",
+    "The Red Sea and Bab al-Mandab"
    ]
   },
   {
@@ -215,6 +238,10 @@
      "name": "WFP: Yemen",
      "url": "https://www.wfp.org/countries/yemen"
     }
+   ],
+   "timeline": [
+    "The Stockholm Agreement and Hodeidah",
+    "The 2022 truce and the Presidential Council"
    ]
   }
  ]

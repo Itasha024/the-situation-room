@@ -1426,3 +1426,64 @@ html[data-view="ops"] .ops-left .ex-list .phase-head > strong { display: block !
 html[data-view="ops"] .ops-left .ex-list .phase-card:not(.open) .full { display: none !important }
 html[data-view="ops"] .ops-left .ex-list .phase-card .toggle-phase { display: inline-block !important }
 html[data-view="ops"] .ops-left .ex-list .phase-card.expandable { cursor: pointer }
+
+/* ---------- 26 Oct (user: "the explainer in the sub menu … much more nice to look at — clear colours, diagrams …
+   very professional; the timeline too"): the explainers' cards in their category's colour (desk.css .ex-card), the
+   categories' icons in the side menu, and the Timeline's eras as a line of dated markers. ---------- */
+html[data-view="ops"] .ops-left .ex-list .phase-card.ex-card { padding: 14px 14px 13px !important; border-left: 3px solid var(--ex-c) !important; background: var(--o-raised) !important }
+html[data-view="ops"] .ops-left .ex-list .phase-card.ex-guide { background: linear-gradient(180deg, color-mix(in srgb, var(--ex-c) 10%, var(--o-raised)), var(--o-raised) 60%) !important }
+html[data-view="ops"] .ops-left .ex-card .ex-title { color: var(--o-strong); font-family: var(--ops-ui) }
+html[data-view="ops"] .ops-left .ex-card .phase-sum { font-size: 13.5px !important; color: var(--o-text) }
+html[data-view="ops"] .ops-left .ex-chip { color: var(--o-text) !important; background: var(--o-panel); border-color: var(--o-line-2) }
+html[data-view="ops"] .ops-left :is(.ex-chip-tl, .ex-chip-ex) { border-color: color-mix(in srgb, var(--o-sel) 45%, var(--o-line-2)); background: color-mix(in srgb, var(--o-sel) 8%, var(--o-panel)) }
+html[data-view="ops"] .ops-left .ex-chip .ex-svg { color: var(--o-sel) }
+html[data-view="ops"] .ops-left .ex-g-fig { color: var(--o-strong); border-color: var(--o-line); background-color: var(--o-panel) }
+html[data-view="ops"] .ops-left .ex-read { color: color-mix(in srgb, var(--ex-c, var(--o-sel)) 72%, var(--o-strong)) !important }
+html[data-view="ops"] .ops-left .ex-all { margin: 2px 0 0 !important }
+/* The categories in the side menu: each its icon in its colour over its name. */
+html[data-view="ops"] .ops-left .ex-cats button { display: block !important }
+html[data-view="ops"] .ops-left .ex-cats button .ex-svg { display: block; width: 18px; height: 18px; margin: 0 auto 5px; color: var(--ex-c) }
+html[data-view="ops"] .ops-left .ex-cats button:not(.on) .ex-svg { opacity: .75 }
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-left .ex-cats button .ex-svg { display: inline-block; width: 14px; height: 14px; margin: 0 6px 0 0; vertical-align: -3px }
+}
+/* An era: its dates large in the highlight colour, its place in the run at the right; Now edged in that colour. */
+html[data-view="ops"] .ops-left .tl-card .tl-head { display: block !important }
+html[data-view="ops"] .ops-left .tl-card .tl-when { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0 0 9px; margin: 0 0 9px; border-bottom: 1px solid var(--o-line) }
+html[data-view="ops"] .ops-left .tl-card .tl-dates { font: 600 14px/1.2 var(--ops-mono); color: var(--o-sel); letter-spacing: .01em }
+html[data-view="ops"] .ops-left .tl-card .tl-dates { flex: 1 1 auto; min-width: 0 }
+html[data-view="ops"] .ops-left .tl-card .tl-n { flex: none; align-self: flex-start; margin-left: auto; padding-top: 2px; font: 500 11px var(--ops-mono); color: var(--o-faint); white-space: nowrap }
+html[data-view="ops"] .ops-left .tl-card .tl-now2 { display: inline-block; margin: 0 }
+html[data-view="ops"] .ops-left .pager-timeline .phase-card.tl-card { border-left: 3px solid var(--o-line-2) !important }
+html[data-view="ops"] .ops-left .pager-timeline .phase-card.tl-card.now { border-left-color: var(--o-sel) !important; background: linear-gradient(180deg, color-mix(in srgb, var(--o-sel) 7%, var(--o-raised)), var(--o-raised) 140px) !important }
+html[data-view="ops"] .ops-left .tl-card .phase-sum { font-weight: 500; color: var(--o-strong) !important; font-size: 14.5px !important }
+html[data-view="ops"] .ops-left .tl-card .tl-map { background: var(--o-panel); border-left-color: var(--o-line-2) }
+html[data-view="ops"] .ops-left .tl-card .srcs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding-top: 10px; border-top: 1px dashed var(--o-line-2) }
+html[data-view="ops"] .ops-left .tl-card .src-list { flex-basis: 100% }
+html[data-view="ops"] .ops-left .tl-card .src-list li { border-color: var(--o-line) }
+html[data-view="ops"] .ops-left .tl-card .src-list a { color: var(--o-text) }
+html[data-view="ops"] .ops-left .tl-card .src-list a:hover { color: var(--o-sel) }
+html[data-view="ops"] .ops-left .now-tag { background: var(--o-sel); color: var(--o-sel-ink); border-radius: 2px; font: 700 10.5px/1.5 var(--ops-cond); letter-spacing: .14em; padding: 0 6px }
+/* The eras' side menu as a line of markers: the start year over each name, the open era filled, the latest ringed. */
+@media (min-width: 761px) {
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.tl-dot {
+    text-align: left !important; padding: 9px 4px 10px 21px !important;
+    background: linear-gradient(var(--o-line-2), var(--o-line-2)) 9px 0 / 1px 100% no-repeat !important
+  }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.tl-dot:first-child { background-position: 9px 15px !important }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.tl-dot:last-child { background-size: 1px 15px !important }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.tl-dot:is(.on, :hover) { background-color: var(--o-panel) !important }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.tl-dot::after {
+    content: "" !important; position: absolute; left: 6px; top: 12px; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--o-bg); box-shadow: 0 0 0 1.5px var(--o-dim)
+  }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.tl-dot.tl-isnow::after { box-shadow: 0 0 0 1.5px var(--o-sel), 0 0 0 4px color-mix(in srgb, var(--o-sel) 22%, transparent) }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.tl-dot.on::after { background: var(--o-sel); box-shadow: 0 0 0 1.5px var(--o-sel), 0 0 0 4px color-mix(in srgb, var(--o-sel) 25%, transparent) }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.tl-dot.on::before { display: none }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots .tl-yr { display: block; margin: 0 0 2px; font: 500 10px/1.1 var(--ops-mono); letter-spacing: 0; text-transform: none; color: var(--o-faint) }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.on .tl-yr { color: var(--o-sel) }
+}
+@media (max-width: 760px) {
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots .tl-yr { display: inline; margin-right: 5px; font: 500 10px var(--ops-mono); letter-spacing: 0; color: var(--o-faint) }
+  html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.on .tl-yr { color: var(--o-sel) }
+}

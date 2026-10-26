@@ -214,6 +214,22 @@ test("the IDF line: a move's way, a map's date, an area's share (user, 24 Oct)",
   assert.equal(heldShareIn("Palestinian economy shrank 77% in Gaza"), null);
 });
 
+// User, 26 Oct: "the clash type … doesn't represent the wide variety of pins under it".
+test("Gaza kinds of event: what was done, and the page's list the same", async () => {
+  const { gazaKindOf, GAZA_KIND_RES } = await import("./gaza-kinds.ts");
+  const fs = await import("node:fs");
+  assert.equal(gazaKindOf("Palestinian media: Israeli forces raid Arraba and arrest three"), "raid");
+  assert.equal(gazaKindOf("WAFA: Israeli extremists torch cars in Huwara"), "property");
+  assert.equal(gazaKindOf("IDF: strike in Khan Younis kills operative"), "strike");
+  assert.equal(gazaKindOf("Palestinian media: Israeli forces demolish a home in Silwan"), "demolition");
+  assert.equal(gazaKindOf("IDF: gunman stabs soldier at Gush Etzion junction"), "attack");
+  assert.equal(gazaKindOf("Palestinian media: youth shot by Israeli forces in Beita"), "gunfire");
+  assert.equal(gazaKindOf("Palestinian media: Israeli extremists attack shepherds in Masafer Yatta"), "assault");
+  assert.equal(gazaKindOf("Board of Peace: stabilisation force troops arrive"), "combat");
+  const page = fs.readFileSync(new URL("../../../public/app.js", import.meta.url), "utf8");
+  for (const [, re] of GAZA_KIND_RES) assert.ok(page.includes(re.source), `public/app.js lacks ${re.source.slice(0, 40)}`);
+});
+
 // User, 24 Oct: "no taking such things from sources that aren't Israeli or Palestinian unless it's exclusive" (Al-Modon's
 // "major military operation in the occupied West Bank" led an Iran card); diplomacy may come from anyone.
 test("Gaza and Judea and Samaria events from Israeli or Palestinian sources only", async () => {

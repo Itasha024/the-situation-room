@@ -71,3 +71,9 @@ test("a found event's Israeli act is the Palestinian channels' claim", async () 
   assert.equal(claimLine("Palestinian Interior Ministry: two security officers killed"), "Palestinian Interior Ministry: two security officers killed");
   assert.equal(claimLine("Palestinian media: Israeli forces raid Jericho"), "Palestinian media: Israeli forces raid Jericho");
 });
+
+test("quotes are people's and channels' own voice only (27 Oct)", async () => {
+  const { ownVoice } = await import("./gaza-mood.ts");
+  for (const bad of ["Urgent | Israeli forces evicts a new family", "The moment Israeli forces targets a vehicle", "The rubble and destruction at the home", "We mourn the duty dead Ahmed", "Everyone is happy, this son of a bastard came"]) assert.equal(ownVoice(bad), false, bad);
+  for (const good of ["God's curse upon them", "May God bring relief.", "Most likely someone from the PLO planted it"]) assert.equal(ownVoice(good), true, good);
+});

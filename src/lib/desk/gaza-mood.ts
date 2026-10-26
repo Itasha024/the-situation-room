@@ -310,7 +310,7 @@ Answer JSON only:
  "intensity": 1-5 (1 quiet, 5 very heated: many reactions, strong words, calls to act),
  "summary": "2-3 short sentences in plain English: what the reactions say and how widely, and who says it (local channels, faction media, commenters). Never retell the event, never discuss which words outlets use. When the reactions are few, say so plainly. Spell places as the EVENT does.",
  "calls": [{"i": item number, "kind": "protest"|"strike"|"confront"|"attack"|"mobilise"|"other", "en": "the call in English, short"}] (ONLY explicit calls on the public to DO something: go out, protest, strike, confront, mobilise, attack; a faction's threat counts as "attack". A prayer, a curse, a wish or an official's vow to investigate is NOT a call; none found: []),
- "quotes": [{"i": item number, "en": "a short English rendering"}] (up to 5 items in someone's OWN voice that show the mood best: a person's or a channel's own feeling, opinion, prayer, curse, joke or call; for a channel's post render only its own words, not the news in it. NEVER an item that only tells what happened or what someone announced, never an official, faction or family statement, never obscene words; none found: []),
+ "quotes": [{"i": item number, "en": "a short English rendering"}] (up to 5 items in someone's OWN voice that show the mood best: a person's or a channel's own feeling, opinion, prayer, curse, joke or call; for a channel's post render only its own words of feeling or opinion, never its headline, its caption of a video or photo ("The moment …", "Urgent | …") or the news in it. NEVER an item that only tells what happened or what someone announced, never an official, faction or family statement, never obscene words; none found: []),
  "reports": number,
  "rel": [the item numbers of every item about THIS event, reports and reactions alike]}
 Words: write "Judea and Samaria" (never "West Bank"), "Israeli citizens" (never "settlers"), "Israeli forces" or "the IDF" (never "occupation forces"), "killed" (never "martyred"), "attacks" (never "ceasefire violations"). Quote people's words as theirs; do not adopt them.`;
@@ -325,6 +325,18 @@ export function moodItems(posts: MoodPost[], max = 45): MoodPost[] {
 export function moodPrompt(ev: MoodEvent, items: MoodPost[]): string {
   const rx = (p: MoodPost) => (p.rx ? ` [${Object.entries(p.rx).map(([e, n]) => `${e}${n}`).join(" ")}]` : "");
   return [`EVENT (${ev.at.slice(0, 16).replace("T", " ")} UTC${ev.place ? `, ${ev.place}` : ""}): ${ev.headline}`, "", "ITEMS:", ...items.map((p, i) => `${i}. [${p.c ? "comment" : "post"} @${p.ch}${p.v ? `, ${p.v} views` : ""}${rx(p)}] ${cut(p.x, 260)}`)].join("\n");
+}
+
+/**
+ * A quote in someone's own voice, not a headline, a caption, a statement or crude words (27 Oct: "Urgent | Israeli
+ * forces evict …", "The moment Israeli forces …", "We mourn the duty dead …" came through as quotes).
+ */
+export function ownVoice(en: string): boolean {
+  const s = en.trim();
+  if (/\||^(?:urgent|breaking|watch|video|footage|photos?|scenes?|the moment|the rubble|moments?|now|update)\b/i.test(s)) return false;
+  if (/^we (?:mourn|announce|condemn|confirm|declare|hold|call on the)\b/i.test(s)) return false;
+  if (/\b(?:bastard|whore|son of a|bitch|fuck|shit)\b/i.test(s)) return false;
+  return true;
 }
 
 /** The model's answer made safe: known kinds only, items it named, shares that add up. */
@@ -349,7 +361,7 @@ export function readMood(json: Record<string, unknown>, items: MoodPost[], words
   const quotes = (Array.isArray(json.quotes) ? json.quotes : []).flatMap((q) => {
     const o = q as { i?: unknown; en?: unknown };
     const p = item(o.i);
-    if (!p || typeof o.en !== "string" || !o.en.trim()) return [];
+    if (!p || typeof o.en !== "string" || !o.en.trim() || !ownVoice(o.en)) return [];
     return [{ en: words(o.en.trim()), u: p.u, ch: p.ch, ...(p.c ? { c: 1 as const } : {}) }];
   }).slice(0, 5);
   const intensity = Math.max(1, Math.min(5, Math.round(Number(json.intensity) || 1)));

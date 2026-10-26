@@ -248,11 +248,11 @@ export function PaGuide() {
         </ul>
 
         <H3 id="pg-areas" cat="Politics and money" kicker="Politics and money">Areas A, B and C (Oslo II, 1995)</H3>
-        {/* The map's own colours for the areas (public/app.js OSLO_STYLE): A purple, B teal, C grey. */}
+        {/* The map's own colours for the areas (public/app.js OSLO_STYLE): A purple, B teal, C pink. */}
         <div className="pg-bar" role="img" aria-label="Area A about 18 percent, Area B about 22 percent, Area C about 60 percent of Judea and Samaria">
           <span style={{ width: "18%", background: "#c084fc" }}>A <small>18%</small></span>
           <span style={{ width: "22%", background: "#2dd4bf" }}>B <small>22%</small></span>
-          <span style={{ width: "60%", background: "#94a3b8" }}>C <small>60%</small></span>
+          <span style={{ width: "60%", background: "#f472b6" }}>C <small>60%</small></span>
         </div>
         <p className="pg-note">Shares of the land of Judea and Samaria, about; the colours are the desk map's.</p>
         <ul>

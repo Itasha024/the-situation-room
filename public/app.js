@@ -3313,8 +3313,10 @@ function wirePager(root, idx, onChange, opts) {
     dots.forEach((b, j) => { b.classList.toggle('on', j === next); b.setAttribute('aria-selected', String(j === next)); });
     cur = next;
     ends();
+    if (dots[0]) stripFollow(dots[0].parentElement, true);
     onChange(next);
   };
+  if (dots[0]) stripFollow(dots[0].parentElement);
   const prev = pager.querySelector('.pg-prev');
   const nextBtn = pager.querySelector('.pg-next');
   // Without wrapping, an arrow with nowhere to go is hidden.
@@ -3346,6 +3348,51 @@ function wirePager(root, idx, onChange, opts) {
     x0 = null;
     const on = (dx < 0) !== RTL ? 1 : -1;
     if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) go(cur + on, on);
+  }, { passive: true });
+}
+
+/*
+ * A side menu (the eras, the categories) keeps its chosen item in view, as a phone's row or a computer's column
+ * (user, 26 Oct: "make the sub menu move according to the current chosen sub category"). It scrolls the menu only,
+ * never the page; a menu hidden when drawn is set right when it first gets its size.
+ */
+function stripFollow(strip, smooth) {
+  if (!strip) return;
+  const go = (soft) => {
+    const b = strip.querySelector('button.on, button[aria-selected="true"]');
+    if (!b || !strip.clientWidth) return;
+    const sr = strip.getBoundingClientRect(), br = b.getBoundingClientRect();
+    const to = { behavior: soft && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto' };
+    if (strip.scrollWidth > strip.clientWidth + 2) to.left = strip.scrollLeft + (br.left - sr.left) - (strip.clientWidth - br.width) / 2;
+    if (strip.scrollHeight > strip.clientHeight + 2) to.top = strip.scrollTop + (br.top - sr.top) - (strip.clientHeight - br.height) / 2;
+    if (to.left != null || to.top != null) strip.scrollTo(to);
+  };
+  requestAnimationFrame(() => go(smooth));
+  if (!strip._follow && window.ResizeObserver) {
+    let w0 = strip.clientWidth;
+    new ResizeObserver(() => { const w = strip.clientWidth; if (w && !w0) go(false); w0 = w; }).observe(strip);
+  }
+  strip._follow = go;
+}
+
+/**
+ * On a phone, a side swipe over a panel's boxes moves to the next or the last of its categories, as the timeline's
+ * eras do (user, 26 Oct), and its menu row follows.
+ */
+function swipeCats(area, strip) {
+  if (!area || !strip) return;
+  let x0 = null, y0 = null;
+  area.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  area.addEventListener('touchend', (e) => {
+    if (x0 == null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    x0 = null;
+    if (document.documentElement.dataset.view !== 'ops' || !matchMedia('(max-width: 760px)').matches) return;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5 || e.target.closest('.pager-timeline, .chart, input, .spot-pop')) return;
+    const btns = [...strip.querySelectorAll('button')];
+    const i = btns.findIndex((b) => b.classList.contains('on'));
+    const next = btns[i + ((dx < 0) !== RTL ? 1 : -1)];
+    if (next) next.click();
   }, { passive: true });
 }
 
@@ -3493,7 +3540,7 @@ function niceStep(range, n) {
   const p = 10 ** Math.floor(Math.log10(raw || 1));
   return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || p * 10;
 }
-function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), label, start = WAR_START }) {
+function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), label, start = WAR_START, startLabel = 'Conflict' }) {
   const all = lines.flatMap((l) => l.pts);
   if (all.length < 2) return '';
   const W = 320;
@@ -3524,7 +3571,7 @@ function lineChart({ lines, bases = [], zero = false, fmt = (v) => ledNum(v), la
     m.setUTCMonth(m.getUTCMonth() + 1);
   }
   const war = Date.parse(`${start}T00:00:00Z`) >= t0 && Date.parse(`${start}T00:00:00Z`) <= t1
-    ? `<line class="war" x1="${x(start).toFixed(1)}" x2="${x(start).toFixed(1)}" y1="${T}" y2="${H - B}"/><text class="war" x="${(x(start) + 3).toFixed(1)}" y="${T + 8}">Conflict</text>`
+    ? `<line class="war" x1="${x(start).toFixed(1)}" x2="${x(start).toFixed(1)}" y1="${T}" y2="${H - B}"/><text class="war" x="${(x(start) + 3).toFixed(1)}" y="${T + 8}">${escapeHtml(startLabel)}</text>`
     : '';
   const base = bases.map((b) => `<line class="base ${b.cls || ''}" x1="${L}" x2="${W - R}" y1="${y(b.value).toFixed(1)}" y2="${y(b.value).toFixed(1)}"/>`).join('');
   const path = lines.map((l) => {
@@ -3762,12 +3809,13 @@ function renderCasualties() {
     }).join('')}</table></div>`]);
   }
   const idx = Math.min(numBoxOf[numCat] || 0, slides.length - 1);
-  const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${NUM_CATS.map(([k, label]) => `<button type="button" data-cat="${k}" aria-pressed="${k === numCat}"${k === numCat ? ' class="on"' : ''}>${label}</button>`).join('')}</div>`;
+  const sw = numCatStrip(NUM_CATS, numCat);
   hideSpot();
   el.innerHTML = `${cadenceStamp(true)}${sw}
     <div class="tally one">${pagerHtml('numbers', slides.map((s) => s[1]), idx, slides.map((s) => s[0]))}</div>
 `;
   wirePager(el, idx, (i) => { numBoxOf[numCat] = i; hideSpot(); });
+  numCatWire(el, numCat);
   wirePop(document.getElementById('btn-share-meth'), 'share-pop', SHARE_HTML);
   wireMore(el);
   wireSpots(el);
@@ -8893,11 +8941,15 @@ function irSpark(series, unit) {
 }
 /** A box's series as the Yemen desk's charts: opened from the chart sign by its name (user, 11 Oct). */
 function irChart(b, id) {
-  const pts = (b.series || []).filter((p) => p && p.d && Number.isFinite(+p.v)).map((p) => ({ date: p.d, value: +p.v })).sort((x, y) => x.date.localeCompare(y.date));
-  if (pts.length < 3) return '';
+  const ptsOf = (s) => (s || []).filter((p) => p && p.d && Number.isFinite(+p.v)).map((p) => ({ date: p.d, value: +p.v })).sort((x, y) => x.date.localeCompare(y.date));
+  // One line (series), or several (lines: [{ name, series }], the Gaza desk's map counts by area).
+  const lines = (Array.isArray(b.lines) ? b.lines.map((l, i) => ({ name: l.name, cls: `s${i + 1}`, pts: ptsOf(l.series) })) : [{ name: b.seriesUnit || b.unit || '', cls: 's1', pts: ptsOf(b.series) }]).filter((l) => l.pts.length >= 2);
+  const pts = lines.flatMap((l) => l.pts);
+  if (!lines.length || pts.length < 3) return '';
   const big = Math.max(...pts.map((p) => Math.abs(p.value)));
   const fmt = (v) => (big >= 1e6 ? `${+(v / 1e6).toFixed(2)}M` : big >= 1e4 ? `${+(v / 1e3).toFixed(1)}k` : ledNum(v, big < 10 ? 2 : big < 100 ? 1 : 0));
-  const chart = lineChart({ lines: [{ name: b.seriesUnit || b.unit || '', cls: 's1', pts }], fmt, label: b.title, start: IRAN_MAP_FROM });
+  const gaza = deskOf().id === 'gaza';
+  const chart = lineChart({ lines, fmt, label: b.title, start: IRAN_MAP_FROM, zero: !!b.zero, startLabel: gaza ? 'Ceasefire' : undefined });
   if (!chart) return '';
   spotCharts[id] = `<p class="chart-title">${escapeHtml(b.title)}</p>${chart}`;
   return id;
@@ -8962,9 +9014,10 @@ function renderIranNumbers() {
   // The same line as the Yemen desk's numbers (user, 17 Oct), with the time the Iran desk's numbers next update.
   const nextAt = live && Date.parse(live.nextAt || '') > Date.now() ? live.nextAt : iranBrief.b && iranBrief.b.nextUpdateAt;
   const head = cadenceStamp(true, nextAt ? { nextUpdateAt: nextAt } : null);
-  const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${d.sets.map((s) => `<button type="button" data-cat="${s.key}" aria-pressed="${s.key === set.key}"${s.key === set.key ? ' class="on"' : ''}>${escapeHtml(s.name)}</button>`).join('')}</div>`;
+  const sw = numCatStrip(d.sets.map((s) => [s.key, s.name]), set.key);
   el.innerHTML = `${head}${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
   wirePager(el, 0, () => { hideSpot(); irClamp(el); });
+  numCatWire(el, set.key, set.name);
   wireSpots(el);
   irClamp(el);
   // A click anywhere on a box opens it, as on the timeline and the Yemen desk (user, 12 Oct).
@@ -9010,7 +9063,14 @@ function gazaMapBox() {
   const n = {};
   for (const e of evs) { const a = gazaAreaOf(e); if (a) { const k = `${iranSideOf(e)}:${a}`; n[k] = (n[k] || 0) + 1; } }
   const rows = GAZA_PIN_SIDES.map(([k, , name]) => ({ label: name, cells: ['gaza', 'js'].map((a) => (n[`${k}:${a}`] ? { v: n[`${k}:${a}`].toLocaleString('en-US'), k: 'off' } : null)) })).filter((r) => r.cells.some(Boolean));
-  return { type: 'table', title: 'Events on the map', unit: 'since 10 Oct 2025', cols: ['', 'Gaza', 'Judea and Samaria'], rows, note: "Each event once, by who acted, as the map has it: the desk's reports from 23 Oct 2026, the researched events before." };
+  // Its chart: the events a week in each area, the weeks counted back from today so the last one is whole; drawn
+  // again with the pins, so it moves as they come (user, 26 Oct: "graphs … update always live").
+  const WEEK = 7 * 86400_000, now = Date.now();
+  const weeks = Math.ceil((now - Date.parse('2025-10-10T00:00:00+03:00')) / WEEK);
+  const per = { gaza: new Array(weeks).fill(0), js: new Array(weeks).fill(0) };
+  for (const e of evs) { const a = gazaAreaOf(e), w = Math.floor((now - Date.parse(e.at)) / WEEK); if (a && w >= 0 && w < weeks) per[a][weeks - 1 - w]++; }
+  const series = (a) => per[a].map((v, i) => ({ d: new Date(now - (weeks - 1 - i) * WEEK).toISOString().slice(0, 10), v }));
+  return { type: 'table', title: 'Events on the map', unit: 'since 10 Oct 2025', cols: ['', 'Gaza', 'Judea and Samaria'], rows, zero: true, lines: [{ name: 'Gaza, events a week', series: series('gaza') }, { name: 'Judea and Samaria, events a week', series: series('js') }], note: "Each event once, by who acted, as the map has it: the desk's reports from 23 Oct 2026, the researched events before." };
 }
 function gazaSets() {
   const sets = ((gazaNums.r && gazaNums.r.sets) || []).map((s) => ({ ...s, boxes: [...(s.boxes || [])] }));
@@ -9027,13 +9087,18 @@ function gazaSets() {
   const zone = rep && (!map0 || String(rep.asOf) > String(map0.asOf)) ? { share: rep.share, url: rep.url, by: rep.by, asOf: rep.asOf, name: `"${rep.text}"`, said: true } : map0;
   if (zone && Number.isFinite(+zone.share)) {
     const s = setOf('dayafter', 'Day after');
-    const box = { type: 'stat', title: 'Gaza held by the IDF', unit: 'share of the Strip', value: { v: `${+zone.share % 1 ? (+zone.share).toFixed(1) : +zone.share}%`, url: zone.url, src: zone.by, date: zone.asOf, k: zone.said ? 'unoff' : 'off' }, caption: zone.said ? `${zone.name} (${zone.by}, ${fmtDay(zone.asOf)})` : `${zone.name || 'the area behind the line'}, as last mapped (${fmtDay(zone.asOf)})` };
+    // Its chart: the line at the ceasefire and as first measured (the researched box, Gisha), then each figure since:
+    // the last map and an Israeli report, as they come.
+    const pts = [{ d: '2025-10-10', v: 53 }, { d: '2025-11-04', v: 57.8 }];
+    for (const p of [map0, rep]) if (p && Number.isFinite(+p.share) && p.asOf) pts.push({ d: String(p.asOf).slice(0, 10), v: +p.share });
+    const box = { type: 'stat', title: 'Gaza held by the IDF', unit: 'share of the Strip', seriesUnit: '% of Gaza held by the IDF', series: pts, value: { v: `${+zone.share % 1 ? (+zone.share).toFixed(1) : +zone.share}%`, url: zone.url, src: zone.by, date: zone.asOf, k: zone.said ? 'unoff' : 'off' }, caption: zone.said ? `${zone.name} (${zone.by}, ${fmtDay(zone.asOf)})` : `${zone.name || 'the area behind the line'}, as last mapped (${fmtDay(zone.asOf)})` };
     const i = s.boxes.findIndex((x) => x.title === box.title);
     if (i >= 0) s.boxes[i] = box; else s.boxes.unshift(box);
   }
   const m = gazaMapBox();
   if (m) setOf('security', 'Security').boxes.unshift(m);
-  return sets.filter((s) => s.boxes.length);
+  // The hostages are all back (user, 26 Oct: "remove hostages category").
+  return sets.filter((s) => s.boxes.length && s.key !== 'hostages');
 }
 function renderGazaNumbers() {
   const el = document.getElementById('gaza-numbers');
@@ -9042,11 +9107,13 @@ function renderGazaNumbers() {
   if (!sets.length) return;
   const set = sets.find((s) => s.key === gazaNums.cat) || sets[0];
   gazaNums.cat = set.key;
-  const asOf = gazaNums.r.asOf ? `researched to ${fmtDay(gazaNums.r.asOf)}` : '';
-  const live = gazaNums.d && gazaNums.d.at ? `live figures updated ${fmtStamp(gazaNums.d.at)}` : '';
-  const sw = `<div class="num-cat" role="group" aria-label="Numbers to show">${sets.map((s) => `<button type="button" data-cat="${s.key}" aria-pressed="${s.key === set.key}"${s.key === set.key ? ' class="on"' : ''}>${escapeHtml(s.name)}</button>`).join('')}</div>`;
-  el.innerHTML = `<p class="cadence at-head">Since the ceasefire of 10 Oct 2025${asOf || live ? ` · ${escapeHtml([asOf, live].filter(Boolean).join(' · '))}` : ''}</p>${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
+  // The same line as the other desks' numbers (user, 26 Oct), with the time the desk's figures next update.
+  const nextAt = iranBrief.b && iranBrief.b.nextUpdateAt;
+  const head = cadenceStamp(true, nextAt ? { nextUpdateAt: nextAt } : null);
+  const sw = numCatStrip(sets.map((s) => [s.key, s.name]), set.key);
+  el.innerHTML = `${head}${sw}<div class="tally one">${pagerHtml('numbers', set.boxes.map((b, i) => irBox(b, i)), 0, set.boxes.map((b) => b.title))}</div>`;
   wirePager(el, 0, () => { hideSpot(); irClamp(el); });
+  numCatWire(el, set.key, set.name);
   wireSpots(el);
   irClamp(el);
   el.querySelectorAll('.led-tog').forEach((b) => {
@@ -9124,6 +9191,10 @@ function renderDeskExplain(ex, id) {
   const sw = `<div class="num-cat ex-cats" role="group" aria-label="Explainers to show">${cats.map((c) => { const [cc, ic] = exCat(c.name); return `<button type="button" data-cat="${escapeHtml(c.name)}" style="--ex-c:${cc}" aria-pressed="${c === cat}"${c === cat ? ' class="on"' : ''}>${exIcon(ic)}<span>${escapeHtml(c.name)}</span></button>`; }).join('')}</div>`;
   el.innerHTML = `${sw}<div class="pager pager-timeline ex-list">${cat.cards.join('')}${cat.cards.includes(guide) ? '' : `<p class="ex-all"><a class="ex-read ex-all-a" href="${href}#cat-${slug(cat.name)}">${escapeHtml(cat.name)} in the full guide <span aria-hidden="true">→</span></a></p>`}</div>`;
   el.querySelectorAll('.num-cat button').forEach((b) => (b.onclick = () => { deskExplain[`${id}:cat`] = b.dataset.cat; renderDeskExplain(ex, id); }));
+  // On a phone a side swipe moves between the categories, as the timeline's eras (user, 26 Oct), the menu following.
+  const strip = el.querySelector('.num-cat');
+  stripFollow(strip);
+  swipeCats(el.querySelector('.ex-list'), strip);
 }
 /*
  * The explainers' categories, each a colour and an icon (user, 26 Oct: "clear colours … professional"); the guide pages
@@ -9151,7 +9222,45 @@ const EX_ICON = {
   ballot: '<rect x="4.5" y="10.5" width="15" height="9.5" rx="1"/><path d="M8.5 10.5 10.5 4h5l-1.5 6.5M8 15.5h8"/>',
   book: '<path d="M4 5.5c2.7-1 5.3-1 8 .8v13c-2.7-1.8-5.3-1.8-8-.8z"/><path d="M20 5.5c-2.7-1-5.3-1-8 .8v13c2.7-1.8 5.3-1.8 8-.8z"/>',
   clock: '<path d="M6 4v16"/><circle cx="6" cy="7.5" r="1.6" fill="currentColor"/><circle cx="6" cy="14" r="1.6" fill="currentColor"/><path d="M10 7.5h9M10 14h7M10 19h5"/>',
+  pulse: '<path d="M3 12.5h4l2.2-5 3.6 10 2.4-5h5.8"/>',
+  bolt: '<path d="M13 3 5.5 13.5H12L11 21l7.5-10.5H12z"/>',
+  atom: '<circle cx="12" cy="12" r="1.6" fill="currentColor"/><ellipse cx="12" cy="12" rx="9" ry="3.6"/><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(-60 12 12)"/>',
+  ban: '<circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"/>',
+  truck: '<path d="M3 6.5h11v9.5H3zM14 10h4l2.5 3v3H14z"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+  sunrise: '<path d="M3.5 18h17M7 18a5 5 0 0 1 10 0M12 4v4M5.6 9.6l1.8 1.8M18.4 9.6l-1.8 1.8"/>',
 };
+/*
+ * The numbers' categories in the explainers' look (user, 26 Oct: "do that to the numbers categories too … clear and not
+ * heavy on the eyes"): each a colour and an icon in the side menu, the colour edging its boxes.
+ */
+const NUM_STYLE = {
+  control: ['#2bb3a3', 'map'], territory: ['#2bb3a3', 'map'],
+  cas: ['#e0564b', 'pulse'], casualties: ['#e0564b', 'pulse'],
+  sea: ['#3b9edd', 'anchor'], maritime: ['#3b9edd', 'anchor'],
+  energy: ['#e0a43c', 'bolt'],
+  economy: ['#3fae7a', 'coins'], econ: ['#3fae7a', 'coins'],
+  nuke: ['#9b7ff0', 'atom'], nuclear: ['#9b7ff0', 'atom'],
+  sanc: ['#c07ad8', 'ban'], sanctions: ['#c07ad8', 'ban'],
+  aid: ['#2bb3a3', 'truck'],
+  dayafter: ['#e0a43c', 'sunrise'],
+  security: ['#3b82f6', 'shield'],
+  js: ['#8fb35a', 'map'],
+  pa: ['#d06aa0', 'ballot'],
+  money: ['#3fae7a', 'coins'],
+};
+const numStyle = (key, name) => NUM_STYLE[key] || NUM_STYLE[String(name || '').toLowerCase()] || ['#8a939d', 'book'];
+/** The numbers' category menu: [key, name] pairs, the chosen key. */
+function numCatStrip(cats, cur) {
+  return `<div class="num-cat ex-cats nc-cats" role="group" aria-label="Numbers to show">${cats.map(([k, name]) => { const [c, ic] = numStyle(k, name); return `<button type="button" data-cat="${escapeHtml(k)}" style="--ex-c:${c}" aria-pressed="${k === cur}"${k === cur ? ' class="on"' : ''}>${exIcon(ic)}<span>${escapeHtml(name)}</span></button>`; }).join('')}</div>`;
+}
+/** A numbers panel drawn: its boxes edged in its category's colour, its menu following, a swipe on a phone. */
+function numCatWire(el, key, name) {
+  const tally = el.querySelector('.tally');
+  if (tally) { tally.classList.add('nc-boxes'); tally.style.setProperty('--ex-c', numStyle(key, name)[0]); }
+  const strip = el.querySelector('.num-cat');
+  stripFollow(strip);
+  swipeCats(tally, strip);
+}
 function exIcon(n) {
   return `<svg class="ex-svg" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${EX_ICON[n] || EX_ICON.book}</g></svg>`;
 }
@@ -9291,8 +9400,10 @@ function renderIranTimeline() {
   };
   const all = [...t.phases.map((p, i) => card(p, false, i)), card(now, true, total - 1)];
   const labels = [...t.phases.map((p) => p.title), now.title];
-  el.innerHTML = pagerHtml('timeline', all, all.length - 1, labels);
-  wirePager(el, all.length - 1, () => closeReadMore(el, '.phase-card', '.toggle-phase'), { wrap: false });
+  // It opens on the newest era; drawn again (a new Now box), it stays on the era the reader chose.
+  const idx = iranNums.tlIdx == null ? all.length - 1 : Math.min(iranNums.tlIdx, all.length - 1);
+  el.innerHTML = pagerHtml('timeline', all, idx, labels);
+  wirePager(el, idx, (i) => { iranNums.tlIdx = i; closeReadMore(el, '.phase-card', '.toggle-phase'); }, { wrap: false });
   el.querySelectorAll('.phase-card').forEach((c) => wireBoxToggle(c, c.querySelector('.toggle-phase'), 'open'));
   tlDecorate(el, [...t.phases.map((p) => ({ title: p.title, when: tlYear(p.dates) })), { title: now.title, when: tlYear(now.dates), now: true }]);
 }
@@ -9401,7 +9512,7 @@ async function loadIranBrief() {
     const b = await res.json();
     if (b && b.idfArea) drawGazaLine(b.idfArea);
     if (!b || !b.ok || b.pending) return;
-    const sig = `${b.updatedAt}|${b.proseTriedAt || ''}|${(b.sanctions && b.sanctions.through) || ''}|${(b.numbers && b.numbers.through) || ''}`;
+    const sig = `${b.updatedAt}|${b.proseTriedAt || ''}|${(b.sanctions && b.sanctions.through) || ''}|${(b.numbers && b.numbers.through) || ''}|${(b.timelineNow && b.timelineNow.asOf) || ''}`;
     if (sig === iranBrief.sig) return;
     iranBrief.b = b;
     iranBrief.sig = sig;

@@ -67,3 +67,44 @@ test("the Gaza desk's live numbers: the running count, the crossings, the aid tr
   assert.ok(trucks && trucks.type === "stat" && trucks.value.v === "212" && trucks.unit === "today" && trucks.set === "aid");
   if (cross && cross.type === "table") assert.deepEqual(cross.rows.map((r) => `${r.label}:${r.cells[0]?.v}`), ["Kerem Shalom:Open", "Zikim:Open", "Kissufim:Closed", "Rafah:Closed"]);
 });
+
+// 26 Oct, evening (user's list): the Gaza Now box rewritten as the other desks' are, the hostages' category gone, the
+// live boxes' charts, the explainers' and the timeline's links each way.
+import { GAZA_NOW_BASE, GAZA_TOPICS, gazaNowShape } from "./gaza-timeline-now.ts";
+import { dayMax, keepRising } from "./gaza-numbers.ts";
+import GZEX from "../../../public/gaza-explain.json" with { type: "json" };
+import GZTL from "../../../public/gaza-timeline.json" with { type: "json" };
+import GZNUM from "../../../public/gaza-numbers.json" with { type: "json" };
+
+test("the Gaza Now box keeps its topics and the desk's words", () => {
+  assert.ok(GAZA_TOPICS.length >= 5);
+  assert.ok(gazaNowShape(GAZA_NOW_BASE.summary, GAZA_NOW_BASE.detail));
+  const noIsf = GAZA_NOW_BASE.detail.split(/\n\n/).filter((p) => !p.startsWith("ISF:")).join("\n\n");
+  assert.equal(gazaNowShape(GAZA_NOW_BASE.summary, noIsf), false);
+  assert.doesNotMatch(GAZA_NOW_BASE.detail, /West Bank|settlers/);
+});
+
+test("no hostages category in the Gaza numbers", () => {
+  assert.ok(!(GZNUM as { sets: { key: string }[] }).sets.some((s) => s.key === "hostages"));
+});
+
+test("a running count's chart only grows, one point a day", () => {
+  assert.deepEqual(dayMax([{ d: "2026-10-24", v: 5 }, { d: "2026-10-24", v: 9 }, { d: "2026-10-23", v: 3 }]), [{ d: "2026-10-23", v: 3 }, { d: "2026-10-24", v: 9 }]);
+  assert.deepEqual(keepRising([{ d: "2026-10-22", v: 1538 }, { d: "2026-10-23", v: 153 }, { d: "2026-10-25", v: 1551 }]).map((p) => p.v), [1538, 1551]);
+});
+
+test("every Gaza explainer's era and every era's explainer exists, and each link goes both ways", () => {
+  const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const eras = [...GZTL.phases, GZTL.now] as { title: string; explainers?: string[] }[];
+  const items = GZEX.items as { title: string; timeline?: string[] }[];
+  for (const e of items) for (const t of e.timeline ?? []) {
+    const p = eras.find((x) => slug(x.title) === slug(t));
+    assert.ok(p, `${e.title} -> ${t}`);
+    assert.ok((p!.explainers ?? []).includes(e.title), `${t} does not lead back to ${e.title}`);
+  }
+  for (const p of eras) for (const x of p.explainers ?? []) {
+    const e = items.find((i) => slug(i.title) === slug(x));
+    assert.ok(e, `${p.title} -> ${x}`);
+    assert.ok((e!.timeline ?? []).includes(p.title), `${x} does not lead back to ${p.title}`);
+  }
+});

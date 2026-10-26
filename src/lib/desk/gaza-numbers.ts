@@ -25,7 +25,9 @@ export type GazaCard = {
   alsoReportedBy?: { source: string; url?: string }[];
 };
 export type Cell = { v: string | number | null; url?: string; src?: string; date?: string; k?: "off" | "unoff"; note?: string };
-export type Box = { set?: string; setName?: string } & (
+/** A box's dated figures, drawn as its chart from the chart sign by its name (public/app.js irChart). */
+export type Point = { d: string; v: number };
+export type Box = { set?: string; setName?: string; series?: Point[]; seriesUnit?: string; zero?: boolean } & (
   | { type: "claims"; title: string; unit?: string; note?: string; rows: { label: string; sub?: string; off: Cell | null; unoff: Cell | null }[] }
   | { type: "table"; title: string; unit?: string; note?: string; cols: string[]; rows: { label: string; sub?: string; cells: (Cell | null)[] }[] }
   | { type: "stat"; title: string; unit?: string; note?: string; value: Cell; caption?: string }
@@ -141,7 +143,11 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
   const running = all.find((c) => RUNNING.test(c.summary));
   if (running) {
     const n = RUNNING.exec(running.summary)![1];
-    boxes.push({ set: "cas", type: "stat", title: "Killed in Gaza since the ceasefire", unit: "since 10 Oct 2025", value: { ...cellOf(running, n), k: "unoff" }, caption: `Gaza's Hamas-run Health Ministry says, as reported ${fmt(day(running.at))}` });
+    // Its chart: the ministry's count at the ceasefire and as researched (public/gaza-timeline.json, gaza-numbers.json),
+    // then each day's highest count the cards told (user, 26 Oct: graphs that update with the figures).
+    const told = dayMax(all.flatMap((c) => { const m = RUNNING.exec(c.summary); return m ? [{ d: day(c.at), v: Number(m[1].replace(/,/g, "")) }] : []; }));
+    const series = keepRising([...KILLED_SEED, ...told]);
+    boxes.push({ set: "cas", type: "stat", title: "Killed in Gaza since the ceasefire", unit: "since 10 Oct 2025", value: { ...cellOf(running, n), k: "unoff" }, caption: `Gaza's Hamas-run Health Ministry says, as reported ${fmt(day(running.at))}`, series, seriesUnit: "killed since the ceasefire, as the ministry says" });
   }
 
   // The crossings.
@@ -173,9 +179,34 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
   if (trucks) {
     const clause = trucks.summary.split(/;|\.\s/).find((p) => TRUCKS.test(p)) ?? trucks.summary;
     const n = TRUCKS.exec(clause)![1];
-    boxes.push({ set: "aid", type: "stat", title: "Aid trucks, latest report", unit: spanOf(clause, trucks.at), value: cellOf(trucks, n, officialCard(trucks) ? "off" : "unoff"), caption: `${clause.trim()} (${trucks.source}, ${fmt(day(trucks.at))})` });
+    // Its chart: the trucks each day's reports told for that one day (a week's or a month's total left out).
+    const series = dayMax(all.flatMap((c) => {
+      const cl = c.summary.split(/;|\.\s/).find((p) => TRUCKS.test(p));
+      if (!cl || /\b(?:week|month|since|so far|total|cumulative|past \d+ days)\b/i.test(cl)) return [];
+      const v = Number(TRUCKS.exec(cl)![1].replace(/,/g, ""));
+      return v > 0 && v < 2000 ? [{ d: day(c.at), v }] : [];
+    }));
+    boxes.push({ set: "aid", type: "stat", title: "Aid trucks, latest report", unit: spanOf(clause, trucks.at), value: cellOf(trucks, n, officialCard(trucks) ? "off" : "unoff"), caption: `${clause.trim()} (${trucks.source}, ${fmt(day(trucks.at))})`, series, seriesUnit: "trucks a day, as reported", zero: true });
   }
   return { boxes, from, reports: all.length };
+}
+
+/** The Health Ministry's count of the killed since the ceasefire before the desk read it (researched, sourced). */
+const KILLED_SEED: Point[] = [
+  { d: "2025-10-10", v: 0 },
+  { d: "2026-06-17", v: 1005 },
+  { d: "2026-10-22", v: 1538 },
+];
+/** One point a day, its highest figure. */
+export function dayMax(pts: Point[]): Point[] {
+  const m = new Map<string, number>();
+  for (const p of pts) if (Number.isFinite(p.v)) m.set(p.d, Math.max(m.get(p.d) ?? -Infinity, p.v));
+  return [...m].map(([d, v]) => ({ d, v })).sort((a, b) => a.d.localeCompare(b.d));
+}
+/** A running count only grows: a day's figure below an earlier one (a misread, a partial count) is left out. */
+export function keepRising(pts: Point[]): Point[] {
+  let top = -Infinity;
+  return dayMax(pts).filter((p) => (p.v >= top ? ((top = p.v), true) : false));
 }
 
 /** The time a count covers, from its words: "today", "this week", "since Sunday", else the day it was told. */

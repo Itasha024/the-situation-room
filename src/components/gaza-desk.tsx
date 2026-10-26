@@ -80,7 +80,7 @@ const GAZA_HTML = `
 </section>
 <section class="cas-wrap" id="cas-wrap">
   <h2>In numbers</h2>
-  <div id="gaza-numbers">${SOON("casualties, territory, aid, security, Judea and Samaria, the PA and its money, sanctions, hostages and the day after, from the ceasefire of 10 October 2025.")}</div>
+  <div id="gaza-numbers">${SOON("casualties, territory, aid, security, Judea and Samaria, the PA and its money, sanctions and the day after, from the ceasefire of 10 October 2025.")}</div>
 </section>
 <section class="timeline-wrap" id="timeline-wrap">
   <h2>Timeline</h2>

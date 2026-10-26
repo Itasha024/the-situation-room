@@ -1487,3 +1487,24 @@ html[data-view="ops"] .ops-left .now-tag { background: var(--o-sel); color: var(
   html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots .tl-yr { display: inline; margin-right: 5px; font: 500 10px var(--ops-mono); letter-spacing: 0; color: var(--o-faint) }
   html[data-view="ops"] .ops-left .pager-timeline ~ .pg-dots button.on .tl-yr { color: var(--o-sel) }
 }
+
+/* ---------- 26 Oct, evening (user's list). ---------- */
+/* A timeline era shows its summary only, Read more for the rest (user: "show only the summary that's in bold and have
+   the read more for the whole thing"); this undoes "read whole" of 21 Oct. */
+html[data-view="ops"] .ops-left .pager-timeline .phase-card:not(.open) .full { display: none !important }
+html[data-view="ops"] .ops-left .pager-timeline .phase-card .toggle-phase { display: inline-block !important; margin-top: 8px }
+html[data-view="ops"] .ops-left .pager-timeline .phase-card.expandable { cursor: pointer }
+html[data-view="ops"] .ops-left .pager-timeline .tl-card .phase-sum { margin-bottom: 0 }
+/* No blank space under the map credit (user: "remove blank space … under the openstreetmap contributors"): the credit
+   sits at the panel's foot, the room above it, and keeps only a little room under it. */
+html[data-view="ops"] .ops-left .ops-panes { display: flex; flex-direction: column }
+html[data-view="ops"] .ops-left .ops-panes > * { flex: none }
+html[data-view="ops"] .ops-left .ops-panes > footer:not(#_) { margin-top: auto; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) }
+@media (max-width: 760px) { html[data-view="ops"] .ops-on > .ops-left .ops-panes { flex: 1 0 auto } }
+/* The numbers in the explainers' look (user: "same style but clear and not heavy on the eyes"): the categories' icons
+   in their colours in the side menu (the .ex-cats rules), each box edged in its category's colour, its name marked. */
+html[data-view="ops"] .ops-left .nc-boxes :is(.tally-box, .ctrl-box):not(#_) { border-left: 3px solid color-mix(in srgb, var(--ex-c) 75%, var(--o-line)) !important }
+html[data-view="ops"] .ops-left .nc-boxes h3.ops-boxhead::before { content: ""; display: inline-block; width: 7px; height: 7px; margin: 0 7px 0 1px; border-radius: 2px; background: var(--ex-c); vertical-align: 1px }
+html[data-view="ops"] .ops-left .nc-boxes .spot svg { color: var(--ex-c) }
+html[data-view="ops"] .ops-left .nc-boxes .stat3 b { color: var(--o-strong) }
+html[data-view="ops"] .ops-left .nc-cats button.on { color: var(--o-strong) !important }

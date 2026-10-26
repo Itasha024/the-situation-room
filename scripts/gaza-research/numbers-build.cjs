@@ -21,7 +21,7 @@ const cas = [take("hostages", "Casualties: Gaza war"), take("security", "IDF sol
 if (cas[0]) cas[0].title = "Killed and wounded";
 // The crossings' box is the live one's title, so the latest report's states take its place when there are some.
 for (const b of set("aid").boxes) if (b.title === "Crossings: latest status") b.title = "The crossings";
-const ORDER = [["cas", "Casualties"], ["aid", "Aid"], ["dayafter", "Day after"], ["security", "Security"], ["js", "Judea & Samaria"], ["pa", "The PA"], ["money", "PA money"], ["sanc", "Sanctions"], ["hostages", "Hostages"]];
+const ORDER = [["cas", "Casualties"], ["aid", "Aid"], ["dayafter", "Day after"], ["security", "Security"], ["js", "Judea & Samaria"], ["pa", "The PA"], ["money", "PA money"], ["sanc", "Sanctions"]]; // No Hostages: all are back (user, 26 Oct).
 const sets = ORDER.map(([key, name]) => ({ key, name, boxes: key === "cas" ? cas : set(key).boxes })).filter((s) => s.boxes.length);
 // The desk's words everywhere (gaza-words.ts), checked, not rewritten: a research file that breaks them is fixed by hand.
 const BAD = /West Bank|\bsettlers?\b|settlements?\b|\boccupation\b|occupied|martyr|ceasefire violation|massacre|genocide|colonist|Zionist/i;

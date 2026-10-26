@@ -21,6 +21,7 @@ import { TRUMP_KEY, type TrumpFeed } from "./trump.ts";
 import type { LiveReport } from "./types.ts";
 import { topReports } from "./brief-store.ts";
 import { dropEmpty, rankPoints } from "./rank-points.ts";
+import { refreshGazaTimelineNow } from "./gaza-timeline-now.ts";
 
 export const GAZA_BRIEF_KEY = "brief:gaza";
 const HOURS = 3;
@@ -166,6 +167,12 @@ async function build(store: DeskStore, now: Date): Promise<GazaBrief | null> {
     proseTriedAt: now.toISOString(),
   };
   await store.putJson(GAZA_BRIEF_KEY, brief);
+  // The Timeline's "Now" box, rewritten every 36 hours from the cards; it must never cost the brief.
+  try {
+    await refreshGazaTimelineNow(store, reports as unknown as LiveReport[], now);
+  } catch (err) {
+    console.error("[gaza-timeline-now]", err instanceof Error ? err.message : err);
+  }
   console.log(`[gaza-brief] ${w.updatedAt}: ${cards.length} cards, ${trump.length} Trump statements, ${answer ? `written by ${answer.model}` : "no writer"}, ${Object.keys(got).length} lists new`);
   return brief;
 }

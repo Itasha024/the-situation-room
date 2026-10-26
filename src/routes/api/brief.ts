@@ -6,6 +6,7 @@ import { IRAN_BRIEF_KEY, type IranBrief } from "@/lib/desk/iran-brief";
 import { GAZA_BRIEF_KEY, type GazaBrief } from "@/lib/desk/gaza-brief";
 import { GAZA_AREA_KEY, type IdfArea } from "@/lib/gaza-line.server";
 import { gazaWords } from "@/lib/desk/gaza-words";
+import { GAZA_NOW_KEY, type GazaTimelineNow } from "@/lib/desk/gaza-timeline-now";
 import { IRAN_NOW_KEY, type IranTimelineNow } from "@/lib/desk/iran-timeline-now";
 import { liveSanctionBoxes, OFAC_KEY, type OfacStore } from "@/lib/desk/ofac";
 import { type Box, IRAN_LIVE_KEY, type IranLive, liveNumbers } from "@/lib/desk/iran-live";
@@ -55,7 +56,8 @@ async function briefAnswer(desk: ReturnType<typeof deskParam>): Promise<Response
             const st = await getStore();
             const gb = await st.getJson<GazaBrief>(GAZA_BRIEF_KEY);
             const idfArea = await gazaIdfArea(st);
-            if (gb) return json({ ...gb, situation: banded(gb.situation), areas: servedLists(gb.areas), arenas: [], idfArea }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=86400");
+            const timelineNow = (await st.getJson<GazaTimelineNow>(GAZA_NOW_KEY).catch(() => null)) ?? null;
+            if (gb) return json({ ...gb, situation: banded(gb.situation), areas: servedLists(gb.areas), arenas: [], idfArea, timelineNow }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=86400");
             return json({ ok: true, desk, pending: true, idfArea, ...briefWindow(new Date(), 3) }, 200, "public, max-age=60", "public, s-maxage=300");
           }
           if (desk !== "yemen") {

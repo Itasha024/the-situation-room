@@ -35,7 +35,7 @@ import { pgSafe } from "./desk/store.pg.ts";
 import { type Listed, fetchListing, inTurn, parseHtmlListing, pageDate, parseListing, titleKey, urlKey } from "./desk/sitemap.ts";
 import { DROPPED_OUTLET, type Learned, loadLearned } from "./desk/originals.ts";
 import { nearerSource, officialVoice } from "./desk/speaker-press.ts";
-import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, IRAN_RATINGS_KEY, IRAN_RATINGS_V, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, iranSide, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
+import { type CatalogueEntry, type RatedCard, type SourceRatings, type Verdicts, GAZA_RATINGS_KEY, IRAN_RATINGS_KEY, IRAN_RATINGS_V, gazaSide, LATER_CHECKED_KEY, RATINGS_KEY, VERDICTS_KEY, iranSide, laterCandidates, primeRatings, rateSources, ratingsDue, tellers, useRatings, withSeed } from "./desk/source-rating.ts";
 import { OWN_ONLY, isExclusive, ownInformation } from "./desk/exclusive.ts";
 import { leadFromSite, mergeAlso, ownNewsApart, siteAlsoOnly, siteOutlet, siteOwnNews, siteTakesLead, sideRefusesLead } from "./desk/site-articles.ts";
 import { relinkStoredCards } from "./desk/relink.ts";
@@ -48,6 +48,7 @@ import { addsFacts, combineGroups, enrichCards, members, pickLead, planWaves, sp
 import { checkLinks, judgeLinks, linkOk, namedSpeaker, speakerKey, speakersOf } from "./desk/links.ts";
 import { TRIAGE_MODELS } from "./desk/triage.ts";
 import type { DeskId } from "./desks.ts";
+import { GAZA_TG, GAZA_X, type GazaLean, WAFA_SITE, gazaLeanOf } from "./desk/gaza-sources.ts";
 import { IRAN_RSS, IRAN_TG, IRAN_X, IRAQI_MEDIA, type IranLean, LEBANESE_MEDIA, SHARED_RSS, SHARED_TG, SHARED_X, iranLeanOf } from "./desk/iran-sources.ts";
 import { isIranDeskItem, passesIraqiMediaGate, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
 import { isGazaDeskItem } from "./desk/gaza-reader.ts";
@@ -3654,6 +3655,42 @@ export async function refreshIranSourceRatings(store: Awaited<ReturnType<typeof 
   return true;
 }
 
+/**
+ * The Gaza desk's ratings (user, 27 Oct: the Source ratings link as on the other desks, with this desk's own
+ * sources added): its own channels and accounts, and every Iran desk source that reaches it through its gate.
+ * The sides are Israel's and the Palestinians'; Arab and international sources are the non-aligned.
+ */
+export async function refreshGazaSourceRatings(store: Awaited<ReturnType<typeof getStore>>, now = new Date()): Promise<boolean> {
+  const stored = await store.getJson<SourceRatings>(GAZA_RATINGS_KEY);
+  if (!ratingsDue(stored, now)) return false;
+  const slice = await store.recentDesk(8000, undefined, { desk: "gaza", events: false });
+  const own = (await store.getJson<Verdicts>(VERDICTS_KEY)) ?? {};
+  const rated = rateSources(ratedCards(slice.reports), gazaCatalogue(), withSeed(own), now.getTime(), (n, lean) => gazaSide(lean || gazaLeanOf(n)));
+  const sources = rated.map((s) => (s.lean ? s : { ...s, lean: gazaLeanOf(s.name) }));
+  const { day, startedAt } = deskDay(now.getTime());
+  await store.putJson(GAZA_RATINGS_KEY, { day, updatedAt: new Date(startedAt).toISOString(), sources } satisfies SourceRatings);
+  console.log(`[source-ratings] Gaza: ${sources.length} sources rated`);
+  return true;
+}
+
+/** Every source the Gaza desk reads: its own first, then the Iran desk's under this desk's groups. */
+export function gazaCatalogue(): CatalogueEntry[] {
+  const out: CatalogueEntry[] = [];
+  const seen = new Set<string>();
+  const add = (e: CatalogueEntry) => {
+    const k = e.name.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(e);
+  };
+  for (const c of GAZA_TG) add({ name: c.name, url: `https://t.me/${c.id}`, lean: c.lean, platform: "Telegram" });
+  for (const a of GAZA_X) add({ name: a.name, url: `https://x.com/${a.id}`, lean: a.lean, platform: "X" });
+  add({ name: "WAFA", url: WAFA_SITE, lean: "pa", platform: "Website" });
+  const fromIran: Record<string, GazaLean> = { israel: "israel", gulf: "arab" };
+  for (const e of iranCatalogue()) add({ ...e, lean: fromIran[e.lean ?? ""] ?? (gazaLeanOf(e.name) === "israel" ? "israel" : gazaLeanOf(e.name) === "arab" ? "arab" : "intl") });
+  return out;
+}
+
 /** The last ticks' database traffic and CPU, for the status page. */
 export const TICK_USAGE_KEY = "tick-usage";
 export type TickUsage = { at: string; tookMs: number; cpuMs: number; dbReadKB: number; dbWrittenKB: number; queries: number };
@@ -3754,6 +3791,11 @@ export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | 
     await refreshIranSourceRatings(store);
   } catch (err) {
     console.error("[desk] Iran source ratings failed:", err instanceof Error ? err.message : err);
+  }
+  try {
+    await refreshGazaSourceRatings(store);
+  } catch (err) {
+    console.error("[desk] Gaza source ratings failed:", err instanceof Error ? err.message : err);
   }
   // What this tick cost: Supabase bills egress, Vercel bills CPU.
   const cpu = cpu0 ? process.cpuUsage(cpu0) : null;

@@ -183,6 +183,7 @@
   // The panels' and the strip's sizes as the reader dragged them (lw, rw, dh in pixels; see paintSizes).
   let SZ = {};
   try { SZ = JSON.parse(localStorage.getItem('ops-sizes') || '{}') || {}; } catch (e) { /* none kept */ }
+  const inFullFrame = (() => { try { return window.top !== window && window.top.__opsFull === true; } catch (e) { return false; } })();
   // The left panel's content as wide as the right panel (user, 27 Oct): a width dragged before that is let go once.
   if (SZ.v !== 2) { delete SZ.lw; SZ.v = 2; }
   // The left panel opens narrower (user, 22 Oct: "too wide right now"); a width dragged before then goes.
@@ -248,7 +249,7 @@
       <button type="button" class="ops-btn ops-ico" data-op="theme" title="Day or night">${ICON.theme}<span class="sr">Day or night</span></button>
       <button type="button" class="ops-btn ops-ico ops-keysbtn" data-op="keys" title="Keys (?)">${ICON.keys}<span class="sr">Keys</span></button>
       <button type="button" class="ops-btn ops-ico" data-op="settings" title="Settings (,)">${ICON.gear}<span class="sr">Settings</span></button>
-      ${document.fullscreenEnabled ? `<button type="button" class="ops-btn ops-ico" data-op="full" title="Full screen (F)">${ICON.full}<span class="sr">Full screen</span></button>` : ''}`;
+      ${document.fullscreenEnabled || inFullFrame ? `<button type="button" class="ops-btn ops-ico" data-op="full" title="Full screen (F)">${ICON.full}<span class="sr">Full screen</span></button>` : ''}`;
     bar.appendChild(acts);
     root.insertBefore(bar, root.firstChild);
     // The desks' tabs give up their names, the other desks' first, rather than run under the buttons (user, 23 Oct).
@@ -761,11 +762,35 @@
     if (!at) return;
     setTimeout(() => { try { m.setView([+at[1], +at[2]], +at[3]); } catch (e) { /* bad link */ } }, 900);
   }
+  // Full screen holds the site in a frame (user, 27 Oct: moving to another desk left full screen): the pages
+  // change inside it and only the button, F or Esc ends it, at the page last open.
   function fullScreen() {
-    const el = H; // The whole page, so the settings and the keys show over it too.
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+    if (inFullFrame) { try { window.top.__opsExitFull(); } catch (e) { /* the frame was let go */ } return; }
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    const f = document.createElement('iframe');
+    f.src = location.href;
+    f.allow = 'fullscreen';
+    f.title = document.title;
+    f.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2147483647;background:#0b0e12';
+    let on = false;
+    const close = () => {
+      if (!f.isConnected) return;
+      let u = '';
+      try { u = f.contentWindow.location.href; } catch (e) { /* not ours */ }
+      f.remove();
+      window.__opsFull = false;
+      document.removeEventListener('fullscreenchange', changed);
+      if (u && u !== location.href && u.startsWith(location.origin)) location.href = u;
+    };
+    const changed = () => { if (document.fullscreenElement === f) on = true; else if (on) close(); };
+    window.__opsFull = true;
+    window.__opsExitFull = () => { if (document.fullscreenElement) document.exitFullscreen().catch(close); else close(); };
+    document.addEventListener('fullscreenchange', changed);
+    document.body.appendChild(f);
+    if (!f.requestFullscreen) { close(); H.requestFullscreen && H.requestFullscreen().catch(() => {}); return; }
+    f.requestFullscreen().catch(() => { close(); H.requestFullscreen && H.requestFullscreen().catch(() => {}); });
   }
+
 
 
   /* ---------- The whole war, side by side: a column a day since the desk's start (20 Oct: "since 13 Jul on the
@@ -927,7 +952,7 @@
   /* Every event since the desk's start (20 Oct: Yemen from 13 Jul, Iran and the All page from 28 Feb), newest first; the
      hours picked under the map, when picked. Drawn a page at a time as the reader scrolls; the older ones are read
      from the server only when the reader reaches them. */
-  const LOG_FROM = { yemen: Date.parse('2026-07-13T00:00:00+03:00'), iran: Date.parse('2026-02-28T00:00:00+03:00'), gaza: Date.parse('2025-10-10T00:00:00+03:00'), all: Date.parse('2026-02-28T00:00:00+03:00') };
+  const LOG_FROM = { yemen: Date.parse('2026-07-13T00:00:00+03:00'), iran: Date.parse('2026-02-28T00:00:00+03:00'), gaza: Date.parse('2025-10-10T00:00:00+03:00'), all: Date.parse('2025-10-10T00:00:00+03:00') };
   const LOG_STEP = 100;
   let logList = [], evQ = '', logN = LOG_STEP, logOld = 'no';
   const tOf = (e) => { if (e._t == null) e._t = Date.parse(e.at) || 0; return e._t; };
@@ -1832,9 +1857,7 @@
     attackPins();
     // The sources' ratings, in short, at the right of the sources filter over the reports (user, 22 Oct).
     const fl = PAGE !== 'all' && document.getElementById('feed-legend');
-    if (fl && PAGE !== 'gaza' && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', `<a class="ops-srclink" href="/${PAGE}-conflict-desk/sources" title="How reliable each source has been">Source ratings</a>`);
-    // The Gaza desk's guide to the PLO, the PA and the factions (user, 26 Oct).
-    if (fl && PAGE === 'gaza' && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', '<a class="ops-srclink" href="/gaza-judea-samaria-desk/guide" title="The PLO, the PA and its security services, Fatah, Hamas and the factions">Who\'s who</a>');
+    if (fl && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', `<a class="ops-srclink" href="/${PAGE === 'gaza' ? 'gaza-judea-samaria' : `${PAGE}-conflict`}-desk/sources" title="How reliable each source has been">Source ratings</a>`);
     paintSlim();
   }
 

@@ -34,7 +34,8 @@
     // The third desk, live from 26 Oct.
     gaza: { name: 'Gaza – Judea & Samaria', short: 'Gaza', desk: 'Gaza – Judea & Samaria desk', href: '/gaza-judea-samaria-desk', from: '2026-10-23' },
   };
-  const WAR_FROM = '2026-02-28';
+  // The earliest pins on this map: the Gaza desk's, from the ceasefire of 10 Oct 2025 (user, 27 Oct).
+  const WAR_FROM = '2025-10-10';
   const appDesks = app('DESKS') || [];
   const flagOf = (id) => {
     const d = appDesks.find && appDesks.find((x) => x.id === id);
@@ -97,7 +98,7 @@
   }
   const iranPin = (e) => ({ ...e, desk: 'iran', fp: String(e.fp), mapCat: ['strike', 'combat', 'vessel', 'port'].includes(e.type) ? e.type : 'strike', cat: A('iranKindOf')(e) || 'strike' });
   // The Gaza desk's pins are drawn as the Iran desk's are, in its own sides' colours.
-  const gazaPin = (e) => ({ ...e, desk: 'gaza', fp: String(e.fp), mapCat: ['strike', 'combat', 'vessel', 'port'].includes(e.type) ? e.type : 'strike', cat: A('iranKindOf')(e) || 'strike' });
+  const gazaPin = (e) => { const g = { ...e, desk: 'gaza', fp: String(e.fp), mapCat: ['strike', 'combat', 'vessel', 'port'].includes(e.type) ? e.type : 'strike' }; g.cat = A('iranKindOf')(g) || 'strike'; return g; };
   const eventsOf = (desk, rows) => (rows || []).filter((e) => typeof e.lat === 'number' && typeof e.lng === 'number')
     .filter((e) => desk !== 'iran' || A('iranPinShown')(e) !== false)
     .map((e) => (desk === 'iran' ? iranPin(e) : desk === 'gaza' ? gazaPin(e) : yemenPin(e))).filter(Boolean);
@@ -206,7 +207,8 @@
       getJson(`/api/desk?desk=iran&since=${HD.iran.from}`),
       getJson(`/iran-map-pins.json?v=${assetV()}`),
       getJson(`/api/desk?desk=gaza&since=${HD.gaza.from}`),
-    ]).then(([y, i, past, g]) => {
+      getJson(`/gaza-map-pins.json?v=${assetV()}`),
+    ]).then(([y, i, past, g, gpast]) => {
       const ir = eventsOf('iran', i && i.events);
       addEvents([...eventsOf('yemen', y && y.events), ...ir, ...eventsOf('gaza', g && g.events)]);
       // The war's researched attacks, before the Iran desk began reading (the desk's own file, map-pack.cjs).
@@ -219,6 +221,13 @@
           out.push(iranPin({ fp: 'rs#' + ni, ni, researched: true, dayOnly: !hm, mapOnly: true, at, lat, lng, actor, sea: !!sea, kind: typeof kind === 'number' ? kind : undefined, type: 'strike', place: '', label: '', text: '', source: '', url: '', also: [] }));
         });
         addEvents(out);
+      }
+      // Gaza's researched events since the ceasefire of 10 Oct 2025, before its desk began reading (user, 27 Oct).
+      const gz = eventsOf('gaza', g && g.events);
+      const gFirst = gz.reduce((m, e) => Math.min(m, Date.parse(e.at) || Infinity), Infinity);
+      if (gpast && Array.isArray(gpast.pins)) {
+        addEvents(gpast.pins.map(([ymd, actor, lat, lng, kind, place, label, source, url, also], i) => ({ fp: 'gr#' + i, kind: typeof kind === 'number' || typeof kind === 'string' ? kind : undefined, at: `${ymd}T12:00:00+03:00`, dayOnly: true, researched: true, noted: true, actor, type: 'strike', mapOnly: true, place: place || '', lat, lng, label: label || '', text: '', source: source || '', url: url || '', also: (also || []).map(([s, u]) => ({ source: s, url: u })) }))
+          .filter((e) => Date.parse(e.at) < gFirst).map(gazaPin));
       }
       warIn = true;
       // The nuclear file's map has every attack on a nuclear site since 28 Feb once these are in.
@@ -425,6 +434,8 @@
   const gzInk = (e) => (gzSides().find(([k]) => k === gzSideOf(e)) || [])[1] || '#94a3b8';
   // The Gaza pins' sides ticked on and off here; their kinds go with the Iran desk's.
   const gzOn = {};
+  // The Gaza desk's kinds ticked apart from Iran's (user, 27 Oct: its own What rows here).
+  const gzKinds = {};
   const irInk = (e) => { const ink = app('IRAN_PIN_INK') || {}; const side = A('iranSideOf')(e) || 'other'; return ink[side] || '#94a3b8'; };
   // One colour per side, worked out once (and again when the theme changes).
   const INK = new Map();
@@ -432,7 +443,7 @@
   function ticked(e) {
     if (e.desk === 'yemen') return yeLayers()[e.cat] !== false && yeSides()[A('yemenSideOf')(e) || 'unclear'] !== false && A('yemenSideShown')(e) !== false;
     const p = irPins();
-    if (e.desk === 'gaza') return gzOn[gzSideOf(e)] !== false && (p.kinds || {})[e.cat] !== false;
+    if (e.desk === 'gaza') return gzOn[gzSideOf(e)] !== false && gzKinds[e.cat] !== false;
     const w = p.where || { land: true, sea: true };
     const sea = !!e.sea || e.cat === 'vessel';
     return p.on[A('iranSideOf')(e) || 'other'] !== false && (p.kinds || {})[e.cat] !== false && ((w.land && w.sea) || (sea ? w.sea : w.land));
@@ -636,7 +647,7 @@
       const row = app('sideLegendRow');
       const seen = new Set(D.events.filter((e) => e.desk === 'gaza').map(gzSideOf));
       return `<p class="leg-sub leg-who">Who</p>${gzSides().filter(([k]) => k !== 'other' || seen.has(k)).map(([k, c, n]) => row(c, n, gzOn[k] !== false, `data-side="${k}"`)).join('')}
-      ${A('iranKindRows')() || ''}`;
+      ${A('gazaKindRows')((k) => gzKinds[k] !== false) || ''}`;
     }
     const p = irPins();
     const sides = (app('IRAN_PIN_SIDES') || []).filter(([k]) => k !== 'other' || D.events.some((e) => e.desk === 'iran' && A('iranSideOf')(e) === 'other'));
@@ -673,7 +684,7 @@
     const on = !b.classList.contains('on');
     (b.dataset.y || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); if (t === 'side') yeSides()[k] = on; else if (t === 'layer') yeLayers()[k] = on; });
     (b.dataset.i || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); const p = irPins(); if (t === 'side') p.on[k] = on; else if (t === 'kind') p.kinds[k] = on; });
-    (b.dataset.g || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); if (t === 'side') gzOn[k] = on; else if (t === 'kind') irPins().kinds[k] = on; });
+    (b.dataset.g || '').split(' ').filter(Boolean).forEach((r) => { const [t, k] = r.split(':'); if (t === 'side') gzOn[k] = on; else if (t === 'kind') gzKinds[k] = on; });
   }
   let legendCollapsed = true; // Closed at first, as on the desks (user, 17 Oct).
   function drawLegend() {
@@ -696,7 +707,7 @@
       if (!b) return;
       if (b.dataset.y != null || b.dataset.i != null) setMerged(b);
       else if (S.legend === 'gaza') {
-        if (b.dataset.kind) { const p = irPins(); p.kinds[b.dataset.kind] = p.kinds[b.dataset.kind] === false; }
+        if (b.dataset.kind) gzKinds[b.dataset.kind] = gzKinds[b.dataset.kind] === false;
         else if (b.dataset.side) gzOn[b.dataset.side] = gzOn[b.dataset.side] === false;
       } else if (S.legend === 'yemen') {
         if (b.dataset.side) { const s = yeSides(); s[b.dataset.side] = s[b.dataset.side] === false; }

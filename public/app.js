@@ -283,6 +283,8 @@ function iranKindOf(ev) {
   return 'strike';
 }
 const IRAN_KIND_LABEL = { strike: 'Strike / launch / alert', combat: 'Ground fighting', vessel: 'Maritime', port: 'Energy', nuclear: 'Nuclear' };
+/** The Gaza desk's kinds by name (user, 26 Oct), here too so the All page's legend can show them (user, 27 Oct). */
+const GAZA_KIND_LABEL = { strike: 'Strike / shelling', gunfire: 'Gunfire', raid: 'Raid / arrest', demolition: 'Demolition', property: 'Arson / vandalism / theft', assault: 'Assault', attack: 'Attack (stabbing, ramming, shooting, bomb)', combat: 'Clashes', funeral: 'Funerals', vessel: 'Maritime' };
 /** A legend row for a kind of event: the mark on a plain disc, since the colour now says who acted. */
 function kindLegendRow(cat, label, on, attr) {
   return `<button type="button" class="leg-item${on ? ' on' : ''}" ${attr} aria-pressed="${on ? 'true' : 'false'}"><span class="leg-ico kind">${EVENT_SVG[cat] || ''}</span>${escapeHtml(label)}</button>`;
@@ -7954,7 +7956,7 @@ function useDeskSettings() {
   IRAN_KIND_LABEL.combat = 'Clashes';
   IRAN_KIND_LABEL.funeral = 'Funerals';
   // What was done, told apart (user, 26 Oct).
-  Object.assign(IRAN_KIND_LABEL, { strike: 'Strike / shelling', gunfire: 'Gunfire', raid: 'Raid / arrest', demolition: 'Demolition', property: 'Arson / vandalism / theft', assault: 'Assault', attack: 'Attack (stabbing, ramming, shooting, bomb)' });
+  Object.assign(IRAN_KIND_LABEL, GAZA_KIND_LABEL);
   IRAN_GROUPS = Object.fromEntries(Object.keys(GAZA_GROUP_NAMES).map((k) => [k, k]));
   IRAN_GROUP_NAMES = GAZA_GROUP_NAMES;
   iranPins.on = Object.fromEntries(GAZA_PIN_SIDES.map(([k]) => [k, true]));
@@ -8371,6 +8373,11 @@ function renderIranLegend() {
 function iranKindRows(on = (k) => iranPins.kinds[k] !== false) {
   return `<p class="leg-sub">What</p>
       ${(deskOf().id === 'gaza' ? GAZA_KINDS : IRAN_KINDS).map((k) => kindLegendRow(k, IRAN_KIND_LABEL[k], on(k), `data-kind="${k}"`)).join('')}`;
+}
+/** The Gaza desk's kinds of event, for the All page's legend. */
+function gazaKindRows(on) {
+  return `<p class="leg-sub">What</p>
+      ${GAZA_KINDS.map((k) => kindLegendRow(k, GAZA_KIND_LABEL[k], on(k), `data-kind="${k}"`)).join('')}`;
 }
 /** The note: the report as the card tells it, its time and place, its source. Nothing more to open. */
 function iranPopupHtml(ev) {

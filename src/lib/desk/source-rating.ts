@@ -359,6 +359,13 @@ export const GROUP_LABEL: Record<Group, string> = { houthi: "Houthi-aligned", go
 export const IRAN_RATINGS_KEY = "source-ratings-iran";
 /** 2: the Iran war's officials start at 4 (22 Oct). */
 export const IRAN_RATINGS_V = 2;
+/** The Gaza desk's ratings (user, 27 Oct), and its two sides: Israel's, and the Palestinians' (the PA, the factions, the rest). */
+export const GAZA_RATINGS_KEY = "source-ratings-gaza";
+export function gazaSide(lean: string | undefined): Group {
+  if (lean === "israel") return "gov";
+  if (lean === "pa" || lean === "factions" || lean === "palestinian") return "houthi";
+  return "nonaligned";
+}
 export function iranSide(lean: string | undefined): Group {
   if (lean === "axis") return "houthi";
   if (lean === "israel" || lean === "us" || lean === "opposition") return "gov";

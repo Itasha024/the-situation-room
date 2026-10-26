@@ -9,7 +9,7 @@
  * operations room, Day a newsroom page; the reader's device picks unless they do.
  */
 html[data-view="ops"] {
-  --ops-lw: clamp(300px, 19vw, 360px);
+  --ops-lw: clamp(360px, 24vw, 440px);
   --ops-rw: clamp(320px, 24vw, 400px);
   --ops-nav-w: 56px;
   --ops-strip-h: 26px;
@@ -92,7 +92,7 @@ html[data-view="ops"] .ops-on .rail-splitter { display: none !important }
   html[data-view="ops"] .ops-on.ops-nodock .ops-fold-d { border-color: var(--o-sel); color: var(--o-sel); background: color-mix(in srgb, var(--o-sel) 14%, transparent) }
 }
 @media (min-width: 761px) and (max-width: 1180px) {
-  html[data-view="ops"] { --ops-lw: 300px; --ops-rw: 320px; --ops-nav-w: 50px }
+  html[data-view="ops"] { --ops-lw: 340px; --ops-rw: 320px; --ops-nav-w: 50px }
 }
 /* Handles to widen the side panels and raise the strip under the map (21 Oct). */
 html[data-view="ops"] .ops-grip { display: none }

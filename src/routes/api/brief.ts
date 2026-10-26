@@ -138,5 +138,5 @@ async function gazaIdfArea(st: Awaited<ReturnType<typeof getStore>>) {
       if (!move || r.lat == null || r.lng == null) return [];
       return [{ fp: r.fp, at: r.at, move, place: r.place, lat: r.lat, lng: r.lng, places: r.places ?? [], headline: gazaWords(r.summary), source: r.source, url: r.url }];
     });
-  return { zone: area.zone, held: area.held, checkedAt: area.checkedAt, moves };
+  return { zone: area.zone, held: area.held, reported: area.reported ?? null, checkedAt: area.checkedAt, moves };
 }

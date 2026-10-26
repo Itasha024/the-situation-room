@@ -21,7 +21,7 @@
  *   en.khabaragency1.net), and one channel's same headline is one card.
  */
 import { PLACE_BY_NAME, placesIn } from "./gazetteer.ts";
-import { headWords, speechOwner, wordsInCommon } from "./copies.ts";
+import { differentSpeakers, headWords, sameDecision, speechOwner, wordsInCommon } from "./copies.ts";
 import { isAggregator } from "./credibility.ts";
 import { sameOutlet } from "./originals.ts";
 import { LATER_RANK, MEDIA_RANK, countryIn, firstHand, isRelayChannel, pressOf } from "./state-press.ts";
@@ -657,7 +657,7 @@ export function sameOwnHeadline(a: Card, b: Card): boolean {
  * Which rule joins two cards
  * ------------------------------------------------------------------ */
 
-export type Rule = "mirror" | "own-headline" | "headline" | "remarks" | "burst" | "ship" | "dead" | "blast" | "figure" | "site" | "target" | "scoop" | "intercept" | "kit";
+export type Rule = "mirror" | "own-headline" | "headline" | "remarks" | "burst" | "ship" | "dead" | "blast" | "figure" | "site" | "target" | "scoop" | "intercept" | "kit" | "visit" | "decision";
 
 /** The same headline from two outlets: a field report within two hours, anything else within twelve. */
 export const HEADLINE_FIELD_MS = 2 * H;
@@ -683,6 +683,7 @@ type Sig = {
   targets: Set<string>;
   intercept: string;
   kit: string;
+  visit: string;
 };
 function sharedTargets(x: Set<string>, y: Set<string>): number {
   let n = 0;
@@ -724,6 +725,7 @@ function sig(r: Card): Sig {
       site: citySite(r.summary),
       intercept: interceptAt(r),
       kit: kitDecision(r),
+      visit: FIELD.has(String(r.type)) ? "" : visitOf(r.summary),
     };
     sigs.set(r, s);
     if (SIG_SEEN.size > 6000) SIG_SEEN.clear();
@@ -758,7 +760,63 @@ export function eventRule(a: Card, b: Card): Rule | null {
   if (sa.intercept && sa.intercept === sb.intercept && gap <= INTERCEPT_MS) return "intercept";
   if (sa.kit && sa.kit === sb.kit && gap <= KIT_MS) return "kit";
   if (sameScoop(a, b)) return "scoop";
+  // One visit, one decision, many outlets (26 Oct: the Saudi delegation to Tehran went out as 12 cards, the
+  // Iraqi PM's order on the Maysan council head as 4).
+  if (a.source !== b.source && !sa.field && !sb.field) {
+    if (sa.visit && sa.visit === sb.visit && gap <= VISIT_MS) return "visit";
+    // A speaker's words are the remarks rule's (one occasion, one card), not this one's.
+    if (gap <= DECISION_MS && !sa.remarks && !sb.remarks && !differentSpeakers(a, b) && sameDecision(a, b)) return "decision";
+  }
   return looseRule(a, b);
+}
+
+/** A visit or round of talks told by many outlets: one card for this long from the first. */
+export const VISIT_MS = 18 * H;
+export const DECISION_MS = 12 * H;
+const HOSTS: [RegExp, string, RegExp][] = [
+  [/\bTehran\b/, "tehran", /\bIran(?:ian)?s?\b/], [/\bRiyadh\b/, "riyadh", /\bSaudi\b/], [/\bDoha\b/, "doha", /\bQatar(?:i)?\b/],
+  [/\bIslamabad\b/, "islamabad", /\bPakistan(?:i)?\b/], [/\bAnkara\b/, "ankara", /\bTurk(?:ey|ish|iye)\b/], [/\bCairo\b/, "cairo", /\bEgypt(?:ian)?\b/],
+  [/\bBeirut\b/, "beirut", /\b(?:Lebanon|Lebanese)\b/], [/\bBaghdad\b/, "baghdad", /\bIraq(?:i)?\b/], [/\bMoscow\b/, "moscow", /\bRussia(?:n)?\b/],
+  [/\bBeijing\b/, "beijing", /\bChin(?:a|ese)\b/], [/\bMuscat\b/, "muscat", /\bOman(?:i)?\b/], [/\bAbu Dhabi\b/, "abu dhabi", /\b(?:UAE|Emirati)\b/],
+  [/\bAmman\b/, "amman", /\bJordan(?:ian)?\b/], [/\bWashington\b/, "washington", /\b(?:US|U\.S\.|American)\b/], [/\b(?:New )?Delhi\b/, "delhi", /\bIndia(?:n)?\b/],
+  [/\bDamascus\b/, "damascus", /\bSyria(?:n)?\b/], [/\bSanaa\b/, "sanaa", /\bYemen(?:i)?\b/], [/\bGeneva\b/, "geneva", /^$/],
+];
+const VISITORS: [RegExp, string][] = [
+  [/\bSaudi\b/, "saudi"], [/\bQatar(?:i)?\b/, "qatar"], [/\b(?:UAE|Emirati)\b/, "uae"], [/\bOman(?:i)?\b/, "oman"], [/\bKuwait(?:i)?\b/, "kuwait"],
+  [/\bEgypt(?:ian)?\b/, "egypt"], [/\bJordan(?:ian)?\b/, "jordan"], [/\bIran(?:ian)?\b/, "iran"], [/\bTurk(?:ey|ish|iye)\b/, "turkey"],
+  [/\bPakistan(?:i)?\b/, "pakistan"], [/\b(?:US|U\.S\.|American)\b/, "us"], [/\bRussia(?:n)?\b/, "russia"], [/\bChin(?:a|ese)\b/, "china"],
+  [/\bIraq(?:i)?\b/, "iraq"], [/\bIndia(?:n)?\b/, "india"], [/\b(?:Lebanon|Lebanese)\b/, "lebanon"], [/\b(?:EU|European)\b/, "eu"], [/\b(?:UN|United Nations)\b/, "un"],
+];
+const VISIT_WORDS = /\b(?:delegations?|visit\w*|arriv\w*|lands?|landed|en route|heads? to|travel\w* to|meets?|met|meeting|talks|mediat\w*|envoys?|plane|aircraft)\b/i;
+/**
+ * Who visits where, "saudi>tehran", or "": the first country named that is not the host's, and the
+ * capital the headline is in (the one after "to", "in" or "at" first).
+ */
+export function visitOf(summary: string): string {
+  const h = String(summary || "");
+  if (!VISIT_WORDS.test(h)) return "";
+  const after = /\b(?:to|in|at|into)\s+(?:the\s+)?([A-Z][a-z]+(?: [A-Z][a-z]+)?)/g;
+  let host: (typeof HOSTS)[number] | undefined;
+  for (const m of h.matchAll(after)) {
+    host = HOSTS.find(([re]) => re.test(m[1]));
+    if (host) break;
+  }
+  host ??= HOSTS.map((x) => [x, h.search(x[0])] as const).filter(([, i]) => i >= 0).sort((x, y) => x[1] - y[1])[0]?.[0];
+  if (!host) return "";
+  let best = "";
+  let at = Infinity;
+  for (const [re, id] of VISITORS) {
+    const m = new RegExp(re.source, "g");
+    for (const x of h.matchAll(m)) {
+      if (host[2].test(x[0])) continue;
+      if (x.index! < at) {
+        at = x.index!;
+        best = id;
+      }
+      break;
+    }
+  }
+  return best ? `${best}>${host[1]}` : "";
 }
 
 const OWN_POST = /^https:\/\/(?:t\.me|x\.com|twitter\.com)\//;

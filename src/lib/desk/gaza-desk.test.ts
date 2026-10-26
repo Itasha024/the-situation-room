@@ -263,3 +263,18 @@ test("two Gaza stories share more than Gaza and Israel before the reader's 'dupl
   const { wordsInCommon } = await import("./copies.ts");
   assert.ok(wordsInCommon("Hamas spokesman Hazem Qassem accuses Israel of returning to starvation policy in Gaza", "Kushner and Mladenov reset Gaza disarmament talks, reiterate Israeli conditions contradicting earlier understandings with factions") < 2);
 });
+
+test("Palestinian politics passes the Gaza gate (user, 26 Oct)", () => {
+  for (const t of [
+    "Abbas postpones legislative and presidential elections to September 2027",
+    "Fatah Revolutionary Council meets in Ramallah",
+    "PFLP rejects the PLO Executive Committee decision",
+    "Preventive Security arrests three Hamas members",
+    "الانتخابات التشريعية تؤجل إلى أيلول 2027",
+    "اللجنة المركزية لحركة فتح تجتمع برئاسة الرئيس",
+    "خليل الحية: لن نقبل",
+    "מנגנוני הביטחון של הרשות עצרו פעילי חמאס",
+  ]) assert.ok(isGazaDeskItem(t), t);
+  assert.ok(!isGazaDeskItem("الحية تلدغ طفلا في الصعيد"));
+  assert.match(GAZA_SYSTEM_PROMPT, /Palestinian politics/);
+});

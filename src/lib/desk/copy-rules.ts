@@ -872,6 +872,18 @@ type Row = Record<string, unknown>;
  * Social card that is not Trump's); otherwise its copy and type fixed in
  * place. The row in the database is left as it is.
  */
+/**
+ * A speaker lead the line then says again (26 Oct, Arab News: "Saudi defence minister Prince Khalid bin
+ * Salman: Saudi defence minister leads delegation to Tehran"): the line alone.
+ */
+export function doubledLead(headline: string): string {
+  const m = /^([^:]{6,90}):\s+(.+)$/.exec(String(headline || ""));
+  if (!m) return headline;
+  const words = (s: string) => s.toLowerCase().split(/\s+/).slice(0, 3).join(" ");
+  if (m[1].split(/\s+/).length < 3 || words(m[1]) !== words(m[2])) return headline;
+  return m[2].charAt(0).toUpperCase() + m[2].slice(1);
+}
+
 export function serveCard(r: Row, desk: DeskId): boolean {
   const summary = String(r.summary ?? "");
   const text = String(r.text ?? "");
@@ -891,7 +903,7 @@ export function serveCard(r: Row, desk: DeskId): boolean {
     if (desk === "yemen") out = houthiWords(out, houthi);
     // The Gaza desk's own words on every stored card of every desk (gaza-words.ts; 24 Oct: "West Bank" on an Iran card).
     out = gazaWords(out);
-    return out;
+    return doubledLead(out);
   };
   // A link to another story: the first other account leads, or the card is not shown (Round 4 of 20 Oct).
   if (wrongLink(summary, text, String(r.url ?? ""))) {

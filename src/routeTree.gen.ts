@@ -24,6 +24,7 @@ import { Route as ApiTgmediaRouteImport } from './routes/api/tgmedia'
 import { Route as ApiTickRouteImport } from './routes/api/tick'
 import { Route as ApiTrafficRouteImport } from './routes/api/traffic'
 import { Route as ApiTrumpRouteImport } from './routes/api/trump'
+import { Route as GazaJudeaSamariaDeskGuideRouteImport } from './routes/gaza-judea-samaria-desk_.guide'
 import { Route as IranConflictDeskSourcesRouteImport } from './routes/iran-conflict-desk_.sources'
 import { Route as YemenConflictDeskSourcesRouteImport } from './routes/yemen-conflict-desk_.sources'
 
@@ -102,6 +103,12 @@ const ApiTrumpRoute = ApiTrumpRouteImport.update({
   path: '/api/trump',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GazaJudeaSamariaDeskGuideRoute =
+  GazaJudeaSamariaDeskGuideRouteImport.update({
+    id: '/gaza-judea-samaria-desk_/guide',
+    path: '/gaza-judea-samaria-desk/guide',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const IranConflictDeskSourcesRoute = IranConflictDeskSourcesRouteImport.update({
   id: '/iran-conflict-desk_/sources',
   path: '/iran-conflict-desk/sources',
@@ -130,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/api/tick': typeof ApiTickRoute
   '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
+  '/gaza-judea-samaria-desk/guide': typeof GazaJudeaSamariaDeskGuideRoute
   '/iran-conflict-desk/sources': typeof IranConflictDeskSourcesRoute
   '/yemen-conflict-desk/sources': typeof YemenConflictDeskSourcesRoute
 }
@@ -149,6 +157,7 @@ export interface FileRoutesByTo {
   '/api/tick': typeof ApiTickRoute
   '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
+  '/gaza-judea-samaria-desk/guide': typeof GazaJudeaSamariaDeskGuideRoute
   '/iran-conflict-desk/sources': typeof IranConflictDeskSourcesRoute
   '/yemen-conflict-desk/sources': typeof YemenConflictDeskSourcesRoute
 }
@@ -169,6 +178,7 @@ export interface FileRoutesById {
   '/api/tick': typeof ApiTickRoute
   '/api/traffic': typeof ApiTrafficRoute
   '/api/trump': typeof ApiTrumpRoute
+  '/gaza-judea-samaria-desk_/guide': typeof GazaJudeaSamariaDeskGuideRoute
   '/iran-conflict-desk_/sources': typeof IranConflictDeskSourcesRoute
   '/yemen-conflict-desk_/sources': typeof YemenConflictDeskSourcesRoute
 }
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/api/tick'
     | '/api/traffic'
     | '/api/trump'
+    | '/gaza-judea-samaria-desk/guide'
     | '/iran-conflict-desk/sources'
     | '/yemen-conflict-desk/sources'
   fileRoutesByTo: FileRoutesByTo
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/api/tick'
     | '/api/traffic'
     | '/api/trump'
+    | '/gaza-judea-samaria-desk/guide'
     | '/iran-conflict-desk/sources'
     | '/yemen-conflict-desk/sources'
   id:
@@ -228,6 +240,7 @@ export interface FileRouteTypes {
     | '/api/tick'
     | '/api/traffic'
     | '/api/trump'
+    | '/gaza-judea-samaria-desk_/guide'
     | '/iran-conflict-desk_/sources'
     | '/yemen-conflict-desk_/sources'
   fileRoutesById: FileRoutesById
@@ -248,6 +261,7 @@ export interface RootRouteChildren {
   ApiTickRoute: typeof ApiTickRoute
   ApiTrafficRoute: typeof ApiTrafficRoute
   ApiTrumpRoute: typeof ApiTrumpRoute
+  GazaJudeaSamariaDeskGuideRoute: typeof GazaJudeaSamariaDeskGuideRoute
   IranConflictDeskSourcesRoute: typeof IranConflictDeskSourcesRoute
   YemenConflictDeskSourcesRoute: typeof YemenConflictDeskSourcesRoute
 }
@@ -359,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTrumpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gaza-judea-samaria-desk_/guide': {
+      id: '/gaza-judea-samaria-desk_/guide'
+      path: '/gaza-judea-samaria-desk/guide'
+      fullPath: '/gaza-judea-samaria-desk/guide'
+      preLoaderRoute: typeof GazaJudeaSamariaDeskGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/iran-conflict-desk_/sources': {
       id: '/iran-conflict-desk_/sources'
       path: '/iran-conflict-desk/sources'
@@ -392,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTickRoute: ApiTickRoute,
   ApiTrafficRoute: ApiTrafficRoute,
   ApiTrumpRoute: ApiTrumpRoute,
+  GazaJudeaSamariaDeskGuideRoute: GazaJudeaSamariaDeskGuideRoute,
   IranConflictDeskSourcesRoute: IranConflictDeskSourcesRoute,
   YemenConflictDeskSourcesRoute: YemenConflictDeskSourcesRoute,
 }

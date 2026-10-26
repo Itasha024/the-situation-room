@@ -1269,3 +1269,5 @@ html .leg-ico.kind,html[data-set] .leg-ico.kind{background:#475569;color:#fff;bo
 .gz-more { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.35); background: transparent; color: inherit; font: 700 11px/1 Georgia, serif; padding: 0; }
 .gz-rows { margin-top: 4px; }
 .gz-rows[hidden] { display: none; }
+/* Yemen's district lines only zoomed in, as the other countries' (user, 26 Oct). */
+.ye-dist-off path.ye-dist{stroke-opacity:0!important}

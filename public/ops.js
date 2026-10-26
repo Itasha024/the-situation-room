@@ -1830,6 +1830,8 @@
     // The sources' ratings, in short, at the right of the sources filter over the reports (user, 22 Oct).
     const fl = PAGE !== 'all' && document.getElementById('feed-legend');
     if (fl && PAGE !== 'gaza' && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', `<a class="ops-srclink" href="/${PAGE}-conflict-desk/sources" title="How reliable each source has been">Source ratings</a>`);
+    // The Gaza desk's guide to the PLO, the PA and the factions (user, 26 Oct).
+    if (fl && PAGE === 'gaza' && !fl.querySelector('.ops-srclink')) fl.insertAdjacentHTML('beforeend', '<a class="ops-srclink" href="/gaza-judea-samaria-desk/guide" title="The PLO, the PA and its security services, Fatah, Hamas and the factions">Who\'s who</a>');
     paintSlim();
   }
 

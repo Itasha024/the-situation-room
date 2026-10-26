@@ -5097,12 +5097,18 @@ function districtSide(p, byIso) {
 function districtStyle(f, byIso) {
   const ctrl = districtSide(f.properties, byIso);
   const on = controlVisible(ctrl);
-  return { fillColor: COLORS[ctrl] || COLORS.contested, fillOpacity: on ? 0.55 : 0, color: EDGE, weight: 0.35, opacity: on ? 0.45 : 0.1 };
+  return { fillColor: COLORS[ctrl] || COLORS.contested, fillOpacity: on ? 0.55 : 0, color: EDGE, weight: 0.35, opacity: on ? 0.45 : 0.1, className: 'ye-dist' };
 }
 
 /** The district layer on a map, beneath the governorate outlines; null before it has loaded. */
 function districtLayer(m, byIso) {
   if (!districtGeo || !window.L) return null;
+  // The district lines show as the map zooms in, as the other countries' districts do (user, 26 Oct); the colours always.
+  if (!m._yeDist) {
+    m._yeDist = () => { try { m.getContainer().classList.toggle('ye-dist-off', m.getZoom() < IR_ADM_ZOOM.adm2); } catch (e) {} };
+    m.on('zoomend', m._yeDist);
+    m._yeDist();
+  }
   return L.geoJSON(districtGeo, { style: (f) => districtStyle(f, byIso), interactive: false }).addTo(m);
 }
 

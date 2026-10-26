@@ -179,10 +179,12 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
   if (trucks) {
     const clause = trucks.summary.split(/;|\.\s/).find((p) => TRUCKS.test(p)) ?? trucks.summary;
     const n = TRUCKS.exec(clause)![1];
-    // Its chart: the trucks each day's reports told for that one day (a week's or a month's total left out).
+    // Its chart: a day's whole count as the crossings' own authority or COGAT told it ("Gaza crossings authority: 248
+    // trucks entered Gaza Sunday"); one convoy, a kind of goods, a plan or a week's total is not a day's count.
     const series = dayMax(all.flatMap((c) => {
       const cl = c.summary.split(/;|\.\s/).find((p) => TRUCKS.test(p));
-      if (!cl || /\b(?:week|month|since|so far|total|cumulative|past \d+ days)\b/i.test(cl)) return [];
+      if (!cl || !DAY_COUNT_BY.test(c.summary) || !/\bentered\b/i.test(cl)) return [];
+      if (/\b(?:week|month|since|so far|total|cumulative|past \d+ days|to enter|will|tomorrow|promis\w*)\b/i.test(cl)) return [];
       const v = Number(TRUCKS.exec(cl)![1].replace(/,/g, ""));
       return v > 0 && v < 2000 ? [{ d: day(c.at), v }] : [];
     }));
@@ -191,6 +193,8 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
   return { boxes, from, reports: all.length };
 }
 
+/** Who tells a day's whole count of trucks into Gaza. */
+const DAY_COUNT_BY = /\b(?:crossings? authority|COGAT|UN2720)\b/i;
 /** The Health Ministry's count of the killed since the ceasefire before the desk read it (researched, sourced). */
 const KILLED_SEED: Point[] = [
   { d: "2025-10-10", v: 0 },

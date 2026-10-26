@@ -108,3 +108,16 @@ test("every Gaza explainer's era and every era's explainer exists, and each link
     assert.ok((e!.timeline ?? []).includes(p.title), `${x} does not lead back to ${p.title}`);
   }
 });
+
+test("the aid trucks' chart takes a day's whole count only, as the crossings authority or COGAT told it", async () => {
+  const { gazaNumbers } = await import("./gaza-numbers.ts");
+  const c = (fp: string, at: string, source: string, summary: string) => ({ fp, at, source, url: `https://t.me/x/${fp}`, summary, flags: ["arena:aid"] });
+  const g = gazaNumbers([
+    c("a", "2026-10-23T14:11:00Z", "Al-Shati News", "Gaza crossings authority: 12 aid trucks entered Gaza on 23 October, all via Kerem Shalom; Zikim and Kissufim closed"),
+    c("b", "2026-10-24T16:03:00Z", "Muthana al-Najjar", "32 aid trucks enter Gaza, carrying shelter supplies, food and household items"),
+    c("c", "2026-10-24T13:54:00Z", "Al-Shati News", "136 vegetable and fruit trucks to enter Gaza tomorrow, 8 per trader for 17 traders"),
+    c("d", "2026-10-25T18:32:00Z", "Quds News Network", "Gaza crossings authority: 248 trucks entered Gaza Sunday, 128 commercial, 100 aid, 20 fuel via Kerem Shalom"),
+  ]);
+  const trucks = g.boxes.find((b) => b.title === "Aid trucks, latest report");
+  assert.deepEqual(trucks?.series, [{ d: "2026-10-23", v: 12 }, { d: "2026-10-25", v: 248 }]);
+});

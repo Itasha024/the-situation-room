@@ -3388,7 +3388,7 @@ function swipeCats(area, strip) {
     const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
     x0 = null;
     if (document.documentElement.dataset.view !== 'ops' || !matchMedia('(max-width: 760px)').matches) return;
-    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5 || e.target.closest('.pager-timeline, .chart, input, .spot-pop')) return;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5 || e.target.closest('.chart, input, .spot-pop')) return;
     const btns = [...strip.querySelectorAll('button')];
     const i = btns.findIndex((b) => b.classList.contains('on'));
     const next = btns[i + ((dx < 0) !== RTL ? 1 : -1)];

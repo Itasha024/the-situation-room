@@ -66,6 +66,8 @@ export function hurtIn(s: string): { dead: number; hurt: number } {
 
 /** A day's or a war's tally, a recovery of bodies, a recap: no single event, never added up. */
 const TALLY = /\b(?:today|yesterday|past (?:24|48|72) hours|in 24 hours|(?:past|last|this) (?:week|month|days)|over the past|since|so far|toll|total|cumulative|this week|this month|bodies|remains|recovered|retrieved|died of (?:earlier )?wounds|succumbed)\b/i;
+/** An earlier toll retold: "raids Hebron after attack killing two soldiers", "names soldiers killed", a funeral, an inquiry. */
+const RETOLD = /\b(?:after|following|over|for|avenge|revenge for)\s+(?:the\s+|an?\s+|last\s+\w+'s\s+)?(?:attack|killing|shooting|deaths?)\b|\bnames?\b[^.;]{0,40}\bkilled\b|\bnamed\b|\binvestigation\b|\binquiry\b|\bfunerals?\b|\bmourn\w*|\bvows?\b/i;
 const OFFICIAL = /\b(?:Health Ministry|Ministry of Health|MoH|Civil Defen[cs]e|Red Crescent|PRCS|Magen David Adom|MDA|IDF|Israel Police|Shin Bet|COGAT|Government Media Office|Avichay Adraee|Ella Waweya)\b/i;
 const officialCard = (c: GazaCard) => OFFICIAL.test(c.source) || (c.alsoReportedBy ?? []).some((a) => OFFICIAL.test(a.source));
 const GAZA_PLACES = /\b(?:Gaza\w*|Khan Y(?:ou|u|o)nis|Rafah|Jabalia|Deir al-Balah|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Mawasi|Shuja'?iyya|Zeitoun|Tuffah|Sheikh Radwan|Netzarim|yellow line)\b/i;
@@ -140,12 +142,19 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
     s.n += n;
     s.last ??= c;
   };
-  for (const c of all) {
-    if (TALLY.test(c.summary)) continue;
+  // One toll told again is counted once (26 Oct: the two soldiers killed near Hebron, in five reports over three
+  // days): the same side, area and count within three days, sharing a spot or a name (Israelis: rare enough that
+  // the count alone holds), or a retelling ("after the attack that killed…", "names the soldiers killed").
+  const counted: { where: string; dead: number; hurt: number; t: number; keys: string[] }[] = [];
+  const keysOf = (s: string) => [...(s.match(/\b[A-Z][a-z'-]{2,}(?:[ -](?:al-|el-|Abu |bin )?[A-Z][a-z'-]{2,})*\b/g) ?? [])].map((k) => k.toLowerCase()).filter((k) => !/^(?:israeli|palestinian|palestinians|gaza|israel|idf|hamas|the)$/.test(k));
+  // Oldest first, so the first account of an event is the one counted.
+  for (const c of [...all].reverse()) {
+    if (TALLY.test(c.summary) || RETOLD.test(c.summary)) continue;
     const side = hurtSide(c);
     const cardArea = areaOf(c);
     if (!side) continue;
     const off = officialCard(c);
+    const t = Date.parse(c.at);
     // Clause by clause: "Israeli extremists raid Awarta near Nablus; three Palestinians killed south of Khan Younis".
     for (const part of c.summary.split(/;|\.\s/)) {
       const { dead, hurt } = hurtIn(part);
@@ -153,6 +162,10 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
       const area = GAZA_PLACES.test(part) ? "gaza" : JS_PLACES.test(part) ? "js" : cardArea;
       const where = side === "israeli" ? "israeli" : area;
       if (!where) continue;
+      const keys = keysOf(part);
+      const again = counted.some((x) => x.where === where && Math.abs(x.t - t) < 3 * 864e5 && (dead ? x.dead === dead : x.hurt === hurt) && (where === "israeli" || x.keys.some((k) => keys.includes(k))));
+      if (again) continue;
+      counted.push({ where, dead, hurt, t, keys });
       add(`${where}:dead`, off, dead, c);
       add(`${where}:hurt`, off, hurt, c);
     }

@@ -14,12 +14,15 @@ import { webReactions } from "./desk/mood-web.ts";
 export const MOOD_KEY = "gaza:mood";
 const MOOD_LOCK = "gaza:mood-lock";
 const H = 3600_000;
-const EVERY_MS = 15 * 60_000;
-const PER_RUN = 3;
-const AT_ONCE = 5;
+// Light on purpose (27 Oct: the mood reads on top of the scans had the small server throttled and the site down).
+const EVERY_MS = 30 * 60_000;
+const PER_RUN = 2;
+const AT_ONCE = 3;
+/** Channels searched per event: the town's, the main ones, then the rest of the Palestinian ones up to this. */
+const CHANNELS_PER_EVENT = 30;
 /** Events found from the reactions (the finder), and how often the channels' latest posts are read for them. */
 const FOUND_KEY = "gaza:mood-found";
-const FIND_EVERY = 30 * 60_000;
+const FIND_EVERY = 90 * 60_000;
 const MODELS: ChainModel[] = [
   { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
   { provider: "nvidia", id: "minimaxai/minimax-m3.1-flash" },
@@ -60,11 +63,11 @@ async function termsOf(ev: MoodEvent): Promise<string[]> {
 async function readEvent(ev: MoodEvent, had: MoodEntry | undefined, now: number): Promise<MoodEntry> {
   // Words that found little are asked for again.
   const terms = had?.terms?.length && had.posts >= 3 ? had.terms : ev.terms?.length ? ev.terms : await termsOf(ev);
-  const channels = channelsFor(ev);
+  const channels = channelsFor(ev).slice(0, CHANNELS_PER_EVENT);
   const from = Date.parse(ev.at) - H, to = Date.parse(ev.at) + 24 * H;
   const found = new Map<string, MoodPost>();
   // The town's and the main channels by every word; the many others by the first only (Telegram's pages are shared with the scan).
-  const jobs = channels.flatMap((ch, i) => (i < 25 ? terms : terms.slice(0, 1)).map((t) => ({ ch, t })));
+  const jobs = channels.flatMap((ch, i) => (i < 12 ? terms : terms.slice(0, 1)).map((t) => ({ ch, t })));
   await pool(jobs, async ({ ch, t }) => {
     // The handle in small letters: Telegram's search page answers it (the other spelling redirects first).
     const html = await fetchText(`https://t.me/s/${ch.toLowerCase()}?q=${encodeURIComponent(t)}`, 12_000).catch(() => null);
@@ -82,7 +85,7 @@ async function readEvent(ev: MoodEvent, had: MoodEntry | undefined, now: number)
   for (const p of web) if (!p.c && !found.has(p.u)) found.set(p.u, p);
   const posts = [...found.values()];
   // The comments under the most-read Telegram posts (only channels with a public discussion group have any).
-  await pool(posts.filter((p) => p.u.startsWith("https://t.me/")).sort((a, b) => b.v - a.v).slice(0, 15), async (p) => {
+  await pool(posts.filter((p) => p.u.startsWith("https://t.me/")).sort((a, b) => b.v - a.v).slice(0, 8), async (p) => {
     const html = await fetchText(`${p.u}?embed=1&discussion=1&comments_limit=40`, 12_000).catch(() => null);
     if (html) comments.push(...parseComments(html, p.ch));
   });
@@ -114,9 +117,22 @@ async function readEvent(ev: MoodEvent, had: MoodEntry | undefined, now: number)
 
 const due = (e: MoodEntry | undefined, now: number) => !e || now - Date.parse(e.readAt) >= (now - Date.parse(e.at) < 3 * H ? 30 : 90) * 60_000;
 
+/** True when the server is throttled: a loop of a few milliseconds takes many times that (vm-cpu-throttle). */
+function cpuSlow(): boolean {
+  const t = performance.now();
+  let x = 0;
+  for (let i = 0; i < 3e6; i++) x += i;
+  return x > 0 && performance.now() - t > 150;
+}
+
 export async function runMood(store: DeskStore, now = Date.now()): Promise<number> {
   const prev = (await store.getJson<MoodStore>(MOOD_KEY)) ?? { at: "", events: [] };
   if (prev.at && now - Date.parse(prev.at) < EVERY_MS) return 0;
+  // The reactions wait while the server is slow: the site comes first.
+  if (cpuSlow()) {
+    console.log("[mood] skipped: the server is slow");
+    return 0;
+  }
   // One reader at a time (27 Oct: two processes read the same event at once and the worse read was kept).
   const held = await store.getJson<{ at: number }>(MOOD_LOCK);
   if (held && now - held.at < 10 * 60_000) return 0;

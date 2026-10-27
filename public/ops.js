@@ -953,12 +953,14 @@
     const sc = svg.parentNode;
     mzMax = Math.max(1, Math.min(32, span / (20 * DAY)));
     const zoom = Math.min(MZ, mzMax);
-    const cw = isPhone() ? 7 : 6.2, longest = Math.max(6, ...rows.map((r) => r.name.length));
-    const LW = Math.round(Math.min(isPhone() ? 200 : 220, longest * cw + 14));
+    // The names' column as wide as the longest name really is, measured in the chart's own font (user, 27 Oct: the
+    // names and the chart sat pushed to the right, the column sized by a guess per letter).
+    const LW = Math.round(Math.min(isPhone() ? 200 : 240, labWidth(svg, rows.map((r) => r.name)) + 16));
     const W = Math.max(240, LW + ((sc.clientWidth || 600) - LW) * zoom), RH = isPhone() ? 14 : 11, top = 3;
     svg.style.width = zoom > 1 ? W + 'px' : '';
     const H2 = top + Math.max(1, rows.length) * RH + 18;
     svg.setAttribute('viewBox', `0 0 ${W} ${H2}`);
+    svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
     svg.style.height = H2 + 'px';
     const x = (t) => LW + ((t - t0) / span) * (W - LW - 6);
     let out = '';
@@ -968,7 +970,7 @@
     const dayW = (W - LW - 6) / (span / DAY);
     const GAP = isPhone() ? 40 : 36;
     const step = [1, 2, 7, 14].find((n) => n * dayW >= 20) || 0;
-    let lastX = LW + 34; // the first day's date, written at the left
+    let lastX = LW + (new Date(t0 + 4 * 3600e3).getUTCFullYear() !== new Date().getUTCFullYear() ? 60 : 34); // the first day's date, written at the left
     for (let t = t0; t < t0 + span; t += DAY) {
       const d = new Date(t + D_OFF), X = x(t);
       if (d.getUTCDate() === 1) {
@@ -979,7 +981,8 @@
         if (step && (d.getUTCDate() - 1) % step === 0 && d.getUTCDate() <= 26 && X - lastX >= 6 && X < W - 52) { out += `<text class="tk dn" x="${X + dayW / 2}" y="${ty}" text-anchor="middle">${d.getUTCDate()}</text>`; lastX = X + 14; }
       }
     }
-    out += `<text class="tk" x="${LW}" y="${ty}">${esc(dm(t0 + 3600e3 * 4, 'Asia/Riyadh'))}</text>`;
+    const y0 = new Date(t0 + 4 * 3600e3).getUTCFullYear();
+    out += `<text class="tk" x="${LW}" y="${ty}">${esc(dm(t0 + 3600e3 * 4, 'Asia/Riyadh'))}${y0 !== new Date().getUTCFullYear() ? ' ' + y0 : ''}</text>`;
     rows.forEach((r, i) => {
       const y = top + i * RH;
       out += `<line class="row" x1="${LW}" x2="${W - 6}" y1="${y + 6}" y2="${y + 6}"/>`;
@@ -995,14 +998,15 @@
     if (rng) out += `<rect class="sel" x="${x(rng[0])}" y="${top - 3}" width="${Math.max(2, x(rng[1]) - x(rng[0]))}" height="${H2 - 14 - top}"/>`;
     out += `<rect class="hit" data-mx x="${LW}" y="0" width="${W - LW - 6}" height="${H2 - 12}"/>`;
     // The side names stay at the left while a zoomed chart scrolls.
-    out += `<g class="labs"><rect class="labs-bg" x="0" y="0" width="${LW - 2}" height="${H2}"/>${rows.map((r, i) => `<text class="lab" x="${LW - 8}" y="${top + i * RH + 8.5}" text-anchor="end">${esc(r.name)}</text>`).join('')}</g>`;
+    out += `<g class="labs"><rect class="labs-bg" x="0" y="0" width="${LW - 2}" height="${H2}"/>${rows.map((r, i) => `<text class="lab" x="4" y="${top + i * RH + 8.5}">${esc(r.name)}</text>`).join('')}</g>`;
     svg.innerHTML = out;
     svg._x = { t0, LW, W, span };
     // Zooming keeps the middle of what was in view; the first draw shows today.
     if (sc._z !== zoom) { const mid = sc._z ? (sc.scrollLeft + sc.clientWidth / 2) / (sc.scrollWidth || 1) : 1; sc._z = zoom; sc.scrollLeft = mid * sc.scrollWidth - sc.clientWidth / 2; }
     stickLabs();
     const head = $('.ops-act-h b', dock);
-    if (head) head.textContent = `Since ${dm(t0 + 3600e3 * 4, 'Asia/Riyadh')}`;
+    // With its year when that is not this year (user, 27 Oct: "should say since 10 Oct 2025").
+    if (head) head.textContent = `Since ${dm(t0 + 3600e3 * 4, 'Asia/Riyadh')}${new Date(t0 + 4 * 3600e3).getUTCFullYear() !== new Date().getUTCFullYear() ? ' ' + new Date(t0 + 4 * 3600e3).getUTCFullYear() : ''}`;
     const sel = $('.ops-act-sel', dock);
     sel.hidden = !rng;
     if (rng) sel.innerHTML = `${esc(dm(rng[0] + 3600e3 * 4, 'Asia/Riyadh'))}${rng[1] - rng[0] > DAY ? '–' + esc(dm(rng[1] - 3600e3, 'Asia/Riyadh')) : ''} <button type="button" data-clear title="Show every day again">${ICON.x}<span class="sr">Clear</span></button>`;
@@ -1011,6 +1015,21 @@
     counts();
     if (PAGE === 'all') drawTheatres();
     dimPins();
+  }
+  /** The widest of the names as the chart writes them (its .lab font), measured once per set of names. */
+  function labWidth(svg, names) {
+    const key = `${isPhone()}|${names.join('|')}`;
+    if (svg._lw && svg._lw[0] === key) return svg._lw[1];
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('class', 'lab');
+    svg.appendChild(t);
+    let w = 0;
+    try { for (const n of names) { t.textContent = n; w = Math.max(w, t.getComputedTextLength()); } } catch (e) { /* not drawn */ }
+    t.remove();
+    // Not drawn yet (a hidden panel): a guess per letter, measured again on the next draw.
+    if (!w) return Math.max(6, ...names.map((n) => n.length)) * (isPhone() ? 7 : 6.2);
+    svg._lw = [key, w];
+    return w;
   }
   let MZ = 1, mzMax = 8;
   function stickLabs() {

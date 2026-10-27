@@ -14,6 +14,10 @@ import { gazaLeanOf } from "./gaza-sources.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { houthiAttack, pinSideOf } from "./dev-marks.ts";
 import { cardsOnTheirPins, serveIranPins, serveYemenPins } from "./serve-map-pins.ts";
+import { gazaNotAPin, gazaPinSide } from "./gaza-pin-side.ts";
+
+/** A pin of the Gaza – Judea & Samaria map: on its desk, or the desk's own pin on another page. */
+const isGazaPin = (e: Record<string, unknown>, desk: string) => desk === "gaza" || (Array.isArray(e.desks) && (e.desks as string[]).includes("gaza"));
 import { exclusivesOut, idOrderTimes, postTimes, serveCard } from "./copy-rules.ts";
 import { type Card as SameCard, foldServed } from "./fold-same.ts";
 import { gzipped } from "./microcache.ts";
@@ -40,7 +44,12 @@ export async function readDesk(limit: number, before: string | undefined, desk: 
   for (const e of ((slice as { events?: Record<string, unknown>[] }).events ?? [])) {
     if (typeof e.label === "string") e.label = gazaWords(e.label);
     if (typeof e.text === "string") e.text = gazaWords(e.text);
+    // The Gaza map's side is who acted, from the pin's headline (gaza-pin-side.ts; user, 27 Oct).
+    if (isGazaPin(e, desk)) e.actor = gazaPinSide(String(e.label ?? ""), e.actor as string | null);
   }
+  // No pin for a roundup, an event held or a standing situation (the same audit).
+  const evs = (slice as { events?: Record<string, unknown>[] }).events;
+  if (Array.isArray(evs)) (slice as { events?: Record<string, unknown>[] }).events = evs.filter((e) => !(isGazaPin(e, desk) && gazaNotAPin(String(e.label ?? ""))));
   // A word a model glued to a name is shown split, and a name in the
   // desk's one spelling; the row is left as it is.
   for (const r of slice.reports) {

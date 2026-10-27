@@ -334,7 +334,9 @@ export function moodPrompt(ev: MoodEvent, items: MoodPost[]): string {
 export function ownVoice(en: string): boolean {
   const s = en.trim();
   if (/\||^(?:urgent|breaking|watch|video|footage|photos?|scenes?|the moment|the rubble|moments?|now|update)\b/i.test(s)) return false;
-  if (/^we (?:mourn|announce|condemn|confirm|declare|hold|call on the)\b/i.test(s)) return false;
+  if (/^we (?:mourn|announce|condemn|confirm|declare|hold|call on the|express|extend|offer|affirm|reject|warn)\b/i.test(s)) return false;
+  // News told in the third person (27 Oct: "Israeli citizens establish an outpost…", "Near their homes, the Israeli army…").
+  if (/^(?:the )?(?:israeli|palestinian|occupation|gaza|residents|locals|settlers|forces|army|despite|near|amid|after|during|following)\b/i.test(s)) return false;
   if (/\b(?:bastard|whore|son of a|bitch|fuck|shit)\b/i.test(s)) return false;
   return true;
 }
@@ -418,6 +420,8 @@ export function readFound(json: Record<string, unknown>, posts: MoodPost[], word
     const terms = (Array.isArray(o.terms) ? o.terms : []).map(String).map((t) => t.trim()).filter((t) => AR.test(t) && t.length <= 30 && !/^(?:غزة|قطاع غزة|الضفة|الضفة الغربية)$/.test(t)).slice(0, 2);
     const at = seed.map((p) => p.at).sort()[0];
     const pt = placeAt(place);
+    // Only events in Gaza, Judea and Samaria or Jerusalem (27 Oct: "Jordanian air strikes on southern Syria" was found).
+    if (!pt && !/\b(?:Gaza|Judea|Samaria|Jerusalem|Al-Aqsa|Palestin\w*)\b/i.test(h)) continue;
     const score = Math.round(seed.reduce((a, p) => a + stirOf(p), 0));
     out.push({ fp: `mood-${hash(`${o.area}|${place.toLowerCase()}|${at.slice(0, 13)}`)}`, at, headline: claimLine(words(h)), ...(place ? { place } : {}), ...(pt ?? {}), area: o.area, score, found: 1, terms, seed });
   }

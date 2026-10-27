@@ -92,3 +92,12 @@ test("web reactions: YouTube's times and data, Bluesky's posts, X posts matched 
   const x = matchX([{ url: "https://x.com/QudsNen/status/1", text: "Raid on قلنديا camp", created_at: "Tue Oct 27 07:00:00 +0000 2026", views: 50, author: { screen_name: "QudsNen" } }, { url: "https://x.com/QudsNen/status/2", text: "other news", created_at: "Tue Oct 27 07:00:00 +0000 2026" }], ["قلنديا"], now - 3600_000 * 5, now);
   assert.deepEqual(x.map((p) => p.ch), ["X: @QudsNen"]);
 });
+
+test("quotes: no news told in the third person, no statements; found events only in Gaza, Judea and Samaria (27 Oct)", async () => {
+  const { ownVoice } = await import("./gaza-mood.ts");
+  assert.equal(ownVoice("Israeli citizens establish an outpost on the northern entrance of Al-Bireh"), false);
+  assert.equal(ownVoice("Near their homes, the Israeli army prevents residents from picking olives"), false);
+  assert.equal(ownVoice("We express deep sorrow and regret over the incident"), false);
+  assert.equal(ownVoice("This land is our land and the earth is ours"), true);
+  assert.equal(ownVoice("May God have mercy on them."), true);
+});

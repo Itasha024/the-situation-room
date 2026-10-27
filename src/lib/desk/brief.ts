@@ -98,6 +98,17 @@ export function briefWindow(now = new Date(), hours = CADENCE_HOURS): { updatedA
   return { updatedAt: deskIso(at), nextUpdateAt: deskIso(next), startedAt: deskIso(start) };
 }
 
+/**
+ * Where a brief starts reading (user, 27 Oct: the night's window held 8 Gaza cards and the morning brief had one
+ * point a list): its own window, reaching back 3 hours at a time, at most 12, until it holds `min` reports.
+ */
+export function briefStart(ats: number[], start: number, end: number, min = 20, maxHours = 12): number {
+  const n = (from: number) => ats.filter((t) => t >= from && t < end).length;
+  let s = start;
+  while (n(s) < min && end - s < maxHours * 3600_000) s -= 3 * 3600_000;
+  return s;
+}
+
 /* ------------------------------------------------------------------ *
  * Fronts the desk tracks
  * ------------------------------------------------------------------ */

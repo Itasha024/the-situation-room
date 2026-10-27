@@ -316,7 +316,7 @@ Answer JSON only:
 Words: write "Judea and Samaria" (never "West Bank"), "Israeli citizens" (never "settlers"), "Israeli forces" or "the IDF" (never "occupation forces"), "killed" (never "martyred"), "attacks" (never "ceasefire violations"). Quote people's words as theirs; do not adopt them.`;
 
 /** The model's numbered items: posts first, most-seen first, then comments. */
-export function moodItems(posts: MoodPost[], max = 45): MoodPost[] {
+export function moodItems(posts: MoodPost[], max = 60): MoodPost[] {
   const own = posts.filter((p) => !p.c).sort((a, b) => b.v - a.v).slice(0, 30);
   const cmts = posts.filter((p) => p.c).slice(0, max - own.length);
   return [...own, ...cmts];
@@ -324,7 +324,7 @@ export function moodItems(posts: MoodPost[], max = 45): MoodPost[] {
 
 export function moodPrompt(ev: MoodEvent, items: MoodPost[]): string {
   const rx = (p: MoodPost) => (p.rx ? ` [${Object.entries(p.rx).map(([e, n]) => `${e}${n}`).join(" ")}]` : "");
-  return [`EVENT (${ev.at.slice(0, 16).replace("T", " ")} UTC${ev.place ? `, ${ev.place}` : ""}): ${ev.headline}`, "", "ITEMS:", ...items.map((p, i) => `${i}. [${p.c ? "comment" : "post"} @${p.ch}${p.v ? `, ${p.v} views` : ""}${rx(p)}] ${cut(p.x, 260)}`)].join("\n");
+  return [`EVENT (${ev.at.slice(0, 16).replace("T", " ")} UTC${ev.place ? `, ${ev.place}` : ""}): ${ev.headline}`, "", "ITEMS:", ...items.map((p, i) => `${i}. [${p.c ? "comment" : "post"} ${p.ch.includes(":") ? p.ch : `@${p.ch}`}${p.v ? `, ${p.v} views` : ""}${rx(p)}] ${cut(p.x, 260)}`)].join("\n");
 }
 
 /**

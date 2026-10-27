@@ -94,7 +94,10 @@ async function readDesk(limit: number, before: string | undefined, desk: DeskId,
     slice.reports = exclusivesOut(idOrderTimes(postTimes(slice.reports as Record<string, unknown>[]))) as typeof slice.reports;
   }
   if (slice.reports.length) {
-    slice.reports = foldServed(slice.reports as unknown as SameCard[]).reports as unknown as typeof slice.reports;
+    const folded = foldServed(slice.reports as unknown as SameCard[]);
+    slice.reports = folded.reports as unknown as typeof slice.reports;
+    // Each folded card to the card it joined, so a brief's link to it opens that card (user, 27 Oct).
+    if (folded.into.size) (slice as Record<string, unknown>).foldedInto = Object.fromEntries(folded.into);
   }
   // The Iran map's own pins pass its scope as they are served, so a pin stored under older rules never shows.
   // The Iran map's own pins pass its scope as they are served (serve-map-pins.ts).

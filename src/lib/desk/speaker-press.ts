@@ -24,7 +24,7 @@ export type Nation =
 const NATION_WORDS: [Nation, RegExp][] = [
   ["us", /\b(?:US|U\.S\.|USA|American|Americans|Washington|Trump|Vance|Rubio|Hegseth|Witkoff|Leavitt|Bessent|Waltz|Kushner|White House|Pentagon|State Department|Treasury|CENTCOM|Central Command)\b/],
   ["iran", /\b(?:Iran|Iranian|Iranians|Tehran|IRGC|Revolutionary Guards?|Basij|Khamenei|Pezeshkian|Araghchi|Baghaei|Ghalibaf|Larijani|Vahidi|Hatami|Mohajerani|Gharibabadi|Velayati|Jalili|Eslami|Isfahan|Bandar Abbas|Bushehr|Natanz|Fordow|Mashhad|Tabriz|Shiraz|Kharg|Sistan|Baluchestan|Khuzestan)\b/i],
-  ["israel", /\b(?:Israel|Israeli|Israelis|Hebrew|IDF|Netanyahu|Katz|Saar|Zamir|Mossad|Tel Aviv|Jerusalem|Haifa|Eilat|Dimona)\b/i],
+  ["israel", /\b(?:Israel|Israeli|Israelis|Hebrew|IDF|Netanyahu|Katz|Saar|Zamir|Mossad|Tel Aviv|Jerusalem|Haifa|Eilat|Dimona|Eisenkot|Lapid|Bennett|Gantz|Liberman|Lieberman|Yair Golan|Smotrich|Ben[- ]?Gvir|Herzog|Dermer|Knesset|Likud)\b/i],
   ["saudi", /\b(?:Saudi|Saudis|Riyadh|Jeddah|Aramco|Najran|Jizan|Jazan|Khamis Mushait|Abha)\b/i],
   ["uae", /\b(?:UAE|Emirati|Emirates|Abu Dhabi|Dubai|Fujairah|Ras al-Khaimah)\b/i],
   ["qatar", /\b(?:Qatar|Qatari|Doha|Ras Laffan)\b/i],
@@ -151,6 +151,10 @@ export function nearerSource(
   return nearness(r.source, n, r.lean, r.side) > nearness(home.source, n, home.lean, home.side);
 }
 
+/** Israel's own politics: its party leaders opening a headline, its elections, Knesset, coalition and opposition. */
+export const ISRAELI_POLITICS =
+  /^(?:Israeli opposition leader |Former (?:Israeli )?(?:military chief|army chief|prime minister|PM) |Opposition leader )?(?:Gadi |Yair |Naftali |Benny |Avigdor )?(?:Eisenkot|Lapid|Bennett|Gantz|Liberman|Lieberman|Yair Golan)\b|\b(?:Knesset (?:election|vote|elections)|Israeli (?:election|elections|opposition|coalition|polls?)|Likud|Netanyahu's (?:rival|opponent|trial|coalition|government collapse))\b/i;
+
 /** Who speaks in a headline: the words before its colon, or before "says". */
 function speakerOf(headline: string): string {
   const h = String(headline || "").trim();
@@ -176,6 +180,8 @@ export function rivalRelay(headline: string, source: string, lean = "", own = fa
   const s = String(source || "").trim();
   if (own || find(OFFICIAL, s) || WIRE.test(s) || AGGREGATOR.test(s)) return null;
   const speaker = speakerOf(headline);
+  // Israel's politics, whoever acts in the headline (user, 27 Oct: ISNA's "Eisenkot will reveal Netanyahu's request…").
+  if (ISRAELI_POLITICS.test(headline) && sourceNation(s, lean) !== "israel") return `relay: Israel's politics are told from Israeli sources, not ${s}`;
   const who = subjectNation(speaker);
   if (!who) return null;
   const mine = sourceNation(s, lean);

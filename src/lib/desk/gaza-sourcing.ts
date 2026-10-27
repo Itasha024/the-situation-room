@@ -7,7 +7,7 @@
 import { gazaLeanOf } from "./gaza-sources.ts";
 import { iranLeanOf } from "./iran-sources.ts";
 import { leadOf } from "./copy-rules.ts";
-import { sourceNation } from "./speaker-press.ts";
+import { ISRAELI_POLITICS, sourceNation } from "./speaker-press.ts";
 
 const ISRAELI_NAME = /^(?:Kan\b|Israel 1\b|Hazfon\b|US2020US$|Channel 1[1-4]\b|Maariv\b|Yedioth|Ynet|Army Radio|Galei Tzahal|Times of Israel)/i;
 const IRANIAN = /^(?:IRNA|Tasnim|Fars|ISNA|Mehr|IRIB|Press TV|Nour News|Tehran Times|Al-Alam|ILNA|IMNA|SNN)\b/i;
@@ -48,7 +48,7 @@ export function gazaSourceRule(x: GazaSourcing): string | null {
   const s = String(x.source || "").trim();
   const h = String(x.headline || "").trim();
   const spoken = x.type === "statement" || x.type === "diplomacy" || !!leadOf(h);
-  if (!israeliSource(s) && (ISRAELI_LEADER.test(h) || ISRAELI_FORCE_SAYS.test(h))) return `Israel is told from the Israeli sources the desk reads, not ${s}`;
+  if (!israeliSource(s) && (ISRAELI_LEADER.test(h) || ISRAELI_FORCE_SAYS.test(h) || ISRAELI_POLITICS.test(h))) return `Israel is told from the Israeli sources the desk reads, not ${s}`;
   const lead = leadOf(h) || h;
   if (spoken && !palestinianSource(s) && PALESTINIAN_VOICE.test(lead)) return `the Palestinians' words are taken from their own channels, not ${s}`;
   return null;

@@ -77,3 +77,18 @@ test("quotes are people's and channels' own voice only (27 Oct)", async () => {
   for (const bad of ["Urgent | Israeli forces evicts a new family", "The moment Israeli forces targets a vehicle", "The rubble and destruction at the home", "We mourn the duty dead Ahmed", "Everyone is happy, this son of a bastard came"]) assert.equal(ownVoice(bad), false, bad);
   for (const good of ["God's curse upon them", "May God bring relief.", "Most likely someone from the PLO planted it"]) assert.equal(ownVoice(good), true, good);
 });
+
+test("web reactions: YouTube's times and data, Bluesky's posts, X posts matched by the event's words (27 Oct)", async () => {
+  const { agoAt, parseYtSearch, parseBsky, matchX } = await import("./mood-web.ts");
+  const now = Date.parse("2026-10-27T08:00:00Z");
+  assert.equal(agoAt("3 hours ago", now), now - 3 * 3600_000);
+  assert.equal(agoAt("Streamed 1 day ago", now), now - 864e5);
+  assert.equal(agoAt("قبل 3 ساعات", now), null);
+  const yt = `<script>var ytInitialData = {"a":[{"videoRenderer":{"videoId":"abc","title":{"runs":[{"text":"اقتحام قلنديا"}]},"ownerText":{"runs":[{"text":"Shehab"}]},"publishedTimeText":{"simpleText":"2 hours ago"},"viewCountText":{"simpleText":"1,234 views"}}}]};</script>`;
+  assert.deepEqual(parseYtSearch(yt, now), [{ id: "abc", title: "اقتحام قلنديا", ch: "Shehab", at: now - 7200_000, views: 1234 }]);
+  const b = parseBsky({ posts: [{ uri: "at://did:plc:x/app.bsky.feed.post/3k", author: { handle: "a.bsky.social" }, record: { text: "قلنديا", createdAt: "2026-10-27T07:00:00Z" }, likeCount: 2 }] });
+  assert.equal(b[0].u, "https://bsky.app/profile/a.bsky.social/post/3k");
+  assert.equal(b[0].ch, "Bluesky: a.bsky.social");
+  const x = matchX([{ url: "https://x.com/QudsNen/status/1", text: "Raid on قلنديا camp", created_at: "Tue Oct 27 07:00:00 +0000 2026", views: 50, author: { screen_name: "QudsNen" } }, { url: "https://x.com/QudsNen/status/2", text: "other news", created_at: "Tue Oct 27 07:00:00 +0000 2026" }], ["قلنديا"], now - 3600_000 * 5, now);
+  assert.deepEqual(x.map((p) => p.ch), ["X: @QudsNen"]);
+});

@@ -10,7 +10,7 @@
  */
 
 import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
-import { briefWindow } from "./brief.ts";
+import { briefStart, briefWindow } from "./brief.ts";
 import { cleanPoints, onePointEach } from "./prose.ts";
 import { headlinePoints, NUM_MARK, numberRefs, type Ref, stripRefs } from "./refs.ts";
 import { keepSpeaker, writerInput } from "./iran-brief.ts";
@@ -51,7 +51,7 @@ export type GazaBrief = {
 };
 
 const SYSTEM = `You are the editor of a live news desk on Gaza and Judea and Samaria.
-You get the reports published in the last ${HOURS} hours, and Trump's own statements on Gaza in that time. Each line is: [its id] outlet (its group): headline — body. Trump's own statements have the ids t1, t2…
+You get the reports published since the last update (at least the last ${HOURS} hours, more when it was quiet), and Trump's own statements on Gaza in that time. Each line is: [its id] outlet (its group): headline — body. Trump's own statements have the ids t1, t2…
 Write two separate briefs in English wire style (Reuters/AP), each a numbered list for a reader with a minute:
 ${GAZA_AREAS.map((a) => `- "${a.id}" = ${a.name}: ${a.about}`).join("\n")}
 Each list: 0-8 points (fewer when less happened: only what is important and interesting, never padding), each ONE development in 1-2 short sentences (at most 40 words), most important first. Importance is what changes the most: deaths, strikes, attacks, decisions on war, on aid and on the day after come first; reactions, condemnations and general statements last or left out. A report goes in the one list it is about; [] when nothing happened there. Two reports of one event are one point; one speaker's words on one subject are one point.
@@ -92,6 +92,7 @@ export function gazaUnusable(j: Record<string, unknown>, refOf: Record<string, R
   const n = Object.values(got).reduce((s, x) => s + x.points.length, 0);
   if (!n) return "no usable points";
   if (nLines >= 8 && n < 3) return `${n} point(s) for ${nLines} reports`;
+  if (nLines >= 20 && n < 5) return `${n} point(s) for ${nLines} reports`;
   return null;
 }
 
@@ -118,15 +119,17 @@ async function build(store: DeskStore, now: Date): Promise<GazaBrief | null> {
     if (now.getTime() > Date.parse(w.nextUpdateAt) - 5 * 60_000) return saved;
   }
   // The first brief reads the last day, so neither list opens empty.
-  const start = saved ? Date.parse(w.startedAt) : Date.parse(w.updatedAt) - 24 * 3600_000;
   const end = Date.parse(w.updatedAt);
+  const { reports } = await store.recentDesk(1500, undefined, { events: false, desk: "gaza" });
+  // The cards as served (audit of 24 Oct): a card the serve rules hide never feeds the brief, and a lead swapped by them is cited.
+  const served = (reports as unknown as LiveReport[]).filter((r) => serveCard(r as unknown as Record<string, unknown>, "gaza"));
+  // A quiet window reads further back, so a night never leaves a list of one point.
+  const start = saved ? briefStart(served.map((r) => Date.parse(String(r.at || ""))), Date.parse(w.startedAt), end) : end - 24 * 3600_000;
   const inWin = (at: string) => {
     const t = Date.parse(at);
     return Number.isFinite(t) && t >= start && t < end;
   };
-  const { reports } = await store.recentDesk(1500, undefined, { events: false, desk: "gaza" });
-  // The cards as served (audit of 24 Oct): a card the serve rules hide never feeds the brief, and a lead swapped by them is cited.
-  const cards = (reports as unknown as LiveReport[]).filter((r) => inWin(String(r.at || "")) && serveCard(r as unknown as Record<string, unknown>, "gaza"));
+  const cards = served.filter((r) => inWin(String(r.at || "")));
   const feed = (await store.getJson<TrumpFeed>(TRUMP_KEY)) ?? { statements: [] };
   const trump = feed.statements.filter((s) => !s.off && !s.in && inWin(s.at) && ABOUT_GAZA.test(`${s.headline ?? ""} ${s.text ?? ""}`));
 

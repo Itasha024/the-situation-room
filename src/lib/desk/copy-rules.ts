@@ -420,7 +420,7 @@ export function roleInCopy(name: string, copy: string): string | null {
  */
 export function bareSpeaker(headline: string): string | null {
   const m = /^([A-Z][\p{L}'’-]+(?: [A-Z][\p{L}'’-]+)?):\s/u.exec(String(headline || ""));
-  if (!m || FAMOUS.test(m[1])) return null;
+  if (!m || FAMOUS.test(m[1]) || knownRole(m[1])) return null;
   if (IRAN_OFFICES.some((o) => o.name === m[1].split(" ").pop())) return null;
   if (subjectNation(m[1]) || /^(?:IRGC|IDF|CENTCOM|Hezbollah|Hamas|UN|UNIFIL|IAEA|EU|NATO|OPEC|UKMTO|Houthis?|Kataib|Nujaba|Treasury|Pentagon|Kremlin|Ansarallah|Reuters|Axios|Sources?|Officials?)$/i.test(m[1])) return null;
   // A role word in the lead already ("Spokesman Baghaei:" is two words with its role).
@@ -442,11 +442,38 @@ export function droppedSpeaker(headline: string, type: string, sourceText: strin
   return h.includes(surname) ? null : m[1];
 }
 
+/**
+ * Party leaders and figures the channels name by surname alone, which the copy often does not explain (user, 27 Oct:
+ * LBCI's "الجميّل من الكفور" went out as "Gemayel:" — "should have said his role"). Only surnames one person goes by.
+ */
+const KNOWN_ROLES: Record<string, string> = {
+  Gemayel: "Kataeb leader Samy Gemayel",
+  Geagea: "Lebanese Forces leader Samir Geagea",
+  Bassil: "Free Patriotic Movement leader Gebran Bassil",
+  Frangieh: "Marada leader Suleiman Frangieh",
+  Mikati: "Former Lebanese PM Najib Mikati",
+  Raad: "Hezbollah bloc head Mohammad Raad",
+  Haykal: "Lebanese army commander Rodolphe Haykal",
+  Eisenkot: "Former IDF chief Gadi Eisenkot",
+  Lapid: "Israeli opposition leader Yair Lapid",
+  Bennett: "Former Israeli PM Naftali Bennett",
+  Gantz: "Former Israeli defence minister Benny Gantz",
+  Liberman: "Yisrael Beytenu leader Avigdor Liberman",
+};
+/** The table's role for a lead that is the surname alone or the same person's full name. */
+export function knownRole(lead: string): string | null {
+  const surname = lead.split(" ").pop()!;
+  const known = KNOWN_ROLES[surname];
+  return known && (lead === surname || known.endsWith(` ${lead}`)) ? known : null;
+}
+
 /** A bare-surname lead with no role: its role from the table, or from the card's copy. */
 export function speakerByRole(headline: string, copy = ""): string {
   const h = String(headline || "");
   const m = /^([A-Z][\p{L}'’-]+(?: [A-Z][\p{L}'’-]+)?):\s/u.exec(h);
   if (!m || FAMOUS.test(m[1])) return h;
+  const known = knownRole(m[1]);
+  if (known) return `${known}${h.slice(m[1].length)}`;
   const surname = m[1].split(" ").pop()!;
   if (IRAN_OFFICES.some((o) => o.name === surname)) return h; // officeTitles does those
   // A body, a country or a group is not a person: "Hezbollah:", "IRGC:", "Iran:".

@@ -121,3 +121,19 @@ test("the aid trucks' chart takes a day's whole count only, as the crossings aut
   const trucks = g.boxes.find((b) => b.title === "Aid trucks, latest report");
   assert.deepEqual(trucks?.series, [{ d: "2026-10-23", v: 12 }, { d: "2026-10-25", v: 248 }]);
 });
+
+test("27 Oct: Israel's politics only from Israeli sources, a known leader's role, a paper opening a post is the original", async () => {
+  const { rivalRelay } = await import("./speaker-press.ts");
+  const { gazaSourceRule } = await import("./gaza-sourcing.ts");
+  const { speakerByRole, bareSpeaker } = await import("./copy-rules.ts");
+  const { findCitation } = await import("./origin.ts");
+  assert.ok(rivalRelay("Eisenkot will reveal Netanyahu's request to attack Iran after opposition wins", "ISNA", "axis"));
+  assert.ok(rivalRelay("Eisenkot: Netanyahu lives in delusion and knows Iran has no nuclear weapon", "IRIB News", "axis"));
+  assert.equal(rivalRelay("Eisenkot: Netanyahu lives in delusion", "N12", "israel"), null);
+  assert.ok(gazaSourceRule({ headline: "Eisenkot will reveal Netanyahu's request to attack Iran", type: "politics", source: "ISNA" }));
+  assert.equal(speakerByRole("Gemayel: restoring sovereignty and confining arms is the main path"), "Kataeb leader Samy Gemayel: restoring sovereignty and confining arms is the main path");
+  assert.equal(speakerByRole("Nadim Gemayel: no"), "Nadim Gemayel: no");
+  assert.equal(bareSpeaker("Gemayel: restoring sovereignty"), null);
+  assert.equal(findCitation("الديار عن اوساط دبلوماسية: نجحت طهران في ادراج الملف اللبناني", "Bint Jbeil News", "https://t.me/bintjbeilnews/198503")?.name, "Ad-Diyar");
+  assert.equal(findCitation("هدم الديار في غزة: قصف", "X", "https://t.me/x/1"), null);
+});

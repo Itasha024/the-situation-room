@@ -155,16 +155,17 @@ const CITABLE: [RegExp, Cited][] = [
   // Bare "الشرق الأوسط" is "the Middle East"; only the paper counts.
   [/صحيفة\s+"?الشرق الأوسط|Asharq Al-Awsat/i, O("Asharq Al-Awsat", "aawsat.com", "SA", { lang: "ar" })],
   [/الأخبار اللبنانية|صحيفة الأخبار|Al-Akhbar/i, O("Al-Akhbar", "al-akhbar.com", "LB", { lang: "ar" })],
-  // Lebanese papers (user, 18 Oct). Bare "المدن" is "the cities" and "الديار" "the homes": only the paper or site counts.
-  [/(?:موقع|صحيفة|جريدة)\s+[«"]?المدن|[«"]المدن[»"]|Al-?Modon/i, O("Al-Modon", "almodon.com", "LB", { lang: "ar" })],
+  // Lebanese papers (user, 18 Oct). Bare "المدن" is "the cities" and "الديار" "the homes": only the paper or site counts,
+  // or the bare name opening a post before "عن" or a colon (user, 27 Oct: "الديار عن اوساط دبلوماسية: …").
+  [/(?:^|\n)\s*[«"]?المدن[»"]?\s*(?:عن|:)|(?:موقع|صحيفة|جريدة)\s+[«"]?المدن|[«"]المدن[»"]|Al-?Modon/i, O("Al-Modon", "almodon.com", "LB", { lang: "ar" })],
   [/نداء الوطن|Nidaa al-Watan|Nidaa Al Watan/i, O("Nidaa al-Watan", "nidaalwatan.com", "LB", { lang: "ar" })],
-  [/(?:صحيفة|جريدة)\s+[«"]?الديار|[«"]الديار[»"]|Ad-?Diyar|Al-Diyar/i, O("Ad-Diyar", "addiyar.com", "LB", { lang: "ar" })],
+  [/(?:^|\n)\s*[«"]?الديار[»"]?\s*(?:عن|:)|(?:صحيفة|جريدة)\s+[«"]?الديار|[«"]الديار[»"]|Ad-?Diyar|Al-Diyar/i, O("Ad-Diyar", "addiyar.com", "LB", { lang: "ar" })],
   // Three more (user, 22 Oct). Bare "النشرة" is "the bulletin" and "الجمهورية" "the republic": only the site or paper.
   [/ليبانون ديبايت|Lebanon ?Debate/i, O("Lebanon Debate", "lebanondebate.com", "LB", { lang: "ar" })],
-  [/موقع\s+[«"]?النشرة|[«"]النشرة[»"]|El-?Nashra|Al-Nashra/i, O("Elnashra", "elnashra.com", "LB", { lang: "ar" })],
-  [/(?:صحيفة|جريدة)\s+[«"]?الجمهورية(?! الإسلامية)|[«"]الجمهورية[»"]|Al-?Joumhouria|Al-Jumhuriya/i, O("Al-Joumhouria", "aljoumhouria.com", "LB", { lang: "ar" })],
+  [/(?:^|\n)\s*[«"]?النشرة[»"]?\s*(?:عن|:)|موقع\s+[«"]?النشرة|[«"]النشرة[»"]|El-?Nashra|Al-Nashra/i, O("Elnashra", "elnashra.com", "LB", { lang: "ar" })],
+  [/(?:^|\n)\s*[«"]?الجمهورية[»"]?\s*(?:عن|:)|(?:صحيفة|جريدة)\s+[«"]?الجمهورية(?! الإسلامية)|[«"]الجمهورية[»"]|Al-?Joumhouria|Al-Jumhuriya/i, O("Al-Joumhouria", "aljoumhouria.com", "LB", { lang: "ar" })],
   // Al-Binaa (user, 23 Oct, from NNA's press review). Bare "البناء" is "building": only the paper.
-  [/(?:صحيفة|جريدة)\s+[«"]?البناء|[«"]البناء[»"]|Al-?Binaa/i, O("Al-Binaa", "al-binaa.com", "LB", { lang: "ar" })],
+  [/(?:^|\n)\s*[«"]?البناء[»"]?\s*(?:عن|:)|(?:صحيفة|جريدة)\s+[«"]?البناء|[«"]البناء[»"]|Al-?Binaa/i, O("Al-Binaa", "al-binaa.com", "LB", { lang: "ar" })],
   [/وزارة الدفاع السعودية|الدفاع السعودية|Saudi (?:Defen[cs]e|defen[cs]e) Ministry|Saudi Ministry of Defen[cs]e/i, B("Saudi Defense Ministry", "spa.gov.sa", "SA")],
   [/المتحدث (?:الرسمي )?باسم (?:قوات )?التحالف|تحالف دعم الشرعية|coalition spokesman/i, B("Coalition (SPA)", "spa.gov.sa", "SA")],
   [/الخارجية السعودية|Saudi (?:Foreign Ministry|Ministry of Foreign Affairs)/i, B("Saudi Foreign Ministry", "spa.gov.sa", "SA")],

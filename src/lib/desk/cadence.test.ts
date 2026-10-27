@@ -44,3 +44,13 @@ test("the overview puts the battle first and politics in its own paragraph", () 
   assert.equal(battleFirst("Houthi forces launched an offensive on Marib after a mobilisation call."), "Houthi forces launched an offensive on Marib after a mobilisation call.");
   assert.equal(battleFirst(""), "");
 });
+
+test("a quiet brief window reads further back, up to 12 hours (27 Oct)", async () => {
+  const { briefStart } = await import("./brief.ts");
+  const H = 3600_000, end = 100 * H, start = end - 3 * H;
+  const busy = Array.from({ length: 25 }, (_, i) => end - 1 * H - i * 1000);
+  assert.equal(briefStart(busy, start, end), start);
+  const night = [end - H, end - 2 * H, ...Array.from({ length: 30 }, (_, i) => end - 7 * H - i * 1000)];
+  assert.equal(briefStart(night, start, end), end - 9 * H);
+  assert.equal(briefStart([end - H], start, end), end - 12 * H);
+});

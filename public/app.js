@@ -1772,12 +1772,16 @@ function sortedReports(d) {
  */
 let deskArchive = { reports: [], events: [], updatedAt: null };
 
+/** A card the desk folded into another as it was served, to that card (a brief may cite either; user, 27 Oct). */
+const foldedInto = {};
+const leadFp = (fp) => { let f = fp; for (let i = 0; i < 4 && foldedInto[f]; i++) f = foldedInto[f]; return f; };
 async function pullDesk() {
   try {
     const res = await fetch('/api/desk?limit=400', { cache: 'no-cache' });
     if (!res.ok) return;
     const body = await res.json();
     if (!body || body.ok === false) return;
+    if (body.foldedInto) Object.assign(foldedInto, body.foldedInto);
     // Added to what the page holds, never in its place (user, 12 Oct: the whole war's count fell back to
     // about 930): each refresh read the newest 400 rows over the whole war's pins and the pages read back.
     const keep = (fresh, had) => { const seen = new Set(fresh.map((x) => String(x.fp || ''))); return [...fresh, ...had.filter((x) => !seen.has(String(x.fp || '')))]; };
@@ -4008,7 +4012,7 @@ function revealHashCard() {
   }
   const m = /^#r=(.+)$/.exec(location.hash || '');
   if (!m || !data) return;
-  const fp = decodeURIComponent(m[1]);
+  const fp = leadFp(decodeURIComponent(m[1]));
   history.replaceState(null, '', location.pathname + location.search);
   const all = sortedReports(data).filter(leanOk);
   const at = all.findIndex((r) => String(r.fp) === fp);
@@ -8561,6 +8565,7 @@ async function loadIranFeed() {
     const res = await fetch(`/api/desk?desk=${deskOf().id}&limit=300`, { cache: 'no-cache' });
     if (!res.ok) return;
     const d = await res.json();
+    if (d.foldedInto) Object.assign(foldedInto, d.foldedInto);
     // The older pages the reader has scrolled to stay under the newest (20 Oct: every report since 28 Feb, a page at a time).
     const newest = d.reports || [];
     const have = new Set(newest.map((r) => String(r.fp)));
@@ -8642,7 +8647,7 @@ function revealIranHashCard(all) {
   const m = /^#r=(.+)$/.exec(location.hash || '');
   if (!m) return;
   if (!revealIranHashCard.on) { revealIranHashCard.on = true; addEventListener('hashchange', () => { irHashTries = 0; renderIranFeed(); }); }
-  const fp = decodeURIComponent(m[1]);
+  const fp = leadFp(decodeURIComponent(m[1]));
   const at = all.findIndex((r) => String(r.fp) === fp);
   if (at < 0) {
     if (iranDesk.lean) { iranDesk.lean = ''; renderIranFeed(); return; }

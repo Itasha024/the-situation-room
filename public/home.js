@@ -262,24 +262,10 @@
     ['us', 'United States', /\b(?:US|U\.S\.|United States|Americans?|Trump|Washington|Pentagon|CENTCOM|Rubio|Vance|Witkoff)\b/],
     ['russia', 'Russia', /\b(?:Russia(?:n)?s?|Moscow|Putin|Kremlin)\b/i],
   ];
-  /** Simple flags, 18 by 12, cut to a circle like the desks'. */
-  const C_ART = {
-    saudi: '<rect width="18" height="12" fill="#006c35"/><rect x="4" y="7.6" width="10" height=".9" fill="#fff"/><rect x="4.5" y="4" width="9" height="2" rx=".6" fill="#fff" opacity=".85"/>',
-    lebanon: '<rect width="18" height="12" fill="#fff"/><rect width="18" height="3" fill="#ed1c24"/><rect y="9" width="18" height="3" fill="#ed1c24"/><path d="M9 3.6 6.4 8.2h5.2z" fill="#00a651"/>',
-    syria: '<rect width="18" height="4" fill="#007a3d"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#000"/><circle cx="5.5" cy="6" r=".9" fill="#ce1126"/><circle cx="9" cy="6" r=".9" fill="#ce1126"/><circle cx="12.5" cy="6" r=".9" fill="#ce1126"/>',
-    iraq: '<rect width="18" height="4" fill="#ce1126"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#000"/><rect x="5" y="5.3" width="8" height="1.4" rx=".5" fill="#007a3d"/>',
-    jordan: '<rect width="18" height="4" fill="#000"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#007a3d"/><path d="M0 0 8 6 0 12z" fill="#ce1126"/>',
-    egypt: '<rect width="18" height="4" fill="#ce1126"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#000"/><circle cx="9" cy="6" r="1.2" fill="#c09300"/>',
-    qatar: '<rect width="18" height="12" fill="#8d1b3d"/><path d="M0 0h6l-1.4 1 1.4 1-1.4 1 1.4 1-1.4 1 1.4 1-1.4 1 1.4 1-1.4 1 1.4 1-1.4 1 1.4 1H0z" fill="#fff"/>',
-    uae: '<rect width="18" height="4" fill="#00732f"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#000"/><rect width="5" height="12" fill="#ff0000"/>',
-    kuwait: '<rect width="18" height="4" fill="#007a3d"/><rect y="4" width="18" height="4" fill="#fff"/><rect y="8" width="18" height="4" fill="#ce1126"/><path d="M0 0 5 4v4L0 12z" fill="#000"/>',
-    bahrain: '<rect width="18" height="12" fill="#ce1126"/><path d="M0 0h5l2 1.2-2 1.2 2 1.2-2 1.2 2 1.2-2 1.2 2 1.2-2 1.2 2 1.2-2 1.2H0z" fill="#fff"/>',
-    oman: '<rect width="18" height="12" fill="#db161b"/><rect x="5" width="13" height="4" fill="#fff"/><rect x="5" y="8" width="13" height="4" fill="#008000"/>',
-    turkey: '<rect width="18" height="12" fill="#e30a17"/><circle cx="7.4" cy="6" r="3" fill="#fff"/><circle cx="8.2" cy="6" r="2.4" fill="#e30a17"/><circle cx="11" cy="6" r=".9" fill="#fff"/>',
-    us: '<rect width="18" height="12" fill="#fff"/>' + [0, 2, 4, 6, 8, 10].map((y) => '<rect y="' + y + '" width="18" height="1" fill="#b22234"/>').join('') + '<rect width="8" height="6" fill="#3c3b6e"/>',
-    russia: '<rect width="18" height="4" fill="#fff"/><rect y="4" width="18" height="4" fill="#0039a6"/><rect y="8" width="18" height="4" fill="#d52b1e"/>',
-  };
-  const countryFlag = (code) => (code === 'israel' ? roundFlag('gaza') : code === 'iran' || code === 'yemen' ? roundFlag(code) : C_ART[code] ? `<svg class="dt-flag" viewBox="0 0 18 12" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${C_ART[code]}</svg>` : '');
+  /* The real flags (flag-icons, MIT, in /flags), cut to a circle like the desks' (user, 27 Oct: the drawn Saudi one
+     "isn't real"). */
+  const ISO = { saudi: 'sa', lebanon: 'lb', syria: 'sy', iraq: 'iq', jordan: 'jo', egypt: 'eg', qatar: 'qa', uae: 'ae', kuwait: 'kw', bahrain: 'bh', oman: 'om', turkey: 'tr', us: 'us', russia: 'ru' };
+  const countryFlag = (code) => (code === 'israel' ? roundFlag('gaza') : code === 'iran' || code === 'yemen' ? roundFlag(code) : ISO[code] ? `<img class="dt-flag" src="/flags/${ISO[code]}.svg" alt="" aria-hidden="true" loading="lazy">` : '');
   /** The main country of a text: the one named first (a speaker before a colon counts: "Iran's FM: …"). */
   function countryOf(text, desk) {
     const t = String(text || '');

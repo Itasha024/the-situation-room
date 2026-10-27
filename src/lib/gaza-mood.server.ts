@@ -9,6 +9,7 @@ import { askChain, type ChainModel } from "./desk/models.ts";
 import { gazaWords } from "./desk/gaza-words.ts";
 import { type DeskCard, type MoodEvent, type MoodPost, type MoodRead, FIND_SYSTEM, MOOD_SYSTEM, arabicNames, channelsFor, cut, findPrompt, moodItems, moodPrompt, parseComments, parsePosts, pickEvents, readFound, readMood, stirring, sumReactions, watchChannels } from "./desk/gaza-mood.ts";
 import { fetchText } from "./yemen-scan.server.ts";
+import { webReactions } from "./desk/mood-web.ts";
 
 export const MOOD_KEY = "gaza:mood";
 const MOOD_LOCK = "gaza:mood-lock";
@@ -75,10 +76,13 @@ async function readEvent(ev: MoodEvent, had: MoodEntry | undefined, now: number)
   });
   // The posts the finder found the event by.
   for (const p of ev.seed ?? []) if (!found.has(p.u)) found.set(p.u, p);
+  // The same words on YouTube (videos and their comments), Bluesky and the Palestinian X accounts (mood-web.ts).
+  const web = await webReactions(terms, from, Math.min(to, now), now).catch(() => [] as MoodPost[]);
+  const comments: MoodPost[] = web.filter((p) => p.c);
+  for (const p of web) if (!p.c && !found.has(p.u)) found.set(p.u, p);
   const posts = [...found.values()];
-  // The comments under the most-read posts (only channels with a public discussion group have any).
-  const comments: MoodPost[] = [];
-  await pool(posts.slice().sort((a, b) => b.v - a.v).slice(0, 15), async (p) => {
+  // The comments under the most-read Telegram posts (only channels with a public discussion group have any).
+  await pool(posts.filter((p) => p.u.startsWith("https://t.me/")).sort((a, b) => b.v - a.v).slice(0, 15), async (p) => {
     const html = await fetchText(`${p.u}?embed=1&discussion=1&comments_limit=40`, 12_000).catch(() => null);
     if (html) comments.push(...parseComments(html, p.ch));
   });

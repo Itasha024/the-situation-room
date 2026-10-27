@@ -154,6 +154,7 @@
     if (bg && bg.ok !== false && !bg.pending) D.gbrief = bg;
     // Every desk's points in one order of importance (user, 27 Oct), for the All page's brief.
     if (ba && ba.ok !== false && Array.isArray(ba.points) && ba.points.length) D.abrief = ba;
+    setTimeout(() => { try { if (window.__opsTheatres) window.__opsTheatres(); } catch (e) { console.warn(e); } }, 0);
     if (di || dy || dg) {
       D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), reportsOf('gaza', dg && dg.reports), OLD]);
       byFp = new Map(D.reports.map((r) => [r.fp, r]));

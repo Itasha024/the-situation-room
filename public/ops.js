@@ -630,6 +630,8 @@
   const DESK_INFO = { iran: ['Iran', 'Israel, the US, Iran and its allies', '/iran-conflict-desk'], yemen: ['Yemen', 'The Houthis, the government, the coalition, the Red Sea', '/yemen-conflict-desk'], gaza: ['Gaza – Judea & Samaria', 'Israel, Hamas, the factions and the PA', '/gaza-judea-samaria-desk'] };
   /* Each desk's own brief, its latest developments in short (20 Oct: "make like a brief off of the desk's brief";
      the counts and the bars of sides went). */
+  // Drawn again once the briefs are in (27 Oct: the brief stayed on "Loading" until the map's next event).
+  window.__opsTheatres = () => { if (PAGE === 'all') drawTheatres(); };
   function drawTheatres() {
     const el = document.getElementById('ops-theatres');
     const h = window.__home;

@@ -173,9 +173,9 @@ async function allAnswer(): Promise<Response> {
       gaza: (await st.getJson<GazaBrief>(GAZA_BRIEF_KEY).catch(() => null))?.situation?.refs ?? [],
     };
     const points = allBriefPoints(all).map((p) => {
-      const n = /[[(d+)]]/.exec(p.text);
+      const n = /\[\[(\d+)\]\]/.exec(p.text);
       const ref = n ? refsOf[p.desk][Number(n[1]) - 1] : undefined;
-      return { desk: p.desk, text: servedPoints([p.text])[0].replace(/s*[[d+]]/g, "").trim(), fp: ref?.fp ?? null };
+      return { desk: p.desk, text: servedPoints([p.text])[0].replace(/\s*\[\[\d+\]\]/g, "").trim(), fp: ref?.fp ?? null };
     });
     return json({ ok: true, updatedAt: all?.updatedAt ?? null, points }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=86400");
   } catch (err) {

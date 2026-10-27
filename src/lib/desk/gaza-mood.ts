@@ -432,39 +432,131 @@ export function readFound(json: Record<string, unknown>, posts: MoodPost[], word
 
 /* ------------------------------------------------------------------ *
  * The general mood (user, 27 Oct: "reflect the mood across time … no need for a review for each report, just when
- * something bigger happens that creates a lot of traffic"): every hour all the Palestinian channels' latest posts and
- * the comments under the most-read are read together, and the mood over the last hours is kept as a series.
+ * something bigger happens that creates a lot of traffic"; then "present a mood every 24h … not for things like
+ * Jordan attacking in Syria"): every hour all the Palestinian channels' latest posts, the comments under the
+ * most-read and the keyword searches are read together; the hours are kept as a series, and the page shows the last
+ * 24 hours.
  * ------------------------------------------------------------------ */
 
 export const GENERAL_SYSTEM = MOOD_SYSTEM
-  .replace(/^You read Palestinian Telegram channels[^\n]*/, "You read Palestinian Telegram channels and the comments under their posts for a desk that follows the GENERAL PUBLIC MOOD in Gaza and in Judea and Samaria over the last hours, across all events together.")
-  .replace(/^You get one event[^\n]*/m, "You get the numbered posts and comments of the last hours from many channels, each with its channel, time, views and the emoji people pressed. There is no single event: read the mood across all of them.")
-  .replace(/"about": true\|false \(false when nothing found is a reaction to THIS event\)/, '"about": true|false (false only when no item is a reaction at all)')
-  .replace(/Never retell the event/, "Say which events the reactions are mostly about, in a few words each; never retell them")
-  .replace(/Spell places as the EVENT does\./, "")
-  .replace(/"rel": \[the item numbers of every item about THIS event, reports and reactions alike\]/, '"rel": [the item numbers of every reaction]');
+  .replace(/^You read Palestinian Telegram channels[^\n]*/, "You read Palestinian Telegram channels, the comments under their posts and posts found on other platforms, for a desk that follows the GENERAL PUBLIC MOOD of Palestinians in Gaza and in Judea and Samaria over the last hours, across all events together.")
+  .replace(/^You get one event[^\n]*/m, "You get the numbered posts and comments of the last hours from many channels and platforms, each with its source, time, views and the emoji people pressed. There is no single event: read the mood across all of them.\nONLY reactions about Palestinian affairs count: Gaza, Judea and Samaria, Jerusalem and Al-Aqsa, Israel's acts and Israelis, the PA, Hamas and the factions, prisoners, the ceasefire and the day after. Leave out reactions to other countries' affairs (Syria, Jordan, Lebanon, Iran, Yemen and the rest) unless Palestinians are at their centre.")
+  .replace(/"about": true\|false \(false when nothing found is a reaction to THIS event\)/, '"about": true|false (false only when no item is a reaction to Palestinian affairs)')
+  .replace(/"summary": "2-3 short sentences in plain English:[^"]*"/, '"summary": "ONE short sentence, at most 25 words, in plain English: the main feeling and what it is about. No retelling of events, no list of channels."')
+  .replace(/"rel": \[the item numbers of every item about THIS event, reports and reactions alike\]/, '"rel": [the item numbers of every reaction counted]');
+
+/** The day's line, from the hours' lines. */
+export const DAY_SYSTEM = `You write one line for a desk's "public mood" box: how Palestinians in Gaza and in Judea and Samaria have felt over the last 24 hours, from the hourly notes given (oldest first). At most 30 words, plain English, no list of channels, no retelling of events beyond naming what moved people. Words: "Judea and Samaria" (never "West Bank"), "Israeli citizens" (never "settlers"), "Israeli forces" (never "occupation forces"). JSON only: {"summary": "..."}`;
 
 export function generalPrompt(items: MoodPost[], hours: number): string {
   const rx = (p: MoodPost) => (p.rx ? ` [${Object.entries(p.rx).map(([e, n]) => `${e}${n}`).join(" ")}]` : "");
-  return [`THE LAST ${hours} HOURS, ALL CHANNELS:`, "", "ITEMS:", ...items.map((p, i) => `${i}. [${p.c ? "comment" : "post"} ${p.ch.includes(":") ? p.ch : `@${p.ch}`}, ${p.at.slice(11, 16)} UTC${p.v ? `, ${p.v} views` : ""}${rx(p)}] ${cut(p.x, 220)}`)].join("\n");
+  return [`THE LAST ${hours} HOURS, ALL CHANNELS AND PLATFORMS:`, "", "ITEMS:", ...items.map((p, i) => `${i}. [${p.c ? "comment" : "post"} ${p.ch.includes(":") ? p.ch : `@${p.ch}`}, ${p.at.slice(11, 16)} UTC${p.v ? `, ${p.v} views` : ""}${rx(p)}] ${cut(p.x, 220)}`)].join("\n");
 }
 
-/** One point of the general mood's series. */
-export type MoodPoint = { at: string; mood: { k: MoodKind; w: number }[]; intensity: number; posts: number; comments: number; channels: number };
-export type GeneralMood = { at: string; hours: number; read: MoodRead | null; posts: number; comments: number; channels: number; series: MoodPoint[] };
+type Said = { en: string; u: string; ch: string; c?: 1 };
+/** One hour of the general mood. */
+export type MoodPoint = { at: string; mood: { k: MoodKind; w: number }[]; intensity: number; posts: number; comments: number; channels: number; summary?: string; quotes?: Said[]; calls?: (Said & { kind: CallKind })[] };
+export type DayMood = { mood: { k: MoodKind; w: number }[]; intensity: number; posts: number; comments: number; hours: number; quotes: Said[]; calls: (Said & { kind: CallKind })[] };
+export type GeneralMood = {
+  at: string;
+  hours: number;
+  read: MoodRead | null;
+  posts: number;
+  comments: number;
+  channels: number;
+  series: MoodPoint[];
+  /** The last 24 hours' line, written every 3 hours from the hours' lines. */
+  day?: { at: string; summary: string };
+  /** Searches made on the other platforms in the last read, and the posts they found. */
+  searched?: { terms: number; found: number };
+};
 
 /** The series kept: two days of hourly points, the newest last. */
 export function addPoint(series: MoodPoint[], p: MoodPoint, now: number): MoodPoint[] {
   return [...series.filter((x) => now - Date.parse(x.at) < 48 * 3600_000 && x.at !== p.at), p].sort((a, b) => a.at.localeCompare(b.at));
 }
 
+/** The last 24 hours from the hourly points: each hour's moods weighed by the items it read. */
+export function dayMood(series: MoodPoint[], now: number): DayMood | null {
+  const day = series.filter((p) => now - Date.parse(p.at) < 24 * 3600_000);
+  if (!day.length) return null;
+  const sum: Partial<Record<MoodKind, number>> = {};
+  let weight = 0;
+  let heat = 0;
+  for (const p of day) {
+    const w = Math.max(1, p.posts + p.comments);
+    weight += w;
+    heat += p.intensity * w;
+    for (const m of p.mood) sum[m.k] = (sum[m.k] ?? 0) + (m.w * w) / 100;
+  }
+  const raw = Object.entries(sum).map(([k, v]) => ({ k: k as MoodKind, w: (100 * (v as number)) / weight })).sort((a, b) => b.w - a.w).slice(0, 6);
+  const total = raw.reduce((s, m) => s + m.w, 0) || 1;
+  const mood = raw.map((m) => ({ k: m.k, w: Math.round((100 * m.w) / total) })).filter((m) => m.w > 0);
+  const seen = new Set<string>();
+  const uniq = <T extends Said>(l: T[]) => l.filter((q) => (seen.has(q.en) ? false : (seen.add(q.en), true)));
+  const newest = day.slice().reverse();
+  return {
+    mood,
+    intensity: Math.max(1, Math.min(5, Math.round(heat / weight))),
+    posts: day.reduce((s, p) => s + p.posts, 0),
+    comments: day.reduce((s, p) => s + p.comments, 0),
+    hours: day.length,
+    quotes: uniq(newest.flatMap((p) => p.quotes ?? [])).slice(0, 8),
+    calls: uniq(newest.flatMap((p) => p.calls ?? [])).slice(0, 5),
+  };
+}
+
 /**
- * A spike: an event whose posts drew far more than the others — told by many channels, or a large share of all the
- * stir of the hours read. Only spikes get a reading of their own.
+ * The words searched on the other platforms, a different batch every hour (user, 27 Oct: "keyword searches in all
+ * platforms, thousands of keywords"): the hashtags and big names every hour, then every place in Gaza and in Judea
+ * and Samaria in its Arabic names in turn, so each is searched within the days.
  */
-export function isSpike(seed: MoodPost[], top: MoodPost[]): boolean {
-  const channels = new Set(seed.map((p) => p.ch.toLowerCase())).size;
-  const all = top.reduce((s, p) => s + stirOf(p), 0) || 1;
-  const mine = seed.reduce((s, p) => s + stirOf(p), 0);
-  return channels >= 5 || (channels >= 3 && mine / all >= 0.2);
+export const MOOD_TAGS = ["غزة", "الضفة", "جنين", "نابلس", "طولكرم", "الخليل", "رام الله", "القدس", "الأقصى", "خان يونس", "رفح", "مستوطنين", "الاحتلال", "شهيد", "الأسرى", "#غزة", "#جنين", "#القدس", "#الضفة_الغربية", "#طوفان_الأقصى"];
+let PLACE_WORDS: string[] | null = null;
+function placeWords(): string[] {
+  if (!PLACE_WORDS) {
+    const out = new Set<string>();
+    for (const g of GAZA_GAZ) for (const n of g[5]) if (/[؀-ۿ]/.test(n) && n.length >= 3 && n.length <= 24) out.add(n.replace(/^مخيم\s+/, "").trim());
+    for (const t of MOOD_TAGS) out.delete(t);
+    PLACE_WORDS = [...out];
+  }
+  return PLACE_WORDS;
+}
+export function keywordBatch(now: number, n = 24): string[] {
+  const hour = Math.floor(now / 3600_000);
+  const tags = MOOD_TAGS.slice((hour * 6) % MOOD_TAGS.length).concat(MOOD_TAGS).slice(0, 6);
+  const places = placeWords();
+  const k = n - tags.length;
+  const start = (hour * k) % Math.max(1, places.length);
+  return [...tags, ...places.slice(start, start + k), ...places.slice(0, Math.max(0, start + k - places.length))];
+}
+
+/** Each channel's usual views (the median of its posts read), so a post is judged against its own channel. */
+export function channelNorms(posts: MoodPost[]): Map<string, number> {
+  const by = new Map<string, number[]>();
+  for (const p of posts) if (!p.c && p.v > 0) by.set(p.ch.toLowerCase(), [...(by.get(p.ch.toLowerCase()) ?? []), p.v]);
+  const out = new Map<string, number>();
+  for (const [ch, l] of by) {
+    const s = l.sort((a, b) => a - b);
+    out.set(ch, s[Math.floor(s.length / 2)]);
+  }
+  return out;
+}
+/** How far a post went beyond its channel's usual: its views over the channel's median, and its emoji. */
+export function liftOf(p: MoodPost, norms: Map<string, number>): number {
+  const base = norms.get(p.ch.toLowerCase()) || p.v || 1;
+  const emoji = Object.values(p.rx ?? {}).reduce((a, b) => a + b, 0);
+  return p.v / base + emoji / Math.max(50, base / 20);
+}
+
+/**
+ * A spike (user, 27 Oct: "5 channels reporting about the same thing is not a hot topic, most of the Palestinian
+ * channels report the same thing"): an event whose posts went far beyond their channels' usual reach. At least three
+ * of its posts at twice their channel's usual or more, in two channels or more, and together well above the rest.
+ */
+export function isSpike(seed: MoodPost[], all: MoodPost[], norms = channelNorms(all)): boolean {
+  const hot = seed.filter((p) => !p.c && liftOf(p, norms) >= 2);
+  const channels = new Set(hot.map((p) => p.ch.toLowerCase())).size;
+  const lift = seed.reduce((s, p) => s + Math.max(0, liftOf(p, norms) - 1), 0);
+  return hot.length >= 3 && channels >= 2 && lift >= 6;
 }

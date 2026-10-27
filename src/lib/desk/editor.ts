@@ -63,6 +63,7 @@ import type { DeskId } from "../desks.ts";
 import { deskKey } from "./desk-route.ts";
 import { IRAN_ARENAS, IRAN_PROMPT, iranContentHash, iranCopyProblem, iranReword, isIranWar, israelAbroad } from "./iran-reader.ts";
 import { isExclusive } from "./exclusive.ts";
+import { profileNote } from "./source-profiles.ts";
 import { attackTeller, officialVoice, rivalRelay } from "./speaker-press.ts";
 import type { DeskType } from "./digest.ts";
 import type { LiveReport } from "./types.ts";
@@ -476,7 +477,7 @@ export async function editCandidates(
     const items: ReaderItem[] = batch.map((c, n) => ({
       id: String(n),
       source: c.source,
-      alignment: cfg.alignment(c),
+      alignment: cfg.alignment(c) + profileNote(c.source),
       postedAt: c.at,
       text: c.text,
       full: readWhole(c),
@@ -543,7 +544,7 @@ export async function editCandidates(
     const items: ReaderItem[] = batch.map(({ c, note }, n) => ({
       id: String(n),
       source: c.source,
-      alignment: cfg.alignment(c),
+      alignment: cfg.alignment(c) + profileNote(c.source),
       postedAt: c.at,
       text: c.text,
       full: readWhole(c),
@@ -615,7 +616,7 @@ export async function editCandidates(
       const items: ReaderItem[] = batch.map((c, n) => ({
         id: String(n),
         source: c.source,
-        alignment: cfg.alignment(c),
+        alignment: cfg.alignment(c) + profileNote(c.source),
         postedAt: c.at,
         text: c.text,
       }));
@@ -1144,6 +1145,10 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
     const moved = offsetFromText(`${row.summary}. ${c.text}`, place.name, place.lat, place.lng, type === "vessel");
     if (moved) [row.lat, row.lng] = moved;
   }
+  // Any outlet's own scoop is its exclusive, by what its piece says, not by who the outlet is (user, 27 Oct: "every
+  // source can bring exclusive reports"); the card as written counts too, when a feed's teaser held only the headline
+  // (24 Oct: Axios' "memo … obtained by Axios" went out unmarked).
+  if (c.tags.includes("exclusive") || isExclusive(c.text, c.source) || isExclusive(`${row.summary}\n${body}`, c.source)) row.flags = [...new Set([...(row.flags ?? []), "exclusive"])];
   return row;
 }
 

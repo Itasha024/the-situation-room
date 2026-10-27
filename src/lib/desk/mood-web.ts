@@ -100,7 +100,7 @@ export function parseBsky(j: { posts?: BskyPost[] } | null): MoodPost[] {
   });
 }
 
-async function bluesky(terms: string[], from: number): Promise<MoodPost[]> {
+export async function bluesky(terms: string[], from: number): Promise<MoodPost[]> {
   const out: MoodPost[] = [];
   for (const t of terms.slice(0, 2)) {
     const r = await get(`https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=${encodeURIComponent(t)}&sort=latest&limit=50&since=${new Date(from).toISOString()}`);

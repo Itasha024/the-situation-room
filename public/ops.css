@@ -1628,3 +1628,7 @@ html[data-view="ops"] .ops-md-trend > span { flex: 1; display: flex; flex-direct
 html[data-view="ops"] .ops-md-trend > span > i { display: block; flex: none }
 html[data-view="ops"] .ops-md-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--o-dim); margin: 2px 0 0 }
 html[data-view="ops"] .ops-md-sub { margin-top: 4px }
+html[data-view="ops"] .ops-md-more { margin-top: 6px }
+html[data-view="ops"] .ops-md-more > summary { cursor: pointer; list-style: none; font: 700 11px var(--ops-cond); letter-spacing: .14em; text-transform: uppercase; color: var(--o-sel) }
+html[data-view="ops"] .ops-md-more > summary::-webkit-details-marker { display: none }
+html[data-view="ops"] .ops-md-more[open] > summary { margin-bottom: 6px }

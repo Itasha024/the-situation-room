@@ -5,6 +5,8 @@
  * card carries an "Exclusive" label.
  */
 
+import { PROFILES, profileOf } from "./source-profiles.ts";
+
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const GENERIC = [
@@ -16,39 +18,27 @@ const GENERIC = [
   // "مقابلة خاصة | ماجد الأنصاري: …": an interview given to the outlet alone
   // (Al Arabiya, 17 Oct) — not "لقاء خاص", which is as often a private meeting.
   /(?:مقابلة|حوار)\s+خاص(?:ة)?(?![؀-ۿ])/,
+  // Israeli media's own labels (27 Oct: any outlet's scoop, not only the Arab sites').
+  /בלעדי|פרסום ראשון|חשיפת\s/,
 ];
 
 /**
- * Sites whose value is what they have on their own. Most of what they post is
- * other agencies' news, already on the desk from its first source; like Sky
- * News Arabia's breaking account, only their own information goes on: an
- * exclusive, their own sources, or words said to them (an interview, a
- * statement given to them).
+ * The outlet's own reporting in the first person, whoever the outlet is (user, 27 Oct: "every source can bring
+ * exclusive reports, even sources that don't do that often"): "we have learned", "علمنا", "مصادرنا", "נודע לנו".
+ * Not "مراسلنا" (our correspondent): a local channel's field report is its own, but no scoop.
  */
-const OWN_NAMES: Record<string, { en: string[]; ar: string[] }> = {
-  "Erem News": { en: ["Erem News", "Erem"], ar: ["إرم نيوز", "إرم"] },
-  "Asharq Al-Awsat": { en: ["Asharq Al-Awsat"], ar: ["الشرق الأوسط"] },
-  "Al-Araby Al-Jadeed": { en: ["Al-Araby Al-Jadeed", "The New Arab", "Al-Araby"], ar: ["العربي الجديد"] },
-  // Its English site under its own name, and Independent Arabia (27 Oct: "sources told The New Arab" was not marked).
-  "The New Arab": { en: ["The New Arab", "Al-Araby Al-Jadeed", "Al-Araby"], ar: ["العربي الجديد"] },
-  "Independent Arabia": { en: ["Independent Arabia"], ar: ["إندبندنت عربية", "اندبندنت عربية"] },
-  "Al-Akhbar": { en: ["Al-Akhbar"], ar: ["الأخبار"] },
-  // Lebanese papers (user, 18 Oct): "مصادر أميركية لـ«المدن»" is theirs; the agencies' news they carry is not.
-  "Al-Modon": { en: ["Al-Modon", "Almodon", "Al Modon"], ar: ["المدن"] },
-  "Nidaa al-Watan": { en: ["Nidaa al-Watan", "Nidaa Al Watan"], ar: ["نداء الوطن"] },
-  "Ad-Diyar": { en: ["Ad-Diyar", "Addiyar", "Al-Diyar"], ar: ["الديار"] },
-  // And three more (user, 22 Oct).
-  "Lebanon Debate": { en: ["Lebanon Debate", "LebanonDebate"], ar: ["ليبانون ديبايت"] },
-  Elnashra: { en: ["Elnashra", "El Nashra", "Al-Nashra"], ar: ["النشرة"] },
-  "Al-Joumhouria": { en: ["Al-Joumhouria", "Al Joumhouria", "Aljoumhouria", "Al-Jumhuriya"], ar: ["الجمهورية"] },
-  // And Al-Binaa (user, 23 Oct).
-  "Al-Binaa": { en: ["Al-Binaa", "Al Binaa", "Albinaa"], ar: ["البناء"] },
-  Alhurra: { en: ["Alhurra", "Al-Hurra", "Al Hurra"], ar: ["الحرة"] },
-  "Arab News": { en: ["Arab News"], ar: ["عرب نيوز"] },
-  // Their websites (18 Oct); their channels are posts, not sites, and pass as before.
-  "Al Jazeera": { en: ["Al Jazeera"], ar: ["الجزيرة نت", "الجزيرة"] },
-  "Al Arabiya": { en: ["Al Arabiya"], ar: ["العربية نت", "العربية.نت", "العربية"] },
-};
+const FIRST_PERSON = /\b(?:we have learned|we learned|we can reveal|we have obtained|our sources (?:say|said|told)|has learned exclusively)\b|(?:^|[\s«"“:|])(?:علمنا|مصادرنا|حصلنا على|اطلعنا على|ننفرد|انفردنا)(?![؀-ۿ])|נודע לנו/i;
+
+/**
+ * Sites most of whose posts are other agencies' news, already on the desk from its first source: only their own
+ * information goes on (an exclusive, their own sources, words said to them). Which ones, and their names, come from
+ * their profiles (source-profiles.ts); any other outlet's scoop is recognised by what it says, never by a list.
+ */
+const OWN_NAMES: Record<string, { en: string[]; ar: string[] }> = Object.fromEntries(
+  Object.entries(PROFILES)
+    .filter(([, p]) => p.own)
+    .map(([n, p]) => [n, { en: p.en ?? [n], ar: p.ar ?? [] }]),
+);
 export const OWN_ONLY = new Set(Object.keys(OWN_NAMES));
 
 const Q = String.raw`\s*[«"“']?\s*`;
@@ -157,7 +147,8 @@ export function isExclusive(text: string, source: string): boolean {
     .slice(0, 1500)
     .replace(/(?:مشاهد|صور|لقطات|فيديو|مقطع|تصوير)\s+(?:جديدة\s+)?حصري(?:اً|ا|ة)?|\bexclusive(?:ly)?\s+(?:footage|video|images?|pictures?|photos?|scenes|clip)\b|\b(?:footage|video|images?|pictures?|photos?|scenes|clip)\s+(?:obtained\s+)?exclusively\b/gi, " ");
   // A site's terms ("a non-exclusive licence", SPA's "ترخيصا غير حصريا", 6 Oct) are not a label.
-  const u = t.replace(/\bnon-?\s?exclusive\b|غير\s+حصري(?:اً|ا|ة)?/gi, " ");
+  // Nor is a sea's "exclusive economic zone".
+  const u = t.replace(/\bnon-?\s?exclusive\b|غير\s+حصري(?:اً|ا|ة)?|\bexclusive economic zones?\b/gi, " ");
   // "عدن الغد /خاص", "كريتر سكاي/خاص:" is the site's byline (its own staff),
   // not a label: Aden al-Ghad's Sanaa explosions and Crater Sky's camp blasts
   // went out as exclusives (8 Oct).
@@ -170,7 +161,10 @@ export function isExclusive(text: string, source: string): boolean {
   // A public statement is everyone's, whatever label the site puts on it,
   // unless it was given to this outlet alone (user, 9 Oct).
   if (GENERIC.some((re) => re.test(v))) return !PUBLIC.test(v) || TO_OUTLET.test(v);
-  if (MAJORS.test(String(source || "").trim()) && ownSourcing(t, source)) return true;
+  if (FIRST_PERSON.test(v)) return true;
+  // A newsroom's own sourcing at its head ("two officials said"): the big English outlets' and any profiled newsroom's.
+  const profile = profileOf(source);
+  if ((MAJORS.test(String(source || "").trim()) || profile?.newsroom) && ownSourcing(t, source)) return true;
   // The outlet's own name after "told", "learned", "علمت", "مصادر لـ".
   const words = String(source || "")
     .split(/\s+/)
@@ -181,7 +175,13 @@ export function isExclusive(text: string, source: string): boolean {
   // "معلومات الجديد:", "مصادر دبلوماسية للجديد:", "جعجع لـMTV:", "معلومات LBCI".
   const TV: Record<string, string[]> = { "MTV Lebanon": ["MTV", "ام تي في"], LBCI: ["LBCI", "ال بي سي"], "Al Jadeed": ["الجديد"] };
   // The own-news sites' Arabic names too: "مصادر أميركية لـ«المدن»" (user, 18 Oct).
-  const names = [...new Set([...words, ...words.map((w) => ar[w.toLowerCase()]).filter(Boolean), ...(OWN_NAMES[String(source || "").trim()]?.ar ?? []), ...(TV[String(source || "").trim()] ?? [])])];
+  // Its names in its profile too: "مصادر لـ«القدس العربي»", "officials who spoke to the Journal".
+  const names = [...new Set([...words, ...words.map((w) => ar[w.toLowerCase()]).filter(Boolean), ...(OWN_NAMES[String(source || "").trim()]?.ar ?? []), ...(TV[String(source || "").trim()] ?? []), ...(profile?.ar ?? []), ...(profile?.en ?? []).filter((n) => n.length >= 3)])];
+  // Israeli media in Hebrew: "נודע לחדשות 12", "לפי מידע שהגיע לכאן", "גורם בכיר אמר ל-ynet".
+  for (const he of profile?.he ?? []) {
+    const h = esc(he);
+    if (new RegExp(String.raw`נודע\s+ל[-־]?\s*${h}|לפי\s+מידע\s+שהגיע\s+ל[-־]?\s*${h}|(?:אמר|אמרה|אמרו|מסר|מסרה|מסרו|אישר|אישרה)\s+ל[-־]?\s*${h}|(?:בשיחה|בראיון)\s+(?:עם|ל)[-־]?\s*${h}`).test(t)) return true;
+  }
   for (const n of names) {
     const name = esc(n);
     // "معلومات الجديد: …", "خاص الجديد": what the outlet itself learned, at the head of the post.

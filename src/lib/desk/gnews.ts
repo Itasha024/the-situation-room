@@ -51,11 +51,14 @@ export const isGnews = (u: string) => /^https:\/\/news\.google\.com\/rss\/articl
  * first: an article about to be read ("lead"), then a relay's original
  * ("trace"), then a stored card's link ("card"), then old cards ("backlog").
  * Each need leaves the needs above it that many look-ups.
+ * Above them all (user, 27 Oct: "you gotta make sure we read these sites"): the sweep's key sites closed to the
+ * server (Al Arabiya, WSJ, the Lebanese papers), whose articles otherwise waited behind generic searches and were
+ * dropped unread.
  */
 export const RESOLVE_WINDOW_MS = 30 * 60_000;
 export const RESOLVE_LIMIT = 26;
-export type ResolveNeed = "lead" | "trace" | "card" | "backlog";
-const RESERVE: Record<ResolveNeed, number> = { lead: 0, trace: 4, card: 6, backlog: 14 };
+export type ResolveNeed = "key" | "lead" | "trace" | "card" | "backlog";
+const RESERVE: Record<ResolveNeed, number> = { key: 0, lead: 6, trace: 9, card: 11, backlog: 17 };
 const spentAt: number[] = [];
 /** Each Google id's article, once found: one link seen by both desks and on every tick costs once. */
 const found = new Map<string, string>();

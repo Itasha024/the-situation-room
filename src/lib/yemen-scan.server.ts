@@ -560,7 +560,7 @@ const RSS: RssFeed[] = [
   { id: "almonitor", url: "https://www.al-monitor.com/rss", name: "Al-Monitor", cadence: C15, whole: true, site: "al-monitor.com" },
   { id: "mee", url: "https://www.middleeasteye.net/rss", name: "Middle East Eye", cadence: C15, whole: true, site: "middleeasteye.net" },
   { id: "skyar", lang: "ar", url: "https://www.skynewsarabia.com/rss.xml", name: "Sky News Arabia", cadence: C10, whole: true, site: "skynewsarabia.com" },
-  { id: "indyar", lang: "ar", url: "https://www.independentarabia.com/rss/all", name: "Independent Arabia", cadence: C10, whole: true, site: "independentarabia.com" },
+  { id: "indyar", lang: "ar", url: "https://www.independentarabia.com/googlenews.xml", name: "Independent Arabia", cadence: C10, whole: true, site: "independentarabia.com" },
   // Independent Arabia's /rss.xml lists The Independent's English stories (24 Oct); /rss/all is its own.
   // Al-Quds Al-Arabi (user, 24 Oct): its feed and articles open to the server.
   { id: "alquds-arabi", lang: "ar", url: "https://www.alquds.co.uk/feed/", name: "Al-Quds Al-Arabi", cadence: C10, whole: true, site: "alquds.co.uk" },

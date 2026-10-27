@@ -19,6 +19,7 @@
  * the next cycle. A wrong report is worse than a late one.
  */
 
+import { SCOOP_RULE } from "./source-profiles.ts";
 import { createHash } from "node:crypto";
 import { calendarHints, findCalendarDates } from "./calendars.ts";
 import { SPELLING_RULES, spellingHints } from "./spelling.ts";
@@ -403,6 +404,7 @@ ${SPELLING_RULES}
   after sentence with "He said". An outlet's exclusive (its own scoop) is
   always one extended card: the headline, then a body with every fact the
   piece gives (terms, figures, who carried it, each side's answer).
+${SCOOP_RULE}
 - The headline keeps what makes the item news, not only its first words:
   prisoners "released from Saudi prisons", not "released prisoners".
 - A long item is a full article: read ALL of it. The headline carries its

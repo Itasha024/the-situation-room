@@ -8,9 +8,9 @@
 import type { DeskStore } from "./desk/store.ts";
 import { askChain, type ChainModel } from "./desk/models.ts";
 import { gazaWords } from "./desk/gaza-words.ts";
-import { type GeneralMood, type MoodEvent, type MoodPost, type MoodRead, FIND_SYSTEM, GENERAL_SYSTEM, MOOD_SYSTEM, addPoint, arabicNames, channelsFor, cut, findPrompt, generalPrompt, isSpike, moodItems, moodPrompt, parseComments, parsePosts, readFound, readMood, stirOf, stirring, sumReactions, watchChannels } from "./desk/gaza-mood.ts";
+import { type GeneralMood, type MoodEvent, type MoodPost, type MoodRead, DAY_SYSTEM, FIND_SYSTEM, GENERAL_SYSTEM, MOOD_SYSTEM, addPoint, keywordBatch, arabicNames, channelsFor, cut, findPrompt, generalPrompt, isSpike, moodItems, moodPrompt, parseComments, parsePosts, readFound, readMood, stirOf, stirring, sumReactions, watchChannels } from "./desk/gaza-mood.ts";
 import { fetchText } from "./yemen-scan.server.ts";
-import { webReactions } from "./desk/mood-web.ts";
+import { bluesky, webReactions } from "./desk/mood-web.ts";
 
 export const MOOD_KEY = "gaza:mood";
 const MOOD_LOCK = "gaza:mood-lock";
@@ -174,7 +174,13 @@ async function readGeneral(store: DeskStore, posts: MoodPost[], now: number): Pr
     const html = await fetchText(`${p.u}?embed=1&discussion=1&comments_limit=40`, 12_000).catch(() => null);
     if (html) comments.push(...parseComments(html, p.ch));
   });
-  const items = [...own.slice(0, 40), ...comments.slice(0, 30)];
+  // The keyword searches on the other platforms, a new batch every hour (keywordBatch); two words a call.
+  const words = keywordBatch(now);
+  const web: MoodPost[] = [];
+  for (let i = 0; i < words.length; i += 2) web.push(...(await bluesky(words.slice(i, i + 2), now - GENERAL_HOURS * H).catch(() => [] as MoodPost[])));
+  const webSeen = new Set<string>();
+  const webFresh = web.filter((p) => !webSeen.has(p.u) && (webSeen.add(p.u), true)).sort((a, b) => b.v - a.v);
+  const items = [...own.slice(0, 40), ...webFresh.slice(0, 15), ...comments.slice(0, 30)];
   const had = (await store.getJson<GeneralMood>(GENERAL_KEY)) ?? { at: "", hours: GENERAL_HOURS, read: null, posts: 0, comments: 0, channels: 0, series: [] };
   let read: MoodRead | null = null;
   if (items.length >= 8) {
@@ -183,11 +189,22 @@ async function readGeneral(store: DeskStore, posts: MoodPost[], now: number): Pr
   }
   const channels = new Set(fresh.map((p) => p.ch.toLowerCase())).size;
   const at = new Date(now).toISOString();
-  const out: GeneralMood = read?.about
-    ? { at, hours: GENERAL_HOURS, read, posts: fresh.length, comments: comments.length, channels, series: addPoint(had.series, { at, mood: read.mood, intensity: read.intensity, posts: fresh.length, comments: comments.length, channels }, now) }
-    : { ...had, series: had.series.filter((x) => now - Date.parse(x.at) < 48 * H) };
+  const point = read?.about
+    ? { at, mood: read.mood, intensity: read.intensity, posts: fresh.length + webFresh.length, comments: comments.length, channels, summary: read.summary, quotes: read.quotes.slice(0, 3), calls: read.calls.slice(0, 3) }
+    : null;
+  const series = point ? addPoint(had.series, point, now) : had.series.filter((x) => now - Date.parse(x.at) < 48 * H);
+  // The day's line, every 3 hours, from the hours' lines (text only: a small call).
+  let day = had.day;
+  if (point && (!day || now - Date.parse(day.at) >= 3 * H)) {
+    const notes = series.filter((x) => now - Date.parse(x.at) < 24 * H && x.summary).map((x) => `${x.at.slice(11, 16)} UTC: ${x.summary}`);
+    const got = notes.length ? await askChain("gaza-mood-day", DAY_SYSTEM, notes.join("\n"), { models: MODELS, timeoutMs: 60_000, temperature: 0.1, accept: (j) => (typeof j.summary === "string" && j.summary.trim() ? null : "no summary") }).catch(() => null) : null;
+    if (got) day = { at, summary: gazaWords(String(got.json.summary).trim()) };
+  }
+  const out: GeneralMood = point
+    ? { at, hours: GENERAL_HOURS, read, posts: fresh.length + webFresh.length, comments: comments.length, channels, series, day, searched: { terms: words.length, found: webFresh.length } }
+    : { ...had, series, day };
   await store.putJson(GENERAL_KEY, out);
-  console.log(`[mood] general: ${fresh.length} posts, ${comments.length} comments in ${channels} channels; ${read?.about ? read.mood.map((m) => `${m.k} ${m.w}%`).join(", ") : "no read"}`);
+  console.log(`[mood] general: ${fresh.length} posts, ${webFresh.length} from ${words.length} searches, ${comments.length} comments in ${channels} channels; ${read?.about ? read.mood.map((m) => `${m.k} ${m.w}%`).join(", ") : "no read"}`);
 }
 
 async function runMoodNow(store: DeskStore, prev: MoodStore, now: number): Promise<number> {
@@ -236,7 +253,7 @@ async function findSpikes(store: DeskStore, posts: MoodPost[], prev: MoodStore, 
   if (top.length >= 5) {
     const followed = [...new Set([...kept, ...prev.events].map((e) => e.headline))].slice(0, 40);
     const got = await askChain("gaza-mood-find", FIND_SYSTEM, findPrompt(top, followed), { models: MODELS, timeoutMs: 90_000, temperature: 0.1, accept: (j) => (Array.isArray(j.events) ? null : "no events") }).catch(() => null);
-    fresh = (got ? readFound(got.json, top, gazaWords) : []).filter((e) => isSpike(e.seed ?? [], top)).map((e) => ({ ...e, spike: 1 as const }));
+    fresh = (got ? readFound(got.json, top, gazaWords) : []).filter((e) => isSpike(e.seed ?? [], posts)).map((e) => ({ ...e, spike: 1 as const }));
   }
   const byFp = new Map(kept.map((e) => [e.fp, e]));
   for (const e of fresh) if (!byFp.has(e.fp)) byFp.set(e.fp, e);

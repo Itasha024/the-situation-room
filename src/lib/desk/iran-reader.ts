@@ -8,6 +8,7 @@
  * in its teller's name, no "claim" added, arenas by subject, the Iraqi
  * militias' own statements kept, nuclear damage in the name of who says it.
  */
+import { SCOOP_RULE } from "./source-profiles.ts";
 import { createHash } from "node:crypto";
 import { RESPONSE_SCHEMA, type ReaderPrompt } from "./reader.ts";
 import { IRAN_LABEL } from "./desk-route.ts";
@@ -106,6 +107,7 @@ WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 - A terse alert ("explosions heard in Isfahan", "sirens in the north") IS a report: publish it as exactly that, no more.
 
 ISRAELI MEDIA
+${SCOOP_RULE}
 - Items whose source is an Israeli outlet or reporter (N12, Kan, Channel 13, Channel 14, i24 News, Walla, Ynet, Haaretz, Israel Hayom, the Jerusalem Post, Amit Segal, and the Israeli Telegram channels) are published only for Israel's OWN reporting on this war: its reporters, Israeli officials and Israeli sources.
 - Israeli outlets relaying what a foreign government, official or outlet said or did (US Treasury sanctions, a Trump post, an Iranian minister, a "foreign desk" post) are relays too, reject_reason "relay": the original is read directly. Kept: Israeli officials, the IDF, Israeli security sources, the outlet's own correspondents, and exclusives.
 - An item that only repeats a foreign outlet's report ("according to Reuters", "Al Jazeera reports", "a report in the New York Times", "Iranian media say") is rejected, reject_reason "relay": the original is read directly. An Israeli outlet's exclusive ("פרסום ראשון", "exclusive", "revealed") is kept.

@@ -155,7 +155,7 @@ async function page(url: string): Promise<string> {
 }
 
 /** Hosts that only forward to the article: nyti.ms, on.wsj.com, trib.al, t.co … */
-const SHORT_HOST = /^(?:t\.co|nyti\.ms|on\.wsj\.com|reut\.rs|bloom\.bg|trib\.al|bit\.ly|ow\.ly|buff\.ly|dlvr\.it|cnn\.it|wapo\.st|politi\.co|apne\.ws|nbcnews\.to|cbsn\.ws|abcn\.ws|on\.ft\.com|econ\.st|ti\.me|fxn\.ws|tinyurl\.com|is\.gd|lnkd\.in|aje\.io|aje\.news|bbc\.in|trt\.global|shorturl\.at|goo\.gl|rb\.gy|j\.mp|amp\.gs|ift\.tt|share\.google|g\.co|ara\.tv|jrd\.ai|qr\.asharq\.com)$/i;
+const SHORT_HOST = /^(?:t\.co|nyti\.ms|on\.wsj\.com|reut\.rs|bloom\.bg|trib\.al|bit\.ly|ow\.ly|buff\.ly|dlvr\.it|cnn\.it|wapo\.st|politi\.co|apne\.ws|nbcnews\.to|cbsn\.ws|abcn\.ws|on\.ft\.com|econ\.st|ti\.me|fxn\.ws|tinyurl\.com|is\.gd|lnkd\.in|aje\.io|aje\.news|bbc\.in|trt\.global|shorturl\.at|goo\.gl|rb\.gy|j\.mp|amp\.gs|ift\.tt|share\.google|g\.co|ara\.tv|jrd\.ai|qr\.asharq\.com|erem\.news)$/i;
 export const isShortLink = (url: string) => SHORT_HOST.test(hostOf(url));
 
 /**

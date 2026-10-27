@@ -4,6 +4,7 @@
  * statements, speech lines, video) are the Iran reader's, so the site writes one way; what is news,
  * the sides, the arenas and the desk's own words are this desk's.
  */
+import { SCOOP_RULE } from "./source-profiles.ts";
 import { createHash } from "node:crypto";
 import { type ReaderPrompt } from "./reader.ts";
 import { IRAN_SCHEMA, IRAN_SYSTEM_PROMPT } from "./iran-reader.ts";
@@ -85,6 +86,7 @@ WHAT TO PUBLISH (publish: true)
 - Sanctions on Israelis and Israeli officials, on Hamas and every other Palestinian faction, and on the Palestinian Authority, by any government or body.
 - Jerusalem: the Temple Mount (Al-Aqsa), attacks and arrests in the city, decisions on its neighbourhoods.
 - An outlet's own exclusive (Arab, international, Israeli or Palestinian): its scoop leads.
+${SCOOP_RULE}
 
 WHAT NOT TO PUBLISH (publish: false, with a short reject_reason)
 - The war with Iran, Lebanon and Hezbollah, Iraq, Syria or Yemen with no Gaza or Judea and Samaria in it: reject_reason "other desk".

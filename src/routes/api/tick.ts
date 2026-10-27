@@ -3,6 +3,19 @@ import { metered } from "@/lib/desk/cpu-meter";
 import { runSiteCycle, siteMode } from "@/lib/site-scan.server";
 import { runIranCycle } from "@/lib/iran-scan.server";
 import { runGazaCycle } from "@/lib/gaza-scan.server";
+import { prebuildDesk } from "@/lib/desk/serve-desk";
+import type { DeskId } from "@/lib/desks";
+
+/** After a desk's scan the worker builds its most-asked answers, so the site never builds them while visitors wait. */
+async function prebuild(desk: DeskId): Promise<void> {
+  const t = Date.now();
+  try {
+    await prebuildDesk(await getStore(), desk);
+    console.log(`[served] ${desk} built in ${Date.now() - t} ms`);
+  } catch (err) {
+    console.error("[served]", desk, err instanceof Error ? err.message : err);
+  }
+}
 import { getStore } from "@/lib/desk/store";
 
 /**
@@ -202,10 +215,12 @@ async function tick(request: Request): Promise<Response> {
   if (denied) return json({ ok: false, error: denied }, 401);
   if (new URL(request.url).searchParams.get("desk") === "iran") {
     const result = await runIranLocked();
+    await prebuild("iran");
     return json(result, result.ok === false ? 500 : 200);
   }
   if (new URL(request.url).searchParams.get("desk") === "gaza") {
     const result = await runGazaLocked();
+    await prebuild("gaza");
     return json(result, result.ok === false ? 500 : 200);
   }
 
@@ -214,11 +229,15 @@ async function tick(request: Request): Promise<Response> {
   const wait = new URL(request.url).searchParams.get("wait") === "1";
   if (background && !wait) {
     background(
-      runLocked().then((r) => console.log("[tick]", JSON.stringify(r).slice(0, 500))),
+      runLocked().then(async (r) => {
+        console.log("[tick]", JSON.stringify(r).slice(0, 500));
+        await prebuild("yemen");
+      }),
     );
     return json({ ok: true, accepted: true }, 202);
   }
   const result = await runLocked();
+  await prebuild("yemen");
   return json(result, result.ok === false ? 500 : 200);
 }
 

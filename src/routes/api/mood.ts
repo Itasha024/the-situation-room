@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { metered } from "@/lib/desk/cpu-meter";
 import { cachedResponse } from "@/lib/desk/microcache";
 import { getStore } from "@/lib/desk/store";
-import { claimLine, ownVoice } from "@/lib/desk/gaza-mood";
+import { claimLine, dayMood, ownVoice } from "@/lib/desk/gaza-mood";
 import type { GeneralMood } from "@/lib/desk/gaza-mood";
 import { GENERAL_KEY, MOOD_KEY, type MoodStore } from "@/lib/gaza-mood.server";
 
@@ -24,7 +24,9 @@ export const Route = createFileRoute("/api/mood")({
               .map((e) => (e.read ? { ...e, read: { ...e.read, quotes: e.read.quotes.filter((q) => ownVoice(q.en)) } } : e));
             // The general mood over the last hours, with its two-day series (user, 27 Oct).
             const g = await store.getJson<GeneralMood>(GENERAL_KEY);
-            const general = g?.read ? { ...g, read: { ...g.read, quotes: g.read.quotes.filter((q) => ownVoice(q.en)) } } : g ?? null;
+            // The last 24 hours from the hourly reads (user, 27 Oct: "present a mood every 24h").
+            const d24 = g ? dayMood(g.series, Date.now()) : null;
+            const general = g ? { ...g, read: null, last24: d24 ? { ...d24, quotes: d24.quotes.filter((q) => ownVoice(q.en)), summary: g.day?.summary ?? g.read?.summary ?? "" } : null } : null;
             const body = JSON.stringify({ ok: true, at: g?.at && g.at > m.at ? g.at : m.at, general, events, following: m.events.length });
             return { status: 200, body, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60" } };
           }, request.headers.get("accept-encoding"));

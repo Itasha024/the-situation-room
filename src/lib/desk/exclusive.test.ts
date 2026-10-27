@@ -78,3 +78,30 @@ test("The New Arab and Independent Arabia: their own sources count, agency news 
   assert.equal(ownInformation("قال مصدر مصري لـ«إندبندنت عربية» إن القاهرة قدمت خطة جديدة.", "Independent Arabia"), true);
   assert.equal(ownInformation("The UN said aid trucks entered Gaza on Monday, Reuters reported.", "The New Arab"), false);
 });
+
+test("any outlet's scoop is its exclusive by what it says; profiles guide, never gate (27 Oct)", async () => {
+  const { isExclusive, OWN_ONLY } = await import("./exclusive.ts");
+  const { profileOf, profileNote } = await import("./source-profiles.ts");
+  // An outlet seldom marked: its profile's Arabic name.
+  assert.equal(isExclusive("قالت مصادر مصرية لـ«القدس العربي» إن الوفد سيعود إلى القاهرة", "Al-Quds Al-Arabi"), true);
+  // Israeli media in Hebrew.
+  assert.equal(isExclusive("נודע לחדשות 12 כי הקבינט יתכנס הערב", "N12"), true);
+  assert.equal(isExclusive("פרסום ראשון: הנחיה חדשה לפיקוד העורף", "Channel 13"), true);
+  // The first person, any outlet; not "our correspondent".
+  assert.equal(isExclusive("علمنا أن وفدا من حماس سيصل الدوحة الليلة", "Hamza al-Masri"), true);
+  assert.equal(isExclusive("مراسلنا: قوات الاحتلال تقتحم بلدة قباطية", "Hamza al-Masri"), false);
+  // A newsroom's own sourcing at the head.
+  assert.equal(isExclusive("Two Turkish officials said Ankara will send engineers to Gaza next week", "Middle East Eye"), true);
+  // Someone else's scoop retold is not.
+  assert.equal(isExclusive("The Wall Street Journal reports that Iranian officials told mediators Tehran will widen its response", "Al Mayadeen"), false);
+  // A sea zone is no label.
+  assert.equal(isExclusive("The ship was hit inside Yemen's exclusive economic zone", "UKMTO"), false);
+  // The card as written: "obtained by Axios".
+  assert.equal(isExclusive("An October 23 memo from the DNI to Rubio, obtained by Axios, says Iran has increased plots", "Axios"), true);
+  // Profiles: by name, with a channel suffix too; the own-only outlets as before.
+  assert.ok(profileOf("Al Jazeera (X)"));
+  assert.match(profileNote("Erem News"), /usually brings .*Gulf/);
+  assert.equal(profileNote("Some Channel"), "");
+  assert.equal(OWN_ONLY.size, 17);
+  assert.ok(OWN_ONLY.has("Erem News") && OWN_ONLY.has("Al Arabiya") && !OWN_ONLY.has("Al-Quds Al-Arabi"));
+});

@@ -118,7 +118,8 @@ export function readRanking(json: Record<string, unknown>, points: Record<BriefD
 export function wordsOnly(point: string): boolean {
   const first = point.replace(/\s*\[\[\d+\]\]/g, "").split(/(?<=\.)\s/)[0];
   const said = /^[^:]{2,70}:\s/.test(first) || /^[^,;]{0,90}?\b(?:tells?|told|says?|said|warn(?:s|ed)|urg(?:es|ed)|calls? (?:on|for)|called (?:on|for)|accus(?:es|ed)|demand(?:s|ed))\b/i.test(first);
-  return said && !/\b(?:killed|struck|seized|launched|fired|shot down|captured|intercepted|sank|says it (?:struck|killed|hit|seized|launched))\b/i.test(first);
+  // "Iran's navy: a tanker hit a mine and caught fire" tells an event, not words.
+  return said && !/\b(?:kill(?:ed|s|ing)?|dead|died|wounded|injured|struck|strikes?|hit|hits|seized|launched|fired|shot down|captured|intercepted|sank|explo(?:ded|sion|sions)|caught fire|mine|raided|arrested|demolished|advanced)\b/i.test(first);
 }
 
 let running: Promise<void> | null = null;

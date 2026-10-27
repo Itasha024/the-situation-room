@@ -863,17 +863,16 @@
       ${moodMore(`${r.summary ? `<p class="ops-md-sum">${esc(r.summary)}</p>` : ''}${moodSaid(r)}${rx}<p class="ops-md-foot">${e.posts} posts${e.comments ? `, ${e.comments} comments` : ''} in ${e.channels.length} sources · read ${esc(hm(Date.parse(e.readAt), VIEW_TZ()))}</p>`)}
     </article>`;
   }
-  /* The last 24 hours (user, 27 Oct: "present a mood every 24h"), from the hourly reads, with its trend. */
+  /* The last 24 hours (user, 27 Oct: "present a mood every 24h"), from the hourly reads. The hour-by-hour colour bars
+     and the line counting the reads are gone (user, 27 Oct: "what this color pallette here lol remove it"). */
   function moodGeneral(g) {
     const d = g && g.last24;
     if (!d || !d.mood.length) return '';
-    const pts = (g.series || []).slice(-48);
-    const trend = pts.length > 1 ? `<div class="ops-md-trend" aria-label="The mood hour by hour, last two days">${pts.map((p) => `<span title="${esc(hm(Date.parse(p.at), VIEW_TZ()))} · ${esc(p.mood.slice(0, 2).map((m) => `${moodOf(m.k)[0]} ${m.w}%`).join(', '))}">${p.mood.map((m) => `<i style="height:${m.w}%;background:${moodOf(m.k)[1]}"></i>`).join('')}</span>`).join('')}</div><p class="ops-md-axis"><span>${esc(dm(Date.parse(pts[0].at), VIEW_TZ()))} ${esc(hm(Date.parse(pts[0].at), VIEW_TZ()))}</span><span>now</span></p>` : '';
     return `<section class="ops-md-gen">
       <div class="ops-md-h"><span>Last 24 hours</span>${moodHeat(d.intensity)}</div>
       ${moodBar(d.mood)}<p class="ops-md-top">${moodTop(d.mood, 3)}</p>
       ${d.summary ? `<p class="ops-md-sum">${esc(d.summary)}</p>` : ''}
-      ${moodMore(`${moodSaid(d)}${trend}<p class="ops-md-foot">${d.posts} posts and ${d.comments} comments over ${d.hours} hourly reads${g.searched ? ` · ${g.searched.terms} keywords searched on other platforms each hour` : ''}</p>`)}
+      ${moodMore(moodSaid(d))}
     </section>`;
   }
   function paintMood() {

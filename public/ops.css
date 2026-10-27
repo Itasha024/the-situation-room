@@ -1631,3 +1631,6 @@ html[data-view="ops"] .ops-md-more { margin-top: 6px }
 html[data-view="ops"] .ops-md-more > summary { cursor: pointer; list-style: none; font: 700 11px var(--ops-cond); letter-spacing: .14em; text-transform: uppercase; color: var(--o-sel) }
 html[data-view="ops"] .ops-md-more > summary::-webkit-details-marker { display: none }
 html[data-view="ops"] .ops-md-more[open] > summary { margin-bottom: 6px }
+/* A box with a Read more opens on a click anywhere in it (27 Oct). */
+html[data-view="ops"] :is(.ops-md-gen, .ops-md-ev):has(.ops-md-more) { cursor: pointer }
+html[data-view="ops"] .ops-md-more[open] > :not(summary) { cursor: auto }

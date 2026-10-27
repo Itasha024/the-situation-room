@@ -859,7 +859,7 @@
     return `<article class="ops-md-ev" data-md="${esc(e.fp)}">
       <div class="ops-md-h"><time>${esc(hm(Date.parse(e.at), VIEW_TZ()))}</time><span>${where}</span>${moodHeat(r.intensity)}</div>
       <p class="ops-md-t">${esc(e.headline)}</p>
-      ${moodBar(r.mood)}<p class="ops-md-top">${moodTop(r.mood, 3)}</p>
+      ${moodBar(r.mood)}<p class="ops-md-top">${moodTop(r.mood, r.mood.length)}</p>
       ${moodMore(`${r.summary ? `<p class="ops-md-sum">${esc(r.summary)}</p>` : ''}${moodSaid(r)}${rx}<p class="ops-md-foot">${e.posts} posts${e.comments ? `, ${e.comments} comments` : ''} in ${e.channels.length} sources · read ${esc(hm(Date.parse(e.readAt), VIEW_TZ()))}</p>`)}
     </article>`;
   }
@@ -870,7 +870,7 @@
     if (!d || !d.mood.length) return '';
     return `<section class="ops-md-gen">
       <div class="ops-md-h"><span>Last 24 hours</span>${moodHeat(d.intensity)}</div>
-      ${moodBar(d.mood)}<p class="ops-md-top">${moodTop(d.mood, 3)}</p>
+      ${moodBar(d.mood)}<p class="ops-md-top">${moodTop(d.mood, d.mood.length)}</p>
       ${d.summary ? `<p class="ops-md-sum">${esc(d.summary)}</p>` : ''}
       ${moodMore(moodSaid(d))}
     </section>`;
@@ -890,6 +890,13 @@
         ${list.map(moodEvent).join('') || '<p class="ops-md-empty">None here in the last day.</p>'}`
       : '';
     pane.innerHTML = `<div class="ops-md">${head}${gen}${spikes}</div>`;
+    // A click anywhere in a box opens its Read more (user, 27 Oct); a link, the button itself and the open text stay as they are.
+    pane.onclick = (ev) => {
+      const box = ev.target.closest('.ops-md-gen, .ops-md-ev');
+      if (!box || ev.target.closest('a, button, summary, .ops-md-more > :not(summary)')) return;
+      const more = $('.ops-md-more', box);
+      if (more) more.open = !more.open;
+    };
   }
   /* Each report card with a mood read gets a line under it (user, 27 Oct: "reflect it when needed"). */
   function markMoodCards() {

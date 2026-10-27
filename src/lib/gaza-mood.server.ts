@@ -132,10 +132,16 @@ async function runMoodNow(store: DeskStore, prev: MoodStore, now: number): Promi
   const { reports } = await store.recentDesk(800, undefined, { events: false, desk: "gaza", floor: new Date(now - 26 * H).toISOString() });
   const picked = pickEvents(reports as unknown as DeskCard[], now);
   const found = await findEvents(store, picked, prev, now).catch((err) => { console.error("[mood] find", err instanceof Error ? err.message : err); return [] as MoodEvent[]; });
-  const events = [...picked, ...found];
+  // A found event the desk already follows from a card (same place within 12 hours) is not read twice (27 Oct).
+  const norm = (p?: string) => String(p ?? "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
+  const near = (a: MoodEvent, b: MoodEvent) => (a.lat != null && b.lat != null && a.lng != null && b.lng != null ? Math.hypot(a.lat - b.lat, (a.lng - b.lng) * 0.85) < 0.03 : false)
+    || (!!norm(a.place) && !!norm(b.place) && (norm(a.place).startsWith(norm(b.place)) || norm(b.place).startsWith(norm(a.place))));
+  const same = (a: MoodEvent, b: MoodEvent) => near(a, b) && Math.abs(Date.parse(a.at) - Date.parse(b.at)) < 12 * H;
+  const twin = (e: MoodEvent) => !!e.found && picked.some((p) => same(e, p));
+  const events = [...picked, ...found.filter((e) => !twin(e))];
   const byFp = new Map(prev.events.map((e) => [e.fp, e]));
   // Kept for a day after the event, picked or not.
-  const keep = prev.events.filter((e) => now - Date.parse(e.at) < 26 * H);
+  const keep = prev.events.filter((e) => now - Date.parse(e.at) < 26 * H && !twin(e));
   const todo = events.filter((ev) => due(byFp.get(ev.fp), now)).slice(0, PER_RUN);
   let n = 0;
   for (const ev of todo) {
@@ -148,7 +154,7 @@ async function runMoodNow(store: DeskStore, prev: MoodStore, now: number): Promi
       console.error("[mood]", err instanceof Error ? err.message : err);
     }
   }
-  const out = [...new Map([...keep, ...[...byFp.values()].filter((e) => now - Date.parse(e.at) < 26 * H)].map((e) => [e.fp, byFp.get(e.fp) ?? e])).values()]
+  const out = [...new Map([...keep, ...[...byFp.values()].filter((e) => now - Date.parse(e.at) < 26 * H && !twin(e))].map((e) => [e.fp, byFp.get(e.fp) ?? e])).values()]
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
     .slice(0, 30);
   await store.putJson(MOOD_KEY, { at: new Date(now).toISOString(), events: out } satisfies MoodStore);

@@ -1774,7 +1774,13 @@ let deskArchive = { reports: [], events: [], updatedAt: null };
 
 /** A card the desk folded into another as it was served, to that card (a brief may cite either; user, 27 Oct). */
 const foldedInto = {};
-const leadFp = (fp) => { let f = fp; for (let i = 0; i < 4 && foldedInto[f]; i++) f = foldedInto[f]; return f; };
+/** …or, when the card itself is not served, the later card that updates it (its replyTo). */
+const leadFp = (fp, list) => {
+  let f = fp;
+  for (let i = 0; i < 4 && foldedInto[f]; i++) f = foldedInto[f];
+  if (list && !list.some((r) => String(r.fp) === f)) { const up = list.find((r) => String(r.replyTo || '') === f); if (up) f = String(up.fp); }
+  return f;
+};
 async function pullDesk() {
   try {
     const res = await fetch('/api/desk?limit=400', { cache: 'no-cache' });
@@ -4012,9 +4018,9 @@ function revealHashCard() {
   }
   const m = /^#r=(.+)$/.exec(location.hash || '');
   if (!m || !data) return;
-  const fp = leadFp(decodeURIComponent(m[1]));
   history.replaceState(null, '', location.pathname + location.search);
   const all = sortedReports(data).filter(leanOk);
+  const fp = leadFp(decodeURIComponent(m[1]), all);
   const at = all.findIndex((r) => String(r.fp) === fp);
   if (at < 0) return;
   if (at >= reportsShown) { reportsShown = at + 1; renderFeed(data); }
@@ -8647,7 +8653,7 @@ function revealIranHashCard(all) {
   const m = /^#r=(.+)$/.exec(location.hash || '');
   if (!m) return;
   if (!revealIranHashCard.on) { revealIranHashCard.on = true; addEventListener('hashchange', () => { irHashTries = 0; renderIranFeed(); }); }
-  const fp = leadFp(decodeURIComponent(m[1]));
+  const fp = leadFp(decodeURIComponent(m[1]), all);
   const at = all.findIndex((r) => String(r.fp) === fp);
   if (at < 0) {
     if (iranDesk.lean) { iranDesk.lean = ''; renderIranFeed(); return; }

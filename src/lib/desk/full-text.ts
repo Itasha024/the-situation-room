@@ -121,7 +121,7 @@ export function resetReader(): void {
 }
 
 /** A robot check or a refusal, not the page. */
-const CHALLENGE = /requiring CAPTCHA|security check to access|Just a moment|Access Denied|are you a robot|verify you are human/i;
+const CHALLENGE = /Performing security verification|security service to protect against malicious bots|requiring CAPTCHA|security check to access|Just a moment|Access Denied|are you a robot|verify you are human/i;
 
 /** The page as the reading service opens it, as HTML, or "". */
 export async function readerService(url: string, fetcher: typeof fetch = fetch): Promise<string> {
@@ -194,7 +194,7 @@ export function articleLink(text: string): string {
 
 /** The outlet posting its own story: "NY Post" and nypost.com, "WSJ" and wsj.com. */
 export function ownStory(url: string, outlet: string, source: string): boolean {
-  const compact = (x: string) => x.toLowerCase().replace(/^thes+/, "").replace(/[^a-z0-9]+/g, "");
+  const compact = (x: string) => x.toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9]+/g, "");
   let stem = "";
   try {
     stem = compact(new URL(url).hostname.replace(/^(?:www|en|english|m|amp)./, "").split(".").slice(-2)[0] ?? "");

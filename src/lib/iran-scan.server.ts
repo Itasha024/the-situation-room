@@ -26,7 +26,7 @@ import { exclusiveUrl } from "./desk/copy-rules.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
 import { canResolve, cleanUrl, isGnews, knownResolve, outletFromHost, resolvesLeft } from "./desk/gnews.ts";
 import { bingLeft } from "./desk/bing.ts";
-import { articleLink, isPostUrl, msnCopy, ownStory, readerService, unshorten } from "./desk/full-text.ts";
+import { articleLink, isPostUrl, isShortLink, msnCopy, ownStory, readerService, unshorten } from "./desk/full-text.ts";
 import { LIVE_BLOG, articleText } from "./desk/origin.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 import { scanTrump } from "./trump-feed.server.ts";
@@ -180,6 +180,9 @@ export function papersFirst<T extends Pick<RawHit, "url" | "site" | "source" | "
  * whose page there is its teaser too).
  */
 export async function openArticle(url: string, title: string, source: string, ownFirst = true): Promise<string> {
+  // A short link first goes to its article: the reading service, given erem.news/…, met the site's bot check and the
+  // card went out headline-only (user, 27 Oct: "did it even read the full article?").
+  if (isShortLink(url)) url = cleanUrl(await unshorten(url));
   let best = "";
   if (ownFirst) {
     const html = await fetchText(url, 8000);

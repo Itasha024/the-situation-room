@@ -313,10 +313,7 @@
     dock = document.createElement('div');
     dock.className = 'ops-dock';
     dock.innerHTML = `<div class="ops-drow ops-dtop"><div class="ops-quick" role="group" aria-label="Show the last"><span>Last</span><button type="button" data-qr="2">48 h</button><button type="button" data-qr="7">7 days</button></div><div class="ops-time"></div><button type="button" class="ops-fold ops-fold-d" data-op="dock" title="Fold the timeline (\\)">${ICON.down}</button></div>
-      <div class="ops-drow ops-who"></div>
-      <div class="ops-drow ops-mx">
-        <div class="ops-act"><div class="ops-act-h"><b>Since the start</b><span class="ops-act-sel" hidden></span><small>Drag across the days to show them on the map</small><span class="ops-mz" role="group" aria-label="Zoom the hours"><button type="button" data-mz="-1" aria-label="Zoom out">−</button><button type="button" data-mz="1" aria-label="Zoom in">+</button></span></div><div class="ops-amx-sc"><svg class="ops-amx" role="img" aria-label="Events since the war's start, by side and day"></svg></div></div>
-      </div>`;
+      <div class="ops-drow ops-who"></div>`;
     const tb = $('.toolbar', root);
     if (tb) $('.ops-time', dock).appendChild(tb);
     const legend = $('#legend', root) || $('#h-legend', root);
@@ -934,155 +931,18 @@
   const DAY = 864e5, D_OFF = 3 * 3600e3; // the days of the region's clock (UTC+3)
   const dayOf = (t) => Math.floor((t + D_OFF) / DAY) * DAY - D_OFF;
   let rng = null; // [from, to] picked by dragging, or null
-  let rows = [];
   function recent(withResearched) {
     const now = Date.now();
     return events(withResearched).filter((e) => { const t = Date.parse(e.at); return t > now - SPAN && t <= now + 60e3; });
   }
-  const MON = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'Asia/Riyadh' });
+  // The last 48 hours' events and what hangs on them. The chart of every day by side that stood under the map is
+  // gone (user, 27 Oct: "remove diagram below map from site in all pages … its not useful").
   function drawMatrix() {
-    const svg = dock && $('.ops-amx', dock);
-    if (!svg) return;
-    const now = Date.now(), t0 = dayOf(LOG_FROM[PAGE] || now - 30 * DAY), span = Math.max(DAY, dayOf(now) + DAY - t0);
-    const all = events(true).filter((e) => typeof e.lat === 'number' && tOf(e) >= t0 && tOf(e) <= now + 60e3);
-    const by = new Map();
-    all.forEach((e) => { const s0 = sideOf(e); const s = /not stated/i.test(s0.name) ? { name: 'Not stated', c: '#94a3b8' } : s0; const r = by.get(s.name) || { name: s.name, c: s.c, ev: [] }; r.ev.push(e); by.set(s.name, r); });
-    rows = [...by.values()].sort((a, b) => b.ev.length - a.ev.length);
-    // On a phone the days can be drawn two, four or eight times as wide, to read and to tap (20 Oct).
-    // Zoomed in on a PC too, down to a month across the box (user, 27 Oct); the side names as wide as the longest, uncut.
-    const sc = svg.parentNode;
-    mzMax = Math.max(1, Math.min(32, span / (20 * DAY)));
-    const zoom = Math.min(MZ, mzMax);
-    // The names' column as wide as the longest name really is, measured in the chart's own font (user, 27 Oct: the
-    // names and the chart sat pushed to the right, the column sized by a guess per letter).
-    const LW = Math.round(Math.min(isPhone() ? 200 : 240, labWidth(svg, rows.map((r) => r.name)) + 16));
-    const W = Math.max(240, LW + ((sc.clientWidth || 600) - LW) * zoom), RH = isPhone() ? 14 : 11, top = 3;
-    svg.style.width = zoom > 1 ? W + 'px' : '';
-    const H2 = top + Math.max(1, rows.length) * RH + 18;
-    svg.setAttribute('viewBox', `0 0 ${W} ${H2}`);
-    svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
-    svg.style.height = H2 + 'px';
-    const x = (t) => LW + ((t - t0) / span) * (W - LW - 6);
-    let out = '';
-    const ty = H2 - 3;
-    // A line at each month's first day, named; a faint one each week when the days are wide enough; zoomed in,
-    // the days' numbers too, never closer than a label's width (user, 27 Oct: they ran into each other).
-    const dayW = (W - LW - 6) / (span / DAY);
-    const GAP = isPhone() ? 40 : 36;
-    const step = [1, 2, 7, 14].find((n) => n * dayW >= 20) || 0;
-    let lastX = LW + (new Date(t0 + 4 * 3600e3).getUTCFullYear() !== new Date().getUTCFullYear() ? 60 : 34); // the first day's date, written at the left
-    for (let t = t0; t < t0 + span; t += DAY) {
-      const d = new Date(t + D_OFF), X = x(t);
-      if (d.getUTCDate() === 1) {
-        out += `<line class="g d" x1="${X}" x2="${X}" y1="${top - 2}" y2="${H2 - 15}"/>`;
-        if (X - lastX >= 8 && X < W - 72) { out += `<text class="tk day" x="${X + 2}" y="${ty}">${MON.format(t + 3600e3)}${d.getUTCMonth() === 0 ? ' ' + d.getUTCFullYear() : ''}</text>`; lastX = X + GAP; }
-      } else {
-        if (dayW > 5 && d.getUTCDay() === 1) out += `<line class="g" x1="${X}" x2="${X}" y1="${top - 2}" y2="${H2 - 15}"/>`;
-        if (step && (d.getUTCDate() - 1) % step === 0 && d.getUTCDate() <= 26 && X - lastX >= 6 && X < W - 52) { out += `<text class="tk dn" x="${X + dayW / 2}" y="${ty}" text-anchor="middle">${d.getUTCDate()}</text>`; lastX = X + 14; }
-      }
-    }
-    const y0 = new Date(t0 + 4 * 3600e3).getUTCFullYear();
-    out += `<text class="tk" x="${LW}" y="${ty}">${esc(dm(t0 + 3600e3 * 4, 'Asia/Riyadh'))}${y0 !== new Date().getUTCFullYear() ? ' ' + y0 : ''}</text>`;
-    rows.forEach((r, i) => {
-      const y = top + i * RH;
-      out += `<line class="row" x1="${LW}" x2="${W - 6}" y1="${y + 6}" y2="${y + 6}"/>`;
-      // A day's events as one block, darker with more.
-      const bins = new Map();
-      r.ev.forEach((e) => { const b = dayOf(tOf(e)); bins.set(b, (bins.get(b) || 0) + 1); });
-      bins.forEach((n, b) => {
-        out += `<rect class="cell" x="${x(b).toFixed(1)}" y="${y + 1.5}" width="${Math.max(1.4, dayW - 0.4).toFixed(1)}" height="8" fill="${r.c}" fill-opacity="${Math.min(1, 0.3 + n * 0.08).toFixed(2)}"><title>${esc(r.name)}: ${n} event${n === 1 ? '' : 's'}, ${esc(dm(b + 3600e3 * 4, 'Asia/Riyadh'))}</title></rect>`;
-      });
-    });
-    if (!rows.length) out += `<text class="lab" x="${LW}" y="${top + 9.5}">Loading the events…</text>`;
-    out += `<text class="tk now" x="${W - 6}" y="${ty}" text-anchor="end">Today</text>`;
-    if (rng) out += `<rect class="sel" x="${x(rng[0])}" y="${top - 3}" width="${Math.max(2, x(rng[1]) - x(rng[0]))}" height="${H2 - 14 - top}"/>`;
-    out += `<rect class="hit" data-mx x="${LW}" y="0" width="${W - LW - 6}" height="${H2 - 12}"/>`;
-    // The side names stay at the left while a zoomed chart scrolls.
-    out += `<g class="labs"><rect class="labs-bg" x="0" y="0" width="${LW - 2}" height="${H2}"/>${rows.map((r, i) => `<text class="lab" x="4" y="${top + i * RH + 8.5}">${esc(r.name)}</text>`).join('')}</g>`;
-    svg.innerHTML = out;
-    svg._x = { t0, LW, W, span };
-    // Zooming keeps the middle of what was in view; the first draw shows today.
-    if (sc._z !== zoom) { const mid = sc._z ? (sc.scrollLeft + sc.clientWidth / 2) / (sc.scrollWidth || 1) : 1; sc._z = zoom; sc.scrollLeft = mid * sc.scrollWidth - sc.clientWidth / 2; }
-    stickLabs();
-    const head = $('.ops-act-h b', dock);
-    // With its year when that is not this year (user, 27 Oct: "should say since 10 Oct 2025").
-    if (head) head.textContent = `Since ${dm(t0 + 3600e3 * 4, 'Asia/Riyadh')}${new Date(t0 + 4 * 3600e3).getUTCFullYear() !== new Date().getUTCFullYear() ? ' ' + new Date(t0 + 4 * 3600e3).getUTCFullYear() : ''}`;
-    const sel = $('.ops-act-sel', dock);
-    sel.hidden = !rng;
-    if (rng) sel.innerHTML = `${esc(dm(rng[0] + 3600e3 * 4, 'Asia/Riyadh'))}${rng[1] - rng[0] > DAY ? '–' + esc(dm(rng[1] - 3600e3, 'Asia/Riyadh')) : ''} <button type="button" data-clear title="Show every day again">${ICON.x}<span class="sr">Clear</span></button>`;
-    const list = recent();
-    drawLog(list);
+    if (!dock) return;
+    drawLog(recent());
     counts();
     if (PAGE === 'all') drawTheatres();
     dimPins();
-  }
-  /** The widest of the names as the chart writes them (its .lab font), measured once per set of names. */
-  function labWidth(svg, names) {
-    const key = `${isPhone()}|${names.join('|')}`;
-    if (svg._lw && svg._lw[0] === key) return svg._lw[1];
-    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    t.setAttribute('class', 'lab');
-    svg.appendChild(t);
-    let w = 0;
-    try { for (const n of names) { t.textContent = n; w = Math.max(w, t.getComputedTextLength()); } } catch (e) { /* not drawn */ }
-    t.remove();
-    // Not drawn yet (a hidden panel): a guess per letter, measured again on the next draw.
-    if (!w) return Math.max(6, ...names.map((n) => n.length)) * (isPhone() ? 7 : 6.2);
-    svg._lw = [key, w];
-    return w;
-  }
-  let MZ = 1, mzMax = 8;
-  function stickLabs() {
-    const sc = dock && $('.ops-amx-sc', dock), g = sc && $('.ops-amx .labs', dock);
-    if (g) g.setAttribute('transform', `translate(${sc.scrollLeft} 0)`);
-    const z = dock && $('.ops-mz', dock);
-    if (z) { z.querySelector('[data-mz="1"]').disabled = MZ >= mzMax; z.querySelector('[data-mz="-1"]').disabled = MZ <= 1; }
-  }
-  function wireMatrix() {
-    const svg = $('.ops-amx', dock);
-    svg.parentNode.addEventListener('scroll', stickLabs, { passive: true });
-    $('.ops-mz', dock).addEventListener('click', (ev) => {
-      const b = ev.target.closest('[data-mz]');
-      if (!b) return;
-      MZ = Math.max(1, Math.min(mzMax, +b.dataset.mz > 0 ? MZ * 2 : MZ / 2));
-      drawMatrix();
-    });
-    let start = null;
-    const tAt = (ev) => { const r = svg.getBoundingClientRect(), k = svg._x; const px = ((ev.clientX - r.left) / r.width) * k.W; return k.t0 + ((px - k.LW) / (k.W - k.LW - 6)) * k.span; };
-    const clampDay = (t) => Math.max(svg._x.t0, Math.min(dayOf(Date.now()), dayOf(t)));
-    // On a phone a finger drawn across the days picks them, as a mouse does (user, 21 Oct); a zoomed chart
-    // scrolls by a drag on the side names or the dates under it.
-    let pan = null;
-    svg.addEventListener('pointerdown', (ev) => {
-      if (!ev.target.closest('[data-mx], .cell')) {
-        if (ev.pointerType === 'touch' && isPhone()) { pan = { x: ev.clientX, s: svg.parentNode.scrollLeft }; svg.setPointerCapture(ev.pointerId); }
-        return;
-      }
-      start = tAt(ev); svg.setPointerCapture(ev.pointerId); ev.preventDefault();
-    });
-    svg.addEventListener('pointermove', (ev) => {
-      if (pan) { svg.parentNode.scrollLeft = pan.s - (ev.clientX - pan.x); return; }
-      if (start == null) return;
-      const a = clampDay(Math.min(start, tAt(ev))), b = clampDay(Math.max(start, tAt(ev))) + DAY;
-      if (!rng || rng[0] !== a || rng[1] !== b) { rng = [a, b]; drawMatrix(); }
-    });
-    svg.addEventListener('pointerup', (ev) => {
-      if (pan) { pan = null; return; }
-      if (start == null) return;
-      const t = tAt(ev);
-      // A click, not a drag: the day clicked (on a phone, a second day takes in the days between; the same day clears).
-      if (Math.abs(t - start) < DAY / 3) {
-        const d = clampDay(t);
-        if (isPhone() && rng && rng[1] - rng[0] <= DAY && d !== rng[0]) rng = [Math.min(d, rng[0]), Math.max(d, rng[0]) + DAY];
-        else if (rng && d >= rng[0] && d < rng[1] && rng[1] - rng[0] <= DAY) rng = null;
-        else rng = [d, d + DAY];
-        drawMatrix();
-      }
-      start = null;
-      pickToMap();
-    });
-    svg.addEventListener('pointercancel', () => { start = null; pan = null; });
-    dock.addEventListener('click', (ev) => { if (ev.target.closest('[data-clear]')) { rng = null; drawMatrix(); openRange(P.range); } });
   }
   /* Pins outside the days picked fade (the pins drawn one by one; the whole war's canvas is left alone). Each pin
      is matched to its own event by its label and its place. */
@@ -2199,7 +2059,7 @@
     // The page's map, made and with a size (a map read before then has no place yet).
     if (!m || !m.getContainer || !window.L || !m._loaded || !(m.getSize().y > 0)) { setTimeout(startHud, 200); return; }
     buildHud(m);
-    wireMatrix(); wireMood(); wireLog(); wireTraffic(); wireKeys(); wireTrafficClicks(m); wirePinHover();
+    wireMood(); wireLog(); wireTraffic(); wireKeys(); wireTrafficClicks(m); wirePinHover();
     $('.ops-card', hud).addEventListener('click', (ev) => { if (ev.target.closest('[data-sel="x"]')) closeSel(); else if (ev.target.closest('[data-route]')) toggleRoute(); });
     sizeDock();
     oneWorld(m);
@@ -2211,7 +2071,7 @@
     { let at = '', still = 0, n = 0; const t = setInterval(() => { const c = m.getCenter(), k = `${c.lat.toFixed(3)},${c.lng.toFixed(3)},${m.getZoom()}`; still = k === at ? still + 1 : 0; at = k; if (still >= 4 || ++n > 40) { clearInterval(t); root.classList.add('ops-ready'); } }, 100); }
     openAt(m);
     // A quiet line in the map's credits (user, 27 Oct): the map is not every event, and each is as its source told it.
-    try { const from = LOG_FROM[PAGE]; const line = `Not every event since ${esc(dm(from + 4 * 3600e3, 'Asia/Riyadh'))}${new Date(from).getUTCFullYear() < new Date().getUTCFullYear() ? ' ' + new Date(from + 4 * 3600e3).getUTCFullYear() : ''} is mapped; each is as accurate as its source.`; m.attributionControl.setPrefix(`<span class="ops-discl">${line}</span> · <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>`); const act = dock && $('.ops-act', dock); if (act && !$('.ops-discl-m', act)) act.insertAdjacentHTML('beforeend', `<p class="ops-discl-m">${line}</p>`); } catch (e) { /* no credits box */ }
+    try { const from = LOG_FROM[PAGE]; const line = `Not every event since ${esc(dm(from + 4 * 3600e3, 'Asia/Riyadh'))}${new Date(from).getUTCFullYear() < new Date().getUTCFullYear() ? ' ' + new Date(from + 4 * 3600e3).getUTCFullYear() : ''} is mapped; each is as accurate as its source.`; m.attributionControl.setPrefix(`<span class="ops-discl">${line}</span> · <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>`); const act = dock; if (act && !$('.ops-discl-m', act)) act.insertAdjacentHTML('beforeend', `<p class="ops-discl-m">${line}</p>`); } catch (e) { /* no credits box */ }
     // The map opens on the reader's span, as the timeline under it (a link to a pin or a place keeps its own).
     if (!/#(at|pin)=/.test(location.hash)) {
       let tries = 0;

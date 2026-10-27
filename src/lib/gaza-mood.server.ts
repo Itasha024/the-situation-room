@@ -1,13 +1,14 @@
 /**
- * The mood monitor's reading (gaza-mood.ts): after each Gaza cycle, at most every 15 minutes, the biggest events of
- * the last day are followed: their town's channels and the main Palestinian channels searched for them on
- * Telegram's public pages (no account), the comments under the most-read posts, the emoji, and a model's read of
- * the reactions. Each event is read again while it is fresh (every 30 minutes for 3 hours, then every 90) for a day.
+ * The mood monitor's reading (gaza-mood.ts; user, 27 Oct: "reflect the mood across time … just when something bigger
+ * happens that creates a lot of traffic"). Every hour, while the server is not throttled: every Palestinian channel's
+ * latest page read once (Telegram's public pages, no account); the general mood of the last 3 hours read from them and
+ * the comments under the most-read, kept as a two-day series; and the spikes (events told by many channels or drawing
+ * a large share of the stir) each followed on its own: its words searched in the channels, YouTube, Bluesky and X.
  */
 import type { DeskStore } from "./desk/store.ts";
 import { askChain, type ChainModel } from "./desk/models.ts";
 import { gazaWords } from "./desk/gaza-words.ts";
-import { type DeskCard, type MoodEvent, type MoodPost, type MoodRead, FIND_SYSTEM, MOOD_SYSTEM, arabicNames, channelsFor, cut, findPrompt, moodItems, moodPrompt, parseComments, parsePosts, pickEvents, readFound, readMood, stirring, sumReactions, watchChannels } from "./desk/gaza-mood.ts";
+import { type GeneralMood, type MoodEvent, type MoodPost, type MoodRead, FIND_SYSTEM, GENERAL_SYSTEM, MOOD_SYSTEM, addPoint, arabicNames, channelsFor, cut, findPrompt, generalPrompt, isSpike, moodItems, moodPrompt, parseComments, parsePosts, readFound, readMood, stirOf, stirring, sumReactions, watchChannels } from "./desk/gaza-mood.ts";
 import { fetchText } from "./yemen-scan.server.ts";
 import { webReactions } from "./desk/mood-web.ts";
 
@@ -15,14 +16,16 @@ export const MOOD_KEY = "gaza:mood";
 const MOOD_LOCK = "gaza:mood-lock";
 const H = 3600_000;
 // Light on purpose (27 Oct: the mood reads on top of the scans had the small server throttled and the site down).
-const EVERY_MS = 30 * 60_000;
+const EVERY_MS = 60 * 60_000;
 const PER_RUN = 2;
 const AT_ONCE = 3;
 /** Channels searched per event: the town's, the main ones, then the rest of the Palestinian ones up to this. */
 const CHANNELS_PER_EVENT = 30;
 /** Events found from the reactions (the finder), and how often the channels' latest posts are read for them. */
 const FOUND_KEY = "gaza:mood-found";
-const FIND_EVERY = 90 * 60_000;
+/** The general mood, and the hours each of its reads covers. */
+export const GENERAL_KEY = "gaza:mood-general";
+const GENERAL_HOURS = 3;
 const MODELS: ChainModel[] = [
   { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
   { provider: "nvidia", id: "minimaxai/minimax-m3.1-flash" },
@@ -140,39 +143,80 @@ export async function runMood(store: DeskStore, now = Date.now()): Promise<numbe
   try {
     return await runMoodNow(store, prev, now);
   } finally {
-    await store.putJson(MOOD_LOCK, { at: 0 }).catch(() => {});
+    // A pause set by hand (a time far ahead) stays.
+    const still = await store.getJson<{ at: number }>(MOOD_LOCK).catch(() => null);
+    if (!still || still.at <= now) await store.putJson(MOOD_LOCK, { at: 0 }).catch(() => {});
   }
 }
 
+/** Every Palestinian channel's latest page, read once a run (no account: Telegram's public pages). */
+async function latestPosts(): Promise<MoodPost[]> {
+  const posts: MoodPost[] = [];
+  await pool(watchChannels(), async (ch) => {
+    const html = await fetchText(`https://t.me/s/${ch.toLowerCase()}`, 12_000).catch(() => null);
+    if (html) posts.push(...parsePosts(html, ch));
+  });
+  return posts;
+}
+
+/**
+ * The general mood (user, 27 Oct: "reflect the mood across time"): the last GENERAL_HOURS of every channel, the
+ * comments under the most-read posts, one read; a point added to the two-day series.
+ */
+async function readGeneral(store: DeskStore, posts: MoodPost[], now: number): Promise<void> {
+  const fresh = posts.filter((p) => {
+    const t = Date.parse(p.at);
+    return t <= now && now - t < GENERAL_HOURS * H;
+  });
+  const own = fresh.slice().sort((a, b) => stirOf(b) - stirOf(a));
+  const comments: MoodPost[] = [];
+  await pool(own.slice(0, 8), async (p) => {
+    const html = await fetchText(`${p.u}?embed=1&discussion=1&comments_limit=40`, 12_000).catch(() => null);
+    if (html) comments.push(...parseComments(html, p.ch));
+  });
+  const items = [...own.slice(0, 40), ...comments.slice(0, 30)];
+  const had = (await store.getJson<GeneralMood>(GENERAL_KEY)) ?? { at: "", hours: GENERAL_HOURS, read: null, posts: 0, comments: 0, channels: 0, series: [] };
+  let read: MoodRead | null = null;
+  if (items.length >= 8) {
+    const got = await askChain("gaza-mood-general", GENERAL_SYSTEM, generalPrompt(items, GENERAL_HOURS), { models: MODELS, timeoutMs: 90_000, temperature: 0.1, accept: (j) => (typeof j.about === "boolean" ? null : "no about") }).catch(() => null);
+    read = got ? readMood(got.json, items, gazaWords) : null;
+  }
+  const channels = new Set(fresh.map((p) => p.ch.toLowerCase())).size;
+  const at = new Date(now).toISOString();
+  const out: GeneralMood = read?.about
+    ? { at, hours: GENERAL_HOURS, read, posts: fresh.length, comments: comments.length, channels, series: addPoint(had.series, { at, mood: read.mood, intensity: read.intensity, posts: fresh.length, comments: comments.length, channels }, now) }
+    : { ...had, series: had.series.filter((x) => now - Date.parse(x.at) < 48 * H) };
+  await store.putJson(GENERAL_KEY, out);
+  console.log(`[mood] general: ${fresh.length} posts, ${comments.length} comments in ${channels} channels; ${read?.about ? read.mood.map((m) => `${m.k} ${m.w}%`).join(", ") : "no read"}`);
+}
+
 async function runMoodNow(store: DeskStore, prev: MoodStore, now: number): Promise<number> {
-  const { reports } = await store.recentDesk(800, undefined, { events: false, desk: "gaza", floor: new Date(now - 26 * H).toISOString() });
-  const picked = pickEvents(reports as unknown as DeskCard[], now);
-  const found = await findEvents(store, picked, prev, now).catch((err) => { console.error("[mood] find", err instanceof Error ? err.message : err); return [] as MoodEvent[]; });
-  // A found event the desk already follows from a card (same place within 12 hours) is not read twice (27 Oct).
-  const norm = (p?: string) => String(p ?? "").toLowerCase().replace(/[^a-z]+/g, " ").trim();
-  const near = (a: MoodEvent, b: MoodEvent) => (a.lat != null && b.lat != null && a.lng != null && b.lng != null ? Math.hypot(a.lat - b.lat, (a.lng - b.lng) * 0.85) < 0.03 : false)
-    || (!!norm(a.place) && !!norm(b.place) && (norm(a.place).startsWith(norm(b.place)) || norm(b.place).startsWith(norm(a.place))));
-  const same = (a: MoodEvent, b: MoodEvent) => near(a, b) && Math.abs(Date.parse(a.at) - Date.parse(b.at)) < 12 * H;
-  const twin = (e: MoodEvent) => !!e.found && picked.some((p) => same(e, p));
-  const events = [...picked, ...found.filter((e) => !twin(e))];
+  const posts = await latestPosts();
+  await readGeneral(store, posts, now).catch((err) => console.error("[mood] general", err instanceof Error ? err.message : err));
+  // Only the spikes get a reading of their own (no review per report).
+  const spikes = await findSpikes(store, posts, prev, now).catch((err) => {
+    console.error("[mood] find", err instanceof Error ? err.message : err);
+    return [] as MoodEvent[];
+  });
   const byFp = new Map(prev.events.map((e) => [e.fp, e]));
-  // Kept for a day after the event, picked or not.
-  const keep = prev.events.filter((e) => now - Date.parse(e.at) < 26 * H && !twin(e));
-  const todo = events.filter((ev) => due(byFp.get(ev.fp), now)).slice(0, PER_RUN);
+  const todo = spikes.filter((ev) => due(byFp.get(ev.fp), now)).slice(0, PER_RUN);
   let n = 0;
   for (const ev of todo) {
     try {
       const entry = await readEvent(ev, byFp.get(ev.fp), now);
       byFp.set(ev.fp, entry);
       n += 1;
-      console.log(`[mood] ${cut(ev.headline, 70)}: ${entry.posts} posts, ${entry.comments} comments in ${entry.channels.length} channels; ${entry.read ? entry.read.mood.map((m) => `${m.k} ${m.w}%`).join(", ") : "no read yet"}`);
+      console.log(`[mood] spike ${cut(ev.headline, 70)}: ${entry.posts} posts, ${entry.comments} comments in ${entry.channels.length} channels; ${entry.read ? entry.read.mood.map((m) => `${m.k} ${m.w}%`).join(", ") : "no read yet"}`);
     } catch (err) {
       console.error("[mood]", err instanceof Error ? err.message : err);
     }
   }
-  const out = [...new Map([...keep, ...[...byFp.values()].filter((e) => now - Date.parse(e.at) < 26 * H && !twin(e))].map((e) => [e.fp, byFp.get(e.fp) ?? e])).values()]
+  // The spikes of the last day.
+  const live = new Set(spikes.map((e) => e.fp));
+  const out = [...byFp.values()]
+    .filter((e) => live.has(e.fp) && now - Date.parse(e.at) < 26 * H)
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
-    .slice(0, 30);
+    .slice(0, 12);
   await store.putJson(MOOD_KEY, { at: new Date(now).toISOString(), events: out } satisfies MoodStore);
   return n;
 }
@@ -180,30 +224,24 @@ async function runMoodNow(store: DeskStore, prev: MoodStore, now: number): Promi
 type FoundStore = { at: string; events: MoodEvent[] };
 
 /**
- * Events found from the reactions (user, 27 Oct: "you find reactions and find events this way"): every half hour the
- * latest posts of every Palestinian channel the desk knows are read, the most-reacted grouped into events by a model,
- * and the ones not yet followed are followed for a day.
+ * The spikes (user, 27 Oct: "just when something bigger happens that creates a lot of traffic"): the most-reacted
+ * posts of the hours read grouped into events by a model, and only those told by many channels or drawing a large
+ * share of all the stir kept, for a day.
  */
-async function findEvents(store: DeskStore, picked: MoodEvent[], prev: MoodStore, now: number): Promise<MoodEvent[]> {
+async function findSpikes(store: DeskStore, posts: MoodPost[], prev: MoodStore, now: number): Promise<MoodEvent[]> {
   const had = (await store.getJson<FoundStore>(FOUND_KEY)) ?? { at: "", events: [] };
-  const kept = had.events.filter((e) => now - Date.parse(e.at) < 24 * H);
-  if (had.at && now - Date.parse(had.at) < FIND_EVERY) return kept;
-  const posts: MoodPost[] = [];
-  await pool(watchChannels(), async (ch) => {
-    const html = await fetchText(`https://t.me/s/${ch.toLowerCase()}`, 12_000).catch(() => null);
-    if (html) posts.push(...parsePosts(html, ch));
-  });
+  const kept = had.events.filter((e) => now - Date.parse(e.at) < 24 * H && e.spike);
   const top = stirring(posts, now);
   let fresh: MoodEvent[] = [];
   if (top.length >= 5) {
-    const followed = [...new Set([...picked, ...kept, ...prev.events].map((e) => e.headline))].slice(0, 40);
+    const followed = [...new Set([...kept, ...prev.events].map((e) => e.headline))].slice(0, 40);
     const got = await askChain("gaza-mood-find", FIND_SYSTEM, findPrompt(top, followed), { models: MODELS, timeoutMs: 90_000, temperature: 0.1, accept: (j) => (Array.isArray(j.events) ? null : "no events") }).catch(() => null);
-    fresh = got ? readFound(got.json, top, gazaWords) : [];
+    fresh = (got ? readFound(got.json, top, gazaWords) : []).filter((e) => isSpike(e.seed ?? [], top)).map((e) => ({ ...e, spike: 1 as const }));
   }
   const byFp = new Map(kept.map((e) => [e.fp, e]));
   for (const e of fresh) if (!byFp.has(e.fp)) byFp.set(e.fp, e);
-  const out = [...byFp.values()].sort((a, b) => b.score - a.score).slice(0, 12);
+  const out = [...byFp.values()].sort((a, b) => b.score - a.score).slice(0, 8);
   await store.putJson(FOUND_KEY, { at: new Date(now).toISOString(), events: out } satisfies FoundStore);
-  console.log(`[mood] find: ${posts.length} posts in ${watchChannels().length} channels, ${top.length} most-reacted, ${fresh.length} events (${fresh.map((e) => cut(e.headline, 50)).join("; ")})`);
+  console.log(`[mood] spikes: ${posts.length} posts in ${watchChannels().length} channels, ${top.length} most-reacted, ${fresh.length} new spikes (${fresh.map((e) => cut(e.headline, 50)).join("; ")})`);
   return out;
 }

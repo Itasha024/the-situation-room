@@ -166,7 +166,8 @@ export function gazaNumbers(cards: GazaCard[], from = GAZA_NUMBERS_FROM): { boxe
   const crossRows = CROSSINGS.map(([name, re]) => {
     for (const c of all) {
       const v = crossState(name, re, c.summary);
-      if (v) return { label: name, cells: [cellOf(c, v)] };
+      // Official only when a crossings authority, COGAT or the like told it (27 Oct: a journalist's post was "Official").
+      if (v) return { label: name, cells: [cellOf(c, v, officialCard(c) || /\bcrossings? authority\b/i.test(c.summary) ? "off" : "unoff")] };
     }
     return null;
   }).filter((r): r is { label: string; cells: Cell[] } => !!r);

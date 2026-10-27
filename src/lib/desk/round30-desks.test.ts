@@ -136,10 +136,10 @@ test("Yemen keeps its state keys; another desk's carry its name", () => {
   assert.equal(deskKey("iran", "brief"), "iran:brief");
 });
 
-test("the brief's window: Yemen's 6 hours as before, Iran's 3", () => {
+test("the brief's window: every desk's 3 hours (27 Oct), the 6-hour clock still there", () => {
   const now = new Date("2026-10-08T10:30:00+03:00");
-  const six = briefWindow(now);
-  assert.deepEqual(briefWindow(now, 6), six);
+  const six = briefWindow(now, 6);
+  assert.deepEqual(briefWindow(now), briefWindow(now, 3));
   const three = briefWindow(now, 3);
   assert.equal(Date.parse(three.nextUpdateAt) - Date.parse(three.updatedAt), 3 * 3600_000);
   assert.equal(Date.parse(six.nextUpdateAt) - Date.parse(six.updatedAt), 6 * 3600_000);

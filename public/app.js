@@ -26,6 +26,70 @@
  * language; {name} slots are filled from `v`. Plain labels set in the markup
  * or by innerHTML are put in the language by public/i18n/dom.js.
  * ---------------------------------------------------------------- */
+/*
+ * New since the last visit (user, 27 Oct: "a symbol on reports that are new and weren't read the previous time,
+ * same for briefs"). A card newer than the moment the reader last left the site, and a brief point not on screen
+ * then, get a small "New" mark. Kept in this browser only; the first visit marks nothing.
+ */
+(function seenMarks() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const KEY_AT = 'desk:lastVisit';
+  const KEY_PTS = 'desk:seenPoints';
+  let last = 0;
+  let seenPts = [];
+  try {
+    // One visit keeps its marks across reloads: what was seen before it began, kept for this tab's session.
+    const mine = sessionStorage.getItem('desk:visitFrom');
+    if (mine) {
+      const v = JSON.parse(mine);
+      last = v.at || 0;
+      seenPts = v.pts || [];
+    } else {
+      last = Number(localStorage.getItem(KEY_AT)) || 0;
+      seenPts = JSON.parse(localStorage.getItem(KEY_PTS) || '[]');
+      sessionStorage.setItem('desk:visitFrom', JSON.stringify({ at: last, pts: seenPts }));
+    }
+  } catch (e) { /* private window: no marks */ }
+  const seenSet = new Set(Array.isArray(seenPts) ? seenPts : []);
+  const shown = new Set();
+  const keyOf = (t) => {
+    const s = String(t || '').toLowerCase().replace(/\d+(?:,\d+)*\s*$/, '').replace(/[^a-z\u0600-\u06ff]+/g, '').slice(0, 160);
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return s ? (h >>> 0).toString(36) : '';
+  };
+  const dot = '<span class="new-mark" title="New since your last visit">New</span>';
+  function mark() {
+    document.querySelectorAll('article.card:not([data-seen])').forEach((c) => {
+      c.dataset.seen = '1';
+      const t = c.querySelector('time[datetime]');
+      const at = t ? Date.parse(t.getAttribute('datetime')) : NaN;
+      if (last && at > last) { c.classList.add('is-new'); t.insertAdjacentHTML('beforebegin', dot); }
+    });
+    document.querySelectorAll('ol.pts > li:not([data-seen]), ol.ops-th-pts > li:not([data-seen])').forEach((li) => {
+      li.dataset.seen = '1';
+      const k = keyOf((li.querySelector('.ops-th-p') || li).textContent.replace(/(?:Full report|On) the \w+ desk →/, ''));
+      if (!k) return;
+      shown.add(k);
+      if (last && seenSet.size && !seenSet.has(k)) { li.classList.add('is-new'); li.insertAdjacentHTML('afterbegin', dot); }
+    });
+  }
+  let queued = false;
+  const later = () => { if (!queued) { queued = true; setTimeout(() => { queued = false; mark(); }, 60); } };
+  const start = () => { mark(); new MutationObserver(later).observe(document.body, { childList: true, subtree: true }); };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  // Leaving the site (or its tab): what is on screen now counts as read next time.
+  const save = () => {
+    try {
+      localStorage.setItem(KEY_AT, String(Date.now()));
+      const all = [...seenSet, ...shown];
+      localStorage.setItem(KEY_PTS, JSON.stringify(all.slice(-600)));
+    } catch (e) { /* nothing kept */ }
+  };
+  addEventListener('pagehide', save);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') save(); });
+})();
+
 const I18N = (typeof window !== 'undefined' && window.DESK_I18N) || null;
 const LANG = I18N ? I18N.lang : 'en';
 const LOC = I18N ? I18N.loc : 'en-GB';

@@ -7,6 +7,8 @@ import { deskById } from "@/lib/desks";
 import { serveCard } from "@/lib/desk/copy-rules";
 import { type Card as SameCard, foldServed } from "@/lib/desk/fold-same";
 import { type GazaCard, gazaNumbers } from "@/lib/desk/gaza-numbers";
+import { GAZA_LIVE_KEY, liveGazaBoxes } from "@/lib/desk/gaza-live";
+import type { IranLive } from "@/lib/desk/iran-live";
 
 /**
  * The Gaza – Judea & Samaria desk's numbers (gaza-numbers.ts): the desk's cards since it began reading, as
@@ -22,7 +24,10 @@ export const Route = createFileRoute("/api/gaza-numbers")({
             const slice = await store.recentDesk(1500, undefined, { desk: "gaza", floor: deskById("gaza").feedFrom, events: false });
             const shown = (slice.reports as unknown as Record<string, unknown>[]).filter((r) => serveCard(r, "gaza"));
             const cards = foldServed(shown as unknown as SameCard[]).reports as unknown as GazaCard[];
-            const body = JSON.stringify({ ok: true, at: new Date().toISOString(), ...gazaNumbers(cards) });
+            const counted = gazaNumbers(cards);
+            // The researched boxes the reports have moved since (gaza-live.ts), each with its set: the page puts them in place.
+            const moved = liveGazaBoxes(await store.getJson<IranLive>(GAZA_LIVE_KEY));
+            const body = JSON.stringify({ ok: true, at: new Date().toISOString(), ...counted, boxes: [...counted.boxes, ...moved] });
             return { status: 200, body, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300" } };
           }, request.headers.get("accept-encoding"));
         } catch (err) {

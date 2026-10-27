@@ -19,7 +19,7 @@
 
 import { oldPicture } from "./pin-rule.ts";
 import type { LiveReport } from "./types.ts";
-import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea } from "./brief.ts";
+import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea, sixHourMark } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
 import { battleFirst, controlContext, isOther, keepReported, type DevMark, type Prose, writeProse } from "./prose.ts";
 import { anyAwake, type ChainModel, WRITER_MODELS } from "./models.ts";
@@ -120,7 +120,8 @@ function armClock(store: DeskStore, w: ReturnType<typeof briefWindow>): void {
 async function prewrite(store: DeskStore, w: ReturnType<typeof briefWindow>, at: number): Promise<Prose | null> {
   const t0 = Date.now();
   const saved = (await store.getJson<StoredBrief>(BRIEF_KEY)) ?? null;
-  const { all, inWindow } = await windowReports(store, w);
+  const { all, inWindow: own } = await windowReports(store, w);
+  const inWindow = proseReports(all, own, w);
   const extraFronts = updateExtraFronts(all, (await store.getJson<ExtraFront[]>(EXTRA_FRONTS_KEY)) ?? [], coveredByTrackedFront, new Date(at));
   const brief = buildBrief(inWindow, new Date(at), { extraFronts });
   let controlLines = controlContext();
@@ -196,7 +197,15 @@ async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof bri
   };
   // Stored on the hour with the prose written early (or now, when none was): a
   // backup writer's text is asked again by the clock, 10 minutes on.
-  await proseInto(store, brief, inWindow, all, proseArgs, early);
+  await proseInto(store, brief, proseReports(all, inWindow, w), all, proseArgs, early);
+  // Between the 6-hour marks only the latest points are new; the fronts keep their last text (user, 27 Oct).
+  if (!sixHourMark(w.updatedAt) && saved) {
+    const was = new Map((saved.brief.fronts || []).map((x) => [x.id, x]));
+    brief.fronts = brief.fronts.map((x) => {
+      const o = was.get(x.id);
+      return o ? { ...x, line: o.line, points: o.points, refs: o.refs, lastNewsAt: o.lastNewsAt, ...(o.map ? { map: o.map } : {}) } : x;
+    });
+  }
   brief.proseTriedAt = new Date().toISOString();
   await store.putJson(BRIEF_KEY, { brief, history } satisfies StoredBrief);
   // The official numbers move on the same 6-hour clock. A failed fetch keeps
@@ -241,6 +250,16 @@ function bumpStreaks(saved: StoredBrief): BriefHistory["streaks"] {
 }
 
 /** The cards of the window that just closed, [startedAt, updatedAt), and the last rows overall. */
+/** The reports the prose reads: the window's, or at a 6-hour mark the last 6 hours, for the fronts' text. */
+function proseReports(all: LiveReport[], inWindow: LiveReport[], w: { updatedAt: string }): LiveReport[] {
+  if (!sixHourMark(w.updatedAt)) return inWindow;
+  const end = Date.parse(w.updatedAt);
+  return all.filter((r) => {
+    const t = Date.parse(String(r.at || ""));
+    return Number.isFinite(t) && t >= end - 6 * 3600_000 && t < end;
+  });
+}
+
 async function windowReports(store: DeskStore, w: { startedAt: string; updatedAt: string }): Promise<{ all: LiveReport[]; inWindow: LiveReport[] }> {
   const start = Date.parse(w.startedAt);
   const end = Date.parse(w.updatedAt);

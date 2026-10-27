@@ -304,3 +304,22 @@ test("Palestinian politics passes the Gaza gate (user, 26 Oct)", () => {
   assert.ok(!isGazaDeskItem("الحية تلدغ طفلا في الصعيد"));
   assert.match(GAZA_SYSTEM_PROMPT, /Palestinian politics/);
 });
+
+test("Gaza numbers: the researched boxes move with the reports, by the Iran desk's rules; crossings official only from officials (27 Oct)", async () => {
+  const { applyGaza, GAZA_NOW_COL, liveGazaBoxes, setOfTitle } = await import("./gaza-live.ts");
+  const { slotsOf } = await import("./iran-live-model.ts");
+  const { gazaNumbers } = await import("./gaza-numbers.ts");
+  const box = { type: "table", title: "Arrests in Judea and Samaria", cols: ["", "Arrested", "Time span"], rows: [{ label: "Since the ceasefire", cells: [{ v: "4,100", k: "off", src: "IDF", url: "u", date: "2026-10-20" }, { v: "since 10 Oct 2025", k: "off", src: "IDF", url: "u", date: "2026-10-20" }] }] };
+  const slots = slotsOf([box], GAZA_NOW_COL);
+  assert.deepEqual(slots.map((s) => s.col), ["Arrested"]);
+  const docs = [{ id: 0, at: "2026-10-27T08:00:00Z", source: "IDF", url: "https://x/1", text: "IDF: 4,250 arrested in the West Bank since the ceasefire" }];
+  const moved = applyGaza([box], { updates: [{ slot: "0.0.0", value: "4,250", official: true, source: "IDF", doc: 0 }] }, docs, new Date("2026-10-27T09:00:00Z"));
+  assert.equal((moved[0].rows as { cells: { v: string }[] }[])[0].cells[0].v, "4,250");
+  // A figure the report does not state is never kept.
+  assert.equal(applyGaza([box], { updates: [{ slot: "0.0.0", value: "4,300", official: true, doc: 0 }] }, docs, new Date()).length, 0);
+  const title = [...setOfTitle().keys()][0];
+  assert.equal(liveGazaBoxes({ boxes: { [title]: { type: "stat", title } }, at: {}, tried: {}, meta: {}, updatedAt: "" })[0].set, setOfTitle().get(title));
+  const cards = [{ fp: "a", at: "2026-10-27T06:00:00Z", source: "Osama al-Kahlout", url: "u", summary: "Kerem Shalom crossing opens; Rafah, Zikim and Kissufim remain closed" }];
+  const cross = gazaNumbers(cards).boxes.find((b) => b.title === "The crossings") as { rows: { cells: { k: string }[] }[] };
+  assert.equal(cross.rows[0].cells[0].k, "unoff");
+});

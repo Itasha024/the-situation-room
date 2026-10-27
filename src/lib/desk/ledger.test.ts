@@ -284,3 +284,14 @@ test("the 18 Oct audit: wrong days, later reports and other names stay out; stat
   assert.equal(l.sites.find((s) => s.id === "taibah-medina")!.hits[0].date, "2026-09-29");
   assert.equal(l.sites.find((s) => s.id === "riyadh-refinery")?.status ?? "unknown", "unknown");
 });
+
+test("Brent: FRED's week-old spot price runs on with the stored daily futures, named in the source (27 Oct)", async () => {
+  const { extendBrent } = await import("./ledger.ts");
+  const spot = { name: "Brent crude", unit: "dollars a barrel", baseline: { value: 70, from: "a", to: "b" }, days: [{ date: "2026-10-19", value: 110 }, { date: "2026-10-20", value: 115.22 }], source: { name: "US EIA via FRED", url: "u", date: "2026-10-20" } };
+  const got = extendBrent(spot, [{ d: "2026-10-20", v: 114 }, { d: "2026-10-26", v: 115.809 }, { d: "2026-10-27", v: 110.78 }]);
+  assert.deepEqual(got.days.map((d) => d.date), ["2026-10-19", "2026-10-20", "2026-10-26", "2026-10-27"]);
+  assert.equal(got.days.at(-1)!.value, 110.78);
+  assert.equal(got.source.date, "2026-10-27");
+  assert.match(got.source.name, /FRED to 2026-10-20, then ICE Brent futures/);
+  assert.equal(extendBrent(spot, []), spot);
+});

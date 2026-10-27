@@ -70,3 +70,11 @@ test("a channel that passes on others' posts never has an exclusive of its own (
   assert.equal(isExclusive("EXCLUSIVE: Saudi sources say the kingdom will not halt", "Clash Report"), false);
   assert.equal(isExclusive("خاص | مصادر سعودية: السعودية لن توقف وقف إطلاق النار", "Sky News Arabia"), true);
 });
+
+test("The New Arab and Independent Arabia: their own sources count, agency news does not (27 Oct)", async () => {
+  const { ownInformation, OWN_ONLY } = await import("./exclusive.ts");
+  assert.ok(OWN_ONLY.has("The New Arab") && OWN_ONLY.has("Independent Arabia"));
+  assert.equal(ownInformation("Egyptian sources told The New Arab that Cairo proposed a new plan.", "The New Arab"), true);
+  assert.equal(ownInformation("قال مصدر مصري لـ«إندبندنت عربية» إن القاهرة قدمت خطة جديدة.", "Independent Arabia"), true);
+  assert.equal(ownInformation("The UN said aid trucks entered Gaza on Monday, Reuters reported.", "The New Arab"), false);
+});

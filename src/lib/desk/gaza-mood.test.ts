@@ -101,3 +101,21 @@ test("quotes: no news told in the third person, no statements; found events only
   assert.equal(ownVoice("This land is our land and the earth is ours"), true);
   assert.equal(ownVoice("May God have mercy on them."), true);
 });
+
+test("the general mood: its own prompt, a two-day series, and spikes only for big traffic (27 Oct)", async () => {
+  const { GENERAL_SYSTEM, MOOD_SYSTEM, addPoint, isSpike } = await import("./gaza-mood.ts");
+  assert.notEqual(GENERAL_SYSTEM, MOOD_SYSTEM);
+  assert.match(GENERAL_SYSTEM, /GENERAL PUBLIC MOOD/);
+  assert.match(GENERAL_SYSTEM, /There is no single event/);
+  assert.match(GENERAL_SYSTEM, /false only when no item is a reaction at all/);
+  const now = Date.parse("2026-10-27T12:00:00Z");
+  const p = (h: number) => ({ at: new Date(now - h * 3600_000).toISOString(), mood: [], intensity: 2, posts: 1, comments: 0, channels: 1 });
+  const s = addPoint([p(50), p(2), p(1)], p(0), now);
+  assert.equal(s.length, 3);
+  assert.equal(s.at(-1)!.at, p(0).at);
+  const post = (ch: string, v: number) => ({ u: `https://t.me/${ch}/1`, at: new Date(now).toISOString(), ch, x: "x", v });
+  const top = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"].map((c) => post(c, 4000));
+  assert.equal(isSpike([post("a", 4000)], top), false);
+  assert.equal(isSpike(["a", "b", "c", "d", "e"].map((c) => post(c, 400)), top), true);
+  assert.equal(isSpike([post("a", 40000), post("b", 40000), post("c", 40000)], top), true);
+});

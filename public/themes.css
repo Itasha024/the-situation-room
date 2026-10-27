@@ -868,3 +868,6 @@ html .map-wrap .legend{top:auto;bottom:calc(12px + var(--leg-lift,0px))}
 body:has(#feed-search:not([hidden])) .feed-sub{display:none}
 .sr-top{flex-wrap:wrap}.sr-stamp.sr-discl{flex-basis:100%;order:9;text-transform:none;letter-spacing:0;font-style:italic;opacity:.85}
 img.dt-flag{object-fit:cover;display:inline-block}
+/* New since the last visit (app.js seenMarks) */
+.new-mark{display:inline-block;margin-right:.4em;padding:0 .35em;border-radius:3px;font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;line-height:1.5;vertical-align:.1em;color:#0b1220;background:#f5b941}
+li.is-new>.new-mark{margin-right:.45em}

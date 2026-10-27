@@ -46,7 +46,6 @@ export const SHARED_TG: Record<string, IranLean> = {
   alhadath_brk: "gulf",
   alarabiyaBr: "gulf",
   Alakhbar_News: "axis",
-  eremnews: "gulf",
   ajMubasher: "gulf",
   asharqnews: "gulf",
   almayadeen: "axis",
@@ -228,6 +227,7 @@ export const SHARED_X: Record<string, IranLean> = {
   alaraby_ar: "gulf",
   // US-funded, as VOA and Radio Farda.
   alhurranews: "us",
+  EremNews: "gulf",
   // Sources first read for Yemen (user, 9 Oct: the sources are the site's, not a desk's): what of theirs is on this war goes to the Iran desk too, by its gate.
   marebpress: "gulf", almasdaronline: "gulf", sabanew_: "gulf", spokespersonyem: "gulf", Yem_army_media: "gulf",
   YemenMOD: "gulf", CJFCSpox: "gulf", maldhabyani: "gulf", BashaReport: "gulf", "2decnews": "gulf",

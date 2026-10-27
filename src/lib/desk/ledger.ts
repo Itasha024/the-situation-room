@@ -717,6 +717,21 @@ async function brent(): Promise<PriceSeries | null> {
   };
 }
 
+/**
+ * FRED's spot price runs about a week behind (27 Oct: the box stopped at 20 Oct); the days after it come from the
+ * Iran desk's daily Brent futures (iran-live.ts, Yahoo), already stored, so no extra read. Named in the source.
+ */
+export function extendBrent(price: PriceSeries, futures: { d: string; v: number }[] | undefined): PriceSeries {
+  const last = price.days.at(-1)?.date ?? "";
+  const more = (futures ?? []).filter((p) => p.d > last && Number.isFinite(p.v)).map((p) => ({ date: p.d, value: Math.round(p.v * 100) / 100 }));
+  if (!more.length) return price;
+  return {
+    ...price,
+    days: [...price.days, ...more],
+    source: { name: `US EIA via FRED to ${last}, then ICE Brent futures via Yahoo Finance`, url: price.source.url, date: more.at(-1)!.date },
+  };
+}
+
 /** PortWatch's daily counts: read again at each 6-hour update (PortWatch itself adds days a few at a time). */
 export async function refreshTransits(store: DeskStore, now = new Date()): Promise<Transits | null> {
   const prev = await store.getJson<Transits>(TRANSITS_KEY);
@@ -734,6 +749,13 @@ export async function refreshTransits(store: DeskStore, now = new Date()): Promi
     price = await brent();
   } catch (err) {
     console.error("[ledger] Brent failed:", err instanceof Error ? err.message : err);
+  }
+  const spot = price ?? prev?.brent ?? null;
+  if (spot) {
+    const live = await store.getJson<{ boxes?: Record<string, { series?: { d: string; v: number }[] }> }>("iran:live").catch(() => null);
+    // The spot series as FRED gave it, without days added by an earlier run.
+    const fredOnly = price ?? { ...spot, days: spot.days.filter((d) => !spot.source.date || d.date <= (/to (\d{4}-\d\d-\d\d)/.exec(spot.source.name)?.[1] ?? spot.source.date)) };
+    price = extendBrent(fredOnly, live?.boxes?.["Crude oil price"]?.series);
   }
   const next: Transits = {
     v: 2,

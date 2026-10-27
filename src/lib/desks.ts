@@ -33,7 +33,7 @@ export const DESKS: Desk[] = [
     flag: ["#ce1126", "#ffffff", "#000000"],
     tz: "Asia/Aden",
     clockLabel: "Yemen",
-    cadenceHours: 6,
+    cadenceHours: 3,
     mapFrom: "2026-07-13",
     description:
       "Live open-source reporting on the war in Yemen: who holds what, the fronts, strikes on Saudi Arabia, the Red Sea and the numbers, from every side's sources.",

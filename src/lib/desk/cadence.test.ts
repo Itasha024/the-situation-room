@@ -4,27 +4,27 @@ import { briefWindow, CADENCE_HOURS } from "./brief.ts";
 import { battleFirst } from "./prose.ts";
 
 test("updates fall at 00, 06, 12 and 18 on Israel's clock, and move with it on 25 Oct", () => {
-  assert.equal(CADENCE_HOURS, 6);
-  assert.deepEqual(briefWindow(new Date("2026-09-30T12:05:00Z")), {
+  assert.equal(CADENCE_HOURS, 3); // Every desk's brief every 3 hours (27 Oct); the 6-hour clock below is the fronts' and arenas'.
+  assert.deepEqual(briefWindow(new Date("2026-09-30T12:05:00Z"), 6), {
     updatedAt: "2026-09-30T12:00:00+03:00",
     nextUpdateAt: "2026-09-30T18:00:00+03:00",
     startedAt: "2026-09-30T06:00:00+03:00",
   });
   // Just before midnight in Yemen, and across the day line.
-  assert.deepEqual(briefWindow(new Date("2026-09-30T20:59:00Z")), {
+  assert.deepEqual(briefWindow(new Date("2026-09-30T20:59:00Z"), 6), {
     updatedAt: "2026-09-30T18:00:00+03:00",
     nextUpdateAt: "2026-10-01T00:00:00+03:00",
     startedAt: "2026-09-30T12:00:00+03:00",
   });
-  assert.equal(briefWindow(new Date("2026-09-30T21:00:00Z")).updatedAt, "2026-10-01T00:00:00+03:00");
+  assert.equal(briefWindow(new Date("2026-09-30T21:00:00Z"), 6).updatedAt, "2026-10-01T00:00:00+03:00");
   // After Israel leaves summer time (25 Oct) the updates stay at 00/06/12/18 on its clock.
-  assert.deepEqual(briefWindow(new Date("2026-11-02T04:30:00Z")), {
+  assert.deepEqual(briefWindow(new Date("2026-11-02T04:30:00Z"), 6), {
     updatedAt: "2026-11-02T06:00:00+02:00",
     nextUpdateAt: "2026-11-02T12:00:00+02:00",
     startedAt: "2026-11-02T00:00:00+02:00",
   });
   // The night the clock goes back: 00:00 is still summer time, 06:00 is winter time.
-  assert.deepEqual(briefWindow(new Date("2026-10-24T22:30:00Z")), {
+  assert.deepEqual(briefWindow(new Date("2026-10-24T22:30:00Z"), 6), {
     updatedAt: "2026-10-25T00:00:00+03:00",
     nextUpdateAt: "2026-10-25T06:00:00+02:00",
     startedAt: "2026-10-24T18:00:00+03:00",
@@ -53,4 +53,11 @@ test("a quiet brief window reads further back, up to 12 hours (27 Oct)", async (
   const night = [end - H, end - 2 * H, ...Array.from({ length: 30 }, (_, i) => end - 7 * H - i * 1000)];
   assert.equal(briefStart(night, start, end), end - 9 * H);
   assert.equal(briefStart([end - H], start, end), end - 12 * H);
+});
+
+test("the fronts' and arenas' 6-hour marks (27 Oct)", async () => {
+  const { sixHourMark } = await import("./brief.ts");
+  assert.equal(sixHourMark("2026-10-27T12:00:00+02:00"), true);
+  assert.equal(sixHourMark("2026-10-27T09:00:00+02:00"), false);
+  assert.equal(sixHourMark("2026-10-28T00:00:00+02:00"), true);
 });

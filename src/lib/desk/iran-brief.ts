@@ -14,7 +14,7 @@
 import { serveCard } from "./copy-rules.ts";
 import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
 import { refreshIranTimelineNow } from "./iran-timeline-now.ts";
-import { briefStart, briefWindow } from "./brief.ts";
+import { briefStart, briefWindow, sixHourMark } from "./brief.ts";
 import { cleanPoints, onePointEach, oncePer } from "./prose.ts";
 
 export { oncePer };
@@ -236,7 +236,9 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
   // The cards as served (audit of 24 Oct): a card the serve rules hide never feeds the brief, and a lead swapped by them is cited.
   const served = (reports as unknown as LiveReport[]).filter((r) => serveCard(r as unknown as Record<string, unknown>, "iran"));
   // A quiet window reads further back (gaza-brief.ts, 27 Oct).
-  const start = saved ? briefStart(served.map((r) => Date.parse(String(r.at || ""))), Date.parse(w.startedAt), end) : end - 24 * 3600_000;
+  // The arenas are written at the 6-hour marks only, from the last 6 hours (user, 27 Oct); the points every 3.
+  const six = sixHourMark(w.updatedAt);
+  const start = saved ? Math.min(briefStart(served.map((r) => Date.parse(String(r.at || ""))), Date.parse(w.startedAt), end), six ? end - 6 * 3600_000 : Infinity) : end - 24 * 3600_000;
   const inWin = (at: string) => {
     const t = Date.parse(at);
     return Number.isFinite(t) && t >= start && t < end;
@@ -260,9 +262,9 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
   const old = new Map((saved?.arenas ?? []).map((a) => [a.id, a]));
   const arenas: ArenaBrief[] = ARENAS.map((a) => {
     const fresh = got.arenas[a.id];
-    if (fresh) return { id: a.id, name: a.name, ...fresh, lastNewsAt: w.updatedAt };
-    // Nothing new here: the last points stand, with the time they were news.
     const o = old.get(a.id);
+    if (fresh && (six || !o?.points?.length)) return { id: a.id, name: a.name, ...fresh, lastNewsAt: w.updatedAt };
+    // Nothing new here, or between the 6-hour marks: the last points stand, with the time they were news.
     return o ? { ...o, name: a.name } : { id: a.id, name: a.name, points: [], refs: [] };
   });
   const brief: IranBrief = {

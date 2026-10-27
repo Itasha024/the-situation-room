@@ -1621,3 +1621,10 @@ html[data-view="ops"] .pg-dots .pg-short { display: none }
   html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-timeline) ~ .pg-dots button { max-width: 62vw }
   html[data-view="ops"] .ops-left :is(.pager-fronts, .pager-timeline) ~ .pg-dots .pg-name { overflow: hidden; text-overflow: ellipsis }
 }
+/* The general mood's trend (ops.js moodGeneral): one column an hour, split by the moods' shares. */
+html[data-view="ops"] .ops-md-gen { padding-bottom: 10px; border-bottom: 1px solid var(--o-line-2); margin-bottom: 10px }
+html[data-view="ops"] .ops-md-trend { display: flex; gap: 1px; height: 44px; margin-top: 10px; align-items: stretch }
+html[data-view="ops"] .ops-md-trend > span { flex: 1; display: flex; flex-direction: column-reverse; min-width: 2px; overflow: hidden; border-radius: 1px }
+html[data-view="ops"] .ops-md-trend > span > i { display: block; flex: none }
+html[data-view="ops"] .ops-md-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--o-dim); margin: 2px 0 0 }
+html[data-view="ops"] .ops-md-sub { margin-top: 4px }

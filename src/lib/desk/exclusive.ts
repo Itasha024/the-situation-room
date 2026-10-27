@@ -29,6 +29,9 @@ const OWN_NAMES: Record<string, { en: string[]; ar: string[] }> = {
   "Erem News": { en: ["Erem News", "Erem"], ar: ["إرم نيوز", "إرم"] },
   "Asharq Al-Awsat": { en: ["Asharq Al-Awsat"], ar: ["الشرق الأوسط"] },
   "Al-Araby Al-Jadeed": { en: ["Al-Araby Al-Jadeed", "The New Arab", "Al-Araby"], ar: ["العربي الجديد"] },
+  // Its English site under its own name, and Independent Arabia (27 Oct: "sources told The New Arab" was not marked).
+  "The New Arab": { en: ["The New Arab", "Al-Araby Al-Jadeed", "Al-Araby"], ar: ["العربي الجديد"] },
+  "Independent Arabia": { en: ["Independent Arabia"], ar: ["إندبندنت عربية", "اندبندنت عربية"] },
   "Al-Akhbar": { en: ["Al-Akhbar"], ar: ["الأخبار"] },
   // Lebanese papers (user, 18 Oct): "مصادر أميركية لـ«المدن»" is theirs; the agencies' news they carry is not.
   "Al-Modon": { en: ["Al-Modon", "Almodon", "Al Modon"], ar: ["المدن"] },

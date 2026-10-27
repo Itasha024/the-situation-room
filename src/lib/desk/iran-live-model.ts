@@ -47,7 +47,8 @@ export type ModelAnswer = { updates?: FigureUpdate[]; events?: EventUpdate[] };
 const LISTS: Record<EventUpdate["list"], string> = { energy: "Attacks on energy sites", nuclear: "Nuclear sites struck", ships: "Incidents" };
 
 /** Every figure the model may move, with its id. */
-export function slotsOf(boxes: Box[]): Slot[] {
+/** `nowCol`: the table columns that hold today's figure (the Gaza desk's tables name them otherwise, gaza-live.ts). */
+export function slotsOf(boxes: Box[], nowCol: RegExp = NOW_COL): Slot[] {
   const out: Slot[] = [];
   boxes.forEach((b, bi) => {
     if (DATA_BOXES.has(b.title)) return;
@@ -62,7 +63,7 @@ export function slotsOf(boxes: Box[]): Slot[] {
       (b.rows as { label: string; sub?: string; cells: (Cell | null)[] }[]).forEach((r, ri) => {
         if (DATA_ROWS[b.title]?.includes(r.label)) return;
         cols.forEach((c, j) => {
-          if (j && NOW_COL.test(c)) out.push({ id: `${bi}.${ri}.${j - 1}`, box: b.title, label: r.sub ? `${r.label} (${r.sub})` : r.label, col: c, unit, now: r.cells[j - 1] });
+          if (j && nowCol.test(c)) out.push({ id: `${bi}.${ri}.${j - 1}`, box: b.title, label: r.sub ? `${r.label} (${r.sub})` : r.label, col: c, unit, now: r.cells[j - 1] });
         });
       });
     } else if (b.type === "stat") {
@@ -121,10 +122,10 @@ const first = (v: string) => Number(numbersIn(v)[0]);
 const day = (iso: string) => String(iso).slice(0, 10);
 
 /** Apply the model's answer to the boxes. Pure, so the rules are testable. Returns the boxes that changed. */
-export function applyAnswer(boxes: Box[], answer: ModelAnswer, docs: Doc[], now: Date): Box[] {
+export function applyAnswer(boxes: Box[], answer: ModelAnswer, docs: Doc[], now: Date, nowCol: RegExp = NOW_COL): Box[] {
   const out = boxes.map((b) => structuredClone(b));
   const changed = new Set<number>();
-  const slots = new Map(slotsOf(boxes).map((s) => [s.id, s]));
+  const slots = new Map(slotsOf(boxes, nowCol).map((s) => [s.id, s]));
   for (const u of answer.updates ?? []) {
     const s = u && slots.get(String(u.slot));
     const doc = docs.find((d) => d.id === Number(u?.doc));

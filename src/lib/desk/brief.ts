@@ -1,5 +1,5 @@
 /**
- * The 6-hour brief.
+ * The 3-hour brief (every desk, user 27 Oct; Yemen was 6).
  *
  * The general situation, the front lines and the conflict-in-numbers are the three
  * panels a reader uses to orient. They are rebuilt on a fixed 6-hour cadence —
@@ -27,7 +27,7 @@ import { num } from "./wire-style.ts";
 import { type ExtraFront, inExtraFront, spotsOf, whereOf } from "./new-fronts.ts";
 import { govKey, type TrackedId, trackedAt, trackedOf } from "./front-areas.ts";
 
-export const CADENCE_HOURS = 6;
+export const CADENCE_HOURS = 3;
 
 /* ------------------------------------------------------------------ *
  * Window boundaries
@@ -96,6 +96,14 @@ export function briefWindow(now = new Date(), hours = CADENCE_HOURS): { updatedA
   const next = deskInstant(year, month, day, slot + hours);
   const start = deskInstant(year, month, day, slot - hours);
   return { updatedAt: deskIso(at), nextUpdateAt: deskIso(next), startedAt: deskIso(start) };
+}
+
+/**
+ * The briefs' latest points come every 3 hours; Yemen's fronts and Iran's arenas stay on the 6-hour clock (user,
+ * 27 Oct). True at 00, 06, 12 and 18 on Israel's clock, when they are written again from the last 6 hours.
+ */
+export function sixHourMark(updatedAt: string): boolean {
+  return Number(String(updatedAt).slice(11, 13)) % 6 === 0;
 }
 
 /**

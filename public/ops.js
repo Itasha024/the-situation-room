@@ -844,15 +844,37 @@
       <p class="ops-md-foot">${e.posts} post${e.posts === 1 ? '' : 's'}${e.comments ? `, ${e.comments} comments` : ''} in ${e.channels.length} source${e.channels.length === 1 ? '' : 's'}${r.reports ? ` · ${r.reports} reports of it left out` : ''} · read ${esc(hm(Date.parse(e.readAt), VIEW_TZ()))}</p>
     </article>`;
   }
+  /* The general mood over the last hours (user, 27 Oct: "reflect the mood across time"), and its trend: one column
+     an hour for two days, each split by the moods' shares. */
+  function moodGeneral(g) {
+    const r = g && g.read;
+    if (!r) return '';
+    const heat = Array.from({ length: 5 }, (_, i) => `<i class="${i < r.intensity ? 'on' : ''}"></i>`).join('');
+    const pts = (g.series || []).slice(-48);
+    const trend = pts.length > 1 ? `<div class="ops-md-trend" aria-label="The mood hour by hour, last two days">${pts.map((p) => `<span title="${esc(hm(Date.parse(p.at), VIEW_TZ()))} · ${esc(p.mood.slice(0, 2).map((m) => `${moodOf(m.k)[0]} ${m.w}%`).join(', '))}">${p.mood.map((m) => `<i style="height:${m.w}%;background:${moodOf(m.k)[1]}"></i>`).join('')}</span>`).join('')}</div><p class="ops-md-axis"><span>${esc(hm(Date.parse(pts[0].at), VIEW_TZ()))}</span><span>now</span></p>` : '';
+    return `<section class="ops-md-gen">
+      <div class="ops-md-h"><span>Last ${g.hours} hours · all channels</span><span class="ops-md-heat" title="How heated: ${r.intensity} of 5">${heat}</span></div>
+      ${moodBar(r.mood)}<p class="ops-md-top">${moodTop(r.mood, 4)}</p>
+      ${r.summary ? `<p class="ops-md-sum">${esc(r.summary)}</p>` : ''}
+      ${r.calls.length ? `<ul class="ops-md-calls">${r.calls.map((c) => `<li><b>${esc(CALL[c.kind] || 'Call')}</b> “${esc(c.en)}” ${chLink(c)}</li>`).join('')}</ul>` : ''}
+      ${r.quotes.length ? `<ul class="ops-md-q">${r.quotes.map((q) => `<li>“${esc(q.en)}” ${chLink(q)}</li>`).join('')}</ul>` : ''}
+      ${trend}
+      <p class="ops-md-foot">${g.posts} posts and ${g.comments} comments in ${g.channels} channels · read ${esc(hm(Date.parse(g.at), VIEW_TZ()))}</p>
+    </section>`;
+  }
   function paintMood() {
     const pane = rightEl && $('.ops-rp-mood', rightEl);
     if (!pane) return;
     const d = MD.data;
     const list = ((d && d.events) || []).filter((e) => MD.area === 'all' || e.area === MD.area);
-    const head = `<div class="ops-md-head"><b>Mood after the day's big events</b><small>Palestinian channels' and people's reactions on Telegram, X, YouTube and Bluesky${d && d.at ? `, last at ${esc(hm(Date.parse(d.at), VIEW_TZ()))}` : ''}.</small></div>
-      <div class="ops-on-areas" role="group" aria-label="Area">${[['all', 'All'], ['gaza', 'Gaza'], ['js', 'Judea and Samaria']].map(([k, n]) => `<button type="button" data-md-area="${k}" aria-pressed="${k === MD.area}">${n}</button>`).join('')}</div>`;
-    const empty = !d ? 'Reading the channels…' : d.following ? `Following ${d.following} event${d.following === 1 ? '' : 's'}; no reactions found yet.` : 'No big event in the last day.';
-    pane.innerHTML = `<div class="ops-md">${head}${list.length ? list.map(moodEvent).join('') : `<p class="ops-md-empty">${empty}</p>`}</div>`;
+    const head = `<div class="ops-md-head"><b>Public mood</b><small>Palestinian channels and their readers, read every hour${d && d.at ? `, last at ${esc(hm(Date.parse(d.at), VIEW_TZ()))}` : ''}.</small></div>`;
+    const gen = d && d.general && d.general.read ? moodGeneral(d.general) : `<p class="ops-md-empty">${d ? 'The first read of the hour is on its way.' : 'Reading the channels…'}</p>`;
+    const spikes = list.length || (d && d.events && d.events.length)
+      ? `<div class="ops-md-head ops-md-sub"><b>Spikes</b><small>Events that drew far more reactions than the rest.</small></div>
+        <div class="ops-on-areas" role="group" aria-label="Area">${[['all', 'All'], ['gaza', 'Gaza'], ['js', 'Judea and Samaria']].map(([k, n]) => `<button type="button" data-md-area="${k}" aria-pressed="${k === MD.area}">${n}</button>`).join('')}</div>
+        ${list.map(moodEvent).join('') || '<p class="ops-md-empty">None here in the last day.</p>'}`
+      : '';
+    pane.innerHTML = `<div class="ops-md">${head}${gen}${spikes}</div>`;
   }
   /* Each report card with a mood read gets a line under it (user, 27 Oct: "reflect it when needed"). */
   function markMoodCards() {

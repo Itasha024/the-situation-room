@@ -65,7 +65,8 @@ export async function runSiteSweep(store: Store, now = Date.now(), force = false
       if (!feed) return;
       const site: SweepSite = { id, name: feed.name, listed: 0, fresh: 0, relevant: 0, opened: 0, ok: false };
       sites.push(site);
-      const body = await fetchListing(feed.url, feed.ua);
+      // 25 s: Al-Araby's listing is 1.8 MB and The National's 0.7 MB; at 10 s they failed whenever the server was busy (27 Oct).
+      const body = await fetchListing(feed.url, feed.ua, 25_000);
       const listed = body ? (feed.html ? parseHtmlListing(body, feed.url, feed.html) : parseListing(body)) : [];
       site.ok = listed.length > 0;
       site.listed = listed.length;

@@ -121,7 +121,7 @@ const TG: ChannelScan[] = [
   // Their sites refuse automated readers (403); their channels post each
   // story's headline and first line, minutes after publication.
   { id: "Alakhbar_News", name: "Al-Akhbar", lean: "houthi", cadence: C5 },
-  { id: "eremnews", name: "Erem News", lean: "gov", cadence: C15 },
+  // Erem News's channel (t.me/eremnews) has posted nothing since 22 May 2026; its X account is read instead (27 Oct).
   { id: "ajMubasher", name: "Al Jazeera Mubasher", lean: "intl", cadence: C5 },
   { id: "asharqnews", name: "Asharq News", lean: "gov", cadence: C5 },
   { id: "almayadeen", name: "Al Mayadeen", lean: "houthi", cadence: C5 },
@@ -325,6 +325,8 @@ const X_ACCOUNTS: XAccount[] = [
   XA("TheNationalNews", "The National", "gov", C30),
   XA("alaraby_ar", "Al-Araby Al-Jadeed", "intl", C15),
   XA("alhurranews", "Alhurra", "intl", C15),
+  // Erem News's own account (27 Oct: its Telegram channel is silent and its site is behind Cloudflare).
+  XA("EremNews", "Erem News", "gov", C15),
 ];
 
 /** Newer than the last post read: X ids grow with time. A pinned post is old and falls out here. */
@@ -458,7 +460,8 @@ const RSS: RssFeed[] = [
   { id: "thenational", url: "https://www.thenationalnews.com/arc/outboundfeeds/rss/?outputType=xml", name: "The National", cadence: C10, whole: true, site: "thenationalnews.com" },
   { id: "almashhad", lang: "ar", url: "https://www.almashhad.news/feed", name: "Almashhad", cadence: C5, whole: true, site: "almashhad.news" },
   // A browser's user agent is refused (403); a plain client is served.
-  { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss.xml", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C5, whole: true, site: "alaraby.co.uk" },
+  // Moved to /rss (27 Oct: /rss.xml answers 301); about a day of articles in 1.8 MB, so every 15 minutes.
+  { id: "alaraby", lang: "ar", url: "https://www.alaraby.co.uk/rss", ua: "curl/8.5.0", name: "Al-Araby Al-Jadeed", cadence: C15, whole: true, site: "alaraby.co.uk" },
   // Its own feed opens to the server again (300 items, about a day and a half,
   // 18 Oct), and so do its articles: no Google link to resolve. Should it close
   // again, the read falls back to Google News's listing of the site by itself.
@@ -490,7 +493,8 @@ const RSS: RssFeed[] = [
   // Al-Binaa (user, 23 Oct: NNA's press review carried it), behind Cloudflare too; a morning paper read as Al-Akhbar is.
   { id: "albinaa", lang: "ar", url: gnews("site:al-binaa.com when:1d", "ar", "LB", "LB:ar"), name: "Al-Binaa", cadence: C1H, whole: true, site: "al-binaa.com" },
   { id: "erem", lang: "ar", url: gnews("site:eremnews.com when:2h", "ar", "AE", "AE:ar"), name: "Erem News", cadence: C10, whole: true, site: "eremnews.com" },
-  { id: "alhurra", lang: "ar", url: "https://www.alhurra.com/rss", name: "Alhurra", cadence: C5, whole: true, site: "alhurra.com" },
+  // Its feeds moved to alhurra.com/feed and /en/feed (27 Oct: the old addresses answer 301).
+  { id: "alhurra", lang: "ar", url: "https://alhurra.com/feed", name: "Alhurra", cadence: C5, whole: true, site: "alhurra.com" },
   { id: "arabnews", url: "https://www.arabnews.com/rss.xml", name: "Arab News", cadence: C5, whole: true, site: "arabnews.com" },
   { id: "reuters", url: "https://www.reuters.com/arc/outboundfeeds/news-sitemap/?outputType=xml", name: "Reuters", cadence: C10, whole: true, site: "reuters.com" },
   { id: "wsj", url: gnews("site:wsj.com when:1h"), name: "WSJ", cadence: C10, whole: true, site: "wsj.com" },
@@ -562,7 +566,7 @@ const RSS: RssFeed[] = [
   { id: "alquds-arabi", lang: "ar", url: "https://www.alquds.co.uk/feed/", name: "Al-Quds Al-Arabi", cadence: C10, whole: true, site: "alquds.co.uk" },
   { id: "newarab", url: "https://www.newarab.com/rss", ua: "curl/8.5.0", name: "The New Arab", cadence: C15, whole: true, site: "newarab.com" },
   { id: "aawsat-en", url: "https://english.aawsat.com/feed", name: "Asharq Al-Awsat", cadence: C10, whole: true, site: "english.aawsat.com" },
-  { id: "alhurra-en", url: "https://www.alhurra.com/en/rss", name: "Alhurra", cadence: C15, whole: true },
+  { id: "alhurra-en", url: "https://alhurra.com/en/feed", name: "Alhurra", cadence: C15, whole: true },
   { id: "ft-me", url: "https://www.ft.com/world/mideast?format=rss", name: "Financial Times", cadence: C30, whole: true, site: "ft.com" },
   { id: "bloomberg", url: "https://feeds.bloomberg.com/politics/news.rss", name: "Bloomberg", cadence: C30, whole: true, site: "bloomberg.com" },
   { id: "politico", url: "https://rss.politico.com/defense.xml", name: "Politico", cadence: C30, whole: true, site: "politico.com" },

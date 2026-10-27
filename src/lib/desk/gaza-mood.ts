@@ -126,6 +126,8 @@ export type MoodEvent = {
   score: number;
   /** Found from the reactions themselves, not from a desk card (user, 27 Oct: "it works both ways"). */
   found?: 1;
+  /** A spike: an event that drew far more traffic than the others (isSpike). */
+  spike?: 1;
   /** The search words the finder gave, and the posts it found the event by. */
   terms?: string[];
   seed?: MoodPost[];
@@ -426,4 +428,43 @@ export function readFound(json: Record<string, unknown>, posts: MoodPost[], word
     out.push({ fp: `mood-${hash(`${o.area}|${place.toLowerCase()}|${at.slice(0, 13)}`)}`, at, headline: claimLine(words(h)), ...(place ? { place } : {}), ...(pt ?? {}), area: o.area, score, found: 1, terms, seed });
   }
   return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * The general mood (user, 27 Oct: "reflect the mood across time … no need for a review for each report, just when
+ * something bigger happens that creates a lot of traffic"): every hour all the Palestinian channels' latest posts and
+ * the comments under the most-read are read together, and the mood over the last hours is kept as a series.
+ * ------------------------------------------------------------------ */
+
+export const GENERAL_SYSTEM = MOOD_SYSTEM
+  .replace(/^You read Palestinian Telegram channels[^\n]*/, "You read Palestinian Telegram channels and the comments under their posts for a desk that follows the GENERAL PUBLIC MOOD in Gaza and in Judea and Samaria over the last hours, across all events together.")
+  .replace(/^You get one event[^\n]*/m, "You get the numbered posts and comments of the last hours from many channels, each with its channel, time, views and the emoji people pressed. There is no single event: read the mood across all of them.")
+  .replace(/"about": true\|false \(false when nothing found is a reaction to THIS event\)/, '"about": true|false (false only when no item is a reaction at all)')
+  .replace(/Never retell the event/, "Say which events the reactions are mostly about, in a few words each; never retell them")
+  .replace(/Spell places as the EVENT does\./, "")
+  .replace(/"rel": \[the item numbers of every item about THIS event, reports and reactions alike\]/, '"rel": [the item numbers of every reaction]');
+
+export function generalPrompt(items: MoodPost[], hours: number): string {
+  const rx = (p: MoodPost) => (p.rx ? ` [${Object.entries(p.rx).map(([e, n]) => `${e}${n}`).join(" ")}]` : "");
+  return [`THE LAST ${hours} HOURS, ALL CHANNELS:`, "", "ITEMS:", ...items.map((p, i) => `${i}. [${p.c ? "comment" : "post"} ${p.ch.includes(":") ? p.ch : `@${p.ch}`}, ${p.at.slice(11, 16)} UTC${p.v ? `, ${p.v} views` : ""}${rx(p)}] ${cut(p.x, 220)}`)].join("\n");
+}
+
+/** One point of the general mood's series. */
+export type MoodPoint = { at: string; mood: { k: MoodKind; w: number }[]; intensity: number; posts: number; comments: number; channels: number };
+export type GeneralMood = { at: string; hours: number; read: MoodRead | null; posts: number; comments: number; channels: number; series: MoodPoint[] };
+
+/** The series kept: two days of hourly points, the newest last. */
+export function addPoint(series: MoodPoint[], p: MoodPoint, now: number): MoodPoint[] {
+  return [...series.filter((x) => now - Date.parse(x.at) < 48 * 3600_000 && x.at !== p.at), p].sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/**
+ * A spike: an event whose posts drew far more than the others — told by many channels, or a large share of all the
+ * stir of the hours read. Only spikes get a reading of their own.
+ */
+export function isSpike(seed: MoodPost[], top: MoodPost[]): boolean {
+  const channels = new Set(seed.map((p) => p.ch.toLowerCase())).size;
+  const all = top.reduce((s, p) => s + stirOf(p), 0) || 1;
+  const mine = seed.reduce((s, p) => s + stirOf(p), 0);
+  return channels >= 5 || (channels >= 3 && mine / all >= 0.2);
 }

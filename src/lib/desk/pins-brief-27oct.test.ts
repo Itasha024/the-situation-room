@@ -56,7 +56,7 @@ test("every desk's points in one order: unknown ids out, every point placed, the
     yemen: ["A coalition strike in Sanaa killed a senior Houthi commander [[1]]."],
     gaza: ["A 6-year-old died of wounds in Khan Younis [[1]].", "A drone flew low over western Jabalia camp [[2]].", "Gaza kitchens struggle as aid shrinks [[3]]."],
   };
-  const r = readRanking({ rank: ["i1", "y1", "g1", "x9", "i2"], cut: ["g2", "g3"], fixed: { i2: "Israeli forces conducted explosions in southern Lebanon [[2]].", g1: "Something else entirely [[1]]." } }, points);
+  const r = readRanking({ scores: { i1: 9, y1: 8, g1: 7, x9: 10, i2: 5, g2: 2, g3: 2 }, cut: ["g2", "g3"], fixed: { i2: "Israeli forces conducted explosions in southern Lebanon [[2]].", g1: "Something else entirely [[1]]." } }, points);
   const all: AllBrief = { key: "k", updatedAt: "", points, ...r };
   assert.deepEqual(allBriefPoints(all).map((p) => `${p.desk}${p.i}`), ["iran0", "yemen0", "gaza0", "iran1"]);
   assert.equal(allBriefPoints(all)[3].text, "Israeli forces conducted explosions in southern Lebanon [[2]].");

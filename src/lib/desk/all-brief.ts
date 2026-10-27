@@ -14,6 +14,7 @@ import { BRIEF_KEY, type StoredBrief } from "./brief-store.ts";
 import { IRAN_BRIEF_KEY, type IranBrief } from "./iran-brief.ts";
 import { GAZA_BRIEF_KEY, type GazaBrief } from "./gaza-brief.ts";
 import type { DeskStore } from "./store.ts";
+import { band } from "./rank-points.ts";
 
 export const ALL_BRIEF_KEY = "brief:all";
 /** The All page's brief: at most this many points. */
@@ -34,22 +35,24 @@ export type AllBrief = {
   model?: string;
 };
 
+// Gemini first: Nemotron listed the desks one after another on the first night (27 Oct), Iran's points last.
 const RANKERS: ChainModel[] = [
-  { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
+  { provider: "gemini", id: "gemini-3.8-flash" },
   { provider: "groq", id: "openai/gpt-oss-120b" },
+  { provider: "nvidia", id: "nvidia/nemotron-3-ultra-550b-a55b" },
   { provider: "gemini", id: "gemini-3.5-flash-lite" },
   { provider: "gemini", id: "gemini-3.1-flash-lite" },
 ];
 
 const SYSTEM = `You are the chief editor of a live news site with three desks: Iran (Israel, the US, Iran and its allies, Lebanon, Iraq, the Gulf), Yemen (the Houthis, the government, the Saudi-led coalition, the Red Sea) and Gaza (Gaza, Judea and Samaria).
 You get every point of the three desks' briefs, each as: [its id] (its desk) text.
-1. "rank": every id, from the most important development to the least, across all desks. Importance is what changes the war and the region the most:
-   - first: deaths in numbers, a senior commander killed, strikes and missiles on states, capitals, energy sites and shipping, a ship hit or seized, a front's line moving, decisions on war or peace (a ceasefire, talks, a deal, a blockade, sanctions), a leader's own new decision or threat of war;
-   - then: other attacks with dead or wounded, ground fighting, major diplomatic moves and meetings of leaders;
-   - last: arrests and raids with no one hurt, words with no act, reactions, condemnations, features.
+1. "scores": every id with its importance from 1 to 10, judged against all desks' points alike, never by desk. Importance is what changes the war and the region the most:
+   - 8-10: deaths in numbers, a senior commander killed, strikes and missiles on states, capitals, energy sites and shipping, a ship hit or seized, a front's line moving, decisions on war or peace (a ceasefire, talks, a deal, a blockade, sanctions), a leader's own new decision or threat of war;
+   - 5-7: other attacks with dead or wounded, ground fighting, major diplomatic moves and meetings of leaders;
+   - 1-4: arrests and raids with no one hurt, words with no act, reactions, condemnations, features.
 2. "cut": the ids not worth a brief at all: a drone or aircraft seen overhead with nothing hit, a routine raid or arrest, a road closed, a feature or human-interest story (community kitchens, a family's story), a condemnation or a statement with nothing new, a repeat of another point. Never cut a point with a death, a strike on a state or a decision.
 3. "fixed": only for a point whose tense or grammar is wrong, its id to the corrected text. A brief tells what happened: past tense ("Israeli forces conduct explosions" → "Israeli forces conducted explosions"); what a speaker said keeps its "Speaker: …" form. Change nothing else: same words, same facts, every [[n]] mark kept where it was.
-Answer with JSON only: {"rank":["y2","i1",…],"cut":["g3",…],"fixed":{"i4":"…"}}`;
+Answer with JSON only: {"scores":{"y2":9,"i1":8,…},"cut":["g3",…],"fixed":{"i4":"…"}}`;
 
 /** The three briefs' points, as the desks store them. */
 export async function briefPoints(store: DeskStore): Promise<{ key: string; points: Record<BriefDesk, string[]> }> {
@@ -88,7 +91,17 @@ export function readRanking(json: Record<string, unknown>, points: Record<BriefD
   const all = (Object.keys(points) as BriefDesk[]).flatMap((d) => points[d].map((_, i) => `${LETTER[d]}${i + 1}`));
   const known = new Set(all);
   const ids = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).trim().toLowerCase()).filter((x) => known.has(x)) : []);
-  const ranked = [...new Set([...ids(json.rank), ...all])];
+  // Each point's score (1-10), the writers' bands breaking ties; an order given instead is read as one.
+  const sc = json.scores && typeof json.scores === "object" ? (json.scores as Record<string, unknown>) : {};
+  const scoreOf = new Map(Object.entries(sc).map(([k, v]) => [k.trim().toLowerCase(), Number(v)]).filter(([k, v]) => known.has(k as string) && Number.isFinite(v)) as [string, number][]);
+  const listed = ids(json.rank);
+  const textOf = (id: string) => points[DESK_OF[id[0]]][Number(id.slice(1)) - 1];
+  const fallback = (id: string) => (listed.includes(id) ? 10 - (listed.indexOf(id) * 9) / Math.max(1, listed.length) : 6 - band(textOf(id)));
+  // Words alone never outrank an act (27 Oct: two points of Iran's UN envoy's speech above Gaza's dead): a point of
+  // someone's words is held to 5, one with no new fact to 2, a meeting or a price to 6 (rank-points.ts's bands).
+  const CAP = [10, 10, 6, 5, 2];
+  const score = (id: string) => Math.min(scoreOf.get(id) ?? fallback(id), CAP[band(textOf(id))] ?? 10, wordsOnly(textOf(id)) ? 5 : 10);
+  const ranked = [...all].sort((a, b) => score(b) - score(a) || band(textOf(a)) - band(textOf(b)) || all.indexOf(a) - all.indexOf(b));
   const of = (id: string) => ({ desk: DESK_OF[id[0]], i: Number(id.slice(1)) - 1 });
   const fixed: Record<string, string> = {};
   const f = json.fixed && typeof json.fixed === "object" ? (json.fixed as Record<string, unknown>) : {};
@@ -101,6 +114,13 @@ export function readRanking(json: Record<string, unknown>, points: Record<BriefD
   return { rank: ranked.map(of), cut: [...new Set(ids(json.cut))].map(of), fixed };
 }
 
+/** A speech told as a speech ("Darazi tells the Security Council …", "X: …"): its first sentence has no deed of its speaker's. */
+export function wordsOnly(point: string): boolean {
+  const first = point.replace(/\s*\[\[\d+\]\]/g, "").split(/(?<=\.)\s/)[0];
+  const said = /^[^:]{2,70}:\s/.test(first) || /^[^,;]{0,90}?\b(?:tells?|told|says?|said|warn(?:s|ed)|urg(?:es|ed)|calls? (?:on|for)|called (?:on|for)|accus(?:es|ed)|demand(?:s|ed))\b/i.test(first);
+  return said && !/\b(?:killed|struck|seized|launched|fired|shot down|captured|intercepted|sank|says it (?:struck|killed|hit|seized|launched))\b/i.test(first);
+}
+
 let running: Promise<void> | null = null;
 
 /** Rank the desks' points again when any desk's brief has changed. Safe to call every tick. */
@@ -110,9 +130,12 @@ export function refreshAllBrief(store: DeskStore): Promise<void> {
       const { key, points } = await briefPoints(store);
       const had = await store.getJson<AllBrief>(ALL_BRIEF_KEY).catch(() => null);
       if (had?.key === key) return;
-      const lines = (Object.keys(points) as BriefDesk[]).flatMap((d) => points[d].map((p, i) => `[${LETTER[d]}${i + 1}] (${d}) ${p}`));
+      // The desks' points taken in turn, so no desk reads as first or last.
+      const lines: string[] = [];
+      const desks = Object.keys(points) as BriefDesk[];
+      for (let i = 0; desks.some((d) => points[d][i] !== undefined); i++) for (const d of desks) if (points[d][i] !== undefined) lines.push(`[${LETTER[d]}${i + 1}] (${d}) ${points[d][i]}`);
       if (!lines.length) return;
-      const answer = await askChain("all-brief", SYSTEM, lines.join("\n"), { models: RANKERS, timeoutMs: 60_000, accept: (j) => (Array.isArray(j.rank) && j.rank.length ? null : "no rank") });
+      const answer = await askChain("all-brief", SYSTEM, lines.join("\n"), { models: RANKERS, timeoutMs: 60_000, accept: (j) => (j.scores && typeof j.scores === "object" && Object.keys(j.scores).length ? null : "no scores") });
       if (!answer) return;
       await store.putJson(ALL_BRIEF_KEY, { key, updatedAt: new Date().toISOString(), points, ...readRanking(answer.json, points), model: answer.model } satisfies AllBrief);
       console.log(`[all-brief] ranked ${lines.length} points (${answer.model})`);

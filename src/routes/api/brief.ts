@@ -102,7 +102,10 @@ function banded<T>(s: T): T {
   const pts = (s as { points?: unknown } | null | undefined)?.points;
   if (!Array.isArray(pts)) return s;
   const points = servedPoints(pts.map(String));
-  return { ...s, points, bands: points.map((p) => band(p)) };
+  // The points joined as one text: its paragraphs read the same way ("Hamas: it called …", 27 Oct).
+  const line = (s as { line?: unknown }).line;
+  const fixed = typeof line === "string" ? { line: line.split("\n\n").map(selfSpeaker).join("\n\n") } : {};
+  return { ...s, ...fixed, points, bands: points.map((p) => band(p)) };
 }
 
 /**

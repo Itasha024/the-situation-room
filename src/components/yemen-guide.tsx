@@ -1,5 +1,5 @@
 import { DeskDoc } from "@/components/desk-doc";
-import { Box, Callout, Chart, ExplainerSection, GUIDE_CSS, GuideBody, GuideHero, H3, Row, ar, catId, exToc, type Explainer, type Photo, type TocGroup } from "@/components/guide-kit";
+import { Box, Callout, Chart, ExplainerSection, GUIDE_CSS, GuideBody, GuideHero, H3, Row, ar, catId, exToc, type Explainer, useLiveExplain, type Photo, type TocGroup } from "@/components/guide-kit";
 import data from "../../public/yemen-explain.json";
 
 const DESK = "/yemen-conflict-desk";
@@ -29,7 +29,8 @@ const PHOTOS: Record<string, Photo> = {
  * category (public/yemen-explain.json), so the desk's Explainers panel can link to a section. The explainers hold
  * the background before the Timeline (1990) and the standing facts; the Timeline tells the war's course.
  */
-const AS_OF = "26 October 2026";
+/** The map's note is as of the day the guide was written. */
+const MAP_AS_OF = "26 October 2026";
 const CATS = ["Who's who", "History", "The war at sea", "Economy"];
 const ITEMS = (data as { items: Explainer[] }).items;
 
@@ -100,6 +101,7 @@ const TOC: TocGroup[] = [
 ];
 
 export function YemenGuide() {
+  const live = useLiveExplain("yemen", data as { asOf: string; items: Explainer[] });
   return (
     <DeskDoc guide back={{ href: DESK, label: "Back to the Yemen desk" }}>
       <style>{GUIDE_CSS + LOCAL_CSS}</style>
@@ -107,17 +109,10 @@ export function YemenGuide() {
         <GuideHero
           kicker="Yemen desk · The guide"
           title="Who is who in Yemen's war"
-          standfirst="The two camps and their leaders, who holds which part of the country, the words you will meet, and the background: Yemen's history before 1990, the war at sea and the economy. The desk's Timeline tells the war's course and its reports carry what changes."
-          asOf={AS_OF}
+          standfirst="The two camps and their leaders, who holds which part of the country, and the background to the war."
+          asOf={live.asOf}
           accent="#ce1126"
           photo={HERO}
-          desk={{ href: DESK, name: "Yemen" }}
-          facts={[
-            { v: "2014", l: "The Houthis take Sanaa" },
-            { v: "2 capitals", l: "Sanaa (Houthis) and Aden (government)" },
-            { v: "8 men", l: "The Presidential Leadership Council" },
-            { v: "Jan 2026", l: "The UAE says its last troops left" },
-          ]}
         />
         <GuideBody toc={TOC}>
         <H3 id={catId("Who's who")} cat="Who's who">Who's who</H3>
@@ -198,14 +193,14 @@ export function YemenGuide() {
             </tbody>
           </table>
         </div>
-        <p className="pg-note">As on the desk's map on {AS_OF}. By area the government holds more than half of Yemen; the Houthis hold about a third, with most of the people.</p>
+        <p className="pg-note">As on the desk's map on {MAP_AS_OF}. By area the government holds more than half of Yemen; the Houthis hold about a third, with most of the people.</p>
 
-        {ITEMS.filter((e) => e.cat === "Who's who").map((e) => <ExplainerSection key={e.title} e={e} desk={DESK} photo={PHOTOS[e.title]} />)}
+        {live.items.filter((e) => e.cat === "Who's who").map((e) => <ExplainerSection key={e.title} e={e} desk={DESK} photo={PHOTOS[e.title]} />)}
 
         {CATS.slice(1).map((c) => (
           <div key={c}>
             <H3 id={catId(c)} cat={c}>{c}</H3>
-            {ITEMS.filter((e) => e.cat === c).map((e) => <ExplainerSection key={e.title} e={e} desk={DESK} photo={PHOTOS[e.title]} />)}
+            {live.items.filter((e) => e.cat === c).map((e) => <ExplainerSection key={e.title} e={e} desk={DESK} photo={PHOTOS[e.title]} />)}
           </div>
         ))}
 

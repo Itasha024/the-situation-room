@@ -16,6 +16,7 @@ import { Route as YemenRouteImport } from './routes/yemen'
 import { Route as YemenConflictDeskRouteImport } from './routes/yemen-conflict-desk'
 import { Route as ApiBriefRouteImport } from './routes/api/brief'
 import { Route as ApiDeskRouteImport } from './routes/api/desk'
+import { Route as ApiExplainRouteImport } from './routes/api/explain'
 import { Route as ApiGazaNumbersRouteImport } from './routes/api/gaza-numbers'
 import { Route as ApiMoodRouteImport } from './routes/api/mood'
 import { Route as ApiOilRouteImport } from './routes/api/oil'
@@ -66,6 +67,11 @@ const ApiBriefRoute = ApiBriefRouteImport.update({
 const ApiDeskRoute = ApiDeskRouteImport.update({
   id: '/api/desk',
   path: '/api/desk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExplainRoute = ApiExplainRouteImport.update({
+  id: '/api/explain',
+  path: '/api/explain',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGazaNumbersRoute = ApiGazaNumbersRouteImport.update({
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/explain': typeof ApiExplainRoute
   '/api/gaza-numbers': typeof ApiGazaNumbersRoute
   '/api/mood': typeof ApiMoodRoute
   '/api/oil': typeof ApiOilRoute
@@ -185,6 +192,7 @@ export interface FileRoutesByTo {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/explain': typeof ApiExplainRoute
   '/api/gaza-numbers': typeof ApiGazaNumbersRoute
   '/api/mood': typeof ApiMoodRoute
   '/api/oil': typeof ApiOilRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/yemen-conflict-desk': typeof YemenConflictDeskRoute
   '/api/brief': typeof ApiBriefRoute
   '/api/desk': typeof ApiDeskRoute
+  '/api/explain': typeof ApiExplainRoute
   '/api/gaza-numbers': typeof ApiGazaNumbersRoute
   '/api/mood': typeof ApiMoodRoute
   '/api/oil': typeof ApiOilRoute
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/explain'
     | '/api/gaza-numbers'
     | '/api/mood'
     | '/api/oil'
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/explain'
     | '/api/gaza-numbers'
     | '/api/mood'
     | '/api/oil'
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/yemen-conflict-desk'
     | '/api/brief'
     | '/api/desk'
+    | '/api/explain'
     | '/api/gaza-numbers'
     | '/api/mood'
     | '/api/oil'
@@ -314,6 +326,7 @@ export interface RootRouteChildren {
   YemenConflictDeskRoute: typeof YemenConflictDeskRoute
   ApiBriefRoute: typeof ApiBriefRoute
   ApiDeskRoute: typeof ApiDeskRoute
+  ApiExplainRoute: typeof ApiExplainRoute
   ApiGazaNumbersRoute: typeof ApiGazaNumbersRoute
   ApiMoodRoute: typeof ApiMoodRoute
   ApiOilRoute: typeof ApiOilRoute
@@ -381,6 +394,13 @@ declare module '@tanstack/react-router' {
       path: '/api/desk'
       fullPath: '/api/desk'
       preLoaderRoute: typeof ApiDeskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/explain': {
+      id: '/api/explain'
+      path: '/api/explain'
+      fullPath: '/api/explain'
+      preLoaderRoute: typeof ApiExplainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/gaza-numbers': {
@@ -506,6 +526,7 @@ const rootRouteChildren: RootRouteChildren = {
   YemenConflictDeskRoute: YemenConflictDeskRoute,
   ApiBriefRoute: ApiBriefRoute,
   ApiDeskRoute: ApiDeskRoute,
+  ApiExplainRoute: ApiExplainRoute,
   ApiGazaNumbersRoute: ApiGazaNumbersRoute,
   ApiMoodRoute: ApiMoodRoute,
   ApiOilRoute: ApiOilRoute,
@@ -526,3 +547,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

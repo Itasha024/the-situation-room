@@ -1,5 +1,5 @@
 import { DeskDoc } from "@/components/desk-doc";
-import { Box, Chart, ExplainerSection, GUIDE_CSS, GuideBody, GuideHero, H3, Row, ar, catId, exToc, type Explainer, type Photo, type TocGroup } from "@/components/guide-kit";
+import { Box, Chart, ExplainerSection, GUIDE_CSS, GuideBody, GuideHero, H3, Row, ar, catId, exToc, type Explainer, useLiveExplain, type Photo, type TocGroup } from "@/components/guide-kit";
 import data from "../../public/iran-explain.json";
 
 const DESK = "/iran-conflict-desk";
@@ -28,7 +28,6 @@ const PHOTOS: Record<string, Photo> = {
  * desk's explainers (public/iran-explain.json) under their categories. The explainers hold the background before
  * July 2015 and the standing facts; the desk's Timeline holds what happened from the 2015 deal on.
  */
-const AS_OF = "26 October 2026";
 const CATS = ["Who's who", "History", "Military", "Economy and society"];
 const items = (data as { items: Explainer[] }).items;
 
@@ -42,6 +41,7 @@ const LOCAL_CSS = `
 `;
 
 export function IranGuide() {
+  const live = useLiveExplain("iran", data as { asOf: string; items: Explainer[] });
   const cats = [...CATS, ...[...new Set(items.map((e) => e.cat || "Other"))].filter((c) => !CATS.includes(c))];
   const toc: TocGroup[] = cats.map((c) => ({
     title: c,
@@ -59,24 +59,17 @@ export function IranGuide() {
         <GuideHero
           kicker="Iran desk · The guide"
           title="How Iran is ruled and fights"
-          standfirst="The Supreme Leader and the councils, the Revolutionary Guards and the army, the allied groups Iran calls the axis of resistance, the nuclear programme, missiles and oil. For what happened from the 2015 nuclear deal on, see the desk's Timeline."
-          asOf={AS_OF}
+          standfirst="Who rules Iran, who fights for it, and the nuclear programme, missiles and oil."
+          asOf={live.asOf}
           accent="#239f40"
           photo={HERO}
-          desk={{ href: DESK, name: "Iran" }}
-          facts={[
-            { v: "1979", l: "The Islamic Republic founded" },
-            { v: "Mar 2026", l: "Mojtaba Khamenei Supreme Leader" },
-            { v: "88", l: "Clerics in the Assembly of Experts" },
-            { v: "290", l: "Seats in the Majlis" },
-          ]}
         />
         <GuideBody toc={toc}>
         {cats.map((c) => (
           <div key={c}>
             <H3 id={catId(c)} cat={c}>{c}</H3>
             {c === "Who's who" ? <WhoCharts /> : null}
-            {items.filter((e) => (e.cat || "Other") === c).map((e) => (
+            {live.items.filter((e) => (e.cat || "Other") === c).map((e) => (
               <ExplainerSection key={e.title} e={e} desk={DESK} photo={PHOTOS[e.title]} />
             ))}
           </div>

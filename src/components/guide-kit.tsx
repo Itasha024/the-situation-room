@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useRef } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 
 /**
  * The desks' guide pages (user, 26 Oct: "the full explainer page … looks nice with all the diagrams"; later the same
@@ -156,31 +156,26 @@ export function Callout({ label, icon = "info", tone, children }: { label: React
   );
 }
 
-/** The page's head: the desk, the title, a line on what it holds, the date it is correct to, a photo and key figures. */
-export function GuideHero({ kicker, title, standfirst, asOf, accent, photo, facts, desk }: {
+/**
+ * The page's head (user, 27 Oct: "put image under the header and short explanation … remove references to desk or
+ * timeline on top … remove the 4 squares with the numbers"): the desk, the title, the photo under it, a short line on
+ * what the page holds and the date it is correct to.
+ */
+export function GuideHero({ kicker, title, standfirst, asOf, accent, photo }: {
   kicker: string;
   title: string;
   standfirst: ReactNode;
   asOf: string;
   accent: string;
   photo?: Photo;
-  facts?: { v: ReactNode; l: ReactNode }[];
-  desk: { href: string; name: string };
 }) {
   return (
-    <header className={`pg-hero${photo ? " has-fig" : ""}`} style={{ "--acc": accent } as CSSProperties}>
-      <div className="pg-hero-t">
-        <p className="pg-kicker"><Icon n="book" />{kicker}</p>
-        <h2 className="pg-h1">{title}</h2>
-        <p className="pg-stand">{standfirst}</p>
-        <p className="pg-meta">
-          <span className="pg-asof"><i />Correct as of {asOf}</span>
-          <a className="pg-btn" href={desk.href}>← The {desk.name} desk</a>
-          <a className="pg-btn" href={`${desk.href}#tl=now`}><Icon n="clock" />The desk's Timeline</a>
-        </p>
-      </div>
+    <header className="pg-hero" style={{ "--acc": accent } as CSSProperties}>
+      <p className="pg-kicker"><Icon n="book" />{kicker}</p>
+      <h2 className="pg-h1">{title}</h2>
       {photo ? <Figure p={photo} className="pg-hero-fig" eager /> : null}
-      {facts?.length ? <Facts items={facts} /> : null}
+      <p className="pg-stand">{standfirst}</p>
+      <p className="pg-meta"><span className="pg-asof"><i />Correct as of {asOf}</span></p>
     </header>
   );
 }
@@ -270,11 +265,13 @@ export const GUIDE_CSS = `
 .pg-main b,.pg-main strong{color:var(--pg-strong)}
 
 /* The hero. */
-.pg-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:22px 30px;align-items:center;margin:0 0 26px;padding:30px 30px 24px;border:1px solid var(--pg-line);border-top:3px solid var(--acc,var(--pg-sel));border-radius:6px;overflow:hidden;
+.pg-hero{position:relative;display:block;margin:0 0 26px;padding:30px 30px 24px;border:1px solid var(--pg-line);border-top:3px solid var(--acc,var(--pg-sel));border-radius:6px;overflow:hidden;
   background:radial-gradient(110% 120% at 0% 0%,color-mix(in srgb,var(--acc,var(--pg-sel)) 15%,transparent),transparent 62%),
   repeating-linear-gradient(0deg,transparent 0 31px,color-mix(in srgb,var(--pg-line) 50%,transparent) 31px 32px),
   repeating-linear-gradient(90deg,transparent 0 31px,color-mix(in srgb,var(--pg-line) 50%,transparent) 31px 32px),var(--pg-panel)}
-.pg-hero.has-fig{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}
+.pg-hero .pg-h1{margin-bottom:16px}
+.pg-hero-fig{margin:0 0 16px}
+.pg-hero-fig img{aspect-ratio:21/9;max-height:440px}
 .pg-kicker{display:flex;align-items:center;gap:8px;margin:0 0 10px!important;font:700 12.5px/1 var(--pg-cond);letter-spacing:.18em;text-transform:uppercase;color:var(--pg-sel)}
 .pg-kicker .pg-ic{font-size:16px}
 .pg-h1{margin:0 0 12px;font:700 clamp(32px,4.6vw,50px)/1.02 var(--pg-cond);letter-spacing:.005em;color:var(--pg-strong);text-wrap:balance}
@@ -413,9 +410,9 @@ export const GUIDE_CSS = `
 @media (max-width:760px){
   .doc-root main.doc.doc-guide,html[data-view] .doc-root main.doc.doc-guide{margin:12px auto 20px;padding:0 12px}
   .pg-toc{margin:0 -12px 8px}
-  .pg-hero,.pg-hero.has-fig{grid-template-columns:minmax(0,1fr);padding:22px 16px 16px}
-  .pg-hero-fig{order:-1;margin:-22px -16px 0}
-  .pg-hero-fig img{border-radius:0;border:0;aspect-ratio:16/9}
+  .pg-hero{padding:22px 16px 16px}
+  .pg-hero-fig{margin:0 -16px 14px}
+  .pg-hero-fig img{border-radius:0;border-left:0;border-right:0;aspect-ratio:16/9}
   .pg-hero-fig figcaption{padding:0 16px}
   .pg-stand{font-size:16px}
   .pg-facts{grid-template-columns:1fr 1fr}
@@ -445,6 +442,23 @@ export type Explainer = { title: string; cat?: string; dates?: string; sum: stri
 /** The id of an explainer's section on its desk's guide page; the panel's links use the same. */
 export const exId = (title: string) => "ex-" + title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 export const catId = (cat: string) => "cat-" + cat.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+/**
+ * The explainers as the page shows them: the file's at first, then the version the weekly check keeps current
+ * (src/lib/desk/explain-live.ts, /api/explain) when it is newer. Titles never change, so the contents stay. `asOf`
+ * in words ("27 October 2026").
+ */
+export function useLiveExplain(desk: string, file: { asOf: string; items: Explainer[] }): { items: Explainer[]; asOf: string } {
+  const [d, setD] = useState(file);
+  useEffect(() => {
+    fetch(`/api/explain?desk=${desk}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (j && Array.isArray(j.items) && j.items.length && String(j.asOf) > String(file.asOf)) setD(j); })
+      .catch(() => {});
+  }, [desk, file.asOf]);
+  const t = Date.parse(`${d.asOf}T12:00:00Z`);
+  return { items: d.items, asOf: Number.isFinite(t) ? new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : d.asOf };
+}
+
 /** The contents' entries for a category's explainers. */
 export const exToc = (items: Explainer[]) => items.map((e) => ({ id: exId(e.title), label: e.title }));
 

@@ -1,5 +1,5 @@
 import { DeskDoc } from "@/components/desk-doc";
-import { Box, Callout, Chart, GUIDE_CSS as CSS, GuideBody, GuideHero, H3, Row, ar, he, catId, exToc, ExplainerSection, type Explainer, type Photo, type TocGroup } from "@/components/guide-kit";
+import { Box, Callout, Chart, GUIDE_CSS as CSS, GuideBody, GuideHero, H3, Row, ar, he, catId, exToc, ExplainerSection, type Explainer, useLiveExplain, type Photo, type TocGroup } from "@/components/guide-kit";
 import data from "../../public/gaza-explain.json";
 
 const items = (data as { items: Explainer[] }).items;
@@ -47,9 +47,9 @@ const TOC: TocGroup[] = [
  * reflect the full picture clearly"). Static: facts as of the date in the lede; the desk's reports carry
  * what changes. The desk's words apply here too (Judea and Samaria, Israeli citizens).
  */
-const AS_OF = "26 October 2026";
 
 export function PaGuide() {
+  const live = useLiveExplain("gaza", data as { asOf: string; items: Explainer[] });
   return (
     <DeskDoc guide back={{ href: DESK, label: "Back to the Gaza – Judea & Samaria desk" }}>
       <style>{CSS}</style>
@@ -57,17 +57,10 @@ export function PaGuide() {
         <GuideHero
           kicker="Gaza – Judea & Samaria desk · The guide"
           title="How the Palestinian side is built"
-          standfirst="The PLO, the Palestinian Authority and its security services, Fatah and the Tanzim, Hamas, Islamic Jihad and the other factions, the elections and the money, and the background from Oslo to 2023. The desk's reports carry what changes."
-          asOf={AS_OF}
+          standfirst="The PLO, the Palestinian Authority, Fatah, Hamas and the other factions, and how they are run and paid for."
+          asOf={live.asOf}
           accent="#3b82f6"
           photo={HERO}
-          desk={{ href: DESK, name: "Gaza – Judea & Samaria" }}
-          facts={[
-            { v: "3 posts", l: "Abbas heads the PLO, the PA and Fatah" },
-            { v: "2006", l: "Last national election" },
-            { v: "11 Sep 2027", l: "Next presidential and legislative vote" },
-            { v: "18 · 22 · 60%", l: "Areas A · B · C of Judea and Samaria" },
-          ]}
         />
         <GuideBody toc={TOC}>
 
@@ -266,7 +259,7 @@ export function PaGuide() {
         {cats.map((c) => (
           <div key={c}>
             <H3 id={catId(c)} cat={c} kicker="Background">{c}</H3>
-            {items.filter((e) => (e.cat || "Background") === c).map((e) => <ExplainerSection key={e.title} e={e} desk={DESK} photo={PHOTOS[e.title]} />)}
+            {live.items.filter((e) => (e.cat || "Background") === c).map((e) => <ExplainerSection key={e.title} e={e} desk={DESK} photo={PHOTOS[e.title]} />)}
           </div>
         ))}
 

@@ -82,7 +82,7 @@ test("row index maps: new fields only at the end, the old ones where the front e
   const src = readFileSync(new URL("../../routes/api/traffic.ts", import.meta.url), "utf8");
   const airRow = src.slice(src.indexOf("rows.push([a.hex"), src.indexOf("]);", src.indexOf("rows.push([a.hex")));
   assert.equal(topCommas(airRow) + 1, AIR_ROW_LEN);
-  const seaRow = src.slice(src.indexOf("ships.map((s) => [s.mmsi"), src.indexOf("]) });", src.indexOf("ships.map((s) => [s.mmsi")));
+  const seaRow = src.slice(src.indexOf("ships.map((s) => [s.mmsi"), src.indexOf("]) };", src.indexOf("ships.map((s) => [s.mmsi")));
   assert.equal(topCommas(seaRow) + 1, SEA_ROW_LEN);
   // A scripted edit once turned the callsign test's \d into a plain d, and no continued track ever found its route.
   assert.ok(!src.includes("{3}d/"), "a callsign regex lost its backslash");

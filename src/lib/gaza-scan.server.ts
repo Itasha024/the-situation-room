@@ -16,6 +16,7 @@ import { runMood } from "./gaza-mood.server.ts";
 import { GAZA_SEARCHES, GAZA_TG, GAZA_X, WAFA_SITE } from "./desk/gaza-sources.ts";
 import { hearable, listenToVideos } from "./desk/listen.ts";
 import { runGateAudit, setYemenGate } from "./desk/gate-audit.ts";
+import { refreshDueExplainers } from "./desk/explain-live.ts";
 import { isGazaDeskItem, passesGazaOwnGate } from "./desk/gaza-reader.ts";
 import { type Candidate, GAZA_READER, editCandidates } from "./desk/editor.ts";
 import { getStore } from "./desk/store.ts";
@@ -346,6 +347,8 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
   void refreshIdfArea(store).catch((err) => console.error("[gaza-line]", err instanceof Error ? err.message : err));
   // The researched numbers kept current from the reports, every 6 hours, one model call (gaza-live.ts).
   void refreshGazaNumbers(store).catch((err) => console.error("[gaza-numbers]", err instanceof Error ? err.message : err));
+  // The three desks' explainers, each checked once a week against the week's reports, one desk at a time (explain-live.ts).
+  void refreshDueExplainers(store).catch((err) => console.error("[explain]", err instanceof Error ? err.message : err));
   // The mood after the big events (gaza-mood.server.ts), every 15 minutes; it must never cost the cycle.
   void runMood(store).catch((err) => console.error("[mood]", err instanceof Error ? err.message : err));
   // The gates' daily check, all three desks (gate-audit.ts): once a day, or now when asked (json:gate-audit-now).

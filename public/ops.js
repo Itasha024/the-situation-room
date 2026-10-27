@@ -775,13 +775,18 @@
     if (!at) return;
     setTimeout(() => { try { m.setView([+at[1], +at[2]], +at[3]); } catch (e) { /* bad link */ } }, 900);
   }
-  // Full screen holds the site in a frame (user, 27 Oct: moving to another desk left full screen): the pages
-  // change inside it and only the button, F or Esc ends it, at the page last open.
+  // Full screen (user, 27 Oct: "full screen takes time to load"): the page itself goes full screen at once. Only a
+  // move to another page while full screen (user, 27 Oct, earlier: moving to another desk left full screen) opens
+  // that page in a frame that stays full screen; the pages change inside it and only the button, F or Esc ends it, at
+  // the page last open.
   function fullScreen() {
     if (inFullFrame) { try { window.top.__opsExitFull(); } catch (e) { /* the frame was let go */ } return; }
     if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    if (H.requestFullscreen) H.requestFullscreen().catch(() => {});
+  }
+  function fullFrame(href) {
     const f = document.createElement('iframe');
-    f.src = location.href;
+    f.src = href;
     f.allow = 'fullscreen';
     f.title = document.title;
     f.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2147483647;background:#0b0e12';
@@ -800,9 +805,26 @@
     window.__opsExitFull = () => { if (document.fullscreenElement) document.exitFullscreen().catch(close); else close(); };
     document.addEventListener('fullscreenchange', changed);
     document.body.appendChild(f);
-    if (!f.requestFullscreen) { close(); H.requestFullscreen && H.requestFullscreen().catch(() => {}); return; }
-    f.requestFullscreen().catch(() => { close(); H.requestFullscreen && H.requestFullscreen().catch(() => {}); });
+    if (!f.requestFullscreen) { close(); location.href = href; return; }
+    f.requestFullscreen().catch(() => { close(); location.href = href; });
   }
+  /** Another page of the site while the page is full screen: in the frame. True when taken. */
+  window.__opsGoFull = (href) => {
+    if (inFullFrame) return false;
+    // The same click seen twice (a link and its desk handler): one frame.
+    if (window.__opsFull) return true;
+    if (document.fullscreenElement !== H) return false;
+    let u;
+    try { u = new URL(href, location.href); } catch (e) { return false; }
+    if (u.origin !== location.origin || (u.pathname === location.pathname && u.search === location.search)) return false;
+    fullFrame(u.href);
+    return true;
+  };
+  document.addEventListener('click', (ev) => {
+    const a = ev.target.closest && ev.target.closest('a[href]');
+    if (!a || ev.defaultPrevented || a.target === '_blank' || a.hasAttribute('download') || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button) return;
+    if (window.__opsGoFull(a.href)) ev.preventDefault();
+  }, true);
 
 
 

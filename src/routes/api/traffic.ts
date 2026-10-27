@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { metered } from "@/lib/desk/cpu-meter";
+import { cachedResponse } from "@/lib/desk/microcache";
 import { AIR_BOX, aisEta, cameFrom, type HistFix, type TrackPoint, SEA_KEEP, tidyShips, angleDiff, bearing, continues, flagOf, History, shipJump, inAirBox, inSeaBox, joinTracks, km, lattice, matchPort, nearestPort, project, SEA_BOX, type LatLon } from "@/lib/desk/traffic-geo";
 import { shipInland } from "@/lib/desk/ship-land";
 import { airRoute, listRoute } from "@/lib/traffic-route.server";
@@ -604,6 +605,7 @@ if (process.env.NODE_ENV === "production" && process.env.NITRO_PORT && process.e
   setInterval(() => void monitorRead(), 5 * 60_000).unref?.();
 }
 
+const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=0, must-revalidate", "cdn-cache-control": "public, s-maxage=10, stale-while-revalidate=20" };
 const json = (body: unknown, cache = "public, max-age=0, must-revalidate") =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json; charset=utf-8", "cache-control": cache, "cdn-cache-control": "public, s-maxage=10, stale-while-revalidate=20" } });
 
@@ -641,11 +643,17 @@ export const Route = createFileRoute("/api/traffic")({
           seaOpen();
           void monitorRead();
           seaTidy();
+          // Built once every few seconds and handed to every viewer compressed (user, 27 Oct: "traffic takes full
+          // seconds to load"): some 5,000 ships checked against the land and written out took seconds per viewer
+          // while the server was busy. The page asks every 10 seconds.
+          return cachedResponse("traffic:sea", 6000, 20_000, async () => {
           // Not a ship deep inland (a false position, see ship-land.ts).
           const ships = [...sea.ships.values()].filter((s) => s.t && inSeaBox(s.lat, s.lon) && !shipInland(s.lat, s.lon));
-          return json({ ok: true, live: sea.note === "live", note: sea.note, at: new Date().toISOString(), src: { ais: sea.note, monitor: monitor.n }, ships: ships.map((s) => [s.mmsi, s.name, s.lat, s.lon, s.sog, s.cog, s.hdg, s.nav, s.type ?? null, s.dest || null, s.cs || null, s.imo ?? null, s.len ?? null, new Date(s.t).toISOString(), Math.round(s.t / 1000), s.eta ?? null, s.draught ?? null, s.beam ?? null, s.flag || flagOf(s.mmsi),
+          const body = { ok: true, live: sea.note === "live", note: sea.note, at: new Date().toISOString(), src: { ais: sea.note, monitor: monitor.n }, ships: ships.map((s) => [s.mmsi, s.name, s.lat, s.lon, s.sog, s.cog, s.hdg, s.nav, s.type ?? null, s.dest || null, s.cs || null, s.imo ?? null, s.len ?? null, new Date(s.t).toISOString(), Math.round(s.t / 1000), s.eta ?? null, s.draught ?? null, s.beam ?? null, s.flag || flagOf(s.mmsi),
             // 22 Oct (at the end): the monitor's category; deadweight in tonnes; whose position (SEA_ROW).
-            s.cat ?? null, s.dwt ?? null, s.by ?? null]) });
+            s.cat ?? null, s.dwt ?? null, s.by ?? null]) };
+          return { status: 200, body: JSON.stringify(body), headers: JSON_HEADERS };
+          }, request.headers.get("accept-encoding"));
         }
         air.asked = Date.now();
         if (air.wake) air.wake();
@@ -655,8 +663,9 @@ export const Route = createFileRoute("/api/traffic")({
         // Positions from a reading that stopped long ago are not shown as live.
         const stale = !air.at || Date.now() - Date.parse(air.at) > 300_000;
         const fresh = Date.now() - 300_000;
-        return json({ ok: true, at: air.at, ac: stale ? [] : airRows(), src: [...air.srcOk].filter(([, t]) => t > fresh).map(([k]) => k), ships: !!process.env.AISSTREAM_KEY,
-          cover: [air.readAt.filter((t) => t > Date.now() - 200_000).length, CIRCLES.length] });
+        if (stale) return json({ ok: true, at: air.at, ac: [], src: [], ships: !!process.env.AISSTREAM_KEY, cover: [0, CIRCLES.length] });
+        return cachedResponse("traffic:air", 3000, 10_000, async () => ({ status: 200, headers: JSON_HEADERS, body: JSON.stringify({ ok: true, at: air.at, ac: airRows(), src: [...air.srcOk].filter(([, t]) => t > fresh).map(([k]) => k), ships: !!process.env.AISSTREAM_KEY,
+          cover: [air.readAt.filter((t) => t > Date.now() - 200_000).length, CIRCLES.length] }) }), request.headers.get("accept-encoding"));
       }),
     },
   },

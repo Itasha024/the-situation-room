@@ -7362,6 +7362,8 @@ function deskGo(href, m) {
     if (box && box.bottom > 120 && box.top < innerHeight - 120) { const c = m.getCenter(); from = { c: [c.lat, c.lng], z: m.getZoom() }; }
   } catch (e) {}
   try { sessionStorage.setItem('desk-go', JSON.stringify({ to, from, t: Date.now() })); } catch (e) {}
+  // Full screen stays full screen: the page opens in its frame (public/ops.js __opsGoFull).
+  if (window.__opsGoFull && window.__opsGoFull(href)) { deskGoing = false; return; }
   location.href = href;
 }
 /** Any link marked data-desk-go goes over on the map. */
@@ -9220,7 +9222,11 @@ const deskExplain = {};
 async function loadDeskExplain() {
   const id = deskOf().id;
   if (!document.getElementById('desk-explain')) return;
-  if (!deskExplain[id]) deskExplain[id] = fetch(`/${id}-explain.json?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  if (!deskExplain[id]) deskExplain[id] = fetch(`/api/explain?desk=${id}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)
+    // The weekly-checked version (src/lib/desk/explain-live.ts), else the file.
+    .then((j) => j || fetch(`/${id}-explain.json?v=${IRAN_ASSET_V}`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
   const ex = await deskExplain[id];
   if (ex && deskOf().id === id) renderDeskExplain(ex, id);
 }

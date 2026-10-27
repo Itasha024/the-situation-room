@@ -134,7 +134,7 @@ test("a brief point keeps its speaker and gives every verb a subject (user, 23 O
     speakerActs("IRGC Navy: seven oil tankers were damaged in the Strait of Hormuz overnight, and threatened to strike US military bases if the US continues guiding commercial ships [r6]."),
     "IRGC Navy: seven oil tankers were damaged in the Strait of Hormuz overnight; it threatened to strike US military bases if the US continues guiding commercial ships [r6].",
   );
-  assert.equal(speakerActs("IRGC Navy: it struck two LPG carriers and blames US forces [r1]."), "IRGC Navy: it struck two LPG carriers and blames US forces [r1].");
+  assert.equal(speakerActs("IRGC Navy says it struck two LPG carriers and blames US forces [r1]."), "IRGC Navy says it struck two LPG carriers and blames US forces [r1].");
   const ref = (headline: string, source = "Reuters") => ({ fp: "x", source, at: "", url: "", headline });
   assert.equal(
     keepSpeaker("France, Britain, and Germany are ready to negotiate with Iran [r3].", { r3: ref("German Foreign Minister: France, Britain and Germany ready to negotiate with Iran") }),
@@ -142,4 +142,18 @@ test("a brief point keeps its speaker and gives every verb a subject (user, 23 O
   );
   assert.equal(keepSpeaker("The IRGC Navy seized a tanker [r1].", { r1: ref("IRGC Navy: we seized a tanker") }), "The IRGC Navy seized a tanker [r1].");
   assert.equal(keepSpeaker("Brent passed $116 [r2].", { r2: ref("Reuters: Brent passes $116", "Reuters") }), "Brent passed $116 [r2].");
+});
+
+test("no \"Speaker: it …\" in a brief point (user, 27 Oct)", async () => {
+  const { selfSpeaker, tidyPoint } = await import("./prose.ts");
+  assert.equal(
+    selfSpeaker("Hamas: it called on the UN to implement the recommendations of the Commission of Inquiry report [r2]."),
+    "Hamas called on the UN to implement the recommendations of the Commission of Inquiry report [r2].",
+  );
+  assert.equal(selfSpeaker("IDF: it killed two gunmen who crossed the yellow line in Beit Lahia [r1]."), "IDF says it killed two gunmen who crossed the yellow line in Beit Lahia [r1].");
+  assert.equal(selfSpeaker("IRGC Navy: it struck two LPG carriers and blames US forces [r1]."), "IRGC Navy says it struck two LPG carriers and blames US forces [r1].");
+  assert.equal(selfSpeaker("Hamas: they have rejected the proposal [r3]."), "Hamas has rejected the proposal [r3].");
+  // A quote that opens with "it" stays.
+  assert.equal(selfSpeaker("Pezeshkian: it is unfair that the rich get the same subsidies [r1]."), "Pezeshkian: it is unfair that the rich get the same subsidies [r1].");
+  assert.equal(tidyPoint("Hamas: it welcomed the decision [r1]."), "Hamas welcomed the decision [r1].");
 });

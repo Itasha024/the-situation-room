@@ -370,7 +370,28 @@ export function tidyPoint(p: string): string {
     t = t.slice(0, dash).replace(/[.\s]+$/, "") + marks + ".";
   }
   t = speakerActs(t);
+  t = selfSpeaker(t);
   return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** Acts of speech: the speaker does them in its own name ("Hamas called on the UN …"). */
+const SPOKE = /^(?:called|calls|urged|urges|demanded|demands|warned|warns|condemned|condemns|rejected|rejects|denied|denies|welcomed|welcomes|accused|accuses|blamed|blames|vowed|vows|pledged|pledges|threatened|threatens|announced|announces|confirmed|confirms|said|says|stated|states|stressed|stresses|praised|praises|appealed|appeals|asked|asks|insisted|insists|declared|declares|described|describes|dismissed|dismisses|hailed|hails|mourned|mourns|reaffirmed|reaffirms|expressed|expresses|added|adds|noted|notes)$/i;
+
+/**
+ * "Hamas: it called on the UN to …" (user, 27 Oct: "what the hell is 'Hamas: it…'"): the speaker, a colon, then "it"
+ * or "they" for the speaker itself. An act of speech is the speaker's own ("Hamas called on the UN to …"); a deed it
+ * claims is told as its claim ("IDF says it killed two gunmen …"). "Pezeshkian: it is unfair that …" is a quote, kept.
+ */
+export function selfSpeaker(p: string): string {
+  const m = /^([^:]{2,60}):\s+(?:it|they)\s+(?:(has|have|had)\s+)?([a-z]+)\b/.exec(p);
+  if (!m) return p;
+  const who = m[1].trim();
+  const rest = p.slice(m[0].length);
+  if (SPOKE.test(m[3])) return `${who} ${m[2] ? `${m[2] === "have" ? "has" : m[2]} ` : ""}${m[3]}${rest}`;
+  // A deed: a past tense, "will", or "has done" ("it struck", "it will strike", "it has seized").
+  if (m[2] || /ed$|^(?:struck|hit|shot|sank|took|brought|caught|fought|began|led|left|sent|built|made|held|won|lost|will|would)$/i.test(m[3]))
+    return `${who} says ${p.slice(m[1].length + 1).trim()}`;
+  return p;
 }
 
 const SPEAKER_ACT = "threatened|threatens|warned|warns|vowed|vows|said|says|claimed|claims|added|adds|called|calls|accused|accuses|denied|denies|demanded|demands|urged|urges|pledged|pledges|blamed|blames|announced|announces|confirmed|confirms|stated|states|threatening|warning|vowing";

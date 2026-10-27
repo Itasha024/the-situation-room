@@ -20,6 +20,7 @@ import { getStore } from "@/lib/desk/store";
 import { mergeNumbers } from "@/lib/desk/numbers";
 import { band, dropEmpty } from "@/lib/desk/rank-points";
 import { officeTitles } from "@/lib/desk/copy-rules";
+import { selfSpeaker } from "@/lib/desk/prose";
 import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally";
 import { type Ledger, readLedger, readTransits, type Transits } from "@/lib/desk/ledger";
 import { TIMELINE_NOW_KEY, type TimelineNow } from "@/lib/desk/timeline-now";
@@ -111,7 +112,7 @@ function banded<T>(s: T): T {
  */
 function servedPoints(points: string[]): string[] {
   // The site's words on every desk's brief (audit of 24 Oct: Iran's points could say "West Bank").
-  return dropEmpty(points).map((p) => gazaWords(officeTitles(p)));
+  return dropEmpty(points).map((p) => gazaWords(selfSpeaker(officeTitles(p))));
 }
 
 /** Every list of points in a brief (the arenas', the fronts'), served the same way. */

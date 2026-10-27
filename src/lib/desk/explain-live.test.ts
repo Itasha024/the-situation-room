@@ -1,7 +1,7 @@
 // The weekly explainer check (user, 27 Oct: "make explainers update every 7 days if there's something to update").
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyExplain, currentExplain, EXPLAIN_FILES, explainDocs } from "./explain-live.ts";
+import { applyExplain, currentExplain, EXPLAIN_FILES, EXPLAIN_SYSTEM, explainDocs } from "./explain-live.ts";
 
 const old = { title: "Hamas", cat: "Background", sum: "Hamas runs Gaza. Its leader in Gaza is A.", detail: "Leaders: A leads in Gaza.\n\nMoney: From Qatar and Iran.", sources: [{ name: "x", url: "https://x.org/a" }] };
 const docs = explainDocs([
@@ -37,4 +37,8 @@ test("the stored version is served only when it is as new as the file", () => {
   assert.equal(cur.items.length, file.items.length);
   assert.equal(cur.items.find((e) => e.title === t)?.sum, "NEW");
   assert.equal(currentExplain("iran", { asOf: "2000-01-01", items: live.items }).items[0].sum, file.items[0].sum);
+});
+
+test("a claim only one side reports is written as a report (27 Oct: Shahlai)", () => {
+  assert.match(EXPLAIN_SYSTEM, /has not confirmed/);
 });

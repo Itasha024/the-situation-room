@@ -15,6 +15,7 @@ import { placesInCountry, type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
 import { FINAL_EXCLUDES, NOISE_REASONS, type Outcome } from "./desk/relevance.ts";
 import { refreshBrief } from "./desk/brief-store.ts";
+import { refreshAllBrief } from "./desk/all-brief.ts";
 import { deskDay } from "./desk/brief.ts";
 import { backupDaily } from "./desk/backup.ts";
 import { type Candidate, confidenceOf, editCandidates, onRadar, queueForReading } from "./desk/editor.ts";
@@ -3829,6 +3830,8 @@ export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | 
   let briefBuilt = false;
   try {
     briefBuilt = (await refreshBrief(store, new Date(), { retryProse: true })).built;
+    // Every desk's points in one order of importance (all-brief.ts), never held for.
+    void refreshAllBrief(store).catch((err) => console.error("[all-brief]", err instanceof Error ? err.message : err));
   } catch (err) {
     error ??= `brief: ${err instanceof Error ? err.message : "failed"}`;
   }

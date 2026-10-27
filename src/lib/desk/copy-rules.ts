@@ -459,9 +459,28 @@ const KNOWN_ROLES: Record<string, string> = {
   Bennett: "Former Israeli PM Naftali Bennett",
   Gantz: "Former Israeli defence minister Benny Gantz",
   Liberman: "Yisrael Beytenu leader Avigdor Liberman",
+  // The audit of 27 Oct: LBCI's "Jumblatt:" was thrown away as an unknown name.
+  Jumblatt: "Druze leader Walid Jumblatt",
+  Rai: "Maronite Patriarch Bechara al-Rai",
+  Berri: "Lebanese Parliament Speaker Nabih Berri",
+  Salam: "Lebanese PM Nawaf Salam",
+  Rajji: "Lebanese FM Youssef Rajji",
+  Yazbek: "Lebanese Forces MP Ghayath Yazbek",
+  Sayegh: "Kataeb MP Salim al-Sayegh",
+};
+/** Lebanon's parties as the channels name them, with a few words a reader needs (the audit of 27 Oct: "Kataeb:"). */
+const KNOWN_GROUPS: Record<string, string> = {
+  Kataeb: "Lebanon's Kataeb Party",
+  "Kataeb Party": "Lebanon's Kataeb Party",
+  "Lebanese Forces": "Lebanese Forces party",
+  Marada: "Lebanon's Marada movement",
+  "Free Patriotic Movement": "Lebanon's Free Patriotic Movement",
+  Amal: "Lebanon's Amal movement",
+  "Amal Movement": "Lebanon's Amal movement",
 };
 /** The table's role for a lead that is the surname alone or the same person's full name. */
 export function knownRole(lead: string): string | null {
+  if (KNOWN_GROUPS[lead]) return KNOWN_GROUPS[lead];
   const surname = lead.split(" ").pop()!;
   const known = KNOWN_ROLES[surname];
   return known && (lead === surname || known.endsWith(` ${lead}`)) ? known : null;

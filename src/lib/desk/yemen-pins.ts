@@ -375,8 +375,19 @@ function sameWords(a: string, b: string): boolean {
   A.forEach((w) => B.has(w) && n++);
   return n >= 3 && n / Math.min(A.size, B.size) >= 0.5;
 }
-/** The same place by name, or within about a kilometre: south Lebanon's villages lie two or three apart. */
-const samePlace = (k: YemenPin, p: YemenPin) => !!k.place && String(k.place).toLowerCase() === String(p.place || "").toLowerCase();
+/**
+ * The same place by name, or within about a kilometre: south Lebanon's villages lie two or three apart.
+ * One village in two spellings is one place (27 Oct: "Meiss Ej Jabal" and "Meiss al-Jabal", 1.3 km apart in
+ * the gazetteers, gave one explosion two pins).
+ */
+const samePlace = (k: YemenPin, p: YemenPin) => !!k.place && (String(k.place).toLowerCase() === String(p.place || "").toLowerCase() || townKey(String(k.place)) === townKey(String(p.place || "")));
+/** A place's name in consonants, its articles dropped: "Meiss Ej Jabal" and "Meiss al-Jabal" are both "msjbl". */
+export function townKey(place: string): string {
+  const k = String(place || "").split(",")[0].toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/(^|[\s-])(?:al|el|ej|ed|es|esh|ash|ad|adh|ar|at|ath|az|an|en|er|et|ez)(?=[\s-])/g, " ")
+    .replace(/[^a-z]/g, "").replace(/(.)\1+/g, "$1");
+  return k.length < 4 ? k : k[0] + k.slice(1).replace(/[aeiouy]/g, "").replace(/(.)\1+/g, "$1");
+}
 const near = (k: YemenPin, p: YemenPin) =>
   typeof k.lat === "number" && typeof p.lat === "number" &&
   ((Math.abs(k.lat - p.lat) < 0.012 && Math.abs((k.lng ?? 0) - (p.lng ?? 0)) < 0.012) || samePlace(k, p));
@@ -420,6 +431,10 @@ function kept(f: (t: string) => Set<string>, t: string): ReadonlySet<string> {
   }
   return s;
 }
+/** Gaza and Judea and Samaria. */
+const palestine = (x: YemenPin) => typeof x.lat === "number" && x.lat > 31.2 && x.lat < 32.6 && (x.lng ?? 0) > 34.2 && (x.lng ?? 0) < 35.6;
+/** Who was hurt: 2 a death, 1 a wounding, 0 neither. */
+const harm = (t: string) => (/\b(?:killed|kills|dead|dies|died|death)\b/i.test(t) ? 2 : /\b(?:wound\w*|injur\w*)\b/i.test(t) ? 1 : 0);
 /** Two pins that tell one event. */
 export function oneEvent(k: FullPin, p: FullPin): boolean {
   // One card's two pins moved onto one spot are one pin, whatever side each part of its sentence reads as.
@@ -429,6 +444,10 @@ export function oneEvent(k: FullPin, p: FullPin): boolean {
   if (dayOf(k.at) !== dayOf(p.at)) return sideOk(k.actor, p.actor) && siteAttackRetold(k, p);
   if (!sideOk(k.actor, p.actor)) return false;
   const a = String(k.label || ""), b = String(p.label || "");
+  // Gaza and Judea and Samaria (27 Oct): one village, one night. A raid is told for hours ("raid Jaba town" at
+  // 00:20, 01:47 and 05:22); a village raided again in the afternoon, the next village's raid in the same words
+  // ("demolish monument in Rujeib", "… in Madama"), and a wounding or a death told after gunfire are other events.
+  if (palestine(k) && palestine(p) && (!near(k, p) || hours(k.at, p.at) > 6 || harm(a) !== harm(b))) return false;
   const tk = kept(targetsOf, a), tp = kept(targetsOf, b);
   const shareTarget = [...tp].some((x) => tk.has(x));
   // One site attack, its spots worded apart: "Al-Camp camp in Jirdan district" and "military training camp in Shabwa" (19 Oct, four pins).
@@ -451,6 +470,9 @@ export function oneEvent(k: FullPin, p: FullPin): boolean {
   // ("Israeli artillery strikes X in south Lebanon"): two pins there hours apart are two attacks.
   const lebanon = (x: YemenPin) => typeof x.lat === "number" && x.lat > 33.03 && x.lat < 34.7 && (x.lng ?? 0) > 35.1 && (x.lng ?? 0) < 36.65;
   if (lebanon(k) && lebanon(p) && hours(k.at, p.at) > 1) return false;
+  // One village, one side, within half an hour: the outlets' copies of one blast (27 Oct: Al-Manar and Al Mayadeen
+  // told the explosion in Meiss al-Jabal 19 seconds apart, in words that share no name).
+  if (lebanon(k) && lebanon(p) && hours(k.at, p.at) <= 0.5 && k.actor && k.actor === p.actor && samePlace(k, p)) return true;
   if (sameWords(a, b)) return true;
   const A = kept(actionsOf, a), B = kept(actionsOf, b);
   const shareAction = [...A].some((x) => B.has(x));

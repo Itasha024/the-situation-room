@@ -1154,6 +1154,9 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
   // source can bring exclusive reports"); the card as written counts too, when a feed's teaser held only the headline
   // (24 Oct: Axios' "memo … obtained by Axios" went out unmarked).
   if (c.tags.includes("exclusive") || isExclusive(c.text, c.source) || isExclusive(`${row.summary}\n${body}`, c.source)) row.flags = [...new Set([...(row.flags ?? []), "exclusive"])];
+  // An outlet's own scoop stands as its own card, never as a follow-up under another outlet's (audit of 27 Oct: Al Jadeed's
+  // "Diplomatic sources: the quadripartite meeting in Tehran…" was shown under an INA card).
+  if (row.replyTo && (row.flags ?? []).includes("exclusive")) delete row.replyTo;
   return row;
 }
 

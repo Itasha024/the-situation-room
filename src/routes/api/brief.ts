@@ -21,6 +21,9 @@ import { mergeNumbers } from "@/lib/desk/numbers";
 import { band, dropEmpty } from "@/lib/desk/rank-points";
 import { officeTitles } from "@/lib/desk/copy-rules";
 import { selfSpeaker } from "@/lib/desk/prose";
+import { ALL_BRIEF_KEY, type AllBrief, allBriefPoints, type BriefDesk, rankedDesk, rankedPart } from "@/lib/desk/all-brief";
+import { BRIEF_KEY, type StoredBrief } from "@/lib/desk/brief-store";
+import type { Ref } from "@/lib/desk/refs";
 import { type Claims, readClaims, readTally, type Tally } from "@/lib/desk/tally";
 import { type Ledger, readLedger, readTransits, type Transits } from "@/lib/desk/ledger";
 import { TIMELINE_NOW_KEY, type TimelineNow } from "@/lib/desk/timeline-now";
@@ -38,7 +41,13 @@ export const Route = createFileRoute("/api/brief")({
   server: {
     handlers: {
       GET: ({ request }) => metered("brief", async () => {
-        const desk = deskParam(new URL(request.url).searchParams.get("desk"));
+        const asked = new URL(request.url).searchParams.get("desk");
+        // The All page's brief: every desk's most important points, as one list (all-brief.ts; user, 27 Oct).
+        if (asked === "all") return cachedResponse("brief|all", 30_000, 30 * 60_000, async () => {
+          const res = await allAnswer();
+          return { status: res.status, body: await res.text(), headers: Object.fromEntries(res.headers) };
+        }, request.headers.get("accept-encoding"));
+        const desk = deskParam(asked);
         // Built once per 30 seconds, not per visitor (20 Oct, microcache.ts): the brief changes with a
         // tick or a 6-hour window, and each read was a handful of database reads and the points' rules.
         return cachedResponse(`brief|${desk}`, 30_000, 30 * 60_000, async () => {
@@ -52,6 +61,8 @@ export const Route = createFileRoute("/api/brief")({
 
 async function briefAnswer(desk: ReturnType<typeof deskParam>): Promise<Response> {
         try {
+          const all = await (await getStore()).getJson<AllBrief>(ALL_BRIEF_KEY).catch(() => null);
+          const banded = <T,>(s: T) => bandedAs(desk as BriefDesk, s, all);
           // The Iran desk's brief is built from stage 4 of Round 30; until then it has none.
           // The Gaza desk: Gaza and Judea and Samaria, two lists (gaza-brief.ts), no arenas.
           if (desk === "gaza") {
@@ -59,7 +70,7 @@ async function briefAnswer(desk: ReturnType<typeof deskParam>): Promise<Response
             const gb = await st.getJson<GazaBrief>(GAZA_BRIEF_KEY);
             const idfArea = await gazaIdfArea(st);
             const timelineNow = (await st.getJson<GazaTimelineNow>(GAZA_NOW_KEY).catch(() => null)) ?? null;
-            if (gb) return json({ ...gb, situation: banded(gb.situation), areas: servedLists(gb.areas), arenas: [], idfArea, timelineNow }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=86400");
+            if (gb) return json({ ...gb, situation: banded(gb.situation), areas: servedLists(gb.areas?.map((x) => ({ ...x, points: rankedPart("gaza", x.points ?? [], all) }))), arenas: [], idfArea, timelineNow }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=86400");
             return json({ ok: true, desk, pending: true, idfArea, ...briefWindow(new Date(), 3) }, 200, "public, max-age=60", "public, s-maxage=300");
           }
           if (desk !== "yemen") {
@@ -79,14 +90,14 @@ async function briefAnswer(desk: ReturnType<typeof deskParam>): Promise<Response
           const live = (await store.getJson<ControlLive>(CONTROL_LIVE_KEY)) ?? null;
           // The changes let a past day on the map undo what came after it.
           const controlLive = live ? { districts: live.districts, changes: (live.changes ?? []).map((c) => ({ at: c.at, district: c.district, from: c.from, to: c.to })), asOf: live.asOf } : null;
-          return ok(brief, await readTally(store), await readClaims(store), timelineNow, controlLive, await readLedger(store), await readTransits(store));
+          return ok(banded, brief, await readTally(store), await readClaims(store), timelineNow, controlLive, await readLedger(store), await readTransits(store));
         } catch (err) {
           const msg = err instanceof Error ? err.message : "brief failed";
           return json({ ok: false, error: msg, ...briefWindow() }, 500);
         }
 }
 
-function ok(brief: Brief, tally: Tally, claims: Claims, timelineNow: TimelineNow | null, controlLive: (Pick<ControlLive, "districts" | "asOf"> & { changes: Pick<ControlLive["changes"][number], "at" | "district" | "from" | "to">[] }) | null, ledger: Ledger, transits: Transits | null) {
+function ok(banded: <T>(s: T) => T, brief: Brief, tally: Tally, claims: Claims, timelineNow: TimelineNow | null, controlLive: (Pick<ControlLive, "districts" | "asOf"> & { changes: Pick<ControlLive["changes"][number], "at" | "district" | "from" | "to">[] }) | null, ledger: Ledger, transits: Transits | null) {
   const secondsLeft = Math.max(60, Math.round((Date.parse(brief.nextUpdateAt) - Date.now()) / 1000));
   const age = Math.min(secondsLeft, 600);
   // The edge holds it until the window turns (at most ten minutes), so visitors
@@ -97,11 +108,14 @@ function ok(brief: Brief, tally: Tally, claims: Claims, timelineNow: TimelineNow
   return json({ ...brief, situation: banded(brief.situation), fronts: servedLists(brief.fronts)?.map((a) => ({ ...a, points: (a.points ?? []).map((p) => dropFrontLead(p, a.name)) })), tally, claims, figures: mergeNumbers(tally, claims), timelineNow, controlLive, ledger, transits }, 200, "public, max-age=60", `public, s-maxage=${age}, stale-while-revalidate=86400`);
 }
 
-/** Each point's importance band (rank-points.ts), so the home page can rank both desks' points as one list. */
-function banded<T>(s: T): T {
+/**
+ * Each point's importance band (rank-points.ts), so the home page can rank both desks' points as one list.
+ * The points in the site's order of importance first, the ones not worth a brief out (all-brief.ts, 27 Oct).
+ */
+function bandedAs<T>(desk: BriefDesk, s: T, all: AllBrief | null): T {
   const pts = (s as { points?: unknown } | null | undefined)?.points;
   if (!Array.isArray(pts)) return s;
-  const points = servedPoints(pts.map(String));
+  const points = servedPoints(rankedDesk(desk, pts.map(String), all));
   // The points joined as one text: its paragraphs read the same way ("Hamas: it called …", 27 Oct).
   const line = (s as { line?: unknown }).line;
   const fixed = typeof line === "string" ? { line: line.split("\n\n").map(selfSpeaker).join("\n\n") } : {};
@@ -146,4 +160,25 @@ async function gazaIdfArea(st: Awaited<ReturnType<typeof getStore>>) {
       return [{ fp: r.fp, at: r.at, move, place: r.place, lat: r.lat, lng: r.lng, places: r.places ?? [], headline: gazaWords(r.summary), source: r.source, url: r.url }];
     });
   return { zone: area.zone, held: area.held, reported: area.reported ?? null, checkedAt: area.checkedAt, moves };
+}
+
+/** The All page's brief (all-brief.ts): each point with its desk and the report it was written from. */
+async function allAnswer(): Promise<Response> {
+  try {
+    const st = await getStore();
+    const all = await st.getJson<AllBrief>(ALL_BRIEF_KEY).catch(() => null);
+    const refsOf: Record<BriefDesk, Ref[]> = {
+      iran: (await st.getJson<IranBrief>(IRAN_BRIEF_KEY).catch(() => null))?.situation?.refs ?? [],
+      yemen: (await st.getJson<StoredBrief>(BRIEF_KEY).catch(() => null))?.brief?.situation?.refs ?? [],
+      gaza: (await st.getJson<GazaBrief>(GAZA_BRIEF_KEY).catch(() => null))?.situation?.refs ?? [],
+    };
+    const points = allBriefPoints(all).map((p) => {
+      const n = /[[(d+)]]/.exec(p.text);
+      const ref = n ? refsOf[p.desk][Number(n[1]) - 1] : undefined;
+      return { desk: p.desk, text: servedPoints([p.text])[0].replace(/s*[[d+]]/g, "").trim(), fp: ref?.fp ?? null };
+    });
+    return json({ ok: true, updatedAt: all?.updatedAt ?? null, points }, 200, "public, max-age=60", "public, s-maxage=120, stale-while-revalidate=86400");
+  } catch (err) {
+    return json({ ok: false, error: err instanceof Error ? err.message : "brief failed", points: [] }, 500);
+  }
 }

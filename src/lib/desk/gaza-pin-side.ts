@@ -73,7 +73,7 @@ export function gazaPinSide(label: string, stored: string | null | undefined): s
  * Not an event to pin (the same audit): a roundup of many attacks in many places, an event held, a campaign, a
  * standing situation ("residents face ongoing closures").
  */
-const NOT_A_PIN = /\b(?:\d+|dozens of|hundreds of) (?:Israeli )?(?:attacks|violations|assaults)\b(?! on olive pickers documented)|\bsolidarity (?:event|visit|stand|vigil)|\bevent (?:held|organi[sz]ed)\b|\b(?:solidarity|awareness|support|volunteer|national) campaign\b|\bface (?:ongoing|continuing|daily)\b|\bweekly (?:report|toll)\b|\bmonthly (?:report|toll)\b|\bfollow-up committee\b/i;
+const NOT_A_PIN = /\b(?:\d+|dozens of|hundreds of) (?:(?:Israeli|extremists?|settlers?|army|military|occupation|and|forces)\s+){0,4}(?:attacks|violations|assaults)\b(?! on olive pickers documented)|\bsolidarity (?:event|visit|stand|vigil)|\bevent (?:held|organi[sz]ed)\b|\b(?:solidarity|awareness|support|volunteer|national) campaign\b|\bface (?:ongoing|continuing|daily)\b|\bweekly (?:report|toll)\b|\bmonthly (?:report|toll)\b|\bfollow-up committee\b/i;
 /** Aircraft or drones seen overhead, nothing struck: a watch, not an event ("Reconnaissance drones over Nuseirat"). */
 const OVERHEAD = /\b(?:drones?|quadcopters?|helicopters?|aircraft|warplanes?|jets|Heron|reconnaissance|loitering munitions?)\b[^.;]{0,40}?\b(?:over|circl\w*|fly|flies|flying|flew|hover\w*|airspace)\b/i;
 const HIT = /\b(?:strikes?|struck|hit|hits|kill\w*|wound\w*|injur\w*|fire[sd]?|firing|shell\w*|bomb\w*|missiles?|blast|explo\w*|demolish\w*|raid\w*|arrest\w*)\b/i;

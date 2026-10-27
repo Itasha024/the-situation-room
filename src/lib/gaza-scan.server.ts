@@ -10,6 +10,7 @@
  */
 import { gazaLeadBonus } from "./desk/gaza-sourcing.ts";
 import { refreshGazaBrief } from "./desk/gaza-brief.ts";
+import { refreshAllBrief } from "./desk/all-brief.ts";
 import { refreshGazaNumbers } from "./desk/gaza-live.ts";
 import { refreshIdfArea } from "./gaza-line.server.ts";
 import { runMood } from "./gaza-mood.server.ts";
@@ -342,7 +343,8 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
   }
   console.log(`[gaza] ${note} ${Math.round(tookMs / 1000)}s`);
   // The 3-hour brief, Gaza and Judea and Samaria apart (gaza-brief.ts); it must never cost the cycle.
-  void refreshGazaBrief(store).catch((err) => console.error("[gaza-brief]", err instanceof Error ? err.message : err));
+  // Then every desk's points in one order of importance (all-brief.ts).
+  void refreshGazaBrief(store).then(() => refreshAllBrief(store)).catch((err) => console.error("[gaza-brief]", err instanceof Error ? err.message : err));
   // The IDF-held area as the mapping projects publish it, every 6 hours (gaza-line.server.ts).
   void refreshIdfArea(store).catch((err) => console.error("[gaza-line]", err instanceof Error ? err.message : err));
   // The researched numbers kept current from the reports, every 6 hours, one model call (gaza-live.ts).

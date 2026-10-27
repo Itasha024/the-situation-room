@@ -635,7 +635,7 @@
     const h = window.__home;
     if (!el || !h || !h.D) return;
     const briefs = { iran: h.D.ibrief, yemen: h.D.ybrief, gaza: h.D.gbrief };
-    const key = JSON.stringify(Object.values(briefs).map((b) => (b ? b.updatedAt || 1 : 0)));
+    const key = JSON.stringify([...Object.values(briefs), h.D.abrief].map((b) => (b ? b.updatedAt || 1 : 0)));
     if (el._k === key) return;
     el._k = key;
     const when = (t) => (t ? `${hm(t, 'Asia/Jerusalem')}, ${dm(t, 'Asia/Jerusalem')}` : '');
@@ -647,15 +647,20 @@
       if (s && Array.isArray(s.points) && s.points.length) return s.points.slice(0, 6).map((p) => { const n = /\[\[(\d+)\]\]/.exec(p); const ref = n && (s.refs || [])[+n[1] - 1]; return [desk, String(p).replace(/\s*\[\[\d+\]\]/g, '').trim(), ref && ref.fp]; });
       return (s && s.line ? String(s.line).split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean).slice(0, 6) : []).map((p) => [desk, p, null]);
     });
-    const pts = [];
-    for (let i = 0; pts.length < 12 && lists.some((l) => l[i]); i++) lists.forEach((l) => { if (l[i] && pts.length < 12) pts.push(l[i]); });
+    // The site's own order when it has one (user, 27 Oct: "ordered from 01 the most important down to the least"):
+    // every desk's points ranked together, the ones not worth a brief left out (all-brief.ts).
+    const ranked = h.D.abrief && h.D.abrief.points;
+    const pts = ranked && ranked.length ? ranked.map((p) => [p.desk, p.text, p.fp]) : [];
+    if (!pts.length) for (let i = 0; i < 6; i++) lists.forEach((l) => { if (l[i]) pts.push(l[i]); });
+    pts.splice(12);
     const latest = Object.values(briefs).map((b) => b && b.updatedAt).filter(Boolean).sort().pop();
     const HF = window.__homeFlags || {};
     const more = (fp) => { const r = fp && h.D.reports.find((x) => x.fp === fp); return !!(r && r.more); };
+    const flagsOf = (fp) => { const r = fp && h.D.reports.find((x) => x.fp === fp); return (r && r.flags) || []; };
     el.classList.remove('ops-subwrap');
     el.innerHTML = `<article class="ops-th ops-th-one">
         ${latest ? `<p class="ops-th-sub">From the Iran, Yemen and Gaza desks · updated ${esc(when(latest))}</p>` : ''}
-        ${pts.length ? `<ol class="ops-th-pts">${pts.map(([desk, p, fp]) => `<li><span class="ops-th-flag">${HF.countryTag ? HF.countryTag(p, desk) : ''}</span><span class="ops-th-p">${esc(p)}${HF.deskRef ? (fp ? HF.deskRef(desk, fp, more(fp)) : `<a class="x-desk" href="${DESK_INFO[desk][2]}" data-desk-go>On the ${esc(DESK_INFO[desk][0])} desk →</a>`) : ''}</span></li>`).join('')}</ol>` : `<p class="ops-empty">${briefs.iran || briefs.yemen || briefs.gaza ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
+        ${pts.length ? `<ol class="ops-th-pts">${pts.map(([desk, p, fp]) => `<li><span class="ops-th-flag">${HF.countryTag ? HF.countryTag(p, desk, flagsOf(fp)) : ''}</span><span class="ops-th-p">${esc(p)}${HF.deskRef ? (fp ? HF.deskRef(desk, fp, more(fp)) : `<a class="x-desk" href="${DESK_INFO[desk][2]}" data-desk-go>On the ${esc(DESK_INFO[desk][0])} desk →</a>`) : ''}</span></li>`).join('')}</ol>` : `<p class="ops-empty">${briefs.iran || briefs.yemen || briefs.gaza ? 'No brief yet for this window.' : 'Loading the brief…'}</p>`}
       </article>`;
   }
 

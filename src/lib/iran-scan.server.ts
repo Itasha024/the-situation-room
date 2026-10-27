@@ -32,6 +32,7 @@ import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/t
 import { scanTrump } from "./trump-feed.server.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
 import { refreshIranBrief } from "./desk/iran-brief.ts";
+import { refreshAllBrief } from "./desk/all-brief.ts";
 import { refreshOfac } from "./desk/ofac.ts";
 import { refreshIranLive, type NumbersFile } from "./desk/iran-live.ts";
 import { refreshIranReports, refreshUkmto } from "./desk/iran-live-model.ts";
@@ -551,7 +552,9 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   // A Google item still on Google's redirect waits for the next tick.
   const readable = hits.filter((h) => !isGnews(h.url));
   for (const h of readable) if (h.source === "Google News") h.source = outletFromHost(h.url) || h.source;
-  const waiting = papersFirst(hits.filter((h) => isGnews(h.url)));
+  // The links kept are this war's first, then the Lebanese papers' politics, so the ones dropped are the local news
+  // (audit of 27 Oct: ~4,300 links a day dropped, the papers' and Asharq's among them, in the order they came).
+  const waiting = papersFirst(hits.filter((h) => isGnews(h.url))).sort((a, b) => worth(a) - worth(b));
   if (waiting.length > PENDING_MAX) console.log(`[iran] ${waiting.length - PENDING_MAX} Google links dropped unread: ${[...new Set(waiting.slice(PENDING_MAX).map((h) => h.source))].join(", ")}`);
   state.pending = waiting.slice(0, PENDING_MAX);
 
@@ -656,7 +659,8 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   await store.putJson(IRAN_PAYLOAD, payload);
   await store.putJson(STATE_KEY, state);
   // The 3-hour brief (stage 6): built once its window closes, never held for by the cycle.
-  void refreshIranBrief(store).catch((err) => console.error("[iran-brief]", err instanceof Error ? err.message : err));
+  // Then every desk's points in one order of importance (all-brief.ts).
+  void refreshIranBrief(store).then(() => refreshAllBrief(store)).catch((err) => console.error("[iran-brief]", err instanceof Error ? err.message : err));
   // US sanctions from OFAC's own list, once an hour (user, 17 Oct: the 15 Oct sanctions never reached the numbers).
   void refreshOfac(store).catch((err) => console.error("[ofac]", err instanceof Error ? err.message : err));
   // Every other box of the numbers from its own source, and the rest from the reports every 6 hours (user, 17 Oct: "everything should be automatic").

@@ -14,6 +14,7 @@ import { RESPONSE_SCHEMA, type ReaderPrompt } from "./reader.ts";
 import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
 import { subjectNation } from "./speaker-press.ts";
+import { knownRole } from "./copy-rules.ts";
 import { leadSpeaker } from "./speakers.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
@@ -142,7 +143,7 @@ HOW TO WRITE
 - Every number, name, place and date you write must be in the item's text, as the text gives it: "22 barrels" is never "22 million barrels"; a name you cannot read is left out, never guessed ("لتونی" is Latvia, not Luton). Add nothing: no background, no cause, no casualties, no attribution. The one exception is who someone is: a person or body the text names without saying who they are gets the role you know for certain (Ghayath Yazbek is a Lebanese Forces MP, HRANA an Iranian human rights group); when you are not certain, the side or country only ("a Lebanese politician").
 - Wounded is not killed. Write "kill" only when the text says people died.
 - NEVER write about what is missing or unverified: no "no casualties were reported", "details were not given", "could not be independently verified", "it was unclear".
-- Never name the outlet that carries the item, its correspondent, or that anyone "told" it something: the card shows the source. Not "Khabari Plus quotes Trump", not "Iran International reported that", not "a source told Tasnim": write Trump's words, the fact, "a source said". What officials or sources told an outlet ends the headline: ", US officials say", ", sources say". An outlet is NEVER the speaker_lead and never opens the headline.
+- Never name the outlet that carries the item, its correspondent, or that anyone "told" it something: the card shows the source. Not "Khabari Plus quotes Trump", not "Iran International reported that", not "a source told Tasnim": write Trump's words, the fact, "a source said". What officials or sources told an outlet ends the headline (", US officials say", ", diplomatic sources say") or leads it ("Diplomatic sources: …"); their kind (diplomatic, political, security, Western, Lebanese …) is always kept, never dropped. An outlet is NEVER the speaker_lead and never opens the headline.
 - A place a general reader does not know gets a short locator once, in the body only ("Nikshahr in Sistan and Baluchestan province, south-east Iran"). Never for Tehran, Isfahan, Bandar Abbas, Hormuz, Riyadh, Doha, Beirut, Baghdad, Tel Aviv, Haifa.
 - Use the parties' plain names: Iran, the IRGC, Israel, the IDF, the US, Hezbollah, the Iraqi militias, killed. Never the sources' loaded words ("the Zionist entity", "the enemy", "the occupation", "martyrs", "the Zionist regime", "mercenaries", "terrorists" for a party's forces): write Israel, the US, killed. Iran's government may be called the Iranian regime, as the site does; Israel and the US are never "a regime".
 - A party's claim of harm to civilians ("homes", "a massacre", "a school") is that party's claim, not a fact: who says it goes first, and the victims and figures are kept ("Iranian media: US strike hit a school in Minab, killing 5").
@@ -321,10 +322,19 @@ const LEBANON_WAR = /إسرائيل|اسرائيل|الاحتلال|العدو|�
 const LEBANON_POLITICS =
   /السلاح|مجلس الوزراء|جلسة الحكومة|الحكومة اللبنانية|مجلس النواب|المجلس النيابي|البرلمان|نبيه بري|الرئيس بري|عين التينة|الرئيس عون|جوزاف عون|نواف سلام|رئيس الحكومة|الجيش اللبناني|قائد الجيش|شاحنة|متفجرات|المتفجرات|اشتباك|إشكال مسلح|إطلاق نار|الثنائي الشيعي|حركة أمل/;
 
-/** A Lebanese outlet's item: the Iran war, Lebanon's war with Israel, and Lebanon's politics around them. */
+/**
+ * More of Lebanon's politics, and the world's leaders on the region (audit of 27 Oct: Al Jadeed's "Political sources:
+ * fear over Washington's leaks of sanctions on Lebanese figures", MTV's "Salam tries to ease tension with the Lebanese
+ * Forces", Putin and Qatar on the Gulf never reached the reader).
+ */
+const LEBANON_MORE = /عقوبات|العقوبات|واشنطن|الأميركي|الأمريكي|الإدارة الأميركية|السفارة الأميركية|القوات اللبنانية|الكتائب|جنبلاط|البطريرك|الراعي|الإطاري|اتفاق إطار|ترامب|ترمب|بوتين|الكرملين|الخليج|حمد بن جاسم|أمير قطر|الوزير|وزير الخارجية|المبعوث|الموفد/;
+/** An outlet's own scoop: what sources told it, what it learned ("مصادر دبلوماسية للجديد", "معلومات الـMTV", "علمت"). */
+const LEBANESE_SCOOP = /(?:مصادر|مصدر|أوساط|معلومات|اوساط)[^:\n]{0,40}(?:لل?(?:جديد|ـ?\s?MTV|ـ?\s?LBCI|ـ?\s?OTV|ـ?\s?NBN|نشرة|منار|أخبار|اخبار|ديار|جمهورية|نداء الوطن|بناء|مدن))|(?:علمت|عَلِمت|خاص)\s+(?:"?ال)?(?:جديد|MTV|LBCI|الجمهورية|الأخبار|نداء الوطن|الديار)|^خاص(?=[\s:])/i;
+
+/** A Lebanese outlet's item: the Iran war, Lebanon's war with Israel, and Lebanon's politics around them; its own scoops always. */
 export function passesLebaneseMediaGate(text: string): boolean {
   const t = String(text || "");
-  return isIranWar(t) || LEBANON_WAR.test(t) || LEBANON_POLITICS.test(t);
+  return LEBANESE_SCOOP.test(t) || isIranWar(t) || LEBANON_WAR.test(t) || LEBANON_POLITICS.test(t) || LEBANON_MORE.test(t);
 }
 
 /**
@@ -447,7 +457,7 @@ export function iranCopyProblem(r: { headline: string; body?: string; speaker_le
   // The desk's known figures are the ones its country lists name.
   // "Yazbek to MTV: …" too: one surname and the outlet he spoke to (27 Oct: "what's 'the yazbek'??").
   const bare = BARE_NAME.exec(h)?.[1] ?? /^([A-Z][a-z'’]+(?:-[A-Z]?[a-z'’]+)?) to [A-Z][\w-]*(?: [A-Z][\w-]*)?:\s/.exec(h)?.[1];
-  if (bare && !subjectNation(bare)) return `unfamiliar name: "${bare}" is not widely known; name the speaker by job or role (an Iranian MP, a protester's cousin), the name in the body. An analyst's or commentator's view is commentary`;
+  if (bare && !subjectNation(bare) && !knownRole(bare)) return `unfamiliar name: "${bare}" is not widely known; name the speaker by job or role (an Iranian MP, a protester's cousin), the name in the body. An analyst's or commentator's view is commentary`;
   const src = String(sourceText || "");
   if (MULTIPLIER.test(h) && !MULTIPLIER_SRC.test(src)) return "figure not in source: the text gives no million or billion";
   if (r.event_type === "statement" && !r.speaker_lead && !SAY_VERB.test(h)) {

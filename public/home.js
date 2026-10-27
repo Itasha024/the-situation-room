@@ -68,7 +68,7 @@
   const REGION = [[11.5, 32.5], [38.5, 61]];
 
   /* ---------- The data ---------- */
-  const D = { asOf: null, reports: [], events: [], trump: [], arenas: [], fronts: [], oil: null, ydata: null, ybrief: null, ibrief: null, gbrief: null };
+  const D = { asOf: null, reports: [], events: [], trump: [], arenas: [], fronts: [], oil: null, ydata: null, ybrief: null, ibrief: null, gbrief: null, abrief: null };
   let byFp = new Map();
   // No request holds the page up for long: one that has not answered in 40 seconds counts as none (it is asked again with the next refresh).
   const getJson = (u, o) => fetch(u, { ...(o || {}), signal: AbortSignal.timeout ? AbortSignal.timeout(40_000) : undefined }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -116,10 +116,13 @@
     }
     return [...m.values()].sort((a, b) => (a.at < b.at ? 1 : -1));
   }
-  const keyOf = (e) => e.desk + '|' + e.fp;
+  // One report on two desks is one pin here (27 Oct: a Sanaa strike pinned by both the Yemen and the Iran desk
+  // stood twice on the All map); the first desk listed keeps it, the Yemen desk's before the Iran desk's.
+  const keyOf = (e) => String(e.fp);
   function addEvents(list, replace) {
     const keep = new Map(D.events.map((e) => [keyOf(e), e]));
-    list.forEach((e) => { if (replace || !keep.has(keyOf(e))) keep.set(keyOf(e), e); });
+    const now = new Set();
+    list.forEach((e) => { const k = keyOf(e); if (now.has(k)) return; now.add(k); if (replace || !keep.has(k)) keep.set(k, e); });
     D.events = [...keep.values()];
   }
 
@@ -142,12 +145,15 @@
       addEvents([...eventsOf('yemen', dy && dy.events), ...eventsOf('iran', di && di.events), ...eventsOf('gaza', dg && dg.events)], true);
       try { onDesks(); } catch (e) { console.warn(e); }
     });
-    const [[di, dy, dg], bi, by, ti, ty, sy, si, bg] = await Promise.all([
+    const [[di, dy, dg], bi, by, ti, ty, sy, si, bg, ba] = await Promise.all([
       desks, getJson('/api/brief?desk=iran'), getJson('/api/brief?desk=yemen'),
       getJson('/api/trump'), getJson('/api/trump?desk=yemen'),
       getJson('/api/scan?only=time', { cache: 'no-cache' }), getJson('/api/scan?desk=iran&only=time', { cache: 'no-cache' }), getJson('/api/brief?desk=gaza'),
+      getJson('/api/brief?desk=all'),
     ]);
     if (bg && bg.ok !== false && !bg.pending) D.gbrief = bg;
+    // Every desk's points in one order of importance (user, 27 Oct), for the All page's brief.
+    if (ba && ba.ok !== false && Array.isArray(ba.points) && ba.points.length) D.abrief = ba;
     if (di || dy || dg) {
       D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), reportsOf('gaza', dg && dg.reports), OLD]);
       byFp = new Map(D.reports.map((r) => [r.fp, r]));
@@ -267,14 +273,20 @@
   const ISO = { saudi: 'sa', lebanon: 'lb', syria: 'sy', iraq: 'iq', jordan: 'jo', egypt: 'eg', qatar: 'qa', uae: 'ae', kuwait: 'kw', bahrain: 'bh', oman: 'om', turkey: 'tr', us: 'us', russia: 'ru' };
   const countryFlag = (code) => (code === 'israel' ? roundFlag('gaza') : code === 'iran' || code === 'yemen' ? roundFlag(code) : ISO[code] ? `<img class="dt-flag" src="/flags/${ISO[code]}.svg" alt="" aria-hidden="true" loading="lazy">` : '');
   /** The main country of a text: the one named first (a speaker before a colon counts: "Iran's FM: …"). */
-  function countryOf(text, desk) {
+  // The country a report is about, when its desk's reader said so (user, 27 Oct: "Washington holds Lebanese political
+  // level responsible…" stood under the US flag; it is Lebanon's story).
+  const ARENA_COUNTRY = { 'arena:lebanon': 'lebanon', 'arena:inside_iran': 'iran' };
+  function countryOf(text, desk, flags) {
     const t = String(text || '');
+    const arena = (flags || []).map((f) => ARENA_COUNTRY[f]).find(Boolean);
+    const named = arena && COUNTRY.find(([code]) => code === arena);
+    if (named && named[2].test(t)) return { code: named[0], name: named[1] };
     let best = null;
     for (const [code, name, re] of COUNTRY) { const m = re.exec(t); if (m && (!best || m.index < best.i)) best = { code, name, i: m.index }; }
     if (best) return best;
     return desk === 'iran' ? { code: 'iran', name: 'Iran' } : desk === 'yemen' ? { code: 'yemen', name: 'Yemen' } : { code: 'israel', name: 'Israel' };
   }
-  const countryTag = (text, desk) => { const c = countryOf(text, desk); return `<span class="h-cflag" title="${esc(c.name)}">${countryFlag(c.code)}</span>`; };
+  const countryTag = (text, desk, flags) => { const c = countryOf(text, desk, flags); return `<span class="h-cflag" title="${esc(c.name)}">${countryFlag(c.code)}</span>`; };
   /** Under a report: its desk, and whether the desk has the whole report or only the headline (user, 27 Oct). */
   const deskRef = (desk, fp, more) => (HD[desk] ? `<a class="x-desk" href="${HD[desk].href}#r=${encodeURIComponent(fp)}">${more ? `Full report on the ${esc(HD[desk].short)} desk →` : `On the ${esc(HD[desk].short)} desk →`}</a>` : '');
   const deskOfReport = (r) => (r.desks.includes('iran') && r.desks.includes('yemen') ? 'both' : r.desks[0]);
@@ -303,7 +315,7 @@
         <time datetime="${esc(r.at)}">${esc(fmt(r.at))}</time>
         <span class="src-wrap"><a class="src-link" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.src)}</a><a class="src-go" href="${esc(r.url)}" target="_blank" rel="noopener" aria-label="Open source">${ICON_EXT}</a></span>
         ${pinsOf(r.fp).length ? `<button type="button" class="card-map" data-pin-of="${esc(r.fp)}">Show on map</button>` : ''}
-        ${countryTag(r.h, r.desks[0])}
+        ${countryTag(r.h, r.desks[0], r.flags)}
       </div>
       ${reply}
       <p class="headline">${esc(r.h)}</p>

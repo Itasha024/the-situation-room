@@ -4,7 +4,7 @@
  * Stored pins are never changed here; these rules apply as the desk is read.
  */
 import { districtSeat, gulfAttack, heardInside, iranEventAllowed, iranPinAllowed, lebanonFire, ownSkyOnly, seaPlace, syrianQuneitra } from "./iran-places.ts";
-import { countryPin, notEvent, onePinPerEvent, servePins, strayExtraPins } from "./yemen-pins.ts";
+import { countryPin, notEvent, onePinPerEvent, servePins, strayExtraPins, townKey } from "./yemen-pins.ts";
 import { yemenPinSide } from "./dev-marks.ts";
 
 type Pin = {
@@ -71,6 +71,29 @@ export function serveIranPins<T extends Pin>(events: T[]): T[] {
   });
   // No pin on a whole country's centre, and one pin per event.
   return onePinPerEvent(s.filter((e) => !countryPin(e))) as T[];
+}
+
+/**
+ * The Gaza map's pins, one per event (27 Oct: "raid Jaba town" pinned three times in a night, one ambulance
+ * driver's arrest twice). A card's extra pin on a village another report already pins for the same side
+ * that half-day goes first: a roundup ("tight restrictions across Jenin governorate, raids on towns") set a
+ * second pin on each village the night's own reports had pinned.
+ */
+export function serveGazaPins<T extends Pin>(events: T[]): T[] {
+  const own = new Map<string, T[]>();
+  for (const e of events) {
+    if (String(e.fp ?? "").includes("-pin-") || !e.place) continue;
+    const k = townKey(String(e.place));
+    if (!own.has(k)) own.set(k, []);
+    own.get(k)!.push(e);
+  }
+  const base = (e: Pin) => String(e.fp ?? "").split("-pin-")[0];
+  const kept = events.filter((e) => {
+    if (!String(e.fp ?? "").includes("-pin-") || !e.place) return true;
+    const at = Date.parse(String(e.at));
+    return !(own.get(townKey(String(e.place))) ?? []).some((o) => base(o) !== base(e) && (o.actor ?? "") === (e.actor ?? "") && Math.abs(Date.parse(String(o.at)) - at) <= 12 * 3600e3);
+  });
+  return onePinPerEvent(kept) as T[];
 }
 
 /**

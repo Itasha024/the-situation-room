@@ -13,7 +13,7 @@ import { iranLeanOfSource } from "../yemen-scan.server.ts";
 import { gazaLeanOf } from "./gaza-sources.ts";
 import { gazaWords } from "./gaza-words.ts";
 import { houthiAttack, pinSideOf } from "./dev-marks.ts";
-import { cardsOnTheirPins, serveIranPins, serveYemenPins } from "./serve-map-pins.ts";
+import { cardsOnTheirPins, serveGazaPins, serveIranPins, serveYemenPins } from "./serve-map-pins.ts";
 import { gazaNotAPin, gazaPinSide } from "./gaza-pin-side.ts";
 
 /** A pin of the Gaza – Judea & Samaria map: on its desk, or the desk's own pin on another page. */
@@ -92,6 +92,11 @@ export async function readDesk(limit: number, before: string | undefined, desk: 
     // A card shows the place its pin is served on (20 Oct: "Oil tanker hit by projectile near Jubail, Saudi Arabia" was
     // stored at Byblos, Lebanon's Jbeil; its pin moves to Jubail as it is served, the card kept saying Byblos).
     cardsOnTheirPins(slice.reports as Record<string, unknown>[], s.events);
+  }
+  // The Gaza map's pins, one per event (serve-map-pins.ts; 27 Oct).
+  if (desk === "gaza" && Array.isArray((slice as { events?: unknown[] }).events)) {
+    const s = slice as unknown as { events: Parameters<typeof serveGazaPins>[0] };
+    s.events = serveGazaPins(s.events);
   }
   // The Yemen map's pins: on the place a report names, one per event, no analysis or visits (serve-map-pins.ts).
   if (desk === "yemen" && Array.isArray((slice as { events?: unknown[] }).events)) {

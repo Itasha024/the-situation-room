@@ -403,6 +403,11 @@ export async function judgeLinks(fresh: LiveReport[], pool: LiveReport[], ask: A
   const links = Array.isArray(json?.links) ? (json!.links as { id?: unknown; follows?: unknown }[]) : [];
   const changed: LiveReport[] = [];
   items.forEach(({ card, cands }, i) => {
+    // An outlet's own scoop stands as its own card, never under another outlet's (audit of 27 Oct).
+    if (((card as { flags?: string[] }).flags ?? []).includes("exclusive")) {
+      if (card.replyTo) { delete card.replyTo; changed.push(card); }
+      return;
+    }
     const ans = links.find((l) => String(l?.id) === `n${i + 1}`);
     if (!ans) return;
     const ref = String(ans.follows ?? "").trim();

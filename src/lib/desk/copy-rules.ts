@@ -588,7 +588,36 @@ export function cleanBody(text: string, source: string): string {
   if (HOUTHI_OUTLET.test(String(source || ""))) {
     t = t.replace(/(^|— |\. )Houthi(?:-aligned|-run)? media (?:said|reported|says|reports)(?: that)? (\S)/g, (_m, pre: string, c: string) => `${pre}${c.toUpperCase()}`);
   }
-  return t;
+  return paragraphs(t);
+}
+
+/**
+ * A long body in one block is split into paragraphs of three sentences (user, 27 Oct, Pezeshkian's speech: "try
+ * spacing such long reports to paragraphs logically"). A body the writer already split is left as it is.
+ */
+export function paragraphs(text: string): string {
+  const t = String(text || "").trim();
+  if (!t || /\n\s*\n/.test(t)) return t;
+  const parts: string[] = [];
+  let cur = "";
+  // A sentence ends at . ! ? (and a closing quote) before a capital or a quote; "Lt. Col.", "U.S." and "No. 2" do not end one.
+  for (const m of t.matchAll(/[^]*?(?:[.!?]["”’)]?(?=\s+["“A-Z])|$)/g)) {
+    if (!m[0]) continue;
+    cur += m[0];
+    if (/\b(?:Lt|Col|Gen|Maj|Capt|Brig|Mr|Mrs|Ms|Dr|Sgt|Adm|Gov|Sen|Rep|St|No|vs|Jr|Sr|[A-Z](?:\.[A-Z])+)\.$/.test(cur.trim())) continue;
+    parts.push(cur.trim());
+    cur = "";
+  }
+  if (cur.trim()) parts.push(cur.trim());
+  if (parts.length < 5) return t;
+  const out: string[] = [];
+  // Threes, and never one sentence left alone at the end (four left: two and two).
+  for (let i = 0; i < parts.length; ) {
+    const n = parts.length - i === 4 ? 2 : 3;
+    out.push(parts.slice(i, i + n).join(" "));
+    i += n;
+  }
+  return out.join("\n\n");
 }
 
 /**

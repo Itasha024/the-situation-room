@@ -2934,7 +2934,7 @@ export async function fetchYemenSources(state: ScanState, prev: ScanPayload | nu
   // its own story is that story: the card links the article.
   {
     const linked = hits
-      .filter((h) => h.fromTg && h.text.length < 1500 && (THIS_WAR.test(h.text) || IRAN_WAR_WORDS.test(h.text)) && !!articleLink(h.text))
+      .filter((h) => (h.fromTg || isPostUrl(h.url)) && h.text.length < 1500 && (THIS_WAR.test(h.text) || IRAN_WAR_WORDS.test(h.text)) && !!articleLink(h.text))
       .slice(0, POST_LINKS_PER_TICK);
     if (linked.length) {
       const { openArticle } = await import("./iran-scan.server.ts");

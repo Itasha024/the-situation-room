@@ -799,8 +799,12 @@ const GOV_COPY = /\bYemeni government (?:forces|army|troops)\b|\bgovernment forc
 const OFFICIAL_BODY = /Ministry|Foreign Office|spokesman|State Department|Embassy|CENTCOM|White House|Civil Defence|military axis/i;
 const BODY_NAME: Record<string, string> = { "Sanaa Foreign Ministry": "Houthi foreign ministry", "Yemen Foreign Ministry": "Yemeni government foreign ministry" };
 export function officialLead(headline: string, source: string): string {
-  if (!OFFICIAL_BODY.test(source) || /^[^:]{2,70}:\s/.test(headline)) return headline;
+  if (!OFFICIAL_BODY.test(source)) return headline;
   const name = BODY_NAME[source] ?? source;
+  // Its own post is its own statement, never "A source:" (27 Oct, CENTCOM's post on Hormuz).
+  const anon = /^(?:an?\s+)?(?:(?:US|American|military|senior)\s+)?(?:sources?|officials?)\s*:\s+/i.exec(headline);
+  if (anon) return `${name}: ${headline.slice(anon[0].length)}`;
+  if (/^[^:]{2,70}:\s/.test(headline)) return headline;
   // It already names itself: "Saudi Foreign Ministry condemns …".
   if (new RegExp(OFFICIAL_BODY.exec(name)?.[0] ?? name, "i").test(headline)) return headline;
   return `${name}: ${headline}`;
@@ -939,6 +943,7 @@ ${raw.body}`, c.text) : null;
   // An official body's own post is its statement: it leads (user, 8 Oct: the
   // Sanaa foreign ministry's "Saudi Arabia continues crimes against Yemen" went out with no speaker).
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
+  else if (/^(?:an?\s+)?(?:\w+\s+)?(?:sources?|officials?)\s*:/i.test(r.headline)) r.headline = officialLead(r.headline, c.source);
   if (r.event_type === "statement" || r.event_type === "diplomacy") r.headline = colonAfterLead(r.headline, r.speaker_lead);
   // The name went to its role, or the colon was no quote: the lead follows.
   if (lead && !r.headline.toLowerCase().startsWith(lead.toLowerCase())) {
@@ -1265,6 +1270,7 @@ function decideIran(raw: Reading, c: Candidate, strict = true): EditorVerdict {
     r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
   }
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
+  else if (/^(?:an?\s+)?(?:\w+\s+)?(?:sources?|officials?)\s*:/i.test(r.headline)) r.headline = officialLead(r.headline, c.source);
   if (r.event_type === "statement" || r.event_type === "diplomacy") r.headline = colonAfterLead(r.headline, r.speaker_lead);
   r.headline = stripSpellingNotes(r.headline);
   r.body = stripSpellingNotes(r.body);
@@ -1377,6 +1383,7 @@ function decideGaza(raw: Reading, c: Candidate, strict = true): EditorVerdict {
     r.headline = fixHeadline(`${lead}: ${r.headline.trim()}`);
   }
   if ((r.event_type === "statement" || r.event_type === "diplomacy") && !r.speaker_lead) r.headline = officialLead(r.headline, c.source);
+  else if (/^(?:an?\s+)?(?:\w+\s+)?(?:sources?|officials?)\s*:/i.test(r.headline)) r.headline = officialLead(r.headline, c.source);
   if (r.event_type === "statement" || r.event_type === "diplomacy") r.headline = colonAfterLead(r.headline, r.speaker_lead);
   r.headline = stripSpellingNotes(r.headline);
   r.body = stripSpellingNotes(r.body);

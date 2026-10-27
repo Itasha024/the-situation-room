@@ -2070,8 +2070,9 @@
     // The page fits its map again as the frame settles: the map shows when it has held still for 400 ms.
     { let at = '', still = 0, n = 0; const t = setInterval(() => { const c = m.getCenter(), k = `${c.lat.toFixed(3)},${c.lng.toFixed(3)},${m.getZoom()}`; still = k === at ? still + 1 : 0; at = k; if (still >= 4 || ++n > 40) { clearInterval(t); root.classList.add('ops-ready'); } }, 100); }
     openAt(m);
-    // A quiet line in the map's credits (user, 27 Oct): the map is not every event, and each is as its source told it.
-    try { const from = LOG_FROM[PAGE]; const line = `Not every event since ${esc(dm(from + 4 * 3600e3, 'Asia/Riyadh'))}${new Date(from).getUTCFullYear() < new Date().getUTCFullYear() ? ' ' + new Date(from + 4 * 3600e3).getUTCFullYear() : ''} is mapped; each is as accurate as its source.`; m.attributionControl.setPrefix(`<span class="ops-discl">${line}</span> · <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>`); const act = dock; if (act && !$('.ops-discl-m', act)) act.insertAdjacentHTML('beforeend', `<p class="ops-discl-m">${line}</p>`); } catch (e) { /* no credits box */ }
+    // The note on the map, its own line right under the map (user, 27 Oct: "make sure the disclaimer line under the map is
+    // visible"; it sat small in the credits' corner).
+    try { if (dock && !$('.ops-discl-m', dock)) dock.insertAdjacentHTML('afterbegin', '<p class="ops-discl-m">Map shows the majority of events, each only as accurate as its source.</p>'); } catch (e) { /* no strip */ }
     // The map opens on the reader's span, as the timeline under it (a link to a pin or a place keeps its own).
     if (!/#(at|pin)=/.test(location.hash)) {
       let tries = 0;

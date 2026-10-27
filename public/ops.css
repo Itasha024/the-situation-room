@@ -1560,12 +1560,10 @@ html[data-view="ops"] .ops-left .stat3.long > div > span { text-transform: none 
   html[data-view="ops"] .ops-noleft :is(.leaflet-left, .ops-tools, .ops-coords, .ops-toasts) { translate: 32px 0 }
   html[data-view="ops"] .ops-noright :is(.leaflet-right, .map-chip, .ops-lyrbtn) { translate: -32px 0 }
 }
-html[data-view="ops"] .ops-on .leaflet-control-attribution .ops-discl { opacity: .8; font-style: italic }
 /* The credits keep to the right, clear of the coordinates and the IDF-held box at the left (27 Oct). */
 @media (min-width: 761px) { html[data-view="ops"] .ops-on .leaflet-bottom.leaflet-right .leaflet-control-attribution { max-width: min(560px, 58%); margin-left: auto; line-height: 1.3; text-align: right; white-space: normal } }
-/* On a phone the credits sit by the map's buttons: the line goes under the days instead. */
-html[data-view="ops"] .ops-discl-m { display: none; margin: 6px 0 0; font-size: 10.5px; font-style: italic; color: var(--o-faint) }
-@media (max-width: 760px) { html[data-view="ops"] .ops-on .leaflet-control-attribution .ops-discl { display: none } html[data-view="ops"] .ops-discl-m { display: block } }
+/* The map's note: the first line under the map, on every screen (27 Oct). */
+html[data-view="ops"] .ops-discl-m { display: block; margin: 0 0 6px; font-size: 12px; line-height: 1.35; font-style: italic; color: var(--o-dim, var(--o-faint)) }
 html[data-view="ops"] .doc-root .sr-stamp.sr-discl { font-family: inherit !important; letter-spacing: 0; text-transform: none; font-size: 11.5px; color: var(--o-faint) }
 
 /* The Gaza desk's Mood tab (27 Oct): each big event's reactions, read from the Palestinian channels. */

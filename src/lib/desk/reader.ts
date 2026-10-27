@@ -401,7 +401,10 @@ ${SPELLING_RULES}
   not one). Write it as a wire story, not a list: vary the attribution
   ("warned", "accused", "urged", "argued", "he added", or none where the
   sentence is plainly his) and join related points. Never open sentence
-  after sentence with "He said". An outlet's exclusive (its own scoop) is
+  after sentence with "He said". A speech or interview of one speaker reads
+  as that speaker's words, in quotation marks, with no "he said" in each
+  sentence. A body of more than four sentences is split into short
+  paragraphs (a blank line between them), one subject each. An outlet's exclusive (its own scoop) is
   always one extended card: the headline, then a body with every fact the
   piece gives (terms, figures, who carried it, each side's answer).
 ${SCOOP_RULE}
@@ -533,10 +536,15 @@ STATEMENTS (event_type statement or diplomacy)
   al-Nuzaili "Yemeni armed forces spokesman" (the government's); Hussein
   al-Ezzi, Hezam al-Asad and Mohammed Ali al-Houthi "Houthi official".
 - An organisation, project or body a general reader would not know (Masam,
-  the Nation's Shield forces, a local council) is said once, in the body only,
-  with what it is or its full name: "Masam, the Saudi project clearing
-  landmines in Yemen, said …". Never for the ones readers know (the UN, WHO,
-  the EU, the GCC, the Red Cross, the Houthis), and never in the headline.
+  the Nation's Shield forces, a local council) is said once with what it is or
+  its full name: in the headline when it opens it ("Masam, the Saudi
+  demining project: …"), else in the body ("Masam, the Saudi project clearing
+  landmines in Yemen, said …"). Never for the ones readers know (the UN, WHO,
+  the EU, the GCC, the Red Cross, the Houthis).
+- A person a general reader would not know is never a bare name in the
+  headline: role and side first, the name after it or in the body. An
+  official account's own post is that body's statement ("CENTCOM: …"), never
+  "A source: …".
 - A diplomat's title says where he is posted: "US chargé d'affaires to
   Yemen", "Saudi ambassador to Yemen", never "US Embassy charge d'affaires".
   The speaker is named once: never "<title name>: <the same title> condemns".
@@ -1314,12 +1322,15 @@ export function thinExclusive(sourceText: string, body: string): boolean {
 const HEADLINE_MAX = 140;
 /** "Senior Iranian security official" → "The senior Iranian security official"; "Araghchi", "IRGC", "Iran's FM" stay. */
 function theSpeaker(s: string): string {
+  // "Yazbek to MTV" is Yazbek (27 Oct: "The yazbek to MTV also said said …").
+  s = s.replace(/\s+to\s+[A-Z][\w-]*(?:\s+[A-Z][\w-]*){0,2}$/, "");
   const a = /^an?\s+(.+)$/i.exec(s);
   if (a) return `The ${a[1]}`;
   if (/^the\s/i.test(s) || /^\S+'s\s/.test(s) || !/\s[a-z]/.test(s)) return s;
   const [first, ...more] = s.split(/\s+/);
-  const keep = /^(?:[A-Z]{2,}|Iranian|Israeli|American|Iraqi|Lebanese|Qatari|Saudi|Emirati|Omani|Pakistani|Russian|Chinese|Turkish|Egyptian|British|French|German|European|Gulf|Arab|Houthi|Hezbollah|Yemeni|Western|Kurdish)$/.test(first);
-  return `The ${keep ? first : first.toLowerCase()} ${more.join(" ")}`;
+  // Only a job opens with "the"; a name stays as it is.
+  if (!/^(?:Senior|Official|Source|Spokes\w+|Minister|Deputy|Commander|Lawmaker|Diplomat|Military|Security|Former|Top|Head|Chief|Adviser|Advisor|Member|Leader)$/i.test(first)) return s;
+  return `The ${first.toLowerCase()} ${more.join(" ")}`;
 }
 const CLAUSE_BREAKS = [/;\s+/g, /\s+[—–]\s+/g, /,\s+(?=(?:and|but|while|as|after|amid|saying|adding|warning|calling|with)\b)/g, /,\s+/g, /\s+(?=(?:as|after|amid|while|and|but)\s)/g];
 export function fitHeadline<T extends Pick<Reading, "headline" | "body">>(r: T): T {
@@ -1341,6 +1352,9 @@ export function fitHeadline<T extends Pick<Reading, "headline" | "body">>(r: T):
     const fixedHead = quotes % 2 ? `${head}"` : head;
     let rest = h.slice(at + len).replace(/^(?:and|but)\s+/i, "").trim();
     if (!rest) continue;
+    // A cut inside a phrase leaves no sentence: "sentences Hassan Golshannejad, 36, | to death for …" (27 Oct).
+    if (/^(?:to|for|of|in|on|at|with|from|by|into|over|under|than|\d)/i.test(rest)) continue;
+    rest = rest.replace(/^(?:also\s+)?(?:said|says|saying|added|adding|stated|noting|noted)\s+(?:that\s+)?/i, "");
     const speaker = /^([^:"“]{2,70}):\s/.exec(head)?.[1];
     rest = rest.replace(/^["“”]|["“”]$/g, "");
     const sentence = speaker ? `${theSpeaker(speaker)} also said ${rest}` : `${rest.charAt(0).toUpperCase()}${rest.slice(1)}`;

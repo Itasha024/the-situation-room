@@ -73,6 +73,8 @@ test("Lebanese channels' own scoops and Lebanon's politics reach the reader; kno
   assert.ok(passesLebaneseMediaGate("مصادر سياسية للجديد: حالة حذر وتخوف تسود الأوساط السياسية جراء تسريبات واشنطن"));
   assert.ok(passesLebaneseMediaGate("مصادر لـ MTV: سلام يحاول ترطيب الأجواء مع القوات"));
   assert.ok(!passesLebaneseMediaGate("غرق الشوارع الرئيسية والفرعية في زحلة جراء الأمطار الغزيرة"));
-  assert.equal(speakerByRole("Jumblatt: no one in Lebanon was consulted"), "Druze leader Walid Jumblatt: no one in Lebanon was consulted");
+  // Not Jumblatt (29 Oct): father and son both speak, so the table gives no role and the reader names which one.
+  assert.equal(speakerByRole("Jumblatt: no one in Lebanon was consulted"), "Jumblatt: no one in Lebanon was consulted");
+  assert.equal(speakerByRole("Mohebbi: prove it"), "IRGC spokesman Brig. Gen. Hossein Mohebbi: prove it");
   assert.equal(speakerByRole("Kataeb Party: refer Hezbollah to the Judicial Council"), "Lebanon's Kataeb Party: refer Hezbollah to the Judicial Council");
 });

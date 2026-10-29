@@ -59,7 +59,7 @@ const COMMENTATOR_BODY = /^[^.]{0,80}\b(?:(?:a|an) (?:former (?:\w+ ){0,3}?(?:of
 /** A paper's editorial or a column, told in the body (20 Oct: Okaz's editorial "a final alarm bell for all Yemenis"). */
 const EDITORIAL = /^[^.]{0,140}\b(?:in (?:an?|its) (?:editorial|op-ed|opinion (?:piece|column)|column)|editorial (?:said|says|argued|argues|wrote|writes))\b/i;
 /** Sport between the warring countries is not the war (20 Oct: "Yemen faces Saudi Arabia in Gulf U-17 clash in Doha"). */
-const SPORT = /\b(?:football|soccer|futsal|U-?1[5-9]|U-?2[0-3]|under-1[5-9]|under-2[0-3]|Gulf Cup|Asian Cup|World Cup|national team|kick-?off)\b/i;
+const SPORT = /\b(?:Champions League|club (?:loses|lost|beats|beat|wins|won|draws|drew)|football|soccer|futsal|U-?1[5-9]|U-?2[0-3]|under-1[5-9]|under-2[0-3]|Gulf Cup|Asian Cup|World Cup|national team|kick-?off)\b/i;
 /** A statistics release with nothing of the war in it (20 Oct: "Saudi Arabia's Operating Revenues Index rises 3% year on year in August"). */
 const STATS = /\byear[- ]on[- ]year\b|\b(?:revenues?|PMI|GDP|inflation|price|production|industrial|activity) index\b|\bindex (?:rises|rose|falls|fell|grows|grew|climbs|edges)\b/i;
 /** A major outlet's own analysis led as the teller: "Reuters warns of Houthi efforts to seize Taiz" (Yemen 386). */
@@ -93,7 +93,7 @@ export function notNews(headline: string, body = "", type = ""): string | null {
   if (NON_EVENT.test(h) && !HARM.test(h)) return "no event: an aircraft overhead or flares are not a report";
   if (BULLETIN.test(h) && !HARM.test(h)) return "bulletin: crossings', roads' and checkpoints' hours and court schedules are not reports";
   if (TALKS_ONLY.test(h) && !HARM.test(h)) return "protocol: a meeting where matters were discussed is not news";
-  if ((type === "economy" || type === "statement") && HOME_ECONOMY.test(h)) return "off-desk: prices, rates and companies' results far from the war are not this desk's";
+  if ((type === "economy" || type === "statement") && HOME_ECONOMY.test(h) && !ECONOMY_OF_WAR.test(h)) return "off-desk: prices, rates and companies' results far from the war are not this desk's";
   return null;
 }
 
@@ -138,9 +138,11 @@ const AND_PRESENT = new RegExp(String.raw`(\b(?:${[...new Set(Object.values(PAST
 
 const HARM =/\b(?:killed|killing|kills?|wounded|injured|struck|hit|hits|bomb\w*|missiles?|shot down|intercept\w*|seized|arrested|abducted|demolish\w*|raid\w*|shell(?:ed|s|ing)?\b(?! .*flares))/i;
 const NON_EVENT = /\b(?:reconnaissance|surveillance|spy)\b[^.:]{0,30}\b(?:drones?|aircraft|planes?|flights?|balloons?)\b|\b(?:warplanes?|aircraft|jets|drones?|helicopters?)\s+(?:fly|flew|flying|seen|spotted|circl\w+|hover\w*)\b|\b(?:illumination )?flares\b|\bfly(?:ing)? over\b|\boverflights?\b|\bsonic boom/i;
-const BULLETIN = /\bcrossings?\b[^.]{0,40}\b(?:open|opened|closed|reopen\w*)\b|\bcheckpoints?\b[^.]{0,60}\b(?:open|opening hours?)\b[^.]{0,20}\d|\bflying checkpoint\b|\broads? (?:closed|blocked) at\b|\bcourt (?:to )?hold\w* [^.]{0,40}\bhearings?\b|\bmove[sd]? from\b[^.]{0,60}\btoward/i;
+const BULLETIN = /\bcrossings?\b[^.]{0,80}\b(?:open|opened|closed|reopen\w*)\b|\bcheckpoints?\b[^.]{0,60}\b(?:open|opening hours?)\b[^.]{0,20}\d|\bflying checkpoint\b|\broads? (?:closed|blocked) at\b|\bcourt (?:to )?hold\w* [^.]{0,40}\bhearings?\b|\bmove[sd]? from\b[^.]{0,60}\btoward/i;
 const TALKS_ONLY = /^(?:[^:]{0,80}?\b(?:ambassador|envoy|delegate|representative|coast guard chief|governor|deputy|undersecretary|committee|chief)\b[^:]{0,80}?\b(?:discuss(?:es|ed)?|meets?|met|receives?|received|coordinat\w+|visits?|visited)\b)/i;
 const HOME_ECONOMY = /\b(?:inflation|interest rates?|Federal Reserve|the Fed\b|gasoline|petrol prices|households?\b|VAT\b|earnings|price rises|record output|pumps at record|cruise ships?|airlines?' losses|food prices)\b/i;
+/** Household economics stays when the war is in it (user, 29 Oct: "not necessarily not news, depends"): China raising fuel prices "as oil climbs on Iran war" is the war's cost; the Fed's rate is not. */
+const ECONOMY_OF_WAR = /\b(?:war|Iran\w*|Hormuz|Houthis?|Yemen\w*|Gaza|Red Sea|blockade|sanction\w*|missiles?|drones?|strikes?|attacks?|Israel\w*|Leban\w+|Palestin\w*|tankers?|shipping)\b/i;
 
 /* ------------------------------------------------------------------ *
  * Iran's home affairs (the Iran desk): rain, schools, crime, protests.
@@ -414,6 +416,9 @@ export function partisanWords(s: string, lebanon: boolean, iranDesk = false): st
       .replace(/^the "/, 'The "');
   }
   return out
+    // A speaker's "enemy" is his word, quoted (29 Oct: the IRGC deputy commander's "ready to respond to any
+    // adventure by the enemy" was refused three times for the word and lost).
+    .replace(/\b(the|any|an) (enem(?:y|ies)(?:['’]s)?)\b(?!["”])/gi, '$1 "$2"')
     .replace(/(?<!")\b(non-compliant|unauthori[sz]ed|smuggled)\b(?!")(?=\s+(?:oil |fuel |crude |commercial |foreign )?(?:tankers?|ships?|vessels?|boats?|cargo|crossings?|transits?|VLCCs?))/gi, '"$1"');
 }
 
@@ -552,9 +557,21 @@ export function roleInCopy(name: string, copy: string): string | null {
  * say his role"): the name, so the card is written again with the role; null when the lead is famous, an office
  * the table titles, a body or a country, or already carries a role.
  */
+/**
+ * A lead that is not a person: a country, a body, an outlet, an armed group (29 Oct: "South Korea:", "Coalition:",
+ * "WHO:", "Shehab:", "Saraya al-Quds:", "Kuwaiti Foreign Ministry:", "The Atlantic:" were all sent back as unknown
+ * people, and 40 items were lost with them). The name rules are for people only.
+ */
+const COUNTRY_NAMES = /^(?:the )?(?:Afghanistan|Albania|Algeria|Argentina|Armenia|Australia|Austria|Azerbaijan|Bahrain|Bangladesh|Belarus|Belgium|Brazil|Britain|Bulgaria|Canada|Chile|China|Colombia|Croatia|Cuba|Cyprus|Czechia|Denmark|Djibouti|Egypt|Eritrea|Ethiopia|Finland|France|Georgia|Germany|Greece|Hungary|India|Indonesia|Iran|Iraq|Ireland|Israel|Italy|Japan|Jordan|Kazakhstan|Kenya|Kuwait|Lebanon|Libya|Malaysia|Mexico|Morocco|Netherlands|New Zealand|Nigeria|North Korea|Norway|Oman|Pakistan|Palestine|Philippines|Poland|Portugal|Qatar|Romania|Russia|Saudi Arabia|Serbia|Singapore|Slovakia|Somalia|South Africa|South Korea|Spain|Sudan|Sweden|Switzerland|Syria|Taiwan|Tunisia|Turkey|Türkiye|UAE|UK|Ukraine|United Kingdom|United States|US|Uzbekistan|Venezuela|Vietnam|Yemen)\b/i;
+const BODY_WORDS = /\b(?:Coalition|WHO|UNICEF|UNRWA|OCHA|WFP|ICRC|HRANA|AEOI|Ministry|Ministries|Authority|Authorities|Office|Council|Committee|Commission|Organi[sz]ation|Agency|Center|Centre|Network|News|Media|Press|Times|Post|Journal|Gazette|Atlantic|Monitor|TV|Radio|Channel|Front|Brigades?|Battalions?|Forces|Army|Navy|Police|Guard|Movement|Party|Bloc|Government|Presidency|Parliament|Embassy|Consulate|Mission|Directorate|Department|Bureau|Union|League|Federation|Association|Foundation|Institute|Group|Company|Corporation|Bank|Fund|Court|Prosecution|Municipality|Saraya|Qassam|Quds|Shehab|Safa|WAFA|Maan|Hamas|Hezbollah|Houthis?|Fatah|Jihad|Kataib|Crossings)\b/;
+export function notAPerson(name: string): boolean {
+  const n = String(name || "").trim();
+  return COUNTRY_NAMES.test(n) || BODY_WORDS.test(n) || /^(?:President|Prime Minister|PM|King|Emir|Crown Prince|Sultan|Pope)\s/.test(n);
+}
+
 export function bareSpeaker(headline: string): string | null {
   const m = /^([A-Z][\p{L}'’-]+(?: [A-Z][\p{L}'’-]+)?):\s/u.exec(String(headline || ""));
-  if (!m || FAMOUS.test(m[1]) || knownRole(m[1])) return null;
+  if (!m || FAMOUS.test(m[1]) || knownRole(m[1]) || notAPerson(m[1])) return null;
   if (IRAN_OFFICES.some((o) => o.name === m[1].split(" ").pop())) return null;
   if (subjectNation(m[1]) || /^(?:IRGC|IDF|CENTCOM|Hezbollah|Hamas|UN|UNIFIL|IAEA|EU|NATO|OPEC|UKMTO|Houthis?|Kataib|Nujaba|Treasury|Pentagon|Kremlin|Ansarallah|Reuters|Axios|Sources?|Officials?)$/i.test(m[1])) return null;
   // A role word in the lead already ("Spokesman Baghaei:" is two words with its role).
@@ -577,6 +594,34 @@ export function droppedSpeaker(headline: string, type: string, sourceText: strin
 }
 
 /**
+ * A role the source does not give (user, 29 Oct: Al-Alam's "العميد محبي" — the IRGC's spokesman — went out as
+ * "IRGC Navy commander Mahabi", the posts before his being the Navy's). Each role word in the speaker's lead needs
+ * its word in the source, in any of its languages; one that has none was made up. Returns the made-up word.
+ */
+const ROLE_WORDS: [RegExp, RegExp][] = [
+  [/\b(?:navy|naval)\b/i, /navy|naval|marine|بحري|بحرية|دریایی|دريايي|ימי|הים/i],
+  [/\bspokes(?:man|woman|person)\b/i, /spokes|متحدث|ناطق|سخنگو|דובר/i],
+  [/\bcommander\b/i, /command|chief|head|قائد|قيادي|آمر|فرمانده|سردار|מפקד|אלוף/i],
+  [/\bdeputy\b/i, /deputy|vice|second|نائب|مساعد|معاون|جانشین|סגן/i],
+  [/\bambassador\b/i, /ambassador|envoy|سفير|سفیر|שגריר/i],
+  [/\badvis[eo]r\b/i, /advis|counsel|مستشار|مشاور|יועץ/i],
+  [/\bair force\b/i, /air force|aerospace|airforce|الجوي|الجوية|هوافضا|هوایی|האוויר/i],
+  [/\bintelligence\b/i, /intelligence|استخبار|مخابرات|اطلاعات|מודיעין/i],
+];
+export function inventedRole(headline: string, type: string, sourceText: string): string | null {
+  const text = String(sourceText || "");
+  if (text.trim().length < 20 || !["statement", "diplomacy", "politics"].includes(type)) return null;
+  const h = String(headline || "");
+  // The speaker's lead: up to the colon, or the words before the first verb.
+  const lead = /^[^:]{2,80}(?=:\s)/.exec(h)?.[0] ?? (/^(?:[A-Z][\p{L}.'’-]*\s+|(?:of|the|al-|for)\s+|[a-z]+\s+(?=[A-Z]))+/u.exec(h)?.[0] ?? "");
+  for (const [word, inText] of ROLE_WORDS) {
+    const m = word.exec(lead);
+    if (m && !inText.test(text)) return m[0];
+  }
+  return null;
+}
+
+/**
  * Party leaders and figures the channels name by surname alone, which the copy often does not explain (user, 27 Oct:
  * LBCI's "الجميّل من الكفور" went out as "Gemayel:" — "should have said his role"). Only surnames one person goes by.
  */
@@ -593,8 +638,11 @@ const KNOWN_ROLES: Record<string, string> = {
   Bennett: "Former Israeli PM Naftali Bennett",
   Gantz: "Former Israeli defence minister Benny Gantz",
   Liberman: "Yisrael Beytenu leader Avigdor Liberman",
-  // The audit of 27 Oct: LBCI's "Jumblatt:" was thrown away as an unknown name.
-  Jumblatt: "Druze leader Walid Jumblatt",
+  // Not "Jumblatt": the father and the son both speak (29 Oct: Taymour's words went out as Walid's).
+  // The IRGC's spokesman, whom Al-Alam names by rank and surname alone (29 Oct: "IRGC Navy commander Mahabi").
+  Mohebbi: "IRGC spokesman Brig. Gen. Hossein Mohebbi",
+  Mohabi: "IRGC spokesman Brig. Gen. Hossein Mohebbi",
+  Mahabi: "IRGC spokesman Brig. Gen. Hossein Mohebbi",
   Rai: "Maronite Patriarch Bechara al-Rai",
   Berri: "Lebanese Parliament Speaker Nabih Berri",
   Salam: "Lebanese PM Nawaf Salam",
@@ -797,7 +845,10 @@ export function saysNothing(headline: string): boolean {
 export function noSpeaker(headline: string): boolean {
   const h = String(headline || "");
   if (/^[^:]{2,60}:\s/.test(h) || /\b(?:says?|said|told|tells|claims?|according to)\b/i.test(h)) return false;
-  return /^(?:We|We're|We've|Our|Us|I|I'm|I've|My|Ready (?:for|to)|No basis|Not ready|Never|Will not|Won't|Cannot)\b/.test(h);
+  // The first person anywhere outside quotes, too (user, 29 Oct: "it doesn't say who says the things, just the
+  // things themselves" — LBCI's "Explosives file must go to the Judicial Council, we trust the judges").
+  const bare = h.replace(/["“][^"”]*["”]/g, " ");
+  return /^(?:We|We're|We've|Our|Us|I|I'm|I've|My|Ready (?:for|to)|No basis|Not ready|Never|Will not|Won't|Cannot)\b/.test(h) || /\b(?:we|our|ours|us|my)\b|\bI(?= [a-z])/.test(bare);
 }
 const KEY_WORDS = (s: string) => new Set(String(s || "").toLowerCase().match(/[a-z]{4,}/g) ?? []);
 /**

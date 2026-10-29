@@ -1182,16 +1182,41 @@ const NUMBER_WORDS: [RegExp, number][] = [
   [W("احد عشر|eleven|يازده"), 11],
   [W("اثنا عشر|اثني عشر|twelve|دوازده"), 12],
   [W("عشرين|عشرون|twenty|بيست"), 20],
+  // Arabic's dual is a number (29 Oct: "شهيدان" — two killed at al-Maghazi — failed "figure not in source: 2" in
+  // every outlet that told it), and so are ordinals ("the fourteenth MQ-1": "الرابعة عشرة", "چهاردهمین") and
+  // Hebrew's numbers.
+  [W("شهيدان|شهيدين|قتيلان|قتيلين|جريحان|جريحين|مصابان|مواطنان|مواطنين اثنين|شابان|شابين|طفلان|طفلين|جنديان|جنديين|شقيقان|شقيقين|طائرتان|طائرتين|مسيرتان|مسيرتين|صاروخان|صاروخين|غارتان|غارتين|سفينتان|سفينتين|ناقلتان|ناقلتين|منزلان|منزلين|مرتين|يومين|يومان|שניים|שתיים|שני|שתי|two"), 2],
+  [W("שלושה|שלוש"), 3], [W("ארבעה|ארבע"), 4], [W("חמישה|חמש"), 5], [W("שישה|שש"), 6], [W("שבעה|שבע"), 7], [W("שמונה"), 8], [W("עשרה|עשר"), 10],
+  [W("الاول|الاولى|first|اولين|يكمين"), 1],
+  [W("الثاني|الثانية|second|دومين"), 2],
+  [W("الثالث|الثالثة|third|سومين"), 3],
+  [W("الرابع|الرابعة|fourth|چهارمين"), 4],
+  [W("الخامس|الخامسة|fifth|پنجمين"), 5],
+  [W("السادس|السادسة|sixth|ششمين"), 6],
+  [W("السابع|السابعة|seventh|هفتمين"), 7],
+  [W("الثامن|الثامنة|eighth|هشتمين"), 8],
+  [W("التاسع|التاسعة|ninth|نهمين"), 9],
+  [W("العاشر|العاشرة|tenth|دهمين"), 10],
+  [W("الحادي عشر|الحادية عشرة|eleventh|يازدهمين"), 11],
+  [W("الثاني عشر|الثانية عشرة|twelfth|دوازدهمين"), 12],
+  [W("الثالث عشر|الثالثة عشرة|thirteenth|سيزدهمين"), 13],
+  [W("الرابع عشر|الرابعة عشرة|fourteenth|چهاردهمين"), 14],
+  [W("الخامس عشر|الخامسة عشرة|fifteenth|پانزدهمين"), 15],
+  [W("السادس عشر|السادسة عشرة|sixteenth|شانزدهمين"), 16],
+  [W("السابع عشر|السابعة عشرة|seventeenth|هفدهمين"), 17],
+  [W("الثامن عشر|الثامنة عشرة|eighteenth|هجدهمين|هيجدهمين"), 18],
+  [W("التاسع عشر|التاسعة عشرة|nineteenth|نوزدهمين"), 19],
+  [W("العشرين|twentieth|بيستمين"), 20],
 ];
 
 /**
  * The code's check on the model. Returns why a reading must not be published,
  * or null when it may be.
  */
-const CASUALTY_SRC = /قتيل|قتلى|شهيد|شهداء|جرحى|جريح|مصابين|كشته|مجروح|زخمي|\bkilled\b|\bwounded\b|\binjured\b|casualties/i;
+const CASUALTY_SRC = /قتيل|قتلى|شهيد|شهداء|جرحى|جريح|مصابين|كشته|مجروح|زخمي|הרוג|נהרג|פצוע|נפצע|\bkilled\b|\bwounded\b|\binjured\b|casualties/i;
 const CASUALTY_COPY = /kill|dead|death|died|wound|injur|casualt|lives|bodies/i;
 /** Words that say someone died; the wounded-only words are not among them. */
-const KILLED_SRC = /قتل|قتيل|قتلى|مقتل|استشهد|استشهاد|شهيد|شهداء|كشته|جان باخت|وفاة|توفي|مصرع|جثث|جثة|\bkill|\bdead\b|\bdied\b|\bdeaths?\b|\bbodies\b|\bmartyr/i;
+const KILLED_SRC = /قتل|قتيل|قتلى|مقتل|استشهد|استشهاد|شهيد|شهداء|ارتقى|ارتقوا|ارتقت|كشته|جان باخت|وفاة|توفي|مصرع|جثث|جثة|הרוג|נהרג|חלל|מת\b|נרצח|\bkill|\bdead\b|\bdied\b|\bdeaths?\b|\bbodies\b|\bmartyr/i;
 
 /** Words an English sentence of four or more words almost never goes without. */
 const FUNCTION_WORDS = new Set(
@@ -1290,7 +1315,12 @@ export function unattributed(headline: string, type: string | undefined, sourceT
   const h = headline.trim();
   if (/^[^:]{2,70}:\s/.test(h) || SAID.test(h)) return null;
   const said = type === "statement" || type === "diplomacy";
-  const who = OPENS_WITH_SPEAKER.exec(String(sourceText || ""))?.[1]?.trim() ?? "";
+  const src = String(sourceText || "");
+  let who = OPENS_WITH_SPEAKER.exec(src)?.[1]?.trim() ?? "";
+  // Al Mayadeen's country label is a dateline, the speaker after it ("إيران: اللواء إيزدي: …", 29 Oct).
+  if (/^(?:إيران|ايران|لبنان|العراق|اليمن|السعودية|فلسطين|غزة|سوريا|الأردن|مصر|قطر|الإمارات|الكويت|البحرين|عمان|تركيا|روسيا|الصين|أمريكا|أميركا|واشنطن|فلسطين المحتلة)$/.test(who)) {
+    who = OPENS_WITH_SPEAKER.exec(src.slice(src.indexOf(":") + 1))?.[1]?.trim() ?? who;
+  }
   if (said && who && !NOT_A_TELLER.test(who) && !OUTLET_LEAD.test(`${who}:`)) {
     return `does not lead with its speaker: the text opens with its teller ("${who}"); the headline says who said it ("Qatar: …", "Qatar says …")`;
   }
@@ -1413,7 +1443,9 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   if (b && b.length < 20) return "empty body";
   if (/[؀-ۿ֐-׿]/.test(h + b)) return "source-language text in copy";
   if (transliterated(h)) return "headline written as transliterated Arabic";
-  for (const re of BANNED_PHRASES) if (re.test(`${h} ${b}`)) return `banned phrase: ${re.source}`;
+  // A loaded word in quotes is its speaker's, not the desk's ("enemy" in an IRGC commander's words).
+  const unquoted = `${h} ${b}`.replace(/["“][^"”]{1,40}["”]/g, " ");
+  for (const re of BANNED_PHRASES) if (re.test(unquoted)) return `banned phrase: ${re.source}`;
 
   // Every figure must come from the source. Years and ordinals in dates are
   // numbers too, so they are held to the same rule.
@@ -1444,7 +1476,9 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   if (!strict) return null;
   // Persian letters as the Arabic ones: "شهید", "کشته".
   const srcN = sourceText.replace(/[یۍې]/g, "ي").replace(/ک/g, "ك");
-  if (CASUALTY_SRC.test(srcN) && !CASUALTY_COPY.test(`${h} ${b}`)) return "casualties dropped";
+  // The story's own dead and wounded, in its opening lines: a toll told in passing further down (29 Oct: AP on how
+  // long new strikes on Iran may last, Trump denying a channel to Tehran) is not this story's.
+  if (CASUALTY_SRC.test(srcN.slice(0, 400)) && !CASUALTY_COPY.test(`${h} ${b}`)) return "casualties dropped";
   // Wounded is not killed: "Saudi air strikes on Kamaran Island kill 3
   // citizens" over a text that says three were wounded.
   if (/\bkill(?:s|ed|ing)?\b|\bdead\b|\bdeaths?\b|\bdied\b/i.test(h) && !KILLED_SRC.test(srcN)) return "killed not in source";

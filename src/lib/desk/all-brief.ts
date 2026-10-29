@@ -49,7 +49,8 @@ You get every point of the three desks' briefs, each as: [its id] (its desk) tex
 1. "scores": every id with its importance from 1 to 10, judged against all desks' points alike, never by desk. Importance is what changes the war and the region the most:
    - 8-10: deaths in numbers, a senior commander killed, strikes and missiles on states, capitals, energy sites and shipping, a ship hit or seized, a front's line moving, decisions on war or peace (a ceasefire, talks, a deal, a blockade, sanctions), a leader's own new decision or threat of war;
    - 5-7: other attacks with dead or wounded, ground fighting, major diplomatic moves and meetings of leaders;
-   - 1-4: arrests and raids with no one hurt, words with no act, reactions, condemnations, features.
+   - 1-4: arrests and raids with no one hurt, shelling or gunfire with no one hurt, words with no act, reactions, condemnations, features.
+   The Iran–US war is the site's main story: a move in it (US or Iranian forces, Hormuz, a drone downed, talks, a letter or an offer between Washington and Tehran, a leader's threat) usually stands above a point of the same weight from the other desks. Usually, not always: deaths in numbers anywhere still lead.
 2. "cut": the ids not worth a brief at all: a drone or aircraft seen overhead with nothing hit, a routine raid or arrest, a road closed, a feature or human-interest story (community kitchens, a family's story), a condemnation or a statement with nothing new, a repeat of another point, a meeting or a statement already reported on an earlier day (a recap of last week's talks is not news). Never cut a point with a death, a strike on a state or a decision.
 3. "fixed": only for a point whose tense or grammar is wrong, its id to the corrected text. A brief tells what happened: past tense ("Israeli forces conduct explosions" → "Israeli forces conducted explosions"); what a speaker said keeps its "Speaker: …" form. Change nothing else: same words, same facts, every [[n]] mark kept where it was.
 Answer with JSON only: {"scores":{"y2":9,"i1":8,…},"cut":["g3",…],"fixed":{"i4":"…"}}`;
@@ -100,7 +101,11 @@ export function readRanking(json: Record<string, unknown>, points: Record<BriefD
   // Words alone never outrank an act (27 Oct: two points of Iran's UN envoy's speech above Gaza's dead): a point of
   // someone's words is held to 5, one with no new fact to 2, a meeting or a price to 6 (rank-points.ts's bands).
   const CAP = [10, 10, 6, 5, 2];
-  const score = (id: string) => Math.min(scoreOf.get(id) ?? fallback(id), CAP[band(textOf(id))] ?? 10, wordsOnly(textOf(id)) ? 5 : 10);
+  // Fire with no one hurt and nothing of a state's hit is held to 5 (user, 29 Oct: the All brief put shelling in
+  // south Lebanon and Gaza's gunboats above Vance's letter to Tehran); the Iran desk's points stand half a point up,
+  // the war with Iran being the site's main story ("most of the times Iran desk reports will be first, not a rule").
+  const score = (id: string) =>
+    Math.min(scoreOf.get(id) ?? fallback(id), CAP[band(textOf(id))] ?? 10, wordsOnly(textOf(id)) ? 5 : 10, quietFire(textOf(id)) ? 5 : 10) + (id[0] === "i" ? 0.5 : 0);
   const ranked = [...all].sort((a, b) => score(b) - score(a) || band(textOf(a)) - band(textOf(b)) || all.indexOf(a) - all.indexOf(b));
   const of = (id: string) => ({ desk: DESK_OF[id[0]], i: Number(id.slice(1)) - 1 });
   const fixed: Record<string, string> = {};
@@ -119,7 +124,15 @@ export function wordsOnly(point: string): boolean {
   const first = point.replace(/\s*\[\[\d+\]\]/g, "").split(/(?<=\.)\s/)[0];
   const said = /^[^:]{2,70}:\s/.test(first) || /^[^,;]{0,90}?\b(?:tells?|told|says?|said|warn(?:s|ed)|urg(?:es|ed)|calls? (?:on|for)|called (?:on|for)|accus(?:es|ed)|demand(?:s|ed))\b/i.test(first);
   // "Iran's navy: a tanker hit a mine and caught fire" tells an event, not words.
-  return said && !/\b(?:kill(?:ed|s|ing)?|dead|died|wounded|injured|struck|strikes?|hit|hits|seized|launched|fired|shot down|captured|intercepted|sank|explo(?:ded|sion|sions)|caught fire|mine|raided|arrested|demolished|advanced)\b/i.test(first);
+  // "US official: Vance sent a letter to Rezaei…" tells a step between states, not words.
+  return said && !/\b(?:kill(?:ed|s|ing)?|dead|died|wounded|injured|struck|strikes?|hit|hits|seized|launched|fired|shot down|captured|intercepted|sank|explo(?:ded|sion|sions)|caught fire|mine|raided|arrested|demolished|advanced|sent|letter|offered|proposed|ousted|dismissed|appointed|resigned|signed|deployed)\b/i.test(first);
+}
+
+/** Shelling, gunfire or a raid with no one hurt and no state's site or ship hit. */
+export function quietFire(point: string): boolean {
+  const p = point.replace(/\s*\[\[\d+\]\]/g, "");
+  return /\b(?:shell(?:ed|ing|s)?|artillery|gunfire|opened fire|fired (?:at|on|off)|gunboats?|raid(?:ed|s)?|bulldoz\w*|demolish\w*)\b/i.test(p) &&
+    !/\b(?:kill(?:ed|s|ing)?|dead|deaths?|died|wounded|injured|casualt\w+|ships?|tankers?|Hormuz|airports?|refiner\w*|oil|missiles?|ballistic)\b/i.test(p);
 }
 
 let running: Promise<void> | null = null;

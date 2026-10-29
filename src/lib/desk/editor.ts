@@ -97,6 +97,7 @@ import {
   speakerByRole,
   bareSpeaker,
   droppedSpeaker,
+  inventedRole,
   wrongSource,
   xPostTime,
   yemenOnIran,
@@ -1009,6 +1010,8 @@ function speakerFault(r: Reading, sourceText: string): EditorVerdict | null {
   if (!r.publish) return null;
   // A headline names who it is about (user, 29 Oct: "He wants to rename the Strait of Hormuz…").
   if (/^(?:He|She|They|It|His|Her|Their|Its)\b/.test(String(r.headline || "").trim())) return { kind: "reject", reason: "reader-check", note: "The headline opens with a pronoun: name the speaker or actor first (\"Trump: …\", \"Iran's foreign minister: …\")." };
+  const made = inventedRole(r.headline, TYPE_OF[r.event_type] ?? String(r.event_type), sourceText);
+  if (made) return { kind: "reject", reason: "reader-check", note: `The source does not call the speaker "${made}": give only the role the post itself states, or rank and name ("Brig. Gen. Mohebbi:").` };
   const bare = bareSpeaker(r.headline);
   if (bare) return { kind: "reject", reason: "reader-check", note: `Unfamiliar name in headline: "${bare}" — write their role or affiliation before the name ("Former Iranian foreign minister Salehi:", "Conservative politician Haghighatpour:").` };
   const dropped = droppedSpeaker(r.headline, TYPE_OF[r.event_type] ?? String(r.event_type), sourceText);

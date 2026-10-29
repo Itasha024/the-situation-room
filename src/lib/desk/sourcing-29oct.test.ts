@@ -79,3 +79,49 @@ test("every side's words from its own outlets; a side's own media tell their own
   ];
   for (const [h, s, t] of keep) assert.equal(otherSide(h, s, t), null, `${s}: ${h}`);
 });
+
+// The second round of 29 Oct: occupation words, invented roles, words with no speaker, lost items.
+import { bareSpeaker, inventedRole, noSpeaker } from "./copy-rules.ts";
+import { gazaWords } from "./gaza-words.ts";
+import { figuresIn } from "./reader.ts";
+import { quietFire, wordsOnly } from "./all-brief.ts";
+
+test("no 'occupation' or 'occupied' on the site", () => {
+  assert.equal(gazaWords("Occupation machines begin paving a road west of Dura"), "Israeli bulldozers begin paving a road west of Dura");
+  assert.equal(gazaWords("Attacks by the occupation continue in Jenin"), "Attacks by Israel continue in Jenin");
+  assert.equal(gazaWords('Houthi spokesman: Saudi Arabia is behind the escalation in the "occupied" provinces'), "Houthi spokesman: Saudi Arabia is behind the escalation in the government-held provinces");
+  assert.equal(gazaWords("Hezbollah fired at the occupied Shebaa Farms"), "Hezbollah fired at the Israeli-held Shebaa Farms");
+  assert.equal(gazaWords("Protesters occupied the ministry building"), "Protesters occupied the ministry building");
+});
+
+test("a role the source does not give is sent back", () => {
+  assert.equal(inventedRole("IRGC Navy commander Mahabi challenges US to prove mine clearance", "statement", "العميد محبي: أثبتوا ادعاء إزالة الألغام من مضيق هرمز بأدلة مستقلة"), "Navy");
+  assert.equal(inventedRole("IRGC spokesman Brig. Gen. Mohebbi: CENTCOM kills children", "statement", "المتحدث باسم حرس الثورة العميد حسين محبّي: سنتكوم قاتلة الأطفال"), null);
+});
+
+test("words with nobody saying them; bodies and countries are not unknown people", () => {
+  assert.ok(noSpeaker("Explosives file must go to the Judicial Council, we trust the judges"));
+  assert.ok(!noSpeaker("Houthi official: Our forces are mobilising"));
+  assert.ok(!noSpeaker('Trump says "we will win"'));
+  for (const h of ["Coalition: x", "WHO: x", "South Korea: x", "Shehab: x", "Saraya al-Quds: x"]) assert.equal(bareSpeaker(h), null, h);
+  assert.equal(bareSpeaker("Amin Warafi: x"), "Amin Warafi");
+});
+
+test("numbers as words: Arabic's dual, ordinals, Hebrew", () => {
+  assert.ok(figuresIn("شهيدان ومصابون بقصف الاحتلال مركبة", true).has("2"));
+  assert.ok(figuresIn("ساعتی قبل چهاردهمین فروند پهپاد", true).has("14"));
+  assert.ok(figuresIn("الطائرة المسيّرة المتطورة الرابعة عشرة", true).has("14"));
+  assert.ok(figuresIn('שני הרוגים בתקיפת כטב"מ', true).has("2"));
+});
+
+test("household economics stays when the war is in it", () => {
+  assert.equal(notNews("China raises retail fuel prices as oil climbs on Iran war", "", "economy"), null);
+  assert.ok(notNews("US Federal Reserve holds interest rates steady", "", "economy"));
+  assert.ok(notNews("Hadramawt club loses 2-1 to Qatar's Al-Duhail in Gulf Club Champions League", "", "economy"));
+});
+
+test("the All brief: quiet fire is held down, a letter between states is a deed", () => {
+  assert.ok(quietFire("Israeli artillery shelled several locations in southern Lebanon, including Meidoun"));
+  assert.ok(!quietFire("In Al-Jawf, a Saudi air strike killed 14"));
+  assert.ok(!wordsOnly("US official: Vice President Vance sent a letter to Iran's SNSC secretary"));
+});

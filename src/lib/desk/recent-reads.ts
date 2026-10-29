@@ -11,13 +11,15 @@
  * original not found here is still looked for the old way.
  */
 import { shared } from "./originals.ts";
+import { own } from "./sitemap.ts";
 
 export type Read = { source: string; url: string; text: string; at: number };
 
 const KEEP_MS = 48 * 3600_000;
-const MAX = 8000;
+// At most some 25 MB (29 Oct: 8,000 posts of 4,000 letters filled over two days, the worker's memory with them).
+const MAX = 5000;
 // Whole statements: Fars's post of the security official ran past 1,500 characters (22 Oct).
-const TEXT = 4000;
+const TEXT = 2500;
 const reads = new Map<string, Read>();
 
 /** The scan's items, as read (a picture post with its picture's words). */
@@ -25,9 +27,10 @@ export function remember(rows: { source: string; url: string; text: string; at: 
   for (const r of rows) {
     const at = Date.parse(r.at);
     if (!r.url || !Number.isFinite(at) || now - at > KEEP_MS) continue;
-    const text = `${r.title ? `${r.title}\n` : ""}${r.text}`.slice(0, TEXT);
+    // Copies, not pieces of the page they were cut from (sitemap.ts's own()).
+    const text = own(`${r.title ? `${r.title}\n` : ""}${r.text}`.slice(0, TEXT));
     const had = reads.get(r.url);
-    if (!had || text.length > had.text.length) reads.set(r.url, { source: r.source, url: r.url, text, at });
+    if (!had || text.length > had.text.length) reads.set(r.url, { source: own(r.source), url: own(r.url), text, at });
   }
   if (reads.size <= MAX * 1.1) return;
   for (const [u, r] of reads) if (now - r.at > KEEP_MS) reads.delete(u);

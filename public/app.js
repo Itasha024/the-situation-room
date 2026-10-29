@@ -38,17 +38,11 @@
   let last = 0;
   let seenPts = [];
   try {
-    // One visit keeps its marks across reloads: what was seen before it began, kept for this tab's session.
-    const mine = sessionStorage.getItem('desk:visitFrom');
-    if (mine) {
-      const v = JSON.parse(mine);
-      last = v.at || 0;
-      seenPts = v.pts || [];
-    } else {
-      last = Number(localStorage.getItem(KEY_AT)) || 0;
-      seenPts = JSON.parse(localStorage.getItem(KEY_PTS) || '[]');
-      sessionStorage.setItem('desk:visitFrom', JSON.stringify({ at: last, pts: seenPts }));
-    }
+    // A mark is shown once (user, 29 Oct: "should go away upon second time seeing it, after a refresh or a second
+    // entry"): this load counts as the last visit at once, so a reload or a new tab marks only what came since.
+    last = Number(localStorage.getItem(KEY_AT)) || 0;
+    seenPts = JSON.parse(localStorage.getItem(KEY_PTS) || '[]');
+    localStorage.setItem(KEY_AT, String(Date.now()));
   } catch (e) { /* private window: no marks */ }
   const seenSet = new Set(Array.isArray(seenPts) ? seenPts : []);
   const shown = new Set();
@@ -73,16 +67,16 @@
       shown.add(k);
       if (last && seenSet.size && !seenSet.has(k)) { li.classList.add('is-new'); li.insertAdjacentHTML('afterbegin', dot); }
     });
+    save();
   }
   let queued = false;
   const later = () => { if (!queued) { queued = true; setTimeout(() => { queued = false; mark(); }, 60); } };
   const start = () => { mark(); new MutationObserver(later).observe(document.body, { childList: true, subtree: true }); };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
-  // Leaving the site (or its tab): what is on screen now counts as read next time.
-  const save = () => {
+  // What has been on screen counts as read next time, saved as soon as it is drawn.
+  function save() {
     try {
-      localStorage.setItem(KEY_AT, String(Date.now()));
-      const all = [...seenSet, ...shown];
+      const all = [...new Set([...seenSet, ...shown])];
       localStorage.setItem(KEY_PTS, JSON.stringify(all.slice(-600)));
     } catch (e) { /* nothing kept */ }
   };

@@ -16,6 +16,15 @@
 /** `site`: the outlet's home a Google News item names (`<source url>`). */
 export type Listed = { url: string; title: string; desc: string; at: number; body?: string; site?: string };
 
+/**
+ * A string of its own. V8 keeps a piece cut from a long string (a slice, a regex match, an untouched trim) as a
+ * pointer into it, so one headline the scans remember for hours kept the whole listing it came from: the worker
+ * grew some 30 MB an hour, the listings' text the part that grew (heap profile of 29 Oct).
+ */
+export function own(s: string): string {
+  return s ? (JSON.parse(JSON.stringify(s)) as string) : s;
+}
+
 function decode(s: string): string {
   return s
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
@@ -46,7 +55,7 @@ export function parseListing(xml: string): Listed[] {
       const url = tag(b, "loc");
       const title = tag(b, "news:title") || tag(b, "image:title");
       const at = Date.parse(tag(b, "news:publication_date") || tag(b, "lastmod"));
-      if (url && title) out.push({ url, title, desc: "", at });
+      if (url && title) out.push({ url: own(url), title: own(title), desc: "", at });
     }
     return out;
   }
@@ -60,7 +69,7 @@ export function parseListing(xml: string): Listed[] {
     const at = Date.parse(tag(b, "pubDate") || tag(b, "published") || tag(b, "updated") || tag(b, "dc:date"));
     const body = tag(b, "content:encoded");
     const site = (/<source[^>]+url=["']([^"']+)["']/i.exec(b) || [])[1] || "";
-    if (url && /^https?:\/\//i.test(url) && title) out.push({ url, title, desc: desc.slice(0, 600), at, ...(body.length > 700 ? { body: body.slice(0, 12_600) } : {}), ...(site ? { site } : {}) });
+    if (url && /^https?:\/\//i.test(url) && title) out.push({ url: own(url), title: own(title), desc: own(desc.slice(0, 600)), at, ...(body.length > 700 ? { body: own(body.slice(0, 12_600)) } : {}), ...(site ? { site: own(site) } : {}) });
   }
   return out;
 }
@@ -166,7 +175,7 @@ export function parseHtmlListing(html: string, base: string, article: RegExp): L
   const out: Listed[] = [];
   for (const [url, e] of byUrl) {
     const title = e.texts.sort((a, b) => b.length - a.length)[0] ?? "";
-    if (title.length >= 12) out.push({ url, title, desc: "", at: e.at });
+    if (title.length >= 12) out.push({ url: own(url), title: own(title), desc: "", at: e.at });
   }
   return out;
 }

@@ -14,7 +14,7 @@ import { RESPONSE_SCHEMA, type ReaderPrompt } from "./reader.ts";
 import { IRAN_LABEL } from "./desk-route.ts";
 import { PERSIAN_SPELLING_RULES } from "./spelling.ts";
 import { subjectNation } from "./speaker-press.ts";
-import { knownRole } from "./copy-rules.ts";
+import { knownRole, notAPerson } from "./copy-rules.ts";
 import { leadSpeaker } from "./speakers.ts";
 
 /** Bumped when the prompt changes what a reading says: the cache is keyed by it. */
@@ -457,7 +457,7 @@ export function iranCopyProblem(r: { headline: string; body?: string; speaker_le
   // The desk's known figures are the ones its country lists name.
   // "Yazbek to MTV: …" too: one surname and the outlet he spoke to (27 Oct: "what's 'the yazbek'??").
   const bare = BARE_NAME.exec(h)?.[1] ?? /^([A-Z][a-z'’]+(?:-[A-Z]?[a-z'’]+)?) to [A-Z][\w-]*(?: [A-Z][\w-]*)?:\s/.exec(h)?.[1];
-  if (bare && !subjectNation(bare) && !knownRole(bare)) return `unfamiliar name: "${bare}" is not widely known; name the speaker by job or role (an Iranian MP, a protester's cousin), the name in the body. An analyst's or commentator's view is commentary`;
+  if (bare && !subjectNation(bare) && !knownRole(bare) && !notAPerson(bare)) return `unfamiliar name: "${bare}" is not widely known; name the speaker by job or role (an Iranian MP, a protester's cousin), the name in the body. An analyst's or commentator's view is commentary`;
   const src = String(sourceText || "");
   if (MULTIPLIER.test(h) && !MULTIPLIER_SRC.test(src)) return "figure not in source: the text gives no million or billion";
   if (r.event_type === "statement" && !r.speaker_lead && !SAY_VERB.test(h)) {

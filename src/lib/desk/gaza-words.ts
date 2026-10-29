@@ -54,6 +54,18 @@ const RULES: [RegExp, string | ((m: string) => string)][] = [
   [/\bZionists?\b/g, "Israeli"],
   [/\b(stormed|storming|storms|storm) (?:the )?(?:Al-Aqsa|al-Aqsa|Aqsa)(?: Mosque)?(?: compound)?\b/gi, (m: string) => `${({ stormed: "entered", storming: "entering", storms: "enter", storm: "enter" } as Record<string, string>)[m.split(/\s+/)[0].toLowerCase()]} the Temple Mount (Al-Aqsa) compound`],
   [/\bresistance fighters\b/gi, "gunmen"],
+  // No "occupation" or "occupied" anywhere on the site (user, 29 Oct: "Occupation machines begin paving…" from
+  // Radio Alam): whatever the noun after it, it is Israel's; the Houthis' "occupied provinces" are the government's.
+  [/\b(?:the )?(?:Israeli )?occupation(?:'s)? (?:machines|machinery|equipment|diggers|excavators|cranes)\b/gi, "Israeli bulldozers"],
+  [/\b(end(?:ing|s|ed)?|end (?:of|to)) (?:the )?(?:Israeli )?occupation\b/gi, "$1 Israeli rule"],
+  [/["“]?\boccupied["”]? (provinces|governorates|areas of Yemen|southern provinces)\b/gi, "government-held $1"],
+  [/\b(?:the )?(?:1948 )?occupied (?:interior|lands|land of 1948|territories of 1948)\b/gi, "Israel"],
+  [/\b(?:the )?occupied (?:Palestinian )?territor(?:y|ies)\b/gi, "Gaza and Judea and Samaria"],
+  [/\b(?:the )?(?:Israeli-)?occupied (?:Syrian )?Golan(?: Heights)?\b/gi, "the Golan Heights"],
+  [/\b(?:Israeli-)?occupied (?=[A-Z]|(?:Lebanese|Syrian|Palestinian|Arab) |(?:land|lands|areas?|positions?|points?|hills?|villages?|towns?)\b)/g, "Israeli-held "],
+  [/\b(?:by|from|with|against|on|of) (?:the )?(?:Israeli )?occupation\b/gi, (m: string) => `${m.split(/\s+/)[0]} Israel`],
+  [/\b(?:the )?(?:Israeli )?occupation(?:'s)? (?=[a-z])/gi, "Israeli "],
+  [/\b(?:the )?(?:Israeli )?occupation\b/gi, "Israel"],
 ];
 
 export function gazaWords(s: string): string {
@@ -63,6 +75,7 @@ export function gazaWords(s: string): string {
   out = out.replace(/\bIsraeli extremists (?:Israeli )?(?:Israeli citizens|settlers|colonists)\b/gi, "Israeli extremists");
   // "Israeli Israeli citizens", "Extremist Israeli extremists": one word once.
   out = out.replace(/\b(Israeli)\s+Israeli\b/gi, "$1").replace(/\bextremist (Israeli extremists)\b/gi, "$1");
+  out = out.replace(/\b([Aa]) (Israeli?)\b/g, "$1n $2");
   return out.replace(/^judea and samaria/, "Judea and Samaria").replace(/(^|[.:!?]\s+)israeli/g, (m, p) => `${p}Israeli`).replace(/^(?:deadly|dead|the war)\b/, (m) => m[0].toUpperCase() + m.slice(1));
 }
 

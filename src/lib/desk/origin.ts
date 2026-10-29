@@ -1627,3 +1627,25 @@ export function saidTo(text: string, carrier: string): boolean {
   const name = first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(String.raw`(?:\btold|\binterview with|\bin remarks to|\bspeaking to|لـ|في مقابلة مع|في حديث (?:ل|مع))\s*(?:the\s+)?[«"]?(?:al-?\s?)?${name}`, "i").test(text);
 }
+
+/**
+ * An article the server cannot open, told whole by another outlet the site already read (user, 29 Oct: Reuters'
+ * investigation of Iran's 5,000-agency supply network went out headline-only while Sky News Arabia and Al-Quds
+ * Al-Arabi carried every point of it, citing Reuters: "make full reports from relevant articles, not just the
+ * headline"). The read of the last day that names the outlet and, by a model's check, tells the same story: its
+ * text, headed with who told it.
+ */
+export async function toldByOthers(outlet: string, title: string, url: string, at = Date.now()): Promise<string> {
+  const entry = CITABLE.find(([re, c]) => c.kind === "outlet" && (re.test(outlet) || sameOutlet(c.name, outlet)));
+  const named = entry ? entry[0] : new RegExp(outlet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  const cands = recentReads(at)
+    .filter((r) => r.url !== url && !sameOutlet(r.source, outlet) && Math.abs(r.at - at) <= 24 * 3600_000 && r.text.length >= 400 && named.test(r.text))
+    .sort((a, b) => b.text.length - a.text.length)
+    .slice(0, 5);
+  if (!cands.length) return "";
+  const i = await whichCarries(title, cands.map((c) => c.text));
+  if (i < 0) return "";
+  const c = cands[i];
+  console.log(`[origin] ${outlet}'s article could not be opened; told whole by ${c.source}`);
+  return `[As told by ${c.source}, citing ${entry?.[1].name ?? outlet}]\n${c.text}`;
+}

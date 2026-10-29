@@ -63,3 +63,24 @@ test("one outlet's two posts on towns far apart are two stories", () => {
   const jenin = c("b", "2026-10-29T11:07:00Z", "Palestinian village head: Israeli forces bulldozed farmland west of Jenin", "Jenin", 32.46, 35.3);
   assert.equal(linkOk(jenin, hebron), false);
 });
+
+// 29 Oct, the rejects after the morning's fixes: the stretching mark, "a thousand", a martyr's memorial, outlets as names.
+import { checkReading, figuresIn, type Reading } from "./reader.ts";
+import { bareSpeaker } from "./copy-rules.ts";
+const reading = (over: Partial<Reading>): Reading => ({ id: "0", publish: true, reject_reason: "", event_type: "air_strike", confident_roles: true, actor: null, targets: [], origins: [], speaker_lead: null, interest: "neutral", has_time: false, headline: "", body: "", ...over });
+
+test("the stretching mark hides no death, and 'a thousand' is 1,000", () => {
+  const src = 'صورة الشـهـيد "إيهاب جمال أبو طقية" الذي ارتقـى برفقة "إبراهيم أبو عشيبة" بقصف مركبة على مدخل المغازي وسط القطاع.';
+  assert.equal(checkReading(reading({ headline: "Palestinian media: Two killed in strike on a car at al-Maghazi entrance", body: "Ihab Abu Taqiya and Ibrahim Abu Ashiba were killed when a car was struck at the entrance of al-Maghazi camp." }), src), null);
+  assert.ok(figuresIn("أكثر من ألف اعتداء بين القتل والحرق", true).has("1000"));
+});
+
+test("a martyr's memorial is not a toll dropped", () => {
+  const src = "مصادر محلية: قوات الاحتلال تهدم نصبا تذكاريا للشهيد ميسرة أبو حمدية عند مفرق الصاحب بمدينة الخليل.";
+  assert.equal(checkReading(reading({ event_type: "ground_clash", headline: "Palestinian media: Israeli forces demolished a memorial at al-Sahab junction in Hebron", body: "Israeli forces demolished a memorial to Maysara Abu Hamdiya at al-Sahab junction in Hebron, local sources said." }), src), null);
+});
+
+test("outlets and bodies leading a headline are not unknown people", () => {
+  for (const h of ["Prisoners' Club: 15 detainees moved to administrative detention", "Al-Resalah: Israel released all detainees from Qaryut", "MTV: General Security raided a house in Tripoli", "Al-Alam: Paris limits Israeli firms at Euronaval"]) assert.equal(bareSpeaker(h), null, h);
+  assert.equal(bareSpeaker("Haghighatpour: Iran must leave the NPT"), "Haghighatpour");
+});

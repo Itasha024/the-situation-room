@@ -57,8 +57,8 @@ export function numberRefs(points: string[], refOf: (id: string, point: string) 
   for (const raw of points) {
     // Marks side by side are one group: "[r1][r2][r3]" is "[r1, r2, r3]".
     const p = raw.replace(/\]\s*\[(?=[rt]\d)/gi, ", ");
-    // One reference for each fact a point joins, four at most (user, 9 Oct: two; 29 Oct: connected reports in one point).
-    let left = 4;
+    // One reference for each fact a point joins, four at most (user, 9 Oct: two; 29 Oct: connected and like reports in one point).
+    let left = 6;
     const text = p.replace(ID_MARK, (_m, list: string) => {
       const ids = list.split(/\s*[,;]\s*/).map((x, i, all) => (/^\d+$/.test(x) ? `${(all[0].match(/^[rt]/i) || ["r"])[0]}${x}` : x).toLowerCase());
       // Several reports of one fact: the best one only.

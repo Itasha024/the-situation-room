@@ -356,6 +356,12 @@ export function createPgStore(sqlProvider: SqlProvider = defaultSqlProvider): De
       return rows.map((r) => ({ fp: r.fp, url: r.url, source: r.source ?? "", at: r.at instanceof Date ? r.at.toISOString() : String(r.at) }));
     },
 
+    async setBody(fp, body) {
+      const sql = await sqlProvider();
+      const done = await sql<{ fp: string }>`update desk_report set body = ${pgSafe(body)} where fp = ${fp} and coalesce(body, '') = '' returning fp`;
+      dbMeter.queries += 1;
+      return done.length > 0;
+    },
     async relink(fp, url, source) {
       const sql = await sqlProvider();
       // The article's address is another card's already: that card stands, this one keeps Google's link.

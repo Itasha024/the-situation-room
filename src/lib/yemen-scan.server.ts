@@ -10,6 +10,7 @@
  *   reason — why it was kept or dropped, so the operator can audit the judgement
  */
 
+import { fillThinCards } from "./desk/thin-cards.ts";
 import { createHash } from "node:crypto";
 import { placesInCountry, type Place } from "./desk/gazetteer.ts";
 import { digest } from "./desk/digest.ts";
@@ -3832,6 +3833,7 @@ export async function runScanCycle(scan: (state: ScanState, prev: ScanPayload | 
     briefBuilt = (await refreshBrief(store, new Date(), { retryProse: true })).built;
     // Every desk's points in one order of importance (all-brief.ts), never held for.
     void refreshAllBrief(store).catch((err) => console.error("[all-brief]", err instanceof Error ? err.message : err));
+    void fillThinCards(store, "yemen").catch((err) => console.error("[thin-cards]", err instanceof Error ? err.message : err));
   } catch (err) {
     error ??= `brief: ${err instanceof Error ? err.message : "failed"}`;
   }

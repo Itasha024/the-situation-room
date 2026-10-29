@@ -14,6 +14,7 @@
  * services before Gemini, and Gemini's lite models only while today's use of
  * them leaves the Yemen reader its share.
  */
+import { fillThinCards } from "./desk/thin-cards.ts";
 import { IRAN_RSS, IRAN_TG, IRAN_X, IRAQI_MEDIA, ISRAELI_MEDIA, LEBANESE_MEDIA, NNA_LATEST, type IranLean, nnaStory } from "./desk/iran-sources.ts";
 import { isIranWar, passesIranOwnGate, passesIraqiMediaGate, passesIsraeliMediaGate, passesLebaneseMediaGate } from "./desk/iran-reader.ts";
 import { type Candidate, IRAN_READER, USAGE_KEY, type Usage, editCandidates } from "./desk/editor.ts";
@@ -27,7 +28,7 @@ import { hearable, listenToVideos } from "./desk/listen.ts";
 import { canResolve, cleanUrl, isGnews, knownResolve, outletFromHost, resolvesLeft } from "./desk/gnews.ts";
 import { bingLeft } from "./desk/bing.ts";
 import { articleLink, isPostUrl, isShortLink, msnCopy, ownStory, readerService, unshorten } from "./desk/full-text.ts";
-import { LIVE_BLOG, articleText } from "./desk/origin.ts";
+import { LIVE_BLOG, articleText, toldByOthers } from "./desk/origin.ts";
 import type { LiveReport, RawScanHit, ScanPayload, SourceStatus } from "./desk/types.ts";
 import { scanTrump } from "./trump-feed.server.ts";
 import { SAID_QUEUE, type SaidItem, enqueueSaid, trumpSaid } from "./desk/trump-said.ts";
@@ -196,6 +197,11 @@ export async function openArticle(url: string, title: string, source: string, ow
     const html = await readerService(url);
     const text = html ? extractLead(html) : "";
     if (text.length > best.length) best = text;
+  }
+  // Still shut: the same article told whole by another outlet the site read, naming it (user, 29 Oct).
+  if (best.length < 400) {
+    const told = await toldByOthers(source, title, url);
+    if (told.length > best.length) return told;
   }
   return best;
 }
@@ -660,6 +666,7 @@ export async function runIranCycle(fromScan = false): Promise<IranTickResult> {
   await store.putJson(STATE_KEY, state);
   // The 3-hour brief (stage 6): built once its window closes, never held for by the cycle.
   // Then every desk's points in one order of importance (all-brief.ts).
+  void fillThinCards(store, "iran").catch((err) => console.error("[thin-cards]", err instanceof Error ? err.message : err));
   void refreshIranBrief(store).then(() => refreshAllBrief(store)).catch((err) => console.error("[iran-brief]", err instanceof Error ? err.message : err));
   // US sanctions from OFAC's own list, once an hour (user, 17 Oct: the 15 Oct sanctions never reached the numbers).
   void refreshOfac(store).catch((err) => console.error("[ofac]", err instanceof Error ? err.message : err));

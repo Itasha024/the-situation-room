@@ -23,6 +23,7 @@ import { SCOOP_RULE } from "./source-profiles.ts";
 import { createHash } from "node:crypto";
 import { calendarHints, findCalendarDates } from "./calendars.ts";
 import { SPELLING_RULES, spellingHints } from "./spelling.ts";
+import { notAPerson } from "./copy-rules.ts";
 
 export type ReaderItem = {
   id: string;
@@ -1207,6 +1208,8 @@ const NUMBER_WORDS: [RegExp, number][] = [
   [W("الثامن عشر|الثامنة عشرة|eighteenth|هجدهمين|هيجدهمين"), 18],
   [W("التاسع عشر|التاسعة عشرة|nineteenth|نوزدهمين"), 19],
   [W("العشرين|twentieth|بيستمين"), 20],
+  // "More than a thousand attacks" (Quds News, 29 Oct) is the 1,000 the copy writes.
+  [W("الف|thousand|هزار|אלף"), 1000],
 ];
 
 /**
@@ -1475,7 +1478,14 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   // Casualties in the source are never dropped from the copy.
   if (!strict) return null;
   // Persian letters as the Arabic ones: "شهید", "کشته".
-  const srcN = sourceText.replace(/[یۍې]/g, "ي").replace(/ک/g, "ك");
+  // The stretching mark and the vowel signs are not letters (29 Oct: Alam 24's "ارتقـى" and "الشـهـيد" hid the death
+  // and the two killed at al-Maghazi were refused again). A martyr's memorial, grave or family is not a new toll
+  // (Hebron's "monument to the martyr Maysara Abu Hamdiya" was refused for "casualties dropped").
+  const srcN = sourceText
+    .replace(/[ً-ْٰـ]/g, "")
+    .replace(/[یۍې]/g, "ي")
+    .replace(/ک/g, "ك")
+    .replace(/(?:نصب|النصب|تذكاري|ذكرى|ضريح|قبر|منزل|عائلة|والد|والدة|ام|ابن|شقيق|جدارية|صورة|ميدان|دوار)[^.\n]{0,25}?(?:لل|ال)شهيد\S*/g, " ");
   // The story's own dead and wounded, in its opening lines: a toll told in passing further down (29 Oct: AP on how
   // long new strikes on Iran may last, Trump denying a channel to Tehran) is not this story's.
   if (CASUALTY_SRC.test(srcN.slice(0, 400)) && !CASUALTY_COPY.test(`${h} ${b}`)) return "casualties dropped";
@@ -1486,7 +1496,7 @@ export function checkReading(r: Reading, sourceText: string, strict = true): str
   if (r.actor_side === "houthi" && /\bYemeni (?:armed )?forces\b|\bYemen's (?:army|armed forces)\b/i.test(`${h} ${b}`)) return "Houthi actor written as Yemeni forces";
   // "Amin al-Warafi receives released prisoners in Ibb": nobody knows him.
   const name = UNKNOWN_NAME_LEAD.exec(h);
-  if (name && !KNOWN_NAMES.test(name[0])) return `unfamiliar name in headline: "${name[0].trim()}" — write their role or affiliation, never the name`;
+  if (name && !KNOWN_NAMES.test(name[0]) && !notAPerson(name[0].trim())) return `unfamiliar name in headline: "${name[0].trim()}" — write their role or affiliation, never the name`;
   // A statement of many points kept to one line: the STC official's nine
   // points to an Italian paper went out as one of them and no body.
   const points = pointsIn(sourceText);

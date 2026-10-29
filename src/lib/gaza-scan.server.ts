@@ -8,6 +8,7 @@
  * (gaza-reader.ts); its cards are this desk's alone ("gz-…", desks ["gaza"]). It runs on its own clock
  * and lock, and reads with the free services the other desks use least.
  */
+import { fillThinCards } from "./desk/thin-cards.ts";
 import { gazaLeadBonus } from "./desk/gaza-sourcing.ts";
 import { refreshGazaBrief } from "./desk/gaza-brief.ts";
 import { refreshAllBrief } from "./desk/all-brief.ts";
@@ -343,6 +344,7 @@ export async function runGazaCycle(): Promise<GazaTickResult> {
   console.log(`[gaza] ${note} ${Math.round(tookMs / 1000)}s`);
   // The 3-hour brief, Gaza and Judea and Samaria apart (gaza-brief.ts); it must never cost the cycle.
   // Then every desk's points in one order of importance (all-brief.ts).
+  void fillThinCards(store, "gaza").catch((err) => console.error("[thin-cards]", err instanceof Error ? err.message : err));
   void refreshGazaBrief(store).then(() => refreshAllBrief(store)).catch((err) => console.error("[gaza-brief]", err instanceof Error ? err.message : err));
   // The IDF-held area as the mapping projects publish it, every 6 hours (gaza-line.server.ts).
   void refreshIdfArea(store).catch((err) => console.error("[gaza-line]", err instanceof Error ? err.message : err));

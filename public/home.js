@@ -138,6 +138,13 @@
     // The pins are drawn as soon as the two desks are in, not after the briefs, Trump and the scan times
     // (user, 18 Oct: a first visit waited seconds for the pins).
     const desks = Promise.all([getJson('/api/desk?desk=iran'), getJson('/api/desk?desk=yemen'), getJson('/api/desk?desk=gaza')]);
+    // Every desk's points in one order of importance (user, 27 Oct), for the All page's brief. Drawn the moment it
+    // comes, never after the desks' feeds (29 Oct: a slow Gaza feed left the brief on "Loading" for a minute).
+    const allBrief = getJson('/api/brief?desk=all').then((ba) => {
+      if (ba && ba.ok !== false && Array.isArray(ba.points) && ba.points.length) D.abrief = ba;
+      setTimeout(() => { try { if (window.__opsTheatres) window.__opsTheatres(); } catch (e) { console.warn(e); } }, 0);
+      return ba;
+    });
     if (onDesks) desks.then(([di, dy, dg]) => {
       if (!(di || dy || dg)) return;
       D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), reportsOf('gaza', dg && dg.reports), OLD]);
@@ -149,11 +156,9 @@
       desks, getJson('/api/brief?desk=iran'), getJson('/api/brief?desk=yemen'),
       getJson('/api/trump'), getJson('/api/trump?desk=yemen'),
       getJson('/api/scan?only=time', { cache: 'no-cache' }), getJson('/api/scan?desk=iran&only=time', { cache: 'no-cache' }), getJson('/api/brief?desk=gaza'),
-      getJson('/api/brief?desk=all'),
+      allBrief,
     ]);
     if (bg && bg.ok !== false && !bg.pending) D.gbrief = bg;
-    // Every desk's points in one order of importance (user, 27 Oct), for the All page's brief.
-    if (ba && ba.ok !== false && Array.isArray(ba.points) && ba.points.length) D.abrief = ba;
     setTimeout(() => { try { if (window.__opsTheatres) window.__opsTheatres(); } catch (e) { console.warn(e); } }, 0);
     if (di || dy || dg) {
       D.reports = mergeReports([reportsOf('yemen', dy && dy.reports), reportsOf('iran', di && di.reports), reportsOf('gaza', dg && dg.reports), OLD]);

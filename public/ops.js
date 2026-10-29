@@ -637,7 +637,7 @@
     const h = window.__home;
     if (!el || !h || !h.D) return;
     const briefs = { iran: h.D.ibrief, yemen: h.D.ybrief, gaza: h.D.gbrief };
-    const key = JSON.stringify([...Object.values(briefs), h.D.abrief].map((b) => (b ? b.updatedAt || 1 : 0)));
+    const key = JSON.stringify([...Object.values(briefs), h.D.abrief].map((b) => (b ? b.updatedAt || 1 : 0)).concat(h.D.reports.length));
     if (el._k === key) return;
     el._k = key;
     const when = (t) => (t ? `${hm(t, 'Asia/Jerusalem')}, ${dm(t, 'Asia/Jerusalem')}` : '');

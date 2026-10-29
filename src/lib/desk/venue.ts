@@ -32,6 +32,7 @@ const OUTLET_OF: Record<string, string> = {
   "washingtonexaminer.com": "Washington Examiner",
   "justthenews.com": "Just the News",
   "newsmax.com": "Newsmax",
+  "newsnationnow.com": "NewsNation",
   "cbsnews.com": "CBS",
   "nbcnews.com": "NBC News",
   "abcnews.go.com": "ABC",

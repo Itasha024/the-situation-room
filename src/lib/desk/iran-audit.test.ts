@@ -13,6 +13,8 @@ const reading = (o: Partial<Reading>): Reading =>
 const verdict = (headline: string, text: string, o: Partial<Reading> = {}) => decideIranForTest(reading({ headline, ...o }), text, "Vahid Online", "opposition");
 /** America's words from America's own press: an opposition outlet retelling them is a relay (user, 9 Oct). */
 const usVerdict = (headline: string, text: string, o: Partial<Reading> = {}) => decideIranForTest(reading({ headline, ...o }), text, "Fox News", "us");
+// A wire, for the tests that are about the desk and the words, not who tells it (29 Oct: an Iranian outlet tells Iran's story only).
+const wireVerdict = (headline: string, text: string, o: Partial<Reading> = {}) => decideIranForTest(reading({ headline, ...o }), text, "Reuters", "intl");
 
 test("an outlet never tells the story", () => {
   for (const h of [
@@ -43,7 +45,7 @@ test("commentary is not a report", () => {
 test("the Houthis' war with Saudi Arabia goes to the Yemen desk", () => {
   assert.equal(verdict("Lufthansa and Air India suspend flights to Riyadh after Houthi ballistic missile attack on King Khalid airport", "لوفت‌هانزا ریاض حوثی ملک خالد", { event_type: "economy" }).kind, "reject");
   assert.equal(verdict("Saudi civil defence says intercepted missile debris damaged a nursery in Riyadh", "الدفاع المدني ریاض", { event_type: "air_strike" }).kind, "reject");
-  assert.equal(verdict("Houthis say they fired a missile at Eilat", "الحوثي إيلات صاروخ", { event_type: "missile_launch" }).kind, "publish");
+  assert.equal(wireVerdict("Houthis say they fired a missile at Eilat", "الحوثي إيلات صاروخ", { event_type: "missile_launch" }).kind, "publish");
 });
 
 test("no million the text never gave", () => {
@@ -60,7 +62,7 @@ test("a statement keeps the teller its text opens with", () => {
 });
 
 test("the sources' loaded words are reworded; \"Iranian regime\" stays", () => {
-  const v = verdict("UAE bans 472 vessels linked to Iranian regime from its ports", "472 شناور مرتبط با رژیم ایران", { event_type: "economy" });
+  const v = wireVerdict("UAE bans 472 vessels linked to Iranian regime from its ports", "472 شناور مرتبط با رژیم ایران", { event_type: "economy" });
   assert.equal(v.kind, "publish");
   assert.equal(v.kind === "publish" && v.report.summary, "UAE bans 472 vessels linked to Iranian regime from its ports");
   const w = verdict("Basij says Hormuz shows Islamic Iran's capability", "منظمة تعبئة المستضعفين: مضيق هرمز يظهر اقتدار إيران الإسلامية", { speaker_lead: "Basij" });

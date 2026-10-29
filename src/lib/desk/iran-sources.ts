@@ -389,6 +389,7 @@ export const SHARED_RSS: Record<string, IranLean> = {
   CBS: "us",
   "NBC News": "us",
   "Fox News": "us",
+  NewsNation: "us",
   Politico: "us",
   Bloomberg: "us",
   "Financial Times": "intl",
@@ -445,6 +446,9 @@ export const IRAN_RSS: { id: string; url: string; name: string; lean: IranLean; 
   { id: "c13", url: gnSite("13tv.co.il"), name: "Channel 13", lean: "israel", every: 15, israeliMedia: true },
   // Trump's interviews (user, 16 Oct). newsmax.com does not answer the server; its listing on Google News does.
   { id: "newsmax", url: gnSiteEn("newsmax.com"), name: "Newsmax", lean: "us", every: 10 },
+  // Its scoops on the US and Iran reach the desk through Al Jazeera (user, 29 Oct: "go to the NewsNation pages and
+  // take it from there"): read at home.
+  { id: "newsnation", url: "https://www.newsnationnow.com/feed/", name: "NewsNation", lean: "us", every: 10 },
   // Russia's state media (user, 22 Oct): what Lavrov, Peskov and Putin say is in them first.
   { id: "tass", url: "https://tass.com/rss/v2.xml", name: "TASS", lean: "intl", every: 5 },
   { id: "ria", url: "https://ria.ru/export/rss2/archive/index.xml", name: "RIA Novosti", lean: "intl", every: 10 },

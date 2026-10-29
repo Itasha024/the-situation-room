@@ -90,6 +90,7 @@ import {
   notNews,
   officeTitles,
   partisanWords,
+  pastTense,
   relayOf,
   rightType,
   ungarble,
@@ -989,7 +990,7 @@ function reviewReject(r: Reading, c: Candidate, desk: DeskId, strict: boolean): 
   const why = notNews(r.headline, r.body, TYPE_OF[r.event_type] ?? String(r.event_type)) ?? (desk === "iran" ? homeAffairs(r.headline) : null);
   if (why) return { kind: "reject", reason: "reader", note: sentence(why) };
   if (desk === "iran" && yemenOnIran(r.headline, r.body)) return { kind: "reject", reason: "reader", note: "Yemen desk: the Houthis' war is the Iran desk's only when Iran or an Iranian actor is in the headline or first sentence." };
-  const relay = relayOf({ headline: r.headline, body: r.body, source: c.source, lean: c.lean, desk, own: isExclusive(c.text, c.source) || c.tags.includes("original") });
+  const relay = relayOf({ headline: r.headline, body: r.body, source: c.source, lean: c.lean, desk, own: isExclusive(c.text, c.source) || c.tags.includes("original"), type: TYPE_OF[r.event_type] ?? String(r.event_type) });
   if (relay) return { kind: "reject", reason: "reader", note: sentence(relay) };
   const own = isExclusive(c.text, c.source) || c.tags.includes("original");
   const sourcing = { headline: r.headline, type: TYPE_OF[r.event_type] ?? String(r.event_type), source: c.source, own };
@@ -1006,6 +1007,8 @@ function reviewReject(r: Reading, c: Candidate, desk: DeskId, strict: boolean): 
 /** Who spoke, as the user wants it (24 Oct): a little-known speaker by role, never words with their speaker dropped. */
 function speakerFault(r: Reading, sourceText: string): EditorVerdict | null {
   if (!r.publish) return null;
+  // A headline names who it is about (user, 29 Oct: "He wants to rename the Strait of Hormuz…").
+  if (/^(?:He|She|They|It|His|Her|Their|Its)\b/.test(String(r.headline || "").trim())) return { kind: "reject", reason: "reader-check", note: "The headline opens with a pronoun: name the speaker or actor first (\"Trump: …\", \"Iran's foreign minister: …\")." };
   const bare = bareSpeaker(r.headline);
   if (bare) return { kind: "reject", reason: "reader-check", note: `Unfamiliar name in headline: "${bare}" — write their role or affiliation before the name ("Former Iranian foreign minister Salehi:", "Conservative politician Haghighatpour:").` };
   const dropped = droppedSpeaker(r.headline, TYPE_OF[r.event_type] ?? String(r.event_type), sourceText);
@@ -1123,7 +1126,8 @@ export function toReport(r: Reading, c: Candidate): LiveReport {
     source: c.source,
     url: c.url,
     type,
-    summary: r.headline.trim().replace(/[.\s]+$/, ""),
+    // A finished act in the past tense (29 Oct review).
+    summary: pastTense(r.headline.trim().replace(/[.\s]+$/, "")),
     // No body, no dateline: "KAHBUB — " on its own is an empty card.
     text: dateline && body ? `${dateline} — ${body}` : body,
     live: true,

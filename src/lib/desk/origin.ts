@@ -84,7 +84,7 @@ export type Cited = {
 
 /** Each country's main outlets: where "British media" or "a US official" is looked for. */
 export const COUNTRY_SITES: Record<string, string[]> = {
-  US: ["nytimes.com", "wsj.com", "washingtonpost.com", "apnews.com", "reuters.com", "cnn.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "foxnews.com", "axios.com", "politico.com", "bloomberg.com", "newsmax.com"],
+  US: ["nytimes.com", "wsj.com", "washingtonpost.com", "apnews.com", "reuters.com", "cnn.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "foxnews.com", "newsnationnow.com", "axios.com", "politico.com", "bloomberg.com", "newsmax.com"],
   UK: ["ft.com", "theguardian.com", "thetimes.com", "telegraph.co.uk", "bbc.com", "economist.com", "independent.co.uk", "news.sky.com"],
   IR: ["tasnimnews.ir", "presstv.ir", "irna.ir", "mehrnews.com", "farsnews.ir", "javanonline.ir", "kayhan.ir"],
   IT: ["repubblica.it", "corriere.it", "ansa.it", "lastampa.it", "ilsole24ore.com"],
@@ -119,6 +119,7 @@ const CITABLE: [RegExp, Cited][] = [
   [/بوليتيكو|Politico/i, O("Politico", "politico.com", "US")],
   [/سی[‌ ]?ان[‌ ]?ان|سي إن إن|سي ان ان|\bCNN\b/i, O("CNN", "cnn.com", "US")],
   [/فاکس ?نیوز|فوكس نيوز|Fox News/i, O("Fox News", "foxnews.com", "US")],
+  [/نيوز ?نيشن|نیوز ?نیشن|NewsNation|News Nation/i, O("NewsNation", "newsnationnow.com", "US")],
   [/ان[‌ ]?بی[‌ ]?سی|إن بي سي|ان بي سي|\bNBC\b/i, O("NBC News", "nbcnews.com", "US")],
   [/سی[‌ ]?بی[‌ ]?اس|سي بي إس|سي بي اس|\bCBS\b/i, O("CBS News", "cbsnews.com", "US")],
   [/إيه بي سي|اي بي سي|\bABC News\b/i, O("ABC News", "abcnews.go.com", "US")],

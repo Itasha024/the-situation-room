@@ -15,7 +15,7 @@ import { isOfficial } from "./source-rating.ts";
 import { aboutFootage } from "./media.ts";
 import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
-import { isWireSource, officialVoice, sourceNation, subjectNation } from "./speaker-press.ts";
+import { isWireSource, namesNation, officialVoice, sourceNation, subjectNation } from "./speaker-press.ts";
 
 /* ------------------------------------------------------------------ *
  * Non-news: analysis, market wraps, price ticks, round-ups, Friday
@@ -88,8 +88,59 @@ export function notNews(headline: string, body = "", type = ""): string | null {
   if (EDITORIAL.test(String(body || "")) || /\beditorial\b/i.test(h)) return "commentary: a paper's editorial or a column is not a report";
   if (SPORT.test(h) && !WAR_WORD.test(h)) return "off-topic: sport is not the war";
   if (type === "economy" && STATS.test(h) && !WAR_WORD.test(h)) return "off-topic: a statistics release with nothing of the war in it";
+  // The review of 29 Oct's cards (all three desks): fly-overs and flares, road and crossing bulletins, envoys'
+  // talks with nothing done, and household economics far from the war.
+  if (NON_EVENT.test(h) && !HARM.test(h)) return "no event: an aircraft overhead or flares are not a report";
+  if (BULLETIN.test(h) && !HARM.test(h)) return "bulletin: crossings', roads' and checkpoints' hours and court schedules are not reports";
+  if (TALKS_ONLY.test(h) && !HARM.test(h)) return "protocol: a meeting where matters were discussed is not news";
+  if ((type === "economy" || type === "statement") && HOME_ECONOMY.test(h)) return "off-desk: prices, rates and companies' results far from the war are not this desk's";
   return null;
 }
+
+/**
+ * A finished act in the past tense (user, 27 and 29 Oct: "conducted", never "conduct"; the review of 29 Oct found
+ * "Israeli forces raid…", "artillery shells…" on a third of the cards). Only a verb right after the one who acted
+ * is changed, so a noun ("strikes on", "the raid") and quoted words stay as they are.
+ */
+const ACTOR = String.raw`(?:forces|troops|soldiers|army|police|artillery|gunboats?|vehicles|bulldozers|aircraft|warplanes?|jets|drones|helicopters?|fighters|militants|gunmen|extremists|citizens|Houthis|IDF|IRGC|navy|militias?|brigades?|units?|air defen[cs]es|strikes|Hezbollah|Hamas)`;
+const PAST: Record<string, string> = {
+  raid: "raided", raids: "raided", arrest: "arrested", arrests: "arrested", detain: "detained", detains: "detained",
+  demolish: "demolished", demolishes: "demolished", bulldoze: "bulldozed", bulldozes: "bulldozed",
+  shell: "shelled", shells: "shelled", hit: "hit", hits: "hit", kill: "killed", kills: "killed", wound: "wounded", wounds: "wounded",
+  storm: "stormed", storms: "stormed", seize: "seized", seizes: "seized", abduct: "abducted", abducts: "abducted",
+  target: "targeted", targets: "targeted", launch: "launched", launches: "launched", intercept: "intercepted", intercepts: "intercepted",
+  repel: "repelled", repels: "repelled", recapture: "recaptured", recaptures: "recaptured", capture: "captured", captures: "captured",
+  destroy: "destroyed", destroys: "destroyed", attack: "attacked", attacks: "attacked", assault: "assaulted", assaults: "assaulted",
+  burn: "burned", burns: "burned", close: "closed", closes: "closed", besiege: "besieged", besieges: "besieged",
+  open: "opened", opens: "opened", fire: "fired", fires: "fired", bomb: "bombed", bombs: "bombed", down: "downed", downs: "downed",
+  conduct: "conducted", conducts: "conducted", carry: "carried", carries: "carried", set: "set", sets: "set", advance: "advanced", advances: "advanced",
+  expel: "expelled", expels: "expelled", evict: "evicted", evicts: "evicted", injure: "injured", injures: "injured", steal: "stole", steals: "stole",
+};
+const PRESENT_ACT = new RegExp(String.raw`(\b${ACTOR}\s+)(${Object.keys(PAST).join("|")})\b(?!\s+(?:on|at|in|of|by|from|to|towards?|against)\b)`, "gi");
+export function pastTense(headline: string): string {
+  const h = String(headline || "");
+  // Words inside quotes are someone's own, and so is what someone says, warns or vows.
+  if (/\b(?:says?|said|warns?|vows?|threatens?|claims?|pledges?)\b/i.test(h)) return h;
+  return h
+    .split(/("[^"]*"|“[^”]*”)/)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part
+            // "artillery fire", "anti-aircraft fire" are nouns.
+            .replace(PRESENT_ACT, (m, who: string, verb: string) => (/^fires?$/i.test(verb) && /artillery|aircraft/i.test(who) ? m : `${who}${PAST[verb.toLowerCase()] ?? verb}`))
+            // "killed and wound" → "killed and wounded".
+            .replace(AND_PRESENT, (_m, done: string, verb: string) => `${done}${PAST[verb.toLowerCase()] ?? verb}`),
+    )
+    .join("");
+}
+const AND_PRESENT = new RegExp(String.raw`(\b(?:${[...new Set(Object.values(PAST))].join("|")})\s+and\s+)(${Object.keys(PAST).join("|")})\b`, "gi");
+
+const HARM =/\b(?:killed|killing|kills?|wounded|injured|struck|hit|hits|bomb\w*|missiles?|shot down|intercept\w*|seized|arrested|abducted|demolish\w*|raid\w*|shell(?:ed|s|ing)?\b(?! .*flares))/i;
+const NON_EVENT = /\b(?:reconnaissance|surveillance|spy)\b[^.:]{0,30}\b(?:drones?|aircraft|planes?|flights?|balloons?)\b|\b(?:warplanes?|aircraft|jets|drones?|helicopters?)\s+(?:fly|flew|flying|seen|spotted|circl\w+|hover\w*)\b|\b(?:illumination )?flares\b|\bfly(?:ing)? over\b|\boverflights?\b|\bsonic boom/i;
+const BULLETIN = /\bcrossings?\b[^.]{0,40}\b(?:open|opened|closed|reopen\w*)\b|\bcheckpoints?\b[^.]{0,60}\b(?:open|opening hours?)\b[^.]{0,20}\d|\bflying checkpoint\b|\broads? (?:closed|blocked) at\b|\bcourt (?:to )?hold\w* [^.]{0,40}\bhearings?\b|\bmove[sd]? from\b[^.]{0,60}\btoward/i;
+const TALKS_ONLY = /^(?:[^:]{0,80}?\b(?:ambassador|envoy|delegate|representative|coast guard chief|governor|deputy|undersecretary|committee|chief)\b[^:]{0,80}?\b(?:discuss(?:es|ed)?|meets?|met|receives?|received|coordinat\w+|visits?|visited)\b)/i;
+const HOME_ECONOMY = /\b(?:inflation|interest rates?|Federal Reserve|the Fed\b|gasoline|petrol prices|households?\b|VAT\b|earnings|price rises|record output|pumps at record|cruise ships?|airlines?' losses|food prices)\b/i;
 
 /* ------------------------------------------------------------------ *
  * Iran's home affairs (the Iran desk): rain, schools, crime, protests.
@@ -124,13 +175,17 @@ const AGGREGATORS = /^(?:Clash Report|OSINTdefender|OSINT Hexagone|Megatron|Vise
 /** Iranian outlets, state and diaspora, English and Persian. */
 const IRANIAN_OUTLET =
   /^(?:IRNA|Tasnim|Fars|ISNA|Mehr|IRIB|Press TV|Nour News|Tehran Times|Al-Alam|ILNA|IMNA|SNN|Khabari Plus|Akhbar-e Fori|Shin Persian|Emtedad|Iran International|VOA Farsi|Radio Farda|Vahid Online|Kayhan|Javan|Entekhab)\b/i;
-const UKMTO_TOLD = /\b(?:UKMTO|UKTMO|UK Maritime Trade|United Kingdom Maritime Trade|British maritime security agency)\b/i;
+/** Russia's state media. */
+const RUSSIAN_STATE = /^(?:TASS|RIA(?: Novosti)?|RT(?: Arabic)?|Sputnik)\b/i;
+/** A headline led by a country or person the nations list does not hold (Australia, Obama, China…). */
+const FOREIGN_SPEAKER = /^(?:the )?(?:Australian?|Obama|Biden|Harris|Pakistan(?:i)?|Chinese|China|French|France|German(?:y)?|EU|European|Japan(?:ese)?|India(?:n)?|Canad(?:a|ian)|Turk(?:ey|ish)|Egypt(?:ian)?|Jordan(?:ian)?|Syria(?:n)?|Federal Reserve|Fed)\b/i;
+const UKMTO_TOLD =/\b(?:UKMTO|UKTMO|UK Maritime Trade|United Kingdom Maritime Trade|British maritime security agency)\b/i;
 
 const HEBREW_OUTLET = String.raw`(?:Israel's |Israeli )?(?:Channel 1[1-4]|Kan(?: News| 11)?|N12|Ynet|Yedioth Ahronoth|Yediot Aharonot|Maariv|Haaretz|Israel Hayom|Walla|i24(?: News)?|Army Radio|Galei Tzahal|Times of Israel|Jerusalem Post|Hebrew media|Israeli media|Israeli Broadcasting Authority)`;
 const HEBREW_OUTLET_LEAD = new RegExp(String.raw`^${HEBREW_OUTLET}\s*(?::|reports?\b|reported\b|says\b)`, "i");
 const HEBREW_OUTLET_TELLS = new RegExp(String.raw`(?:,\s*|\bas\s+|\baccording to\s+)${HEBREW_OUTLET}\s+(?:reports?|reported|says|said)?\s*$|\b(?:according to|citing)\s+${HEBREW_OUTLET}\b`, "i");
 
-export type RelayInput = { headline: string; body?: string; source: string; lean?: string; desk: DeskId; own?: boolean };
+export type RelayInput = { headline: string; body?: string; source: string; lean?: string; desk: DeskId; own?: boolean; type?: string };
 
 /**
  * A relay the desk reads first-hand instead: a US body or Trump through Al
@@ -155,6 +210,24 @@ export function relayOf(x: RelayInput): string | null {
   if (x.desk !== "yemen" && mine !== "israel" && (HEBREW_OUTLET_LEAD.test(h) || HEBREW_OUTLET_TELLS.test(h))) return `relay: the Israeli outlets are read directly, not through ${s}`;
   const iranSpeaks = subjectNation(lead || h) === "iran" || IRAN_ACTOR_WORD.test(lead) || /\b(?:Mokhber|Khatibzadeh|Gharibabadi|Ebnolreza|Velayati|Shamkhani|Qaani|Vahidi|Mousavi|Hatami)\b/.test(lead);
   if (x.desk === "yemen" && IRANIAN_OUTLET.test(s) && !iranSpeaks) return `relay: an Iranian outlet on the Yemen desk tells Iran's own words only, not ${s}'s retelling`;
+  return iranSpeaks ? null : foreignStory(h, s, x.type);
+}
+
+/**
+ * Iran's and Russia's outlets tell their own country's words and acts, never another's (user, 29 Oct: Trump's rally
+ * from TASS, Obama from IRNA, the Fed from Nour News, Australia's travel warning from VOA Farsi). Their own scoops
+ * are let through by the caller.
+ */
+export function foreignStory(headline: string, source: string, type?: string): string | null {
+  const h = String(headline || "");
+  const s = String(source || "").trim();
+  const home = IRANIAN_OUTLET.test(s) ? "iran" : RUSSIAN_STATE.test(s) ? "russia" : null;
+  if (!home) return null;
+  const lead = leadOf(h);
+  if (home === "iran" && (IRAN_ACTOR_WORD.test(lead) || /\b(?:Mokhber|Khatibzadeh|Gharibabadi|Ebnolreza|Velayati|Shamkhani|Qaani|Vahidi|Mousavi|Hatami)\b/.test(lead))) return null;
+  if (lead && !namesNation(home, lead)) return `relay: ${s} tells ${home === "iran" ? "Iran's" : "Russia's"} own words only, not ${lead}'s`;
+  const about = subjectNation(h) ?? (FOREIGN_SPEAKER.test(h) ? "other" : null);
+  if (about && about !== home && (!namesNation(home, h) || TALK_TYPES.has(String(type ?? "")))) return `relay: ${s} tells ${home === "iran" ? "Iran's" : "Russia's"} own story only; this one is told from its own country's sources`;
   return null;
 }
 
@@ -245,10 +318,15 @@ export function houthiClaim(headline: string, type: string, source: string): str
  */
 const PAL_EVENT = /\b(?:kill\w*|dead|wound\w*|injur\w*|strikes?|struck|shell\w*|fire[sd]?|firing|shot|shoots?|raid\w*|storm\w*|arrest\w*|detain\w*|abduct\w*|demolish\w*|bulldoz\w*|attack\w*|advance\w*|incursion|bomb\w*|drones?|quadcopter|torch\w*|burn\w*|assault\w*|beat(?:s|en)?|displac\w*|seiz\w*|uproot\w*|clash\w*)\b/i;
 export function palestinianClaim(headline: string, type: string, source: string): string {
-  const h = String(headline || "");
+  let h = String(headline || "");
   if (!["pa", "factions", "palestinian"].includes(gazaLeanOf(source))) return h;
+  // One teller's name for the Palestinian outlets (29 Oct review): "Local sources: …", "…, local sources say" and a
+  // fan channel standing as the armed wing ("Saraya al-Quds:" from Ahfad al-Bahaa) are "Palestinian media: …".
+  const fan = /Ahfad al-Bahaa/i.test(source);
+  if (/^(?:Local|Palestinian local|Field) sources?:\s/i.test(h) || (fan && /^Saraya al-Quds:\s/i.test(h))) h = h.replace(/^[^:]+:\s*/, "Palestinian media: ");
+  else if (/,\s*(?:local|Palestinian) sources say\.?$/i.test(h)) h = `Palestinian media: ${h.replace(/,\s*(?:local|Palestinian) sources say\.?$/i, "")}`;
   if (TALK_TYPES.has(type) || !PAL_EVENT.test(h) || /^[^:]{2,60}:\s/.test(h) || /\b(?:says?|said|claims?|claimed|according to|reports?|reported|alleges?|accus\w+)\b/i.test(h)) return h;
-  const who = /Health Ministry/i.test(source) ? `${source}${/Ramallah/i.test(source) ? "" : " (Hamas-run)"}` : /Civil Defen[cs]e|Media Office|Interior Ministry/i.test(source) ? `${source} (Hamas-run)` : /^(?:Hamas|Islamic Jihad|Saraya|Al-Qassam|WAFA)/i.test(source) ? source : "Palestinian media";
+  const who = /Health Ministry/i.test(source) ? `${source}${/Ramallah/i.test(source) ? "" : " (Hamas-run)"}` : /Civil Defen[cs]e|Media Office|Interior Ministry/i.test(source) ? `${source} (Hamas-run)` : !fan && /^(?:Hamas|Islamic Jihad|Saraya|Al-Qassam|WAFA)/i.test(source) ? source : "Palestinian media";
   return `${who}: ${h}`;
 }
 const TALK_TYPES = new Set(["statement", "diplomacy", "politics", "analysis", "economy", "humanitarian"]);
@@ -1055,6 +1133,9 @@ export function serveCard(r: Row, desk: DeskId): boolean {
   h = ownSubject(h, String(r.source ?? source));
   if (desk === "yemen" && houthi) h = houthiClaim(h, type, source);
   if (desk === "gaza") h = palestinianClaim(h, type, String(r.source ?? source));
+  // A finished act in the past tense, and Iran's and Russia's outlets on their own country's story only (29 Oct review).
+  h = pastTense(h);
+  if (!flags.includes("exclusive") && foreignStory(h, String(r.source ?? source), type)) return false;
   r.summary = h;
   // The other outlets' lines under the card get the same offices and titles.
   if (Array.isArray(r.alsoReportedBy)) {

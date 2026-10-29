@@ -480,7 +480,7 @@ test("two verbs with no joiner: the name before the first is the speaker (Iran I
   const h = "Institute for Science and International Security restricted access to Kuh-e Kolang nuclear site strengthens speculation on stored materials";
   assert.equal(twoVerbs(h), "Institute for Science and International Security: restricted access to Kuh-e Kolang nuclear site strengthens speculation on stored materials");
   assert.equal(ungarble(h), twoVerbs(h));
-  const card: Record<string, unknown> = { summary: h, type: "statement", source: "Iran International" };
+  const card: Record<string, unknown> = { summary: h, type: "statement", source: "Al Arabiya" }; // An Iranian outlet tells Iran's story only (29 Oct): a US institute's finding is not its own.
   assert.ok(serveCard(card, "iran"));
   assert.equal(card.summary, twoVerbs(h));
   // Joined clauses and plain sentences pass untouched.

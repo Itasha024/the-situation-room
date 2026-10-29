@@ -58,6 +58,7 @@ export const ON_MSN: Record<string, string[]> = {
   "washingtonpost.com": ["The Washington Post", "Washington Post"],
   "timesofisrael.com": ["The Times of Israel", "Times of Israel"],
   "newsmax.com": ["Newsmax"],
+  "newsnationnow.com": ["NewsNation"],
   "jpost.com": ["The Jerusalem Post", "Jerusalem Post"],
   "dw.com": ["DW"],
 };

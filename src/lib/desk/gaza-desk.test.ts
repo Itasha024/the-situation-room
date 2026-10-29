@@ -260,7 +260,7 @@ test("Gaza and Judea and Samaria events from Israeli or Palestinian sources only
 test("the site's words on every desk, the Gaza gate's diplomacy", () => {
   const card: Record<string, unknown> = { summary: "Israeli army raids towns across the occupied West Bank", type: "statement", source: "N12", url: "https://x" };
   serveCard(card, "yemen");
-  assert.equal(card.summary, "Israeli army raids towns across Judea and Samaria");
+  assert.equal(card.summary, "Israeli army raided towns across Judea and Samaria");
   assert.ok(isGazaDeskItem("Kushner meets Egyptian intelligence chief on next phase of Trump plan"));
   assert.ok(isGazaDeskItem("Witkoff: stabilisation force troops to deploy next month"));
   assert.ok(isGazaDeskItem("كوشنر يلتقي رئيس المخابرات المصرية"));

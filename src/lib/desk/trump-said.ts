@@ -324,7 +324,7 @@ export function iranParts(text: string, max = 9000, about: (s: string) => boolea
 }
 
 /** The American outlets searched by name on Google News, a query at a time. */
-const US_SITES = ["newsmax.com", "foxnews.com", "cnn.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "apnews.com", "reuters.com", "nypost.com", "politico.com", "axios.com", "thehill.com", "washingtonpost.com", "nytimes.com", "rollcall.com", "whitehouse.gov"];
+const US_SITES = ["newsmax.com", "newsnationnow.com", "foxnews.com", "cnn.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "apnews.com", "reuters.com", "nypost.com", "politico.com", "axios.com", "thehill.com", "washingtonpost.com", "nytimes.com", "rollcall.com", "whitehouse.gov"];
 
 /**
  * His words of this story, where they were first published among the

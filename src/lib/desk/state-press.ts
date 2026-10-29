@@ -59,7 +59,7 @@ export const STATE_PRESS: Record<string, string[]> = {
     "White House", "Truth Social (Trump)", "Donald Trump", "Rapid Response 47", "JD Vance", "State Department", "Pentagon", "CENTCOM", "Treasury", "Scott Bessent", "Marco Rubio", "Pete Hegseth",
     // Clash Report is quick on what US officials say (user, 22 Oct: "go there after rapid response white house stuff his posts … and before american outlets or at the same time").
     "Clash Report",
-    "Reuters", "AP", "Bloomberg", "WSJ", "NYT", "Washington Post", "Axios", "CNN", "CBS", "NBC News", "ABC", "Fox News", "Politico", "NY Post", "Newsmax",
+    "Reuters", "AP", "Bloomberg", "WSJ", "NYT", "Washington Post", "Axios", "CNN", "CBS", "NBC News", "ABC", "Fox News", "Politico", "NY Post", "Newsmax", "NewsNation",
   ],
   UK: ["UK Foreign Office", "Downing Street", "UKMTO", "BBC", "The Telegraph", "The Guardian", "Financial Times", "The Times", "Sky News"],
   // The prime minister and his ministers on their own accounts first (user, 22 Oct), then the army, then the Hebrew press.

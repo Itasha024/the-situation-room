@@ -33,7 +33,7 @@ export type Hit = { url: string; source: string; title?: string; /** An intervie
 /** Each country's press, where its leaders' words are first reported. */
 export const SPEAKER_PRESS: Record<string, string[]> = {
   FR: ["lemonde.fr", "lefigaro.fr", "francetvinfo.fr", "bfmtv.com", "tf1info.fr", "leparisien.fr", "lci.fr", "europe1.fr", "radiofrance.fr", "lesechos.fr", "france24.com", "rfi.fr", "ouest-france.fr", "afp.com", "liberation.fr"],
-  US: ["apnews.com", "reuters.com", "nytimes.com", "washingtonpost.com", "wsj.com", "cnn.com", "foxnews.com", "foxbusiness.com", "cnbc.com", "bloomberg.com", "axios.com", "politico.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "newsmax.com"],
+  US: ["apnews.com", "reuters.com", "nytimes.com", "washingtonpost.com", "wsj.com", "cnn.com", "foxnews.com", "newsnationnow.com", "foxbusiness.com", "cnbc.com", "bloomberg.com", "axios.com", "politico.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "newsmax.com"],
   UK: ["bbc.com", "bbc.co.uk", "theguardian.com", "thetimes.com", "telegraph.co.uk", "news.sky.com", "ft.com", "independent.co.uk", "reuters.com"],
   IR: ["irna.ir", "tasnimnews.ir", "presstv.ir", "mehrnews.com", "farsnews.ir", "isna.ir"],
   EG: ["ahram.org.eg", "youm7.com", "almasryalyoum.com", "sis.gov.eg"],

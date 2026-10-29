@@ -258,7 +258,7 @@
   const COUNTRY = [
     ['iran', 'Iran', /\b(?:Iran(?:ian)?s?|Tehran|IRGC|Khamenei|Araghchi|Pezeshkian|Baghaei)\b/i],
     ['israel', 'Israel', /\b(?:Israel(?:i)?s?|IDF|Netanyahu|Katz|Gaza(?:n)?|Judea|Samaria|Jerusalem|Hamas|Palestinians?|Jenin|Nablus|Hebron|Ramallah|Tulkarm|Qalqilya|Khan Y[ou]+nis|Rafah|Bethlehem|Jericho|COGAT)\b/i],
-    ['yemen', 'Yemen', /\b(?:Yemen(?:i)?s?|Houthis?|Sanaa|Aden|Hodeidah|Marib|Taiz|Ansar Allah|Mocha|Saada)\b/i],
+    ['yemen', 'Yemen', /\b(?:Yemen(?:i)?s?|Houthis?|Sanaa|Aden|Hodeidah|Marib|Taiz|Ansar Allah|Mocha|Saada|Al-Jawf|Jawf|Hazm|Hajjah|Dhale|Lahj|Abyan|Shabwa|Hadramout|Hadramawt|Mahra|Bayda|Ibb|Dhamar|Amran|Mahwit|Raymah|Bab al-Mandab|Dhubab|Midi|Haradh|Socotra)\b/i],
     ['saudi', 'Saudi Arabia', /\b(?:Saudi(?:s| Arabia)?|Riyadh|Jeddah|MBS)\b/i],
     ['lebanon', 'Lebanon', /\b(?:Leban(?:on|ese)|Hezbollah|Beirut)\b/i],
     ['syria', 'Syria', /\b(?:Syri(?:a|an)s?|Damascus)\b/i],
@@ -287,9 +287,20 @@
     const arena = (flags || []).map((f) => ARENA_COUNTRY[f]).find(Boolean);
     const named = arena && COUNTRY.find(([code]) => code === arena);
     if (named && named[2].test(t)) return { code: named[0], name: named[1] };
-    let best = null;
-    for (const [code, name, re] of COUNTRY) { const m = re.exec(t); if (m && (!best || m.index < best.i)) best = { code, name, i: m.index }; }
-    if (best) return best;
+    // The one who struck is not the place it happened (user, 29 Oct: "a Saudi air strike on Al-Hazm market" stood
+    // under the Saudi flag): a country named only as the one who fired counts when no other is named.
+    const BY_ARMS = /^\S*\s+(?:air ?strikes?|strikes?|artillery|drones?|missiles?|warplanes?|jets?|aircraft|gunboats?|forces|army|military|troops|shelling|bombing|raids?|attacks?)\b/i;
+    let best = null, arms = null;
+    for (const [code, name, re] of COUNTRY) {
+      const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
+      for (const m of t.matchAll(g)) {
+        const hit = { code, name, i: m.index };
+        if (BY_ARMS.test(t.slice(m.index))) { if (!arms || hit.i < arms.i) arms = hit; continue; }
+        if (!best || hit.i < best.i) best = hit;
+        break;
+      }
+    }
+    if (best || arms) return best || arms;
     return desk === 'iran' ? { code: 'iran', name: 'Iran' } : desk === 'yemen' ? { code: 'yemen', name: 'Yemen' } : { code: 'israel', name: 'Israel' };
   }
   const countryTag = (text, desk, flags) => { const c = countryOf(text, desk, flags); return `<span class="h-cflag" title="${esc(c.name)}">${countryFlag(c.code)}</span>`; };

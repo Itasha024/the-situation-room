@@ -18,7 +18,6 @@ import { Route as ApiBriefRouteImport } from './routes/api/brief'
 import { Route as ApiDeskRouteImport } from './routes/api/desk'
 import { Route as ApiExplainRouteImport } from './routes/api/explain'
 import { Route as ApiGazaNumbersRouteImport } from './routes/api/gaza-numbers'
-import { Route as ApiMoodRouteImport } from './routes/api/mood'
 import { Route as ApiOilRouteImport } from './routes/api/oil'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
@@ -77,11 +76,6 @@ const ApiExplainRoute = ApiExplainRouteImport.update({
 const ApiGazaNumbersRoute = ApiGazaNumbersRouteImport.update({
   id: '/api/gaza-numbers',
   path: '/api/gaza-numbers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiMoodRoute = ApiMoodRouteImport.update({
-  id: '/api/mood',
-  path: '/api/mood',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOilRoute = ApiOilRouteImport.update({
@@ -168,7 +162,6 @@ export interface FileRoutesByFullPath {
   '/api/desk': typeof ApiDeskRoute
   '/api/explain': typeof ApiExplainRoute
   '/api/gaza-numbers': typeof ApiGazaNumbersRoute
-  '/api/mood': typeof ApiMoodRoute
   '/api/oil': typeof ApiOilRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
@@ -194,7 +187,6 @@ export interface FileRoutesByTo {
   '/api/desk': typeof ApiDeskRoute
   '/api/explain': typeof ApiExplainRoute
   '/api/gaza-numbers': typeof ApiGazaNumbersRoute
-  '/api/mood': typeof ApiMoodRoute
   '/api/oil': typeof ApiOilRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
@@ -221,7 +213,6 @@ export interface FileRoutesById {
   '/api/desk': typeof ApiDeskRoute
   '/api/explain': typeof ApiExplainRoute
   '/api/gaza-numbers': typeof ApiGazaNumbersRoute
-  '/api/mood': typeof ApiMoodRoute
   '/api/oil': typeof ApiOilRoute
   '/api/scan': typeof ApiScanRoute
   '/api/search': typeof ApiSearchRoute
@@ -249,7 +240,6 @@ export interface FileRouteTypes {
     | '/api/desk'
     | '/api/explain'
     | '/api/gaza-numbers'
-    | '/api/mood'
     | '/api/oil'
     | '/api/scan'
     | '/api/search'
@@ -275,7 +265,6 @@ export interface FileRouteTypes {
     | '/api/desk'
     | '/api/explain'
     | '/api/gaza-numbers'
-    | '/api/mood'
     | '/api/oil'
     | '/api/scan'
     | '/api/search'
@@ -301,7 +290,6 @@ export interface FileRouteTypes {
     | '/api/desk'
     | '/api/explain'
     | '/api/gaza-numbers'
-    | '/api/mood'
     | '/api/oil'
     | '/api/scan'
     | '/api/search'
@@ -328,7 +316,6 @@ export interface RootRouteChildren {
   ApiDeskRoute: typeof ApiDeskRoute
   ApiExplainRoute: typeof ApiExplainRoute
   ApiGazaNumbersRoute: typeof ApiGazaNumbersRoute
-  ApiMoodRoute: typeof ApiMoodRoute
   ApiOilRoute: typeof ApiOilRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiSearchRoute: typeof ApiSearchRoute
@@ -408,13 +395,6 @@ declare module '@tanstack/react-router' {
       path: '/api/gaza-numbers'
       fullPath: '/api/gaza-numbers'
       preLoaderRoute: typeof ApiGazaNumbersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/mood': {
-      id: '/api/mood'
-      path: '/api/mood'
-      fullPath: '/api/mood'
-      preLoaderRoute: typeof ApiMoodRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/oil': {
@@ -528,7 +508,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDeskRoute: ApiDeskRoute,
   ApiExplainRoute: ApiExplainRoute,
   ApiGazaNumbersRoute: ApiGazaNumbersRoute,
-  ApiMoodRoute: ApiMoodRoute,
   ApiOilRoute: ApiOilRoute,
   ApiScanRoute: ApiScanRoute,
   ApiSearchRoute: ApiSearchRoute,

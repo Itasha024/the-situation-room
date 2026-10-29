@@ -52,3 +52,30 @@ test("Palestinian outlets have one teller's name; a fan channel is not the armed
   assert.equal(palestinianClaim("Saraya al-Quds: Israeli artillery shelled southern Khan Younis", "strike", "Saraya al-Quds (Ahfad al-Bahaa)"), "Palestinian media: Israeli artillery shelled southern Khan Younis");
   assert.equal(palestinianClaim("Israeli forces raided Halhul, north of Hebron, local sources say", "raid", "Palestine Today TV"), "Palestinian media: Israeli forces raided Halhul, north of Hebron");
 });
+
+import { otherSide } from "./copy-rules.ts";
+
+// One rule for every side (user, 29 Oct: "general rules, not one for Iranian or Russian outlets … exclusives still allowed").
+test("every side's words from its own outlets; a side's own media tell their own side's acts", () => {
+  const go: [string, string, string][] = [
+    ["Hezbollah's Qassem: the resistance will not disarm", "Safa", "statement"],
+    ["Trump: we will finish the war with Iran soon", "Al Jazeera", "statement"],
+    ["Iranian parliament: Tehran received several proposals to stop the war", "Asharq News", "statement"],
+    ["Israeli army chief Zamir: the operation in Hebron will continue", "Al Jazeera", "statement"],
+    ["Omani FM: Gulf security equations must change", "Al-Manar", "statement"],
+    ["UAE calls for dialogue and political solutions", "RT Arabic", "diplomacy"],
+    ["Arab sources: explosions hit Ras Tanura refinery in Saudi Arabia", "Al-Alam", "strike"],
+  ];
+  for (const [h, s, t] of go) assert.ok(otherSide(h, s, t), `${s}: ${h}`);
+  const keep: [string, string, string][] = [
+    ["Israeli artillery fire on outskirts of Zoutar al-Sharqiya and Meidoun", "Al-Manar", "strike"],
+    ["Palestinian media: Israeli forces raided homes in Tafuh", "Quds News Network", "raid"],
+    ["Hamas: the occupation is violating the agreement", "Safa", "statement"],
+    ["Saudi air defences intercepted a missile over Riyadh", "Al Arabiya", "interception"],
+    ["Iran oil exports fell to a six-month low, tanker data show", "Bloomberg", "economy"],
+    ["Pakistani army chief arrives in Tehran for talks", "IRNA", "diplomacy"],
+    ["Diplomatic sources: US widens pressure circle and waves sanctions at allies", "Al-Akhbar", "politics"],
+    ["Trump: we will finish the war with Iran soon", "Reuters", "statement"],
+  ];
+  for (const [h, s, t] of keep) assert.equal(otherSide(h, s, t), null, `${s}: ${h}`);
+});

@@ -15,6 +15,7 @@ import { cleanPoints, onePointEach } from "./prose.ts";
 import { headlinePoints, NUM_MARK, numberRefs, type Ref, stripRefs } from "./refs.ts";
 import { keepSpeaker, writerInput } from "./iran-brief.ts";
 import { gazaWords, GAZA_WORD_RULES } from "./gaza-words.ts";
+import { newsOnly } from "./told-before.ts";
 import { serveCard } from "./copy-rules.ts";
 import type { DeskStore } from "./store.ts";
 import { TRUMP_KEY, type TrumpFeed } from "./trump.ts";
@@ -131,7 +132,8 @@ async function build(store: DeskStore, now: Date): Promise<GazaBrief | null> {
     const t = Date.parse(at);
     return Number.isFinite(t) && t >= start && t < end;
   };
-  const cards = served.filter((r) => inWin(String(r.at || "")));
+  // A talk already told in the week before is not news again (told-before.ts, 29 Oct).
+  const cards = newsOnly(served.filter((r) => inWin(String(r.at || ""))), served, start);
   const feed = (await store.getJson<TrumpFeed>(TRUMP_KEY)) ?? { statements: [] };
   const trump = feed.statements.filter((s) => !s.off && !s.in && inWin(s.at) && ABOUT_GAZA.test(`${s.headline ?? ""} ${s.text ?? ""}`));
 

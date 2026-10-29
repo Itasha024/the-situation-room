@@ -11,6 +11,7 @@
  * models lead, so Google's small daily share stays the Yemen desk's.
  */
 
+import { newsOnly } from "./told-before.ts";
 import { serveCard } from "./copy-rules.ts";
 import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
 import { refreshIranTimelineNow } from "./iran-timeline-now.ts";
@@ -245,7 +246,8 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
     const t = Date.parse(at);
     return Number.isFinite(t) && t >= start && t < end;
   };
-  const cards = served.filter((r) => inWin(String(r.at || "")));
+  // A talk already told in the week before is not news again (told-before.ts, 29 Oct).
+  const cards = newsOnly(served.filter((r) => inWin(String(r.at || ""))), served, start);
   const feed = (await store.getJson<TrumpFeed>(TRUMP_KEY)) ?? { statements: [] };
   const trump = feed.statements.filter((s) => !s.off && !s.in && inWin(s.at));
 

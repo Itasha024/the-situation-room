@@ -15,7 +15,7 @@ import { isOfficial } from "./source-rating.ts";
 import { aboutFootage } from "./media.ts";
 import { FIRST_FOOTAGE_RE } from "./pin-rule.ts";
 import { respell } from "./spelling.ts";
-import { isWireSource, namesNation, officialVoice, sourceNation, subjectNation } from "./speaker-press.ts";
+import { isWireSource, type Nation, namesNation, officialVoice, sourceNation, subjectNation } from "./speaker-press.ts";
 
 /* ------------------------------------------------------------------ *
  * Non-news: analysis, market wraps, price ticks, round-ups, Friday
@@ -210,26 +210,82 @@ export function relayOf(x: RelayInput): string | null {
   if (x.desk !== "yemen" && mine !== "israel" && (HEBREW_OUTLET_LEAD.test(h) || HEBREW_OUTLET_TELLS.test(h))) return `relay: the Israeli outlets are read directly, not through ${s}`;
   const iranSpeaks = subjectNation(lead || h) === "iran" || IRAN_ACTOR_WORD.test(lead) || /\b(?:Mokhber|Khatibzadeh|Gharibabadi|Ebnolreza|Velayati|Shamkhani|Qaani|Vahidi|Mousavi|Hatami)\b/.test(lead);
   if (x.desk === "yemen" && IRANIAN_OUTLET.test(s) && !iranSpeaks) return `relay: an Iranian outlet on the Yemen desk tells Iran's own words only, not ${s}'s retelling`;
-  return iranSpeaks ? null : foreignStory(h, s, x.type);
+  return otherSide(h, s, x.type, x.lean);
 }
 
 /**
- * Iran's and Russia's outlets tell their own country's words and acts, never another's (user, 29 Oct: Trump's rally
- * from TASS, Obama from IRNA, the Fed from Nour News, Australia's travel warning from VOA Farsi). Their own scoops
- * are let through by the caller.
+ * Every side's story from that side's own sources, one rule for every outlet (user, 9 Oct: "every country's news from
+ * its own sources … another outlet only for its own exclusive"; 29 Oct: "make general rules, not one for Iranian or
+ * Russian outlets", after Trump's rally from TASS, Obama from IRNA, the Fed from Nour News, Australia's travel warning
+ * from VOA Farsi). An outlet's own scoop is let through by the caller, and a wire tells anyone's.
+ * - Words: what a country's or a side's people said is told by its own outlets, whoever else passes it on.
+ * - Acts: a side's own media (state and party media: Iran's, Russia's, the axis', the Palestinian factions' and
+ *   agencies') tell their own side's acts, or what was done on their soil, never a third country's.
  */
-export function foreignStory(headline: string, source: string, type?: string): string | null {
+const PALESTINE_WORDS = /\b(?:Palestin\w*|Hamas|Islamic Jihad|PIJ|Saraya al-Quds|Qassam|Fatah|PA|Abbas|Gaza\w*|Judea|Samaria|Ramallah|Jenin|Nablus|Hebron|Tulkarm|Qalqilya|Bethlehem|Jericho|Khan Y[ou]+nis|Rafah|Deir al-Balah|Jabalia|Nuseirat|Bureij|Maghazi|Beit Lahia|Beit Hanoun|Salfit|Tubas)\b/;
+type Side = Nation | "palestine";
+function homeSide(source: string, lean = ""): { side: Side; party: boolean } | null {
+  const s = String(source || "").trim();
+  if (IRANIAN_OUTLET.test(s)) return { side: "iran", party: true };
+  if (RUSSIAN_STATE.test(s)) return { side: "russia", party: true };
+  if (["pa", "factions", "palestinian"].includes(gazaLeanOf(s))) return { side: "palestine", party: true };
+  // A Lebanese outlet close to Hezbollah is Lebanon's (Israel's shelling of the south is its own soil).
+  const n = sourceNation(s, lean === "axis" ? "" : lean);
+  if (n) return { side: n, party: /^(?:Al-Manar|Al Manar|Unews)\b/i.test(s) };
+  return lean === "axis" ? { side: "iran", party: true } : null;
+}
+const namesSide = (side: Side, text: string): boolean => (side === "palestine" ? PALESTINE_WORDS.test(text) : namesNation(side, text) || (side === "lebanon" && LEBANON_PLACE.test(text)));
+function sideOf(text: string): Side | "other" | null {
+  const n = subjectNation(text);
+  const p = PALESTINE_WORDS.exec(text);
+  const at = n ? (NATION_FIRST.exec(text)?.index ?? Infinity) : Infinity;
+  if (p && p.index < at) return "palestine";
+  return n ?? (FOREIGN_SPEAKER.test(text) ? "other" : null);
+}
+/** Where the first country named in a text stands (for comparing with the Palestinian words). */
+const NATION_FIRST = /\b(?:US|U\.S\.|American|Washington|Trump|White House|Pentagon|Iran\w*|Tehran|IRGC|Israel\w*|IDF|Netanyahu|Saudi\w*|Riyadh|UAE|Emirat\w*|Qatar\w*|Oman\w*|Iraq\w*|Leban\w*|Hezbollah|Yemen\w*|Houthis?|Russia\w*|Kremlin|Putin|UK|British|Britain)\b/;
+export function otherSide(headline: string, source: string, type?: string, lean = ""): string | null {
   const h = String(headline || "");
   const s = String(source || "").trim();
-  const home = IRANIAN_OUTLET.test(s) ? "iran" : RUSSIAN_STATE.test(s) ? "russia" : null;
+  if (isWireSource(s) || officialVoice(s)) return null;
+  const home = homeSide(s, lean);
   if (!home) return null;
   const lead = leadOf(h);
-  if (home === "iran" && (IRAN_ACTOR_WORD.test(lead) || /\b(?:Mokhber|Khatibzadeh|Gharibabadi|Ebnolreza|Velayati|Shamkhani|Qaani|Vahidi|Mousavi|Hatami)\b/.test(lead))) return null;
-  if (lead && !namesNation(home, lead)) return `relay: ${s} tells ${home === "iran" ? "Iran's" : "Russia's"} own words only, not ${lead}'s`;
-  const about = subjectNation(h) ?? (FOREIGN_SPEAKER.test(h) ? "other" : null);
-  if (about && about !== home && (!namesNation(home, h) || TALK_TYPES.has(String(type ?? "")))) return `relay: ${s} tells ${home === "iran" ? "Iran's" : "Russia's"} own story only; this one is told from its own country's sources`;
+  const ownWords = (t: string) => namesSide(home.side, t) || (home.side === "iran" && (IRAN_ACTOR_WORD.test(t) || /\b(?:Mokhber|Khatibzadeh|Gharibabadi|Ebnolreza|Velayati|Shamkhani|Qaani|Vahidi|Mousavi|Hatami)\b/.test(t)));
+  // Someone speaks first: a speaker of another side is told by that side's own outlets.
+  // The outlet's own name, or "sources", before the colon is no speaker: the rest is judged.
+  const teller = !lead || s.toLowerCase().startsWith(lead.toLowerCase()) || /\bsources?\b|\bmedia\b/i.test(lead);
+  const speaker = lead && !teller ? sideOf(lead) : null;
+  if (lead && !teller && speaker && speaker !== home.side && !ownWords(lead)) return `relay: ${lead} is told from its own side's sources, not ${s}`;
+  // Who the story is about: its first words ("Obama blames…", "US Federal Reserve holds…", "UAE calls for…").
+  const rest = teller && lead ? h.slice(h.indexOf(":") + 1).trim() : h;
+  const subject = rest.split(/\s+/).slice(0, 4).join(" ");
+  const about = sideOf(subject) ?? sideOf(rest);
+  if (!about || about === home.side) return null;
+  // Israel's forces and citizens in Gaza and Judea and Samaria act on the Palestinians' own soil.
+  if (home.side === "palestine" && about === "israel" && !THIRD_LAND.test(rest)) return null;
+  // Words: what another side said is told by its own outlets.
+  const spoken = SPEECH.test(rest.split(/[,;]/)[0]);
+  if (spoken && WORDS_TYPES.has(String(type ?? "")) && !ownWords(subject)) return `relay: ${s} tells its own side's story; this one is told from its own side's sources`;
+  // A side's own media on another country: its words and figures are that country's to tell; an act, by where it
+  // happened ("explosions hit Ras Tanura in Saudi Arabia", "US warplanes over Erbil in northern Iraq"), not by who
+  // did it ("US strike hit a school in Minab" is Iran's own soil).
+  if (home.party && (spoken || type === "economy") && !ownWords(subject)) return `relay: ${s} tells its own side's words only, not another country's`;
+  const land = landOf(rest);
+  if (home.party && !spoken && land && land !== home.side && !ownWords(rest)) return `relay: ${s} tells what happens on its own side's soil, not in another country`;
   return null;
 }
+/** The country an act happened in: a country named after "in", "over", "at", "off", "near". */
+function landOf(text: string): Side | "other" | null {
+  for (const m of text.matchAll(/\b(?:in|over|at|off|near|inside|across)\s+(?:the\s+|northern\s+|southern\s+|eastern\s+|western\s+|central\s+)?([^,;.]{2,40})/gi)) {
+    const side = sideOf(m[1].split(/\s+/).slice(0, 4).join(" "));
+    if (side) return side;
+  }
+  return null;
+}
+const WORDS_TYPES = new Set(["statement", "diplomacy", "politics"]);
+const SPEECH = /\b(?:says?|said|calls?|called|urges?|urged|warns?|warned|blames?|blamed|condemns?|condemned|demands?|stresses|stressed|affirms?|affirmed|denies|denied|threatens?|vows?|announces?|announced|accuses?|tells?|told|wants?|insists?|rejects?|welcomes?|praises?|hails?)\b/i;
+const THIRD_LAND = /\b(?:Leban\w*|Syria\w*|Iran\w*|Yemen\w*|Iraq\w*|Egypt\w*|Jordan(?!\s+Valley)\w*|Saudi\w*|Qatar\w*|Turk\w*|US|U\.S\.|American|Washington)\b/;
 
 /* ------------------------------------------------------------------ *
  * Wrong source attached.
@@ -1135,7 +1191,16 @@ export function serveCard(r: Row, desk: DeskId): boolean {
   if (desk === "gaza") h = palestinianClaim(h, type, String(r.source ?? source));
   // A finished act in the past tense, and Iran's and Russia's outlets on their own country's story only (29 Oct review).
   h = pastTense(h);
-  if (!flags.includes("exclusive") && foreignStory(h, String(r.source ?? source), type)) return false;
+  // One rule for every side (otherSide): an account from the right side under the card leads it; with none, the card
+  // is not shown unless it is the outlet's own scoop.
+  if (!flags.includes("exclusive") && !exclusiveUrl(String(r.url ?? "")) && otherSide(h, String(r.source ?? source), type, String(r.lean ?? ""))) {
+    const also = (Array.isArray(r.alsoReportedBy) ? r.alsoReportedBy : []) as { source: string; url: string }[];
+    const next = also.find((a) => a?.url && a.source && !otherSide(h, a.source, type));
+    if (!next) return false;
+    r.alsoReportedBy = [{ source: String(r.source ?? source), url: String(r.url ?? "") }, ...also.filter((a) => a !== next)];
+    r.source = next.source;
+    r.url = next.url;
+  }
   r.summary = h;
   // The other outlets' lines under the card get the same offices and titles.
   if (Array.isArray(r.alsoReportedBy)) {

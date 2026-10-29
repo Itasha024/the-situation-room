@@ -10,7 +10,7 @@
  */
 
 import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
-import { briefStart, briefWindow } from "./brief.ts";
+import { briefStart, briefWindow, freshPoints, markTold, toldBefore } from "./brief.ts";
 import { cleanPoints, onePointEach } from "./prose.ts";
 import { headlinePoints, NUM_MARK, numberRefs, type Ref, stripRefs } from "./refs.ts";
 import { keepSpeaker, writerInput } from "./iran-brief.ts";
@@ -56,9 +56,10 @@ You get the reports published since the last update (at least the last ${HOURS} 
 Write two separate briefs in English wire style (Reuters/AP), each a numbered list for a reader with a minute:
 ${GAZA_AREAS.map((a) => `- "${a.id}" = ${a.name}: ${a.about}`).join("\n")}
 Each list: 0-8 points (fewer when less happened: only what is important and interesting, never padding), each ONE development in 1-2 short sentences (at most 40 words), most important first. Importance is what changes the most: deaths, strikes, attacks, decisions on war, on aid and on the day after come first; reactions, condemnations and general statements last or left out. A report goes in the one list it is about; [] when nothing happened there. Two reports of one event are one point; one speaker's words on one subject are one point.
-In every point, after the words each report supports, put that report's id in square brackets, before the full stop: "The IDF struck a car in Khan Yunis [r4]." Every point carries at least one id, and only ids from the lines given. When several reports tell the same fact, give the id of ONE: the speaker's or the side's own account first (the IDF for Israel's army, the Gaza health ministry for its tolls, Hamas's own channel for Hamas), then a wire agency, then the fullest report.
+In every point, after the words each report supports, put that report's id in square brackets, before the full stop: "The IDF struck a car in Khan Yunis [r4]." Every point carries at least one id, and only ids from the lines given. When several reports tell the same fact, give the id of ONE: the speaker's or the side's own account first (the IDF for Israel's army, the Gaza health ministry for its tolls, Hamas's own channel for Hamas), then a wire agency, then the fullest report. Connected reports make one point (user, 29 Oct): several things one speaker said, or one event told in steps, are joined into one point, each fact followed by its own report's id ("Hamas: it handed over two bodies [r3]; it will not disarm before a state [r7]."), up to four ids in a point, one for each different fact.
 Rules:
 - Only facts in the reports. Never invent a place, number, name or claim.
+- A report marked \"(told in an earlier brief)\" was in an earlier brief: never a point of its own, only background to a new one. Fewer points rather than old ones.
 - A point tells what happened, in the past tense: "Israeli forces conducted explosions", never "conduct". What a speaker said keeps "Speaker: …".
 - Only what is worth a brief: never a drone or aircraft seen overhead with nothing hit, a road closed, a single routine arrest, or a feature story (community kitchens, a family's story). Fewer points rather than these.
 - Name no outlet and never open a point with "X reported": the reference shows the source. Every point ends with a full stop. What someone said opens with the speaker and a colon ("Hamas: …"); never "Speaker: it …": an act of speech is the speaker's own ("Hamas called on the UN to …"), and a deed the speaker claims is told as its claim ("IDF says it killed two gunmen who crossed the yellow line in Beit Lahia."); never drop the speaker, or a claim reads as fact, and keep its reason or condition. After the colon write whole sentences, every verb with its subject ("Gaza health ministry: 12 people were killed in the last day and 30 were wounded.", never "…were killed, and said…"). A side's claim is never plain fact; a fact told by both sides, a wire agency or an official body is.
@@ -137,22 +138,26 @@ async function build(store: DeskStore, now: Date): Promise<GazaBrief | null> {
   const feed = (await store.getJson<TrumpFeed>(TRUMP_KEY)) ?? { statements: [] };
   const trump = feed.statements.filter((s) => !s.off && !s.in && inWin(s.at) && ABOUT_GAZA.test(`${s.headline ?? ""} ${s.text ?? ""}`));
 
-  const { lines, refOf } = writerInput(cards, trump);
+  // A report goes in one brief only (user, 29 Oct).
+  const told = await toldBefore(store, "gaza", w.updatedAt);
+  const { lines, refOf } = writerInput(cards, trump, told);
   let answer: { json: Record<string, unknown>; model: string } | null = null;
   if (lines.length) answer = await askChain("gaza-brief", SYSTEM, ["REPORTS:", ...lines].join("\n"), { models: GAZA_WRITERS, timeoutMs: 120_000, accept: (j) => gazaUnusable(j, refOf, lines.length) });
-  const got = answer ? fromGazaAnswer(answer.json, refOf) : {};
+  const got: Record<string, { points: string[]; refs: Ref[] }> = answer ? fromGazaAnswer(answer.json, refOf) : {};
+  for (const id of Object.keys(got)) {
+    got[id] = freshPoints(got[id], told);
+    if (!got[id].points.length) delete got[id];
+  }
 
-  const old = new Map((saved?.areas ?? []).map((a) => [a.id, a]));
   const areas: AreaBrief[] = GAZA_AREAS.map((a) => {
     const fresh = got[a.id];
     if (fresh) return { id: a.id, name: a.name, ...fresh, lastNewsAt: w.updatedAt };
-    // Nothing new here: the last points stand, with the time they were news.
-    const o = old.get(a.id);
-    return o ? { ...o, name: a.name } : { id: a.id, name: a.name, points: [], refs: [] };
+    // Nothing new here: the list is left empty, a report being in one brief only (user, 29 Oct).
+    return { id: a.id, name: a.name, points: [], refs: [] };
   });
   // No writer at all: the strongest headlines, each with its own card, under Gaza.
   if (!answer && cards.length && !areas.some((a) => a.points.length)) {
-    const fb = headlinePoints(topReports(cards, 5));
+    const fb = headlinePoints(topReports(cards.filter((r) => !told.has(String(r.fp))), 5));
     areas[0] = { ...areas[0], points: fb.points.map(gazaWords), refs: fb.refs, lastNewsAt: w.updatedAt };
   }
   // The joint list the All page and the share text read: each area's fresh points, numbered again in one run.
@@ -174,6 +179,7 @@ async function build(store: DeskStore, now: Date): Promise<GazaBrief | null> {
     proseTriedAt: now.toISOString(),
   };
   await store.putJson(GAZA_BRIEF_KEY, brief);
+  await markTold(store, "gaza", brief.situation.points ?? [], brief.situation.refs ?? [], w.updatedAt);
   // The Timeline's "Now" box, rewritten every 36 hours from the cards; it must never cost the brief.
   try {
     await refreshGazaTimelineNow(store, reports as unknown as LiveReport[], now);

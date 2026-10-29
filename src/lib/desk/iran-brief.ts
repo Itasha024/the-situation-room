@@ -15,7 +15,7 @@ import { newsOnly } from "./told-before.ts";
 import { serveCard } from "./copy-rules.ts";
 import { askChain, type ChainModel, WRITER_MODELS } from "./models.ts";
 import { refreshIranTimelineNow } from "./iran-timeline-now.ts";
-import { briefStart, briefWindow, sixHourMark } from "./brief.ts";
+import { briefStart, briefWindow, freshPoints, markTold, sixHourMark, TOLD_TAG, toldBefore } from "./brief.ts";
 import { cleanPoints, onePointEach, oncePer } from "./prose.ts";
 
 export { oncePer };
@@ -70,9 +70,10 @@ Write in English wire style (Reuters/AP):
 - "arenas": for each arena id below, a list of 0-8 points on that arena (up to 8 only when that many important, interesting things happened there since the last update) from these hours, most important first, written the same way. Only reports that belong to that arena; [] when none does. A report goes in the one arena it is most about (two at most): Trump's words go where their subject is, not in every arena. Commentary and analysis go nowhere.
 ARENAS:
 ${ARENAS.map((a) => `- ${a.id} = ${a.name}: ${a.about}`).join("\n")}
-In every point, after the words each report supports, put that report's id in square brackets, before the full stop: "The IRGC Navy seized a tanker off Fujairah [r4]." Every point carries at least one id, and only ids from the lines given. When several reports tell the same fact, give the id of ONE: the speaker's or the country's own account first (Trump's own post for his words, the US Treasury for its sanctions, the IDF for Israel's army, Iran's own agencies for Iran's officials), then a wire agency, then the fullest report. Two ids in a point only when it joins two different facts.
+In every point, after the words each report supports, put that report's id in square brackets, before the full stop: "The IRGC Navy seized a tanker off Fujairah [r4]." Every point carries at least one id, and only ids from the lines given. When several reports tell the same fact, give the id of ONE: the speaker's or the country's own account first (Trump's own post for his words, the US Treasury for its sanctions, the IDF for Israel's army, Iran's own agencies for Iran's officials), then a wire agency, then the fullest report. Connected reports make one point (user, 29 Oct): several things one speaker said, or one event told in steps, are joined into one point, each fact followed by its own report's id ("Araghchi: Iran will not talk under threat [r3]; the Strait stays open to neutral ships [r7]."), up to four ids in a point, one for each different fact.
 Rules:
 - Only facts in the reports. Never invent a place, number, name or claim.
+- A report marked \"(told in an earlier brief)\" was in an earlier brief: never a point of its own, only background to a new one. Fewer points rather than old ones.
 - A point tells what happened, in the past tense: "Israeli forces conducted explosions", never "conduct". What a speaker said keeps "Speaker: …".
 - Only what is worth a brief: never a drone or aircraft seen overhead with nothing hit, a road closed, a routine raid or arrest with no one hurt, or a feature story (community kitchens, a family's story). Fewer points rather than these.
 - Name no outlet and never open a point with "X reported": the reference shows the source. Write the point in your own words, never a headline and body glued together. Every point ends with a full stop. At most 40 words. What someone said opens with the speaker and a colon ("US official: …"); never "Speaker: it …": an act of speech is the speaker's own ("Hamas called on the UN to …"), and a deed the speaker claims is told as its claim ("IRGC Navy says it struck two LPG carriers south of Hormuz and blames US forces."); never drop the speaker, or a statement reads as fact, and keep its reason or condition ("German FM Wadephul: Germany, France and Britain are ready to negotiate with Iran to keep it from nuclear weapons.", never "France, Britain and Germany are ready to negotiate with Iran."); after the colon write whole sentences, every verb with its subject ("IRGC Navy: seven oil tankers were damaged in Hormuz overnight; it will strike US bases if the US keeps escorting ships.", never "…were damaged overnight, and threatened to strike…"); a well-known person by name alone ("Vance: …", "Araghchi: …"), never "US official Vance"; a side's claim is never plain fact. A fact reported by both sides, a wire agency or an official body is plain fact.
@@ -85,7 +86,7 @@ Rules:
 Return ONLY JSON {"points":["..."],"arenas":{"<id>":["..."]}}.`;
 
 /** The cards and Trump's statements of the window, as the writer's lines and the reference each id stands for. */
-export function writerInput(reports: LiveReport[], trump: TrumpStatement[]): { lines: string[]; refOf: Record<string, Ref> } {
+export function writerInput(reports: LiveReport[], trump: TrumpStatement[], told: Set<string> = new Set()): { lines: string[]; refOf: Record<string, Ref> } {
   const refOf: Record<string, Ref> = {};
   const lines: string[] = [];
   const cards = [...reports].filter((r) => r.summary).sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).slice(-160);
@@ -94,13 +95,13 @@ export function writerInput(reports: LiveReport[], trump: TrumpStatement[]): { l
     refOf[id] = refOfReport(r);
     const lean = (r as LiveReport & { lean?: string }).lean;
     const body = String(r.text || "").replace(/\s+/g, " ").slice(0, 200);
-    lines.push(`[${id}] ${r.source}${lean ? ` (${lean})` : ""}: ${r.summary}${body ? ` — ${body}` : ""}`);
+    lines.push(`[${id}] ${r.source}${lean ? ` (${lean})` : ""}${told.has(String(r.fp)) ? TOLD_TAG : ""}: ${r.summary}${body ? ` — ${body}` : ""}`);
   });
   [...trump].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).forEach((s, i) => {
     const id = `t${i + 1}`;
     const shown = shownCard({ headline: s.headline || `Trump: ${s.text}`, body: s.body });
     refOf[id] = { fp: s.id, source: s.source, at: s.at, url: s.url, headline: shown.headline, ...(shown.body ? { body: shown.body } : {}), trump: true };
-    lines.push(`[${id}] Trump (${s.source}): ${shown.headline}${s.text ? ` — ${s.text.replace(/\s+/g, " ").slice(0, 400)}` : ""}`);
+    lines.push(`[${id}] Trump (${s.source})${told.has(s.id) ? TOLD_TAG : ""}: ${shown.headline}${s.text ? ` — ${s.text.replace(/\s+/g, " ").slice(0, 400)}` : ""}`);
   });
   return { lines, refOf };
 }
@@ -251,25 +252,34 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
   const feed = (await store.getJson<TrumpFeed>(TRUMP_KEY)) ?? { statements: [] };
   const trump = feed.statements.filter((s) => !s.off && !s.in && inWin(s.at));
 
-  const { lines, refOf } = writerInput(cards, trump);
+  // A report goes in one brief only (user, 29 Oct): the points and the arenas each keep their own record.
+  const told = await toldBefore(store, "iran", w.updatedAt);
+  const toldArenas = await toldBefore(store, "iran-arenas", w.updatedAt);
+  const { lines, refOf } = writerInput(cards, trump, told);
   let answer: { json: Record<string, unknown>; model: string } | null = null;
   if (lines.length) answer = await askChain("iran-brief", SYSTEM, ["REPORTS:", ...lines].join("\n"), { models: IRAN_WRITERS, timeoutMs: 120_000, accept: (j) => unusable(j, refOf, lines.length) });
   const got = answer ? fromAnswer(answer.json, refOf) : { situation: null, arenas: {} };
+  if (got.situation) got.situation = freshPoints(got.situation, told);
+  for (const id of Object.keys(got.arenas)) {
+    got.arenas[id] = freshPoints(got.arenas[id], toldArenas);
+    if (!got.arenas[id].points.length) delete got.arenas[id];
+  }
 
   // No writer: the strongest headlines as the points, each with its own card.
-  const fallback = cards.length ? headlinePoints(topReports(cards, 5)) : null;
-  const situation = got.situation
+  const fallback = cards.some((r) => !told.has(String(r.fp))) ? headlinePoints(topReports(cards.filter((r) => !told.has(String(r.fp))), 5)) : null;
+  const situation = got.situation?.points.length
     ? { line: got.situation.points.map(stripRefs).join("\n\n"), ...got.situation, model: answer!.model }
     : fallback
       ? { line: fallback.points.map(stripRefs).join("\n\n"), ...fallback }
-      : (saved?.situation ?? { line: "", points: [], refs: [] });
+      : { line: "", points: [], refs: [] };
   const old = new Map((saved?.arenas ?? []).map((a) => [a.id, a]));
   const arenas: ArenaBrief[] = ARENAS.map((a) => {
     const fresh = got.arenas[a.id];
     const o = old.get(a.id);
     if (fresh && (six || !o?.points?.length)) return { id: a.id, name: a.name, ...fresh, lastNewsAt: w.updatedAt };
-    // Nothing new here, or between the 6-hour marks: the last points stand, with the time they were news.
-    return o ? { ...o, name: a.name } : { id: a.id, name: a.name, points: [], refs: [] };
+    // Between the 6-hour marks the arena's last points stand: it is still that arena's one brief. At a mark with
+    // nothing new it is left empty: a report is in one brief only (user, 29 Oct).
+    return o && !six ? { ...o, name: a.name } : { id: a.id, name: a.name, points: [], refs: [] };
   });
   const brief: IranBrief = {
     ok: true,
@@ -283,6 +293,8 @@ async function build(store: DeskStore, now: Date): Promise<IranBrief | null> {
     proseTriedAt: now.toISOString(),
   };
   await store.putJson(IRAN_BRIEF_KEY, brief);
+  await markTold(store, "iran", situation.points, situation.refs, w.updatedAt);
+  for (const a of arenas) if (a.lastNewsAt === w.updatedAt) await markTold(store, "iran-arenas", a.points, a.refs, w.updatedAt);
   // The Timeline's "Now" box, rewritten every 36 hours from the cards; it must never cost the brief.
   try {
     await refreshIranTimelineNow(store, reports as unknown as LiveReport[], now);

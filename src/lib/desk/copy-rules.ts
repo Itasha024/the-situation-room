@@ -43,7 +43,8 @@ const CLERICS_TRIBES =
 const PROTOCOL =
   /\b(?:offers?|sends?|extends?) condolences\b|\bcondolences? (?:on|over|for)\b|\battends? (?:the )?(?:[\w-]+ ){0,5}?(?:session|opening|meeting|summit|conference|ceremony)\b|\bdiscuss(?:es|ed)? (?:the )?(?:latest |regional |bilateral |mutual )+(?:developments|relations|ties|cooperation|security|issues)(?: (?:with|in) [^,;:]{0,50})?$/i;
 /** Features: "Riyadh pet owners seek advice…", "survivor … recalls", "…: Why a global trade route is at risk". */
-const FEATURE = /\bpet owners?\b|\b(?:survivor|witness|resident)s?\b[^.:]{0,60}\brecalls?\b|(?::|^) ?Why\b[^.]{0,90}$|^How\b/i;
+// A relative telling a loss is a feature too (user, 29 Oct: "Mother of slain Hammam Abu Labda recounts her second son killed": "definitely not relevant").
+const FEATURE = /\b(?:mother|father|wife|widow|husband|sister|brother|son|daughter|family|relatives?|parents?)\b[^.:]{0,60}\b(?:recounts?|recalls?|remembers?|tells? (?:of|the story)|describes? (?:the )?(?:loss|pain|grief))\b|\b(?:dedicates?|dedicated|donates?|donated|treats?|treating|offers?|offered)\b[^.:]{0,80}\b(?:for free|free of charge)\b|\bvolunteer(?:s|ed|ing)?\b(?! (?:fighters?|battalions?|forces|units?|brigades?))|\bcharit(?:y|able)\b|\bpet owners?\b|\b(?:survivor|witness|resident)s?\b[^.:]{0,60}\brecalls?\b|(?::|^) ?Why\b[^.]{0,90}$|^How\b/i;
 /** Old news retold: a letter to a man dead since 2024, satellite pictures of damage done before. */
 const OLD_NEWS = /\b(?:message|letter|cable) to (?:Yahya )?Sinwar\b|\b(?:message|letter) to (?:Hassan )?Nasrallah\b|\bsatellite (?:imagery|images|pictures|photos) (?:shows?|reveals?) (?:the )?damage\b/i;
 /** Off-topic on either desk: quakes, weather, executions for crime, blood drives (Yemen 166, 347, 215, 136). */
@@ -92,6 +93,9 @@ export function notNews(headline: string, body = "", type = ""): string | null {
   // talks with nothing done, and household economics far from the war.
   if (NON_EVENT.test(h) && !HARM.test(h)) return "no event: an aircraft overhead or flares are not a report";
   if (BULLETIN.test(h) && !HARM.test(h)) return "bulletin: crossings', roads' and checkpoints' hours and court schedules are not reports";
+  if (NGO_EVENT.test(h) && !HARM.test(h)) return "no event: an institute's launch, workshop or conference is not a report";
+  if (ROUTINE.test(h) && !HARM.test(h) && !/\b(?:attack\w*|clash\w*|ston(?:e|es|ed|ing)|fire[sd]?|shot|explo\w+|st(?:ole|olen|eal\w*)|poison\w*)\b/i.test(h)) return "no event: routine works or traffic with nothing done to anyone";
+  if (BARE_DEATH.test(h) && !/\d|\b(?:Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Dozens|Several|Palestinians|Israelis|Lebanese|Iranians|Yemenis|Soldiers|Hezbollah|Hamas|IDF|IRGC)\b/.test(h) && !/\b(?:commander|leader|official|journalist|doctor|paramedic|child|boy|girl|woman|officer|member|fighter|operative|head|chief)\b/i.test(h)) return "death notice: a name with no role, no how and no where is not a report";
   if (TALKS_ONLY.test(h) && !HARM.test(h)) return "protocol: a meeting where matters were discussed is not news";
   if ((type === "economy" || type === "statement") && HOME_ECONOMY.test(h) && !ECONOMY_OF_WAR.test(h)) return "off-desk: prices, rates and companies' results far from the war are not this desk's";
   return null;
@@ -140,6 +144,19 @@ const HARM =/\b(?:killed|killing|kills?|wounded|injured|struck|hit|hits|bomb\w*|
 const NON_EVENT = /\b(?:reconnaissance|surveillance|spy)\b[^.:]{0,30}\b(?:drones?|aircraft|planes?|flights?|balloons?)\b|\b(?:warplanes?|aircraft|jets|drones?|helicopters?)\s+(?:fly|flew|flying|seen|spotted|circl\w+|hover\w*)\b|\b(?:illumination )?flares\b|\bfly(?:ing)? over\b|\boverflights?\b|\bsonic boom/i;
 const BULLETIN = /\bcrossings?\b[^.]{0,80}\b(?:open|opened|closed|reopen\w*)\b|\bcheckpoints?\b[^.]{0,60}\b(?:open|opening hours?)\b[^.]{0,20}\d|\bflying checkpoint\b|\broads? (?:closed|blocked) at\b|\bcourt (?:to )?hold\w* [^.]{0,40}\bhearings?\b|\bmove[sd]? from\b[^.]{0,60}\btoward/i;
 const TALKS_ONLY = /^(?:[^:]{0,80}?\b(?:ambassador|envoy|delegate|representative|coast guard chief|governor|deputy|undersecretary|committee|chief)\b[^:]{0,80}?\b(?:discuss(?:es|ed)?|meets?|met|receives?|received|coordinat\w+|visits?|visited)\b)/i;
+/**
+ * An institute's, centre's or NGO's launch, workshop or conference (user, 29 Oct: "Geneva Centre for Security Governance
+ * Director: Yemeni tribal code of honor for civilian protection launched in Geneva": "not interesting").
+ */
+const NGO_EVENT = /\b(?:Centre|Center|Institute|Foundation|Forum|Network|Initiative|NGO|Association|Society|Observatory|Coalition for)\b[^.]{0,120}\b(?:launch(?:ed|es|ing)?|workshop|seminar|symposium|training|panel|conference|code of (?:honou?r|conduct)|charter|report on)\b|\b(?:workshop|seminar|symposium|training course)\b/i;
+/** Routine works and traffic with nothing done to anyone (user, 29 Oct: "Israeli forces filled in absorption pit in Qalqilya", "Israeli citizens' buses cross the Jenin-Nablus road under army escort": "these aren't interesting"). */
+const ROUTINE = /\b(?:sheep|goats|cattle|cows|camels|livestock|herds?|flocks?)\b(?![^.]{0,60}\b(?:stole|stolen|steal\w*|killed|poison\w*|seiz\w+))|\b(?:fill(?:ed|s|ing)? in|level(?:l?ed|s|l?ing))\b[^.]{0,40}\b(?:pits?|holes?|trench\w*|ditch\w*)\b|\b(?:absorption|cess|sewage) pits?\b|\bpav(?:e|es|ed|ing)\b[^.]{0,40}\broads?\b|\bunder (?:army|military|police|IDF|security) (?:escort|protection|guard)\b|\b(?:buses|cars|vehicles|traffic)\b[^.]{0,40}\b(?:cross|pass|drive|drove|use)\w*\b[^.]{0,40}\b(?:roads?|roundabouts?|junctions?|highways?|streets?)\b/i;
+/**
+ * A name and a death, nothing else (user, 29 Oct: "Palestinian media: Ihab Abu Taqiya from Abu Muslama killed":
+ * "if it doesn't say his role or something like that, not relevant"): no role, no how, no where beyond his family's
+ * town. A role ("commander", "journalist"), a cause ("in a strike", "by Israeli fire") or a count keeps it.
+ */
+const BARE_DEATH = /^(?:[^:]{2,40}:\s*)?(?:(?:the )?(?:young man |youth |man |citizen )?(?:[A-Z][\w'’-]+\s+){1,5}(?:\([^)]*\)\s+)?(?:(?:from|of) (?:[A-Z][\w'’-]+\s*){1,4})?)(?:was |is )?(?:killed|dies|died|martyred|succumbs?|succumbed)(?: (?:of|to) (?:his |her )?wounds)?\.?$/;
 const HOME_ECONOMY = /\b(?:inflation|interest rates?|Federal Reserve|the Fed\b|gasoline|petrol prices|households?\b|VAT\b|earnings|price rises|record output|pumps at record|cruise ships?|airlines?' losses|food prices)\b/i;
 /** Household economics stays when the war is in it (user, 29 Oct: "not necessarily not news, depends"): China raising fuel prices "as oil climbs on Iran war" is the war's cost; the Fed's rate is not. */
 const ECONOMY_OF_WAR = /\b(?:war|Iran\w*|Hormuz|Houthis?|Yemen\w*|Gaza|Red Sea|blockade|sanction\w*|missiles?|drones?|strikes?|attacks?|Israel\w*|Leban\w+|Palestin\w*|tankers?|shipping)\b/i;
@@ -383,10 +400,12 @@ export function palestinianClaim(headline: string, type: string, source: string)
   const fan = /Ahfad al-Bahaa/i.test(source);
   if (/^(?:Local|Palestinian local|Field) sources?:\s/i.test(h) || (fan && /^Saraya al-Quds:\s/i.test(h))) h = h.replace(/^[^:]+:\s*/, "Palestinian media: ");
   else if (/,\s*(?:local|Palestinian) sources say\.?$/i.test(h)) h = `Palestinian media: ${h.replace(/,\s*(?:local|Palestinian) sources say\.?$/i, "")}`;
-  if (TALK_TYPES.has(type) || !PAL_EVENT.test(h) || /^[^:]{2,60}:\s/.test(h) || /\b(?:says?|said|claims?|claimed|according to|reports?|reported|alleges?|accus\w+)\b/i.test(h)) return h;
+  // A deed on the ground is told as its teller's whatever the reader typed it (29 Oct: WAFA's 19 houses demolished in Salfit, typed humanitarian, stood as fact).
+  if ((TALK_TYPES.has(type) && !HARD_DEED.test(h)) || !PAL_EVENT.test(h) || /^[^:]{2,60}:\s/.test(h) || /\b(?:says?|said|claims?|claimed|according to|reports?|reported|alleges?|accus\w+)\b/i.test(h)) return h;
   const who = /Health Ministry/i.test(source) ? `${source}${/Ramallah/i.test(source) ? "" : " (Hamas-run)"}` : /Civil Defen[cs]e|Media Office|Interior Ministry/i.test(source) ? `${source} (Hamas-run)` : !fan && /^(?:Hamas|Islamic Jihad|Saraya|Al-Qassam|WAFA)/i.test(source) ? source : "Palestinian media";
   return `${who}: ${h}`;
 }
+const HARD_DEED = /\b(?:killed|wounded|injured|demolish\w*|bulldoz\w*|raid(?:s|ed)?|arrest(?:s|ed)|detain(?:s|ed)|shot|shell(?:s|ed)|struck|seiz(?:es|ed)|burn(?:s|ed|t)|uproot\w*|stormed)\b/i;
 const TALK_TYPES = new Set(["statement", "diplomacy", "politics", "analysis", "economy", "humanitarian"]);
 
 /** Lebanon in a card: a Lebanese outlet or a Lebanese place. */

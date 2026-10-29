@@ -66,7 +66,19 @@ const RULES: [RegExp, string | ((m: string) => string)][] = [
   [/\b(?:by|from|with|against|on|of) (?:the )?(?:Israeli )?occupation\b/gi, (m: string) => `${m.split(/\s+/)[0]} Israel`],
   [/\b(?:the )?(?:Israeli )?occupation(?:'s)? (?=[a-z])/gi, "Israeli "],
   [/\b(?:the )?(?:Israeli )?occupation\b/gi, "Israel"],
+  // "Pretext" is the teller's word (user, 29 Oct: WAFA's "Israel uses 'building without permit in Area C' pretext to
+  // demolish homes": "palestinian narrative, fix"): the act and its stated reason, plainly.
+  [/\b(Israel(?:i (?:authorities|forces|army))?) uses? ['"‘“]?([^'"’”;]{3,80}?)['"’”]? (?:as a )?pretext to (\w+)([^;.]*)/gi, (m: string) => {
+    const [, who, why, verb, what] = m.match(/^(.+?) uses? ['"‘“]?(.+?)['"’”]? (?:as a )?pretext to (\w+)(.*)$/i) ?? [];
+    const past = verb && PRETEXT_PAST[verb.toLowerCase()];
+    return past ? `${who} ${past}${what} over ${why}` : m;
+  }],
+  [/\b(?:under|on) the (?:pretext|pretence|guise) (?:of|that)\b/gi, "citing"],
+  [/\bon the (?:false )?(?:pretext|claim)s? of\b/gi, "citing"],
+  [/\bso-called\s+/gi, ""],
 ];
+/** "Israel uses 'X' pretext to demolish homes" → "Israel demolished homes over X". */
+const PRETEXT_PAST: Record<string, string> = { demolish: "demolished", raze: "razed", seize: "seized", confiscate: "confiscated", arrest: "arrested", close: "closed", evict: "evicted", bulldoze: "bulldozed", raid: "raided", expel: "expelled", deport: "deported", ban: "banned", deny: "denied", block: "blocked" };
 
 export function gazaWords(s: string): string {
   let out = String(s || "");

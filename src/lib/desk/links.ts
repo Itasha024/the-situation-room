@@ -286,7 +286,11 @@ export function linkOk(child: Card, parent: Card, who?: Map<string, string>): bo
   const speaker = (c: Card) => who?.get(c.fp) ?? ownSpeaker(c);
   const s = speaker(child);
   const ps = speaker(parent);
-  if (s && s === ps) {
+  // One outlet's two posts on two towns far apart are two stories (user, 29 Oct: Jenin News's farmland west of
+  // Jenin shown as following its monument south of Hebron, 13:06 and 13:07).
+  const apart = Number.isFinite(child.lat) && Number.isFinite(parent.lat) && !!child.place && !!parent.place && child.place !== parent.place &&
+    kmApart({ lat: child.lat!, lng: child.lng! }, { lat: parent.lat!, lng: parent.lng! }) > 40;
+  if (s && s === ps && !(apart && FIELD.has(child.type) && FIELD.has(parent.type))) {
     if (gap <= BRIEFING_MS) return true;
     if (TALK.has(child.type) && TALK.has(parent.type) && gap <= STORY_MS) return true;
   }

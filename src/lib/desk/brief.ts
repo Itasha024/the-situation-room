@@ -14,6 +14,7 @@
 
 import type { DevMark } from "./prose.ts";
 import type { Ref } from "./refs.ts";
+import type { DeskStore } from "./store.ts";
 import type { LiveReport } from "../yemen-scan.server.ts";
 import { alertCities } from "./copies.ts";
 import {
@@ -400,3 +401,45 @@ export function inFrontArea(ll: [number, number], id: string, extraFronts: Extra
   const x = extraFronts.find((f) => f.id === id);
   return !!x && govKey(ll[0], ll[1]) === x.gov;
 }
+
+/* ------------------------------------------------------------------ *
+ * One brief per report (user, 29 Oct: "don't ever leave a report in briefs for more than one brief"): the reports a
+ * desk's brief cited, by fp, with the brief that first cited them. A later brief drops a point whose every reference
+ * an earlier brief already cited, and a list with nothing new is left empty, never filled with the last one's points.
+ * ------------------------------------------------------------------ */
+
+const TOLD_KEEP_MS = 4 * 24 * 3600_000;
+const toldKey = (part: string) => `brief-told:${part}`;
+
+/** The fps an earlier brief of this part ("iran", "iran-arenas", "gaza", "yemen") cited; the current brief's own are not counted. */
+export async function toldBefore(store: DeskStore, part: string, updatedAt: string): Promise<Set<string>> {
+  const m = (await store.getJson<Record<string, string>>(toldKey(part)).catch(() => null)) ?? {};
+  return new Set(Object.entries(m).filter(([, at]) => at < updatedAt).map(([fp]) => fp));
+}
+
+/** The references the points cite, by their [[n]] marks. */
+export function citedRefs(points: string[], refs: Ref[]): Ref[] {
+  const n = new Set(points.flatMap((p) => [...p.matchAll(/\[\[(\d+)\]\]/g)].map((m) => Number(m[1]))));
+  return refs.filter((_, i) => n.has(i + 1));
+}
+
+/** Remember what this brief cited. */
+export async function markTold(store: DeskStore, part: string, points: string[], refs: Ref[], updatedAt: string): Promise<void> {
+  const m = (await store.getJson<Record<string, string>>(toldKey(part)).catch(() => null)) ?? {};
+  for (const r of citedRefs(points, refs)) if (r.fp && !m[r.fp]) m[r.fp] = updatedAt;
+  const cut = new Date(Date.parse(updatedAt) - TOLD_KEEP_MS).toISOString();
+  await store.putJson(toldKey(part), Object.fromEntries(Object.entries(m).filter(([, at]) => at >= cut)));
+}
+
+/** The points with something new: a point every reference of which an earlier brief cited goes. */
+export function freshPoints<T extends { points: string[]; refs: Ref[] }>(x: T, told: Set<string>): T {
+  if (!told.size) return x;
+  const points = x.points.filter((p) => {
+    const fps = [...p.matchAll(/\[\[(\d+)\]\]/g)].map((m) => x.refs[Number(m[1]) - 1]?.fp).filter(Boolean);
+    return !fps.length || fps.some((fp) => !told.has(fp));
+  });
+  return { ...x, points };
+}
+
+/** A writer's input line for a report an earlier brief told: the writer may lean on it, never make it a point. */
+export const TOLD_TAG = " (told in an earlier brief)";

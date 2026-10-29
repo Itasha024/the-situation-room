@@ -19,7 +19,7 @@
 
 import { oldPicture } from "./pin-rule.ts";
 import type { LiveReport } from "./types.ts";
-import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, frontIdsOf, inFrontArea, sixHourMark } from "./brief.ts";
+import { type Brief, type BriefHistory, buildBrief, briefWindow, coveredByTrackedFront, freshPoints, frontIdsOf, inFrontArea, markTold, sixHourMark, toldBefore } from "./brief.ts";
 import { type ExtraFront, EXTRA_FRONTS_KEY, updateExtraFronts } from "./new-fronts.ts";
 import { battleFirst, controlContext, isOther, keepReported, type DevMark, type Prose, writeProse } from "./prose.ts";
 import { anyAwake, type ChainModel, WRITER_MODELS } from "./models.ts";
@@ -207,6 +207,7 @@ async function buildWindow(store: DeskStore, now: Date, w: ReturnType<typeof bri
     });
   }
   brief.proseTriedAt = new Date().toISOString();
+  await oneBriefOnly(store, brief);
   await store.putJson(BRIEF_KEY, { brief, history } satisfies StoredBrief);
   // The official numbers move on the same 6-hour clock. A failed fetch keeps
   // the last tally; it must never cost the brief.
@@ -367,8 +368,18 @@ export async function reprose(store: DeskStore, saved: StoredBrief, now: Date, f
     out.fronts = out.fronts.map((f) => (f.map ? { ...f, map: still(f.map, cards.byFront[f.id] ?? []) } : f));
   }
   console.log(`[desk] prose asked again: ${model || "no model"}${keep ? ", kept" : ", not kept"}`);
+  await oneBriefOnly(store, out);
   await store.putJson(BRIEF_KEY, { brief: out, history: saved.history } satisfies StoredBrief);
   return out;
+}
+
+/** A report goes in one brief only (user, 29 Oct): the points an earlier brief already told go, and this one's are remembered. */
+async function oneBriefOnly(store: DeskStore, brief: Brief): Promise<void> {
+  const s = brief.situation;
+  if (!s?.points?.length || !s.refs) return;
+  const told = await toldBefore(store, "yemen", brief.updatedAt);
+  s.points = freshPoints({ points: s.points, refs: s.refs }, told).points;
+  await markTold(store, "yemen", s.points, s.refs, brief.updatedAt);
 }
 
 /**

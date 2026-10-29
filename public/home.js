@@ -301,6 +301,10 @@
       }
     }
     if (best || arms) return best || arms;
+    // No country named: the reader's arena says whose story it is (user, 29 Oct: Lebanon Debate's "Explosives file
+    // reaches decisive turn" stood under Iran's flag), before the desk's own.
+    const byArena = arena && COUNTRY.find(([code]) => code === arena);
+    if (byArena) return { code: byArena[0], name: byArena[1] };
     return desk === 'iran' ? { code: 'iran', name: 'Iran' } : desk === 'yemen' ? { code: 'yemen', name: 'Yemen' } : { code: 'israel', name: 'Israel' };
   }
   const countryTag = (text, desk, flags) => { const c = countryOf(text, desk, flags); return `<span class="h-cflag" title="${esc(c.name)}">${countryFlag(c.code)}</span>`; };

@@ -104,8 +104,13 @@ export function readRanking(json: Record<string, unknown>, points: Record<BriefD
   // Fire with no one hurt and nothing of a state's hit is held to 5 (user, 29 Oct: the All brief put shelling in
   // south Lebanon and Gaza's gunboats above Vance's letter to Tehran); the Iran desk's points stand half a point up,
   // the war with Iran being the site's main story ("most of the times Iran desk reports will be first, not a rule").
+  // A ship or tanker hit, seized or mined, or an energy site struck, stands near the top unless something weighs more
+  // (user, 29 Oct: three tankers on mines in Hormuz stood ninth; "yes generally unless there's something more important").
   const score = (id: string) =>
-    Math.min(scoreOf.get(id) ?? fallback(id), CAP[band(textOf(id))] ?? 10, wordsOnly(textOf(id)) ? 5 : 10, quietFire(textOf(id)) ? 5 : 10) + (id[0] === "i" ? 0.5 : 0);
+    Math.max(
+      Math.min(scoreOf.get(id) ?? fallback(id), CAP[band(textOf(id))] ?? 10, wordsOnly(textOf(id)) ? 5 : 10, quietFire(textOf(id)) ? 5 : 10),
+      shipHit(textOf(id)) ? 8.5 : 0,
+    ) + (id[0] === "i" ? 0.5 : 0);
   const ranked = [...all].sort((a, b) => score(b) - score(a) || band(textOf(a)) - band(textOf(b)) || all.indexOf(a) - all.indexOf(b));
   const of = (id: string) => ({ desk: DESK_OF[id[0]], i: Number(id.slice(1)) - 1 });
   const fixed: Record<string, string> = {};
@@ -126,6 +131,16 @@ export function wordsOnly(point: string): boolean {
   // "Iran's navy: a tanker hit a mine and caught fire" tells an event, not words.
   // "US official: Vance sent a letter to Rezaei…" tells a step between states, not words.
   return said && !/\b(?:kill(?:ed|s|ing)?|dead|died|wounded|injured|struck|strikes?|hit|hits|seized|launched|fired|shot down|captured|intercepted|sank|explo(?:ded|sion|sions)|caught fire|mine|raided|arrested|demolished|advanced|sent|letter|offered|proposed|ousted|dismissed|appointed|resigned|signed|deployed)\b/i.test(first);
+}
+
+/** A ship, a tanker or an energy site hit, seized, mined or set on fire (a claim of one counts too). */
+export function shipHit(point: string): boolean {
+  const p = point.replace(/\s*\[\[\d+\]\]/g, "");
+  const ship = /\b(?:ships?|vessels?|tankers?|supertankers?|VLCCs?|carriers?|freighters?|cargo ships?|LNG|LPG|refiner(?:y|ies)|oil (?:field|facilit\w+|terminal|port)s?|gas (?:field|plant)s?|pipelines?|energy sites?)\b/i;
+  const hit = /\b(?:hit|hits|struck|strikes? on|attack(?:ed|s)? on|attacked|seiz(?:ed|es|ure)|explo(?:ded|sion|sions)|mines?|mined|on fire|caught fire|ablaze|sank|sunk|boarded|hijack\w*|damaged|targeted)\b/i;
+  // A threat to hit ships is words, not a hit.
+  const threat = /\b(?:will|would|could|may|threaten\w*|warn\w*|vow\w*)\b[^.]{0,50}\b(?:hit|strike|target|attack|seize|mine)\b/i;
+  return ship.test(p) && hit.test(p) && !threat.test(p);
 }
 
 /** Shelling, gunfire or a raid with no one hurt and no state's site or ship hit. */
